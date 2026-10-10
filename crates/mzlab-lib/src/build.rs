@@ -7,6 +7,7 @@ use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
+use crate::sortutil;
 use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
 use crate::util::{crc32c, get_varint, le_f64, le_u16, le_u32, put_varint};
 
@@ -36,6 +37,7 @@ pub struct BuildInfo {
     pub neg: u32,
 }
 
+#[derive(Clone, Copy)]
 struct Key {
     prec: f64,
     pol_key: u8,
@@ -131,7 +133,7 @@ impl<T: Scratch> Builder<T> {
             return Err(Error::new("lib.err.noSpectrum").with("dropped", self.emptied));
         }
         self.store.flush_all()?;
-        self.keys.sort_by(|a, b| {
+        sortutil::sort_by(&mut self.keys, |a, b| {
             a.pol_key
                 .cmp(&b.pol_key)
                 .then(a.prec.total_cmp(&b.prec))
@@ -474,7 +476,7 @@ fn write_index<T: Scratch, K: Sink>(
             es.push((le_u32(c, 0), le_u32(c, 4), le_u16(c, 8)));
         }
         drop(raw);
-        es.sort_unstable();
+        sortutil::sort_by(&mut es, |a, b| a.cmp(b));
         for e in es {
             page.push(e);
             written += 1;

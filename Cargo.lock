@@ -1883,6 +1883,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-lib-wasm"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "mzlab-lib",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-wasm"
 version = "0.1.0"
 dependencies = [

@@ -284,6 +284,23 @@ impl<S: Source> Library<S> {
         self.header.n_peaks
     }
 
+    /// Changes the cache budget (the page splits `cache_budget` among the libraries that are open); the excess is dropped at once.
+    pub fn set_cache_budget(&self, bytes: usize) {
+        let mut c = self.cache.borrow_mut();
+        c.budget = bytes;
+        while c.bytes > c.budget && !c.map.is_empty() {
+            let oldest = *c
+                .map
+                .iter()
+                .min_by_key(|(_, e)| e.1)
+                .map(|(k, _)| k)
+                .expect("not empty");
+            if let Some(e) = c.map.remove(&oldest) {
+                c.bytes -= e.0.len();
+            }
+        }
+    }
+
     pub fn cached_bytes(&self) -> usize {
         self.cache.borrow().bytes
     }
