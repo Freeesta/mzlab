@@ -89,14 +89,14 @@ window.MAPPA = (() => {
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
     const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${r.join("|")}|${JSON.stringify(diffOpt())}`;
-    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, M.l, M.t, pw, ph); return true; }
+    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
     clearTimeout(s.regT);
     s.regT = setTimeout(async () => {
       try {
         const a = await getRegion(A.k, A.level, r, B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "");
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
-        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
+        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
     }, QUIET);

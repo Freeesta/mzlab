@@ -33,7 +33,7 @@ try:
             for _ in range(3): pg.mouse.wheel(0, -200); pg.wait_for_timeout(60)
             zz = z(); assert zz[0] and zz[1], zz
             pg.wait_for_function(f"!!({M}._mz.reg && {M}._mz.reg.nrt > 1)", timeout=15000)     # true zoom: the region on new bins
-            reg = pg.evaluate(f"[{M}._mz.reg.nrt,{M}._mz.reg.nmz,{M}._mz.reg.dmz]"); assert reg[2] < 1 and reg[1] <= 1000 and reg[0] <= 1000, reg     # finer than the 1 Da of the whole map
+            reg = pg.evaluate(f"[{M}._mz.reg.nrt,{M}._mz.reg.nmz,{M}._mz.reg.dmz]"); assert reg[2] <= 1 and reg[1] <= 1000 and reg[0] <= 1000, reg     # never coarser than the 1 Da of the whole map (LR cells are nominal masses)
             zy = z()[1]; pg.keyboard.down("Shift"); pg.mouse.wheel(0, -200); pg.keyboard.up("Shift"); pg.wait_for_timeout(200)
             z2 = z(); assert z2[0] == zz[0] and z2[1] != zy, (zz, z2)                           # Shift: m/z only
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -200); pg.keyboard.up("Alt"); pg.wait_for_timeout(200)
