@@ -466,13 +466,6 @@ class App:
             raise UserError("err.scan.maxAverage", {"n": 200}, "at most 200 scans per average")
         return self._item(k).scan_avg(sids, hr)
 
-    def ionmap(self, k: int, level: int) -> dict:
-        """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""
-        item = self._item(k)
-        grid = self.session.grid(level)
-        m = item.ionmap(level, grid)
-        return {**grid, "level": level, "data": base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")}
-
     def reset(self, fresh: bool = False):
         with self.lock:
             if self.session:
