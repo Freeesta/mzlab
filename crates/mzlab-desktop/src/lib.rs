@@ -5,6 +5,7 @@
 pub mod engine;
 pub mod mapped;
 pub mod protocol;
+pub mod update;
 
 pub use engine::State;
 pub use protocol::{handle, Response};

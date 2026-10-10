@@ -20,6 +20,7 @@
   "phone.about.title": "Titolo della scheda «i» sullo smartphone; {app} = nome del programma.",
   "bt.copied": "Nota nella finestra di aiuto di BioTransformer: lo SMILES del disegno è stato copiato negli appunti; {smiles} = SMILES (abbreviato).",
   "load.err.engineStart": "Errore grave all'avvio, sulla schermata di attesa; {text} = testo tecnico (inglese).",
+  "load.blocked": "Schermata di attesa all'avvio: il database dei file salvati è bloccato da un'altra scheda; {app} = nome del programma.",
   "load.err.worker": "Errore del processo di calcolo nel browser, sulla schermata di attesa; {text} = testo tecnico (inglese).",
   "load.phrase.1": "Frase scherzosa della schermata di attesa (una ogni 5 secondi); può contenere <sub>/<sup>. Va resa con lo stesso tono scherzoso.",
   "load.demo.progress": "Testo sul pulsante degli esempi durante lo scaricamento; {i} = file in corso, {n} = totale, {mb} = megabyte già scaricati con un decimale.",
@@ -287,5 +288,8 @@
   "err.subxic.none": "Errore dell'XIC da formula; {mz} = m/z minimo scelto.",
   "tour.passo": "Intestazione dell'etichetta del tour; {n} = numero del passo, {tot} = passi totali del capitolo, {cap} = titolo del capitolo.",
   "tour.annuncio": "Annuncio accessibile per lettori di schermo al cambio di passo; {n} = numero del passo, {tot} = passi totali, {titolo} = titolo del passo.",
+  "update.available": "Messaggio dell'aggiornamento dell'app desktop; {files} = numero di file cambiati da scaricare, {size} = megabyte già formattati.",
+  "update.newapp": "L'aggiornamento della parte web richiede un'app desktop più recente; {min} = versione minima (es. 0.2.0). Dopo la frase compare il link alla pagina degli installatori.",
+  "update.progress": "Avanzamento dello scaricamento dell'aggiornamento; {done} = file scaricati, {total} = file da scaricare, {size} = megabyte scaricati finora.",
   "workflow.warn.shaMismatch": "Avviso quando l'impronta SHA-256 differisce da quella del flusso; {file} = nome file, {actual} = impronta calcolata, {expected} = impronta attesa."
 }

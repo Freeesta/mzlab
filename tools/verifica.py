@@ -38,7 +38,7 @@ E2E = ROOT / "tests_e2e"
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_rust": {"sito"}, "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_esperti": {"sito"},
+    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_rust": {"sito"}, "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
@@ -233,12 +233,12 @@ AREE = [
     ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
     ("mzlab/web/libreria", {"e2e_libreria", "e2e_hr_identificazione"}), ("mzlab/web/touch.js", {"e2e_tocco", "e2e_tocco_disegno"}), ("mzlab/web/perf.js", {"e2e_perf"}),
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
-    ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
+    ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_map3d", "e2e_pannelli2"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
-    ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_esperti"}),
-    ("mzlab/web/browser", {"e2e13", "e2e_rust"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust"}), ("mzlab/web/sw.js", {"e2e13"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
+    ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero"}),
+    ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
     ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/workflow.py", {"e2e_workflow"}), ("mzlab/web/version.js", {"e2e_workflow"}),

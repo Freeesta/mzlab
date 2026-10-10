@@ -67,11 +67,13 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
+    ${window.DESKUPD ? DESKUPD.row() : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
     `;
   document.body.appendChild(d);
+  if (window.DESKUPD) DESKUPD.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
   const a11yCur = QA11Y.read();

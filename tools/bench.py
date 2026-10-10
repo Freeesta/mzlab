@@ -183,15 +183,148 @@ def main_memoria() -> list:
     return table(keys, rows) + ["", f"Empty page (about:blank), same browser: RSS {baseline()['rss_mb']} MB."]
 
 
+# ---- "velocità" scenarios: many files, with the breakdown of the time and the peak memory (python engine only) ----
+STEPS = """(()=>{const W=window.Worker;window.__steps=[];window.Worker=function(...a){const w=new W(...a);
+w.addEventListener('message',e=>{const d=e.data;if(d&&(d.type==='step'||d.type==='ready'||d.type==='fatal'))window.__steps.push([d.type==='step'?d.text:d.type,Math.round(performance.now())])});return w};
+window.Worker.prototype=W.prototype})();"""
+
+
+class Peak:
+    """Samples the browser RSS in a thread and keeps the maximum (MB)."""
+    def __init__(self): self.max, self._stop = 0.0, False
+    def _loop(self):
+        while not self._stop:
+            self.max = max(self.max, rss_mb()); time.sleep(0.25)
+    def __enter__(self):
+        import threading
+        self._t = threading.Thread(target=self._loop, daemon=True); self._t.start(); return self
+    def __exit__(self, *a): self._stop = True; self._t.join()
+
+
+def replicate(src: list[Path], n: int, out: Path) -> list[str]:
+    """n files for the benchmark: the sources cycled, each copy with its own name (hard link when possible)."""
+    out.mkdir(parents=True, exist_ok=True)
+    res = []
+    for i in range(n):
+        f = src[i % len(src)]
+        d = out / (f"{f.stem}_c{i // len(src)}{f.suffix}" if i >= len(src) else f.name)
+        if not d.exists():
+            try: os.link(f, d)
+            except OSError: import shutil; shutil.copyfile(f, d)
+        res.append(str(d))
+    return res
+
+
+def scenario(name: str, files: list[str], port: int) -> dict:
+    """Open the files, ask TIC + 5 XIC of each, reload the page in the same browser profile (IndexedDB kept) and time the reopening."""
+    from playwright.sync_api import sync_playwright
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    n = len(files)
+    out: dict = {"scenario": name, "files": n, "file_mb": round(sum(os.path.getsize(f) for f in files) / 2**20, 1)}
+    try:
+        with sync_playwright() as p, Peak() as pk:
+            b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--enable-precise-memory-info"])
+            ctx = b.new_context(service_workers="block")
+            ctx.add_init_script(STEPS)
+            ctx.route("**/browser-worker.js", lambda route: (lambda r: route.fulfill(response=r, body=HOOK + r.text(), headers={**r.headers, "content-type": "text/javascript"}))(route.fetch()))
+            pg = ctx.new_page()
+            t0 = time.perf_counter()
+            pg.goto(f"http://127.0.0.1:{port}/?motore=python")
+            pg.wait_for_selector("#drop", timeout=300000)
+            out["engine_start_s"] = round(time.perf_counter() - t0, 2)
+            t1 = time.perf_counter()
+            pg.set_input_files("#pick", files)
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=600000)
+            out["read_mzml_s"] = round(time.perf_counter() - t1, 2)
+            t2 = time.perf_counter()
+            pg.click("#opbtn")
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=600000)
+            out["first_draw_s"] = round(time.perf_counter() - t2, 2)
+            t3 = time.perf_counter()
+            for k in range(n):
+                pg.evaluate(GET, f"api/chrom?k={k}&kind=tic&level=1")
+                for mz in MZS:
+                    pg.evaluate(GET, f"api/xic?k={k}&mz={mz}&tol=0.35&level=1")
+            out["tic_xic_s"] = round(time.perf_counter() - t3, 2)
+            out["idb_mb"] = round(pg.evaluate(IDB_SIZE) / 2**20, 1)
+            pg.close()
+            # reopening: a new page of the same context (same IndexedDB)
+            pg = ctx.new_page()
+            t4 = time.perf_counter()
+            pg.goto(f"http://127.0.0.1:{port}/?motore=python")
+            # LR: a reload goes straight to the data view; HR: it lands on the file list and the student presses "open"
+            pg.wait_for_function(f"!!document.querySelector('.pnl.chrom canvas') || document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=600000)
+            out["reopen_files_listed_s"] = round(time.perf_counter() - t4, 2)
+            if pg.query_selector(".pnl.chrom canvas") is None:
+                pg.click("#opbtn")
+                pg.wait_for_selector(".pnl.chrom canvas", timeout=600000)
+            out["reopen_first_draw_s"] = round(time.perf_counter() - t4, 2)
+            out["reopen_files"] = pg.evaluate("fetch('api/state').then(r => r.json()).then(d => (d.files || d.items || []).length)")
+            steps = pg.evaluate("window.__steps") or []
+            prev = 0
+            for text, at in steps:
+                out[f"reopen_step[{text}]_s"] = round((at - prev) / 1000, 2); prev = at
+            for w in pg.workers:
+                if "browser-worker" in w.url:
+                    out["pyodide_wasm_mb"] = round(w.evaluate(WASM_MEM) / 2**20, 1)
+            out["rss_peak_mb"] = pk.max
+            b.close()
+    finally:
+        srv.terminate()
+    return out
+
+
+def main_velocita(tmp: Path) -> list:
+    """The three "many files" scenarios; real data when MZLAB_DATI / the usual folders have them, synthetic otherwise."""
+    syn = tmp / "sintetici"
+    if not list(Path(MZ).glob("*FullMass*.mzML")):
+        subprocess.run([sys.executable, str(ROOT / "tools" / "dati_sintetici.py"), str(syn)], check=True)
+        lr_src = sorted(syn.glob("B_FullMass-t*.mzML"))
+        hr_src = sorted(syn.glob("HR_DDA-*.mzML"))
+        origin = "synthetic data"
+    else:
+        lr_src = sorted(p for p in Path(MZ).glob("*FullMass*.mzML") if "neg" not in p.name)
+        hr_dir = Path(os.environ.get("MZLAB_HRDDA") or Path(MZ).parent / "HRMS")
+        hr_src = sorted(hr_dir.glob("*DDA*.mzML")) or sorted((ROOT / "mzlab" / "web" / "esempi").glob("HRMS_*.mzML"))
+        origin = "lab data (copies renamed when the folder has fewer files)"
+    sets = {"20 Full Scan LR": replicate(lr_src, 20, tmp / "lr"), "9 HR DDA": replicate(hr_src, 9, tmp / "hr")}
+    rows, port = [], 8880
+    for name, fl in sets.items():
+        port += 1
+        rows.append(scenario(name, fl, port))
+        print(rows[-1], flush=True)
+    keys = ["scenario", "files", "file_mb", "engine_start_s", "read_mzml_s", "first_draw_s", "tic_xic_s", "idb_mb"]
+    keys2 = ["scenario", "reopen_files_listed_s", "reopen_first_draw_s", "reopen_files", "pyodide_wasm_mb", "rss_peak_mb"]
+    step_keys = sorted({k for r in rows for k in r if k.startswith("reopen_step[")})
+    return [f"Files: {origin}.", ""] + table(keys, rows) + [""] + table(keys2, rows) + ["", "Reopening, seconds spent between worker messages:"] + table(["scenario"] + step_keys, rows)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--files", type=int, default=4, help="how many Full Scan files to open")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--memoria", action="store_true", help="also the memory breakdown (WASM heaps, IndexedDB, JS heaps, RSS)")
+    ap.add_argument("--velocita", action="store_true", help="only the many-files scenarios (20 Full Scan LR, 9 HR DDA): time breakdown, reopening, peak memory")
     ap.add_argument("--scrivi", action="store_true", help="overwrite docs/agenti/misure.md with the tables (date and commit)")
     a = ap.parse_args()
     if not (ROOT / "site" / "index.html").exists():
         sys.exit("site/ missing: python3 tools/build_site.py")
+    if a.velocita:
+        import tempfile
+        lines = main_velocita(Path(tempfile.mkdtemp(prefix="mzlab-bench-")))
+        print("\n".join(lines))
+        if a.scrivi:
+            md = ROOT / "docs" / "agenti" / "misure.md"
+            commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+            sec = [f"## Molti file (`python3 tools/bench.py --velocita --scrivi`, motore Python, {time.strftime('%Y-%m-%d')}, commit {commit})",
+                   "Apertura = invio dei file, lettura mzML e primo disegno; riapertura = nuova pagina nello stesso profilo (IndexedDB), fino al primo disegno "
+                   "(HR: fino alla lista dei file, poi «Apri»). I passi sono i secondi tra i messaggi del worker; «ready» include la rilettura da IndexedDB e l'avvio di `mzlab.browser`."] + lines
+            txt = md.read_text(encoding="utf-8")
+            txt = txt.split("\n## Molti file")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
+            md.write_text(txt, encoding="utf-8")
+        return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:
         sys.exit("no Full Scan files found (MZLAB_MZML)")

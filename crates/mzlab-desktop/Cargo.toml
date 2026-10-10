@@ -16,18 +16,21 @@ required-features = ["app"]
 
 [features]
 # The window (Tauri). Off by default so that `cargo test` of the workspace needs no webview library.
-app = ["dep:serde", "dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
 memmap2 = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+# the only network code of the program: web-part updates from freeesta.github.io (pure Rust TLS; never in the WASM graph)
+ureq = { version = "2", default-features = false, features = ["tls"] }
 tauri = { version = "2", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "2", optional = true }
 
 [dev-dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tempfile = "3"

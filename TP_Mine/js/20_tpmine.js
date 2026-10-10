@@ -69,7 +69,7 @@
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
         const m = ev.data;
-        if (m.type === "progress") return onProgress(m.text, m.frac);
+        if (m.type === "progress") return onProgress(m.text, m.frac, m);
         if (m.type === "step") return onProgress(m.text, null);
         if (m.type === "ready") { const p = pending.get("init"); pending.delete("init"); return p && p.res(); }
         const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
@@ -88,7 +88,6 @@
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
   const callRaw = async (fn, ...args) => { await startWorker(); return send({ type: "call", fn, args }); };
-  QTOOLS.call = call;                       // the expert tools of the map (22_tpmine_esperti.js) use the same Python worker
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
@@ -166,13 +165,14 @@
   <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
   <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
- <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
+ <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
     const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
-    onProgress = (t, f) => { msg(t); if (f != null) $("#tp-bar").style.width = Math.round(f * 100) + "%"; };
+    const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
+    onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
 
     $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
@@ -195,7 +195,9 @@
       msg("Reading files...");
       try {
         await startWorker();
+        let k = 0;
         for (const f of list) {
+          msg(`Reading files... ${k} of ${list.length}`); bar(k++ / list.length);
           if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
           else { const buf = f.file ? await f.file.arrayBuffer() : f.buf; await send({ type: "put", name: f.name, buf }, [buf]); }
         }
@@ -205,8 +207,8 @@
         for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
         if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
-        renderFiles(); msg("");
-      } catch (e) { msg(String(e.message || e), true); }
+        renderFiles(); msg(""); bar(0);
+      } catch (e) { msg(String(e.message || e), true); bar(0); }
     }
     $("#tp-page").onclick = async () => {
       await loadFromData(false); };
@@ -365,6 +367,7 @@
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
       setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
+      if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
@@ -374,13 +377,14 @@
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
+          if (window.TPLIVE) TPLIVE.stop(true);
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           setBusy(false); return;
         }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
-        st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
+        st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) { if (window.TPLIVE) TPLIVE.stop(false); msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
       setBusy(false);
     };
 
@@ -573,6 +577,8 @@
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
         <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>`;
+      const isPar = par && id === par.id;
+      if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
       chart($("#tp-c-kin"), [{ x: kin.map(r => r.time), y: kin.map(r => r.detected ? r.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "time (min)" });
       const n = d.traces.length;

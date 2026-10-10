@@ -149,7 +149,13 @@ const TOUR = (() => {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   };
 
+  let memState = null;   // fallback when localStorage is unavailable: the invitation must not return at every step
+  const readState = () => {
+    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return v; } catch (_) {}
+    return memState;
+  };
   const saveState = status => {
+    memState = status;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ stato: status, data: new Date().toISOString() }));
     } catch (_) {}
@@ -523,10 +529,8 @@ const TOUR = (() => {
       if (window.BANCO && BANCO.on()) return;
       if (window.TPMINE && TPMINE.on) return;
       if (typeof E === "undefined" || !E.files || !E.files.length) return;
-      try {
-        const s = localStorage.getItem(STORAGE_KEY);
-        if (s) return;
-      } catch (_) { return; }
+      if (readState()) return;
+      saveState("invitato");   // the invitation appears once per browser, whatever the answer
       TOUR.mostraInvito();
     },
 
@@ -535,9 +539,10 @@ const TOUR = (() => {
       ensureStyles();
       const div = document.createElement("div");
       div.id = "tour-invito";
-      div.setAttribute("role", "region");
+      div.setAttribute("role", "dialog");
+      div.setAttribute("aria-modal", "false");
       div.setAttribute("aria-label", I18N.t("tour.impost.titolo"));
-      div.style.cssText = "position:fixed;bottom:16px;right:16px;z-index:7000;width:320px;max-width:calc(100vw - 32px);background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:12px 14px;box-sizing:border-box;font:13px/1.4 system-ui,-apple-system,sans-serif";
+      div.style.cssText = "position:fixed;bottom:12px;left:12px;z-index:7000;width:260px;max-width:calc(100vw - 24px);background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:12px 14px;box-sizing:border-box;font:13px/1.4 system-ui,-apple-system,sans-serif";
       div.innerHTML = `
         <p style="margin:0 0 10px;line-height:1.45">${I18N.t("tour.invito.testo")}</p>
         <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -555,11 +560,11 @@ const TOUR = (() => {
       const onInvKeyDown = e => {
         if (e.key === "Escape") {
           closeInv();
-          saveState("saltato");
         }
       };
 
       document.addEventListener("keydown", onInvKeyDown);
+      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) {}
 
       div.querySelector("#tour-inv-si").onclick = () => {
         closeInv();
@@ -567,7 +572,7 @@ const TOUR = (() => {
       };
       div.querySelector("#tour-inv-no").onclick = () => {
         closeInv();
-        saveState("saltato");
+        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) {}
       };
     },
 
@@ -700,6 +705,11 @@ const TOUR = (() => {
 
 if (typeof window !== "undefined") {
   window.TOUR = TOUR;
+  // «New session» / «Start from scratch»: the invitation is a user datum too, so it comes back with the clean slate
+  const hard = window.qqHardReset;
+  if (typeof hard === "function") {
+    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) {} return hard(); };
+  }
 }
 
 if (typeof module !== "undefined") {

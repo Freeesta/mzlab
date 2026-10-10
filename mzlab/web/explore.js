@@ -150,14 +150,15 @@ let ldSlow = 0;
 function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
-    ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
-    clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = I18N.t("load.slow"); }, 20000);
+    ldSince = Date.now(); ldMsg = msg ? { text: msg, pct: null } : null; ldRefresh();
+    clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !ldMsg && !window.qqPhaseCur) { ldMsg = { text: I18N.t("load.slow"), pct: null }; ldRefresh(); } }, 20000);
     ldIon(true);                                                     // engine start and data loading: the ions (one analyser per load)
     if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
   } else {
+    if (window.qqFailed) return;                                   // a failed engine start keeps its message (and the «start from scratch» button) on screen
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
-      L.classList.add("fade-out");
+      L.classList.add("fade-out"); ldMsg = null;
       setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }

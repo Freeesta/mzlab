@@ -31,7 +31,7 @@ from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
                     "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True}
-NO_PROGRESS = lambda text, frac=None: None      # noqa: E731
+NO_PROGRESS = lambda text, frac=None, phase=None, payload=None: None      # noqa: E731
 
 
 def classify(run: Run) -> str:
@@ -116,10 +116,12 @@ class ExperimentHR:
         if self.msn_file is None:
             self.warnings.append("no MSn file of the standard: no fragment tree, no localisation")
             return
-        self.progress("MSn tree of the parent...", 0.03)
+        self.progress("MSn tree of the parent...", 0.03, "tree")
         r = Run(self.msn_file["path"])
         t = time.perf_counter()
-        self.tree = msn.build_tree(r, self.ion, self.smiles)
+        self.tree = msn.build_tree(r, self.ion, self.smiles, on_node=lambda n: self.progress(
+            "MSn tree of the parent...", 0.03, "tree", {"kind": "node", "id": n["id"], "parent": n["parent"], "level": n["level"],
+                                                         "mz": None if n["prec_mz"] is None else round(n["prec_mz"], 4), "formula": n["formula"], "ghost": bool(n["ghost"])}))
         r.close()
         self.timing["albero"] = round(time.perf_counter() - t, 2)
         self.library = iimn.build_library(self.tree) if self.tree.subs is not None else None
@@ -138,10 +140,11 @@ class ExperimentHR:
         t0 = time.perf_counter()
         for step, k in enumerate(order):
             x = self.lc[k]
-            self.progress(f"Cerco le feature: {x['label']}", 0.05 + 0.45 * step / n)
+            self.progress(f"Looking for features: {x['label']}", 0.05 + 0.45 * step / n, "features")
             r = Run(x["path"])
             tab = r.table(1, self.s["polarity"])
             self.feats[k] = FT.detect(tab, floor=self.s["floor"], min_height=self.s["min_height"])
+            self.progress(f"Looking for features: {x['label']}", 0.05 + 0.45 * (step + 1) / n, "features", {"kind": "features", "file": x["label"], "n": int(len(self.feats[k]))})
             self.ms2idx[k] = SP.index_ms2(r, x["path"])
             self.stamps[k] = KN.run_start(x["path"])
             if self.parent_rt_hint is None:
@@ -163,7 +166,7 @@ class ExperimentHR:
         return (x["time"] is not None and x["time"] <= 0) or x["type"] in ("blank", "control")
 
     def _filters(self):
-        self.progress("Allineo e filtro...", 0.52)
+        self.progress("Aligning and filtering...", 0.52, "align")
         t = time.perf_counter()
         types = [("blank" if x["type"] == "blank" else "control" if x["type"] == "control" else "sample") for x in self.lc]
         self.al = FT.align(self.feats)
@@ -192,7 +195,7 @@ class ExperimentHR:
         if not self.s["fill_gaps"] or len(self.funnel.idx) == 0:
             return
         t0 = time.perf_counter()
-        self.progress("Filling gaps...", 0.55)
+        self.progress("Filling gaps...", 0.55, "align")
         getters = self._runs()
         last = []
 
@@ -252,7 +255,7 @@ class ExperimentHR:
 
     def _assemble(self):
         t0 = time.perf_counter()
-        self.progress("Assemblo i candidati...", 0.58)
+        self.progress("Assembling the candidates...", 0.58, "candidates")
         al, idx = self.al, self.funnel.idx
         self.getters = self._runs()
         space, _ = FL.tp_space(self.ion)
@@ -359,11 +362,15 @@ class ExperimentHR:
     # ------------------------------------------------------------------ network, scoring, ranking
     def _network(self):
         t0 = time.perf_counter()
-        self.progress("IIMN families of the best candidates...", 0.7)
+        self.progress("IIMN families of the best candidates...", 0.7, "families")
         cands = self.cands
         w = self.s["weights"]
         for k, c in enumerate(cands):
             c["priority"] = NW.priority(c, self.lgn[k], w)
+        for k in sorted((k for k, c in enumerate(cands) if not c.get("hidden")), key=lambda k: -cands[k]["priority"]["score"])[:40]:
+            c = cands[k]                      # live feed: the best candidates with the provisional score (before the IIMN families)
+            self.progress("IIMN families of the best candidates...", 0.7, "families", {"kind": "candidate", "id": c["id"], "name": c.get("derivation") or c.get("formula") or f"m/z {c['mz']:.4f}",
+                                                                                      "mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "score": c["priority"]["score"]})
         self._iimn_top()
         for k, c in enumerate(cands):
             c["priority"] = NW.priority(c, self.lgn[k], w)
@@ -376,7 +383,7 @@ class ExperimentHR:
             if c.get("hidden"):
                 c["isf_coincident"] = True
         # predecessors among the best candidates
-        self.progress("Product network...", 0.85)
+        self.progress("Product network...", 0.85, "network")
         top = [k for k in sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["score"])[:300] if cands[k].get("formula")]
         sub = [cands[k] for k in top]
         cos = {}

@@ -12,29 +12,44 @@
   try { if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   let worker;
   // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
-  try { if (modern && !window.QQQ_PHONE) worker = new Worker(new URL("browser-worker.js", SRC), { type: "module" }); } catch (_) { worker = null; }
+  // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database (tests)
+  const wurl = new URL("browser-worker.js", SRC);
+  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); }
+  try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
-  // the step text goes under the phrase (#ldsub). window.qqStep is also read by loading() in explore.js.
+  // the phase of the start (window.qqPhaseCur = {key, pct}: a catalog key and the percentage when known) replaces the phrase in the single status line of #loading
+  // (ldRefresh() in index.html); an ERROR replaces it too, clearly, in the language of the page
   window.qqStep = "Preparing the calculation engine...";
-  // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in the language of the page
   // for the ?perf meter (perf.js loads later: what happens before it is kept here and picked up by it)
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
+  const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); };
+  // the ONE clean slate («New session» and «Start from scratch»): saved files, notebook, user lists, caches (app, engine, libraries) and service worker are removed, then the page reloads
+  // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
+  const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
+  window.qqHardReset = async () => {
+    await wait(new Promise(r => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
+    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
+    await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
+    const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
+  };
+  const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
-  const fail = (key, params) => { window.qqFailed = key; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
-  document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
+  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
+  document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   const ready = new Promise((res, rej) => {
     if (!worker && window.QQQ_PHONE) return rej(new Error("phone: engine not started"));
     if (!worker) { const t = "this browser is too old"; failed = t; fail("load.err.oldBrowser"); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;
-      if (m.type === "step") return step(m.text);
-      if (m.type === "ready") { isReady = true; window.qqStep = ""; perfMark("motore pronto"); return res(); }
-      if (m.type === "fatal") { failed = m.text; fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
+      if (m.type === "step") return phase(m);
+      if (m.type === "blocked") { window.qqPhaseCur = { key: "load.blocked", pct: null }; if (window.ldRefresh && window.I18N) ldRefresh(); return; }   // replaced by the next step once the other tab lets go
+      if (m.type === "ready") { isReady = true; window.qqStep = ""; phase(null); perfMark("motore pronto"); try { const u = new URL(location.href); if (u.searchParams.has("riparti")) { u.searchParams.delete("riparti"); history.replaceState(null, "", u.href); } } catch (_) { /* optional */ } return res(); }
+      if (m.type === "fatal") { failed = m.text; if (m.key === "load.err.resumeTimeout") fail(m.key, null, true); else fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };
     worker.onerror = e => { failed = e.message || "worker error"; fail("load.err.worker", { text: failed }); rej(new Error(failed)); };

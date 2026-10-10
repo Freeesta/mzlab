@@ -7,7 +7,7 @@
 .tp .lvl-2b{background:#047857}.tp .lvl-3{background:#2b5c8a}.tp .lvl-4{background:#8a6d2b}.tp .lvl-5{background:#7a8190}
 .tp .hrn{border-left:3px solid #d99a1d;background:rgba(217,154,29,.10);padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;margin:0 0 8px}
 .tp .comp{display:grid;grid-template-columns:90px 1fr 42px;gap:6px;align-items:center;font-size:12px}.tp .comp i{display:block;height:8px;background:var(--accent);border-radius:4px}
-.tp .flag{color:#9a5b00;font-size:11px}.tp .tree{font-size:12px}.tp .tree .nd{margin:2px 0}.tp .tree code{font-size:11px}
+.tp .flag{color:#9a5b00;font-size:11px}
 .tp .fl-s{color:#b42318;font-weight:600}.tp .fl-u{color:#2b5c8a;font-weight:600}`;
   const LV = { "2b": "2b", 3: "3", 4: "4", 5: "5" };
   const LV_TEXT = { "2b": "site determined", 3: "region localised", 4: "formula and derivation", 5: "appears with the treatment" };
@@ -34,7 +34,7 @@
       <details class="card"><summary>Applied filters (funnel) and sessions</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("en")} · ${esc(f.text)}</div>`).join("")}
         <div class="mut" style="margin-top:6px">Sessions: ${esc([...new Set(s.sessions.labels)].map(l => l + " (" + s.sessions.labels.filter(x => x === l).length + " files)").join(", "))}${s.sessions.factors.applied ? "; areas rescaled to the reference session" : "; no correction needed"}.</div>
         <div class="mut">Timings (s): ${esc(Object.entries(s.timing).map(([k, v]) => k + " " + v).join(" · "))}</div></details>
-      ${s.tree ? `<details class="card"><summary>MSn tree of the parent (${s.tree.length} nodes)</summary><div class="tree">${tree(s.tree, esc)}</div></details>` : ""}`;
+      <div class="card" id="hr-tree"></div>`;
 
     function spark(series) {
       const mx = Math.max(...series) || 1, w = 70, ht = 18, pts = series.map((v, i) => `${(i / Math.max(1, series.length - 1) * (w - 4) + 2).toFixed(1)},${(ht - 2 - v / mx * (ht - 4)).toFixed(1)}`).join(" ");
@@ -57,6 +57,7 @@
     $("#hr-q").oninput = e => { st.text = e.target.value.trim().toLowerCase(); table(); };
     $("#hr-ord").onchange = e => { st.order = e.target.value; table(); };
     $("#hr-loc").onchange = e => { st.onlyLoc = e.target.checked; table(); };
+    if (window.TPALBERO) window.TPALBERO.mount($("#hr-tree"), h, { compareId: () => st.sel });
     table();
 
     async function detail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
@@ -79,7 +80,7 @@
         ${d.ms2 ? `<div class="card"><h3>MS<sup>2</sup> of the candidate (below) and of the parent (above)</h3><canvas id="hr-ms2" style="height:300px"></canvas>
           <div class="mut"><span class="fl-s">■ shifted (S)</span>: contains the modification · <span class="fl-u">■ unshifted (U)</span>: the modified part is outside the fragment · grey: no relation to the parent</div></div>` :
           `<div class="card mut">No DDA MS² for this ion: no localisation. A second injection with an inclusion list is needed.</div>`}
-        ${loc && loc.ok ? `<div class="card"><h3>Localisation</h3><div class="mut">${loc.n_sites} candidate sites · type ${esc(loc.type)} · ${loc.n_shifted} S fragments, ${loc.n_unshifted} U</div>
+        ${loc && loc.ok ? `<div class="card"><h3>Localisation</h3><div class="row"><button id="hr-cmp-tree">Compare with parent tree</button></div><div class="mut">${loc.n_sites} candidate sites · type ${esc(loc.type)} · ${loc.n_shifted} S fragments, ${loc.n_unshifted} U</div>
           <table><tr><th>Site</th><th>log-likelihood</th></tr>${loc.top_sites.map(t => `<tr><td>${esc(t.site)}</td><td class="n">${t.ll.toFixed(2)}</td></tr>`).join("")}</table>
           <table style="margin-top:6px"><tr><th><i>m/z</i></th><th>%</th><th>formula</th><th>evidence</th></tr>${loc.evidence.map(e => `<tr><td class="n">${e.mz.toFixed(4)}</td><td class="n">${e.rel.toFixed(0)}</td><td>${esc(e.formula)}</td><td class="${e.kind === "S" ? "fl-s" : "fl-u"}">${e.kind === "S" ? "S (shifted)" : "U (unshifted)"}</td></tr>`).join("")}</table></div>` : ""}
         ${d.iimn ? `<div class="card"><h3>Ion family (same peak)</h3><div class="mut">${esc(d.iimn.explained_text || d.iimn.role || "")}</div></div>` : ""}
@@ -93,6 +94,8 @@
       chart($("#hr-kin"), series, { xlabel: "treatment time (min)" });
       $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("");
       if (d.ms2) mirror($("#hr-ms2"), d);
+      const cb = $("#hr-cmp-tree");
+      if (cb) cb.onclick = () => { window.TPALBERO && window.TPALBERO.compare(id); const t = $("#hr-tree"); if (t) t.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
     }
 
     function mirror(cv, d) {
@@ -137,13 +140,6 @@
     $("#hr-x-csv").onclick = () => exportAll("csv"); $("#hr-x-json").onclick = () => exportAll("json");
     $("#hr-x-incl").onclick = async () => dl((s.parent.formula || "parent") + "_inclusion.csv", await h.callRaw("inclusion_csv", "50"), "text/csv");
     if (rows.length) show(rows[0].id);
-  }
-
-  function tree(nodes, esc) {
-    const kids = {}; nodes.forEach(n => (kids[n.parent ?? "root"] = kids[n.parent ?? "root"] || []).push(n));
-    const go = (key, depth) => (kids[key] || []).map(n => `<div class="nd" style="margin-left:${depth * 16}px">${n.ghost ? "👻 " : ""}<b>MS${n.level}</b> ${n.prec_mz != null ? `<i>m/z</i> ${n.prec_mz}` : ""} ${esc(n.formula || "")} <span class="mut">${n.n_scans} scans${n.ce != null ? " · CE " + esc(n.ce) : ""}${n.ghost ? " · ghost (precursor not isolated)" : ""}</span>
-      <div class="mut" style="margin-left:14px"><code>${n.peaks.slice(0, 6).map(p => esc(p.formula || p.mz)).join(" · ")}</code></div></div>${go(n.id, depth + 1)}`).join("");
-    return go("root", 0);
   }
 
   window.TPHR = { render };

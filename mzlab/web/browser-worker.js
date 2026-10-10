@@ -1,12 +1,17 @@
 // Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab package as the local program.
 import { loadPyodide } from "./pyodide/pyodide.mjs";
 
-const say = text => postMessage({ type: "step", text });
+// a step of the start: a catalog key (shown by the loading screen in the language of the page) and the percentage when known
+const say = (key, pct = null, params) => postMessage({ type: "step", key, pct, params });
 const WORK = "/work/sessione";
+const Q = new URL(import.meta.url).searchParams;
+const STALL = +Q.get("r") || 30000;     // ms without any progress while reopening the saved files (?ripresa=ms on the page, for the tests)
+const FRESH = Q.get("riparti") === "1"; // «start from scratch»: the saved files and the notebook are deleted
 
 // ---- the browser's own storage (IndexedDB): files and notebook survive a reload, like the work folder of the local program
 const DB = "qqq_lab"; // kept from the old name: renaming it would lose the users' data
-const idb = () => new Promise((res, rej) => {
+let dbP = null;      // one connection for the whole life of the worker; it closes itself when another tab needs to upgrade the database
+const idb = () => dbP || (dbP = new Promise((res, rej) => {
   const r = indexedDB.open(DB, 2);
   r.onupgradeneeded = () => {
     const db = r.result;
@@ -14,11 +19,13 @@ const idb = () => new Promise((res, rej) => {
     if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
     if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
   };
-  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-});
+  r.onblocked = () => postMessage({ type: "blocked" });     // another tab holds an older connection: the upgrade waits until it is closed
+  r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbP = null; }; res(db); };
+  r.onerror = () => rej(r.error);
+}).catch(e => { dbP = null; throw e; }));
 const tx = async (store, mode, fn) => {
   const db = await idb();
-  return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = () => rej(t.error); });
+  return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };   // private windows may refuse storage: the program still works, it just does not resume
 
@@ -42,34 +49,50 @@ const IDX = new URL("./pyodide/", import.meta.url).href;
 const zipP = fetch(new URL("./mzlab.zip", import.meta.url)).then(r => r.arrayBuffer());
 zipP.catch(() => {});
 fetch(IDX + "pyodide-lock.json").then(r => r.json()).then(l => fetch(IDX + l.packages.numpy.file_name)).then(r => r.arrayBuffer()).catch(() => {});
+// rejects when nothing moved for STALL ms: a database that never answers must not keep the loading screen forever
+function stallGuard() {
+  let t, rej; const p = new Promise((_, r) => { rej = r; });
+  const tick = () => { clearTimeout(t); t = setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), STALL); };
+  tick(); p.catch(() => {}); return { p, tick, stop: () => clearTimeout(t) };
+}
+const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
+async function resume(tick) {
+  say("load.step.resume", 60);
+  if (FRESH) { await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000); }
+  const names = FRESH ? [] : await safe(() => tx("files", "readonly", s => s.getAllKeys()));
+  tick(); say("load.step.resume", 62);
+  const bigs = [];
+  let i = 0;
+  for (const n of names || []) {
+    const buf = await safe(() => tx("files", "readonly", s => s.get(n)));
+    tick(); say("load.step.resume", 62 + 36 * (++i / names.length));
+    if (!buf) continue;
+    if (typeof Blob !== "undefined" && buf instanceof Blob) bigs.push([n, buf]);        // a big file: mounted below, once Python is up
+    else py.FS.writeFile(`${WORK}/${n}`, new Uint8Array(buf));
+  }
+  const nb = FRESH ? null : await safe(() => tx("kv", "readonly", s => s.get("notebook")));
+  if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
+  for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] big file not reopened", n, e); } }
+}
 async function start() {
   try {
-    say("Loading Python...");
+    say("load.step.python", 5);
     py = await loadPyodide({ indexURL: IDX });
-    say("Loading numpy...");
+    say("load.step.numpy", 30);
     await py.loadPackage("numpy");
-    say("Loading the program...");
+    say("load.step.program", 50);
     const zip = await zipP;
     py.FS.mkdirTree("/qqq");
     py.unpackArchive(zip, "zip", { extractDir: "/qqq" });
     py.FS.mkdirTree(WORK);
-    say("Reopening the files of the last visit...");
-    const names = await safe(() => tx("files", "readonly", s => s.getAllKeys()));
-    const bigs = [];
-    for (const n of names || []) {
-      const buf = await safe(() => tx("files", "readonly", s => s.get(n)));
-      if (!buf) continue;
-      if (typeof Blob !== "undefined" && buf instanceof Blob) bigs.push([n, buf]);        // a big file: mounted below, once Python is up
-      else py.FS.writeFile(`${WORK}/${n}`, new Uint8Array(buf));
-    }
-    const nb = await safe(() => tx("kv", "readonly", s => s.get("notebook")));
-    if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
-    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] big file not reopened", n, e); } }
+    const g = stallGuard();
+    try { await Promise.race([resume(g.tick), g.p]); } finally { g.stop(); }
+    say("load.step.start", 99);
     py.runPython("import sys; sys.path.insert(0, '/qqq')\nfrom mzlab import browser\nbrowser.start()");
     handle = py.runPython("browser.handle");
     linkBig = py.runPython("browser.link_big");
     postMessage({ type: "ready" });
-  } catch (e) { postMessage({ type: "fatal", text: String(e && e.message || e) }); }
+  } catch (e) { postMessage({ type: "fatal", text: String(e && e.message || e), key: e && e.key }); }
 }
 const started = start();
 
