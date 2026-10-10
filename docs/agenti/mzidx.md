@@ -1,5 +1,5 @@
 # `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`)
-Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. 
+Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
 
 ## Formato (tutto little-endian, nessuna compressione)
 ```
@@ -27,12 +27,13 @@ total      dimensione del file: un file di dimensione diversa (troncato) non si 
 1. Le scansioni sono già nella tabella di `Run`: con un `indexList` (indexedmzML) le posizioni degli spettri vengono da lì e si leggono solo le intestazioni (fino a `<binaryDataArrayList`), mai i dati binari; senza `indexList` si percorre il file come prima (`Run._spans`).
 2. Ogni scansione si decodifica una volta (`Run.read`) e i suoi picchi vanno, a gruppi di ~1 M di picchi, in secchi di 1 unità di m/z (0…9999, i valori fuori scala negli estremi); oltre `BUILD_BYTES` (64 MB, divisi per le sezioni) i secchi si scaricano in un file temporaneo. La memoria resta limitata: non si concatena mai tutto il file.
 3. Secchio per secchio, nell'ordine di m/z, si ordina in modo stabile e si scrive nei tre array; il primo m/z di ogni blocco entra in `fence`.
-Il risultato è identico alla tabella in memoria (`Run.table`): lo verifica `tests/test_mzidx.py` su tutti i file di esempio e sui sintetici.
+Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo verifica `tests/test_mzidx.py` su tutti i file di esempio e sui sintetici.
 
 ## Lettura
 - `open(path)` → `MzIdx`: `meta`, `scans()` (le `Scan` come le dà il lettore dell'mzML), `table(livello, polarità)` → `PeakTable` i cui `mz`, `inten`, `pos` sono `LazyArray`.
 - `LazyArray`: `a[i:j]` legge la fetta (fino a 2 blocchi dalla cache a blocchi di 16384 elementi, oltre direttamente dal file); `searchsorted` usa `fence` e legge un solo blocco; maschere, operatori e `np.asarray` la leggono intera (temporaneamente).
 - **Cache a blocchi**: LRU condivisa da tutti i file, tetto `CACHE_BYTES` = 64 MB (`CACHE_BYTES_SMALL` = 32 MB su tablet e telefono, `set_cache_limit`). Il tetto sta solo in `mzidx.py`.
+- `PeakTable.iter_chunks()`, `sum_by_scan()`, `base_peaks()` percorrono la tabella a pezzi (somme nello stesso ordine di `np.bincount` sull'intera tabella, quindi bit per bit uguali).
 
 ## Dove sta
-`mzidx.cache_dir()` = `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`); `index_name(percorso)` = SHA-1 di percorso reale, dimensione e data; `trim(cartella, limite)` cancella i più vecchi.
+`Run.table` costruisce l'indice alla prima richiesta (TIC dichiarato e scansioni vengono dall'mzML, non serve prima) in `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; `index_name`: SHA-1 di percorso reale, dimensione e data) e lo apre; alla riapertura `Run` prende tabella delle scansioni, impronta e conteggi dall'indice e non percorre gli spettri. Se l'indice non si può scrivere, `Run.table` costruisce la tabella in memoria come prima (`table_reference`). `mzidx.trim(cartella, limite)` cancella i più vecchi.

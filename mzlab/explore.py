@@ -230,15 +230,7 @@ class Item:
         n = len(ids)
         bpm = np.zeros(n); bpi = np.zeros(n)
         if n and len(t.pos):
-            cache = self.run.__dict__.setdefault("_bpk", {})
-            if level not in cache:                                    # per scan: the highest peak (computed once per level)
-                o = np.lexsort((t.inten, t.pos))
-                ps = t.pos[o]
-                last = np.r_[np.flatnonzero(ps[1:] != ps[:-1]), len(ps) - 1]
-                m = np.zeros(len(t.scan_ids)); y = np.zeros(len(t.scan_ids))
-                m[ps[last]] = t.mz[o][last]; y[ps[last]] = t.inten[o][last]
-                cache[level] = (m, y)
-            m, y = cache[level]
+            m, y = t.base_peaks()                                     # per scan: the highest peak (computed once per table)
             at = {int(i): k for k, i in enumerate(t.scan_ids)}
             sel = np.array([at[int(i)] for i in ids])
             bpm, bpi = m[sel], y[sel]
@@ -456,12 +448,10 @@ class Item:
         if len(t.rt) == 0:
             return np.zeros(0), np.zeros(0)
         if mz0 is not None or mz1 is not None:          # only the ions inside [mz0, mz1] (None = open end)
-            keep = np.ones(len(t.mz), dtype=bool)
-            if mz0 is not None:
-                keep &= t.mz >= mz0
-            if mz1 is not None:
-                keep &= t.mz <= mz1
-            pos, inten = t.pos[keep], t.inten[keep]
+            dt = t.mz.dtype.type
+            a = 0 if mz0 is None else int(np.searchsorted(t.mz, dt(mz0), side="left"))
+            b = len(t.mz) if mz1 is None else int(np.searchsorted(t.mz, dt(mz1), side="right"))
+            pos, inten = t.pos[a:max(a, b)], t.inten[a:max(a, b)]
             if kind == "tic":
                 return t.rt, np.bincount(pos, weights=inten, minlength=len(t.rt))
             out = np.zeros(len(t.rt))
@@ -472,17 +462,8 @@ class Item:
                 out[ps[starts]] = np.maximum.reduceat(ys, starts)
             return t.rt, out
         if kind == "tic":
-            return t.rt, np.bincount(t.pos, weights=t.inten, minlength=len(t.rt))
-        key = level
-        if key not in self._bpc:
-            order = np.argsort(t.pos, kind="stable")
-            ps, ys = t.pos[order], t.inten[order]
-            out = np.zeros(len(t.rt))
-            if len(ps):
-                starts = np.flatnonzero(np.r_[True, ps[1:] != ps[:-1]])
-                out[ps[starts]] = np.maximum.reduceat(ys, starts)
-            self._bpc[key] = out
-        return t.rt, self._bpc[key]
+            return t.rt, t.sum_by_scan()
+        return t.rt, t.base_peaks()[1]
 
     def xic(self, mz: float, tol: float, level: int = 1):
         t = self._tbl(level)
@@ -506,10 +487,14 @@ class Item:
             span = max(grid["rt1"] - grid["rt0"], 1e-9)
             scan_bin = np.clip(np.floor((t.rt - grid["rt0"]) / span * nrt).astype(np.int64), 0, nrt - 1)
             n_scans = np.bincount(scan_bin, minlength=nrt)
-            i = scan_bin[t.pos]
-            j = np.floor((t.mz - grid["mz0"]) / grid["dmz"]).astype(np.int64)
-            ok = (j >= 0) & (j < nmz)
-            acc = np.bincount(i[ok] * nmz + j[ok], weights=t.inten[ok], minlength=nrt * nmz).reshape(nrt, nmz)
+            cells = np.arange(nrt * nmz)
+            acc = np.zeros(nrt * nmz)
+            for mz, inten, pos in t.iter_chunks():                         # the peaks in pieces; the running sums go first so the additions keep their order
+                i = scan_bin[pos]
+                j = np.floor((mz - grid["mz0"]) / grid["dmz"]).astype(np.int64)
+                ok = (j >= 0) & (j < nmz)
+                acc = np.bincount(np.concatenate([cells, i[ok] * nmz + j[ok]]), weights=np.concatenate([acc, inten[ok]]), minlength=nrt * nmz)
+            acc = acc.reshape(nrt, nmz)
             out = (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
         cache[key] = out
         return out
@@ -588,8 +573,8 @@ class Item:
         n = int(ok.sum())
         if n == 0:
             return (*e, 0)
-        m = ok[t.pos]
-        mz, y = t.mz[m], t.inten[m]
+        parts = [(mz[m], y[m]) for mz, y, pos in t.iter_chunks() for m in (ok[pos],)]
+        mz, y = (np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts])) if parts else (np.zeros(0), np.zeros(0))
         if len(mz) == 0:
             return (*e, n)
         if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly (read from the file: the peak table of a high-resolution file is float32)

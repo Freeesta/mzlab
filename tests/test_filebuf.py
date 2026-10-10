@@ -90,8 +90,8 @@ def test_session_opens_a_file_in_file_mode(d, monkeypatch):
     assert np.array_equal(xa[1], xb[1]) and s.items[0].info()["scans"] == ref.items[0].info()["scans"]
 
 
-def test_high_resolution_table_is_float32_and_xic_agrees(d):
-    a, b = Run(d / "full.mzML"), Run(d / "full.mzML")
+def test_high_resolution_table_is_float32_and_xic_agrees(d, tmp_path):
+    a, b = Run(d / "full.mzML", index_path=tmp_path / "a.mzidx"), Run(d / "full.mzML", index_path=tmp_path / "b.mzidx")      # the width of the table is written in the index: one each
     b.hr1 = True
     ta, tb = a.table(1), b.table(1)
     assert ta.mz.dtype == np.float64 and tb.mz.dtype == np.float32 and tb.inten.dtype == np.float32 and tb.pos.dtype == np.int32
@@ -101,7 +101,7 @@ def test_high_resolution_table_is_float32_and_xic_agrees(d):
     assert xa.shape == xb.shape and np.allclose(xa, xb, rtol=1e-5)
     assert np.allclose(ta.xic(194.2, 0.01), tb.xic(194.2, 0.01), rtol=1e-5)
     a.close(); b.close()
-    ms2 = Run(d / "ms2.mzML")
+    ms2 = Run(d / "ms2.mzML", index_path=tmp_path / "c.mzidx")
     ms2.hr1 = True                                       # only level 1 is float32
     assert ms2.table(2).mz.dtype == np.float64
 
