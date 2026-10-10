@@ -126,7 +126,7 @@ fn index_entries_match_the_peaks() {
         let (mq, _) = lib.peaks_q(i).unwrap();
         for m in mq {
             assert!(seen.contains_key(&(i, m)), "fragment entry of spectrum {i}");
-            let nl = ((r.prec - m as f64 / 1e5) * 1e5).round() as u32;
+            let nl = (r.prec * 1e5).round() as u32 - m;
             assert!(
                 nl_seen.contains(&(i, nl)),
                 "neutral loss entry of spectrum {i}"

@@ -2,7 +2,7 @@
 //! (polarity, precursor) order and streamed into the peak and metadata blocks, while the Flash index entries are routed to m/z buckets in the
 //! scratch space and sorted one bucket at a time. In memory: one small key per spectrum, the open blocks and one bucket.
 
-use crate::clean::{clean, dequant_mz, quant_mz, weighted, CleanOpts, MAX_MZ};
+use crate::clean::{clean, quant_mz, weighted, CleanOpts, MAX_MZ};
 use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
@@ -229,9 +229,10 @@ impl<T: Scratch> Builder<T> {
                 let mq = mzq_list[j];
                 let b = ((mq / BUCKET_WIDTH) as usize).min(BUCKETS - 1);
                 self.store.append(S_FRAG + b, &entry_bytes(mq, i, q))?;
-                let nl = ((prec - dequant_mz(mq)) * crate::clean::MZ_SCALE).round();
-                if nl >= 1.0 && nl < u32::MAX as f64 {
-                    let nq = nl as u32;
+                // neutral loss in units of 1e-5 Da, from the rounded precursor: the reader recovers the fragment as `precursor_q - loss`
+                let pq = quant_mz(prec);
+                if pq > mq {
+                    let nq = pq - mq;
                     let b = ((nq / BUCKET_WIDTH) as usize).min(BUCKETS - 1);
                     self.store.append(S_NL + b, &entry_bytes(nq, i, q))?;
                 }
