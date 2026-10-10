@@ -49,6 +49,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, mappa, barra laterale, liste, tour | `docs/agenti/dati.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
+| formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (e `teoria/LEGGIMI.md` se scrivi capitoli) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |

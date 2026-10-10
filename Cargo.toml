@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop"]
+members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib"]
 
 [workspace.package]
 version = "0.1.0"

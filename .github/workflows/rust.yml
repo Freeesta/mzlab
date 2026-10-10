@@ -41,12 +41,16 @@ jobs:
         run: cargo test --locked --release
       - name: WASM build (release)
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+      - name: The libraries crate builds for WASM
+        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib
       - name: No native dependencies in the WASM graph
         run: |
-          tree=$(cargo tree --locked --target wasm32-unknown-unknown -p mzlab-wasm)
-          if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
-            echo "::error::forbidden dependency in the WASM graph"; exit 1
-          fi
+          for p in mzlab-wasm mzlab-lib; do
+            tree=$(cargo tree --locked --target wasm32-unknown-unknown -p $p)
+            if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
+              echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
+            fi
+          done
       - name: fmt (warning only)
         run: cargo fmt --all --check || echo "::warning::cargo fmt differences"
       - name: clippy (warning only)
