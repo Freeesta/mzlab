@@ -38,6 +38,12 @@ Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).
 - **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
 
+## Come citare
+
+Se usi mzLab nel corso o in una pubblicazione, cita il software con i dati di [`CITATION.cff`](CITATION.cff) (il pulsante «Cite this repository» di GitHub li formatta):
+
+> Cristaudo, F. *mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products*. Università degli Studi di Torino. https://freeesta.github.io/mzlab/ (codice: https://github.com/Freeesta/mzlab, licenza MIT). DOI Zenodo: da assegnare alla prima release.
+
 ## Limiti noti
 
 - Non ancora validato contro il software dello strumento su più composti.

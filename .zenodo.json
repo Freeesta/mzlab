@@ -1,0 +1,33 @@
+{
+  "title": "mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products",
+  "upload_type": "software",
+  "description": "<p>mzLab is a free teaching program that runs entirely in the web browser (Python and numpy via Pyodide). Students explore real LC-MS data from a triple quadrupole at unit resolution, and high-resolution Orbitrap and Q-TOF files, to search for the transformation products of a pollutant degraded by photocatalysis. The program shows the data and does not give the answers. It includes theory chapters and practice games (Italian), a chemical structure editor, and requires no installation, no account and no tracking: files never leave the user's computer.</p>",
+  "creators": [
+    {
+      "name": "Cristaudo, Federico",
+      "affiliation": "Università degli Studi di Torino"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "mass spectrometry",
+    "LC-MS",
+    "transformation products",
+    "chemical education",
+    "non-target screening",
+    "WebAssembly"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/Freeesta/mzlab",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://freeesta.github.io/mzlab/",
+      "relation": "isIdenticalTo",
+      "scheme": "url"
+    }
+  ]
+}
