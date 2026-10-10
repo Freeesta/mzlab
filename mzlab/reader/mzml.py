@@ -316,8 +316,53 @@ class Run:
             self._mm.release()
 
     # ------------------------------------------------------------------ index
-    def _index(self):
-        mm, pos, refs, level_of = self._mm, 0, {}, {}
+    def _spectrum_offsets(self):
+        """Start of every <spectrum> as the indexList of an indexedmzML says, or None (no indexList, or it does not match the file)."""
+        mm, n = self._mm, len(self._mm)
+        tail = mm[max(n - 2048, 0):n]
+        m = re.search(rb"<indexListOffset>\s*(\d+)\s*</indexListOffset>", tail)
+        if not m or int(m.group(1)) >= n:
+            return None
+        blob = mm[int(m.group(1)):n]
+        a = re.search(rb'<index\s+name="spectrum"\s*>', blob)
+        if not a:
+            return None
+        e = blob.find(b"</index>", a.end())
+        offs = [int(x) for x in re.findall(rb"<offset[^>]*>\s*(\d+)\s*</offset>", blob[a.end():e if e > 0 else len(blob)])]
+        if not offs or any(y <= x for x, y in zip(offs, offs[1:])) or mm[offs[0]:offs[0] + 10] != b"<spectrum " or mm[offs[-1]:offs[-1] + 10] != b"<spectrum ":
+            return None
+        return offs
+
+    def _spans(self):
+        """(start, end, header text) of every spectrum. With an indexList only the header of each spectrum is read (up to <binaryDataArrayList), not its data."""
+        mm = self._mm
+        offs = self._spectrum_offsets()
+        if offs is not None:
+            last = mm.find(b"</spectrum>", offs[-1])
+            if last < 0:
+                offs = None
+        if offs is not None:
+            nxt = offs[1:] + [last + len(b"</spectrum>") + 1]
+            for a, limit in zip(offs, nxt):
+                n = 4096
+                while True:
+                    chunk = mm[a:min(a + n, limit)]
+                    c = chunk.find(b"<binaryDataArrayList")
+                    if c >= 0 or a + n >= limit:
+                        break
+                    n *= 4
+                if c < 0:
+                    b = a + len(chunk)
+                    e = chunk.rfind(b"</spectrum>")
+                    b = a + e + len(b"</spectrum>") if e >= 0 else b
+                    c = None
+                else:
+                    tail = mm[max(limit - 64, a):limit]
+                    e = tail.rfind(b"</spectrum>")
+                    b = max(limit - 64, a) + e + len(b"</spectrum>") if e >= 0 else limit
+                yield a, b, chunk[:c if c is not None else len(chunk)].decode("utf-8", "replace")
+            return
+        pos = 0
         while True:
             a = mm.find(b"<spectrum ", pos)
             if a < 0:
@@ -327,7 +372,12 @@ class Run:
                 break
             b += len(b"</spectrum>")
             c = mm.find(b"<binaryDataArrayList", a, b)
-            h = mm[a:(c if c > 0 else b)].decode("utf-8", "replace")
+            yield a, b, mm[a:(c if c > 0 else b)].decode("utf-8", "replace")
+            pos = b
+
+    def _index(self):
+        refs, level_of = {}, {}
+        for a, b, h in self._spans():
             m = re.search(r'\sid="([^"]*)"', h)
             lvl = _cv(h, "MS:1000511")
             pol = 1 if 'accession="MS:1000130"' in h else -1 if 'accession="MS:1000129"' in h else 0
@@ -375,7 +425,6 @@ class Run:
                 path=path, precursors=precs, charge=imm["charge"] if imm else None))
             if m:
                 level_of[m.group(1)] = lvl_i
-            pos = b
         self._link_parents(refs)
 
     # ------------------------------------------------------------------ arrays
