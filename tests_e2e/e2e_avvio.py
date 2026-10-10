@@ -38,7 +38,7 @@ try:
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(URL + "?ripresa=4000")
             pg.wait_for_function("document.getElementById('ldmsg') && /altra scheda/.test(document.getElementById('ldmsg').textContent)", timeout=90000)
-            bar = pg.locator("#ldbar"); assert bar.get_attribute("role") == "progressbar"
+            assert pg.locator("#ldbar").count() == 0, "bar on the loading screen"
             assert pg.locator("#ldsub").count() == 0, "second status line"
             pg.wait_for_selector("#ldact button", timeout=60000)
             assert "Riparti da zero" in pg.inner_text("#ldact") and "non risponde" in pg.inner_text("#ldmsg"), pg.inner_text("#loading")
@@ -62,13 +62,23 @@ try:
             assert left[0] == 0 and left[1] is None, left
             pg.close()
         step("«start from scratch» deletes the saved files and the notebook", keeps_notebook)
-        def bar_while_loading():
+        def status_while_loading():
             holder.evaluate(GONE)
             pg = ctx.new_page(); pg.goto(URL)
-            pg.wait_for_selector("#ldbar", state="attached")
-            assert pg.locator("#ldbar").get_attribute("role") == "progressbar" and pg.locator("#ldmsg").count() == 1
+            pg.wait_for_selector("#ldmsg", state="attached")
+            assert pg.locator("#ldbar").count() == 0 and pg.locator("#loading [role=progressbar]").count() == 0, "bar on the loading screen"
+            assert pg.get_attribute("#ldmsg", "role") == "status" and pg.get_attribute("#loading", "aria-busy") == "true"
+            seen = set()
+            def poll():
+                t = pg.evaluate("document.getElementById('ldmsg') ? document.getElementById('ldmsg').textContent : ''")
+                if t: seen.add(t)
+                return not pg.locator("#loading").is_visible() or pg.locator("#drop").count() > 0
+            for _ in range(240):
+                if poll(): break
+                pg.wait_for_timeout(250)
+            assert seen, "status line never had text"
             pg.wait_for_selector("#drop", timeout=120000); pg.close()
-        step("one status line and a progressbar on the loading screen", bar_while_loading)
+        step("one status line (role=status) and no bar on the loading screen", status_while_loading)
         b.close()
 finally:
     srv.terminate()

@@ -180,11 +180,6 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
 #ldion{width:min(80vw,380px);height:auto;display:block}
 #ldmsg{font-size:15px;max-width:520px;min-height:44px}
-#ldbar{width:min(80vw,320px);height:6px;margin:10px auto 0;border-radius:3px;overflow:hidden;background:var(--line);position:relative}
-#ldbar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:3px;animation:ldslide 1.4s ease-in-out infinite}
-#ldbar.det i{width:var(--ldp,0%);animation:none;transition:width .25s}
-@keyframes ldslide{0%{margin-left:-35%}100%{margin-left:100%}}
-@media (prefers-reduced-motion: reduce){#ldbar i{animation:none;width:100%;opacity:.5}#ldbar.det i{width:var(--ldp,0%);opacity:1;transition:none}}
 #ldact{margin-top:12px}#ldact .btn{margin:0 4px}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
@@ -292,7 +287,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li data-i18n="bt.step4">Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li data-i18n-html="bt.step5">Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open" data-i18n="bt.reopen">Riapri BioTransformer</button><span class="sp"></span><button id="btx2" data-i18n="common.close">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg"></div><div id="ldbar" role="progressbar" aria-labelledby="ldmsg" aria-valuemin="0" aria-valuemax="100"><i></i></div><div id="ldact" hidden></div></div>
+<div id="loading" aria-busy="true"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
 <script>
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
@@ -381,13 +376,12 @@ function ldIon(on, mode) {
 let ldMsg = null;
 function ldRefresh() {
   const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
-  const bar = document.getElementById("ldbar"), el = document.getElementById("ldmsg");
-  if (!bar || !el || window.qqFailed) return;
-  if (!cur) { bar.classList.remove("det"); bar.removeAttribute("aria-valuenow"); bar.removeAttribute("aria-valuetext"); if (!ldTimer) return; return ldNext(); }
+  const el = document.getElementById("ldmsg");
+  if (!el || window.qqFailed) return;
+  if (!cur) { el.setAttribute("aria-live", "off"); if (!ldTimer) return; return ldNext(); }
   clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
-  el.textContent = cur.text + (pct == null ? "" : ` ${pct}%`);
-  bar.classList.toggle("det", pct != null);
-  if (pct == null) { bar.removeAttribute("aria-valuenow"); bar.removeAttribute("aria-valuetext"); } else { bar.setAttribute("aria-valuenow", pct); bar.setAttribute("aria-valuetext", `${cur.text} ${pct}%`); bar.style.setProperty("--ldp", pct + "%"); }
+  el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
+  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
 }
 function ldAction(label, fn) {                                   // a button under the status line (stuck start: «start from scratch»)
   const a = document.getElementById("ldact"); a.textContent = ""; a.hidden = !label; if (!label) return;
