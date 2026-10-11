@@ -9,10 +9,12 @@ pub mod mzidx;
 pub mod mzml;
 pub mod peakq;
 pub mod peaks;
+pub mod project;
 pub mod raw;
 pub mod rois;
 pub mod routes;
 pub mod scantable;
+pub mod specpeaks;
 
 pub use error::{Error, Result};
 
