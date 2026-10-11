@@ -107,6 +107,28 @@ def i18n(results) -> None:
     results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
+def codice(results) -> None:
+    """The map of the code is up to date (tools/indice.py) and the size limits do not get worse (tools/controlla.py)."""
+    for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
+        t0 = time.time()
+        p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = (p.stdout or "") + (p.stderr or "")
+        (LOG / f"{script[:-3]}.log").write_text(out, encoding="utf-8")
+        results.append((name, "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
+def noti_rossi() -> dict[str, str]:
+    """tools/noti_rossi.txt: `name | reason` per line, `#` comments. A FAIL of one of these is reported as NOTO (not blocking)."""
+    f = ROOT / "tools" / "noti_rossi.txt"
+    out: dict[str, str] = {}
+    if f.exists():
+        for l in f.read_text(encoding="utf-8").splitlines():
+            if l.strip() and not l.lstrip().startswith("#"):
+                n, _, why = l.partition("|")
+                out[n.strip()] = why.strip()
+    return out
+
+
 def teoria(results) -> None:
     """Teoria chapters: structure, accessibility, markers, noindex; with MZLAB_DATI also forbidden names and copying (tools/controlla_teoria.py)."""
     t0 = time.time()
@@ -236,7 +258,8 @@ CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js") 
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_tema_lampo", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi", "e2e_teoria_cerca", "e2e_teoria_transizione"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_pratica_ei_set", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_tema_lampo", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi", "e2e_teoria_cerca", "e2e_teoria_strumenti", "e2e_teoria_nav", "e2e_teoria_transizione"}),
+    ("mzlab/web/tavola-periodica.js", {"e2e28", "e2e6", "e2e_teoria_strumenti"}),
     ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
     ("tools/tema_testa.py", {"e2e_tema_lampo"}), ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}),
@@ -257,6 +280,7 @@ AREE = [
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_lr", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/lr", {"e2e_lr"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust", "e2e_lr"}), ("mzlab/web/qualita", {"e2e_picchi_qualita"}), ("mzlab/web/peaks-worker", {"e2e_picchi_qualita"}), ("tests_e2e/e2e_picchi_qualita.py", {"e2e_picchi_qualita"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
+    ("mzlab/web/transizioni", {"e2e_transizioni", "e2e_pannello", "e2e_cassetto"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti"}), ("mzlab/web/barra.js", {"e2e_strumenti", "e2e_pannello", "e2e_cassetto", "e2e_barra_hint", "e2e_barra", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
     ("mzlab/web/grafici.js", {"e2e_sottrazione", "e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour", "e2e_asse_x"}),
@@ -375,6 +399,7 @@ def main() -> None:
     if not a.fumo and not a.ultimi_falliti:
         js_syntax(results)
         i18n(results)
+        codice(results)
         if a.teoria:
             teoria(results)
         pytest(results, 1200)
@@ -393,6 +418,10 @@ def main() -> None:
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
+    noti = noti_rossi()
+    results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
+               (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
+               for n, st, dt, notes in results]
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
