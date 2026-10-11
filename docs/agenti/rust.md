@@ -8,6 +8,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
   - `peaks.rs` (porta riga per riga di `ionfamily.detect_peaks`)
   - `peakq.rs` (misure di qualità di un picco — somiglianza gaussiana, asimmetria al 10 %, punteggio di rumore — e il secondo rilevatore «prominenza + minimo locale» con bordi alle valli e aree sul segnale grezzo; senza riferimento Python: le prove sono tracce sintetiche in `peakq::tests`),  `entropy.rs` (somiglianza di entropia spettrale)
   - `mzidx.rs` (costruttore del `.mzidx` in streaming, vedi sotto)
+  - `crates/mzlab-feat`: tracce di massa MS1 a lastre di m/z (`trace::detect`, porta di `features.detect`), vedi `docs/agenti/mzfeat.md`
   - `project.rs` (tipo, tempo e concentrazione dal nome del file: `guess_sample`, `guess_conc` come `mzlab/project.py`, senza regex; prova `tests/project_parity.rs` su ~36000 nomi generati da `tools/project_riferimento.py`)
   - `specpeaks.rs` (`profile_peaks`, `merge_unit`, `pad_zeros` come `mzlab/peaks.py`; prova `tests/specpeaks_parity.rs`, spettri sintetici di `tools/specpeaks_riferimento.py`; non ancora collegati alle rotte)
   - `project.rs` (tipo, tempo e concentrazione dal nome del file: `guess_sample`, `guess_conc` come `mzlab/project.py`, senza regex; prova `tests/project_parity.rs` su ~36000 nomi generati da `tools/project_riferimento.py`)
