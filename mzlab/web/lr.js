@@ -140,6 +140,7 @@ export function createLr({ rb }) {
       if (method === "GET") {
         if (path === "/api/state") return json(state());
         if (path === "/api/session") return json(session());
+        if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
         return null;
