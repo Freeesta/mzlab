@@ -4,6 +4,7 @@ pub mod analysis;
 pub mod entropy;
 pub mod error;
 pub mod idxread;
+pub mod iteminfo;
 pub mod json;
 pub mod mzidx;
 pub mod mzml;
