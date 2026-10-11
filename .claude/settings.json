@@ -11,7 +11,11 @@
       "Read(./.verifica/cache_massbank/**)",
       "Read(./site/**)",
       "Read(./.verifica/**)",
-      "Read(./.git/**)"
+      "Read(./.git/**)",
+      "Read(./**/__pycache__/**)",
+      "Read(./.pytest_cache/**)",
+      "Read(./**/*.egg-info/**)",
+      "Read(./docs/agenti/misure-diario.md)"
     ]
   },
   "autoCompactWindow": 350000
