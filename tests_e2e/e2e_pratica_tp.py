@@ -22,7 +22,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         url = f"http://127.0.0.1:{r.port}/static/teoria/pratica-tp.html"
-        pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.wait_for_selector("#g2 .st"); pg.wait_for_selector("#g3 .cin-svg")
+        pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.wait_for_selector("#g2 .st"); pg.wait_for_selector("#g3 .cin-svg"); pg.wait_for_selector("#g4 .st")
         def dm_level(lv):
             def f():
                 pg.select_option("#g1 .lv", str(lv)); pg.wait_for_timeout(100)
@@ -90,6 +90,21 @@ try:
         def cin_targets():
             n = pg.evaluate("[...document.querySelectorAll('#g3 select, #g3 button, #g3 input')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.height<24||r.width<24)}).length"); assert n == 0, n
         step("H3 controls are at least 24x24 px", cin_targets)
+        def ms2_level(lv):
+            def f():
+                pg.select_option("#g4 .lv", str(lv)); pg.wait_for_timeout(100)
+                e = pg.evaluate("GIOCHI_LC.last.ms2"); assert e["level"] == lv
+                assert pg.locator("#g4 table.cin-tab tr").count() == len(e["ions"]) + 1, "MS2 table missing"
+                pg.click("#g4 .hp"); assert "Aiuto 1" in pg.inner_text("#g4 .hpt")
+                pg.click(f"#g4 .opts button[data-id={e['bestIds'][0]}]"); assert "Coerente" in pg.inner_text("#g4 .st >> nth=0 >> .fb")
+                n = pg.evaluate("(()=>{const e=GIOCHI_LC.last.ms2;return LCMSN.infoOf(e,e.ions.find(x=>x.id===e.probeId))})()")
+                pg.fill("#g4 .nn", str(n)); pg.click("#g4 .ck2")
+                assert "Giusto." in pg.inner_text("#g4 .st >> nth=1 >> .fb") and "problemi · media 100" in pg.inner_text("#g4 .pts")
+            return f
+        for lv in (1, 2, 3): step(f"H7 level {lv}: lc-ms2 played to the end", ms2_level(lv))
+        def ms2_targets():
+            n = pg.evaluate("[...document.querySelectorAll('#g4 select, #g4 button, #g4 input')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.height<24||r.width<24)}).length"); assert n == 0, n
+        step("H7 controls are at least 24x24 px", ms2_targets)
         def keyboard():
             pg.click("#g1 .nw"); pg.focus("#g1 .opts button >> nth=0"); pg.keyboard.press("Enter")
             assert pg.evaluate("!document.querySelectorAll('#g1 .st')[1].hasAttribute('inert')"), "step 2 not open"

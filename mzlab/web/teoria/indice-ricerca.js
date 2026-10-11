@@ -372,6 +372,7 @@ const INDICE_RICERCA = [
 ["Δm del prodotto di trasformazione", "sezione", "pratica-tp.html#h-dm", "Pratica", "δm del prodotto di trasformazione"],
 ["ESI+ ed ESI−", "sezione", "pratica-tp.html#h-esi", "Pratica", "esi+ ed esi− electrospray elettrospray"],
 ["Profili di un prodotto di trasformazione", "sezione", "pratica-tp.html#h-cin", "Pratica", "profili di un prodotto di trasformazione"],
+["Quale MSn fare", "sezione", "pratica-tp.html#h-ms2", "Pratica", "quale msn fare"],
 ["a, q (parametri di Mathieu)", "glossario", "21-glossario.html#g-a-q-parametri-di-mathieu", "Glossario", "a, q (parametri di mathieu)"],
 ["Accuratezza di massa / errore in ppm", "glossario", "21-glossario.html#g-accuratezza-di-massa-errore-in-ppm", "Glossario", "accuratezza di massa / errore in ppm"],
 ["Addotto", "glossario", "21-glossario.html#g-addotto", "Glossario", "addotto adduct m+h m+na"],
