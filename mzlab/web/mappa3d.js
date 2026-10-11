@@ -191,7 +191,7 @@ export function open(p, opener) {
   document.body.appendChild(dlg);
   const Q = k => dlg.querySelector(`[data-m="${k}"]`), glc = dlg.querySelector(".m3d-gl"), ovc = dlg.querySelector(".m3d-ov"), rd = dlg.querySelector(".m3d-read");
   const xicc = dlg.querySelector(".m3d-xic"), spcc = dlg.querySelector(".m3d-spc"), main = dlg.querySelector(".m3d-main"), ov = ovc.getContext("2d");
-  const num = el => { const v = parseFloat(String(el.value).replace(",", ".")); return Number.isFinite(v) ? v : null; };
+  const num = el => { const v = numIt(el.value); return Number.isFinite(v) ? v : null; };
 
   // the most intense cells of the grid, for the «Dati» table (tdati.js)
   if (window.TDATI) TDATI.addButton(glc, () => {
@@ -616,7 +616,7 @@ export function open(p, opener) {
     frame(s);
     const out = document.createElement("canvas"); out.width = glc.width; out.height = glc.height; const o = out.getContext("2d"); o.drawImage(glc, 0, 0); o.drawImage(ovc, 0, 0);
     glc.width = w0; glc.height = h0; ovc.width = w0; ovc.height = h0; ov.setTransform(d, 0, 0, d, 0, 0); V.dirty = true;
-    out.toBlob(bl => { const u = URL.createObjectURL(bl), a2 = document.createElement("a"); a2.href = u; a2.download = `${f.label}_3d.png`; document.body.appendChild(a2); a2.click(); a2.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }, "image/png");
+    out.toBlob(bl => { saveBlob(bl, `${f.label}_3d.png`); }, "image/png");
   }
 
   // ---- life cycle

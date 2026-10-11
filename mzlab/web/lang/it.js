@@ -500,6 +500,7 @@ I18N.add("it", {
   "error.engineRestarted": "Il motore Rust si è riavviato: i file sono stati riaperti, puoi continuare.",
   "error.engineFallback": "Il motore Rust si è fermato di nuovo: da qui in poi i calcoli tornano a Python (nessun dato perso).",
   "error.memoryBudget": "Il file è troppo grande per il motore Rust: lo legge Python.",
+  "lr.python.loading": "Sto caricando il motore di calcolo completo: serve per questa funzione, ci vuole qualche secondo.",
   "err.memory.tooBig": "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "err.memory.over4gb": "file oltre 4 GB: troppo grande. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "tabs.overview.title": "Tempi ed esperimenti",

@@ -13,9 +13,13 @@ import hashlib
 import json
 import re
 import shutil
+import sys
 import urllib.request
 import zipfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import tema_testa  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 PYODIDE = "314.0.7"                                   # Python 3.14 + numpy 2.4 in WebAssembly
@@ -124,7 +128,7 @@ def teoria_entry() -> str:
     """site/teoria/index.html: the short address of the Teoria (teoria/, teoria/#5 for a chapter). It only forwards to static/teoria/, the real
     page (no second copy to download, same files in the service-worker cache); teoria.js turns #5, #cap-5 or #09-quadrupolo into the chapter."""
     return (
-        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        '<!doctype html>\n<html lang="it"><head><meta charset="utf-8">' + tema_testa.snippet("teoria") + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
         f"<title>Teoria · {APP_NAME}</title>\n"
         '<script>location.replace("../static/teoria/index.html"+location.hash)</script>\n'
         '<noscript><meta http-equiv="refresh" content="0;url=../static/teoria/index.html"></noscript></head>\n'

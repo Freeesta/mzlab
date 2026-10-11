@@ -3,7 +3,7 @@
 // Also here: the short description of a chart (aria-describedby) and the live region that reads it only on request.
 // The "Dati" button, the T key on a focused chart and the entry of the right-click menu open the table; D reads the description.
 const T = (k, p) => I18N.t(k, p);
-const EH_ = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const EH_ = s => EH(s ?? "");
 let live = null, seq = 0;
 
 // ---- the description of a chart, linked to its canvas (aria-describedby); the live region announces it only when asked

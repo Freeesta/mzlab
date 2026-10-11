@@ -8,7 +8,7 @@
 const PROFILO = (() => {
   const KEY = "qqq.profilo";
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   let st = { text: "", rt: "", metric: "area", istd: "" };
   let res = null;                                              // last result {ion, rows, series, normalized, metric}

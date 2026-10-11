@@ -223,7 +223,7 @@ const BANCO = (() => {
     try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
     const blob = await new Promise(r => cvs.toBlob(r));
     try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg(I18N.t("bn.copied.img")); }
-    catch (e) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); info(I18N.t("bn.copied.dl")); }
+    catch (e) { saveBlob(blob, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
   }
   async function copyText(p) {
     const t = plotSheets(p); if (!t || !t[0]) return info(I18N.t("bn.noCopy"));
@@ -383,11 +383,11 @@ const BANCO = (() => {
     const read = async () => {
       const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg(I18N.t("bn.iso.typeFormula")); return null; }
       let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
-      const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, parseFloat(w.querySelector("[data-conc]").value.replace(",", ".")) || 0) })).filter(a => a.c > 0);
+      const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, numIt(w.querySelector("[data-conc]").value) || 0) })).filter(a => a.c > 0);
       if (!ads.length) { nearMsg(I18N.t("bn.iso.noSeries")); return null; }
       const o = { formula: r.formula, ad: ads[0].ad, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
       if (ads.length > 1 || ads[0].c !== 100) o.adds = ads;
-      const z0 = parseFloat(b.querySelector("#hri-z0").value.replace(",", ".")), hw = parseFloat(b.querySelector("#hri-hw").value.replace(",", "."));
+      const z0 = numIt(b.querySelector("#hri-z0").value), hw = numIt(b.querySelector("#hri-hw").value);
       if (z0 > 0 && (z0 > 1 || hw > 0)) o.cd = { z0, hw: hw > 0 ? hw : 0 };
       const mode = b.querySelector("#hri-rm").value, rv = b.querySelector("#hri-r").value.trim().replace(",", "."), x = parseFloat(rv);
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }

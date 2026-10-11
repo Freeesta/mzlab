@@ -7,7 +7,7 @@ window.MAPPA = (() => {
   const PREF_KEY = "qqq.mappa";
   const PREF = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(PREF_KEY) || "{}"); } catch (e) { /* no storage */ } return o; })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
-  const SIDE = 180, BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
@@ -341,7 +341,6 @@ window.MAPPA = (() => {
     draw(p); uiSave();
   }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
-  function lockAt(p, px, py) { const s = st(p), a = p._a; if (!a) return; s.lock = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; overlay(p); margins(p); }
   function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
   // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
   function ctx(p, e, px, py) {
@@ -509,7 +508,7 @@ window.MAPPA = (() => {
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
       `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`).join("")}</tbody></table></div>`;
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
-    box.querySelector('[data-t="grp"]').onchange = ev => { const v = parseFloat(String(ev.target.value).replace(",", ".")); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
+    box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
     box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };
@@ -776,7 +775,7 @@ window.MAPPA = (() => {
     g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
-    const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => parseFloat(String(el.value).replace(",", "."));
+    const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
     if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };

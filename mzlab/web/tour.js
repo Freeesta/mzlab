@@ -674,11 +674,6 @@ const TOUR = (() => {
       }
     },
 
-    ridisegna: () => {
-      if (!active) return;
-      renderStep();
-    },
-
     caricaEsempio: async () => {
       if (typeof loading === "function") loading(true, I18N.t("load.demo.opening"));
       try {
