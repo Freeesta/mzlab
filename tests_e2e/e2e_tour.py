@@ -156,7 +156,7 @@ try:
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 2 di 8 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Scansione per scansione", ttl
+        assert ttl == "Il pallino del cursore", ttl
 
         # ArrowLeft goes back to Step 1
         pg.keyboard.press("ArrowLeft")
