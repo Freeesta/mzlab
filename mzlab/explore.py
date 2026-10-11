@@ -292,6 +292,8 @@ class Item:
                        "ce": sorted({x.collision_energy for x in sc2 if x.collision_energy is not None}),
                        "iso": sorted({round((x.iso[1] - x.iso[0]) / 2, 3) for x in sc2 if x.iso})[:4], "res": med([x.res for x in sc2 if x.res]),
                        "inject": med(vals(sc2, "MS:1000927")), "an": self.profile(2)["an"]}
+                lo2 = vals(sc2[:50], "MS:1000501")
+                ms2["window_lo"] = min(lo2) if lo2 else None      # lower limit of the MS2 scan window (ion traps cut the spectrum there)
             return {"ms1": ms1, "ms2": ms2, "instrument": self.hr_info().get("instrument", "")}
         except Exception as e:  # noqa: BLE001 -- the window «Metodo» works without it
             return {"error": f"{type(e).__name__}: {e}"[:120]}

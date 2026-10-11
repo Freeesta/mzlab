@@ -111,7 +111,7 @@ const LIB = (() => {
   function queryOf(p) {
     const a = p._a, d0 = a && a.data && a.data[0]; if (!d0 || !d0.d) return null;
     const d = d0.d, y = d.y0 || d.y, f = d0.f, peaks = d.mz.map((m, i) => [m, y[i]]).filter(q => q[1] > 0);
-    const prec = [d.prec, p._prec, p.prec].map(Number).find(v => Number.isFinite(v) && v > 0);
+    const prec = [d.prec, p._prec, p.prec, d.scan && d.scan.prec].map(Number).find(v => Number.isFinite(v) && v > 0);
     const pol = f && f.polarity === "positive" ? 1 : f && f.polarity === "negative" ? -1 : 0;
     const rt = p.r0 != null ? (p.r0 + p.r1) / 2 : null;
     return { peaks, prec, pol, f, rt, title: `${(f && f.label) || ""}${rt != null ? " · RT " + rt.toFixed(2) + " min" : ""}` };
@@ -124,12 +124,25 @@ const LIB = (() => {
     const acc = css("--accent"), ink = css("--ink"), mut = css("--muted"), line = css("--line"), shc = css("--ok");
     g.clearRect(0, 0, W, H); g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
     const common = { q: new Set(r.pairs.map(p => p[0])), l: new Set(r.pairs.map(p => p[1])) };
+    // lines between the paired peaks (type 0 = same m/z, 1 = shifted by the precursor difference) and between peaks that share a neutral loss without sharing the m/z; what is drawn is recorded in cv.dataset
+    const nlp = [], nlq = new Set(), nll = new Set(), lines = [], tolNl = q.frag || 0.01, qy = i => mid - q.it[i] * half, ly = j => mid + r.it[j] * half, warn = css("--warn");
+    if (q.prec > 0 && r.prec > 0) {
+      const used = new Set((r.pairs || []).map(p => p[0] + "|" + p[1]));
+      for (let i = 0; i < q.mz.length; i++) for (let j = 0; j < r.mz.length; j++) {
+        const a = q.prec - q.mz[i], b = r.prec - r.mz[j];
+        if (a > 0.5 && b > 0.5 && Math.abs(a - b) <= tolNl && !used.has(i + "|" + j) && !nlq.has(i) && !nll.has(j)) { nlp.push([i, j]); nlq.add(i); nll.add(j); }
+      }
+    }
+    g.save(); g.globalAlpha = 0.55; g.lineWidth = 1;
+    (r.pairs || []).forEach(pr => { const t = pr[2] ? 1 : 0; lines.push([pr[0], pr[1], t]); g.beginPath(); g.setLineDash(t ? [5, 3] : []); g.strokeStyle = t ? shc : acc; g.moveTo(X(q.mz[pr[0]]), qy(pr[0])); g.lineTo(X(r.mz[pr[1]]), ly(pr[1])); g.stroke(); });
+    nlp.forEach(pr => { g.beginPath(); g.setLineDash([1, 3]); g.strokeStyle = warn; g.lineWidth = 1.5; g.moveTo(X(q.mz[pr[0]]), qy(pr[0])); g.lineTo(X(r.mz[pr[1]]), ly(pr[1])); g.stroke(); });
+    g.restore(); cv.dataset.lines = JSON.stringify(lines); cv.dataset.nl = JSON.stringify(nlp);
     g.lineWidth = 1.5; g.font = fpx(12);
     const shq = new Set((r.pairs || []).filter(p => p[2]).map(p => p[0])), shl = new Set((r.pairs || []).filter(p => p[2]).map(p => p[1]));      // analogues: peaks matched after the shift
     const bars = (mz, it, set, dir) => mz.forEach((m, i) => {
-      const hh = it[i] * half, sh = (dir > 0 ? shq : shl).has(i); g.strokeStyle = sh ? shc : set.has(i) ? acc : mut; g.lineWidth = set.has(i) ? 2 : 1.3;
+      const hh = it[i] * half, sh = (dir > 0 ? shq : shl).has(i), nl = (dir > 0 ? nlq : nll).has(i); g.strokeStyle = sh ? shc : nl ? warn : set.has(i) ? acc : mut; g.lineWidth = set.has(i) ? 2 : 1.3;
       g.beginPath(); g.moveTo(X(m), mid); g.lineTo(X(m), mid - dir * hh); g.stroke();
-      if (it[i] > 0.08) { g.fillStyle = sh ? shc : set.has(i) ? acc : mut; g.textAlign = "center"; g.fillText(m.toFixed(r.prec > 0 && q.hr ? 4 : 2), X(m), dir > 0 ? mid - hh - 4 : mid + hh + 13); }
+      if (it[i] > 0.08) { g.fillStyle = sh ? shc : nl ? warn : set.has(i) ? acc : mut; g.textAlign = "center"; g.fillText(m.toFixed(r.prec > 0 && q.hr ? 4 : 2), X(m), dir > 0 ? mid - hh - 4 : mid + hh + 13); }
     });
     bars(q.mz, q.it, common.q, 1); bars(r.mz, r.it, common.l, -1);
     g.strokeStyle = line; g.lineWidth = 1; g.beginPath(); g.moveTo(ml, mid); g.lineTo(W - mr, mid); g.stroke();
@@ -188,53 +201,32 @@ const LIB = (() => {
     ensureCss();
     const q = queryOf(p);
     if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
+    if (profOf(q.f).hr) return whatIs(p);                // high resolution: «What is it?» (identity and analogs together, level and evidence)
     let d = document.getElementById("libres");
     if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
-    const prof = profOf(q.f), st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: prof.hr ? 0.01 : 0.5, hr: prof.hr, res: null, sel: 0, tab: "id", an: null, n: 1, decided: "" };
+    const prof = profOf(q.f), st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: 0.5, res: null, sel: 0 };
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.search.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
       <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> <select id="lr-unit"><option value="ppm">ppm</option><option value="Da">Da</option></select></label>
         <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
-      ${st.hr ? `<div class="qbar" id="lr-tabs"><button data-t="id" class="on">${I18N.t("lib.tab.id")}</button><button data-t="an">${I18N.t("lib.tab.an")}</button>${thresholdsHtml()}</div>
-      <div id="lr-verdict"></div>` : ""}
+
       <div id="lr-body"></div><canvas id="lr-cv" hidden></canvas>`;
     d.querySelector("#lr-unit").value = st.unit;
     d.querySelector("#lr-x").onclick = () => d.close(); d.querySelector("#lr-libs").onclick = () => { open(); };
     const msg = t => { d.querySelector("#lr-msg").textContent = t || ""; };
     const colHead = ["#", I18N.t("lib.col.name"), I18N.t("lib.col.entropy"), I18N.t("lib.col.cosine"), I18N.t("lib.col.shared"), I18N.t("lib.col.dprec"), "CE", I18N.t("lib.col.instrument"), I18N.t("lib.col.adduct"), I18N.t("lib.col.library")];
     const rowsOf = rs => rs.map((r, i) => [i + 1, r.name, r.ent, r.cos, r.shared, r.dprec, r.ce, r.inst, r.type, r.lib]);
-    const vdEl = () => d.querySelector("#lr-verdict");
     const show = () => {
       const R = st.res, body = d.querySelector("#lr-body"), cv = d.querySelector("#lr-cv");
-      if (vdEl()) vdEl().innerHTML = "";
-      if (st.tab === "an") return showAn();
       if (!R) { body.innerHTML = ""; cv.hidden = true; return; }
       if (!R.libs) { body.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p><p><button id="lr-open">${I18N.t("lib.openLibs")}</button></p>`; body.querySelector("#lr-open").onclick = () => open(); cv.hidden = true; return; }
       if (!R.results.length) { body.innerHTML = `<p>${I18N.t("lib.noPrec", { tol: st.v + " " + st.unit })}</p>`; cv.hidden = true; return; }
       const dp = r => st.unit === "ppm" ? r.dprec.toFixed(1) + " ppm" : (r.dprec >= 0 ? "+" : "") + r.dprec.toFixed(4) + " Da";
       body.innerHTML = `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.cosine")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.library")}</th></tr>${R.results.map((r, i) => `<tr class="row${i === st.sel ? " sel" : ""}" data-i="${i}"><td class="num">${i + 1}</td><td>${EHt(r.name)}</td><td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.cos.toFixed(3)}</td><td class="num">${r.shared}</td><td class="num">${dp(r)}</td><td>${EHt(r.ce)}</td><td>${EHt(r.inst)}</td><td>${EHt(r.type)}</td><td>${EHt(r.lib)}</td></tr>`).join("")}</table></div>`;
       body.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => { st.sel = +tr.dataset.i; body.querySelectorAll("tr.row").forEach(x => x.classList.toggle("sel", x === tr)); draw(); });
-      if (st.hr && vdEl()) {                                   // levels only for high-resolution data (the low-resolution world gives candidates, never answers)
-        st.lv = assess(R.results, { nScans: st.n, analogs: st.an && st.an.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
-        vdEl().innerHTML = levelHtml(st.lv); levelBind(vdEl(), st.lv, () => { st.decided = st.lv.decided || ""; show(); });
-      }
       cv.hidden = false; draw();
     };
-    // analogues (WP-H9): the library spectra with another precursor (up to 200 Da apart) that match the query after a shift of the precursor difference
-    const showAn = () => {
-      const A = st.an, body = d.querySelector("#lr-body"), cv = d.querySelector("#lr-cv");
-      if (!A) { body.innerHTML = `<p class="muted">${I18N.t("lib.an.searching")}</p>`; cv.hidden = true; return; }
-      if (!A.libs) { body.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p>`; cv.hidden = true; return; }
-      if (!A.results.length) { body.innerHTML = `<p>${I18N.t("lib.an.none")}</p>`; cv.hidden = true; return; }
-      body.innerHTML = `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.an.name")}</th><th class="num">&Delta;m</th><th>${I18N.t("lib.an.interp")}</th><th class="num">${I18N.t("lib.an.mcos")}</th><th class="num">${I18N.t("lib.an.matched")}</th><th>${I18N.t("lib.col.library")}</th></tr>
-        ${A.results.map((r, i) => `<tr class="row${i === st.sel ? " sel" : ""}" data-i="${i}"><td class="num">${i + 1}</td><td>${EHt(r.name)}</td><td class="num">${sgnTxt(r.delta)}</td><td data-dm="${i}">${EHt(deltaKnown(r.delta) || "…")}</td><td class="num">${r.mcos.toFixed(2)}</td><td class="num">${I18N.t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</td><td>${EHt(r.lib)}</td></tr>`).join("")}</table></div>
-        <div class="sm muted" style="margin-top:4px">${I18N.t("lib.an.note")}</div>`;
-      body.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => { st.sel = +tr.dataset.i; body.querySelectorAll("tr.row").forEach(x => x.classList.toggle("sel", x === tr)); draw(); });
-      A.results.forEach(async (r, i) => { if (!deltaKnown(r.delta)) { const t = await deltaFormula(r.delta); const c = body.querySelector(`[data-dm="${i}"]`); if (c) c.textContent = t || I18N.t("lib.an.noFormula"); } });
-      cv.hidden = false; draw();
-    };
-    const draw = () => { if (st.tab === "an") { const A = st.an; if (!A || !A.results.length) return; const r = A.results[st.sel] || A.results[0]; mirror(d.querySelector("#lr-cv"), { mz: r.qa.mz, it: r.qa.it, hr: true }, { mz: r.la.mz, it: r.la.it, prec: r.prec, name: r.name, shared: r.matched, pairs: r.pairs }); return; }
-      const R = st.res; if (!R || !R.results.length) return; const cv = d.querySelector("#lr-cv"), r = R.results[st.sel]; mirror(cv, { mz: R.query.mz, it: R.query.it, hr: st.hr }, r); };
+    const draw = () => { const R = st.res; if (!R || !R.results.length) return; const cv = d.querySelector("#lr-cv"), r = R.results[st.sel]; mirror(cv, { mz: R.query.mz, it: R.query.it, hr: st.hr }, r); };
     const run = async () => {
       const num = id => parseFloat(String(d.querySelector(id).value).replace(",", "."));
       st.prec = num("#lr-prec"); st.v = num("#lr-tol"); st.unit = d.querySelector("#lr-unit").value; st.frag = num("#lr-frag");
@@ -246,14 +238,7 @@ const LIB = (() => {
       } catch (e) { st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
       show();
     };
-    const runAn = async () => {
-      st.an = null; show();
-      try { st.an = await call("analogs", { peaks: q.peaks, prec: st.prec, pol: q.pol, frag: st.frag, maxDelta: 200, max: 10 }); st.sel = 0; msg(st.an.libs ? I18N.t("lib.analogsN", { n: st.an.results.length }) : ""); } catch (e) { st.an = null; msg(I18N.t("lib.error", { message: e.message })); }
-      show();
-    };
-    d.querySelectorAll("#lr-tabs [data-t]").forEach(b => b.onclick = () => { st.tab = b.dataset.t; st.sel = 0; d.querySelectorAll("#lr-tabs [data-t]").forEach(x => x.classList.toggle("on", x === b)); if (st.tab === "an") runAn(); else show(); });
-    if (d.querySelector("#lr-sog")) thresholdsBind(d, show);
-    d.querySelector("#lr-go").onclick = () => { if (st.tab === "an") { st.prec = parseFloat(String(d.querySelector("#lr-prec").value).replace(",", ".")); st.frag = parseFloat(String(d.querySelector("#lr-frag").value).replace(",", ".")); runAn(); } else run(); };
+    d.querySelector("#lr-go").onclick = run;
     d.querySelectorAll(".qbar input").forEach(i => i.onkeydown = e => { if (e.key === "Enter") run(); });
     const table = () => { const h = colHead, rs = st.res ? rowsOf(st.res.results) : []; return { h, rs }; };
     d.querySelector("#lr-copy").onclick = async () => {
@@ -266,7 +251,105 @@ const LIB = (() => {
     };
     d.querySelector("#lr-xlsx").onclick = () => { const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingSave")); dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head: h, rows: rs, widths: [5, 30, 10, 10, 16, 14, 8, 14, 12, 20] }]); };
     d.showModal(); window.addEventListener("resize", draw, { once: true });
-    if (st.hr) scansOf(p).then(n => { if (n !== st.n) { st.n = n; if (st.res) show(); } });
+    if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
+  }
+  // ------------------------------------------------------------ «Cos'è?» (high resolution only): identity (Flash entropy) and analogues (hybrid) of ONE MS2 spectrum together, with level and evidence
+  const isHr = p => { const q = queryOf(p); return !!(q && profOf(q.f).hr); };       // the voice of the menu exists only for high-resolution spectra (low resolution gives no answers)
+  function cosVis(q, r, lo) {                         // cosine on the visible peaks (cos_vis of Attributio): the reference peaks below the lower limit of the MS2 scan window are removed; null when nothing is cut
+    if (!(lo > 0) || !r.mz.some(m => m < lo)) return null;
+    let dot = 0, na = 0, nb = 0; for (const v of q.it) na += v;
+    r.mz.forEach((m, j) => { if (m >= lo) nb += r.it[j]; });
+    for (const pr of r.pairs || []) if (r.mz[pr[1]] >= lo) dot += Math.sqrt(q.it[pr[0]] * r.it[pr[1]]);
+    return na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0;
+  }
+  const polTxt = v => I18N.t(v > 0 ? "lib.what.pol.pos" : v < 0 ? "lib.what.pol.neg" : "lib.what.pol.unk");
+  function groupsOf(rs) {                              // the same first InChIKey block (or name) = one structure: the best entry heads the group
+    const m = new Map(); rs.forEach((r, i) => { r._i = i; const k = LIVELLI.ikKey(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
+    return [...m.values()];
+  }
+  async function whatIs(p) {
+    ensureCss();
+    const q = queryOf(p); if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
+    let d = document.getElementById("libres");
+    if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
+    const prof = profOf(q.f), top = q.peaks.reduce((x, y) => Math.max(x, y[0]), 0);
+    const st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, frag: Math.max(0.005, +(10e-6 * top).toFixed(4)), res: null, an: null, sel: { k: "id", i: 0 }, n: 1, lo: null, decided: "", open: new Set() };
+    d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.what.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
+      <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
+      <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> ppm</label>
+        <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
+      <div class="qbar">${thresholdsHtml()}</div><div id="lr-verdict"></div><div id="lr-body"></div><canvas id="lr-cv" hidden></canvas><div id="lr-detail" class="sm"></div>`;
+    d.querySelector("#lr-x").onclick = () => d.close(); d.querySelector("#lr-libs").onclick = () => { open(); };
+    const msg = t => { d.querySelector("#lr-msg").textContent = t || ""; };
+    const sel = () => { const A = st.sel.k === "an" ? st.an : st.res; return A && A.results[st.sel.i] ? A.results[st.sel.i] : null; };
+    const dp = r => (r.dprec >= 0 ? "+" : "") + r.dprec.toFixed(1) + " ppm";
+    const pct = v => (v == null ? "" : Math.round(v * 100) + "%");
+    const idRow = (r, g, k) => `<tr class="row${st.sel.k === "id" && st.sel.i === r._i ? " sel" : ""}${k ? " mem" : ""}" data-k="id" data-i="${r._i}"${k && !st.open.has(g) ? " hidden" : ""}><td class="num">${k ? "" : r._i + 1}</td>
+      <td>${k ? "&nbsp;&nbsp;↳ " : ""}${EHt(r.name)}${!k && st.groups[g].length > 1 ? ` <button type="button" class="sm" data-grp="${g}" aria-expanded="${st.open.has(g)}" title="${EHt(I18N.t("lib.what.group", { n: st.groups[g].length - 1 }))}">${st.open.has(g) ? "▾" : "▸"} ${I18N.t("lib.what.group", { n: st.groups[g].length - 1 })}</button>` : ""}</td>
+      <td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.reverse != null ? r.reverse.toFixed(3) : ""}</td><td class="num">${r.shared}</td><td class="num">${pct(r.explained)}</td><td class="num">${dp(r)}</td><td>${EHt(r.type)}</td><td>${polTxt(r.polarity)}</td><td>${EHt(r.ce)}</td><td>${EHt(r.inst)}</td><td>${EHt(r.lib)}</td><td>${EHt(r.license || "")}</td></tr>`;
+    const show = () => {
+      const R = st.res, A = st.an, body = d.querySelector("#lr-body"), cv = d.querySelector("#lr-cv"), vd = d.querySelector("#lr-verdict");
+      vd.innerHTML = "";
+      if (!R) { body.innerHTML = ""; cv.hidden = true; d.querySelector("#lr-detail").innerHTML = ""; return; }
+      if (!R.libs) { body.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p><p><button id="lr-open">${I18N.t("lib.openLibs")}</button></p>`; body.querySelector("#lr-open").onclick = () => open(); cv.hidden = true; return; }
+      st.groups = groupsOf(R.results);
+      st.lv = assess(R.results, { nScans: st.n, analogs: A && A.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
+      const cvs = st.sel.k === "id" && R.results[st.sel.i] && st.lo != null ? cosVis({ it: R.query.it }, R.results[st.sel.i], st.lo) : null;
+      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2).replace(".", I18N.lang === "it" ? "," : ".") })]);       // a proof only: it never changes the level
+      vd.innerHTML = levelHtml(st.lv); levelBind(vd, st.lv, () => { st.decided = st.lv.decided || ""; show(); });
+      body.innerHTML = `<h4 style="margin:8px 0 2px">${I18N.t("lib.what.cand")}</h4>` + (R.results.length ? `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.reverse")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.explained")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.pol")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.col.license")}</th></tr>
+        ${st.groups.map((g, gi) => g.map((r, k) => idRow(r, gi, k)).join("")).join("")}</table></div>` : `<p>${I18N.t("lib.what.none")}</p>`)
+        + `<h4 style="margin:10px 0 2px">${I18N.t("lib.what.an")}</h4>` + (!A ? `<p class="muted">${I18N.t("lib.an.searching")}</p>` : !A.results.length ? `<p>${I18N.t("lib.an.none")}</p>` : `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.an.name")}</th><th class="num">&Delta;m</th><th>${I18N.t("lib.an.interp")}</th><th class="num">${I18N.t("lib.an.mcos")}</th><th class="num">${I18N.t("lib.an.matched")}</th><th>${I18N.t("lib.col.library")}</th></tr>
+        ${A.results.map((r, i) => `<tr class="row${st.sel.k === "an" && st.sel.i === i ? " sel" : ""}" data-k="an" data-i="${i}"><td class="num">${i + 1}</td><td>${EHt(r.name)}</td><td class="num">${sgnTxt(r.delta)}</td><td data-dm="${i}">${EHt(deltaKnown(r.delta) || "…")}</td><td class="num">${r.mcos.toFixed(2)}</td><td class="num">${I18N.t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</td><td>${EHt(r.lib)}</td></tr>`).join("")}</table></div><div class="sm muted" style="margin-top:4px">${I18N.t("lib.an.note")}</div>`);
+      body.querySelectorAll("tr.row").forEach(tr => tr.onclick = e => { if (e.target.closest("[data-grp]")) return; st.sel = { k: tr.dataset.k, i: +tr.dataset.i }; body.querySelectorAll("tr.row").forEach(x => x.classList.toggle("sel", x === tr)); draw(); });
+      body.querySelectorAll("[data-grp]").forEach(b => b.onclick = () => { const g = +b.dataset.grp; if (st.open.has(g)) st.open.delete(g); else st.open.add(g); show(); });
+      if (A) A.results.forEach(async (r, i) => { if (!deltaKnown(r.delta)) { const t = await deltaFormula(r.delta); const c = body.querySelector(`[data-dm="${i}"]`); if (c) c.textContent = t || I18N.t("lib.an.noFormula"); } });
+      cv.hidden = !sel(); draw();
+    };
+    const draw = () => {
+      const r = sel(), cv = d.querySelector("#lr-cv"), det = d.querySelector("#lr-detail"); if (!r) { det.innerHTML = ""; return; }
+      const q2 = st.sel.k === "an" ? { mz: r.qa.mz, it: r.qa.it } : { mz: st.res.query.mz, it: st.res.query.it };
+      mirror(cv, { ...q2, hr: true, prec: st.prec, frag: st.frag }, st.sel.k === "an" ? { mz: r.la.mz, it: r.la.it, prec: r.prec, name: r.name, shared: r.matched, pairs: r.pairs } : r);
+      const nls = [], ps = st.sel.k === "an" ? r.pairs : (r.pairs || []), lm = st.sel.k === "an" ? r.la.mz : r.mz;
+      JSON.parse(cv.dataset.nl || "[]").forEach(([i]) => nls.push(+(st.prec - q2.mz[i]).toFixed(4)));
+      ps.forEach(pr => { const v = +(st.prec - q2.mz[pr[0]]).toFixed(4); if (v > 0.5 && !nls.includes(v)) nls.push(v); });
+      const attr = [r.authors, r.accession, r.license].some(x => x) ? `<div>${I18N.t("lib.what.attr", { authors: EHt(r.authors || "–"), accession: EHt(r.accession || "–"), license: EHt(r.license || "–") })}</div>` : "";
+      det.innerHTML = `<div class="muted">${I18N.t("lib.what.legend")}</div><div>${nls.length ? I18N.t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : I18N.t("lib.what.nlNone")}</div>${attr}`;
+    };
+    const run = async () => {
+      const num = id => parseFloat(String(d.querySelector(id).value).replace(",", "."));
+      st.prec = num("#lr-prec"); st.v = num("#lr-tol"); st.frag = num("#lr-frag");
+      if (!(st.prec > 0) || !(st.v > 0) || !(st.frag > 0)) return msg(I18N.t("lib.checkTol"));
+      msg(I18N.t("lib.searching")); const t0 = performance.now(); st.an = null; st.res = null; st.sel = { k: "id", i: 0 };
+      try {
+        const [a, b] = await Promise.all([call("search", { peaks: q.peaks, prec: st.prec, pol: q.pol, tol: { v: st.v, unit: "ppm" }, frag: st.frag }), call("analogs", { peaks: q.peaks, prec: st.prec, pol: q.pol, frag: st.frag, maxDelta: 200, max: 10 })]);
+        st.res = a; st.an = b; msg(a.libs ? I18N.t("lib.results", { n: a.results.length, ms: Math.round(performance.now() - t0) }) : "");
+      } catch (e) { st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
+      show();
+    };
+    thresholdsBind(d, show);
+    d.querySelector("#lr-go").onclick = run;
+    d.querySelectorAll(".qbar input").forEach(i => i.onkeydown = e => { if (e.key === "Enter") run(); });
+    const lvTxt = () => (st.lv ? [st.lv.proposed, st.lv.decided || ""] : ["", ""]);
+    const head = [ "#", I18N.t("lib.col.name"), I18N.t("lib.col.entropy"), I18N.t("lib.col.reverse"), I18N.t("lib.col.shared"), I18N.t("lib.col.explained"), I18N.t("lib.col.dprec") + " (ppm)", I18N.t("lib.col.adduct"), I18N.t("lib.col.pol"), "CE", I18N.t("lib.col.instrument"), I18N.t("lib.col.library"), I18N.t("lib.col.license"), "InChIKey", I18N.t("lv.proposed"), I18N.t("lv.decided")];
+    const rowsOf = () => { const [pr, de] = lvTxt(); return st.res ? st.res.results.map((r, i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
+    d.querySelector("#lr-copy").onclick = async () => {
+      const rs = rowsOf(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));
+      const it = /^it/i.test(navigator.language || ""), f = v => typeof v === "number" ? String(+v.toFixed(3)).replace(".", it ? "," : ".") : String(v ?? "");
+      const tsv = head.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n");
+      const html = `<table><tr>${head.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map(v => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
+      try { if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]); else await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); }
+      catch (e) { try { await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e2) { msg(I18N.t("lib.noCopy")); } }
+    };
+    d.querySelector("#lr-xlsx").onclick = () => {
+      const rs = rowsOf(); if (!rs.length) return msg(I18N.t("lib.nothingSave"));
+      const an = st.an ? st.an.results.map((r, i) => [i + 1, r.name, +r.delta.toFixed(4), deltaKnown(r.delta) || "", r.mcos, r.matched, r.shifted, r.lib]) : [];
+      dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head, rows: rs, widths: [5, 30, 10, 10, 10, 12, 14, 12, 10, 8, 14, 20, 14, 28, 10, 10] },
+        { name: I18N.t("lib.what.sheetAn"), head: ["#", I18N.t("lib.an.name"), "Δm", I18N.t("lib.an.interp"), I18N.t("lib.an.mcos"), I18N.t("lib.an.matched"), I18N.t("lib.an.shifted", { matched: "", shifted: "" }).replace(/[()]/g, "").trim() || "shifted", I18N.t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }]);
+    };
+    d.showModal(); window.addEventListener("resize", draw, { once: true });
+    scansOf(p).then(n => { if (n !== st.n) { st.n = n; if (st.res) show(); } });
+    if (p.k != null) J(`api/method?k=${p.k}`).then(f => { const sp = f && f.scan_params, lo = sp && sp.ms2 && sp.ms2.window_lo; if (lo > 0) { st.lo = lo; if (st.res) show(); } }).catch(() => {});
     if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
   }
   // ------------------------------------------------------------ «Identifica tutte le MS2 del file» (WP-H8): every MS2 of a high-resolution file against the libraries
@@ -348,6 +431,6 @@ const LIB = (() => {
       d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
     } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
   }
-  return { open, searchFrom, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
+  return { open, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;
