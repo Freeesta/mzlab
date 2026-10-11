@@ -182,6 +182,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
 <form id="qq-rform" class="qq-form"><label>${t("qaqc.in.mz")} <input id="qq-rin" value="${eh(st.ratio.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="qq-rrt" value="${eh(st.ratio.rt)}" inputmode="decimal" size="5" required></label>
 <label>${t("qaqc.thr")} <select id="qq-thr"><option value="3"${st.thr === 3 ? " selected" : ""}>3:1</option><option value="10"${st.thr === 10 ? " selected" : ""}>10:1</option></select></label>
 <button type="submit">${t("qaqc.ratio.go")}</button>${hasTable ? `<button type="button" id="qq-feat">${t("qaqc.feat.go")}</button>` : ""}</form>
+<div class="qq-form"><button type="button" id="qq-rep-html">${t("qaqc.rep.html")}</button><button type="button" id="qq-rep-json">${t("qaqc.rep.json")}</button></div>
 <div id="qq-rres">${ratioBlock(res.ratio)}${featBlock(res.feat)}</div></details>`;
     paintIons(box);
   }
@@ -207,6 +208,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     box.onclick = e => {
       const b = e.target.closest("button[data-rm]");
       if (b) { st.ions = st.ions.filter(i => String(i.id) !== b.dataset.rm); res.ions = res.ions.filter(o => String(o.ion.id) !== b.dataset.rm); save(); paintIons(box); }
+      if (e.target.id === "qq-rep-html" || e.target.id === "qq-rep-json") RAPPORTO.export(e.target.id === "qq-rep-json" ? "json" : "html").catch(err => { box.querySelector("#qq-msg").textContent = String(err && err.message || err); });
       if (e.target.id === "qq-feat") runFeatures().then(() => paint(box)).catch(err => { box.querySelector("#qq-msg").textContent = String(err && err.message || err); });
     };
     box.onsubmit = async e => {
