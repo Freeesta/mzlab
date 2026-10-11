@@ -122,7 +122,7 @@ try:
         pg = r2.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(1500)
+        pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg); pg.wait_for_timeout(1500)
         viewer(pg, "hr", True)
     r2.close()
 except Exception as e:
