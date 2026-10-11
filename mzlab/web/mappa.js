@@ -11,7 +11,7 @@ window.MAPPA = (() => {
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
-  const mirOn = p => { const s = st(p); return s.mir != null ? s.mir : isMax(p); };
+  const mirOn = p => { const s = st(p); return s.ex ? true : s.mir != null ? s.mir : isMax(p); };       // «How it is extracted» always uses the two plots at the margins
   const wide = p => p.el && p.el.clientWidth >= NARROW;
   const point = p => { const s = st(p); return s.lock || s.kp || s.hov; };
   const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
@@ -28,10 +28,7 @@ window.MAPPA = (() => {
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
-    // long press on a touch screen = lock the point
-    let lp = 0;
-    cv.addEventListener("touchstart", e => { if (e.touches.length !== 1 || !is2d(p)) return; const t = e.touches[0], r = cv.getBoundingClientRect(), px = t.clientX - r.left, py = t.clientY - r.top; clearTimeout(lp); lp = setTimeout(() => { lockAt(p, px, py); }, 550); }, { passive: true });
-    ["touchend", "touchmove", "touchcancel"].forEach(n => cv.addEventListener(n, () => clearTimeout(lp), { passive: true }));
+    grid.appendChild(navBar(p)); navSync(p); touchInit(p, cv);
     const wrap = () => {
       if (!p._setMax || p._setMax._mz) return;
       const orig = p._setMax, f = on => { orig(on); onMax(p, on); }; f._mz = true; p._setMax = f;
@@ -134,7 +131,9 @@ window.MAPPA = (() => {
     g.clearRect(0, 0, a.W, a.H);
     if (!is2d(p)) return;
     drawPoints(p, g);
-    const pt = point(p), on = mirOn(p);
+    if (s.ex && window.MAPEX) MAPEX.overlay(p, g);
+    if (s.feat && window.MAPEX) MAPEX.featOverlay(p, g);
+    const pt = point(p), on = mirOn(p) && !s.ex;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
       g.save(); g.strokeStyle = css("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
@@ -146,7 +145,7 @@ window.MAPPA = (() => {
       }
       g.restore();
     }
-    readout(p);
+    readout(p); navSync(p);
   }
   function readout(p) {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
@@ -256,6 +255,7 @@ window.MAPPA = (() => {
   }
   function margins(p) {
     const s = st(p); if (!s.sp || s.sp.hidden && s.xc.hidden || !is2d(p)) return;
+    if (s.ex) { if (window.MAPEX) MAPEX.margins(p); return; }
     const pt = point(p); if (!pt) { drawSide(p, null); drawBottom(p, null); return; }
     if (s.lastRt != null) s.dir = pt.rt > s.lastRt ? 1 : pt.rt < s.lastRt ? -1 : s.dir; s.lastRt = pt.rt;
     if (show(p, pt)) { if (MEAS) meas.push({ fetch: 0, draw: 0, total: s.t0 ? performance.now() - s.t0 : 0 }); s.t0 = 0; return; }
@@ -312,19 +312,23 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- mouse
   function move(p, px, py) {
     if (!is2d(p)) return; const s = st(p), a = p._a;
+    if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
+    if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
     if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
   function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
-    if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel keeps the old zoom of explore.js
+    if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     e.preventDefault();
-    const a = p._a, dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
+    const a = p._a;
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();
-    const x = xOf(p, px), y = a.mzAt(py);
-    if (!e.altKey) p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]);       // Maiusc = m/z only
-    if (!e.shiftKey) p.zoom = clampView(x - (x - a.x0) * f, x + (a.x1 - x) * f, a.full[0], a.full[1]);         // Alt = RT only
+    if (!e.shiftKey && !e.altKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {          // trackpad, two fingers sideways: move along RT
+      panPx(p, -e.deltaX, 0); draw(p); return true;
+    }
+    const dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
+    scaleView(p, f, { rt: xOf(p, px), mz: a.mzAt(py) }, e.shiftKey ? "x" : e.altKey ? "y" : "xy");       // Maiusc = RT only, Alt = m/z only
     draw(p); return true;
   }
   function boxZoom(p, ax, ay, bx, by) {
@@ -341,15 +345,15 @@ window.MAPPA = (() => {
   function ctx(p, e, px, py) {
     if (!is2d(p)) return false;
     e.preventDefault(); hideHover(p);
-    const a = p._a;
-    if (e.shiftKey) { if (px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b) openXic(null, { mz: a.mzAt(py), obs: true }); return true; }
-    const s = st(p); if (s.lock) unlock(p); else if (px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b) lockAt(p, px, py);
-    return true;
+    const a = p._a, inside = px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b;
+    if (e.shiftKey) { if (inside) openXic(null, { mz: a.mzAt(py), obs: true }); return true; }
+    if (Date.now() - (st(p).lpAt || 0) < 900) return true;             // the long press has just opened the menu (Android also sends contextmenu)
+    showMenu(ad2(p, inside ? { rt: xOf(p, px), mz: a.mzAt(py) } : null), e); return true;
   }
   // the «⋯» menu: the old right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
-  function menuAt(p, btn) {
+  function menuAt(p, btn, kbd) {
     const a = p._a; if (!a) return; const pt = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, r = btn.getBoundingClientRect();
-    ctxFor(p, { preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, pt.rt, a.X(pt.rt), a.Y(pt.mz));
+    showMenu(ad2(p, pt), { preventDefault() {}, clientX: r.left + (kbd ? r.width / 2 : 0), clientY: kbd ? r.top + r.height / 2 : r.bottom + 4, kbd: !!kbd });
   }
 
   // ---------------------------------------------------------------- keyboard (focus on the map, or the map in full screen; never inside a text field)
@@ -362,9 +366,15 @@ window.MAPPA = (() => {
     if (k === "0") { done(); whole(p); return; }
     if (k === "Backspace") { done(); undoZoom(p); return; }
     if (!is2d(p)) return;
+    if (s.ex && window.MAPEX && MAPEX.key(p, e)) { done(); return; }
     if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
-    if (k === "l" || k === "L") { done(); if (s.lock) unlock(p); else { const q = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }; s.lock = { ...q }; overlay(p); margins(p); } return; }
-    if (k === "Escape" && s.lock) { done(); unlock(p); return; }
+    if (k === "l" || k === "L") { done(); ad2(p, null).toggleLock(); return; }
+    if (k === "Escape") { if (s.lock) { done(); unlock(p); navSync(p); } else if (!isMax(p) && p.zh && p.zh.length) { done(); undoZoom(p); } return; }       // Esc: unlock, or take back the last zoom
+    if (k === "Home") { done(); whole(p); return; }
+    if (k === "+" || k === "=") { done(); ad2(p, null).zoomBy(0.7); return; }
+    if (k === "-" || k === "_") { done(); ad2(p, null).zoomBy(1 / 0.7); return; }
+    if (k === "?") { done(); help("2d"); return; }
+    if (k === "ContextMenu" || (k === "F10" && e.shiftKey)) { done(); menuAt(p, p.cv, true); return; }
     if (k === "s" || k === "S") { done(); s.mark = !s.mark; markBtn(p); return; }
     if (k === "Delete" && s.psel != null) { done(); delPoint(p, s.psel); return; }
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(k)) return;
@@ -436,6 +446,7 @@ window.MAPPA = (() => {
   // mousedown on a point: drag it (it snaps again where it is dropped); true = explore.js does nothing else
   function down(p, e, px, py) {
     if (!is2d(p) || e.button !== 0 || e.shiftKey || e.altKey) return false;
+    if (st(p).ex && window.MAPEX && MAPEX.down(p, e, px, py)) return true;       // the box of «How it is extracted»
     const i = nearPoint(p, px, py); if (i < 0) return false;
     e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
     const mv = ev => { moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top; list[i].rt = xOf(p, x); list[i].mz = p._a.mzAt(y); overlay(p); };
@@ -450,6 +461,7 @@ window.MAPPA = (() => {
   // a click (no drag) on the map: with «Segna» on it adds a point; on a point it chooses it
   function click(p, px, py) {
     if (!is2d(p)) return false; const s = st(p), i = nearPoint(p, px, py);
+    if (s.feat && window.MAPEX && MAPEX.featClick(p, px, py)) return true;       // a marker of mzFinder: the box goes there
     if (i >= 0) { s.psel = i; overlay(p); table(p); return true; }
     if (!s.mark) return false;
     addPoint(p, px, py); return true;
@@ -512,8 +524,8 @@ window.MAPPA = (() => {
     const s = st(p); if (on === !!s.tgrown || isMax(p)) return;
     s.tgrown = on; p.h = Math.max(200, p.h + (on ? 1 : -1) * 220); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
   }
-  async function spectrumAt(p, rt) {
-    const f = p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
+  async function spectrumAt(p, rt, k) {
+    const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
     newSpec(p, r0, r1, f.k);
   }
@@ -541,6 +553,186 @@ window.MAPPA = (() => {
   async function copyRows(p) {
     const txt = [headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n");
     try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
+  }
+
+  // ---------------------------------------------------------------- navigation: ONE list of commands (CMDS) for the right-click menu of the 2D map and of the 3D viewer,
+  // the bar on the map, the command palette (barra.js reads CMDS) and the sheet of gestures. An «adapter» says where a command acts:
+  //   { kind: "2d" | "3d", p, pt() -> {rt, mz, v?} | null, locked(), toggleLock(), resetAll(), resetX?(), resetY?(), hasSel?(), zoomSel?(), zoomBy(f), view?(n), after?() }
+  const SV = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
+  const ICO = {
+    xic: '<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>', spec: '<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>',
+    both: '<path d="M2 13h5"/><path d="M2.5 12c1-6 2-6 3 0M9 13V8M12 13V5"/>',
+    lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>', unlock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 014.8-1"/>',
+    home: '<path d="M2.5 8L8 3l5.5 5"/><path d="M4 7v6.5h3v-3h2v3h3V7"/>', rx: '<path d="M2 8h12M2 5.5v5M14 5.5v5"/>', ry: '<path d="M8 2v12M5.5 2h5M5.5 14h5"/>',
+    sel: '<rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2.5 2"/><path d="M8 6v4M6 8h4"/>', plus: '<path d="M8 3v10M3 8h10"/>', minus: '<path d="M3 8h10"/>',
+    copy: '<rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M10.5 5.5V3.7a1.2 1.2 0 00-1.2-1.2H3.7a1.2 1.2 0 00-1.2 1.2v5.6a1.2 1.2 0 001.2 1.2h1.8"/>',
+    help: '<circle cx="8" cy="8" r="6"/><path d="M6.2 6.3a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.8M8 11.7v.1"/>',
+    feat: '<circle cx="5" cy="10" r="2.2"/><circle cx="11" cy="5" r="2.2"/><path d="M2.5 13.5h11"/>', learn: '<rect x="2.5" y="2.5" width="6.5" height="6.5" rx="1"/><path d="M9 9l4.5 4.5M5.8 9v4.5h4M9 5.8h4.5"/>', top: '<rect x="3" y="3" width="10" height="10" rx="1"/><path d="M3 8h10M8 3v10"/>', side: '<path d="M2 13h12"/><path d="M3 12l2.5-7 2.5 4 2-6 3 9"/>'
+  };
+  // where a command acts: the locked point, otherwise the one under the pointer when the menu was opened, otherwise the sight
+  function ad2(p, at) {
+    const s = st(p), a = () => p._a, mid = () => ({ rt: (a().x0 + a().x1) / 2, mz: (a().y0 + a().y1) / 2 });
+    const pt = () => { const q = s.lock || at || point(p); return q ? { ...q, v: valueAt(p, q.rt, q.mz) } : null; };
+    const set = fn => () => { pushZh(p); fn(); draw(p); uiSave(); };
+    return {
+      kind: "2d", p, pt, locked: () => !!s.lock,
+      toggleLock: () => { if (s.lock) unlock(p); else { s.lock = { ...(at || point(p) || mid()) }; s.kp = null; overlay(p); margins(p); } navSync(p); },
+      resetAll: () => whole(p), resetX: set(() => { p.zoom = null; }), resetY: set(() => { p.zoomY = null; }),
+      hasSel: () => !!p.sel, zoomSel: set(() => { const r = p.sel, f = a().full; p.zoom = clampView(r[0], r[1], f[0], f[1]); p.sel = null; }),
+      zoomBy: f => zoomBy(p, f, s.lock || at || point(p))
+    };
+  }
+  const touched = p => Date.now() - (st(p).gestAt || 0) < 700;           // a finger gesture has just moved the map: the mouse events that follow it are not clicks or boxes
+  const ptText = q => q ? `RT ${q.rt.toFixed(2)} min · m/z ${q.mz.toFixed(3)}${q.v != null ? " · " + T("mappa.read.int") + " " + fmt(q.v) : ""}` : "";
+  function extract(ad, what) {
+    const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
+    if (what !== "spec") xicDirect(q.mz, ad.p);
+    if (what !== "xic") spectrumAt(ad.p, q.rt, ad.k);
+    if (ad.after) ad.after();
+  }
+  const CMDS = [
+    { id: "mapxic", g: "extract", ic: "xic", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "xic") },
+    { id: "mapspec", g: "extract", ic: "spec", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "spec") },
+    { id: "mapboth", g: "extract", ic: "both", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "both") },
+    { id: "maplock", g: "lock", ic: "lock", kinds: ["2d", "3d"], on: ad => ad.locked(), run: ad => ad.toggleLock() },
+    { id: "mapreset", g: "view", ic: "home", kinds: ["2d", "3d"], run: ad => ad.resetAll() },
+    { id: "mapresetx", g: "view", ic: "rx", kinds: ["2d"], run: ad => ad.resetX() },
+    { id: "mapresety", g: "view", ic: "ry", kinds: ["2d"], run: ad => ad.resetY() },
+    { id: "mapzoomsel", g: "view", ic: "sel", kinds: ["2d"], ok: ad => ad.hasSel(), run: ad => ad.zoomSel() },
+    { id: "map3top", g: "view", ic: "top", kinds: ["3d"], run: ad => ad.view(1) },
+    { id: "map3rt", g: "view", ic: "side", kinds: ["3d"], run: ad => ad.view(2) },
+    { id: "map3mz", g: "view", ic: "spec", kinds: ["3d"], run: ad => ad.view(3) },
+    { id: "mapzin", g: "zoom", ic: "plus", kinds: ["2d", "3d"], bar: true, run: ad => ad.zoomBy(0.7) },
+    { id: "mapzout", g: "zoom", ic: "minus", kinds: ["2d", "3d"], bar: true, run: ad => ad.zoomBy(1 / 0.7) },
+    { id: "mapexplain", g: "learn", ic: "learn", kinds: ["2d"], on: ad => !!st(ad.p).ex, run: ad => explain(ad.p) },
+    { id: "mapfeat", g: "learn", ic: "feat", kinds: ["2d"], vis: ad => featAvail(ad.p), on: ad => !!st(ad.p).feat, run: ad => featToggle(ad.p) },
+    { id: "mapcopy", g: "copy", ic: "copy", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: async ad => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } },
+    { id: "maphelp", g: "help", ic: "help", kinds: ["2d", "3d"], run: ad => help(ad.kind) }
+  ];
+  const cmdOf = id => CMDS.find(c => c.id === id);
+  const nameOf = (c, ad) => T(c.id === "maplock" && ad.locked() ? "cmd.maplock.off.name" : `cmd.${c.id}.name`);
+  const runCmd = (id, ad) => { const c = cmdOf(id); if (c && (!c.ok || c.ok(ad))) return c.run(ad); };
+  // the items of the right-click menu (shared component: menu() in explore.js)
+  function itemsFor(ad) {
+    const items = [], q = ad.pt(), hdr = ad.locked() ? T("mapnav.where.locked", { at: ptText(q) }) : q ? T("mapnav.where", { at: ptText(q) }) : T("mapnav.where.none");
+    items.push({ label: hdr, dim: true }, "-");
+    let last = null;
+    for (const c of CMDS) {
+      if (!c.kinds.includes(ad.kind) || c.bar && c.g === "zoom" || c.vis && !c.vis(ad)) continue;
+      if (last && c.g !== last) items.push("-");
+      last = c.g;
+      const on = c.on ? c.on(ad) : null, dis = c.ok && !c.ok(ad);
+      items.push({ label: nameOf(c, ad), icon: SV(c.id === "maplock" && on ? ICO.unlock : ICO[c.ic]), aria: nameOf(c, ad), tip: T(`cmd.${c.id}.tip`), check: on, dim: dis, fn: () => runCmd(c.id, ad) });
+      if (c.id === "mapboth" && ad.kind === "2d") extraXic(ad, items);
+    }
+    return items;
+  }
+  // the older entries of the 2D menu: XIC with its own window, XIC added to a panel, spectrum averaged on the selection
+  function extraXic(ad, items) {
+    const q = ad.pt(), p = ad.p; if (!q) return;
+    const lab = q.mz.toFixed(mzd(p));
+    items.push({ label: T("ctx.map.xic", { mz: lab }), fn: () => openXic(null, { mz: q.mz, obs: true }) });
+    tabPanels().filter(x => x.type === "xic").forEach(x => items.push({ label: T("ctx.map.addTo", { mz: lab, panel: ptitle(x.title) }), fn: () => openXic(x, { mz: q.mz, obs: true }) }));
+    if (p.sel) items.push({ label: T("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], p._a.f.k) });
+  }
+  function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); }
+  // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
+  function scaleView(p, f, c, axes) {
+    const a = p._a, x = c ? c.rt : (a.x0 + a.x1) / 2, y = c ? c.mz : (a.y0 + a.y1) / 2;
+    if (axes.includes("y")) p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]);
+    if (axes.includes("x")) p.zoom = clampView(x - (x - a.x0) * f, x + (a.x1 - x) * f, a.full[0], a.full[1]);
+  }
+  function zoomBy(p, f, c) {
+    const a = p._a; if (!a) return; if (c && (c.rt < a.x0 || c.rt > a.x1 || c.mz < a.y0 || c.mz > a.y1)) c = null;
+    pushZh(p); scaleView(p, f, c, "xy"); draw(p); uiSave();
+  }
+  function panPx(p, dx, dy) {                                           // the picture follows the finger / the pointer by (dx, dy) pixels
+    const a = p._a, w = a.W - M.l - M.r, h = a.H - M.t - M.b, sx = (a.x1 - a.x0) / w * dx, sy = (a.y1 - a.y0) / h * dy;
+    p.zoom = clampView(a.x0 - sx, a.x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(a.y0 + sy, a.y1 + sy, a.fullY[0], a.fullY[1]);
+  }
+  function pinch(p, last, c, f) {                                      // scale by f around the previous midpoint, then follow the midpoint to where it is now
+    const a = p._a, w = a.W - M.l - M.r, h = a.H - M.t - M.b, rt = xOf(p, last.x), mz = a.mzAt(last.y);
+    const x0 = rt - (rt - a.x0) * f, x1 = rt + (a.x1 - rt) * f, y0 = mz - (mz - a.y0) * f, y1 = mz + (a.y1 - mz) * f, sx = (x1 - x0) / w * (c.x - last.x), sy = (y1 - y0) / h * (c.y - last.y);
+    p.zoom = clampView(x0 - sx, x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(y0 + sy, y1 + sy, a.fullY[0], a.fullY[1]);
+  }
+  // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
+  const BAR = ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "mapfeat", "maphelp"];
+  function barFor(getAd, kind = "2d") {
+    const b = document.createElement("div"); b.className = "mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
+    b.innerHTML = BAR.filter(id => cmdOf(id).kinds.includes(kind)).map(id => `<button type="button" data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapexplain" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
+    b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
+    b.addEventListener("mousemove", e => e.stopPropagation());
+    lockBtn(b, false); return b;
+  }
+  function lockBtn(bar, on) {                                           // the padlock button shows the state: closed + pressed = locked
+    const b = bar && bar.querySelector('[data-nav="maplock"]'); if (!b) return;
+    b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); b.innerHTML = SV(on ? ICO.lock : ICO.unlock);
+    const nm = T(on ? "cmd.maplock.off.name" : "cmd.maplock.name"); b.title = nm; b.setAttribute("aria-label", nm);
+  }
+  const navBar = p => { const b = barFor(() => ad2(p, null)); st(p).nav = b; return b; };
+  const navSync = p => { const s = st(p); lockBtn(s.nav, !!s.lock); const f = s.nav && s.nav.querySelector('[data-nav="mapfeat"]'); if (f) { f.hidden = !featAvail(p); f.setAttribute("aria-pressed", String(!!s.feat)); f.classList.toggle("on", !!s.feat); } const e = s.nav && s.nav.querySelector('[data-nav="mapexplain"]'); if (e) { e.setAttribute("aria-pressed", String(!!s.ex)); e.classList.toggle("on", !!s.ex); } };
+  // ---- «How it is extracted»: the module loads the first time
+  async function explain(p, on) {
+    const s = st(p); if (on === undefined) on = !s.ex;
+    if (!window.MAPEX) { try { window.MAPEX = await import("./mappa-estrai.js"); } catch (e) { console.error(e); nearMsg(T("mapex.err")); return; } }
+    if (on) MAPEX.start(p); else MAPEX.stop(p);
+    navSync(p);
+  }
+  const featAvail = p => !!(p._a && p._a.f && window.MAPFEAT && window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) && (MAPFEAT.features(p._a.f) || []).length);       // only the high-resolution world, only when mzFinder holds a result
+  async function featToggle(p) {
+    const s = st(p); if (!s.feat && !featAvail(p)) return;
+    if (!window.MAPEX) { try { window.MAPEX = await import("./mappa-estrai.js"); } catch (e) { console.error(e); return; } }
+    s.feat = !s.feat; if (!s.feat && window.MAPEX) MAPEX.featClear(p);
+    navSync(p); frame(p);
+  }
+  function grow(p, key, px) {                                           // the panel is px taller while a block under the map is shown (0 = gone); the amount may change
+    const s = st(p), k = "g" + key, prev = s[k] || 0; if (px === prev || isMax(p)) return;
+    s[k] = px; p.h = Math.max(200, p.h + px - prev); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
+  }
+  // ---- sheet of the gestures (one key per row: action|mouse|trackpad|touch|keyboard)
+  const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "explain", "interval", "mark", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur"] };
+  function help(kind) {
+    const rows = HELP[kind].map(r => I18N.t(`mapnav.h.${kind}.${r}`).split("|").map(x => EH(x.trim()) || "–"));
+    const head = ["act", "mouse", "pad", "touch", "key"].map(k => `<th scope="col">${I18N.t(`mapnav.h.${k}`)}</th>`).join("");
+    big(I18N.t(`mapnav.h.title.${kind}`), `<table class="mzhelp"><thead><tr>${head}</tr></thead><tbody>${rows.map(r => `<tr><th scope="row">${r[0]}</th>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="muted">${I18N.t(`mapnav.h.note.${kind}`)}</p>`);
+  }
+  // the 2D map of the active tab the palette acts on
+  const activeMap = () => { const q = E.active; if (q && q.type === "map" && is2d(q) && E.panels.includes(q)) return q; return (typeof tabPanels === "function" ? tabPanels() : []).find(x => x.type === "map" && is2d(x)) || null; };
+  const paletteOk = c => { const p = activeMap(); return !!p && c.kinds.includes("2d") && (!c.vis || c.vis(ad2(p, null))); };
+  const paletteRun = id => { const p = activeMap(); if (p) runCmd(id, ad2(p, null)); };
+  // touch: one finger moves the map, two fingers move and pinch, a double tap = whole view, a long press = the menu
+  function touchInit(p, cv) {
+    cv.style.touchAction = "none";
+    let g = null, lastTap = null, lp = 0;
+    const at = (t, r) => ({ x: t.clientX - r.left, y: t.clientY - r.top });
+    const cen = ts => { const r = cv.getBoundingClientRect(), a = at(ts[0], r), b = ts[1] ? at(ts[1], r) : a; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y), cx: (ts[0].clientX + (ts[1] || ts[0]).clientX) / 2, cy: (ts[0].clientY + (ts[1] || ts[0]).clientY) / 2 }; };
+    const inside = q => { const a = p._a; return a && q.x >= M.l && q.x <= a.W - M.r && q.y >= M.t && q.y <= a.H - M.b; };
+    cv.addEventListener("touchstart", e => {
+      if (!is2d(p)) return; clearTimeout(lp); const c = cen(e.touches);
+      if (e.touches.length >= 2) { g = { two: true, last: c, moved: true }; pushZh(p); return; }
+      g = { two: false, last: c, start: c, moved: false, t0: Date.now() };
+      if (st(p).ex && window.MAPEX && inside(c)) g.box = MAPEX.touch(p, c.x, c.y);       // a finger on the box moves the box, not the map
+      lp = setTimeout(() => { if (g && !g.moved) { g.moved = true; st(p).lpAt = Date.now(); showMenu(ad2(p, inside(c) ? { rt: xOf(p, c.x), mz: p._a.mzAt(c.y) } : null), { preventDefault() {}, clientX: c.cx, clientY: c.cy, lp: true }); } }, 550);
+    }, { passive: true });
+    cv.addEventListener("touchmove", e => {
+      if (!g || !is2d(p)) return; const c = cen(e.touches), a = p._a;
+      if (!g.moved && Math.hypot(c.x - g.start.x, c.y - g.start.y) < 8) return;
+      if (g.box && e.touches.length === 1) { g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault(); g.box(c.x, c.y); return; }
+      if (!g.two && !g.moved) pushZh(p);
+      g.moved = true; st(p).gestAt = Date.now(); clearTimeout(lp); e.preventDefault();
+      if (g.two && e.touches.length >= 2 && g.last.d > 0 && c.d > 0) pinch(p, g.last, c, g.last.d / c.d);
+      else panPx(p, c.x - g.last.x, c.y - g.last.y);
+      g.last = c; draw(p);
+    }, { passive: false });
+    const end = e => {
+      clearTimeout(lp); if (!g) return; const moved = g.moved, two = g.two; g = null;
+      if (e.touches.length) { if (e.cancelable) e.preventDefault(); g = { two: e.touches.length > 1, last: cen(e.touches), start: cen(e.touches), moved: true }; return; }
+      if (moved) { st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }       // no mouse events after a gesture (they would be a box zoom)
+      const now = Date.now(), c = e.changedTouches[0], r = cv.getBoundingClientRect(), q = at(c, r);
+      if (lastTap && now - lastTap.t < 350 && Math.hypot(q.x - lastTap.x, q.y - lastTap.y) < 30) { lastTap = null; if (e.cancelable) e.preventDefault(); st(p).dtap = now; whole(p); navSync(p); return; }
+      lastTap = { t: now, x: q.x, y: q.y };
+    };
+    cv.addEventListener("touchend", end); cv.addEventListener("touchcancel", () => { clearTimeout(lp); g = null; });
   }
 
   // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
@@ -575,7 +767,7 @@ window.MAPPA = (() => {
     try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
   }
 
-  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise, dropFile };
+  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's

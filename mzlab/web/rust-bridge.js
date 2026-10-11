@@ -133,6 +133,16 @@ export function createBridge({ workerUrl, notify }) {
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
     }
+    if (path === "/api/scaninfo") {
+      const s = slots[k0], sid = num(q, "sid", NaN);
+      if (!s) return null;
+      await s.opening;
+      if (!s.idx || !s.idx.scans || s.bad || !s.blob || !Number.isInteger(sid) || sid < 0) return null;
+      const r = await rpc({ op: "scaninfo", slot: k0, sid, blob: s.blob });
+      if (r.dead || r.error || !r.info) return null;                         // an error (scan outside the file) is worded by Python
+      stats.rust++;
+      return { status: 200, text: r.info, ms: performance.now() - t0 };
+    }
     if (path === "/api/xic" && !hasRef(q)) {
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
       if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {

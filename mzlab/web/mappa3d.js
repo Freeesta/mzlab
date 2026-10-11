@@ -105,7 +105,7 @@ dialog.m3d[open]{display:flex}dialog.m3d::backdrop{background:rgba(0,0,0,.5)}
 .m3d-main canvas.m3d-gl,.m3d-main canvas.m3d-ov{position:absolute;inset:0;width:100%;height:100%;display:block}.m3d-ov{pointer-events:none}.m3d-gl{touch-action:none;cursor:grab}.m3d-gl:active{cursor:grabbing}
 .m3d-gl:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .m3d-read{position:absolute;left:12px;top:8px;right:12px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);pointer-events:none;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)}
-.m3d-help{position:absolute;left:12px;bottom:6px;font-size:11px;color:var(--muted);max-width:55%;pointer-events:none;text-shadow:0 0 3px var(--panel)}
+.m3d-main>.mznav{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:2px;padding:2px;background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:.9}.m3d-help{position:absolute;left:12px;bottom:6px;font-size:11px;color:var(--muted);max-width:55%;pointer-events:none;text-shadow:0 0 3px var(--panel)}
 .m3d-mini{position:absolute;right:10px;bottom:46px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .m3d-mini canvas{width:260px;height:104px;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:6px}
 .m3d-time{position:absolute;left:12px;right:290px;bottom:26px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.m3d-time input[type=range]{flex:1 1 0}
@@ -442,7 +442,7 @@ export function open(p, opener) {
     if (!V.cur || !V.g) { rd.textContent = ""; return; }
     const g = V.g, { i, j } = V.cur, v = V.raw[i * g.nmz + j], rt = rtAt(i), mz = mzAt(j);
     const cell = !hr && g.dmz >= 0.9 ? T("m3d.read.nom", { n: Math.round(g.mz0 + j * g.dmz + 0.2) }) : "";
-    rd.textContent = `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}`;
+    rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}`;
     Q("ti").value = String(i); Q("tt").textContent = `RT ${rt.toFixed(2)}`;
     mini();
   }
@@ -465,14 +465,16 @@ export function open(p, opener) {
 
   // ---- interaction
   const setCur = (i, j) => { const g = V.g; if (!g) return; i = clamp(i, 0, g.nrt - 1); j = clamp(j, 0, g.nmz - 1); if (V.cur && V.cur.i === i && V.cur.j === j) return; V.cur = { i, j }; readout(); V.dirty = true; };
-  const ptrs = new Map(); let drag = null, moved = 0, lastPinch = 0;
+  const ptrs = new Map(); let drag = null, moved = 0, lastPinch = 0, lpT = 0, lpDone = false;
   glc.addEventListener("pointerdown", e => {
     glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); moved = 0;
     drag = { x: e.offsetX, y: e.offsetY, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
+    clearTimeout(lpT); lpDone = false;
+    if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }       // long press = the menu
   });
   glc.addEventListener("pointermove", e => {
     const q = ptrs.get(e.pointerId);
-    if (!q) { const h = pick(e.offsetX, e.offsetY); if (h) setCur(h.i, h.j); return; }
+    if (!q) { if (V.lock) return; const h = pick(e.offsetX, e.offsetY); if (h) setCur(h.i, h.j); return; }       // locked: the cursor stays
     const dx = e.offsetX - q.x, dy = e.offsetY - q.y; q.x = e.offsetX; q.y = e.offsetY; moved += Math.abs(dx) + Math.abs(dy);
     if (ptrs.size === 2) {                                  // two fingers: move, and pinch = zoom
       const [A, B] = [...ptrs.values()], dist = Math.hypot(A.x - B.x, A.y - B.y); if (lastPinch) V.cam.d = clamp(V.cam.d * lastPinch / dist, 0.2, 12); lastPinch = dist; panBy(dx / 2, dy / 2); V.dirty = true; return;
@@ -481,8 +483,11 @@ export function open(p, opener) {
     V.dirty = true;
   });
   const up = e => {
-    const had = ptrs.delete(e.pointerId); if (!had) return; lastPinch = 0;
-    if (moved < 5 && ptrs.size === 0 && e.type === "pointerup" && e.button === 0) click(e);       // a click that does not move = fix the point
+    const had = ptrs.delete(e.pointerId); if (!had) return; lastPinch = 0; clearTimeout(lpT);
+    if (moved < 5 && ptrs.size === 0 && e.type === "pointerup" && !lpDone) {
+      if (e.button === 0) click(e);                                                             // a click that does not move = fix the point
+      else if (e.button === 2) openMenu({ x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY });       // a right click that does not move = the menu (a drag moves the view)
+    }
     drag = null;
   };
   glc.addEventListener("pointerup", up); glc.addEventListener("pointercancel", up);
@@ -509,10 +514,35 @@ export function open(p, opener) {
     const k = e.key; let used = true;
     if (k === "ArrowLeft") stepCur(-1, 0); else if (k === "ArrowRight") stepCur(1, 0); else if (k === "ArrowUp") stepCur(0, 1); else if (k === "ArrowDown") stepCur(0, -1);
     else if (k === "+" || k === "=") V.cam.d = clamp(V.cam.d * 0.85, 0.2, 12); else if (k === "-" || k === "_") V.cam.d = clamp(V.cam.d / 0.85, 0.2, 12);
-    else if (k >= "1" && k <= "4") setView(+k); else if (k === "r" || k === "R") reset(); else used = false;
+    else if (k >= "1" && k <= "4") setView(+k); else if (k === "r" || k === "R") reset();
+    else if (k === "l" || k === "L") toggleLock(); else if (k === "?") MAPPA.help("3d");
+    else if (k === "ContextMenu" || (k === "F10" && e.shiftKey)) { const r = glc.getBoundingClientRect(); openMenu({ cur: true, cx: r.left + r.width / 2, cy: r.top + r.height / 2, kbd: true }); }
+    else used = false;
     if (used) { e.preventDefault(); V.dirty = true; }
   });
   function reset() { Object.assign(P, { ex: 1, asp: DEF.asp }); Q("ex").value = 1; Q("asp").value = DEF.asp; P.sig = hr ? 0 : 1; Q("sig").value = P.sig; V.rt = [a.x0, a.x1]; V.mz = [a.y0, a.y1]; resetCam(35, 32); savePrefs(); load(); }
+
+  // ---- navigation: the commands, the menu and the bar are the ones of the 2D map (MAPPA.CMDS in mappa.js)
+  const cellOf = h => h && { rt: rtAt(h.i), mz: mzAt(h.j), v: V.raw[h.i * V.g.nmz + h.j] };
+  const ctxEl = () => document.getElementById("ctx");
+  function ad3(hit) {
+    return {
+      kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
+      resetAll: () => { resetCam(35, 32); },
+      view: n => setView(n), zoomBy: f => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
+      host: () => dlg.appendChild(ctxEl()),                    // the menu must live inside the modal dialog to be seen and used
+      after: () => { close(); }                                // the XIC and the spectrum appear in the panels of the page
+    };
+  }
+  function toggleLock() { V.lock = !V.lock; MAPPA.lockBtn(navBar, V.lock); readout(); }
+  function openMenu(at) {
+    const hit = at.cur ? null : pick(at.x, at.y);
+    if (hit && !V.lock) setCur(hit.i, hit.j);
+    MAPPA.showMenu(ad3(hit), { preventDefault() {}, clientX: at.cx, clientY: at.cy, kbd: !!at.kbd, lp: !!at.lp });
+  }
+  const navBar = MAPPA.barFor(() => ad3(null), "3d"); main.appendChild(navBar);
+  dlg.addEventListener("keydown", e => { const c = ctxEl(); if (e.key === "Escape" && c && !c.hidden && dlg.contains(c)) { e.preventDefault(); e.stopPropagation(); c.hidden = true; glc.focus({ preventScroll: true }); } }, true);     // Esc closes the menu first, not the viewer
+  dlg.addEventListener("cancel", e => { const c = ctxEl(); if (c && !c.hidden && dlg.contains(c)) { e.preventDefault(); c.hidden = true; } });
 
   // ---- sidebar
   const on = (k, ev, fn) => Q(k).addEventListener(ev, fn);
@@ -564,11 +594,11 @@ export function open(p, opener) {
   const ro = new ResizeObserver(() => { resize(); });
   function close() { if (dlg.open) dlg.close(); }
   dlg.addEventListener("close", () => {
-    alive = false; stop(); cancelAnimationFrame(raf); ro.disconnect(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); dlg.remove();
+    alive = false; stop(); cancelAnimationFrame(raf); ro.disconnect(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); { const c = ctxEl(); if (c && dlg.contains(c)) document.body.appendChild(c); } dlg.remove();
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });
-  window.__m3d = { V, P, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
+  window.__m3d = { V, P, ptrs, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
   dlg.showModal(); resize(); ro.observe(main); glc.focus({ preventScroll: true });
   if (!window.ResizeObserver) resize();
   load().then(() => { raf = requestAnimationFrame(loop); });

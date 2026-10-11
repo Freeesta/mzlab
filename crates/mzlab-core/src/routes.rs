@@ -93,6 +93,11 @@ impl<R: ReadAt> Routes<R> {
         }
     }
 
+    /// `/api/scaninfo` for scan `sid`, reading the header of that scan from the mzML.
+    pub fn scaninfo<M: ReadAt>(&self, sid: usize, mzml: &mut M) -> Result<String> {
+        crate::scaninfo::scaninfo(&self.idx.scans, sid, mzml)
+    }
+
     /// The trace of one file: `{"rt":[...],"y":[...]}` (the multi-file wrapper of `api/xic` is the page's job).
     pub fn xic(&mut self, mz: f64, tol: f64, level: u8) -> Result<String> {
         let Some(si) = self.idx.section_of(level, None) else {
