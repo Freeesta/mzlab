@@ -9,11 +9,11 @@ mzlab/web/index.html	static/esempi/
 mzlab/web/index.html	static/teoria/glossario-dati.js
 mzlab/web/index.html	static/teoria/tema.js
 mzlab/web/draw.js	qqq.disegno.strumenti
-mzlab/web/explore.js	Cromatogramma
-mzlab/web/explore.js	Spettro di massa
-mzlab/web/explore.js	Ione estratto (XIC)
-mzlab/web/explore.js	Spettro degli ioni prodotto
-mzlab/web/explore.js	Spettro composito
+mzlab/web/pannelli.js	Cromatogramma
+mzlab/web/pannelli.js	Spettro di massa
+mzlab/web/pannelli.js	Ione estratto (XIC)
+mzlab/web/pannelli.js	Spettro degli ioni prodotto
+mzlab/web/pannelli.js	Spettro composito
 mzlab/web/liste.js	massa
 mzlab/web/liste.js	nome
 mzlab/web/liste.js	ione
