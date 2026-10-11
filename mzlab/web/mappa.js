@@ -68,8 +68,8 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
-  const diffOpt = () => ({ show: PREF.show || "all", thr: PREF.thr ?? 0.02, rttol: PREF.rttol ?? 0.1 });
-  const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
+  const diffOpt = (diff = true) => ({ show: PREF.show || "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
+  const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}|${mapBg() ? 1 : 0}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}${mapBg() ? "&bg=1" : ""}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
   }));
@@ -88,15 +88,15 @@ window.MAPPA = (() => {
     const s = st(p); init(p);
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
-    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${r.join("|")}|${JSON.stringify(diffOpt())}`;
-    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, M.l, M.t, pw, ph); return true; }
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${mapPal()}|${mapBg()}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
+    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
     clearTimeout(s.regT);
     s.regT = setTimeout(async () => {
       try {
-        const a = await getRegion(A.k, A.level, r, B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "");
+        const a = await getRegion(A.k, A.level, r, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + (mapBg() ? "&bg=1" : ""));
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
-        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
+        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
     }, QUIET);
@@ -104,7 +104,7 @@ window.MAPPA = (() => {
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
-    const ctx = off.getContext("2d"), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : LUT_SEQ;
+    const ctx = off.getContext("2d"), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : lutSeq(mapPal());
     for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
       const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
       d.data[o] = tab[q * 4]; d.data[o + 1] = tab[q * 4 + 1]; d.data[o + 2] = tab[q * 4 + 2]; d.data[o + 3] = 255;
@@ -457,19 +457,26 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
   function decorate(p, c) {
     if (p.type !== "map") return;
-    const sp = document.createElement("span"); sp.className = "seg mzbt";
-    const o = diffOpt(), sel = (v, lab) => `<option value="${v}" ${o.show === v ? "selected" : ""}>${lab}</option>`;
-    const dif = p.ref !== "" && p.ref != null ? `<select data-mz="show" title="${T("mappa.show.title")}">${sel("all", T("mappa.show.all"))}${sel("up", T("mappa.show.up"))}${sel("down", T("mappa.show.down"))}</select>` +
-      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` : "";
-    sp.innerHTML = `<button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button>`;
-    c.appendChild(sp);
-    if (dif) { const d2 = document.createElement("span"); d2.className = "mzdif"; d2.innerHTML = dif; c.appendChild(d2);
-      d2.querySelector('[data-mz="show"]').onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
-      d2.querySelector('[data-mz="thr"]').onchange = ev => { const v = parseFloat(String(ev.target.value).replace(",", ".")); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); }; }
-    sp.querySelector('[data-mz="mark"]').onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
-    sp.querySelector('[data-mz="mir"]').onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
-    sp.querySelector('[data-mz="all"]').onclick = () => whole(p);
-    sp.querySelector('[data-mz="menu"]').onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
+    const hasRef = p.ref !== "" && p.ref != null, o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";
+    const opt = (v, cur, lab) => `<option value="${v}" ${cur === v ? "selected" : ""}>${lab}</option>`;
+    const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
+    if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
+      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
+      `<label class="muted" title="${T("mappa.bg.title")}"><input type="checkbox" data-mz="bg"${PREF.bg ? " checked" : ""}> ${T("mappa.bg")}</label>`;
+    if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
+    const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}" aria-label="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
+      `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
+    c.appendChild(g);
+    const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => parseFloat(String(el.value).replace(",", "."));
+    Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
+    Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
+    Q("bg").onchange = ev => { PREF.bg = ev.target.checked; prefSave(); draw(p); };
+    if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
+    Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
+    Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
+    Q("all").onclick = () => whole(p);
+    Q("menu").onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
   }
 
   function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
@@ -479,7 +486,7 @@ window.MAPPA = (() => {
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
 (() => {
-  const H0 = 300, HMIN = 190;
+  const H0 = 300, HMIN = 190, h0 = p => p.type === "map" ? 360 : H0;
   const css = document.createElement("style");
   css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:10px;z-index:5;cursor:ns-resize;touch-action:none}" +
     ".pnl .pgrip.t{top:-3px}.pnl .pgrip.b{bottom:-3px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:3px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
@@ -509,11 +516,11 @@ window.MAPPA = (() => {
       const end = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", end); g.removeEventListener("pointercancel", end); g.classList.remove("on"); done(p); };
       g.addEventListener("pointermove", mv); g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
     });
-    g.addEventListener("dblclick", ev => { const p = pOf(el); if (!p) return; ev.stopPropagation(); if (side === "t" && !p.full) { const b = p.y + p.h; setH(p, H0); p.y = Math.max(0, b - p.h); apply(p); } else setH(p, H0); done(p); });
+    g.addEventListener("dblclick", ev => { const p = pOf(el); if (!p) return; ev.stopPropagation(); if (side === "t" && !p.full) { const b = p.y + p.h; setH(p, h0(p)); p.y = Math.max(0, b - p.h); apply(p); } else setH(p, h0(p)); done(p); });
     g.addEventListener("keydown", ev => {
       const p = pOf(el); if (!p || !["ArrowUp", "ArrowDown", "Home"].includes(ev.key)) return;
       ev.preventDefault(); ev.stopPropagation(); const k = ev.shiftKey ? 60 : 20;
-      if (ev.key === "Home") setH(p, H0); else setH(p, p.h + (ev.key === "ArrowDown" ? k : -k));
+      if (ev.key === "Home") setH(p, h0(p)); else setH(p, p.h + (ev.key === "ArrowDown" ? k : -k));
       done(p);
     });
     el.appendChild(g);
