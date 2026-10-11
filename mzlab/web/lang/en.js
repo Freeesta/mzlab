@@ -656,6 +656,8 @@ I18N.add("en", {
   "corr.tract.desc": "drag over a stretch without peaks and its average is removed",
   "corr.snip": "Automatic background",
   "corr.snip.desc": "removes the rising base under the peaks (SNIP)",
+  "mappa.bg": "remove background",
+  "ctl.map.diff.none": "none",
   "corr.file.mapdesc": "takes this file off the map: orange where the sample is more intense, blue where the reference is",
   "corr.file.specdesc": "takes this file's spectrum off (same m/z), over the same time window",
   "corr.tract.mapdesc": "choose a stretch with no peaks (Alt + drag on the map) and its mean is taken off",

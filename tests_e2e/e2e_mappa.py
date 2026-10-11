@@ -105,6 +105,7 @@ try:
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.select_option(".pnl.map [data-mz=show]", "all"); pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
+            pg.click(".pnl.map [data-a=cpar]"); pg.wait_for_timeout(200)                                   # close «Options»: the popover would cover the map
         step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, show increases only, noise threshold", diff)
         def points():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)

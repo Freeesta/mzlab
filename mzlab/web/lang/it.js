@@ -656,6 +656,8 @@ I18N.add("it", {
   "corr.tract.desc": "trascini un tratto senza picchi e se ne toglie la media",
   "corr.snip": "Fondo automatico",
   "corr.snip.desc": "toglie la base che sale sotto i picchi (SNIP)",
+  "mappa.bg": "togli il fondo",
+  "ctl.map.diff.none": "nessuno",
   "corr.file.mapdesc": "toglie questo file dalla mappa: in arancio ciò che è più intenso nel campione, in blu ciò che è più intenso nel riferimento",
   "corr.file.specdesc": "toglie lo spettro di questo file (stesso m/z), nella stessa finestra di tempo",
   "corr.tract.mapdesc": "scegli un tratto senza picchi (Alt + trascina sulla mappa) e se ne toglie la media",
