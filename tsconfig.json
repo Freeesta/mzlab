@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "tools/tipi/globali.d.ts",
+    "mzlab/web/ordine.js",
+    "mzlab/web/xlsx.js",
+    "mzlab/web/version.js",
+    "mzlab/web/appname.js",
+    "mzlab/web/telefono.js"
+  ]
+}
