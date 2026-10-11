@@ -95,6 +95,8 @@ const BARRA = (() => {
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
     { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
     { id: "subref", bar: false, group: "graphs", ic: () => IC('<path d="M2 11c2 0 2-6 4-6s2 6 4 6 2-3 4-3"/><path d="M2 13.5h12" stroke-dasharray="2 2"/>'), visible: () => inData() && window.SUBREF && tabFiles().length > 1, run: () => window.SUBREF && SUBREF.toggle() },
+    { id: "gradient", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.have(p)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.have(q)); if (p) { p.overlay = p.overlay === "grad" ? null : "grad"; draw(p); uiSave(); } } },
+    { id: "pressure", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.pressHave(p) && !isAnalog(p.kind)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.pressHave(q) && !isAnalog(q.kind)); if (p) { p.overlay = p.overlay === "press" ? null : "press"; draw(p); uiSave(); } } },
     { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
@@ -116,6 +118,8 @@ const BARRA = (() => {
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
+  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
+  if (window.MAPPA) MAPPA.CMDS.filter(c => c.kinds.includes("2d")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
   const byId = id => CMD.find(c => c.id === id);
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };

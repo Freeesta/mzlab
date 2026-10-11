@@ -364,6 +364,16 @@ class App:
     def analog(self, k: int, i: int, n: int = 2000) -> dict:
         return self._item(k).analog(i, max(10, min(int(n), 20000)))
 
+    def delay(self, k: int) -> dict | None:
+        """Delay of the mass spectrometer after the PDA of file k (both traces of the file), or None when it has no PDA or they share too little time."""
+        from .analog import detector_delay
+        item = self._item(k)
+        if not item.has_pda():
+            return None
+        ta, ya = item.total("pda")
+        tb, yb = item.total("tic", 1)
+        return detector_delay(ta, ya, tb, yb)
+
     def gradient(self, k: int) -> dict | None:
         """The LC gradient of file k: the one in the .dam chosen for it, else the one typed or imported for this file in the session, else None."""
         from .analog import from_dam
