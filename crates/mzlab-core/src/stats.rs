@@ -237,109 +237,6 @@ pub fn chi2_sf(x: f64, df: u32) -> f64 {
     gammainc_q(df as f64 / 2.0, x / 2.0)
 }
 
-/// numpy's `SeedSequence(seed).generate_state(4, uint64)` for a non-negative integer seed below 2^32.
-fn seed_state(seed: u32) -> [u64; 4] {
-    const MULT_A: u32 = 0x931e8875;
-    const MULT_B: u32 = 0x58f38ded;
-    const MIX_L: u32 = 0xca01f9dd;
-    const MIX_R: u32 = 0x4973f715;
-    let hashmix = |v: u32, h: &mut u32| {
-        let mut v = v ^ *h;
-        *h = h.wrapping_mul(MULT_A);
-        v = v.wrapping_mul(*h);
-        v ^ (v >> 16)
-    };
-    let mix = |x: u32, y: u32| {
-        let r = MIX_L.wrapping_mul(x).wrapping_sub(MIX_R.wrapping_mul(y));
-        r ^ (r >> 16)
-    };
-    let mut h = 0x43b0d7e5u32;
-    let mut pool = [0u32; 4];
-    for (i, p) in pool.iter_mut().enumerate() {
-        *p = hashmix(if i == 0 { seed } else { 0 }, &mut h);
-    }
-    for s in 0..4 {
-        for d in 0..4 {
-            if s != d {
-                let hs = hashmix(pool[s], &mut h);
-                pool[d] = mix(pool[d], hs);
-            }
-        }
-    }
-    let mut hb = 0x8b51f9ddu32;
-    let mut w = [0u32; 8];
-    for (i, o) in w.iter_mut().enumerate() {
-        let mut v = pool[i % 4] ^ hb;
-        hb = hb.wrapping_mul(MULT_B);
-        v = v.wrapping_mul(hb);
-        *o = v ^ (v >> 16);
-    }
-    [0, 1, 2, 3].map(|i| w[2 * i] as u64 | (w[2 * i + 1] as u64) << 32)
-}
-
-/// numpy's PCG64 (XSL-RR 128/64) with its buffered 32-bit output.
-struct Pcg64 {
-    state: u128,
-    inc: u128,
-    half: Option<u32>,
-}
-
-impl Pcg64 {
-    const MULT: u128 = 0x2360ED051FC65DA44385DF649FCCF645;
-    fn new(seed: u32) -> Pcg64 {
-        let v = seed_state(seed);
-        let init = (v[0] as u128) << 64 | v[1] as u128;
-        let seq = (v[2] as u128) << 64 | v[3] as u128;
-        let mut g = Pcg64 {
-            state: 0,
-            inc: seq << 1 | 1,
-            half: None,
-        };
-        g.step();
-        g.state = g.state.wrapping_add(init);
-        g.step();
-        g
-    }
-    fn step(&mut self) {
-        self.state = self.state.wrapping_mul(Self::MULT).wrapping_add(self.inc);
-    }
-    fn next64(&mut self) -> u64 {
-        self.step();
-        let x = ((self.state >> 64) as u64) ^ (self.state as u64);
-        x.rotate_right((self.state >> 122) as u32)
-    }
-    fn next32(&mut self) -> u32 {
-        if let Some(h) = self.half.take() {
-            return h;
-        }
-        let n = self.next64();
-        self.half = Some((n >> 32) as u32);
-        n as u32
-    }
-    /// `random_interval(max)`: a uniform integer in `0..=max` by masked rejection.
-    fn interval(&mut self, max: u32) -> u32 {
-        if max == 0 {
-            return 0;
-        }
-        let mask = u32::MAX >> max.leading_zeros();
-        loop {
-            let v = self.next32() & mask;
-            if v <= max {
-                return v;
-            }
-        }
-    }
-    /// `rng.permutation(n)`.
-    fn permutation(&mut self, n: usize) -> Vec<usize> {
-        let mut a: Vec<usize> = (0..n).collect();
-        for i in (1..n).rev() {
-            let j = self.interval(i as u32) as usize;
-            a.swap(i, j);
-        }
-        a
-    }
-}
-
 #[derive(Clone, Copy)]
 pub enum Stat {
     Pearson,
@@ -386,7 +283,7 @@ pub fn perm_pvalue(stat: Stat, x: &[f64], y: &[f64], n_perm: usize, seed: u32) -
     let perms = if n <= 7 {
         heap_permutations(n)
     } else {
-        let mut g = Pcg64::new(seed);
+        let mut g = crate::rng::Pcg64::new(seed);
         (0..n_perm).map(|_| g.permutation(n)).collect()
     };
     let hit = perms

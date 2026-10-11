@@ -17,256 +17,9 @@ pub struct Peak {
 
 pub const MIN_SCANS_RELIABLE: usize = 6;
 
-fn median(v: &[f64]) -> f64 {
-    if v.is_empty() {
-        return 0.0;
-    }
-    let mut s = v.to_vec();
-    s.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let n = s.len();
-    if n % 2 == 1 {
-        s[n / 2]
-    } else {
-        (s[n / 2 - 1] + s[n / 2]) / 2.0
-    }
-}
+use crate::signal::{asls_baseline, cwt_ricker, median, snip_baseline, solve};
+pub use crate::signal::{noise_level, savgol};
 
-/// Robust noise sigma from the first differences (MAD).
-pub fn noise_level(y: &[f64]) -> f64 {
-    if y.len() < 4 {
-        return 0.0;
-    }
-    let d: Vec<f64> = y.windows(2).map(|w| w[1] - w[0]).collect();
-    let m = median(&d);
-    let dev: Vec<f64> = d.iter().map(|v| (v - m).abs()).collect();
-    1.4826 * median(&dev) / 2f64.sqrt()
-}
-
-/// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
-fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
-    for c in 0..n {
-        let mut p = c;
-        for r in c + 1..n {
-            if a[r * n + c].abs() > a[p * n + c].abs() {
-                p = r;
-            }
-        }
-        if a[p * n + c].abs() < 1e-300 {
-            return None;
-        }
-        if p != c {
-            for k in 0..n {
-                a.swap(c * n + k, p * n + k);
-            }
-            b.swap(c, p);
-        }
-        let d = a[c * n + c];
-        for r in c + 1..n {
-            let f = a[r * n + c] / d;
-            if f != 0.0 {
-                for k in c..n {
-                    a[r * n + k] -= f * a[c * n + k];
-                }
-                b[r] -= f * b[c];
-            }
-        }
-    }
-    let mut x = vec![0.0; n];
-    for r in (0..n).rev() {
-        let mut s = b[r];
-        for k in r + 1..n {
-            s -= a[r * n + k] * x[k];
-        }
-        x[r] = s / a[r * n + r];
-    }
-    Some(x)
-}
-
-/// Savitzky-Golay convolution coefficients (odd window), derivative order `deriv`, unit spacing, ordered like `np.convolve` wants.
-fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64> {
-    let half = (window / 2) as i64;
-    let m = poly + 1;
-    // pinv(A)[deriv] = row `deriv` of (A^T A)^-1 A^T, A[i][j] = x_i^j
-    let xs: Vec<f64> = (-half..=half).map(|v| v as f64).collect();
-    let mut ata = vec![0.0; m * m];
-    for j in 0..m {
-        for k in 0..m {
-            ata[j * m + k] = xs.iter().map(|x| x.powi((j + k) as i32)).sum();
-        }
-    }
-    let mut e = vec![0.0; m];
-    e[deriv] = 1.0;
-    let w = solve(ata, e, m).unwrap_or_else(|| vec![0.0; m]);
-    let fact: f64 = (1..=deriv).map(|v| v as f64).product();
-    let mut c: Vec<f64> = xs
-        .iter()
-        .map(|x| fact * (0..m).map(|j| w[j] * x.powi(j as i32)).sum::<f64>())
-        .collect();
-    c.reverse();
-    c
-}
-
-fn reflect(i: i64, n: i64) -> usize {
-    // numpy "reflect" padding (the edge is not repeated); valid while |offset| < n
-    let mut j = i;
-    if j < 0 {
-        j = -j;
-    }
-    if j > n - 1 {
-        j = 2 * (n - 1) - j;
-    }
-    j as usize
-}
-
-pub fn savgol(y: &[f64], window: usize, poly: usize) -> Vec<f64> {
-    let n = y.len();
-    let mut window = window | 1;
-    if n < 3 {
-        return y.to_vec();
-    }
-    window = window.min(if n % 2 == 1 { n } else { n - 1 });
-    let poly = poly.min(window - 1);
-    let half = window / 2;
-    let c = savgol_coeffs(window, poly, 0);
-    let ni = n as i64;
-    (0..n)
-        .map(|i| {
-            (0..window)
-                .map(|k| {
-                    let src = i as i64 + k as i64 - half as i64;
-                    let v = if n > half {
-                        y[reflect(src, ni)]
-                    } else {
-                        y[src.clamp(0, ni - 1) as usize]
-                    };
-                    v * c[window - 1 - k]
-                })
-                .sum()
-        })
-        .collect()
-}
-
-pub(crate) fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
-    let n = y.len();
-    let mut v: Vec<f64> = y
-        .iter()
-        .map(|&x| (((x.max(0.0) + 1.0).sqrt() + 1.0).ln() + 1.0).ln())
-        .collect();
-    let top = iters.min((n / 2).saturating_sub(1).max(1));
-    for w in 1..=top {
-        let a: Vec<f64> = (0..n)
-            .map(|i| {
-                let right = if i + w < n { v[i + w] } else { v[n - 1] };
-                let left = if i >= w { v[i - w] } else { v[0] };
-                (right + left) / 2.0
-            })
-            .collect();
-        for i in 0..n {
-            v[i] = v[i].min(a[i]);
-        }
-    }
-    v.iter()
-        .map(|&x| ((x.exp() - 1.0).exp() - 1.0).powi(2) - 1.0)
-        .collect()
-}
-
-fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
-    if x <= xp[0] {
-        return fp[0];
-    }
-    if x >= xp[xp.len() - 1] {
-        return fp[fp.len() - 1];
-    }
-    let j = xp.partition_point(|&v| v <= x) - 1;
-    fp[j] + (x - xp[j]) * (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j])
-}
-
-fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
-    let n = y.len();
-    if n < 5 {
-        let m = y.iter().cloned().fold(f64::INFINITY, f64::min);
-        return vec![if n == 0 { 0.0 } else { m }; n];
-    }
-    if n > 20000 {
-        return snip_baseline(y, 20);
-    }
-    let k = n.div_ceil(max_n).max(1);
-    if k > 1 {
-        let m = n / k;
-        let yd: Vec<f64> = (0..m)
-            .map(|b| y[b * k..(b + 1) * k].iter().sum::<f64>() / k as f64)
-            .collect();
-        let xd: Vec<f64> = (0..m).map(|b| (b as f64 + 0.5) * k as f64 - 0.5).collect();
-        let zd = asls_baseline(&yd, lam / (k as f64).powi(4), p, iters, usize::MAX / 4);
-        return (0..n)
-            .map(|i| interp(i as f64, &xd, &zd).min(y[i]))
-            .collect();
-    }
-    // P = lam * D2^T D2 (D2 = second differences)
-    let mut pm = vec![0.0; n * n];
-    for r in 0..n - 2 {
-        let c = [(r, 1.0), (r + 1, -2.0), (r + 2, 1.0)];
-        for &(i, vi) in &c {
-            for &(j, vj) in &c {
-                pm[i * n + j] += lam * vi * vj;
-            }
-        }
-    }
-    let mut w = vec![1.0; n];
-    let mut z = y.to_vec();
-    for _ in 0..iters {
-        let mut a = pm.clone();
-        for i in 0..n {
-            a[i * n + i] += w[i];
-        }
-        let b: Vec<f64> = (0..n).map(|i| w[i] * y[i]).collect();
-        z = match solve(a, b, n) {
-            Some(s) => s,
-            None => break,
-        };
-        let w_new: Vec<f64> = (0..n)
-            .map(|i| if y[i] > z[i] { p } else { 1.0 - p })
-            .collect();
-        if w_new == w {
-            break;
-        }
-        w = w_new;
-    }
-    (0..n).map(|i| z[i].min(y[i])).collect()
-}
-
-fn ricker(width: f64, n: usize) -> Vec<f64> {
-    let h = (n / 2) as i64;
-    (-h..=h)
-        .map(|x| {
-            let x = x as f64;
-            (1.0 - (x / width).powi(2)) * (-0.5 * (x / width).powi(2)).exp() / width.sqrt()
-        })
-        .collect()
-}
-
-fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
-    let n = y.len();
-    widths
-        .iter()
-        .map(|&w| {
-            let k = ((10.0 * w).min(n as f64 - 1.0) as usize) | 1;
-            let wv = ricker(w, k);
-            let h = (k / 2) as i64;
-            (0..n)
-                .map(|i| {
-                    // np.convolve(np.pad(y, h, edge), wv, valid): the kernel is symmetric
-                    (0..k)
-                        .map(|j| {
-                            let src = (i as i64 + j as i64 - h).clamp(0, n as i64 - 1) as usize;
-                            y[src] * wv[k - 1 - j]
-                        })
-                        .sum::<f64>()
-                })
-                .collect()
-        })
-        .collect()
-}
 
 /// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
 pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
@@ -336,24 +89,25 @@ impl Default for Params {
     }
 }
 
+/// Result of the peak picking with the intermediate traces (`ionfamily.detect_peaks` returns them too).
+#[derive(Debug, Clone, Default)]
+pub struct Detection {
+    /// Baseline-corrected trace (not clipped).
+    pub yc: Vec<f64>,
+    /// Smoothed, non-negative corrected trace.
+    pub ys: Vec<f64>,
+    pub noise: f64,
+    pub peaks: Vec<Peak>,
+}
+
 /// Peaks of the trace (rt in minutes, y), sorted by decreasing height like the Python engine.
 pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
-    let n = y.len();
-    if n < 7 || !y.iter().any(|&v| v > 0.0) {
-        return Vec::new();
-    }
-    let base = if params.asls {
-        asls_baseline(y, 1e5, 0.01, 10, 160)
-    } else {
-        snip_baseline(y, 20)
-    };
-    let yc: Vec<f64> = (0..n).map(|i| y[i] - base[i]).collect();
-    let ys: Vec<f64> = savgol(&yc, params.smooth, 2)
-        .into_iter()
-        .map(|v| v.max(0.0))
-        .collect();
-    let noise = noise_level(&yc).max(1e-9);
-    // widths = unique(round(geomspace(1, max(3, min(n/6, 12)), 7), 2))
+    detect_full(rt, y, params).peaks
+}
+
+/// `detect_peaks` with the corrected and smoothed traces and the noise level.
+/// `unique(round(geomspace(1, max(3, min(n/6, 12)), 7), 2))`: the widths of the wavelet scales.
+fn scale_widths(n: usize) -> Vec<f64> {
     let stop = (n as f64 / 6.0).min(12.0).max(3.0);
     let mut widths: Vec<f64> = (0..7)
         .map(|i| {
@@ -368,8 +122,12 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
         })
         .collect();
     widths.dedup();
-    let c = cwt_ricker(&ys, &widths);
-    let nw = widths.len();
+    widths
+}
+
+/// Ridge lines over the scales: the local maxima of each scale joined when they stay close, with the value over the noise of their scale.
+fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
+    let (nw, n) = (widths.len(), c[0].len());
     let peaks_per_scale: Vec<Vec<usize>> = (0..nw)
         .map(|i| {
             (1..n - 1)
@@ -411,9 +169,15 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
             }
         }
     }
+    ridges
+}
+
+/// The apexes `(index, ridge SNR, width)` that the ridges support, in order of position.
+fn ridge_apexes(ridges: &[Ridge], widths: &[f64], ys: &[f64], noise: f64, snr: f64) -> Vec<(usize, f64, f64)> {
+    let n = ys.len();
     let mut found: Vec<(usize, f64, f64)> = Vec::new();
     let mut taken: Vec<usize> = Vec::new();
-    for r in &ridges {
+    for r in ridges {
         if r.pos.len() < 3 {
             continue;
         }
@@ -423,7 +187,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
                 k = j;
             }
         }
-        if r.val[k] < params.snr {
+        if r.val[k] < snr {
             continue;
         }
         let w = widths[r.scale[k]];
@@ -436,7 +200,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
                 apex = j;
             }
         }
-        if ys[apex] < params.snr * noise {
+        if ys[apex] < snr * noise {
             continue;
         }
         if taken
@@ -452,6 +216,12 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
         a.0.cmp(&b.0)
             .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     });
+    found
+}
+
+/// Borders, area and height of each apex; the peaks with fewer scans than `min_scans` are dropped; by decreasing height.
+fn peaks_of(found: Vec<(usize, f64, f64)>, rt: &[f64], yc: &[f64], ys: &[f64], params: &Params) -> Vec<Peak> {
+    let n = ys.len();
     let mut peaks = Vec::new();
     for (apex, rsn, _w) in found {
         let h = ys[apex];
@@ -465,7 +235,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
         }
         let lo2 = lo.saturating_sub(1);
         let hi2 = (hi + 1).min(n - 1);
-        let hh = parabola_height(rt, &ys, apex);
+        let hh = parabola_height(rt, ys, apex);
         let seg: Vec<f64> = yc[lo2..=hi2].iter().map(|v| v.max(0.0)).collect();
         let area = trapz(&seg, &rt[lo2..=hi2]);
         let ns = hi2 - lo2 + 1;
@@ -488,4 +258,28 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     peaks
+}
+
+pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
+    let n = y.len();
+    if n < 7 || !y.iter().any(|&v| v > 0.0) {
+        return Detection::default();
+    }
+    let base = if params.asls {
+        asls_baseline(y, 1e5, 0.01, 10, 160)
+    } else {
+        snip_baseline(y, 20)
+    };
+    let yc: Vec<f64> = (0..n).map(|i| y[i] - base[i]).collect();
+    let ys: Vec<f64> = savgol(&yc, params.smooth, 2)
+        .into_iter()
+        .map(|v| v.max(0.0))
+        .collect();
+    let noise = noise_level(&yc).max(1e-9);
+    let widths = scale_widths(n);
+    let c = cwt_ricker(&ys, &widths);
+    let ridges = ridge_lines(&c, &widths);
+    let found = ridge_apexes(&ridges, &widths, &ys, noise, params.snr);
+    let peaks = peaks_of(found, rt, &yc, &ys, &params);
+    Detection { yc, ys, noise, peaks }
 }

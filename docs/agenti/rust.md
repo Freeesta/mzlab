@@ -5,7 +5,9 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 - `crates/mzlab-core`: `raw.rs` (lettore dei `.raw` Thermo con OpenTFRaw `=2.0.0`, Apache-2.0, da `Read + Seek`: `read` dà gli stessi `Spectrum` dell'mzML (centroidi), `to_mzml` scrive l'mzML che il resto del programma già legge)
   - `mzml.rs` (lettore a eventi con quick-xml da `Read`: spettri con livello, RT in minuti, polarità, precursore, filtro, m/z `f64`, intensità `f32`; cromatogrammi TIC/BPC/SRM/PDA; Numpress rifiutato)
   - `analysis.rs` (TIC e XIC come `Item.total`/`PeakTable.xic`)
-  - `peaks.rs` (porta riga per riga di `ionfamily.detect_peaks`)
+  - `peaks.rs` (porta riga per riga di `ionfamily.detect_peaks`: `detect_peaks`, `detect_full` con tracce corretta e levigata e rumore), `signal.rs` (mediana, riflessione, Savitzky-Golay, SNIP, AsLS, ondina Ricker), `peakext.rs` (apice parabolico con incertezza, FWHM, affidabilità)
+  - `rng.rs` (`Pcg64`: `default_rng(seed)` di numpy — SeedSequence, permutazione, interi limitati di Lemire, `choice` con e senza reinserimento — identico bit a bit), `jsonb.rs` (costruttore dei JSON dei rapporti: NaN → null, `msg(chiave, parametri)`)
+  - `tracestat.rs`, `similarity.rs`, `ratio.rs`, `kinetics.rs`, `roles.rs`, `ms2sim.rs`, `origin.rs` (`profile_similarity`, `ratio_fit`, `kinetics`, `annotate_roles`, somiglianza MS2 e `origin_report` di `mzlab/ionfamily.py`: «Da dove viene questo ione?», solo prove, mai un verdetto), `originroute.rs` (`api/origin` sulla sessione dagli indici: solo risoluzione unitaria con centroidi, il resto è di Python; prova `tests/origin_parity.rs` con `tools/origin_riferimento.py`, stesso JSON con confronto foglia per foglia)
   - `peakq.rs` (misure di qualità di un picco — somiglianza gaussiana, asimmetria al 10 %, punteggio di rumore — e il secondo rilevatore «prominenza + minimo locale» con bordi alle valli e aree sul segnale grezzo; senza riferimento Python: le prove sono tracce sintetiche in `peakq::tests`),  `entropy.rs` (somiglianza di entropia spettrale)
   - `mzidx.rs` (costruttore del `.mzidx` in streaming, vedi sotto)
   - `crates/mzlab-feat`: tracce di massa MS1 a lastre di m/z (`trace::detect`, porta di `features.detect`), vedi `docs/agenti/mzfeat.md`
@@ -67,8 +69,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 - **Resta**:
   - (1) apertura di 2 file Full Scan sintetici 1,1-1,3 s (classico 1,2 s): tabella delle scansioni letta da una finestra di 1 MB (`window.rs`), residuo ~0,7 s per l'indice (avvio del worker + 0,2 s di calcolo a file), costruirlo in secondo piano non serve finché l'apertura resta sotto il secondo; file veri (centinaia di MB) non misurati.
   - (2) rotte `fileinfo` e `method` nel bridge (il Rust c'è in `fileroutes.rs`, non è collegato a `lr.js`).
-  - (3) `origin_report`, `profile_similarity`, `ratio_fit`, `kinetics` (servono `integers`/`choice` del generatore numpy).
-  - (4) `peaks.py` e le rotte delle mappe.
-  - (5) HR, Banco, mzFinder, `.dam` e tracce analogiche restano su Pyodide.
+  - (3) `peaks.py` e le rotte delle mappe; `subxic` e `qaqc`.
+  - (4) HR, Banco, mzFinder, `.dam` e tracce analogiche restano su Pyodide.
 - **Provare**: `cargo test --release -p mzlab-core`; `python3 tools/verifica.py --senza-e2e`; il sito con il `.wasm` si prova solo in CI (`sito-rust.yml`, `workflow_dispatch` con `solo=e2e_lr,e2e13`; senza `wasm-bindgen` in locale). Il peso del `.wasm` del motore (limite 1,5 MB) e della libreria (600 KB) si controlla in `tools/wasm_opt.sh`, usato anche da `pages.yml`.
 - **Trappole**: `E`, `S`, `NB` sono `const` degli script classici, non stanno su `window`; l'avvio ha un tempo massimo (`?ripresa=ms`, 30 s) dopo il quale passa a Python, che spiega se un'altra scheda tiene il database; con `lr.js` la sessione ripresa rende invisibile `#drop` dopo una ricarica; ogni rotta nuova di `lr.js` deve avere lo stesso JSON di Python (confronto in `e2e_lr.py`); `MZLAB_TRACE` (array su `window`, riempito se definito prima del caricamento) registra rpc e fetch con i tempi.

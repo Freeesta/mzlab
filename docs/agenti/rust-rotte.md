@@ -32,7 +32,8 @@ Stato attuale; parte del motore Rust (`docs/agenti/rust.md`).
 | GET `dda`, `scan`, `scanavg` | fette e tabella delle scansioni (HR) | Python (mondo HR) |
 | GET `mrm`, `method`, `method_warnings` | cromatogrammi SRM, metadati, `.dam` | `mrm` Rust pronto in `mzlab-core` (`fileroutes::mrm_transitions`), non ancora collegato; `method` e `method_warnings` Python |
 | GET `map`, `mappunti3d`, `mapsnap`, `mappunti` | picchi dell'indice (griglia RT × m/z) | Python (Pacchetto «algoritmi», punto 2) |
-| GET `origin`, `subxic`, `qaqc` | picchi dell'indice (`ionfamily`) | Python (Pacchetto «algoritmi», punto 1) |
+| GET `origin` | prove su ROI, forma, rapporto, cinetica, ruoli, MS2 (`originroute.rs`, `lr-origin.js`) | Rust per risoluzione unitaria con centroidi; HR e profilo: Python |
+| GET `subxic`, `qaqc` | picchi dell'indice (`ionfamily`) | Python |
 | GET `formula`, `composition`, `contaminants`, `msntree` | nessun file (chimica); `msntree` legge le scansioni | Python (HR, Pacchetto «algoritmi», punto 3) |
 | POST `workflow/validate`, `export/mgf`, `export/msp`, `stat/profile`, `stat/blank`, `qaqc/features` | solo dati già nella pagina | stato/calcolo puro: JS o Rust (punto 4) |
 

@@ -183,3 +183,11 @@ Container cloud (Chromium 1194; su un runner GitHub Actions prima della correzio
 Stesso container prima della correzione: Rust 6.5 s di apertura, classico 1.2 s. L'apertura costava la tabella delle scansioni (`prepare_upload`, 4.5 s a file).
 Senza `indexList` (i file sintetici) lo scorrimento rileggeva 1 MB per ogni spettro e ogni lettura sincrona di `Blob` in OPFS costa circa 1 ms; ora `idxread::Windowed` serve le letture piccole da una finestra di 1 MB e lo scorrimento tiene il suo buffer (688 letture da 1 MB → 5). 
 Resta ~0.7 s per la costruzione dell'indice (avvio del worker, 0.2 s di calcolo a file, in parallelo). Con file veri (centinaia di MB, di norma con `indexList`) la misura non è stata fatta.
+
+## «Da dove viene questo ione?» (`api/origin`, `cargo test --release -p mzlab-core --test origin_parity` e `tools/origin_riferimento.py`, nativo, dati LR veri e sintetici, un report con 200 bootstrap, 400 spostamenti, 25 candidati)
+| Motore | Tempo per rapporto (ms) |
+|---|---|
+| Python (numpy, `ionfamily.origin_report`) | 320-365 |
+| Rust (`origin::origin_report`) | 80-90 |
+
+Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazione, rapporto con bootstrap, cinetica, ruoli e candidati. Nel browser (WebAssembly) non misurato qui. Parità: stessi indici e conteggi, numeri uguali entro 1e-9, p-value Monte Carlo identici (stesso `default_rng`).
