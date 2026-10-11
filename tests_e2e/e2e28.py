@@ -74,9 +74,28 @@ try:
         def diffs():
             d = pg.evaluate("[...document.querySelectorAll('.ad-diffs tbody tr')].map(tr=>[...tr.children].map(c=>c.textContent))")
             assert 5 <= len(d) <= 6 and d[0][0] == "+21.9819", d
-            t = pg.inner_text(".ad-diffs"); assert "Huang" in t and "nominal" not in t.lower() and "Tabella completa" not in t, t
-            assert pg.evaluate("document.querySelectorAll('.ad-diffs a').length") == 0     # the Theory does not hold this table: no link
-        step("pairs: at most 6 rows, source line, no nominal, no link to Theory", diffs)
+            t = pg.inner_text(".ad-diffs"); assert "Huang" in t and "nominal" not in t.lower(), t
+            assert pg.evaluate("document.querySelectorAll('.ad-diffs a').length") == 1
+            a = pg.locator(".ad-diffs a"); assert a.get_attribute("href") == "static/teoria/06-esi.html#addotti-differenze" and "noopener" in a.get_attribute("rel") and a.get_attribute("aria-label")
+        step("pairs: at most 6 rows, source line, no nominal, one link to the Theory", diffs)
+        def theory():
+            reqs = []
+            with pg.context.expect_page() as np_:
+                pg.locator(".ad-diffs a").focus(); pg.keyboard.press("Enter")
+            tp = np_.value; tp.on("request", lambda q: reqs.append(q.url)); tp.wait_for_load_state(); tp.wait_for_timeout(800)
+            assert tp.url.endswith("/static/teoria/06-esi.html#addotti-differenze"), tp.url
+            h = tp.evaluate("document.querySelector('#addotti-differenze').getBoundingClientRect().top"); assert -5 < h < 700, h
+            assert tp.evaluate("document.querySelectorAll('#addotti-differenze + p + .tw caption').length") == 1
+            assert tp.evaluate("document.querySelectorAll('#addotti-differenze + p + .tw tbody tr').length") == 14
+            hd = tp.evaluate("[...document.querySelectorAll('#addotti-differenze + p + .tw thead th')].map(h=>h.scope+':'+h.textContent)")
+            assert hd == ["col:Coppia di addotti", "col:\u0394 m/z esatto", "col:\u0394 nominale", "col:Modo", "col:Nota e significato didattico"], hd
+            tp.set_viewport_size({"width": 390, "height": 800}); tp.wait_for_timeout(300)
+            assert tp.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no horizontal page scroll at 390 px"
+            for th in ("light", "dark"):
+                tp.evaluate(f"document.documentElement.setAttribute('data-theme','{th}')")
+            bad = [u for u in reqs if any(k in u.lower() for k in ("pyodide", ".wasm", "mzlab.zip"))]; assert not bad, bad
+            tp.close()
+        step("full table opens in the Theory (14 rows, headers, 390 px, no engine)", theory)
         def reflists():
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
