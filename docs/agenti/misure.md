@@ -116,3 +116,12 @@ Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 1
 - SIMD (`+simd128`), 20 Full Scan LR, pool, tre giri: tempo totale 8,83 / 10,41 / 8,13 s con SIMD (media 9,12 s), 7,74 / 10,05 / 10,09 s senza (media 9,29 s); somma dei tempi nel worker (`buildMs`) 9,21 contro 9,02 s. Nessuna differenza misurabile; `.wasm` 773 KB contro 776 KB.
 - Il costruttore nativo del desktop (memmap2 + rayon) non è misurato qui: va misurato sul Mac con `python3 tools/bench.py --indici` dentro l'app.
 
+## Pulizia del codice (motore Python, 5 file Full Scan sintetici, 3 giri; Chromium cloud senza WASM Rust)
+| misura | prima | dopo |
+|---|---|---|
+| apertura (open_s) | 3.32 / 3.49 / 3.42 | 3.08 / 3.33 / 3.07 |
+| TIC + 5 XIC (tic_xic_s) | 0.61 / 0.33 / 0.31 | 0.34 / 0.34 / 0.34 |
+| RSS del browser, MB | 806 / 810 / 790 | 766 / 810 / 725 |
+| JS degli script di `mzlab/web/` (senza vendor e teoria), byte | 1 124 713 | 1 122 273 (−2 440) |
+
+Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (partono dopo gli script classici).

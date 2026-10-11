@@ -23,23 +23,6 @@ function sgFilter(y, m, deriv) {                         // half window m (windo
   for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
   return out;
 }
-function sgDeriv2Inv(y, m = 3) {
-  const n = y.length;
-  if (n < 2 * m + 1) return y.slice();
-  const S0 = 2 * m + 1;
-  const S2 = m * (m + 1) * (2 * m + 1) / 3;
-  const S4 = m * (m + 1) * (2 * m + 1) * (3 * m * m + 3 * m - 1) / 15;
-  const det = S0 * S4 - S2 * S2;
-  const w = [];
-  for (let j = -m; j <= m; j++) w.push(-2 * (S0 * j * j - S2) / det);
-  const out = new Array(n);
-  for (let i = 0; i < n; i++) {
-    let v = 0;
-    for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))];
-    out[i] = v;
-  }
-  return out;
-}
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0 };
 const PK = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("qqq.picchi") || "{}"); } catch (e) { /* no storage */ } return { ...PK_DEF, ...o }; })();

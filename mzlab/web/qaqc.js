@@ -30,6 +30,7 @@ const QAQC = (() => {
     return f.type === "blank" ? "blank" : f.type === "standard" ? "standard" : "sample";
   }
   const roleOf = f => (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));
+  const setRole = (file, role) => { if (ROLES.includes(role)) { st.roles[file] = role; save(); } };       // the sample table (campioni.js) writes the type of a file here
   const roleName = r => (r === "blank" ? t("qaqc.role.blank") : r === "qc" ? t("qaqc.role.qc") : r === "standard" ? t("qaqc.role.standard") : r === "dark" ? t("qaqc.role.dark") : t("qaqc.role.sample"));
 
   // ---------------------------------------------------------------- ions: m/z or formula, RT expected
@@ -236,6 +237,6 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     save();
   }
 
-  return { mount, run, runRatio, runFeatures, addIon, exportState, importState, series, roleOf, roleName, guessRole, get state() { return st; }, get results() { return res; }, chart, ROLES };
+  return { mount, run, setRole, runRatio, runFeatures, addIon, exportState, importState, series, roleOf, roleName, guessRole, get state() { return st; }, get results() { return res; }, chart, ROLES };
 })();
 window.QAQC = QAQC;

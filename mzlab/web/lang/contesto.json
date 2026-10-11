@@ -111,6 +111,10 @@
   "panel.num.title": "Suggerimento sul numerino del pannello; {n} = numero (1-9), è anche il tasto da premere.",
   "ctl.linked": "Nel titolo di uno spettro collegato; {n} = numero del pannello del cromatogramma.",
   "ctl.prec.one": "Voce del menu dei precursori; {v} = m/z del precursore.",
+  "ctl.files.aria": "Nome accessibile del pulsante dei file mostrati; {n} = file visibili, {tot} = file della scheda.",
+  "disp.xmz": "Campo del m/z dello ione di un XIC in alta risoluzione nelle opzioni di visualizzazione; {input} = il campo numerico.",
+  "disp.xtol": "Campo dell'intervallo (mezza larghezza) di un XIC in alta risoluzione; {input} = il campo numerico.",
+  "disp.xunit": "Scelta dell'unità dell'intervallo di un XIC (ppm o Da); {select} = il menu.",
   "ctl.files": "Pulsante nell'intestazione di un grafico: file mostrati su file totali; {n} e {tot} = numeri.",
   "ctl.chip.sub": "Etichetta accanto al menu Correzione; {label} = nome del campione sottratto.",
   "xic.ionN": "Etichetta di una riga della finestra XIC; {n} = numero dello ione (2-10).",
@@ -354,5 +358,9 @@
   "qaqc.feat.sum": "Riga sopra la tabella delle feature di mzFinder. {n} = feature che raggiungono la soglia, {tot} = totale, {thr} = soglia, {b} = bianchi.",
   "rep.sub": "Riga sotto il titolo del rapporto di studio. {name} = nome del programma, {ver} = versione, {commit} = commit, {date} = data e ora UTC.",
   "rep.s1.sum": "Riepilogo del disegno dello studio. {n} = file, {s} campioni, {b} bianchi, {q} QC, {st} standard, {d} al buio.",
-  "rep.s3.prog": "Riga della sezione Elaborazione. {name} = programma, {ver} = versione, {commit} = commit."
+  "rep.s3.prog": "Riga della sezione Elaborazione. {name} = programma, {ver} = versione, {commit} = commit.",
+  "meta.grad.aria": "Etichetta accessibile della barra di colore del tempo. {a} = primo tempo, {b} = ultimo tempo (con unità).",
+  "meta.imported": "Messaggio dopo l'importazione della tabella dei metadati. {n} = file aggiornati.",
+  "meta.of": "Prefisso dell'etichetta accessibile dei campi della tabella dei metadati. {f} = nome del file.",
+  "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole."
 }

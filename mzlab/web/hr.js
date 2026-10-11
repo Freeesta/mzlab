@@ -165,7 +165,7 @@ const HR = (() => {
   // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
   // the unit window of today (xicWin, explore.js) for the others. A classic trace {mz, w} is an explicit window in Da (all files alike).
   const xicFiles = tab => scanFiles(tabFiles(tab || E.tab));
-  const ionText = (mz, f) => { const q = prof(f, f.lv); return `m/z ${(+mz).toFixed(q.dec)} \u00b1 ${+q.tol.toFixed(1)} ppm`; };
+  const ionText = (mz, f, t) => { const q = prof(f, f.lv); return `m/z ${(+mz).toFixed(q.dec)} \u00b1 ` + (t && t.wda != null ? `${+t.wda.toFixed(5)} Da` : `${+(t && t.ppm != null ? t.ppm : q.tol).toFixed(1)} ppm`); };
   // the trace for an ion if a high-resolution file is among the files the XIC is for; otherwise null (the caller makes the classic unit-window trace)
   function ionTrace(mz, o = {}) {
     const fs = xicFiles(o.tab), hf = fs.find(f => isHr(f, f.lv));
@@ -175,8 +175,9 @@ const HR = (() => {
   // [centre, half width] in Da of trace t for file f
   function xicArgs(f, t, p) {
     if (!t.ion) return [t.mz, t.w ?? p.tol];
+    if (t.wda != null) return [t.mz, t.wda];                                  // interval chosen in Da in «Display options»
     const q = prof(f, f.lv);
-    if (q.hr) return [t.mz, t.mz * q.tol * 1e-6];
+    if (q.hr) return [t.mz, t.mz * (t.ppm ?? q.tol) * 1e-6];
     const [a, b] = xicWin(t.mz, t.obs);
     return [rh((a + b) / 2, 2), rh((b - a) / 2, 2)];
   }
@@ -184,7 +185,7 @@ const HR = (() => {
   function xicEdges(t, p) {
     const f = xicFiles(p.tab).find(x => isHr(x, x.lv)), q = f && prof(f, f.lv);
     if (!t.ion || !q) return null;
-    const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
+    const d = q.dec, w = t.wda != null ? t.wda : t.mz * (t.ppm ?? q.tol) * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
   return { isoSeries, isoPat, mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
