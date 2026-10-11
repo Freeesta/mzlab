@@ -135,7 +135,8 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
         ($($c:ident),*) => { $( reserve(&mut out.$c, n)?; )* };
     }
     cols!(
-        mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group, charge
+        mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group, charge,
+        shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
     );
     for &i in &idx {
         let r = &f[i as usize];
@@ -159,6 +160,15 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
         out.flags.push(fl);
         out.iso_group.push(0);
         out.charge.push(0);
+        out.shape.push(0.0);
+        out.snr.push(0.0);
+        out.fwhm.push(0.0);
+        out.asym.push(0.0);
+        out.gaps.push(0);
+        out.qreason.push(0);
+        out.ms2_n.push(0);
+        out.purity.push(-1.0);
+        out.area_win.push(0.0);
     }
     Ok(out)
 }
