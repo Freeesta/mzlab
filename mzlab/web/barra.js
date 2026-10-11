@@ -169,15 +169,20 @@ const BARRA = (() => {
 
   // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
   let _refitRaf = 0, _lastW = -1;
+  function paintFit() {
+    const dp = Q1("#dpanels");
+    if (dp) _lastW = dp.clientWidth;
+    if (dp && _lastW < 100) return;                // the workspace is hidden (sheet) or not shown yet: nothing to draw
+    if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
+  }
   function refit() {
     if (_refitRaf) return;
-    _refitRaf = requestAnimationFrame(() => {
-      _refitRaf = 0;
-      const dp = Q1("#dpanels");
-      if (dp) _lastW = dp.clientWidth;
-      if (dp && _lastW < 100) return;             // the workspace is hidden (sheet) or not shown yet: nothing to draw
-      if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
-    });
+    _refitRaf = requestAnimationFrame(() => { _refitRaf = 0; paintFit(); });
+  }
+  // a layout change that is animated (transizioni.js) is refitted at once, in the same frame: one redraw, then the panels slide
+  function refitNow() {
+    if (_refitRaf) { cancelAnimationFrame(_refitRaf); _refitRaf = 0; }
+    paintFit();
   }
   // The panels' own observers read a width change that is not theirs (the page narrowed under them) as «resized by hand» and
   // unlock them from the page width: the full-width panels are noted before the layout moves and given back once it has settled.
@@ -191,7 +196,8 @@ const BARRA = (() => {
       _fullSnap = null;
       let back = false;
       snap.forEach(p => { if (!p.full && E.panels.includes(p)) { p.full = true; back = true; } });
-      if (back || snap.length) refit();
+      const dp = Q1("#dpanels");
+      if (back || snap.length && dp && dp.clientWidth !== _lastW) refit();
     }, 250);
   }
   function watchWorkspace() {
@@ -204,12 +210,19 @@ const BARRA = (() => {
     const v = Q1("#v-data"), aside = Q1("#dfiles");
     if (!v || !aside) return;
     const shown = _open && inData();
-    if (shown !== v.classList.contains("sb-open") || shown && sheet() !== v.classList.contains("sb-sheet")) snapFull();
-    v.classList.toggle("sb-right", _side === "right");
-    v.classList.toggle("sb-open", shown);
-    v.classList.toggle("sb-sheet", shown && sheet());
-    aside.toggleAttribute("inert", !shown);
-    aside.setAttribute("aria-hidden", shown ? "false" : "true");
+    const was = v.classList.contains("sb-open");
+    const moved = shown && was && (_side === "right") !== v.classList.contains("sb-right");
+    const change = shown !== was || shown && sheet() !== v.classList.contains("sb-sheet") || moved;
+    if (change) snapFull();
+    const apply = () => {
+      v.classList.toggle("sb-right", _side === "right");
+      v.classList.toggle("sb-open", shown);
+      v.classList.toggle("sb-sheet", shown && sheet());
+      aside.toggleAttribute("inert", !shown);
+      aside.setAttribute("aria-hidden", shown ? "false" : "true");
+      if (change) { applyWidth(); refitNow(); }
+    };
+    if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();
     const tg = Q1("#sb-toggle");
     if (tg) {
       tg.hidden = !inData();

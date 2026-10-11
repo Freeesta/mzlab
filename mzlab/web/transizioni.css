@@ -1,0 +1,24 @@
+/* Motion tokens and the shared transitions of the interface. Loaded last: a component that animates uses these tokens
+   (var(--t-fast), var(--t-med), var(--ease-out)) and animates only transform and opacity. Reduced motion = duration 0. */
+:root{--t-fast:120ms;--t-med:180ms;--ease-out:cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){:root{--t-fast:0ms;--t-med:0ms}}
+:root[data-a11y-reduce]{--t-fast:0ms;--t-med:0ms}
+@keyframes tr-pop{from{opacity:0;transform:scale(.98)}}
+@keyframes tr-drop{from{opacity:0;transform:translateY(6px)}}
+@keyframes tr-fade{from{opacity:0}}
+/* menus, popovers, drop-downs: appear in --t-fast with a slight scale */
+#stmenu,#fpop,#colpop,#helppop,.sp-pop:not([hidden]),.subpop,.cpop,.hmore:not([hidden]),.corrm:not([hidden]){animation:tr-pop var(--t-fast) var(--ease-out);transform-origin:top left}
+/* dialogs, command palette, calculator: fade plus 6 px */
+dialog[open],#calcdlg:not([hidden]),#paletta .pal-b{animation:tr-drop var(--t-med) var(--ease-out)}
+dialog[open]::backdrop,#paletta{animation:tr-fade var(--t-med) var(--ease-out)}
+/* views, new panels, folded content */
+section[id^="v-"]:not([hidden]){animation:tr-fade var(--t-med) var(--ease-out)}
+.pnl{animation:tr-drop var(--t-med) var(--ease-out)}
+details[open]>:not(summary){animation:tr-fade var(--t-med) var(--ease-out)}
+.toast-msg{transition:opacity var(--t-med) var(--ease-out),transform var(--t-med) var(--ease-out)}
+:where(button,select,summary){transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast)}
+/* the side panel while it slides out (transizioni.js keeps it on screen for one animation) */
+#dfiles.sb-leaving{display:flex!important;position:fixed!important;margin:0;pointer-events:none}
+/* reduced motion or no animation on the first paint: nothing moves */
+@media (prefers-reduced-motion:reduce){#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],dialog[open]::backdrop,#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*{animation:none!important}}
+:root[data-a11y-reduce] :is(#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*),:root[data-a11y-reduce] dialog[open]::backdrop,:root[data-a11y-reduce] #paletta{animation:none!important}
