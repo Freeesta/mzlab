@@ -9,7 +9,10 @@
       "Read(./mzlab/web/esempi/**)",
       "Read(./tests_e2e/shots/**)",
       "Read(./.verifica/cache_massbank/**)",
-      "Read(./site/**)"
+      "Read(./site/**)",
+      "Read(./.verifica/**)",
+      "Read(./.git/**)"
     ]
-  }
+  },
+  "autoCompactWindow": 350000
 }
