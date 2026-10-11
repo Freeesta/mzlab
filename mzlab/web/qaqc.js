@@ -90,9 +90,12 @@ const QAQC = (() => {
     const byBase = Object.fromEntries(series().map(f => [base(f.file), roleOf(f)]));
     const roleFor = n => roleByName[n] || byBase[base(n)] || "sample";
     const blanks = names.filter(n => roleFor(n) === "blank"), samples = names.filter(n => !["blank", "dark"].includes(roleFor(n)));
-    const j = await fetch("api/qaqc/features", { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ features: tb.features.map(f => ({ key: f.key, mz: f.mz, rt: f.rt, areas: f.areas })), blanks, samples, thr: st.thr }) }).then(r => r.json());
+        const roles = names.map(roleFor);
+    // same rule as the Statistics section «Difference from the reference», with the blanks (mean area) as the reference
+    const j = await fetch("api/stat/reference", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ matrix: tb.features.map(f => names.map(n => (f.areas && f.areas[n]) || 0)), roles, times: names.map(() => null), reference: roles.flatMap((r, i) => (r === "blank" ? [i] : [])), factor: st.thr, stat: "mean" }) }).then(r => r.json());
     if (j.error) throw I18N.err(j);
+    j.rows = j.rows.map((q, i) => { const f = tb.features[i]; return { key: f.key, mz: f.mz, rt: f.rt, blank_area: q.ref_level, sample_area: q.treated_max, ratio: q.ratio, absent_in_blank: q.ratio == null, at_least: q.ratio == null ? q.treated_max > 0 : q.ratio >= st.thr }; });
     res.feat = { thr: st.thr, blanks, samples, rows: j.rows };
     return res.feat;
   }

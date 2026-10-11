@@ -6,7 +6,7 @@
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{analysis, mzidx, mzml, raw};
+use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
@@ -468,6 +468,57 @@ pub fn build_mzidx(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes
     ))
+}
+
+/// Fields per peak written by `detect_peaks`: apex, lo, hi, area, height, snr, scans, gaussian, asymmetry (NaN = not measurable), noise score.
+pub const PEAK_FIELDS: usize = 10;
+
+fn put_peak(rt: &[f64], y: &[f64], noise: f64, p: &peaks::Peak, out: &mut [f64]) {
+    let q = peakq::quality(rt, y, p.lo, p.hi, noise);
+    out[..PEAK_FIELDS].copy_from_slice(&[
+        p.apex_i as f64,
+        p.lo as f64,
+        p.hi as f64,
+        p.area,
+        p.height,
+        p.snr,
+        p.n_scans as f64,
+        q.gaussian,
+        q.asymmetry.unwrap_or(f64::NAN),
+        q.noise_score,
+    ]);
+}
+
+/// Peaks of a trace (RT in minutes, intensities) into `out` as records of `PEAK_FIELDS` numbers, highest first. `mode` 0 = CWT,
+/// 1 = prominence + local minimum. Returns the number of peaks written (those that fit).
+#[wasm_bindgen]
+pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
+    let n = rt.len().min(y.len());
+    let (rt, y) = (&rt[..n], &y[..n]);
+    let found = if mode == 1 {
+        peakq::detect_prominence(rt, y, peakq::ProminenceParams::default())
+    } else {
+        peaks::detect_peaks(rt, y, peaks::Params::default())
+    };
+    let noise = peaks::noise_level(y);
+    let room = out.len() / PEAK_FIELDS;
+    for (i, p) in found.iter().take(room).enumerate() {
+        put_peak(rt, y, noise, p, &mut out[i * PEAK_FIELDS..]);
+    }
+    found.len().min(room) as u32
+}
+
+/// Quality of the peak between the indices `lo` and `hi` of a trace: `[gaussian, asymmetry (NaN = not measurable), noise score]` into `out`;
+/// the noise of the whole trace is worked out here. Returns 3, or 0 if the arguments do not fit.
+#[wasm_bindgen]
+pub fn peak_quality(rt: &[f64], y: &[f64], lo: u32, hi: u32, out: &mut [f64]) -> u32 {
+    let n = rt.len().min(y.len());
+    if out.len() < 3 || lo as usize >= hi as usize || hi as usize >= n {
+        return 0;
+    }
+    let q = peakq::quality(&rt[..n], &y[..n], lo as usize, hi as usize, peaks::noise_level(&y[..n]));
+    out[..3].copy_from_slice(&[q.gaussian, q.asymmetry.unwrap_or(f64::NAN), q.noise_score]);
+    3
 }
 
 fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
