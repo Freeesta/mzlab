@@ -39,12 +39,17 @@ def json_close(a, b, tol=1e-9, path=""):
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
 def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
 
-def open_files(pg):
+TIMES = {}
+def open_files(pg, label=None):
+    t0 = time.time()
     pg.wait_for_selector("#drop", timeout=120000)
+    if label: TIMES[label + " start→page ready"] = round(pg.evaluate("performance.now()") / 1000, 2)
+    t0 = time.time()
     pg.set_input_files("#pick", FILES)
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
     pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
+    if label: TIMES[label + " open"] = round(time.time() - t0, 2)
 def snap(pg): return {"state": pg.evaluate(JSON, "api/state")["j"], "session": pg.evaluate(JSON, "api/session")["j"]}
 
 try:
@@ -52,7 +57,7 @@ try:
         b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None)
         def context():
             c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000); reqs = []
-            c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
+            c.on("request", lambda r: reqs.append(r.url)); c.add_init_script("window.MZLAB_TRACE = [];"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             return c, pg, reqs
         ctx, pg, reqs = context()
@@ -63,7 +68,7 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("the page starts on the Rust engine: Pyodide is not requested", boot)
         def load():
-            open_files(pg)
+            open_files(pg, "rust flow")
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("upload, list, session and TIC of two Full Scan files without Pyodide", load)
@@ -74,17 +79,19 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
-            pg.reload(); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 2)", timeout=30000)   # the notebook is saved 0.5 s after the last change: a reload before it loses the session
+            pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=180000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
             json_close(st["files"], lr_snap["state"]["files"], path="files")
+            json_close(pg.evaluate(JSON, "api/session")["j"]["session"], lr_snap["session"]["session"], path="resumed session")
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
         # the classic engine on the same files: the JSON must be the same
         ctx2, pg2, reqs2 = context()
         pg2.goto(f"http://127.0.0.1:{PORT}/?motore=python")
         def classic():
-            open_files(pg2)
+            open_files(pg2, "classic")
             assert pyodide(reqs2), "the counter does not see Pyodide in the classic flow"
             py = snap(pg2)
             json_close(lr_snap["state"]["files"], py["state"]["files"], path="state.files")
@@ -92,9 +99,9 @@ try:
             json_close(lr_snap["session"], py["session"], path="session")
         step("the JSON of state and session equals the classic engine's (Pyodide)", classic)
         def late_python():
-            open_files(pg) if not pg.evaluate("window.S && S.sess") else None
+            open_files(pg) if not pg.evaluate("typeof S !== 'undefined' && !!S.sess") else None
             before = pg.evaluate(JSON, "api/session")["j"]["session"]
-            r = pg.evaluate(JSON, "api/gradient?k=0")                   # a route only Python knows
+            r = pg.evaluate(JSON, "api/fileinfo?k=0")                   # a route only Python knows (the header of the file)
             assert r["status"] == 200, r
             assert pyodide(reqs), "Pyodide did not start"
             assert pg.evaluate("window.MZLAB_LR_DONE === true")
@@ -126,6 +133,25 @@ try:
             r = pg4.evaluate(JSON, "api/mrm?k=0"); assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["files"][0]["transitions"], r["eng"]
             assert not pyodide(reqs4), (pyodide(reqs4)[:3], why(pg4))
         step("an MRM file opens without Pyodide: the transitions come from the Rust engine", mrm_alone)
+        def five_files():
+            # the flow of e2e13 in the Rust default: five files (Full Scan, MS2, MRM), reload, panels
+            ctx5, pg5, reqs5 = context()
+            ctx5.add_init_script("window.MZLAB_TRACE = [];")
+            pg5.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+            pg5.wait_for_selector("#drop", timeout=120000)
+            five = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")]
+            pg5.set_input_files("#pick", five)
+            pg5.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
+            pg5.click("#opbtn"); pg5.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            pg5.wait_for_function("E.files.length >= 5 && E.pending.length === 0", timeout=120000); pg5.wait_for_timeout(2000)
+            pg5.reload()
+            pg5.wait_for_selector(".pnl canvas", timeout=180000)
+            pg5.wait_for_function("E.files.length >= 1", timeout=180000)
+            assert not pyodide(reqs5), pyodide(reqs5)[:3]
+            assert not why(pg5)[0], why(pg5)
+            assert not errs, errs[:3]
+        step("five files (Full Scan, MS2, MRM): the reload resumes the session without Pyodide", five_files)
+        print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:
