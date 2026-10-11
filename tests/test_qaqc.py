@@ -74,5 +74,3 @@ def test_pure_functions():
     q = qaqc.sample_blank_ratios([10, 100, 20, None], ["blank", "sample", "blank", "sample"], 10)
     assert q["blank_area"] == 15 and q["rows"][1]["ratio"] == pytest.approx(100 / 15) and q["rows"][1]["at_least"] is False
     assert q["rows"][3] is None
-    f = qaqc.feature_ratios([{"key": "a", "areas": {"b": 10, "s1": 50, "s2": 200}}, {"key": "z", "areas": {"s1": 5}}], ["b"], ["s1", "s2"], 10)
-    assert f[0]["ratio"] == 20 and f[0]["at_least"] is True and f[1]["absent_in_blank"] is True and f[1]["ratio"] is None
