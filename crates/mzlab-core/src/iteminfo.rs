@@ -219,6 +219,12 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
     low(&an)
 }
 
+/// True when the scans of the survey (`survey`) or of the product ions are read as high resolution (`Item.profile(level)["hr"]`).
+pub fn group_is_hr(scans: &[Scan], survey: bool) -> bool {
+    let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
+    mass_profile(&g).hr
+}
+
 fn median(v: &mut [f64]) -> Option<f64> {
     if v.is_empty() {
         return None;
