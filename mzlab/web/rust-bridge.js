@@ -101,6 +101,12 @@ export function createBridge({ workerUrl, notify }) {
     }
     return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
+  // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
+  api.ready = async ks => {
+    if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
+    await Promise.all(ks.map(k => slots[k].opening));
+    return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
+  };
   api.crash =() => rpc({ op: "crash" });
   api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
 

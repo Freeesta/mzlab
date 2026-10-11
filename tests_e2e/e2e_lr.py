@@ -121,6 +121,15 @@ try:
         pg3.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
         open_files(pg3)
         step("spectrum, formula, gradient: same answers as the classic engine, still without Pyodide", same_as_classic)
+        def origin_same():
+            for u in ["api/origin?k=0&mz=194.2&parent=364.37", "api/origin?k=1&mz=305.3&parent=364.37&rt0=13.5&rt1=15.2", "api/origin?k=0&mz=152.2&parent=364.37&formula=C9H10Cl2N2O"]:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
+                assert a["eng"] == "rust", (u, a["eng"])
+                for r in (a["j"], b2["j"]): r.pop("timing", None)                    # seconds of each stage: they differ by nature
+                json_close(a["j"], b2["j"], 1e-6, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("origin: the evidence of Rust equals Python's, still without Pyodide", origin_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
