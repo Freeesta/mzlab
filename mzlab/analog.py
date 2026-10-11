@@ -199,3 +199,60 @@ COURSE = [(0, 10), (2, 10), (12, 60), (13, 70), (15, 100), (17, 100), (17.1, 10)
 def course_gradient() -> dict:
     """The gradient of the course: chosen by hand by the student (never a default of the program)."""
     return gradient_model("course", [{"t": t, "b": b} for t, b in COURSE], 20.0)
+
+
+# ---------------------------------------------------------------- delay between two detectors in series (PDA before the mass spectrometer)
+def _grid(t, y, t0, t1, dt):
+    g = np.arange(t0, t1, dt)
+    return g, np.interp(g, t, y)
+
+
+def _flatten(y, width: int):
+    """The trace without its slow baseline (running median) and scaled to unit spread: only the peaks are left to compare."""
+    y = np.asarray(y, dtype=float)
+    k = max(3, width | 1)
+    pad = np.pad(y, k // 2, mode="edge")
+    idx = np.arange(0, len(y), 8)           # the running median is taken every 8th point and interpolated: the baseline is slow
+    base = np.interp(np.arange(len(y)), idx, [np.median(pad[i:i + k]) for i in idx])
+    z = y - base
+    s = np.std(z)
+    return z / s if s > 0 else z
+
+
+def detector_delay(t_a, y_a, t_b, y_b, max_lag: float = 0.6, dt: float | None = None) -> dict | None:
+    """How much later the trace B (mass spectrometer, in series after the PDA A) shows the same peaks: ``{"delay": min, "peaks": n, "corr": 0-1}``.
+
+    Cross-correlation of the two traces on a common grid after removing the baseline, parabolic refinement of the maximum; ``peaks`` counts the strongest
+    peaks of A that have a peak of B within two grid steps once the delay is applied (the quality shown to the student). None when the traces share too little time.
+    """
+    t_a, y_a, t_b, y_b = (np.asarray(v, dtype=float) for v in (t_a, y_a, t_b, y_b))
+    if len(t_a) < 20 or len(t_b) < 20:
+        return None
+    t0, t1 = max(t_a[0], t_b[0]) + max_lag, min(t_a[-1], t_b[-1]) - max_lag
+    if t1 - t0 < 1.0:
+        return None
+    dt = dt or max(float(np.median(np.diff(t_b))), float(np.median(np.diff(t_a))), 0.002) / 2
+    _, a = _grid(t_a, y_a, t0 - max_lag, t1 + max_lag, dt)
+    _, b = _grid(t_b, y_b, t0 - max_lag, t1 + max_lag, dt)
+    w = int(0.5 / dt)
+    a, b = _flatten(a, w), _flatten(b, w)
+    n = int(max_lag / dt)
+    seg = slice(n, len(a) - n)
+    A = a[seg]
+    lags = np.arange(-n, n + 1)
+    cc = np.array([float(np.dot(A, b[seg.start + L:seg.stop + L])) for L in lags]) / (np.linalg.norm(A) * np.linalg.norm(b[seg]) + 1e-12)
+    i = int(np.argmax(cc))
+    if 0 < i < len(cc) - 1:                       # parabola through the three points around the maximum
+        d = cc[i - 1] - 2 * cc[i] + cc[i + 1]
+        off = 0.5 * (cc[i - 1] - cc[i + 1]) / d if d != 0 else 0.0
+    else:
+        off = 0.0
+    delay = float((lags[i] + off) * dt)
+    # peaks of A found in B at the delay
+    def tops(v, k):
+        idx = [j for j in range(1, len(v) - 1) if v[j] > v[j - 1] and v[j] >= v[j + 1] and v[j] > 2.0]
+        return sorted(idx, key=lambda j: -v[j])[:k]
+    pa, pb = tops(A, 8), tops(b[seg], 40)
+    L = int(round(delay / dt))
+    matched = sum(1 for j in pa if any(abs((j + L) - q) <= 2 for q in pb))
+    return {"delay": round(delay, 4), "peaks": matched, "corr": round(float(cc[i]), 3)}

@@ -374,6 +374,7 @@ function ctxFor(p, e, x, px, py) {
     }
     if (p.type === "chrom") items.push({ label: I18N.t("ctx.chrom.xic"), fn: () => openXic(null, { after: p }) });
     if (window.DISP && window.BANCO && BANCO.on() && (p.type === "chrom" || p.type === "xic")) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
+    if (window.GRADIENTE && GRADIENTE.have(p)) items.push({ label: I18N.t("ctx.chrom.grad"), check: p.overlay === "grad", aria: I18N.t("ctx.chrom.grad.aria"), fn: () => { p.overlay = p.overlay === "grad" ? null : "grad"; draw(p); uiSave(); } });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
     if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: I18N.t("ctx.chrom.identAll"), fn: () => LIB.identifyAll(k) });
     if (p.type === "chrom" && window.COMP && window.HR && HR.isHr(E.files[k], 2) && E.files[k].kind === "ms2") items.push({ label: I18N.t("ctx.chrom.tree"), fn: () => COMP.tree(k) });

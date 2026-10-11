@@ -29,6 +29,24 @@ const DISP = (() => {
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });
 
+  // ---- PDA in series before the mass spectrometer: the delay is measured by the server (cross-correlation of PDA and TIC of the file) and can be corrected by hand;
+  // «Allinea PDA e massa» only moves the time axis of the PDA trace on the screen (data and results stay as they are)
+  const pdel = new Map();
+  const dfile = p => (typeof shownFor === "function" ? shownFor(p).find(f => f.pda) : null) || null;
+  function measured(p) {
+    const f = dfile(p); if (!f) return null;
+    if (!pdel.has(f.k)) { pdel.set(f.k, null); J(`api/delay?k=${f.k}`).then(j => { pdel.set(f.k, j.delay || false); if (window.BANCO) BANCO.renderInfo(); if (p.pdaAlign) draw(p); }).catch(() => pdel.set(f.k, false)); }
+    return pdel.get(f.k) || null;
+  }
+  const pdaShift = p => { if (!p.pdaAlign) return 0; const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; };
+  register("chrom", { id: "pdadelay", label: "disp.pdaDelay", title: "disp.pdaDelay.title", kind: "number", min: -2, max: 2, step: 0.01, when: p => p.kind === "pda" && !!dfile(p),
+    get: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; },
+    set: (p, v) => { const n = parseFloat(String(v).replace(",", ".")); p.pdaDelay = isFinite(n) ? clamp(n, -2, 2) : null; redraw(p); },
+    note: p => { const m = measured(p); return m ? t("disp.pdaDelay.found", { delay: m.delay.toFixed(2), n: m.peaks, corr: m.corr.toFixed(2) }) : t("disp.pdaDelay.none"); } });
+  register("chrom", { id: "pdaalign", label: "disp.pdaAlign", title: "disp.pdaAlign.title", kind: "check", when: p => p.kind === "pda" && !!dfile(p), get: p => !!p.pdaAlign, set: (p, v) => { p.pdaAlign = !!v; redraw(p); } });
+  // ---- gradient over the chromatogram: the delay at the column is typed by the student (the program does not estimate the dwell volume)
+  register("chrom", { id: "gdelay", label: "disp.gdelay", title: "disp.gdelay.title", kind: "number", min: 0, max: 10, step: 0.1, when: p => p.overlay === "grad", get: p => p.gdelay || 0,
+    set: (p, v) => { p.gdelay = clamp(Math.round((parseFloat(String(v).replace(",", ".")) || 0) * 10) / 10, 0, 10); redraw(p); } });
   // ---- XIC in high resolution: the ion and its interval (the header only says «XIC • m/z value»); the interval is per trace, in ppm or in Da
   const xt = p => (p && p.type === "xic" ? p.traces[Math.min(p._xt || 0, p.traces.length - 1)] : null);
   const xhr = p => !!(window.HR && p && p.type === "xic" && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));
@@ -67,8 +85,9 @@ const DISP = (() => {
       ${list.map((it, k) => {
         const c = control(it, p, k), title = it.title ? ` title="${EH(t(it.title))}"` : "";
         if (it.kind === "button") return `<div class="row">${c}</div>`;
-        if (it.kind === "check") return `<div class="row"><label${title}>${c} ${t(it.label)}</label></div>`;
-        return `<div class="row"><label${title}>${t(it.label, { input: c, select: c })}</label></div>`;
+        const note = it.note ? `<div class="sm muted">${EH(it.note(p))}</div>` : "";
+        if (it.kind === "check") return `<div class="row"><label${title}>${c} ${t(it.label)}</label></div>${note}`;
+        return `<div class="row"><label${title}>${t(it.label, { input: c, select: c })}</label></div>${note}`;
       }).join("")}</div>`;
     b.querySelectorAll("[data-k]").forEach(el => {
       const it = list[+el.dataset.k];
@@ -82,6 +101,6 @@ const DISP = (() => {
     if (window.BARRA) BARRA.setTab("disp");
     if (window.BANCO) BANCO.renderInfo();
   }
-  return { register, panel, open, items, typeOf };
+  return { register, panel, open, items, typeOf, pdaShift, pdaHere: p => !!dfile(p), pdaDelayValue: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; } };
 })();
 window.DISP = DISP;
