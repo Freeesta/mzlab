@@ -491,7 +491,7 @@ window.MAPPA = (() => {
 
     // «Open in 3D»: the viewer is loaded the first time it is asked for
   async function open3d(p, opener) {
-    try { const m = await import("./static/mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
+    try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
   }
 
   return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
