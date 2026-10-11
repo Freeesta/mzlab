@@ -35,7 +35,6 @@ ADDUCT_ATOMS = {
     "[M-H]-": ({"H": -1}, -1), "[M+Cl]-": ({"Cl": 1}, -1), "[M+HCOO]-": ({"C": 1, "H": 1, "O": 2}, -1),
     "M+.": ({}, 1), "M-.": ({}, -1), "[M]+": ({}, 1), "[M]-": ({}, -1),
 }
-ODD_ELECTRON = {"M+.", "M-."}
 # Kind & Fiehn 2007: limits of the element ratios to C (the "Seven Golden Rules"), H/C 0.2-3.1 included
 RATIO_RULES = {"HC": ("H", 0.2, 3.1), "NC": ("N", 0.0, 1.3), "OC": ("O", 0.0, 1.2), "PC": ("P", 0.0, 0.3), "SC": ("S", 0.0, 0.8),
                "FC": ("F", 0.0, 1.5), "ClC": ("Cl", 0.0, 0.8), "BrC": ("Br", 0.0, 0.8)}

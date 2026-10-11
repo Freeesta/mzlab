@@ -187,7 +187,7 @@ function peakParams() {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = PK[i.dataset.pk]; });
     Q("#pk-def").onclick = () => { Object.assign(PK, PK_DEF); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
-      document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = parseFloat(String(i.value).replace(",", ".")); if (v >= 0) PK[k] = v; } });
+      document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
       PK.minHalf = Math.max(1, Math.round(PK.minHalf)); pkSave(); Q("#bigdlg").close();
     };
   });

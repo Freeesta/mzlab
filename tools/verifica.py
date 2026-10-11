@@ -246,7 +246,7 @@ AREE = [
     ("mzlab/web/tour.js", {"e2e_tour"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti"}), ("mzlab/web/barra.js", {"e2e_strumenti", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}),
     ("mzlab/web/pannelli.js", {"e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco"}),
-    ("mzlab/web/grafici.js", {"e2e_cromato", "e2e_mappa", "e2e_map3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour"}),
+    ("mzlab/web/grafici.js", {"e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour"}),
     ("mzlab/web/picchi.js", {"e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour"}),
     ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_tour"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),

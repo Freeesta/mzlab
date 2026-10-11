@@ -5,11 +5,6 @@ const firstTab = () => (TABS.find(([t]) => tabFiles(t).length) || ["full"])[0];
 const pickTab = want => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
-const TABICON = { full: "full", ms2: "prod", mrm: "mrm" }, TABHELP = { full: "modo-full", ms2: "modo-ms2", mrm: "modo-mrm" };
-// short label of the tab (what the experiment is and what it is for), from the text of the three modes
-function modeTip(t) {
-  try { const m = QMODI.M[QMODI.tab2key[t]]; return [m.what, m.use].filter(Boolean).join(". ").replace(/<[^>]+>/g, "").replace(/&gt;/g, ">").replace(/&amp;/g, "&"); } catch (e) { return ""; }
-}
 // the label of a tab: the scheme Q1 -> q2 -> Q3 in big, with the words (texts from modi.js)
 function modeSchema(t) {
   try {
@@ -160,21 +155,6 @@ function defaultLayoutTab(t) {
       relayout(); fitHost(); uiSave();
     });
   }
-}
-
-// First view of the MRM graphs: the peak is ~0.5 min wide in a 20 min run, so the student would zoom every time. All graphs zoom on +-1.5 min around the
-// highest transition of all the visible files, only if that peak is clear (>= 10x the noise); otherwise the whole run stays. "Vista intera" is one click.
-function mrmFocus(ps) {
-  let best = null;
-  for (const q of ps) for (const s of (q._a && q._a.sr) || []) {
-    if (!s.y.length) continue;
-    let mx = -1, at = 0; s.y.forEach((v, i) => { if (v > mx) { mx = v; at = i; } });
-    const ys = Float64Array.from(s.y).sort(), med = ys[ys.length >> 1], dev = Float64Array.from(ys, v => Math.abs(v - med)).sort(), noise = 1.4826 * dev[dev.length >> 1];
-    if (mx >= 10 * Math.max(med + 3 * noise, 1) && (!best || mx > best.mx)) best = { mx, rt: s.x[at] };
-  }
-  if (!best) return;
-  ps.forEach(q => { const a = q._a; if (a && a.full && !q.zoom) { q.zoom = clampView(best.rt - 1.5, best.rt + 1.5, a.full[0], a.full[1]); draw(q); } });
-  uiSave();
 }
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
