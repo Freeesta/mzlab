@@ -87,6 +87,7 @@
   }
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
+  window.TPCALL = call;                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
   const callRaw = async (fn, ...args) => { await startWorker(); return send({ type: "call", fn, args }); };
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
