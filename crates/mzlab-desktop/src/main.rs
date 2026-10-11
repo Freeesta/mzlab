@@ -67,6 +67,29 @@ async fn pick_files(
     Ok(register(&state, paths))
 }
 
+/// «Scarica mzML»: system save dialog for a converted mzML (by its number); None if the user cancels, otherwise the chosen path.
+#[tauri::command]
+async fn save_mzml(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+    id: u32,
+    name: String,
+) -> Result<Option<String>, String> {
+    let dlg = app
+        .dialog()
+        .file()
+        .add_filter("mzML", &["mzML"])
+        .set_file_name(name);
+    let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_save_file())
+        .await
+        .map_err(|e| e.to_string())?;
+    let Some(path) = picked.and_then(|f| f.into_path().ok()) else {
+        return Ok(None);
+    };
+    state.save_copy(id, &path).map_err(|e| e.to_string())?;
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
 /// Files dropped on the window (the webview gives paths, not `File` objects).
 #[tauri::command]
 fn register_paths(state: tauri::State<'_, Arc<State>>, paths: Vec<String>) -> Vec<PickedFile> {
@@ -323,6 +346,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             pick_files,
             register_paths,
+            save_mzml,
             update_check,
             update_apply,
             update_restart,

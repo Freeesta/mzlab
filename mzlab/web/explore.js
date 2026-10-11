@@ -448,7 +448,7 @@ function renderFileList() {
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
-      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${CONV.has(fileBase(f.file)) ? `<button type="button" class="sec sm" data-dl="${EH(fileBase(f.file))}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button>` : ""}${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
         prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="${I18N.t("files.addPair.title")}"><div class="fi"><b class="pn" data-pg="${pr}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
         '</div>' : ""}
@@ -474,7 +474,9 @@ function renderFileList() {
   };
   // files grouped strictly by experiment type
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
-  Q("#flst").innerHTML = pre + body + others;
+  Q("#flst").innerHTML = (CONV.size > 1 ? `<div style="margin:4px 0"><button type="button" class="sec sm" data-dl-all="1" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>` : "") + pre + body + others;
+  Q("#flst").querySelectorAll("[data-dl-all]").forEach(b => b.onclick = () => CONV.downloadAll());
+  Q("#flst").querySelectorAll("[data-dl]").forEach(b => b.onclick = e => { e.stopPropagation(); CONV.download(b.dataset.dl); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
   Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
