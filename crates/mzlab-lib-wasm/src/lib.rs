@@ -15,6 +15,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
+mod fdr;
+
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
 }
@@ -248,7 +250,7 @@ impl Importer {
 
 #[wasm_bindgen]
 pub struct Lib {
-    inner: Library<JsIo>,
+    pub(crate) inner: Library<JsIo>,
 }
 
 fn tol_of(v: f64, ppm: bool) -> Tol {

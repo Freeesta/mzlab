@@ -163,3 +163,98 @@ fn synthetic_library_of_5000_entries_with_500_queries() {
     let q = Query::new(qs[0].0.prec, 1, &qs[0].0.mz, &qs[0].0.it).unwrap();
     assert!(!identity(&plain, &q, &OPTS).unwrap().is_empty());
 }
+
+/// An isomer-like sibling: the same precursor, half of the fragments moved elsewhere.
+fn sibling(r: &mut Rng, s: &Spectrum, tag: &str) -> Spectrum {
+    let mut x = s.clone();
+    let hi = s.prec - 4.0;
+    for m in x.mz.iter_mut() {
+        if r.unit() < 0.5 {
+            *m = (r.range(50.0, hi) * 1e4).round() / 1e4;
+        }
+    }
+    let mut pk: Vec<(f64, f64)> = x.mz.iter().cloned().zip(x.it.iter().cloned()).collect();
+    pk.sort_by(|a, b| a.0.total_cmp(&b.0));
+    pk.dedup_by(|a, b| (a.0 - b.0).abs() < 0.2);
+    x.mz = pk.iter().map(|p| p.0).collect();
+    x.it = pk.iter().map(|p| p.1).collect();
+    x.meta.accession = format!("{}{tag}", s.meta.accession);
+    x
+}
+
+/// Calibration: declared q against the observed error rate on a library whose errors are isomers, not random. Queries that are in the library
+/// should hit their own entry; queries left out of the library can only hit a sibling (an error by definition).
+#[test]
+fn calibration_declared_q_is_a_lower_bound_of_the_observed_error() {
+    let mut r = Rng(2024);
+    let base = synth_set(5, 2000, 12);
+    let mut lib_set: Vec<Spectrum> = Vec::new();
+    let mut left_out: Vec<Spectrum> = Vec::new();
+    for (k, s) in base.iter().enumerate() {
+        let mut s = s.clone();
+        s.pol = 1;
+        lib_set.push(s.clone());
+        lib_set.push(sibling(&mut r, &s, "b"));
+        if k % 5 == 0 {
+            left_out.push(sibling(&mut r, &s, "c"));
+        }
+        if k % 5 == 1 {
+            left_out.push(s.clone());
+        }
+    }
+    let all = with_decoys(&lib_set, DecoyKind::Fragments, DEFAULT_SEED);
+    let bytes = build_in_memory(&all, BuildOpts::default()).unwrap().0;
+    let lib = Library::open(&bytes[..], CACHE_BYTES).unwrap();
+    // 400 queries of entries that are in the library (noisy copies) and 400 of siblings that are not (accession ends in «c»)
+    let mut qs: Vec<Option<Query>> = Vec::new();
+    let mut want: Vec<Option<String>> = Vec::new();
+    for s in lib_set.iter().step_by(10).take(400) {
+        let n = noisy(&mut r, s);
+        qs.push(Query::new(n.prec, 1, &n.mz, &n.it));
+        want.push(Some(s.meta.accession.clone()));
+    }
+    for s in left_out
+        .iter()
+        .filter(|s| s.meta.accession.ends_with('c'))
+        .take(400)
+    {
+        let n = noisy(&mut r, s);
+        qs.push(Query::new(n.prec, 1, &n.mz, &n.it));
+        want.push(None);
+    }
+    let res = search_fdr(&lib, &qs, &OPTS, DecoyKind::Fragments).unwrap();
+    assert_eq!(
+        res,
+        search_fdr(&lib, &qs, &OPTS, DecoyKind::Fragments).unwrap()
+    );
+    let wrong: Vec<bool> = res
+        .iter()
+        .zip(&want)
+        .map(|(x, w)| match (x.best.index, w) {
+            (Some(i), Some(a)) => lib.meta(i).unwrap().accession != *a,
+            _ => true,
+        })
+        .collect();
+    eprintln!("declared q -> accepted, observed error rate");
+    for t in [0.001f32, 0.01, 0.05, 0.1, 0.2] {
+        let acc: Vec<usize> = (0..res.len())
+            .filter(|&i| res[i].best.index.is_some() && res[i].fdr.q_value <= t)
+            .collect();
+        let err = acc.iter().filter(|&&i| wrong[i]).count();
+        let obs = if acc.is_empty() {
+            0.0
+        } else {
+            err as f64 / acc.len() as f64
+        };
+        eprintln!(
+            "q <= {t}: {} accepted, {err} wrong, observed {obs:.3}",
+            acc.len()
+        );
+        assert!(
+            acc.is_empty() || obs >= t as f64,
+            "the declared q must be a lower bound"
+        );
+    }
+    let j = search_fdr_json(&res);
+    assert!(j.starts_with("[{") && j.contains("\"note\":\"lib.fdr.note\""));
+}

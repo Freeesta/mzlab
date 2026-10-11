@@ -96,6 +96,17 @@ pub fn is_decoy(accession: &str) -> bool {
     accession.starts_with(DECOY_PREFIX)
 }
 
+fn draw_away(r: &mut XorShift, lo: f64, hi: f64, avoid: &[f64]) -> f64 {
+    let mut m = lo;
+    for _ in 0..16 {
+        m = ((lo + (hi - lo) * r.unit()) * 1e4).round() / 1e4;
+        if avoid.iter().all(|a| (a - m).abs() > 0.02) {
+            break;
+        }
+    }
+    m
+}
+
 /// One decoy of `s`. The metadata keep the polarity and the licence but carry the prefix in the accession and no chemistry.
 pub fn make_decoy(s: &Spectrum, kind: DecoyKind, seed: u64) -> Spectrum {
     let mut r = XorShift::new(seed);
@@ -104,14 +115,18 @@ pub fn make_decoy(s: &Spectrum, kind: DecoyKind, seed: u64) -> Spectrum {
         DecoyKind::Fragments => {
             let lo = s.mz.iter().cloned().fold(f64::INFINITY, f64::min);
             let hi = s.mz.iter().cloned().fold(0.0, f64::max);
-            // stay below the precursor region that the cleaning removes
-            let hi = if s.prec - 2.0 > lo {
-                hi.min(s.prec - 2.0)
+            // stay below the precursor region that the cleaning removes; a spectrum with a narrow range (one or two peaks) gets a wider one
+            let top = (s.prec - 2.0).max(lo);
+            let (lo, hi) = if hi - lo < 20.0 {
+                (lo.min(50.0), top.max(hi))
             } else {
-                hi
+                (lo, hi.min(top))
             };
-            d.mz = s.mz.iter().map(|_| lo + (hi - lo) * r.unit()).collect();
-            d.mz.iter_mut().for_each(|m| *m = (*m * 1e4).round() / 1e4);
+            // a decoy peak never lands on a true fragment (up to 16 draws, then the last one is kept)
+            d.mz =
+                s.mz.iter()
+                    .map(|_| draw_away(&mut r, lo, hi, &s.mz))
+                    .collect();
         }
         DecoyKind::Precursor => {
             let delta = SHIFT_MIN + (SHIFT_MAX - SHIFT_MIN) * r.unit();
@@ -146,15 +161,27 @@ pub fn with_decoys(targets: &[Spectrum], kind: DecoyKind, global_seed: u64) -> V
 pub struct Best {
     pub target: f32,
     pub decoy: f32,
+    /// Library index of the best target (`None` when no target was found).
+    pub index: Option<u32>,
+}
+
+/// Scores enter the q-values rounded to 1e-4: the sums of the entropy differ in the last bits between the native and the WebAssembly code, and a
+/// mathematical zero must be the same zero (and a tie the same tie) on both.
+pub fn quantize(score: f64) -> f32 {
+    ((score * 1e4).round() / 1e4) as f32
 }
 
 /// Runs the identity search and splits the candidates into targets and decoys by the accession prefix (the score is the entropy similarity).
 pub fn best_scores<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Result<Best> {
     let mut b = Best::default();
     for h in identity(lib, q, o)? {
-        let d = is_decoy(&lib.meta(h.index)?.accession);
-        let slot = if d { &mut b.decoy } else { &mut b.target };
-        *slot = slot.max(h.entropy as f32);
+        let e = quantize(h.entropy);
+        if is_decoy(&lib.meta(h.index)?.accession) {
+            b.decoy = b.decoy.max(e);
+        } else if b.index.is_none() || e > b.target {
+            b.target = e;
+            b.index = Some(h.index);
+        }
     }
     Ok(b)
 }
@@ -218,6 +245,61 @@ pub fn qvalues(scores_target: &[f32], scores_decoy: &[f32]) -> Vec<f32> {
         .collect()
 }
 
+/// Result for one query of a batch: its best target (if any), the best decoy score and the q-value of the target score within the batch.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct QueryFdr {
+    pub best: Best,
+    pub fdr: LibFdr,
+}
+
+/// Identity search of many queries in a library built with decoys, with the q-value of each best target relative to the whole batch
+/// (q needs many queries: with a handful it is coarse). A query that is `None` (nothing left after the cleaning) or without a target gets q = 1.
+pub fn search_fdr<S: Source>(
+    lib: &Library<S>,
+    queries: &[Option<Query>],
+    o: &IdentityOpts,
+    kind: DecoyKind,
+) -> Result<Vec<QueryFdr>> {
+    let mut best = Vec::with_capacity(queries.len());
+    for q in queries {
+        best.push(match q {
+            Some(q) => best_scores(lib, q, o)?,
+            None => Best::default(),
+        });
+    }
+    let t: Vec<f32> = best
+        .iter()
+        .map(|b| {
+            if b.index.is_some() {
+                b.target
+            } else {
+                f32::NAN
+            }
+        })
+        .collect();
+    let d: Vec<f32> = best.iter().map(|b| b.decoy).collect();
+    let f = lib_fdr(&t, &d, kind);
+    Ok(best
+        .into_iter()
+        .zip(f)
+        .map(|(best, fdr)| QueryFdr { best, fdr })
+        .collect())
+}
+
+/// JSON of `search_fdr` (one object per query): `pos` (library index or null), `score`, `decoy`, `q`, `nt`, `nd`, `kind`, `note` (the i18n key).
+pub fn search_fdr_json(r: &[QueryFdr]) -> String {
+    let rows: Vec<serde_json::Value> = r
+        .iter()
+        .map(|x| {
+            serde_json::json!({
+                "pos": x.best.index, "score": x.best.target, "decoy": x.best.decoy, "q": x.fdr.q_value,
+                "nt": x.fdr.n_target_ge, "nd": x.fdr.n_decoy_ge, "kind": x.fdr.decoy_kind.code(), "note": fdr_note(),
+            })
+        })
+        .collect();
+    serde_json::Value::Array(rows).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,6 +338,16 @@ mod tests {
         assert_ne!(a.mz, s.mz);
         assert_eq!(a.it, s.it);
         assert!(a.mz.iter().all(|&m| (60.0..=200.0).contains(&m)));
+        assert!(a
+            .mz
+            .iter()
+            .all(|m| s.mz.iter().all(|t| (t - m).abs() > 0.02)));
+        let one = Spectrum {
+            mz: vec![100.0],
+            it: vec![1.0],
+            ..s.clone()
+        };
+        assert_ne!(make_decoy(&one, DecoyKind::Fragments, 5).mz, one.mz);
         let p = make_decoy(&s, DecoyKind::Precursor, decoy_seed(&s, 1));
         assert!((p.prec - s.prec).abs() >= SHIFT_MIN && (p.prec - s.prec).abs() <= SHIFT_MAX);
         assert_eq!(p.mz, s.mz);
