@@ -19,7 +19,10 @@ try:
             c = r.b.new_context(viewport={"width": 1280, "height": 800}); q = c.new_page(); q.reqs = []
             q.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             q.on("request", lambda x: q.reqs.append(x.url)); q.bytes = [0]
-            q.on("response", lambda x: q.bytes.__setitem__(0, q.bytes[0] + (len(x.body()) if x.ok else 0))); return c, q
+            def add(x):
+                try: q.bytes[0] += len(x.body())
+                except Exception: pass                      # redirects and evicted bodies have none
+            q.on("response", add); return c, q
 
         def dati():
             c, q = fresh(); q.goto(U + "#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
