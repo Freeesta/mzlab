@@ -400,5 +400,6 @@
   "pca.ell": "Descrizione di un'ellisse. {g} = nome del gruppo di repliche.",
   "pca.col.pc": "Intestazione di colonna. {n} = numero della componente.",
   "pca.row.aria": "Etichetta accessibile di una riga. {mz} = m/z, {rt} = RT.",
-  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo."
+  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo.",
+  "int.cmp.aria": "Descrizione accessibile del grafico di confronto. {a} = picchi trovati dalla CWT, {b} = picchi trovati da prominenza + minimo locale."
 }
