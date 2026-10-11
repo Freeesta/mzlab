@@ -24,8 +24,12 @@
   const btn = document.createElement("button");
   btn.id = "a11y-btn"; btn.type = "button"; btn.textContent = "Aa"; btn.title = "Lettura facilitata";
   btn.setAttribute("aria-label", "Lettura facilitata"); btn.setAttribute("aria-haspopup", "dialog"); btn.setAttribute("aria-expanded", "false");
-  const top = $("#top");
-  if (top && !embedded) top.appendChild(btn); else { btn.classList.add("float"); document.body.appendChild(btn); }
+  const top = $("#top"), tbar = $("#tbar");
+  if (tbar && !embedded) {   // standalone page: the gear closes the bar of comandi.js
+    btn.className = "tb"; btn.innerHTML = window.TCMD.icona("impostazioni") + '<span class="l">Impostazioni</span>'; btn.title = "Lettura facilitata";
+    btn.setAttribute("aria-label", "Impostazioni: lettura facilitata");
+    tbar.appendChild(btn);
+  } else if (top && !embedded) top.appendChild(btn); else { btn.classList.add("float"); document.body.appendChild(btn); }
 
   const panel = document.createElement("div");
   panel.id = "a11y-panel"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Lettura facilitata");

@@ -28,6 +28,7 @@
   const prog = document.createElement("i"); prog.id = "prog"; prog.setAttribute("aria-hidden", "true");
   bar.append(menu, prog);
   document.body.prepend(bar);
+  if (window.TCMD && TCMD.cbar) TCMD.cbar();   // previous / next next to the index button
 
   const bg = document.createElement("div"); bg.id = "sheetbg"; bg.hidden = true; document.body.appendChild(bg);
   const head = document.createElement("div"); head.className = "sheethd";
