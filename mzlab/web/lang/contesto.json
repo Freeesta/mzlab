@@ -221,7 +221,6 @@
   "lib.all.shownVal": "Valore del foglio «Parametri» dell'Excel: righe mostrate su totale; {n} = mostrate, {total} = totale.",
   "lib.all.sub": "Riga sotto il titolo di «Identifica tutte le MS2»; {ppm} = tolleranza del precursore.",
   "lib.an.shifted": "Cella della tabella degli analoghi: picchi abbinati e, tra questi, quelli abbinati dopo lo spostamento del precursore.",
-  "lib.analogsN": "Messaggio dopo la ricerca degli analoghi; {n} = quanti trovati.",
   "lib.copied": "Messaggio dopo la copia della tabella degli appunti; {n} = numero di righe.",
   "lib.doneN": "Esito della lettura di una libreria; {n} = spettri letti (già formattato).",
   "lib.droppedN": "Seguito di lib.doneN: spettri scartati; {n} = quanti (già formattato).",
@@ -307,5 +306,9 @@
   "lv.dec.3prov": "Frase decisiva del livello 3 provvisorio; {gates} = elenco delle prove non superate.",
   "lv.dec.3an": "Frase decisiva: solo un analogo; {cos} = coseno modificato, {delta} = differenza di massa con segno.",
   "lv.dec.none": "Frase decisiva quando nessuna fonte supera i cancelli; {name} = candidato più vicino, {gate} = prova non superata.",
-  "lv.refuse.2b": "Messaggio quando il chimico prova a scrivere 2b dove non si può; {lv} = livello proposto."
+  "lv.refuse.2b": "Messaggio quando il chimico prova a scrivere 2b dove non si può; {lv} = livello proposto.",
+  "lib.what.group": "Nota sotto una voce del risultato; {n} = numero di altre voci con lo stesso primo blocco dell'InChIKey (stessa struttura piana, stereoisomeri).",
+  "lib.what.nl": "Sotto lo specchio; {list} = masse delle perdite neutre in comune, già formattate.",
+  "lib.what.cosVis": "Prova aggiuntiva: {lo} = limite inferiore della finestra di scansione MS2 del file, {cos} = coseno già formattato.",
+  "lib.what.attr": "Sotto lo specchio; autori, accessione e licenza della voce di libreria (testi dei file di libreria)."
 }

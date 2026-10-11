@@ -83,7 +83,7 @@ class LibParser {
     const p = topPeaks(c.mz, c.it), type = f.precursortype ?? f.adduct ?? "";
     this.stats.read++;
     this.cb({ prec, pol: polFrom(f.ionmode ?? f.polarity, type, f.charge), mz: p.mz, it: p.it,
-      meta: [f.name ?? f.title ?? "", type, f.collisionenergy ?? f.ce ?? "", f.instrumenttype ?? f.instrument ?? "", f.formula ?? "", f.inchikey ?? ""] });
+      meta: [f.name ?? f.title ?? "", type, f.collisionenergy ?? f.ce ?? "", f.instrumenttype ?? f.instrument ?? "", f.formula ?? "", f.inchikey ?? "", f.db ?? f.accession ?? f.accessionnumber ?? "", f.authors ?? f.author ?? f.datacollector ?? "", f.license ?? f.licence ?? ""] });
   }
 }
 function formatOf(name, head) {                 // by extension, otherwise by the first lines
@@ -129,7 +129,10 @@ function entropySimilarity(a, b, pairs) {       // 1 - (2 S_AB - S_A - S_B) / ln
 }
 function score(q, lib, tolFrag) {
   const pairs = matchPeaks(q.mz, q.it, lib.mz, lib.it, tolFrag);
-  return { cos: cosine(q, lib, pairs), ent: entropySimilarity(q, lib, pairs), shared: pairs.length, pairs };
+  let dot = 0, qp = 0, qa = 0, la = 0;                         // reverse = the paired peaks of the query against ALL the library peaks; explained = the share of the query intensity that is paired
+  for (const [i, j] of pairs) { dot += Math.sqrt(q.it[i] * lib.it[j]); qp += q.it[i]; }
+  for (const v of q.it) qa += v; for (const v of lib.it) la += v;
+  return { cos: cosine(q, lib, pairs), ent: entropySimilarity(q, lib, pairs), shared: pairs.length, pairs, reverse: qp > 0 && la > 0 ? dot / Math.sqrt(qp * la) : 0, explained: qa > 0 ? qp / qa : 0 };
 }
 
 // ---------------------------------------------------------------- search over an index
@@ -141,8 +144,8 @@ function searchIndex(idx, q, opts, getSpec, meta) {
     const pos = idx.ord[k], lp = idx.pol[pos];
     if (opts.pol && lp && lp !== opts.pol) continue;                           // same polarity (a library entry without polarity is kept)
     const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
-    out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "",
-      cos: sc.cos, ent: sc.ent, shared: sc.shared, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
+    out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "",
+      cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
   }
   return out;
 }
@@ -195,7 +198,7 @@ function analogIndex(idx, q, opts, getSpec, meta) {
     const lib = { mz: c.s.mz, it: c.s.it, prec: idx.prec[c.k] }, r = modCosine({ mz: q.mz, it: q.it, prec: q.prec }, lib, frag);
     if (r.matched < 4) continue;
     const m = meta ? meta[c.pos] : null;
-    out.push({ pos: c.pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", mcos: r.cos, matched: r.matched, shifted: r.shifted,
+    out.push({ pos: c.pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", mcos: r.cos, matched: r.matched, shifted: r.shifted,
       delta: r.delta, prec: idx.prec[c.k], coinc: c.n, mz: Array.from(c.s.mz), it: Array.from(c.s.it), pairs: r.pairs.map(p => [p[0], p[1], p[2]]), qa: { mz: Array.from(r.a.mz), it: Array.from(r.a.it) }, la: { mz: Array.from(r.b.mz), it: Array.from(r.b.it) } });
   }
   out.sort((x, y) => y.mcos - x.mcos);
