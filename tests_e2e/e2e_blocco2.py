@@ -48,7 +48,7 @@ try:
             assert pg.evaluate("TIP_DELAY") == 1250
         step("2.3/2.5: no icons, tab label = Q1 -> q2 -> Q3 after TIP_DELAY (1250 ms)", tabs)
         def rows():
-            pg.evaluate("E.cur=E.files.find(f=>f.kind==='full').k;renderFileList()")
+            drawer(pg); pg.evaluate("E.cur=E.files.find(f=>f.kind==='full').k;renderFileList()")
             pg.locator("#flst .fl:not(.ghost) small").nth(2).click(); pg.wait_for_timeout(300)
             c = pg.evaluate("E.cur"); assert c == pg.evaluate("tabFiles('full')[2].k"), c
             box = pg.locator("#flst .fl:not(.ghost)").nth(1).bounding_box(); pg.mouse.click(box["x"] + box["width"] - 3, box["y"] + 3); pg.wait_for_timeout(300)

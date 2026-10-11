@@ -32,7 +32,7 @@ try:
             pg.screenshot(path=SH + "19_ms2.png")
         step("precursor chromatogram: kind/m-z/blank/baseline/log grey with tooltips, no TIC/BPC", dis)
         def side():
-            t = pg.inner_text("#flst"); assert "PRODUCT ION" in t.upper() and "m/z 229.1" in t, t      # grouped by experiment: the MS2 group lists its precursors
+            drawer(pg); t = pg.inner_text("#flst"); assert "PRODUCT ION" in t.upper() and "m/z 229.1" in t, t      # grouped by experiment: the MS2 group lists its precursors
             r = pg.evaluate("""()=>{const f=document.querySelector('#flst .fl:not(.pr) .fi');const b=f.querySelector('.nm').getBoundingClientRect(),s=f.querySelector('small').getBoundingClientRect();return [b.top,s.top,b.right,s.left]}""")
             assert abs(r[0] - r[1]) < 12 and r[3] >= r[2] - 1, r
         step("sidebar: precursors first, time to the right of the file name", side)

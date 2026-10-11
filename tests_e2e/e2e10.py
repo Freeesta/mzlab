@@ -36,7 +36,7 @@ try:
         step("two methods: selector", two)
         pg.click("#bigx"); pg.wait_for_timeout(300)
         def texts():
-            pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click("#sidebar-tablist [data-t=losses]"); pg.wait_for_timeout(300)
+            pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click("#stbar [data-cmd=losses]"); pg.wait_for_timeout(300)
             t = pg.inner_text("#sb-panel-losses"); assert "Differenze di massa frequenti" not in t and "Riferimenti" not in t and "Levsen" not in t
             assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "losses"
             pg.click("#np-pt"); pg.wait_for_timeout(300)             # the periodic table is in the header: it stays a window

@@ -27,7 +27,7 @@ try:
             assert all(dis("[data-o=ref]"))
         step("panels: overlay/stack, overlay files, difference disabled", panels)
         def two():
-            pg.click("#addf"); pg.wait_for_timeout(500)
+            drawer(pg); pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [mz("B_FullMass-t60")]); pg.wait_for_timeout(800)
             pg.click("#opbtn"); pg.wait_for_function("tabFiles('full').length===2", timeout=60000); pg.wait_for_timeout(1500)
             assert not any(dis("#fmode button")) and not any(dis("[data-o=mode],[data-o=ref]"))      # the arrows and the selector need "Solo il selezionato"

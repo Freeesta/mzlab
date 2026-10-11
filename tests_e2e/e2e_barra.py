@@ -39,12 +39,11 @@ try:
             assert "Altro" not in pg.inner_text("#tools") and "Unisci" not in pg.inner_text("#tools")
         step("no Altro / Unisci; Ordina is a small icon that still works", gone)
         def fold():
-            assert "◀" not in pg.inner_text("#ffold") and pg.evaluate("!!Q('#ffold svg')")
-            assert pg.evaluate("Q('#ffold').title") == "Nascondi l'elenco dei file"
-            pg.click("#ffold"); pg.wait_for_timeout(500)
-            assert pg.is_visible("#funfold") and pg.evaluate("!!Q('#funfold svg')") and "▶" not in pg.inner_text("#funfold")
-            assert pg.evaluate("Q('#funfold').title") == "Mostra l'elenco dei file"
-            pg.click("#funfold"); pg.wait_for_timeout(400)
+            b = "#stbar [data-cmd=file]"
+            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Elenco dei file caricati: scegli, nascondi, rinomina, colora"
+            pg.click(b); pg.wait_for_timeout(500)
+            assert pg.is_visible("#flst") and pg.is_visible("#sb-x") and pg.evaluate("!!Q('#sb-x svg')") and pg.evaluate("Q('#sb-x').title") == "Chiudi il pannello"
+            pg.click("#sb-x"); pg.wait_for_timeout(400); assert not pg.is_visible("#flst")
             # the only ◀ ▶ left in the toolbar are the file arrows
             assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /[◀▶]/.test(b.textContent)).map(b => b.id)") == ["fprev", "fnext"]
         step("side-panel icon for the file list", fold)

@@ -48,7 +48,7 @@ try:
         
         # Test mix loading
         def test_mix():
-            pg.click("#addf"); pg.wait_for_timeout(500)
+            drawer(pg); pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
             pg.click("#opbtn")

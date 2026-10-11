@@ -306,15 +306,6 @@
     }
   }
 
-  Qs("#np-pt").onclick = () => open("pt");
-  Qs("#np-ad").onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts");
-    else open("ad");
-  };
-  Qs("#np-nl").onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses");
-    else open("ls");
-  };
   window.QQQRef = {
     open, massOf, mono, isoPattern, ionCounts, ADD, adductDiffs: calcAdductDiffs,
     mountLosses, mountAdducts, setLossQuery, periodic, bindPeriodic, adductTab, bindAdducts, lossTab, bindLoss

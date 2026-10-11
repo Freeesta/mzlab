@@ -435,7 +435,7 @@ function openBT() {
   Q("#bt").hidden = false;
   try { if (window.TPDraw) window.TPDraw.smiles().then(s => { if (s) { navigator.clipboard.writeText(s); Q("#btcopy").textContent = I18N.t("bt.copied", { smiles: s.length > 40 ? s.slice(0, 40) + "…" : s }); } }).catch(() => {}); } catch (_) { /* appunti non disponibili */ }
 }
-Q("#np-bt").onclick = openBT; Q("#bt-open").onclick = openBT; Q("#btx").onclick = () => { Q("#bt").hidden = true; };
+window.openBT = openBT; Q("#bt-open").onclick = openBT; Q("#btx").onclick = () => { Q("#bt").hidden = true; };
 
 // ------------------------------------------------------------------ barra strumenti
 Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
@@ -455,15 +455,13 @@ document.addEventListener("tpview", e => { if (e.detail.view === "data") setTime
 const calcBox = Q("#calcdlg");
 Object.defineProperty(calcBox, "open", {
   get: () => {
-    if (window.BARRA && BARRA.isDataView()) {
-      return BARRA.curTab === "calc" && (!document.querySelector("#v-data")?.classList.contains("sb-unpinned") || document.querySelector("#v-data")?.classList.contains("sb-overlay-open"));
-    }
+    if (window.BARRA && BARRA.isDataView()) return BARRA.isOpen("calc");
     return !calcBox.hidden;
   }
 });
 calcBox.close = () => {
   if (window.BARRA && BARRA.isDataView()) {
-    if (!BARRA.pinned) BARRA.closeOverlay();
+    if (!BARRA.pinned) BARRA.close(true);
   } else {
     calcBox.hidden = true;
   }
@@ -472,11 +470,8 @@ function calcPlace() {
   const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);
   calcBox.style.top = Math.round(r.bottom + 6) + "px"; calcBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
 }
-Q("#np-calc2").onclick = () => {
-  if (window.BARRA && BARRA.isDataView()) {
-    BARRA.setTab("calc");
-    return;
-  }
+// outside the Dati view the calculator is a drop-down under its toolbar button (in the Dati view it is the "Calcolatrice" panel of the drawer)
+window.calcToggleFloat = () => {
   if (!calcBox.hidden) return calcBox.close();
   calcBox.hidden = false;
   calcPlace();
@@ -491,10 +486,8 @@ document.addEventListener("keydown", e => {
     const i = Q("#calcin");
     if (document.activeElement === i && i.value) {
       i.value = ""; CALC.fresh = false; calcRun();
-    } else if (!BARRA.pinned && BARRA.overlayOpen) {
-      BARRA.closeOverlay();
     }
-    return;
+    return;                                                  // the drawer itself closes with Esc (barra.js)
   }
   if (calcBox.hidden) return;
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close

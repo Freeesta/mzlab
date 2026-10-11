@@ -24,7 +24,7 @@ try:
         step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
         pg.click("text=Carica dati"); ready(pg)
         def list_signs():
-            assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
+            drawer(pg); assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)
         def legend():
             pg.evaluate("E.files.forEach(f=>f.vis=true)"); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)

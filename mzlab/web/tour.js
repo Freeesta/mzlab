@@ -51,11 +51,14 @@ const TOUR = (() => {
     {
       id: "file",
       prep: () => {
-        const tab = document.getElementById("sb-tab-file");
-        if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
-        if (typeof foldFiles === "function" && typeof E !== "undefined" && E.fold) foldFiles(false);
+        // the file list is a drawer of the toolbar: the tour opens it for this step and closes it again when the step ends
+        if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
+          const wasOpen = BARRA.isOpen();
+          BARRA.show("file", { noFocus: true, instant: true });
+          return () => { if (!wasOpen) BARRA.close(false); };
+        }
       },
-      target: () => document.getElementById("sb-panel-file")
+      target: () => document.getElementById("sb-pane")
     },
     {
       id: "schede",
@@ -125,7 +128,7 @@ const TOUR = (() => {
     },
     {
       id: "barra",
-      target: () => document.getElementById("sidebar-tablist")
+      target: () => document.getElementById("stbar")
     },
     {
       id: "metodo",
@@ -144,6 +147,7 @@ const TOUR = (() => {
   let provaTimer = null;
   let provaState = null;
   let currentTargetEl = null;
+  let curLeave = null;      // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
 
   const isReducedMotion = () => {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -383,7 +387,8 @@ const TOUR = (() => {
     }
 
     const step = list[curStep];
-    if (step.prep) step.prep();
+    if (curLeave) { const f = curLeave; curLeave = null; f(); }
+    if (step.prep) { const back = step.prep(); if (typeof back === "function") curLeave = back; }
 
     const targetEl = step.target();
     if (!targetEl || targetEl.offsetParent === null || targetEl.getBoundingClientRect().width === 0) {
@@ -650,6 +655,7 @@ const TOUR = (() => {
 
     chiudi: () => {
       stopProvaTimer();
+      if (curLeave) { const f = curLeave; curLeave = null; f(); }
       active = false;
       currentTargetEl = null;
 
