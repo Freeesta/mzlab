@@ -47,6 +47,16 @@ export async function putFromFS(kind, name, FS, path) {
   finally { FS.close(st); }
 }
 
+// a file written under a temporary name (by a worker of the pool) takes its final name; a half-written file never has it
+export async function promote(kind, from, to) {
+  const d = await dir(kind), fh = await d.getFileHandle(from);
+  try { await d.removeEntry(to); } catch (_) { /* nothing to replace */ }
+  if (typeof fh.move === "function") { await fh.move(to); return (await d.getFileHandle(to)).getFile(); }
+  const f = await put(kind, to, await fh.getFile());          // no move() in this browser: a copy
+  try { await d.removeEntry(from); } catch (_) { /* optional */ }
+  return f;
+}
+
 export async function get(kind, name) {
   try { return await (await (await dir(kind)).getFileHandle(name)).getFile(); } catch (_) { return null; }
 }
