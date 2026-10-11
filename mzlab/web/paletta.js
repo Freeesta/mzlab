@@ -14,9 +14,10 @@ const PALETTE = (() => {
   const norm = s => String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   const groupOf = c => (c.group || (c.item || c.hr ? "hr" : "tools"));
-  const kw = c => t(`cmd.${c.id}.kw`);
+  const kw = c => (c.teo ? "" : t(`cmd.${c.id}.kw`));
 
   function candidates() {
+    if (BARRA.inTheory) return BARRA.theoryCommands().filter(c => !c.off);      // in the Teoria the palette searches the commands of the Teoria
     return BARRA.commands.filter(c => c.run && !c.items && c.id !== "search" && BARRA.visible(c));
   }
 
