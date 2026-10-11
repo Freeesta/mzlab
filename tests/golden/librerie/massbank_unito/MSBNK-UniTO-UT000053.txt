@@ -1,0 +1,46 @@
+ACCESSION: MSBNK-UniTO-UT000053
+RECORD_TITLE: Tazobactam; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+K]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000053
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 1 injection(s), 4 scan(s).
+CH$NAME: Tazobactam
+CH$COMPOUND_CLASS: Non-Natural Product; beta-lactamase inhibitor
+CH$FORMULA: C10H12N4O5S
+CH$EXACT_MASS: 300.05284
+CH$SMILES: C[C@@]1([C@@H](N2[C@H](S1(=O)=O)CC2=O)C(=O)O)CN3C=CN=N3
+CH$IUPAC: InChI=1S/C10H12N4O5S/c1-10(5-13-3-2-11-12-13)8(9(16)17)14-6(15)4-7(14)20(10,18)19/h2-3,7-8H,4-5H2,1H3,(H,16,17)/t7-,8+,10+/m1/s1
+CH$LINK: CAS 89786-04-9
+CH$LINK: INCHIKEY LPQZKKCYTLCDGQ-WEDXCCLWSA-N
+CH$LINK: PUBCHEM CID:123630
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 6.075 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 339.01600
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+K]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-0fk9-0915000000-69b4af2862f1f3ebcc6e
+PK$NUM_PEAK: 7
+PK$PEAK: m/z int. rel.int.
+  173.38446 1457596.6 999
+  190.67357 114077.1 78
+  232.35681 120940.7 83
+  294.99417 104556.0 72
+  298.29181 108950.4 75
+  301.05925 874417.1 599
+  330.54596 109612.9 75
+//
