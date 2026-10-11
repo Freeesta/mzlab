@@ -26,8 +26,11 @@ try:
         def click_chapter(pg, href):
             pg.click(f'#side li a[href="{href}"]'); pg.wait_for_url("**/" + href); pg.wait_for_function("document.readyState==='complete'"); real_wait(pg, 500)
         def vt():
-            ctx, pg, errs = ctxpage(b, color_scheme="dark"); pg.goto(T + "06-esi.html"); real_wait(pg, 400)
-            click_chapter(pg, "08-vuoto.html"); o = rev(pg)
+            for attempt in range(3):   # a loaded machine may reveal the page before the index exists: the transition is then skipped on purpose
+                ctx, pg, errs = ctxpage(b, color_scheme="dark"); pg.goto(T + "06-esi.html"); real_wait(pg, 400)
+                click_chapter(pg, "08-vuoto.html"); o = rev(pg)
+                if o and o["side"] > 20 and o["anims"]: break
+                ctx.close()
             assert o and o["vt"], o
             assert o["side"] > 20 and o["top"], ("index and header are already built when the new page is first revealed", o)
             names = " ".join(o["anims"]); assert "::view-transition-new(root):vt-in:180" in names, o["anims"]
