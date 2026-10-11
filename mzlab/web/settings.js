@@ -70,6 +70,7 @@ function uipOpen(btn) {
     ` : ""}
     ${window.MZLAB_BROWSER ? `<div class="row" id="uip-space-row" hidden><span>${I18N.t("settings.space.label")}</span> <span id="uip-space-val" class="sm" role="status" aria-live="polite"></span> <button id="uip-space" type="button" title="${I18N.t("settings.space.title")}">${I18N.t("settings.space.button")}</button></div>` : ""}
     ${window.DESKUPD ? DESKUPD.row() : ""}
+    <div class="uip-reset" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0" title="${I18N.t("settings.reset.title")}"><span>${I18N.t("settings.reset.label")}</span> <button id="uip-reset" type="button">${I18N.t("settings.reset.button")}</button></div>
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
@@ -101,6 +102,7 @@ function uipOpen(btn) {
   };
   const uipEtich = d.querySelector("#uip-etich");
   if (uipEtich) { uipEtich.value = window.BARRA ? BARRA.labels : "auto"; uipEtich.onchange = e => { if (window.BARRA) BARRA.setLabels(e.target.value); }; }
+  d.querySelector("#uip-reset").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask(); };
   const uipTour = d.querySelector("#uip-tour");
   if (uipTour) uipTour.onclick = () => {
     d.remove();

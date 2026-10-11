@@ -39,9 +39,7 @@ const CONV = {
       try { return !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); }
       catch (e) { const n = document.getElementById("up"); if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); n.appendChild(d); setTimeout(() => d.remove(), 12000); } return false; }
     }
-    const a = document.createElement("a"), u = URL.createObjectURL(blob);
-    a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(u), 60000);
+    saveBlob(blob, name, 60000);
     return true;
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)

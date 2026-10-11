@@ -46,7 +46,7 @@ const BARRA = (() => {
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _w));
-  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc", "stat"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -79,7 +79,7 @@ const BARRA = (() => {
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
     { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
-    { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
+    { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
@@ -108,7 +108,6 @@ const BARRA = (() => {
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
     { id: "labels", bar: false, group: "app", ic: () => ICONS.search, run: () => { setLabels(_labMode === "auto" ? "always" : _labMode === "always" ? "hidden" : "auto"); announce(t("cmd.labels.now." + _labMode)); } },
-    { id: "hint", bar: false, group: "app", ic: () => ICONS.search, visible: () => inData(), run: () => { hintClose(false); hintShow(); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
     { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
@@ -121,17 +120,21 @@ const BARRA = (() => {
     { id: "sideL", bar: false, group: "panel", ic: () => ICONS.left, visible: () => inData(), run: () => setSide("left") },
     { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
     { id: "panel", bar: false, group: "panel", ic: () => ICONS.panel, visible: () => inData(), run: () => toggleDrawer() },
-    // external links, rare: in "Altro"
-    { id: "stat", dom: "np-stat", more: true, ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
+    // search: true = found only by the search (palette, Ctrl/⌘ K): never a button of the bar, never in "Altro"; external links, rare: in "Altro"
+    { id: "stat", search: true, group: "tools", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
   // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
   if (window.MAPPA) MAPPA.CMDS.filter(c => c.kinds.includes("2d")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
+  // the two clean slates (reset.js): a short question says what is lost; also in the gear
+  const IC_RESET = () => IC('<path d="M3 8a5 5 0 109-2.8"/><path d="M12.5 2v3.5H9"/>');
+  CMD.push({ id: "resetall", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("all") }, { id: "resetfiles", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("files") });
+  CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   const byId = id => CMD.find(c => c.id === id);
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
-  const visible = c => (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
+  const visible = c => (!c.feature || !!FEATURES[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
   const lab = c => t(`cmd.${c.id}.lab`);
   const name = c => t(`cmd.${c.id}.name`);
   const tip = c => t(`cmd.${c.id}.tip`);
@@ -435,7 +438,7 @@ const BARRA = (() => {
     const bar = Q1("#stbar");
     if (!bar) return;
     const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
-    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end");
+    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || FEATURES[c.feature]));
     const hr = CMD.filter(c => c.hr);
     let h = common.map(c => btnHtml(c)).join("");
     h += `<span class="tb-sep" role="separator" data-hrgrp="1"></span>`;

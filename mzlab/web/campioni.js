@@ -69,7 +69,7 @@ const CAMPIONI = (() => {
 
   // ---------------------------------------------------------------- the files of the table
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const files = () => (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone && (f.lv || 1) === 1 && f.kind !== "empty");
   const roleOf = f => (window.QAQC ? QAQC.roleOf(f) : f.type || "sample");
   const roleName = r => t("qaqc.role." + r);
@@ -177,9 +177,7 @@ const CAMPIONI = (() => {
     };
     box.onclick = e => {
       if (e.target.id === "cmp-exp") {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([tsvText()], { type: "text/tab-separated-values" }));
-        a.download = "metadata.tsv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        saveBlob(new Blob([tsvText()], { type: "text/tab-separated-values" }), "metadata.tsv", 2000);
       } else if (e.target.id === "cmp-copy") {
         const tx = tsvText();
         (navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));

@@ -8,7 +8,7 @@
 const PCA = (() => {
   const KEY = "qqq.pca", MIN_SAMPLES = 5;
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   let st = { min: 1000, k: 2, transform: "log", scaling: "pareto" };
   let res = null, sel = null;                                  // res: {r, feats, names, files, groups}; sel: index (in r.features) of the feature chosen
   try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }

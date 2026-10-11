@@ -95,7 +95,6 @@
 
   // ------------------------------------------------------------------ reading aloud (Web Speech API, voice it-IT)
   const HL = "highlights" in CSS ? "a11y-sentence" : null;
-  let hlRange = null;
   function clearHl() { if (HL) CSS.highlights.delete(HL); document.querySelectorAll(".a11y-hlblock").forEach(x => x.classList.remove("a11y-hlblock")); }
   function stop() { if (speech) speechSynthesis.cancel(); clearHl(); queue = []; }
   let queue = [];
