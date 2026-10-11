@@ -367,5 +367,13 @@
   "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole.",
   "prof.chart.aria": "Etichetta accessibile del grafico del profilo nel tempo. {ion} = etichetta dell'ione scelto.",
   "prof.sum": "Riga sopra il grafico del profilo nel tempo. {mz} = m/z, {rt} = RT atteso in minuti.",
-  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno."
+  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno.",
+  "sub.chip": "{file} = nome del file di riferimento (con «(auto)» se scelto in automatico); {f} = fattore; {norm} = normalizzazione.",
+  "sub.factor.vt": "{f} = fattore moltiplicativo del riferimento (numero con due decimali).",
+  "sub.file.auto": "{file} = nome del file che il programma sceglierebbe in automatico.",
+  "sub.next": "{file} = nome del file di riferimento.",
+  "sub.prev": "{file} = nome del file di riferimento.",
+  "sub.norm.istd.short": "{mz} = m/z dello standard interno scelto dallo studente.",
+  "sub.note": "{file} = file di riferimento; {f} = fattore; {norm} = normalizzazione.",
+  "sub.on": "{file} = file di riferimento; {f} = fattore."
 }

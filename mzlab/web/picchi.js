@@ -248,8 +248,9 @@ async function drawSpec(p, snapped) {
   if (!files.length) return say(I18N.t("spec.isMrm"));
   if (isDda) { const m = DDA.waiting(p); if (m) return say(m); }
   else if (p.r0 == null) return say(I18N.t("spec.pickRange"));
+  const sref = window.SUBREF ? SUBREF.eff(p) : null;          // the reference of the session (or the file chosen in «fondo»): same window of time, factor of the session
   const bgOf = f => p.bg === "w" ? (p.bw0 != null && p.bw1 != null && p.bw1 > p.bw0 ? [f.k, p.bw0, p.bw1] : null)
-    : (p.bg !== "" && p.bg != null && +p.bg !== f.k ? [+p.bg, p.r0, p.r1] : null);
+    : (sref && sref.k !== f.k ? [sref.k, p.r0, p.r1, sref.factor, 1] : null);
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
   const one = !isDda && files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
@@ -387,6 +388,7 @@ async function drawSpec(p, snapped) {
   p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? I18N.t("spec.bgSubtracted") : ""}</span>`;       // on the row of the x axis title, to the right
   if (isDda) DDA.caption(p);                                // scan, parent, activation, NCE, isolation
   p.leg.title = p.leg.textContent;
+  if (window.SUBREF && p.bg !== "w") SUBREF.chip(p);
   const multiFiles = scanFiles(tabFiles(p.tab)).length > 1;
   const showLabel = data.length > 1 || multiFiles;
   if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => {
