@@ -132,6 +132,17 @@ pub fn dequant_mz(q: u32) -> f64 {
     q as f64 / MZ_SCALE
 }
 
+/// What the `.mzlib` keeps of a spectrum: m/z on the 1e-5 Da grid, intensities as `u16` fractions of the highest (returned in the original scale).
+pub fn quantized(mz: &[f64], it: &[f64]) -> (Vec<f64>, Vec<f64>) {
+    let mx = it.iter().cloned().fold(0.0, f64::max);
+    let m: Vec<f64> = mz.iter().map(|v| dequant_mz(quant_mz(*v))).collect();
+    let i: Vec<f64> = it
+        .iter()
+        .map(|v| ((v / mx) * 65535.0).round().clamp(1.0, 65535.0) / 65535.0 * mx)
+        .collect();
+    (m, i)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

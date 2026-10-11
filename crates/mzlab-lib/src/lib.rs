@@ -9,6 +9,8 @@ pub mod format;
 pub mod io;
 pub mod parse;
 pub mod read;
+pub mod scores;
+pub mod search;
 pub mod spec;
 pub mod util;
 

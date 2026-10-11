@@ -149,7 +149,7 @@ def test_ionmap_is_mean_per_scan_on_common_grid(tmp_path):
     f.write_text(_mzml(f'<spectrumList count="3">{"".join(scans)}</spectrumList>'), encoding="utf-8")
     sess = Session([{"file": "full.mzML"}], tmp_path)
     g = sess.grid(1)
-    m = sess.items[0].ionmap(1, g)
+    m = sess.items[0].ionmap(1, g, "mean")
     assert m.shape == (g["nrt"], g["nmz"])
     rt_bin = lambda rt: min(int((rt - g["rt0"]) / (g["rt1"] - g["rt0"]) * g["nrt"]), g["nrt"] - 1)   # last edge falls in the last bin
     assert m[rt_bin(1.0), int(150.2 - g["mz0"])] == pytest.approx(200.0)      # mean of 100 and 300

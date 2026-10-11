@@ -1877,6 +1877,7 @@ dependencies = [
 name = "mzlab-lib"
 version = "0.1.0"
 dependencies = [
+ "mzlab-core",
  "ruzstd",
  "serde_json",
 ]

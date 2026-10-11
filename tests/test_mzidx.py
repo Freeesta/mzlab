@@ -190,3 +190,24 @@ def test_known_sha_and_registry(synth, tmp_path, monkeypatch):
     assert r2.use_index(other) and Path(r2.index_path) == other
     assert np.array_equal(np.asarray(r2.table(1).mz), r2.table_reference(1).mz)
     r2.close()
+
+
+def test_maps_spectra_and_totals_equal_the_in_memory_ones(synth, tmp_path):
+    from mzlab.explore import Item
+    f = next(p for p in synth if p.name == "full.mzML")
+    a = Item(f.name, None, 0, "sample", f, run=Run(f, index_path=tmp_path / "m.mzidx"))
+    b = Item(f.name, None, 0, "sample", f, run=Run(f, index_path=tmp_path / "n.mzidx"))
+    b.run.table = b.run.table_reference                                    # the same file read the old way
+    ta = a._tbl(1)
+    grid = {"rt0": float(ta.rt[0]), "rt1": float(ta.rt[-1]), "nrt": 60, "mz0": 100.0, "dmz": 1.0, "nmz": 400}
+    for agg in ("max", "mean"):
+        assert np.array_equal(a.ionmap(1, grid, agg), b.ionmap(1, grid, agg)), agg
+    assert np.array_equal(a.ionmap_region(1, 2.0, 10.0, 30, 150.0, 300.0, 120), b.ionmap_region(1, 2.0, 10.0, 30, 150.0, 300.0, 120))
+    for kind in ("tic", "bpc"):
+        assert all(np.array_equal(x, y) for x, y in zip(a.total(kind, 1), b.total(kind, 1)))
+        assert all(np.array_equal(x, y) for x, y in zip(a.total(kind, 1, 150.0, 300.0), b.total(kind, 1, 150.0, 300.0)))
+    r0, r1 = float(ta.rt[100]), float(ta.rt[160])
+    sa, sb = a._binned(r0, r1, 1), b._binned(r0, r1, 1)
+    assert all(np.array_equal(x, y) for x, y in zip(sa, sb))
+    assert a.scan_table(1) == b.scan_table(1)
+    a.run.close(); b.run.close()

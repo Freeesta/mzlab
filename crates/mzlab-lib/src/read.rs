@@ -93,6 +93,14 @@ struct IndexDir {
     pages: Vec<(u32, u32, u32)>, // first m/z, count, crc
 }
 
+/// Per-spectrum numbers the Flash searches need for every index entry (8 bytes per spectrum), read once from the table on first use.
+pub struct Light {
+    /// Highest entropy-weighted intensity of each spectrum.
+    pub scale: Vec<f32>,
+    /// Precursor in 1e-5 Da units (`round(prec * 1e5)`), the value the neutral-loss index is built from.
+    pub precq: Vec<u32>,
+}
+
 pub struct Library<S: Source> {
     src: S,
     pub header: Header,
@@ -102,6 +110,7 @@ pub struct Library<S: Source> {
     frag: IndexDir,
     nl: IndexDir,
     cache: RefCell<Cache>,
+    light: std::cell::OnceCell<Light>,
     /// Decoded-chunk reads served from the file (not the cache): lets tests and the bench see the cache work.
     pub block_reads: std::cell::Cell<u64>,
 }
@@ -230,8 +239,41 @@ impl<S: Source> Library<S> {
                 budget: cache_bytes,
                 tick: 0,
             }),
+            light: std::cell::OnceCell::new(),
             block_reads: std::cell::Cell::new(0),
         })
+    }
+
+    /// The light table (built on first call, outside the block cache).
+    pub fn light(&self) -> Result<&Light> {
+        if let Some(l) = self.light.get() {
+            return Ok(l);
+        }
+        let n = self.header.n_spectra as usize;
+        let mut scale = vec_with_capacity::<f32>(n)?;
+        let mut precq = vec_with_capacity::<u32>(n)?;
+        for (ci, e) in self.table.entries.iter().enumerate() {
+            let raw = match self.cache.borrow_mut().get((Kind::Table, ci as u32)) {
+                Some(r) => r,
+                None => {
+                    let stored = read_vec(&self.src, self.table.off + e.offset, e.stored as u64)?;
+                    if crc32c(&stored) != e.crc {
+                        return Err(Error::corrupt("crc"));
+                    }
+                    Rc::new(decompress(&stored, e.method, e.raw as usize)?)
+                }
+            };
+            for r in raw.chunks_exact(SPEC_REC_LEN) {
+                let rec = SpecRec::from_bytes(r);
+                scale.push(rec.scale);
+                precq.push(crate::clean::quant_mz(rec.prec));
+            }
+        }
+        if scale.len() != n {
+            return Err(Error::corrupt("table"));
+        }
+        let _ = self.light.set(Light { scale, precq });
+        Ok(self.light.get().expect("just set"))
     }
 
     pub fn n_spectra(&self) -> u32 {
