@@ -54,7 +54,7 @@ canvas{display:block;width:100%}
 /* an open menu or popover may go beyond the panel (it would otherwise be cut where the panel ends) */
 .pnl:has(.sp-pop:not([hidden])),.pnl:has(.corrm:not([hidden])){overflow:visible}.corrm[hidden]{display:none}.corri{display:flex;gap:8px;align-items:flex-start;text-align:left;border:0;background:transparent;padding:5px 8px;border-radius:6px}.corri:hover:not(:disabled){background:var(--sel)}.corri.on{background:var(--sel)}.corri svg{flex:none;margin-top:2px}.corri>span{display:flex;flex-direction:column}#demobtn.sec{background:transparent;border:1px solid var(--line);font-weight:500}#calcdlg{position:fixed;z-index:9000;width:min(560px,calc(100vw - 16px));max-height:calc(100vh - 90px);overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px 14px}#calcdlg input{width:100%;box-sizing:border-box;margin:8px 0 4px}#calcdlg[hidden]{display:none}#calcres{font-size:calc(30px*var(--z,1));font-weight:700;text-align:right;min-height:1.3em;word-break:break-all}.calc-nl-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:12px;font-weight:600;border:1px solid var(--accent);border-radius:6px;background:var(--sel,#e8ecf2);color:var(--accent);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}.calc-nl-btn:hover{background:var(--accent);color:#fff}.calc-nl-btn[hidden]{display:none!important}.cpad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}.cpad[hidden]{display:none}.cpad button{font-size:calc(20px*var(--z,1));min-height:44px;border-radius:8px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}.cpad button:hover{background:var(--sel);border-color:var(--accent)}.cpad .op{background:var(--soft,#eef2f7);color:var(--accent);font-weight:600}.cpad .eq{background:var(--accent,#2b5c8a);color:#fff;font-weight:700}#calctape{margin:4px 0;border-top:1px solid var(--line);padding-top:4px}#calctape div{padding:2px 4px;cursor:pointer;border-radius:4px;font-variant-numeric:tabular-nums}#calctape div:hover{background:var(--soft,#eef2f7)}#helppop.guide{max-height:80vh;overflow:auto;width:min(760px,94vw)}#helppop .hp-s{margin:6px 0 10px;padding-left:8px;border-left:3px solid var(--line)}#helppop details{margin:8px 0}#helppop summary{cursor:pointer}#helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
-#start{max-width:920px;margin:16px auto;padding:0 14px;font-size:calc(13px + 2pt)}#flist,#mlist{overflow-x:auto}#start .card{min-width:0}#start .card h3{font-size:inherit}#start #drop b,#start #dropdam b{font-size:inherit}
+#start{max-width:920px;margin:16px auto;padding:0 14px;font-size:calc(13px + 2pt)}#flist{overflow-x:auto}#mlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 8px;border:1px solid var(--line);border-radius:14px;background:var(--soft);color:var(--ink)}.chip button{border:0;background:none;color:var(--ink);cursor:pointer;font-size:1.1em;line-height:1;padding:0 2px}#start .card{min-width:0}#start .card h3{font-size:inherit}#start #drop b,#start #dropdam b{font-size:inherit}
 #start table input,#start table select{font-size:inherit}#start th select{font-weight:400}#start .note{margin-top:6px;color:var(--accent)}
 #dtabs{display:flex;gap:4px;align-items:flex-end;border-bottom:2px solid var(--line);margin-bottom:8px;flex-wrap:wrap}#dtabs button{border:0;border-bottom:3px solid transparent;border-radius:6px 6px 0 0;background:none;padding:7px 14px;font-weight:600;color:var(--muted);margin-bottom:-2px}
 #dtabs button:hover{color:var(--ink);background:var(--sel)}#dtabs button.on{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel)}#dtabs button i{font-style:normal;font-weight:600;font-size:11px;background:var(--sel);color:var(--muted);border-radius:9px;padding:1px 7px;margin-left:6px}#dtabs button.on i{background:var(--accent);color:#fff}#dtabs .sp{flex:1}#dtabs .tw>.hq{padding:0;margin:0 8px 9px -6px;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;line-height:14px;font-size:10px;background:var(--panel);color:var(--muted);align-self:center;margin-bottom:6px}#dtabs button.off{opacity:.65}
@@ -77,7 +77,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #drop *,#dropdam *{pointer-events:none}
 #drop.over,#dropdam.over,.card.req #drop.over{border-style:solid;border-color:var(--accent);background:#d6e4f5;color:var(--ink);box-shadow:inset 0 0 0 3px var(--accent)}#drop b,#dropdam b{color:var(--ink);font-size:15px}
 
-.cont{margin-top:5px;padding-top:4px;border-top:1px solid var(--line);max-width:300px}.cont-h{color:var(--accent)}.cont-row{margin-top:3px}#wiffhelp{margin-top:8px}#wiffhelp summary{cursor:pointer;color:var(--accent)}#wiffhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}
+.cont{margin-top:5px;padding-top:4px;border-top:1px solid var(--line);max-width:300px}.cont-h{color:var(--accent)}.cont-row{margin-top:3px}#convhelp{margin-top:8px}#convhelp summary{cursor:pointer;color:var(--accent)}#convhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}#convhelp a{color:var(--accent)}#unopen{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--ink)}#unopen p{margin:4px 0}#unopen ul{margin:4px 0 0 18px;padding:0}#unopen .row{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
 .go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
 .prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
 
@@ -195,6 +195,10 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #sb-panel-stat .bad{color:var(--bad)}
 #sb-panel-stat input,#sb-panel-stat select{max-width:100%;box-sizing:border-box;font-size:11px}
 #sb-panel-stat .prof-chart{width:100%;height:auto;display:block}
+#sb-panel-stat .pca-plot{width:100%;height:auto;display:block}
+#sb-panel-stat .pca-q{min-width:22px;height:22px;padding:0 4px;border-radius:50%;font-size:12px;line-height:1}
+#sb-panel-stat tr.sel td{background:var(--sel)}
+#sb-panel-stat tbody tr[tabindex]{cursor:pointer}
 .cmp-grad{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:6px 0}
 .cmp-grad i{display:block;flex:1;min-width:60px;height:8px;border-radius:4px;border:1px solid var(--line)}
 .liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}
@@ -521,22 +525,26 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
   <div id="drop" data-i18n-html="load.drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
   <div class="muted sm" id="dropraw" hidden data-i18n="load.dropRaw">Con il motore Rust puoi caricare anche i file Thermo .raw: vengono letti direttamente nel browser e convertiti in .mzML.</div>
   <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px" data-i18n="load.or">oppure</div><button id="demobtn" class="sec" aria-expanded="false" aria-controls="demochoice" data-i18n-title="load.demo.title" title="Scegli quali file di esempio aprire: si scarica solo ciò che scegli"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg><span data-i18n="load.demo.button">Prova con i file di esempio &#9662;</span></button><div id="demochoice" hidden style="margin-top:8px;display:none;gap:6px;justify-content:center;flex-wrap:wrap"><button type="button" class="sec" data-demo="full" data-i18n-title="load.demo.full.title" title="5 file Full Scan: 0, 5, 10, 15 e 30 minuti di irraggiamento">Full Scan <span class="muted" data-i18n="load.demo.full.size">5 file · 28 MB</span></button><button type="button" class="sec" data-demo="ms2" data-i18n-title="load.demo.ms2.title" title="2 file MS2 (ioni prodotto): 15 e 60 minuti">MS2 <span class="muted" data-i18n="load.demo.ms2.size">2 file · 10 MB</span></button><button type="button" class="sec" data-demo="mrm" data-i18n-title="load.demo.mrm.title" title="4 standard MRM a concentrazione crescente (0,6; 2,4; 7,2 e 18 ppm)">MRM <span class="muted" data-i18n="load.demo.mrm.size">4 file · 2 MB</span></button><button type="button" class="sec" data-demo="hrms" data-i18n-title="load.demo.hrms.title" title="4 file ad alta risoluzione (Orbitrap, DDA): serie temporale di un inquinante degradato su TiO2 (0, 5, 10 e 30 min)">HRMS <span class="muted" data-i18n="load.demo.hrms.size">4 file · 28 MB</span></button></div></div>
-  <details id="wiffhelp" class="sm"><summary data-i18n="load.wiff.summary">Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
+  <div id="unopen" class="note" role="status" aria-live="polite" hidden></div>
+  <details id="convhelp" class="sm"><summary data-i18n="conv.help.summary">Non hai file mzML?</summary>
+   <p id="convhint" class="muted" hidden></p>
    <ol class="muted">
-    <li data-i18n-html="load.wiff.step1">Scarica <b>ProteoWizard</b> (gratuito) da <a href="https://proteowizard.sourceforge.io/download.html" target="_blank" rel="noopener">proteowizard.sourceforge.io</a>: scegli la versione per <b>Windows a 64 bit</b>, l'unica che legge i file SCIEX (accetta la licenza dei produttori). Su Mac va usato in Windows (per esempio con Parallels).</li>
-    <li data-i18n-html="load.wiff.step2">Apri <b>MSConvert</b> e aggiungi i file <code>.wiff</code>: ognuno deve stare nella stessa cartella del suo <code>.wiff.scan</code>.</li>
-    <li data-i18n-html="load.wiff.step3">Imposta <b>Output format: mzML</b>, <b>Binary encoding: 64-bit</b>, <b>zlib compression</b> attivo, <b>Numpress</b> disattivato; poi <b>Start</b>.</li>
-    <li data-i18n-html="load.wiff.step4">Trascina qui i file <code>.mzML</code> ottenuti.</li></ol></details>
+    <li data-i18n-html="conv.help.step1">Scarica <b>ProteoWizard</b> (contiene MSConvert), gratis, per Windows: <a href="https://proteowizard.sourceforge.io/download.html" target="_blank" rel="noopener noreferrer">proteowizard.sourceforge.io</a>.</li>
+    <li data-i18n-html="conv.help.step2">Apri <b>MSConvert</b>, trascina i tuoi file (<code>.raw</code>, <code>.wiff</code>, <code>.d</code>…) nell'elenco e premi <b>Add</b> (un <code>.wiff</code> deve stare accanto al suo <code>.wiff.scan</code>).</li>
+    <li data-i18n-html="conv.help.step3">Formato di uscita: <b>mzML</b>. Le impostazioni predefinite vanno bene così: non cambiare altro.</li>
+    <li data-i18n-html="conv.help.step4">Premi <b>Start</b>: i file <code>.mzML</code> compaiono nella cartella di output.</li>
+    <li data-i18n-html="conv.help.step5">Carica qui i <code>.mzML</code>.</li></ol>
+   <p id="convdesk" class="muted sm" hidden data-i18n="conv.help.desktop">I file .raw non serve convertirli: trascinali nel riquadro qui sopra e l'app li converte.</p></details>
   <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
- <div class="card"><h3><span data-i18n="load.step2.title">2. Metodo di acquisizione</span> <span class="tag opt" data-i18n="load.optional">facoltativo</span></h3>
-  <div id="dropdam" data-i18n-html="load.dam.drop"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
-  <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
+ <div class="card"><h3 data-i18n="load.step2.title">2. Metodo di acquisizione</h3>
+  <div id="dropdam" tabindex="0" role="button"></div>
+  <input type="file" id="pickdam" multiple hidden>
   <div id="mlist"></div></div>
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
-(function(){var L=["icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mappa.js","xlsx.js","origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","rapporto.js","m:workflow.js","m:fair.js","tables.js","barra.js","paletta.js","help.js","m:perf.js","molui.js","tpmine-loader.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+(function(){var L=["icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","xlsx.js","origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","pca.js","rapporto.js","m:workflow.js","m:fair.js","tables.js","barra.js","paletta.js","help.js","m:perf.js","molui.js","tpmine-loader.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
 L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
 <script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
@@ -608,8 +616,14 @@ function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
 function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
+// the formats of instrument methods the program reads TODAY (one line per format; the field, the file picker and the texts all come from here)
+const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
+const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
+(()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
+  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop",{formats:fm}));$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop",{formats:fm})}</b><br>${I18N.t("load.method.dropHint")}`})();
+// each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
-  el.innerHTML=ST.methods.length?`<table><tr><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.content")}</th><th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+ST.methods.map((m,i)=>`<tr><td>${esc(m.name)}</td><td class="muted">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")}</td><td class="num muted">${sz(m.size)}</td><td><button data-mrm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`).join("")+"</table>":"";
+  el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
 const EXPN={full:"Full Scan",ms2:"MS2 (Product Ion)",mrm:"MRM"},expn=k=>k==="empty"?I18N.t("load.exp.empty"):EXPN[k]||k;
 const mixedText=m=>m.map(p=>p.name+(p.pol?(p.pol===1?" pos":" neg"):"")+(p.nprec?` (${I18N.t("load.exp.precursors",{n:p.nprec})})`:"")).join(" + ");
@@ -662,8 +676,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
     fs.push(new File(parts,n))}
    b.textContent=I18N.t("load.demo.opening");await upload(fs,"data")}catch(e){fail(new Error(I18N.t("load.demo.error",{message:e.message})))}finally{b.disabled=false;b.innerHTML=lab}})})();
 // files of the instruments are not read by the program (no reader of proprietary formats): a message with the recipe instead of a generic error
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#dropraw");if(b&&d&&b.convertRaw)d.hidden=false})})();   // the .raw note only where the Rust engine can read it
-function ricetta(name){const n=name.toLowerCase();return /\.raw$/.test(n)?"load.recipe.raw":/\.wiff2?$/.test(n)?"load.recipe.wiff":/\.wiff\.scan$/.test(n)?"load.recipe.wiffScan":/\.d$/.test(n)?"load.recipe.d":null}
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#dropraw");if(b&&d&&b.convertRaw){d.hidden=false;CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
@@ -672,18 +685,58 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
     try{const name=f.name.replace(/\.raw$/i,".mzML"),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
+let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
+const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
+function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
+function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
+const SEEN_GROUPS=new Set();
+function groupHash(files){const s=files.map(f=>f.name+":"+f.size).sort().join("|");let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h+"."+files.length}
+function groupSeen(h){let a=[];try{a=JSON.parse(ssGet("qqq.unopen")||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
+function groupMark(h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet("qqq.unopen")||"[]");a.push(h);ssSet("qqq.unopen",JSON.stringify(a.slice(-50)))}catch(e){}}
+function namesCut(a,max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
+// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats, read errors and big files, one line per kind
+function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
+function openConvHelp(focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
+function reportLoad(rep){
+  const u=$("#unopen"),L=[],T=(k,p)=>I18N.t(k,p);let conv=[];
+  if(rep.unopen.length){
+    const by={};rep.unopen.forEach(x=>{by[x.ext]=(by[x.ext]||0)+1;conv.push(x.ext)});
+    const types=Object.keys(by).join(", "),n=rep.unopen.length,names=rep.unopen.map(x=>x.name);
+    L.push(`<p><b>${T(n===1?"unopen.head.one":"unopen.head",{n,types})}</b></p>`);
+    L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
+  if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
+  for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
+  if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
+  if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
+  if(rep.big.length)L.push(`<p>${T("load.note.big",{n:rep.big.length})}</p>`);
+  if(!L.length)return;
+  const needHelp=rep.unopen.length||rep.other.length;
+  u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
+  u.hidden=false;
+  u.querySelector('[data-a=close]').onclick=closeUnopen;
+  const hb=u.querySelector('[data-a=help]');if(hb)hb.onclick=()=>openConvHelp(true);
+  if(rep.unopen.length){
+    const h=$("#convhint");h.textContent=T("conv.help.hint",{types:[...new Set(conv)].join(", ")});h.hidden=false;
+    if(!ssGet("qqq.convopen")){ssSet("qqq.convopen","1");openConvHelp(false)}   // opens by itself once per session
+    if(CONVERT_RAW)$("#convdesk").hidden=false}
+  else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
 async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
-  files=files.filter(f=>{const r=ricetta(f.name);if(!r)return true;const n=document.createElement("div");n.className="note recipe";n.innerHTML=`${I18N.t(r,{name:esc(f.name)})} <button type="button" class="sec" data-x="1">${I18N.t("common.close")}</button>`;n.querySelector("button").onclick=()=>n.remove();box.appendChild(n);return false});
-  const one=async f=>{const isDam=/\.dam$/i.test(f.name);
-    if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=I18N.t(isDam?"load.note.movedToDam":"load.note.movedToData",{name:f.name});box.appendChild(n);setTimeout(()=>n.remove(),6000)}
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
+  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
+  if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
+  const one=async f=>{const isDam=isMethodFile(f.name);
+    if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
       if(j.error)throw I18N.err(j);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      if(window.QQQ_BROWSER&&f.size>300*1048576){const n=document.createElement("div");n.className="note";n.textContent=I18N.t("load.note.big",{name:f.name});box.appendChild(n);setTimeout(()=>n.remove(),20000)}}
-    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}};
-  if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f)}   // in the browser the engine builds the indexes of several files at once (pool of workers)
+      if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
+    catch(e){row.remove();(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
+  if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
+  reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
-$("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
+$("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
