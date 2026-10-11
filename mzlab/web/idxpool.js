@@ -41,7 +41,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, ne
       if (job.done) return;
       if (m.op === "ready") { job.inited = true; w.postMessage({ blob: job.blob, inputs: job.inputs, part: job.part, budget: job.budget || budget }, []); return; }
       if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); pump(); return; }
-      if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats }); pump(); return; }
+      if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms }); pump(); return; }
       if (m.op === "error") {
         if (m.fatal) return retry("crash", m.text);
         end();

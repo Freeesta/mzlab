@@ -16,7 +16,7 @@ if not (ROOT / "site" / "index.html").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py")); sys.exit(0)
 if not wasm.exists():
     if shutil.which("cargo") and shutil.which("wasm-bindgen"):
-        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"], cwd=ROOT, check=True)
+        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "--config", 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'], cwd=ROOT, check=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(wasm.parent), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm"], cwd=ROOT, check=True)
     else:
         print("  ", ("wasm", "FAIL site/static/wasm missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
@@ -43,6 +43,7 @@ try:
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
+            pg.wait_for_function("E.files.length >= 4 && E.pending.length === 0", timeout=120000)          # the list is opened file by file: wait for the last one
         step("open the files: the TIC panels are drawn by Rust", load)
         def tic_xic():
             n = pg.evaluate("E.files.length"); assert n >= 4, n
