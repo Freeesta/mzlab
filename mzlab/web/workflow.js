@@ -65,6 +65,7 @@ const WORKFLOW = (() => {
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
       qaqc: window.QAQC ? QAQC.exportState() : null,
+      gradienti: window.GRADIENTE ? GRADIENTE.exportState() : null,       // only what the student entered (the gradient of a .dam or .raw is not stored)
     };
 
     const panels = (typeof E !== "undefined" && E.panels ? E.panels : []).map(p => ({
@@ -207,6 +208,7 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
+    if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
     if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {

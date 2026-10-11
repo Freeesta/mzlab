@@ -284,6 +284,13 @@ impl Engine {
         })
     }
 
+    /// The text of the instrument method of a Thermo `.raw` (read through `read(offset, length)`): the Chromeleon script with the gradient; empty when there is none.
+    pub fn raw_method_text(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
+        raw::instrument_method_text(BlockReader::new(read, size as u64))
+            .map(|t| t.unwrap_or_default())
+            .map_err(|e| error_json(&e))
+    }
+
     /// Number of scans of one level (the capacity a trace needs).
     pub fn count(&self, slot: u32, level: u8) -> u32 {
         self.runs.get(&slot).map_or(0, |r| {

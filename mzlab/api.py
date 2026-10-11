@@ -199,8 +199,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/gradient":      # the gradient the student typed, pasted or imported for a file (or null to remove it)
                 return _json({"gradient": app.set_gradient(body)})
             if path == "/api/gradient_parse":  # the text of a Chromeleon script or a CSV -> the gradient model (nothing is stored)
-                from .analog import parse_chromeleon, parse_gradient_csv
-                return _json({"gradient": (parse_chromeleon if body.get("fmt") == "chromeleon" else parse_gradient_csv)(body.get("text", ""))})
+                from .analog import course_gradient, parse_chromeleon, parse_gradient_csv
+                fmt = body.get("fmt")
+                return _json({"gradient": course_gradient() if fmt == "course" else (parse_chromeleon if fmt == "chromeleon" else parse_gradient_csv)(body.get("text", ""))})
             if path == "/api/meta":          # metadata of the open files (sample table): type, time, concentration, replicate group
                 return _json(app.set_meta(body))
             if path == "/api/stat/profile":    # time profile of one ion chosen by the user (values already integrated by the page): order, normalization
