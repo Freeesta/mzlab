@@ -1,0 +1,6 @@
+id,score,compound_name,method,inchi_key,smiles,precursor_mz,adduct,mol_formula,entry_id,inchi
+1,0.91,testamine,spectral_library_annotation,AAAAAAAAAAAAAA-UHFFFAOYSA-N,CCOC,184.1332,[M+H]+,C10H17NO2,E-1,InChI=1S/X
+1,0.99,Other name,spectral_library_annotation,ZZZZZZZZZZZZZZ-UHFFFAOYSA-N,,184.1332,[M+H]+,,E-9,
+2,0.88,Testol,spectral_library_annotation,BBBBBBBBBBBBBB-UHFFFAOYSA-N,CCFAKE,301.1547,[M+H]+,C10H17NO2,E-2,
+5,0.95,Testagel,spectral_library_annotation,FFFFFFFFFFFFFF-UHFFFAOYSA-N,,299.1754,[M+H]+,C18H22N2O2,E-5,
+5,0.97,FA 12:0,matchedlipid,,,299.1754,[M+H]+,,,
