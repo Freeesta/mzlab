@@ -16,6 +16,21 @@ from .chem.elements import formula_mz
 from .explore import MAP_POINTS_MAX, check_agg, diff_tolerant, map_cells, rt_groups, subtract_constant
 
 
+def _peaks(text):
+    """'mz:intensity;mz:intensity' -> [(mz, intensity)] (None when empty)."""
+    out = [tuple(float(x) for x in part.split(":")) for part in (text or "").split(";") if part]
+    return out[:2000] or None
+
+
+def _weights(text):
+    """'1,1,0.5' -> (mass, isotopes, fragments) weights; missing or bad = 1,1,1."""
+    try:
+        w = [max(0.0, float(x)) for x in (text or "").split(",")]
+    except ValueError:
+        w = []
+    return tuple((w + [1.0, 1.0, 1.0])[:3])
+
+
 def _json(obj, code=200):
     return code, "application/json", json.dumps(obj).encode("utf-8"), {}
 
@@ -261,7 +276,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      tol=float(q.get("tol", 5)), unit=q.get("unit", "ppm"), rdb=(rdb[0], rdb[1]), nitrogen=q.get("n", "none"),
                                      rules=[x for x in (q.get("rules") or "").split(",") if x], max_results=min(int(q.get("max", 10)), 200),
                                      parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
-                                     iso_tol=float(q.get("isotol", 0.2))))
+                                     iso_tol=float(q.get("isotol", 0.2)), obs=_peaks(q.get("obs")), frags=_peaks(q.get("frags")),
+                                     r200=float(q.get("r200", 70000)), sigma_ppm=float(q.get("sppm", 3)), sigma_int=float(q.get("sint", 0.15)),
+                                     weights=_weights(q.get("w"))))
             except (ValueError, KeyError, IndexError) as e:
                 return _fail(e)
         if path == "/api/contaminants":   # built-in list of known contaminants, expanded into ions (mzlab.chem.contaminants); matching is done in the browser (web/liste.js)
