@@ -162,41 +162,8 @@ def frammenti_di(rng, mz: float, extra=(), evita=()) -> tuple:
     return np.array(f)[o], np.array(r)[o]
 
 
-class Costruttore:
-    def __init__(self, seme: int, profilo: str):
-        self.rng = np.random.default_rng(seme)
-        self.P = PROFILI[profilo]
-        self.file = self.P["file"]
-        self.tempi = np.array([t for _, _, t in self.file])
-        self.tipi = [k for _, k, _ in self.file]
-        self.ioni: list[Ione] = []
-        self.rt_cursor = 1.0
-        self.n_mol = 0
-        self.formule: list[dict] = []
-
-    def slot(self, passo: float | None = None) -> float:
-        r = self.rt_cursor
-        self.rt_cursor += passo or self.P["passo"]
-        return r
-
-    def id_mol(self) -> str:
-        self.n_mol += 1
-        return f"SIN-{self.n_mol:03d}"
-
-    def traccia(self, forma, k_form=None, k_dec=None, scala=1.0) -> np.ndarray:
-        return scala * np.array([fattore(forma, t, k, k_form, k_dec) for t, k in zip(self.tempi, self.tipi)])
-
-    def ione(self, id, ruolo, famiglia, neutra: dict | None, rt, sg, amp, adduct="[M+H]+", **kw) -> Ione:
-        """An ion of a molecule (neutral formula) or, with neutra None, an ion without formula (`ion` given in kw as m/z via `mz`)."""
-        o = Ione(id=id, ruolo=ruolo, famiglia=famiglia, rt=float(rt), sg=float(sg), amp=amp, **kw)
-        if neutra is not None:
-            add = {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}}[adduct]
-            o.ion = E.fmt(somma(neutra, add))
-            o.picchi, mz, rel = modello(o.ion)
-            o.mz = float(mz[0])
-        self.ioni.append(o)
-        return o
-
+class Derivati:
+    """Ions derived from a base ion (isotopes, adducts, in-source fragments); needs `rng`, `ioni` and `ione` of the class that uses it."""
     def derivati(self, base: Ione, neutra: dict, isotopi=True, addotti=(), isf=0, isf_finti=0, perdite=None):
         """Isotopes (rows of the truth only: the pattern is already in the data), adducts, in-source fragments."""
         rng = self.rng
@@ -230,6 +197,42 @@ class Costruttore:
         finti = [o for o in nuovi if o.ruolo == "isf_finto"]
         base.frammenti = frammenti_di(rng, base.mz, extra=[(o.mz, float(rng.uniform(0.5, 0.9))) for o in veri], evita=[o.mz for o in finti])
         return nuovi
+
+
+class Costruttore(Derivati):
+    def __init__(self, seme: int, profilo: str):
+        self.rng = np.random.default_rng(seme)
+        self.P = PROFILI[profilo]
+        self.file = self.P["file"]
+        self.tempi = np.array([t for _, _, t in self.file])
+        self.tipi = [k for _, k, _ in self.file]
+        self.ioni: list[Ione] = []
+        self.rt_cursor = 1.0
+        self.n_mol = 0
+        self.formule: list[dict] = []
+
+    def slot(self, passo: float | None = None) -> float:
+        r = self.rt_cursor
+        self.rt_cursor += passo or self.P["passo"]
+        return r
+
+    def id_mol(self) -> str:
+        self.n_mol += 1
+        return f"SIN-{self.n_mol:03d}"
+
+    def traccia(self, forma, k_form=None, k_dec=None, scala=1.0) -> np.ndarray:
+        return scala * np.array([fattore(forma, t, k, k_form, k_dec) for t, k in zip(self.tempi, self.tipi)])
+
+    def ione(self, id, ruolo, famiglia, neutra: dict | None, rt, sg, amp, adduct="[M+H]+", **kw) -> Ione:
+        """An ion of a molecule (neutral formula) or, with neutra None, an ion without formula (`ion` given in kw as m/z via `mz`)."""
+        o = Ione(id=id, ruolo=ruolo, famiglia=famiglia, rt=float(rt), sg=float(sg), amp=amp, **kw)
+        if neutra is not None:
+            add = {"[M+H]+": {"H": 1}, "[M+Na]+": {"Na": 1}, "[M+NH4]+": {"N": 1, "H": 4}}[adduct]
+            o.ion = E.fmt(somma(neutra, add))
+            o.picchi, mz, rel = modello(o.ion)
+            o.mz = float(mz[0])
+        self.ioni.append(o)
+        return o
 
     def prodotto(self, progenitore: Ione, neutra_p: dict, nome=None, rt=None, sg=None, forma="monotona", generazione=1, ruolo="tp1", scala=None, trasf=None):
         rng = self.rng
