@@ -75,3 +75,21 @@ def test_time_read_from_the_name_with_units_and_raw():
     # a .raw gets the same reading as the mzML it is converted to
     for stem in ("irr_t30", "campione_2h", "plain"):
         assert guess_sample(stem + ".raw") == guess_sample(stem + ".mzML")
+
+
+@needs_node
+def test_hr_group_table():
+    cases = [({"kind": "full"}, "full"), ({"kind": "ms2"}, "ms2"), ({"kind": "full", "dda": True}, "dda"), ({"kind": "ms2", "dda": True}, "dda"),
+             ({"kind": "full", "infusion": True}, "infusion"), ({"kind": "ms2", "dda": True, "infusion": True}, "infusion"), ({"kind": "full", "dda": False}, "full")]
+    assert run(f"console.log(JSON.stringify({json.dumps([c for c, _ in cases])}.map(o.hrGroup)))") == [g for _, g in cases]
+    assert run("console.log(JSON.stringify(['a.mzML','a.mzML#MS2','b#MS1'].map(o.fileBase)))") == ["a.mzML", "a.mzML", "b"]
+
+
+def test_infusion_like():
+    from types import SimpleNamespace as S
+
+    from mzlab.explore import infusion_like
+    assert not infusion_like([])
+    assert infusion_like([S(rt=0.5)])
+    assert infusion_like([S(rt=1.0), S(rt=1.0), S(rt=1.0)])
+    assert not infusion_like([S(rt=1.0), S(rt=1.5)])

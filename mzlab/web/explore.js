@@ -127,8 +127,11 @@ const lrTog = () => !!UIP.tog && !(window.BANCO && BANCO.on());
 const allTabs = () => !!(window.BANCO && BANCO.on()) || !!UIP.tog;
 const tabPanels = t => (t === undefined && allTabs() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
 // group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
-const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : kindOf(f)) : kindOf(f);
-const grpLabel = g => ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
+const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.dda": () => I18N.t("files.group.dda"), "hr.infusion": () => I18N.t("files.group.infusion") };
+const grpLabel = g => GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+// the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
+const sibsOf = f => E.files.filter(x => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
 // ------------------------------------------------------------------ schermata di caricamento
@@ -279,6 +282,8 @@ async function bootSession0() {
     let vis = true;
     if (oldVis[s.file]) {
       vis = oldVis[s.file].vis;
+    } else if (isFirstLoad && isHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
+      vis = fileBase(s.file) === fileBase(j.session[0].file);          // high resolution: only the first file (in the order of the list) is open, a click opens the others
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
       const firstIdx = j.session.findIndex(x => x.kind === s.kind);
       vis = (k === firstIdx);
@@ -430,12 +435,16 @@ function reorderFiles(fromK, toK, isBefore) {
   uiSave();
 }
 
+const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
+function flGrpGet() { try { return JSON.parse(localStorage.getItem("qqq.flgrp") || "{}") || {}; } catch (_) { return E._flgrp || {}; } }
+function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
   const groups = [];
   const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
+  groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });       // a DDA file is ONE row (its Full Scan and MS2 parts open together)
   if (window.BANCO && BANCO.on() && (E.tab === "mrm" || lrTog())) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
@@ -459,13 +468,17 @@ function renderFileList() {
     return `<div class="fgh sep" data-gt="${t}" style="cursor:pointer"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div><div class="grp-files" style="${open ? "" : "display:none"}">${tabFiles(t).map(ghost).join("")}</div>`;
   }).join("");
   const isMainOpen = isExpOpen(E.tab);
+  // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
+  const compact = !!(window.BANCO && BANCO.on() && flCompact());
+  const grpClosed = g => compact && flGrpGet()[g] === 1;
   const gh = (G, label, cls = "") => {
     const isSub = !!cls;
     const open = isSub ? true : isMainOpen;
+    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv" style="font-size:10px;margin-right:2px">${grpClosed(G.g) ? "▸" : "▾"}</span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
-  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
+  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").innerHTML = pre + body + others;
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
@@ -482,6 +495,11 @@ function renderFileList() {
     const f = E.files[+tog.dataset.prk];
     if (f) { f._prOpen = f._prOpen === false; renderFileList(); }
   });
+  Q("#flst").querySelectorAll(".fgh[data-gg]").forEach(el => {
+    const flip = () => { const m = flGrpGet(); m[el.dataset.gg] = m[el.dataset.gg] === 1 ? 0 : 1; flGrpSet(m); renderFileList(); };
+    el.onclick = e => { if (!e.target.closest("input")) flip(); };
+    el.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("input")) { e.preventDefault(); flip(); } };
+  });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
     side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
     if (!x.checked) cleanupOrphanPanels();
@@ -490,7 +508,7 @@ function renderFileList() {
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
-    E.files[+x.dataset.k].vis = x.checked;
+    sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
     if (!x.checked) cleanupOrphanPanels();
     redrawAll();
     uiSave();
@@ -501,6 +519,10 @@ function renderFileList() {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = e => {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
+      const f0 = E.files[+nm.dataset.k];
+      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
+        sibsOf(f0).forEach(f => { f.vis = true; }); E.cur = f0.k; renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+      }
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
