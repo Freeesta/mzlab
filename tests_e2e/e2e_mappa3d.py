@@ -118,15 +118,11 @@ try:
         step("old t3* keys of qqq.mappa are ignored", oldkeys)
         b.close()
     with sync_playwright() as p:
-        b = p.chromium.launch(); r.b = b
-        pg = b.new_context(locale="it-IT", viewport={"width": 1440, "height": 950}).new_page()
-        pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+        pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
         pg.click("#np-map"); ready(pg); pg.wait_for_timeout(1500)
         viewer(pg, "hr", True)
-        b.close()
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
