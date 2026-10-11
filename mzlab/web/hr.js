@@ -22,7 +22,6 @@ const HR = (() => {
   const fmt = (f, level, v) => (v == null || !Number.isFinite(v)) ? "" : v.toFixed(prof(f, level).dec);
   const ppm = (obs, ref) => (obs - ref) / ref * 1e6;
   // "tolerance 5 ppm" or "0.5 Da" as text for titles and tooltips
-  const tolText = (f, level) => { const q = prof(f, level); return q.unit === "ppm" ? `${+q.tol.toFixed(1)} ppm` : `${+q.tol.toFixed(2)} Da`; };
   // appended to server requests: the server must also behave as today when the switch is off
   const q = () => "";
   // short label of the instrument, for lists and the method window: "Orbitrap Exploris 120 · R 45 000 / 15 000"
@@ -187,6 +186,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.wda != null ? t.wda : t.mz * (t.ppm ?? q.tol) * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { isoSeries, isoPat, mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { isoSeries, isoPat, mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;

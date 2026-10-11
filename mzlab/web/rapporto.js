@@ -7,7 +7,7 @@
 const RAPPORTO = (() => {
   const FORMAT = "mzreport/1";
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const cands = new Map();                           // candidates annotated in the session (confidence level and evidence), kept in the workflow file
 

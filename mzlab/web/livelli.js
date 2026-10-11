@@ -25,7 +25,6 @@ const LIVELLI = (() => {
     const st = read(), n = name || profileName(st); if (!(key in D.profili[n].soglie) || !(v >= 0)) return false;
     st[n] = { ...(st[n] || {}), [key]: v }; write(st); return true;
   }
-  function setProfile(name) { if (!D.profili[name]) return false; const st = read(); st.profilo = name; write(st); return true; }
   function reset() { write({}); }
   const exportState = () => ({ formato: D.formato, profilo: profileName(), soglie: thresholds() });          // what the workflow file keeps
   function importState(o) {                            // accepts the first format ({ent, shared, ppm, ent2}) and this one
@@ -101,7 +100,7 @@ const LIVELLI = (() => {
   const name = lv => t(`lv.name.${lv}`);
   const sentence = lv => t("lv.sentence", { lv, name: name(lv) });  // «Candidate · level 2a», never «it is X»
   const rank = lv => ORDER.indexOf(lv);
-  return { names, profile, profileName, thresholds, setThreshold, setProfile, reset, exportState, importState, assess, decide, shown, cls, name, sentence, rank, ikKey, marginOf, data: D, ORDER };
+  return { names, profile, profileName, thresholds, setThreshold, reset, exportState, importState, assess, decide, shown, cls, name, sentence, rank, ikKey, marginOf, data: D, ORDER };
 })();
 if (typeof window !== "undefined") window.LIVELLI = LIVELLI;
 if (typeof module !== "undefined") module.exports = LIVELLI;

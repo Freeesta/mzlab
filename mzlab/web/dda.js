@@ -27,8 +27,6 @@ const DDA = (() => {
   const ready = k => store.get(keyOf(k)) || null;          // already loaded? (drawing code cannot wait)
   const preload = k => get(k).catch(() => null);
   const ms2Item = f => E.files.find(x => x.kind === "ms2" && phys(x) === phys(f) && x.polarity === f.polarity) || E.files.find(x => x.kind === "ms2" && phys(x) === phys(f));
-  // scan numbers as the instrument software shows them (the number in the id of the scan), not the position in the file
-  const scanNo = (D, i) => D.no ? D.no[i] : D.sid[i] + 1;
   const tolOf = (f, mz) => { const t = HR.tolDa(f, mz, 2); return t != null ? t : 0.5; };
 
   const scanCache = (k, sid) => memo(`dsc|${keyOf(k)}|${sid}`, () => J(`api/scan?k=${k}&sid=${sid}` + HR.q()));
