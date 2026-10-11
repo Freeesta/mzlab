@@ -16,7 +16,7 @@ const BARRA = (() => {
   const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
   const PHONE_W = 600;
   const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
-  const DROP_ORDER = ["ptable", "stat", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
   let _open = false;
@@ -72,7 +72,7 @@ const BARRA = (() => {
     { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
     { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
-    { id: "stat", dom: "np-stat", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
+    
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
     { id: "scan", hr: true, items: ["hdr", "lst", "fil"], ic: () => ICONS[_last.scan] },
@@ -93,6 +93,9 @@ const BARRA = (() => {
     { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
     { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
+    { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
+    { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
+    { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
     { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
@@ -106,6 +109,7 @@ const BARRA = (() => {
     { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
     { id: "pin", bar: false, group: "panel", ic: () => ICONS.file, visible: () => inData() && !narrow(), run: () => { if (!_open) show(_tab); togglePin(); } },
     // external links, rare: in "Altro"
+    { id: "stat", dom: "np-stat", more: true, ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];

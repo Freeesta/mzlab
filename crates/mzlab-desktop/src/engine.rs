@@ -90,6 +90,8 @@ pub struct State {
     inner: Mutex<Inner>,
     /// the folder of the spectral libraries (`librerie.rs`)
     pub libs: crate::librerie::Folder,
+    /// where the `.mzidx` of the picked files are built (`set_index_folder`; a folder of the system temp dir until then)
+    idx: Mutex<Option<Arc<crate::idxbuild::IdxBuilder>>>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -97,6 +99,34 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl State {
     pub fn new() -> State {
         State::default()
+    }
+
+    /// The cache folder of the app for the indexes (the page asks for the builder through `idx/...`).
+    pub fn set_index_folder(&self, dir: PathBuf) -> Result<()> {
+        let b = crate::idxbuild::IdxBuilder::new(dir)?;
+        *self.idx.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(b));
+        Ok(())
+    }
+
+    pub fn indexer(&self) -> Result<Arc<crate::idxbuild::IdxBuilder>> {
+        let mut g = self.idx.lock().unwrap_or_else(|e| e.into_inner());
+        if g.is_none() {
+            *g = Some(Arc::new(crate::idxbuild::IdxBuilder::new(
+                std::env::temp_dir().join("mzlab-mzidx"),
+            )?));
+        }
+        Ok(g.as_ref().cloned().expect("just set"))
+    }
+
+    /// `idx/build`: the index of the picked file `id`, built in the cache folder as `<name>.mzidx`. Returns the statistics as JSON.
+    pub fn build_index(&self, id: u32, name: &str, body: &[u8]) -> Result<String> {
+        let p = self.picked(id)?;
+        let table = crate::idxbuild::decode_inputs(body)?;
+        let st = self.indexer()?.build(&p.path, name, &table)?;
+        Ok(format!(
+            "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"size\":{}}}",
+            st.scans, st.peaks, st.sections, st.passes, st.bytes
+        ))
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {

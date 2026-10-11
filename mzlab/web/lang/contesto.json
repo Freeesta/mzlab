@@ -131,6 +131,9 @@
   "zoom.mz": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in m/z.",
   "zoom.rt": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in minuti.",
   "cursor.handle.value": "Valore letto da un lettore di schermo sul pallino del cursore del cromatogramma; {rt} = tempo di ritenzione in minuti.",
+  "spec.contRemoved": "Nota nella legenda dello spettro; {n} = numero di picchi tolti perché compatibili con un contaminante Keller.",
+  "ctx.spec.openMs2": "Voce del clic destro su un picco dello spettro; {mz} = m/z del precursore della scansione MS².",
+  "ctx.spec.openMs2.aria": "Etichetta per lettori di schermo; {mz} = m/z del picco.",
   "ms2.nearestScan": "Messaggio sul cromatogramma; {rt} = tempo di ritenzione della scansione trovata.",
   "ctx.map.where": "Prima riga (grigia) del menu del clic destro sulla mappa; {rt} = RT, {mz} = m/z, {file} = campione.",
   "ctx.map.xic": "Menu del clic destro sulla mappa; {mz} = m/z.",
@@ -367,5 +370,13 @@
   "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole.",
   "prof.chart.aria": "Etichetta accessibile del grafico del profilo nel tempo. {ion} = etichetta dell'ione scelto.",
   "prof.sum": "Riga sopra il grafico del profilo nel tempo. {mz} = m/z, {rt} = RT atteso in minuti.",
-  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno."
+  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno.",
+  "feat.err.lines": "Errore sotto la lista di ioni. {n} = righe non valide, {list} = numeri delle prime righe.",
+  "feat.err.many": "Errore: lista troppo lunga. {max} = massimo di ioni.",
+  "feat.sum": "Riepilogo della tabella. {n} = feature, {m} = file, {src} = origine (frase).",
+  "feat.unmatched": "Avviso. {list} = nomi dei file senza colonna.",
+  "feat.more": "Nota sotto l'anteprima. {n} = feature non mostrate.",
+  "feat.row.aria": "Etichetta accessibile di una riga della tabella. {mz} = m/z, {rt} = RT.",
+  "feat.progress": "Avanzamento. {i} = ione corrente, {n} = totale.",
+  "blank.sum": "Riepilogo della sottrazione del bianco. {k} = tenute, {d} = scartate, {stat} = massimo/media, {nb} = numero di bianchi, {thr} = fattore, {min} = rilevazioni minime."
 }
