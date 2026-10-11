@@ -59,6 +59,8 @@ try:
             v = pg.evaluate("E.files.map(f=>f.file)")
             assert len(v) == 1 and "B_FullMass-t0.mzML" in v[0]
         step("mix LR and HR: shows choice dialog and replaces files", test_mix)
+        # the refusal of the mixed list (400 err.hr.mix) is what opens the choice dialog: not an error of the page
+        r.errs = [e for e in r.errs if not (e[0] == "http400" and e[1].endswith("/api/explore")) and "status of 400" not in str(e)]
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real Orbitrap cuttings (private data repository), in a clean session

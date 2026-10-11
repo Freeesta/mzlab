@@ -56,6 +56,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` |
+| lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
 
 ## 6. Trappole generali
 - Il service worker tiene in cache l'app: dopo un deploy prova con Cmd/Ctrl+Shift+R. Le anteprime dei link restano in cache presso le app di messaggistica (`?v=2` sul link; con un'immagine nuova cambia anche il `?v=` di `og:image` in `build_site.py`).
