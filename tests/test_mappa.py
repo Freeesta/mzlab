@@ -33,8 +33,8 @@ def test_region_endpoint(tmp_path):
     assert code == 200
     import json
     j = json.loads(body)
-    assert j["region"] and j["nmz"] == 1000 and j["nrt"] == 4                # at most 1000 bins per axis
-    m = np.frombuffer(base64.b64decode(j["data"]), "<f4").reshape(4, 1000)
+    assert j["region"] and j["nmz"] == 1024 and j["nrt"] == 4                # at most 1024 bins per axis
+    m = np.frombuffer(base64.b64decode(j["data"]), "<f4").reshape(4, 1024)
     assert m.sum() == pytest.approx(160.0)
 
 
