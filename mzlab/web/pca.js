@@ -87,6 +87,13 @@ const PCA = (() => {
     }));
     return s + "</svg>";
   }
+  // the values of the scores plot, for the «Dati» table (tdati.js)
+  function scoresTable() {
+    if (!res) return null;
+    const r = res.r, nc = r.scores[0] ? r.scores[0].length : 2;
+    return { head: [t("qaqc.col.file"), ...Array.from({ length: Math.min(nc, 5) }, (_, i) => "PC" + (i + 1)), t("tdati.col.group")], rowHeader: true,
+      rows: r.scores.map((q, i) => { const fl = res.files[r.samples[i]] || {}; return [fl.label || fl.file || "", ...q.slice(0, 5).map(v => fmt(v, 3)), (fl.group || fl.rep || "")]; }) };
+  }
   function loadingsSvg() {
     const r = res.r, xs = r.loadings.map(q => q[0]), ys = r.loadings.map(q => q[1]);
     const f = frame(xs, ys, axisLabel(r, 0), axisLabel(r, 1));
@@ -177,6 +184,6 @@ const PCA = (() => {
       { name: "Variance", head: ["PC", "%"], rows: r.explained.map((v, i) => ["PC" + (i + 1), +(v * 100).toFixed(3)]), widths: [8, 10] }]);
   }
   if (typeof STAT !== "undefined") STAT.add({ id: "pca", title: "pca.title", hr: true, visible: () => true, mount });
-  return { mount, run, select, get result() { return res; }, get params() { return st; }, groupInfo, MIN_SAMPLES };
+  return { mount, run, select, scoresTable, get result() { return res; }, get params() { return st; }, groupInfo, MIN_SAMPLES };
 })();
 window.PCA = PCA;

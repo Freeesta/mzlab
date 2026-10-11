@@ -327,7 +327,7 @@ async function apexSpectrum(c, sp) {
 // width available for the panels (the panel area may still be hidden while the files are being opened)
 function hostWidth() {
   const w = Q("#dpanels").clientWidth;
-  return w > 100 ? w : Math.max(600, innerWidth - 28 - (window.BARRA ? BARRA.pinnedWidth : 0));
+  return w > 100 ? w : Math.max(600, innerWidth - 28 - (window.BARRA ? BARRA.dockedWidth : 0));
 }
 // full-width panels follow the page: when the window or the file list changes size
 function fitWidth() {

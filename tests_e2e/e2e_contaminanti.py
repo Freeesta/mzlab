@@ -142,6 +142,7 @@ try:
         step("window of the laboratory contaminants", win_lab)
 
         def header_btn():
+            pg.evaluate("BARRA.close(false)")                      # an earlier step may have left the panel docked: the button would hide it
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
             assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
             assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "liste"

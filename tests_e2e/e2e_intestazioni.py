@@ -82,9 +82,9 @@ try:
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
                 pg.evaluate("BARRA.setTab('file',{noFocus:true})"); pg.wait_for_timeout(500)
                 check(pg, ("drawer", w))
-                pg.evaluate("BARRA.setPinned(true)"); pg.wait_for_timeout(900)
+                pg.evaluate("BARRA.show('file',{noFocus:true})"); pg.wait_for_timeout(900)
                 check(pg, ("pinned", w))
-                pg.evaluate("BARRA.setPinned(false); BARRA.close && BARRA.close()"); pg.wait_for_timeout(500)
+                pg.evaluate("BARRA.close && BARRA.close()"); pg.wait_for_timeout(500)
         step("drawer open or pinned: headers stay on one row, nothing cut (1280, 1440, 1680)", cassetto)
 
         def ipad():

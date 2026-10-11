@@ -251,7 +251,7 @@ try:
         pg.evaluate("localStorage.removeItem('qqq.tour.lr')"); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=8000)
         for vp in ((1280, 800), (1024, 1366), (1500, 1000)):
             pg.set_viewport_size({"width": vp[0], "height": vp[1]}); pg.wait_for_timeout(300)
-            pg.evaluate("BARRA.setPinned(false);BARRA.setTab('file',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
+            pg.evaluate("BARRA.setTab('file',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
             top = pg.evaluate("(()=>{const b=document.querySelector('#tour-inv-si').getBoundingClientRect();const e=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return !!(e&&e.closest('#tour-invito'))})()")
             assert top, vp
             bb = pg.locator("#tour-invito").bounding_box(); assert bb["x"] < 40 and bb["y"] + bb["height"] > vp[1] - 40, (vp, bb)
