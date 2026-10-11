@@ -437,7 +437,7 @@ function renderFileList() {
   const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   if (window.BANCO && BANCO.on() && (E.tab === "mrm" || lrTog())) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
-  const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
+  const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
     const hasPr = E.tab === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
