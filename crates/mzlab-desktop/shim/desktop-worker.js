@@ -30,10 +30,19 @@ onmessage = async ev => {
     switch (m.op) {
       case "open": info = await (await get("open", { slot: m.slot, id: await fileId(m.blob) })).text(); break;
       case "raw2mzml": {                                                              // .raw -> mzML on disk (native), then read in chunks
-        const out = await (await get("raw2mzml", { id: await fileId(m.blob) })).json();
+        const rid = await fileId(m.blob);
+        // the conversion is one long native call: ask now and then how far it has got (an older app has no such route: nothing is shown)
+        const poll = setInterval(async () => {
+          try { const p = await (await get("rawprogress", { id: rid })).json(); if (p.total) postMessage({ id, op: "progress", total: p.total, read: p.read, written: p.written }); } catch (_) { /* optional */ }
+        }, 300);
+        let out;
+        try { out = await (await get("raw2mzml", { id: rid })).json(); } finally { clearInterval(poll); }
         const parts = [];
-        for (let off = 0; off < out.size; off += CHUNK) parts.push(new Uint8Array(await (await get("file", { id: out.id, off, len: CHUNK })).arrayBuffer()));
-        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        for (let off = 0; off < out.size; off += CHUNK) {
+          parts.push(new Uint8Array(await (await get("file", { id: out.id, off, len: CHUNK })).arrayBuffer()));
+          postMessage({ id, op: "progress", total: 1, read: 1, written: out.size, copied: Math.min(off + CHUNK, out.size), size: out.size });
+        }
+        postMessage({ id, op: m.op, n: parts.length, parts, tid: out.id }, parts.map(a => a.buffer));
         return;
       }
       case "close": await get("close", { slot: m.slot }); break;
