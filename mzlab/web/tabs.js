@@ -212,7 +212,7 @@ function ms2Switch(prec) {
 function openOverview() {
   const kinds = TABS.filter(([t]) => tabFiles(t).length);
   const key = f => f.type === "sample" ? `0|${(f.time ?? 1e9).toString().padStart(9, "0")}` : f.type === "standard" ? `1|${(f.conc ?? 1e9).toString().padStart(9, "0")}` : "2|";
-  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${f.time} min` : I18N.t("load.type.sample")) : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : I18N.t("load.type.blank");
+  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${fmtTime(f.time)}` : I18N.t("load.type.sample")) : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : I18N.t("load.type.blank");
   const rows = new Map();
   E.files.forEach(f => { const k = key(f) + "|" + lab(f); if (!rows.has(k)) rows.set(k, { lab: lab(f), by: {} }); (rows.get(k).by[f.kind] = rows.get(k).by[f.kind] || []).push(f); });
   const body = [...rows.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => `<tr><td><b>${EH(r.lab)}</b></td>` + kinds.map(([t]) => `<td>${(r.by[t] || []).map(f => `<button class="fc" data-k="${f.k}" title="${I18N.t("tabs.overview.open", { tab: EH(TABS.find(x => x[0] === t)[1]) })}">${EH(f.label)}</button>`).join("") || '<span class="muted">-</span>'}</td>`).join("") + "</tr>").join("");
