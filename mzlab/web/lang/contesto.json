@@ -113,6 +113,7 @@
   "spec.follow": "Chip nell'intestazione di uno spettro agganciato; {n} = numero del pannello del cromatogramma.",
   "spec.follow.aria": "Etichetta accessibile del chip dello spettro agganciato; {n} = numero del pannello.",
   "spec.follow.item": "Voce del menu del chip: un cromatogramma da seguire; {n} = numero del pannello, {title} = suo titolo.",
+  "ctl.ms2tr.opt": "Voce del menu delle transizioni MS2; {q1} = m/z del precursore, {q3} = m/z del frammento.",
   "ctl.prec.one": "Voce del menu dei precursori; {v} = m/z del precursore.",
   "ctl.files.aria": "Nome accessibile del pulsante dei file mostrati; {n} = file visibili, {tot} = file della scheda.",
   "disp.xmz": "Campo del m/z dello ione di un XIC in alta risoluzione nelle opzioni di visualizzazione; {input} = il campo numerico.",
