@@ -293,11 +293,11 @@
       return null;
     }, r => {
       rows++;
-      const id = txt(r[ix.id]), f = t.byId.get(id); if (!f) { lost++; return; }
-      const nm = txt(r[ix.name]), mzs = ix.mzs >= 0 ? num(r[ix.mzs]) : null, md = ix.md >= 0 ? num(r[ix.md]) : null;
+      const id = txt(r[ix.id]), f = t.byId.get(id), nm = txt(r[ix.name]), mzs = ix.mzs >= 0 ? num(r[ix.mzs]) : null, md = ix.md >= 0 ? num(r[ix.md]) : null;
       const ppm = mzs && md != null ? md / mzs * 1e6 : ix.ppm >= 0 ? num(r[ix.ppm]) : null, analog = ppm != null && Math.abs(ppm) > ANALOG_PPM;
+      if (analog) analogs++;          // every row of the file, as the file reports them
+      if (!f) { lost++; return; }
       if (isPropagated(nm)) { prop++; return; }
-      if (analog) analogs++;
       f.ann.push({ source: "GNPS2", type: "MQScore", score: ix.mq >= 0 ? num(r[ix.mq]) : null, shared: ix.sh >= 0 ? num(r[ix.sh]) : null, ppm, name: nm, cleanName: cleanName(nm),
         ik: (ix.ikp >= 0 && txt(r[ix.ikp])) || (ix.ik >= 0 ? txt(r[ix.ik]) : ""), smiles: ix.smi >= 0 ? txt(r[ix.smi]) : "", inchi: ix.inchi >= 0 ? txt(r[ix.inchi]) : "", adduct: ix.add >= 0 ? normAdduct(r[ix.add]) : "", library: ix.lib >= 0 ? txt(r[ix.lib]) : "",
         precursor: mzs, analog, propagated: false, notes: analog ? ["analogue: |mass difference| > " + ANALOG_PPM + " ppm"] : [] });

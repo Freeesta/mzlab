@@ -103,7 +103,7 @@
     $("#unt-lv").innerHTML = `<option value="all">all (${t.features.length.toLocaleString("en")})</option>` + L().ORDER.filter(l => cnt[l]).map(l => `<option value="${l}">${l} · ${esc(L().name(l))} (${cnt[l].toLocaleString("en")})</option>`).join("");
     $("#unt-lv").value = st.level; $("#unt-res").hidden = false;
     st.order = t.features.map((f, i) => i).sort((a, b) => { const ra = st.res.get(t.features[a].key), rb = st.res.get(t.features[b].key); return rank(ra) - rank(rb) || (rb.ent ?? -1) - (ra.ent ?? -1) || a - b; });
-    if (window.UNTX) $("#unt-exp").innerHTML = window.UNTX.buttons(); if (window.UNTX) window.UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol }));
+    if (window.UNTX && !$("#unt-x-xlsx")) { $("#unt-exp").innerHTML = window.UNTX.buttons(); window.UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol, all: () => st.order.map(i => st.table.features[i]), visible })); }
     table();
   }
   function visible() {
