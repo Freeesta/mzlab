@@ -252,17 +252,15 @@
     if (Object.values(n).some(k => k < 0)) throw new Error(I18N.t("tbl.iso.adductTooMany"));
     return { n, z: a.z, ad: a.n };
   }
-  // ---------------------------------------------------------------- dialog with three tabs (Tavola periodica, Addotti, Perdite neutre)
+  // ---------------------------------------------------------------- dialog #refdlg: one content at a time (Tavola periodica; Addotti and Perdite neutre outside the Dati view), titled with its name, no tab bar
   const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ad", I18N.t("icon.adduct"), adductTab, bindAdducts], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
   function open(which, opt = {}) {
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
     const show = id => {
       const t = TABS.find(x => x[0] === id); body.innerHTML = t[2](); if (t[3]) t[3](body, show);
-      d.querySelectorAll("#reftabs button").forEach(b => b.classList.toggle("on", b.dataset.t === id));
+      Qs("#reftitle").textContent = t[1];
     };
-    Qs("#reftabs").innerHTML = TABS.map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join("");
-    Qs("#reftabs").querySelectorAll("button").forEach(b => b.onclick = () => show(b.dataset.t));
     Qs("#refx").onclick = () => d.close();
     show(which); if (!d.open) d.showModal();
     if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
