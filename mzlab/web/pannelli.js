@@ -214,7 +214,8 @@ function addPanel(type, o, after) {
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL}</button></span>`;
-    return `<span class="tbs">${gv + gl + gs + gi + gx + go}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
+    const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
+    return `<span class="tbs">${gv + gl + gs + gi + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
   Q("#dpanels").appendChild(el);
@@ -239,6 +240,7 @@ function addPanel(type, o, after) {
     if (first) { first = false; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
+    fitHdSoon(p);
   });
   p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
@@ -252,6 +254,7 @@ function addPanel(type, o, after) {
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => { draw(p); setTimeout(() => draw(p), 120); });
   };
   fsB.onclick = () => p._setMax(!el.classList.contains("max"));
+  hdMoreInit(p);
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
@@ -484,6 +487,7 @@ async function pngWithMeta(blob, fields) {
 }
 
 function ctl(p) {
+  hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);      // a single trace is named in the title
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
@@ -572,7 +576,7 @@ function ctl(p) {
   if (window.BANCO) BANCO.decorate(p, c);
   if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
   const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
-  const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const pr = p.el.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
+  const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = on => { p._parOpen = on; if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); c.querySelectorAll('[data-a="cparchip"]').forEach(b => { b.onclick = () => parToggle(true); }); parPlace();
     if (!p._parAway) { p._parAway = e => { if (p._parOpen && p.el.isConnected && !e.target.closest(".cpop") && !e.target.closest('[data-a="cpar"],[data-a="cparchip"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, true); } }
@@ -614,6 +618,49 @@ function ctl(p) {
       draw(p);
     };
   });
+  fitHdSoon(p);
+}
+// ---- one low header row: when the groups do not fit in the width of the panel the least needed ones go into the «⋯» menu (the nodes are moved, so they keep their
+// handlers, and put back in place when there is room again); nothing wraps and nothing is cut. Order: the NL note, then the icon groups from the right, then the controls from the right.
+function hdRestore(p) {
+  const l = p._hm || []; p._hm = [];
+  l.slice().reverse().forEach(n => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
+  const m = p.el && p.el.querySelector(".hmore"), b = p.el && p.el.querySelector('[data-a="more"]');
+  if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
+}
+function fitHd(p) {
+  const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
+  const hd = el.querySelector(".hd"), more = el.querySelector(".hmore"), mb = el.querySelector('[data-a="more"]'); if (!hd || !more || !mb) return;
+  p._fitBusy = true;
+  try {
+    const open = !more.hidden;
+    hdRestore(p);
+    if (!hd.offsetParent && getComputedStyle(el).position !== "fixed") return;           // tab not shown
+    const c = el.querySelector(".ctl");
+    const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
+    if (!over()) return;
+    mb.hidden = false;
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    for (const n of [...cands, ...groups, ...kids]) {
+      if (!over()) break;
+      if (n.hidden || !n.offsetWidth) continue;
+      if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
+      const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); p._hm.push(n);
+    }
+    if (!p._hm.some(n => n._ph)) mb.hidden = true;
+    else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
+  } finally { p._fitBusy = false; }
+}
+function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); }
+function hdMorePlace(p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
+function hdMoreInit(p) {
+  const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;
+  const close = back => { m.hidden = true; mb.setAttribute("aria-expanded", "false"); if (back) mb.focus(); };
+  mb.onclick = e => { e.stopPropagation(); if (m.hidden) { m.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); } else close(false); };
+  m.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); close(true); } });
+  p._moreAway = e => { if (!m.hidden && p.el.isConnected && !e.target.closest(".hmore") && !e.target.closest('[data-a="more"]') && !e.target.closest(".corrm,.cpop,#fpop,#ctx")) close(false); };
+  document.addEventListener("mousedown", p._moreAway, true);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected) { close(true); } });
 }
 function addTrace(p, mz, label, w) {
   mz = rh(mz, w != null ? 2 : 1);       // (a window centre is half of two 0.1 values: two decimals, the edges stay at one) unit-resolution instrument: one decimal is all that means anything
