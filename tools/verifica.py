@@ -249,7 +249,7 @@ AREE = [
     ("mzlab/web/grafici.js", {"e2e_cromato", "e2e_mappa", "e2e_map3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour"}),
     ("mzlab/web/picchi.js", {"e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour"}),
-    ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_tour"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
+    ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_tour"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
     ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/workflow.py", {"e2e_workflow"}), ("mzlab/web/version.js", {"e2e_workflow"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")

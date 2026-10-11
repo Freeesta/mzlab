@@ -50,6 +50,7 @@ const WORKFLOW = (() => {
       picchi: typeof PK !== "undefined" ? { ...PK } : {},
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
+      qaqc: window.QAQC ? QAQC.exportState() : null,
     };
 
     const panels = (typeof E !== "undefined" && E.panels ? E.panels : []).map(p => ({
@@ -82,6 +83,7 @@ const WORKFLOW = (() => {
       parametri: parameters,
       pannelli: panels,
       operazioni: ops,
+      candidati: window.RAPPORTO ? RAPPORTO.candidates() : [],
     };
   }
 
@@ -190,6 +192,8 @@ const WORKFLOW = (() => {
     if (p.contaminanti_esclusi && window.LISTE && typeof LISTE.exclImport === "function") {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
+    if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
+    if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {
       NB.ops = wf.operazioni.slice();
     }

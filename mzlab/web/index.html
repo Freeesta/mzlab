@@ -539,6 +539,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/libreria.js"></script>
 <script src="static/touch.js"></script>
 <script src="static/qaqc.js"></script>
+<script src="static/rapporto.js"></script>
 <script src="static/workflow.js"></script>
 <script src="static/tables.js"></script>
 <script src="static/barra.js"></script>
@@ -735,7 +736,8 @@ function openSessionMenu(ev){ev.preventDefault();
     {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
     "-",
     {label:I18N.t("workflow.menu.export"),fn:()=>window.WORKFLOW&&WORKFLOW.export()},
-    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()}
+    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()},
+    {label:I18N.t("rep.menu"),fn:()=>window.RAPPORTO&&RAPPORTO.export("html")}
   ])}
 const smb=document.getElementById("session-menu-btn");
 if(smb)smb.onclick=e=>{e.stopPropagation();openSessionMenu(e)};

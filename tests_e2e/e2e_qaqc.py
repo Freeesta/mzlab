@@ -62,6 +62,25 @@ try:
             assert pg.evaluate("QAQC.results.ions[0].roles.join()") == "blank,sample,qc"
             assert "qc" in pg.evaluate("localStorage.getItem('qqq.qaqc')")
         step("a type corrected by hand is used and remembered", lr_role_fix)
+        def report(hr):
+            import json
+            with pg.expect_download() as d: pg.evaluate("RAPPORTO.export('json')")
+            rep = json.load(open(d.value.path(), encoding="utf-8"))
+            assert rep["formato"] == "mzreport/1" and rep["alta_risoluzione"] is hr and rep["programma"]["nome"], rep.keys()
+            shas = pg.evaluate("E.files.map(f=>f.sha256)")
+            assert [f["sha256"] for f in rep["disegno_studio"]["file"]] == shas and all(len(x) == 64 for x in shas)       # the fingerprint of the workflow file
+            assert rep["qaqc"]["ioni"] and rep["acquisizione"] and rep["elaborazione"]["parametri"]["qaqc"]["ioni"]
+            assert ("livelli_confidenza" in rep) is hr
+            with pg.expect_download() as d: pg.evaluate("RAPPORTO.export('html')")
+            h = open(d.value.path(), encoding="utf-8").read()
+            pos = [h.index(f"{n}. ") for n in (1, 2, 3, 4)]
+            assert pos == sorted(pos) and "<h2>1. " in h and "<h2>4. " in h and "SHA-256" in h, pos          # NORMAN order
+            assert ("<h2>5. " in h) is hr and "script" not in h.lower().replace("<meta", "")
+            return rep
+        def lr_report():
+            rep = report(False)
+            assert any(x["ruolo"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
+        step("LR: study report (JSON and HTML) with SHA-256, instrument, parameters, QA/QC, NORMAN order", lr_report)
 
         r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p)
         load(pg, [H / ds.HR_NAMES["exploris"], H / ds.HR_NAMES["fusion"]], 4)
@@ -75,6 +94,10 @@ try:
             assert ma and ma["max_abs"] >= 1.0 and ma["n"] == 2, ma
             assert "Δppm" in pg.evaluate("Array.from(document.querySelectorAll('#qq-res th')).map(x=>x.textContent)")
         step("HR: Δppm per file and mass accuracy (mean, maximum) of a known ion", hr_panel)
+        def hr_report():
+            rep = report(True)
+            assert rep["qaqc"]["ioni"][0]["accuratezza_massa"]["n"] == 2 and rep["livelli_confidenza"] == []
+        step("HR: report with mass accuracy and the section of the confidence levels", hr_report)
 finally:
     r.close()
 for s in steps: print(s)
