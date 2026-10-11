@@ -102,6 +102,39 @@ try:
             assert pg.evaluate("window.__mark") == 2 and "ricarica" in pg.inner_text("#rust-note"), pg.inner_text("#rust-note")
             pg.close()
         step("tab back after freeze/discard: engine checked, one reload, no NoGilError, no loop", resume_after_freeze)
+        def resume_every_path():
+            holder.evaluate(GONE)
+            pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
+            pg.add_init_script("""(() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (d, t) { window.__w = this;
+              if (d && d.ping && window.__mute) return; return pm.call(this, d, t); }; })()""")
+            pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            cdp = ctx.new_cdp_session(pg)
+            def reloaded(fire):
+                pg.evaluate("window.__mark = 1; sessionStorage.removeItem('qqq.recovered')")
+                with pg.expect_navigation(timeout=60000): pg.evaluate(fire)
+                pg.wait_for_selector("#drop", timeout=120000)
+                assert pg.evaluate("window.__mark") is None and not pg.evaluate("window.qqFailed")
+                assert "NoGil" not in pg.inner_text("body")
+            # a real freeze/resume of the page (Page Lifecycle) with a request in flight: the engine is fine, no reload, no error
+            pg.evaluate("window.__mark = 1; window.__r = fetch('api/ping').then(x => x.status)")
+            cdp.send("Page.setWebLifecycleState", {"state": "frozen"}); pg.wait_for_timeout(1500)
+            cdp.send("Page.setWebLifecycleState", {"state": "active"}); pg.wait_for_timeout(1500)
+            assert pg.evaluate("window.__r") == 200 and pg.evaluate("window.__mark") == 1 and not pg.evaluate("window.qqFailed")
+            # 1. the worker reports the lost Python outside any request (background work)
+            reloaded("window.__w.onmessage({ data: { type: 'dead' } })")
+            # 2. the worker never answers the health check
+            pg.evaluate("window.__mute = true; window.__mark = 1; sessionStorage.removeItem('qqq.recovered')")
+            with pg.expect_navigation(timeout=60000): pg.evaluate("window.MZLAB_ENGINE_CHECK()")
+            pg.wait_for_selector("#drop", timeout=120000)
+            # 3. the error reaches the page as an unhandled rejection / script error
+            reloaded("setTimeout(() => Promise.reject(Object.assign(new Error('Attempted to use PyProxy when Python GIL not held'), { name: 'NoGilError' })), 0)")
+            # 4. a request answered with the error: reload; a second time within a minute: the message of the page, not the raw error
+            pg.evaluate("window.__mark = 2")
+            pg.evaluate("window.__w.onmessage({ data: { type: 'dead' } })"); pg.wait_for_selector("#rust-note", timeout=10000)
+            assert pg.evaluate("window.__mark") == 2 and "ricarica" in pg.inner_text("#rust-note")
+            assert "NoGil" not in pg.inner_text("body")
+            pg.close()
+        step("every path of the lost engine (dead message, mute ping, unhandled NoGilError, frozen page) recovers", resume_every_path)
         b.close()
 finally:
     srv.terminate()
