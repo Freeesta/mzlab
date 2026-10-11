@@ -79,7 +79,17 @@ impl Losses {
         let ok = frag.iter().all(|(e, v)| e == "H" || *v >= 0) && frag.iter().find(|(e, _)| e == "H").map_or(0, |x| x.1) >= -1;
         (ok, frag.into_iter().filter(|(_, v)| *v > 0).map(|(e, v)| (e, v as u64)).collect())
     }
+}
 
+/// Observed (M+1)/M and (M+2)/M of the ion at `mz` from the areas of the ROIs at +1 and +2 in the scans `a..b` of the window.
+pub fn isotope_check(w: &Window, mz: f64, a: usize, b: usize) -> Value {
+    let area = |m: f64| window_area(w, m, a, b);
+    let (a0, a1, a2) = (area(mz), area(mz + ISO_STEP), area(mz + 2.00671));
+    let r = |a: f64| if a0 > 0.0 { a / a0 } else { f64::NAN };
+    Obj::new().n("obs_m1", r(a1)).n("obs_m2", r(a2)).done()
+}
+
+impl Losses {
     /// `annotate_roles(mz_x, mz_p, formula_p)` with `tol = 0.5`.
     pub fn annotate(&self, mz_x: f64, mz_p: f64, formula_p: Option<&str>) -> Result<Value> {
         let tol = 0.5;
@@ -143,27 +153,23 @@ impl Losses {
     }
 }
 
+/// Area of the ROI nearest to `m` (within 0.5) in the scans `a..b` of the window; 0 when there is none.
+fn window_area(w: &Window, m: f64, a: usize, b: usize) -> f64 {
+    if w.mz.is_empty() {
+        return 0.0;
+    }
+    let j = crate::tracestat::argmin(&w.mz.iter().map(|v| (v - m).abs()).collect::<Vec<_>>());
+    if (w.mz[j] - m).abs() > 0.5 {
+        return 0.0;
+    }
+    let row = &w.x[j * w.n_scans..(j + 1) * w.n_scans];
+    let (a, b) = (a.min(row.len()), b.min(row.len()));
+    if a < b { crate::stats::psum(&row[a..b]) } else { 0.0 }
+}
+
 impl Default for Losses {
     fn default() -> Self {
         Losses::new()
     }
 }
 
-/// Observed (M+1)/M and (M+2)/M of the ion at `mz` from the areas of the ROIs at +1 and +2 in the scans `a..b` of the window.
-pub fn isotope_check(w: &Window, mz: f64, a: usize, b: usize) -> Value {
-    let area = |m: f64| -> f64 {
-        if w.mz.is_empty() {
-            return 0.0;
-        }
-        let j = crate::tracestat::argmin(&w.mz.iter().map(|v| (v - m).abs()).collect::<Vec<_>>());
-        if (w.mz[j] - m).abs() > 0.5 {
-            return 0.0;
-        }
-        let row = &w.x[j * w.n_scans..(j + 1) * w.n_scans];
-        let (a, b) = (a.min(row.len()), b.min(row.len()));
-        if a < b { crate::stats::psum(&row[a..b]) } else { 0.0 }
-    };
-    let (a0, a1, a2) = (area(mz), area(mz + ISO_STEP), area(mz + 2.00671));
-    let r = |a: f64| if a0 > 0.0 { a / a0 } else { f64::NAN };
-    Obj::new().n("obs_m1", r(a1)).n("obs_m2", r(a2)).done()
-}

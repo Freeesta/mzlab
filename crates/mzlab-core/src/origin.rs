@@ -202,6 +202,20 @@ fn early(rep: Obj, warn: Value) -> Result<Value> {
     Ok(rep.put("warnings", Value::Arr(vec![warn])).done())
 }
 
+/// The warning that a neighbouring ion (0.4-1.0 away, more than 5 % of the area of the parent) may coincide in mass with X.
+fn coincidence_warning(cands: &[Value], mz: f64) -> Option<Value> {
+    let near: Vec<f64> = cands.iter().filter_map(|c| {
+        let m = c.get("mz")?.f64()?;
+        let ar = c.get("area_rel")?.f64()?;
+        ((m - mz).abs() > 0.4 && (m - mz).abs() <= 1.0 && ar > 0.05).then_some(m)
+    }).take(3).collect();
+    if near.is_empty() {
+        return None;
+    }
+    let list = near.iter().map(|m| format!("{m:.1}")).collect::<Vec<_>>().join(", ");
+    Some(msg("of.warn.massCoincidence", &[("mz", text(&list))]))
+}
+
 /// The evidence for the ion `r.mz` against `r.parent_mz` over `samples`, with the product-ion spectra `ms2` if the student loaded them.
 pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r: &Request) -> Result<Value> {
     let base = Obj::new().n("mz", r.mz).n("parent_mz", r.parent_mz).put("samples", Value::Arr(vec![])).put("candidates", Value::Arr(vec![])).put("timing", Obj::new().done());
@@ -239,18 +253,10 @@ pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r:
     }
     let (a, b) = (lower(&rtw, peak_t0), upper(&rtw, peak_t1));
     let ratio = ratio_fit(&xw, &pw, (a, b), 200, 0);
-    let cands = candidates(&w, a, b, &pw, rf.apex_rt, r, &Losses::new())?;
     let losses = Losses::new();
+    let cands = candidates(&w, a, b, &pw, rf.apex_rt, r, &losses)?;
     rep = rep.put("roles", losses.annotate(r.mz, r.parent_mz, r.formula_p)?).put("isotopes", isotope_check(&w, r.mz, a, b)).put("neighbors", Value::Arr(neighbors(&w, &xw, r.mz, a, b)));
-    let near: Vec<f64> = cands.iter().filter_map(|c| {
-        let m = c.get("mz")?.f64()?;
-        let ar = c.get("area_rel")?.f64()?;
-        ((m - r.mz).abs() > 0.4 && (m - r.mz).abs() <= 1.0 && ar > 0.05).then_some(m)
-    }).take(3).collect();
-    if !near.is_empty() {
-        let list = near.iter().map(|m| format!("{m:.1}")).collect::<Vec<_>>().join(", ");
-        warnings.push(msg("of.warn.massCoincidence", &[("mz", text(&list))]));
-    }
+    warnings.extend(coincidence_warning(&cands, r.mz));
     let nr = ratio.get("n").and_then(|v| v.f64()).unwrap_or(f64::INFINITY);
     if ratio.get("ok").and_then(|v| v.bool()) == Some(true) && nr < 6.0 {
         warnings.push(msg("of.warn.fewRatio", &[("n", int(nr as i64))]));

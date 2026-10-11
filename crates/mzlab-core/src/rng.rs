@@ -1,46 +1,6 @@
 //! numpy's `default_rng(seed)` generator (SeedSequence + PCG64) and the draws the Python engine uses: `permutation`, `integers`, `choice`,
 //! so that the Monte Carlo and bootstrap values are the same as Python's.
 
-/// numpy's `SeedSequence(seed).generate_state(4, uint64)` for a non-negative integer seed below 2^32.
-fn seed_state(seed: u32) -> [u64; 4] {
-    const MULT_A: u32 = 0x931e8875;
-    const MULT_B: u32 = 0x58f38ded;
-    const MIX_L: u32 = 0xca01f9dd;
-    const MIX_R: u32 = 0x4973f715;
-    let hashmix = |v: u32, h: &mut u32| {
-        let mut v = v ^ *h;
-        *h = h.wrapping_mul(MULT_A);
-        v = v.wrapping_mul(*h);
-        v ^ (v >> 16)
-    };
-    let mix = |x: u32, y: u32| {
-        let r = MIX_L.wrapping_mul(x).wrapping_sub(MIX_R.wrapping_mul(y));
-        r ^ (r >> 16)
-    };
-    let mut h = 0x43b0d7e5u32;
-    let mut pool = [0u32; 4];
-    for (i, p) in pool.iter_mut().enumerate() {
-        *p = hashmix(if i == 0 { seed } else { 0 }, &mut h);
-    }
-    for s in 0..4 {
-        for d in 0..4 {
-            if s != d {
-                let hs = hashmix(pool[s], &mut h);
-                pool[d] = mix(pool[d], hs);
-            }
-        }
-    }
-    let mut hb = 0x8b51f9ddu32;
-    let mut w = [0u32; 8];
-    for (i, o) in w.iter_mut().enumerate() {
-        let mut v = pool[i % 4] ^ hb;
-        hb = hb.wrapping_mul(MULT_B);
-        v = v.wrapping_mul(hb);
-        *o = v ^ (v >> 16);
-    }
-    [0, 1, 2, 3].map(|i| w[2 * i] as u64 | (w[2 * i + 1] as u64) << 32)
-}
-
 /// numpy's PCG64 (XSL-RR 128/64) with its buffered 32-bit output (`np.random.default_rng(seed)`).
 pub struct Pcg64 {
     state: u128,
@@ -93,6 +53,43 @@ impl Pcg64 {
             }
         }
     }
+}
+
+/// Floyd's algorithm and a shuffle (`rng.choice(population, size, replace=False)`, `pop <= 10000` or `size <= pop / 50`).
+fn floyd(g: &mut Pcg64, pop: usize, size: usize) -> Vec<usize> {
+    let mut idx = vec![0usize; size];
+    let mask = {
+        let set = (1.2 * size as f64) as u64;
+        if set == 0 { 0 } else { u64::MAX >> set.leading_zeros() }
+    };
+    let mut table = vec![u64::MAX; mask as usize + 1];
+    for j in pop - size..pop {
+        let val = g.bounded(j as u32) as u64;
+        let mut loc = (val & mask) as usize;
+        while table[loc] != u64::MAX && table[loc] != val {
+            loc = (loc + 1) & mask as usize;
+        }
+        let slot = j + size - pop;
+        if table[loc] == u64::MAX {
+            table[loc] = val;
+            idx[slot] = val as usize;
+        } else {
+            let mut loc = j & mask as usize;
+            while table[loc] != u64::MAX {
+                loc = (loc + 1) & mask as usize;
+            }
+            table[loc] = j as u64;
+            idx[slot] = j;
+        }
+    }
+    for i in (1..size).rev() {
+        let j = g.bounded(i as u32) as usize;
+        idx.swap(i, j);
+    }
+    idx
+}
+
+impl Pcg64 {
     /// `rng.permutation(n)`.
     pub fn permutation(&mut self, n: usize) -> Vec<usize> {
         let mut a: Vec<usize> = (0..n).collect();
@@ -130,37 +127,48 @@ impl Pcg64 {
     }
     /// `rng.choice(population, size, replace=False)` as indices (Floyd's algorithm and a shuffle, `pop <= 10000` or `size <= pop / 50`).
     pub fn choice_no_replace(&mut self, pop: usize, size: usize) -> Vec<usize> {
-        let mut idx = vec![0usize; size];
-        let mask = {
-            let set = (1.2 * size as f64) as u64;
-            if set == 0 { 0 } else { u64::MAX >> set.leading_zeros() }
-        };
-        let mut table = vec![u64::MAX; mask as usize + 1];
-        for j in pop - size..pop {
-            let val = self.bounded(j as u32) as u64;
-            let mut loc = (val & mask) as usize;
-            while table[loc] != u64::MAX && table[loc] != val {
-                loc = (loc + 1) & mask as usize;
-            }
-            let slot = j + size - pop;
-            if table[loc] == u64::MAX {
-                table[loc] = val;
-                idx[slot] = val as usize;
-            } else {
-                let mut loc = j & mask as usize;
-                while table[loc] != u64::MAX {
-                    loc = (loc + 1) & mask as usize;
-                }
-                table[loc] = j as u64;
-                idx[slot] = j;
-            }
-        }
-        for i in (1..size).rev() {
-            let j = self.bounded(i as u32) as usize;
-            idx.swap(i, j);
-        }
-        idx
+        floyd(self, pop, size)
     }
+}
+
+/// numpy's `SeedSequence(seed).generate_state(4, uint64)` for a non-negative integer seed below 2^32.
+fn seed_state(seed: u32) -> [u64; 4] {
+    const MULT_A: u32 = 0x931e8875;
+    const MULT_B: u32 = 0x58f38ded;
+    const MIX_L: u32 = 0xca01f9dd;
+    const MIX_R: u32 = 0x4973f715;
+    let hashmix = |v: u32, h: &mut u32| {
+        let mut v = v ^ *h;
+        *h = h.wrapping_mul(MULT_A);
+        v = v.wrapping_mul(*h);
+        v ^ (v >> 16)
+    };
+    let mix = |x: u32, y: u32| {
+        let r = MIX_L.wrapping_mul(x).wrapping_sub(MIX_R.wrapping_mul(y));
+        r ^ (r >> 16)
+    };
+    let mut h = 0x43b0d7e5u32;
+    let mut pool = [0u32; 4];
+    for (i, p) in pool.iter_mut().enumerate() {
+        *p = hashmix(if i == 0 { seed } else { 0 }, &mut h);
+    }
+    for s in 0..4 {
+        for d in 0..4 {
+            if s != d {
+                let hs = hashmix(pool[s], &mut h);
+                pool[d] = mix(pool[d], hs);
+            }
+        }
+    }
+    let mut hb = 0x8b51f9ddu32;
+    let mut w = [0u32; 8];
+    for (i, o) in w.iter_mut().enumerate() {
+        let mut v = pool[i % 4] ^ hb;
+        hb = hb.wrapping_mul(MULT_B);
+        v = v.wrapping_mul(hb);
+        *o = v ^ (v >> 16);
+    }
+    [0, 1, 2, 3].map(|i| w[2 * i] as u64 | (w[2 * i + 1] as u64) << 32)
 }
 
 #[cfg(test)]

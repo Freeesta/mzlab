@@ -61,6 +61,38 @@ fn spec(v: &Value) -> (Vec<f64>, Vec<f64>) {
     (f("mz"), f("int"))
 }
 
+/// The same cases through the route of the session (`origin_route`: the files of the session by slot, the report plus `hr` and `pol`).
+fn via_route(cases: &[Value], out: &Path, n_files: usize, failures: &mut Vec<String>) {
+    let mut routes: std::collections::HashMap<u32, Routes<std::fs::File>> = (0..n_files)
+        .map(|i| {
+            let p = out.join(format!("s{i}.mzidx"));
+            let idx = Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap();
+            (i as u32, Routes::new(idx))
+        })
+        .collect();
+    let mut via_route = 0;
+    for c in cases.iter().filter(|c| c["params"]["ms2"].is_null()) {
+        let pa = &c["params"];
+        let items: Vec<ItemMeta> = (0..n_files)
+            .map(|i| ItemMeta { slot: i as u32, label: pa["labels"][i].as_str().unwrap().to_string(), time: pa["times"][i].as_f64(), full: true })
+            .collect();
+        let ask = Ask { k: pa["ref"].as_i64().unwrap_or(-1), mz: pa["mz"].as_f64().unwrap(), parent: pa["parent"].as_f64().unwrap(), rt0: pa["rt0"].as_f64(), rt1: pa["rt1"].as_f64(), formula: pa["formula"].as_str() };
+        let rep = origin_route(&items, &mut routes, &ask).unwrap().expect("unit-resolution centroids are answered by Rust");
+        let mut got: Value = serde_json::from_str(&write(&rep)).unwrap();
+        let g = got.as_object_mut().unwrap();
+        assert_eq!(g.remove("hr"), Some(Value::Bool(false)));
+        assert!(g.remove("pol").is_some());
+        g.remove("timing");
+        let mut want = c["result"].clone();
+        want.as_object_mut().unwrap().remove("timing");
+        let mut bad = Vec::new();
+        compare("", &got, &want, &mut bad);
+        failures.extend(bad.iter().take(10).map(|b| format!("route mz {}: {b}", pa["mz"])));
+        via_route += 1;
+    }
+    assert!(via_route > 0, "no case without MS2 to run through the route");
+}
+
 #[test]
 fn rust_origin_matches_python() {
     // MZLAB_ORIGIN_DIR: a folder already written by the reference script (e.g. from real files), to compare without regenerating
@@ -117,35 +149,7 @@ fn rust_origin_matches_python() {
             failures.push(format!("mz {} ref {}: {b}", pa["mz"], pa["ref"]));
         }
     }
-    // the same through the route of the session (`origin_route`: the files of the session by slot, the report plus `hr` and `pol`)
-    let mut routes: std::collections::HashMap<u32, Routes<std::fs::File>> = (0..n_files)
-        .map(|i| {
-            let p = out.join(format!("s{i}.mzidx"));
-            let idx = Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap();
-            (i as u32, Routes::new(idx))
-        })
-        .collect();
-    let mut via_route = 0;
-    for c in cases.iter().filter(|c| c["params"]["ms2"].is_null()) {
-        let pa = &c["params"];
-        let items: Vec<ItemMeta> = (0..n_files)
-            .map(|i| ItemMeta { slot: i as u32, label: pa["labels"][i].as_str().unwrap().to_string(), time: pa["times"][i].as_f64(), full: true })
-            .collect();
-        let ask = Ask { k: pa["ref"].as_i64().unwrap_or(-1), mz: pa["mz"].as_f64().unwrap(), parent: pa["parent"].as_f64().unwrap(), rt0: pa["rt0"].as_f64(), rt1: pa["rt1"].as_f64(), formula: pa["formula"].as_str() };
-        let rep = origin_route(&items, &mut routes, &ask).unwrap().expect("unit-resolution centroids are answered by Rust");
-        let mut got: Value = serde_json::from_str(&write(&rep)).unwrap();
-        let g = got.as_object_mut().unwrap();
-        assert_eq!(g.remove("hr"), Some(Value::Bool(false)));
-        assert!(g.remove("pol").is_some());
-        g.remove("timing");
-        let mut want = c["result"].clone();
-        want.as_object_mut().unwrap().remove("timing");
-        let mut bad = Vec::new();
-        compare("", &got, &want, &mut bad);
-        failures.extend(bad.iter().take(10).map(|b| format!("route mz {}: {b}", pa["mz"])));
-        via_route += 1;
-    }
-    assert!(via_route > 0, "no case without MS2 to run through the route");
+    via_route(&cases, &out, n_files, &mut failures);
     assert!(compared > 1000, "only {compared} numbers compared");
     assert!(failures.is_empty(), "{} differences:\n{}", failures.len(), failures.join("\n"));
 }
