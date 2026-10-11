@@ -20,7 +20,6 @@
   };
   const wurl = new URL("browser-worker.js", SRC);
   { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); wurl.searchParams.set("pool", poolMode(q)); if (window.MZLAB_DESKTOP) wurl.searchParams.set("desk", "1"); }
-  try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
@@ -47,7 +46,10 @@
   const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
-  const ready = new Promise((res, rej) => {
+  // The Pyodide worker. Started at once, or (with the flow without Pyodide, below) the first time a request needs Python.
+  const startPython = () => {
+  try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
+  return new Promise((res, rej) => {
     if (!worker && window.QQQ_PHONE) return rej(new Error("phone: engine not started"));
     if (!worker) { const t = "this browser is too old"; failed = t; fail("load.err.oldBrowser"); return rej(new Error(t)); }
     worker.onmessage = ev => {
@@ -62,7 +64,8 @@
     };
     worker.onerror = e => { failed = e.message || "worker error"; fail("load.err.worker", { text: failed }); rej(new Error(failed)); };
   });
-  ready.catch(() => {});
+  };
+  let ready = null;                    // the engine is up: Pyodide, or (flow without Pyodide) the Rust engine
 
   // Rust engine (?motore=rust, or localStorage qqq.motore = "rust"; ?motore=python forces it off): TIC, XIC and single scans are answered by
   // rust-worker.js when it can answer exactly as Python does (rust-bridge.js decides); without the option nothing of it is loaded.
@@ -85,7 +88,35 @@
         .catch(e => { console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
   window.MZLAB_RUST_READY = rustReady;                                       // the page waits for it to decide whether a Thermo .raw can be read
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|filters|scanlist|nearest_scan)\b/;
+  // The flow of the low-resolution files without Pyodide (lr.js; opt-in: ?lr=1 or localStorage qqq.lr = "1"; needs the Rust engine): upload, list of the
+  // files, session and notebook are answered by the Rust engine; Pyodide starts (once, with a message) the first time a request needs it, and the session
+  // is replayed into it. Without the Rust engine, or on any trouble, it is the classic way.
+  const lrOn = rustOn && modern && !window.QQQ_PHONE && (() => {
+    const m = /[?&]lr=(\w+)/.exec(location.search);
+    if (m) return m[1] === "1";
+    try { return localStorage.getItem("qqq.lr") === "1"; } catch (_) { return false; }
+  })();
+  let lr = null, pyP = null;
+  const lrInit = async () => {
+    const b = await rustReady;
+    if (!b || b.disabled) return startPython();
+    try { lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b }); await lr.boot(); window.MZLAB_LR = lr; }
+    catch (e) { console.debug("[mzLab] flow without Pyodide not available", e); window.MZLAB_LR_ERR = String(e && e.message || e); lr = null; return startPython(); }
+  };
+  const needPython = () => pyP || (pyP = (async () => {
+    notice("lr.python.loading");
+    if (lr) lr.freeze();                                                 // no more answers from here while Python starts: the session to replay is final
+    await startPython();
+    const keep = lr && lr.session().samples;
+    lr = null; window.MZLAB_LR_DONE = true;                              // from now on the classic way: Python has the files (OPFS) and gets the session
+    if (keep && keep.length) {
+      const body = new TextEncoder().encode(JSON.stringify({ samples: keep, append: false }));
+      await new Promise(res => { const id = ++seq; pending.set(id, res); worker.postMessage({ id, method: "POST", url: "api/explore", body }, [body.buffer]); });
+    }
+  })());
+  ready = lrOn ? lrInit() : startPython();
+  ready.catch(() => {});
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|mrm|filters|scanlist|nearest_scan|scaninfo)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
@@ -96,6 +127,16 @@
     await ready;
     const method = (init.method || "GET").toUpperCase();
     const rb = await rustReady;
+    if (lr) {                                                            // flow without Pyodide: the Rust engine first, Python only when it must
+      if (rb && method === "GET" && RUST_ROUTES.test(url)) {
+        const r = await rb.handle(method, url);
+        if (r) return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust" } });
+      }
+      const a = lr && await lr.handle(method, url, init);
+      if (a) return new Response(a.text, { status: a.status, headers: { "Content-Type": "application/json", "X-Engine": "rust" } });
+      (window.MZLAB_LR_MISS = window.MZLAB_LR_MISS || []).push(method + " " + url);             // what sent the engine to Python (tests)
+      await needPython();
+    }
     if (rb && method === "GET" && RUST_ROUTES.test(url)) {
       const r = await rb.handle(method, url);
       if (r) return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust" } });
@@ -109,15 +150,18 @@
     const id = ++seq;
     const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
-    if (post !== null && r.status === 200) rustSession(rb, url, post);
+    if (post !== null && r.status === 200) rustSession(rb, url, post, r.text);
     if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
   };
   const r_ok_post = url => /^(\.\/)?api\/(explore|remove|new)\b/.test(url);
-  const rustSession = (rb, url, text) => {                                  // keeps the Rust engine's files in step with the session of Python
+  const rustSession = (rb, url, text, answer) => {                                  // keeps the Rust engine's files in step with the session of Python
     try {
       const j = text ? JSON.parse(text) : {};
-      if (/api\/explore/.test(url)) rb.noteExplore(j);
+      if (/api\/explore/.test(url)) {                                    // one slot per ITEM of the session (a mixed file makes several), not per file of the request
+        let s = null; try { s = JSON.parse(answer).session; } catch (_) { /* the answer is not the session */ }
+        rb.noteExplore(Array.isArray(s) ? { samples: s.map(it => ({ file: it.file })) } : j);
+      }
       else if (/api\/remove/.test(url)) { rb.noteRemove(j.name); rb.noteExplore(null); }
       else rb.noteNew();
     } catch (_) { /* optional */ }
