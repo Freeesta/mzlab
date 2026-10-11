@@ -8,6 +8,7 @@ pub mod iteminfo;
 pub mod json;
 pub mod mzidx;
 pub mod mzml;
+pub mod mzmlhead;
 pub mod peakq;
 pub mod peaks;
 pub mod project;

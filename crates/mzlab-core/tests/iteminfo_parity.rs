@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::iteminfo::{item_info, Analog, Facts, Meta, Part};
+use mzlab_core::iteminfo::{item_info, Meta, Part};
 use serde_json::Value;
 
 fn root() -> PathBuf {
@@ -95,31 +95,32 @@ fn item_info_like_python() {
                 cunit: m["cunit"].as_str().map(String::from),
                 rep: m["rep"].as_str().map(String::from),
             };
+            let size = std::fs::metadata(line).unwrap().len();
+            let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
+            let scans_end = idx.scans.last().map_or(0, |s| s.end);
+            let n_chrom = idx
+                .run
+                .get("n_chromatograms")
+                .and_then(|v| v.f64())
+                .unwrap_or(0.0) as i64;
+            let facts = mzlab_core::iteminfo::facts_from(
+                &mut mz,
+                scans_end,
+                n_chrom,
+                idx.scans.is_empty() || r["part"]["mode"] == "mrm",
+            )
+            .unwrap_or_else(|e| panic!("{stem}: {e}"));
+            // the facts Rust read must also be the ones Python read
             let f = &r["facts"];
-            let facts = Facts {
-                instrument: s(&f["instrument"]),
-                n_chromatograms: f["n_chromatograms"].as_i64().unwrap(),
-                srm: f["srm"].as_u64().unwrap() as usize,
-                pda: f["pda"].as_bool().unwrap(),
-                header_polarity: s(&f["header_polarity"]),
-                srm_rt: f["srm_rt"]
-                    .as_array()
-                    .map(|a| (a[0].as_f64().unwrap(), a[1].as_f64().unwrap())),
-                analog: f["analog"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|a| Analog {
-                        i: a["i"].as_i64().unwrap(),
-                        kind: s(&a["kind"]),
-                        id: s(&a["id"]),
-                        unit: s(&a["unit"]),
-                        t0: a["t0"].as_f64().unwrap(),
-                        t1: a["t1"].as_f64().unwrap(),
-                        n: a["n"].as_i64().unwrap(),
-                    })
-                    .collect(),
-            };
+            assert_eq!(
+                (facts.instrument.as_str(), facts.srm, facts.pda),
+                (
+                    f["instrument"].as_str().unwrap(),
+                    f["srm"].as_u64().unwrap() as usize,
+                    f["pda"].as_bool().unwrap()
+                ),
+                "{stem}: facts"
+            );
             let part = r["part"].as_object().map(|p| Part {
                 mode: match p["mode"].as_str().unwrap() {
                     "ms1" => "ms1",
