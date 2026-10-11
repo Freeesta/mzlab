@@ -1,6 +1,7 @@
 """Statistics of a series (mzlab/statistica.py): time profile, blank subtraction, PCA: known values on synthetic data."""
 import io
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -200,3 +201,96 @@ def test_pca_route_and_golden():
     assert np.allclose(r["explained"], g["explained"], atol=1e-9)
     assert np.allclose(np.abs(r["scores"]), np.abs(g["scores"]), atol=1e-8) and np.allclose(np.abs(r["loadings"]), np.abs(g["loadings"]), atol=1e-8)
     assert np.allclose(r["stability"], g["stability"], atol=1e-8) and r["steps"] == g["steps"] and r["imputed"] == g["imputed"]
+
+
+# ---------------------------------------------------------------------------------------------------- difference from the reference
+GOLD = json.loads((Path(__file__).parent / "golden" / "differenza_hr.json").read_text(encoding="utf-8"))
+
+
+def _gold_run(**kw):
+    return st.reference_difference(list(GOLD["features"].values()), GOLD["roles"], GOLD["times"], **kw)
+
+
+def test_reference_difference_matches_the_golden_series():
+    r = _gold_run()
+    assert r["reference"] == GOLD["reference"] and r["params"]["pseudo"] == pytest.approx(GOLD["pseudo"]) and r["params"]["pseudo_source"] == "blanks"
+    for (name, exp), row in zip(GOLD["expected"].items(), r["rows"]):
+        assert (row["kept"], row["reason"], row["shape"], row["absent_in_reference"]) == (exp["kept"], exp["reason"], exp["shape"], exp["absent"]), name
+        assert row["log2fc"] == pytest.approx(exp["log2fc"], abs=1e-3) and row["t_max"] == exp["t_max"], name
+        assert (row["rho"] is None) == (exp["rho"] is None) and (row["rho"] is None or row["rho"] == pytest.approx(exp["rho"], abs=1e-3)), name
+
+
+def test_reference_difference_story_of_the_series():
+    names = list(GOLD["features"])
+    r = _gold_run()
+    by = dict(zip(names, r["rows"]))
+    assert [names[i] for i in r["kept"]] == ["product_rises", "intermediate", "drift_early_row", "drift_late_row"]
+    assert by["product_rises"]["shape"] == "rises" and by["intermediate"]["shape"] == "rises_falls" and by["parent_falls"]["shape"] == "falls"
+    assert by["parent_falls"]["reason"] == "below_reference" and by["parent_falls"]["ratio"] < 1       # the parent is there at t0: listed, not kept
+    assert by["blank_background"]["reason"] == "below_reference" and not by["blank_background"]["absent_in_reference"]
+    assert all(by[k]["shape"] is None and not by[k]["kept"] for k in ("noise", "noise_b", "noise_c", "noise_d"))   # under the noise estimate: no label
+    # the qc file is neither reference nor treated; the maximum of the product is the last file alone
+    assert r["treated"] == [3, 4, 5, 6, 7] and by["product_rises"]["max_file"] == 7 and by["product_rises"]["rep_n"] == 1
+    # replicates: the maximum of the early drift row is at t10 where two files are averaged
+    d = by["drift_early_row"]
+    assert d["rep_n"] == 2 and d["rep_n_detected"] == 2 and d["rep_mean"] == pytest.approx(3.05e5) and d["rep_cv"] == pytest.approx(2.31, abs=0.01)
+
+
+def test_reference_difference_the_user_can_choose_the_reference_and_the_pseudocount():
+    r = _gold_run(reference=[0, 1], pseudo=10.0, ref_stat="mean")
+    assert r["reference_rule"] == "explicit" and r["reference"] == [0, 1] and r["params"]["pseudo_source"] == "given" and r["params"]["pseudo"] == 10.0
+    assert r["treated"] == [2, 3, 4, 5, 6, 7]                      # the t0 file is now a treated one
+    names = list(GOLD["features"])
+    pf = r["rows"][names.index("parent_falls")]
+    assert pf["kept"] and pf["ref_level"] == 0 and pf["ratio"] is None and pf["log2fc"] == pytest.approx(np.log2((5e6 + 10) / 10))
+
+
+def test_reference_difference_edge_cases():
+    roles, times = ["blank", "sample", "sample", "sample"], [None, 0, 10, 20]
+    nan = float("nan")
+    r = st.reference_difference([[0, nan, 5e3, None], [-5, 1e4, 1e4, 1e4]], roles, times)
+    assert r["rows"][0]["ref_level"] == 0 and r["rows"][0]["treated_max"] == 5e3 and r["rows"][0]["kept"]
+    assert r["rows"][1]["reason"] == "below_reference"               # a negative or missing area is 0, equal areas are not above
+    assert r["params"]["pseudo_source"] == "reference" and r["params"]["pseudo"] == 3e4        # no positive area in the blank: the median of the t0 file
+    fl = st.reference_difference([[0, 0, 5e3, 0]], roles, times)                                 # nothing positive in the reference: the floor
+    assert fl["params"]["pseudo_source"] == "floor" and fl["params"]["pseudo"] == st.FLOOR
+    # a single treated file: no shape, no replicate spread, still a difference
+    one = st.reference_difference([[0, 0, 9e4]], ["blank", "sample", "sample"], [None, 0, 10])
+    assert one["rows"][0]["shape"] is None and one["rows"][0]["rho"] is None and one["rows"][0]["rep_cv"] is None and one["rows"][0]["kept"]
+    # no time at all: the reference is the blank, the shape is undefined
+    nt = st.reference_difference([[0, 5e4, 6e4]], ["blank", "sample", "sample"], [None, None, None])
+    assert nt["reference"] == [0] and nt["rows"][0]["shape"] is None and nt["rows"][0]["t_max"] is None
+    assert st.reference_difference([], roles, times)["rows"] == []        # empty table
+
+
+def test_reference_difference_errors_are_clear():
+    with pytest.raises(UserError) as e:
+        st.reference_difference([[1, 2]], ["sample", "sample"], [5, 10])
+    assert e.value.key == "err.stat.ref.none"                          # no blank and no file at time 0
+    with pytest.raises(UserError) as e:
+        st.reference_difference([[1, 2]], ["blank", "dark"], [None, None])
+    assert e.value.key == "err.stat.ref.notreated"
+    with pytest.raises(UserError) as e:
+        st.reference_difference([[1, 2, 3]], ["blank", "sample"], [None, 5])
+    assert e.value.key == "err.stat.ref.shape"
+    with pytest.raises(UserError):
+        st.reference_difference([[1, 2]], ["blank", "sample"], [None, 5], factor=-1)
+    with pytest.raises(UserError):
+        st.reference_difference([[1, 2]], ["blank", "sample"], [None, 5], ref_stat="median")
+
+
+def test_reference_difference_replaces_the_old_sample_blank_ratio():
+    """What qaqc.feature_ratios gave: highest sample area over the mean blank area, 'absent' when the blank has none."""
+    t = [[10, 10, 50, 200], [0, 0, 5, 0]]
+    r = st.reference_difference(t, ["blank", "blank", "sample", "sample"], [None] * 4, reference=[0, 1], ref_stat="mean", factor=10)
+    assert r["rows"][0]["ratio"] == 20 and r["rows"][0]["kept"] and r["rows"][1]["ratio"] is None and r["rows"][1]["absent_in_reference"]
+
+
+def test_reference_route():
+    body = json.dumps({"matrix": list(GOLD["features"].values()), "roles": GOLD["roles"], "times": GOLD["times"], "factor": 3}).encode()
+    code, _, out, _ = dispatch(None, "POST", "/api/stat/reference", {}, io.BytesIO(body), len(body))
+    d = json.loads(out)
+    assert code == 200 and d["reference"] == [0, 1, 2] and d["kept"] == [0, 1, 8, 9]
+    bad = json.dumps({"matrix": [[1, 2]], "roles": ["sample", "sample"], "times": [5, 10]}).encode()
+    code, _, out, _ = dispatch(None, "POST", "/api/stat/reference", {}, io.BytesIO(bad), len(bad))
+    assert code == 400 and json.loads(out)["error_key"] == "err.stat.ref.none"
