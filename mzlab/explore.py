@@ -584,6 +584,13 @@ class Item:
             out = _cells(i * nmz + j, t.inten[a:b][ok], nrt * nmz, agg, np.bincount(scan_bin[scan_in], minlength=nrt), nmz).reshape(nrt, nmz)
         return out
 
+    def map_stretch(self, level: int, rt0: float, rt1: float, mz0: float, mz1: float, nmz: int, log: bool = False) -> np.ndarray:
+        """The background of a stretch the student chose: for each m/z cell of a region the mean over the scans of [rt0, rt1] (a stretch with no
+        peaks), shape (nmz,). Subtracted like map_background; no median over the run, only this interval."""
+        if not (rt1 > rt0 and mz1 > mz0) or (log and mz0 <= 0):
+            return np.zeros(nmz, dtype=np.float32)
+        return self.ionmap_region(level, rt0, rt1, 1, mz0, mz1, nmz, "mean", log)[0].astype(np.float32)       # one RT bin = the stretch: mean per scan of every cell
+
     def map_background(self, level: int, mz0: float, mz1: float, nmz: int, log: bool = False, agg: str = "max") -> np.ndarray:
         """The constant background of the m/z cells of a region: for each cell the median along the WHOLE run, over the scans (at most 1500
         groups of consecutive scans), shape (nmz,). An ion present all along the run (solvent, column bleed, plasticisers) is a line of the map;

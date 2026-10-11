@@ -66,7 +66,7 @@ window.MAPPA = (() => {
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
   const diffOpt = (diff = true) => ({ show: PREF.show || "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1 });
-  const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}|${mapBg() ? 1 : 0}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}${mapBg() ? "&bg=1" : ""}`).then(j => {
+  const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
   }));
@@ -85,12 +85,12 @@ window.MAPPA = (() => {
     const s = st(p); init(p);
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
-    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${mapPal()}|${mapBg()}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${mapPal()}|${mapBg(p)}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
     if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
     clearTimeout(s.regT);
     s.regT = setTimeout(async () => {
       try {
-        const a = await getRegion(A.k, A.level, r, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + (mapBg() ? "&bg=1" : ""));
+        const a = await getRegion(A.k, A.level, r, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + mapBg(p));
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
         s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
@@ -671,6 +671,45 @@ window.MAPPA = (() => {
   }
   const navBar = p => { const b = barFor(() => ad2(p, null)); st(p).nav = b; return b; };
   const navSync = p => { const s = st(p); lockBtn(s.nav, !!s.lock); const f = s.nav && s.nav.querySelector('[data-nav="mapfeat"]'); if (f) { f.hidden = !featAvail(p); f.setAttribute("aria-pressed", String(!!s.feat)); f.classList.toggle("on", !!s.feat); } const e = s.nav && s.nav.querySelector('[data-nav="mapexplain"]'); if (e) { e.setAttribute("aria-pressed", String(!!s.ex)); e.classList.toggle("on", !!s.ex); } };
+  // ---- «Correzione» of the map: one at a time (none | a file | the background of a stretch | the automatic background), like the chromatograms and the spectrum.
+  // p.corr: undefined = an old panel (converted at the first draw from p.ref and from the old global switch PREF.bg), "" = follow the reference of the session, "none", "file" (p.ref), "tract" (p.bgr = [rt0, rt1]), "auto".
+  function corrInit(p) { if (p.corr === undefined) p.corr = p.ref !== "" && p.ref != null ? "file" : PREF.bg ? "auto" : ""; }
+  function corrState(p) {
+    corrInit(p); const se = p.corr === "" && window.SUBREF ? SUBREF.eff(p) : null;
+    return { now: p.corr === "file" && p.ref !== "" && p.ref != null ? "f" + p.ref : se ? "f" + se.k : p.corr === "tract" ? "tract" : p.corr === "auto" ? "auto" : "" };
+  }
+  function setCorr(p, v) {
+    corrInit(p);
+    if (v === "") { p.corr = "none"; p.ref = ""; p.bgr = null; }
+    else if (v[0] === "f") { p.corr = "file"; p.ref = +v.slice(1); p.bgr = null; }
+    else if (v === "auto") { p.corr = "auto"; p.ref = ""; p.bgr = null; }
+    else if (v === "tract") {
+      p.corr = "tract"; p.ref = "";
+      if (p.sel && p.sel[1] > p.sel[0]) { p.bgr = [...p.sel]; p.sel = null; p._pickBg = false; } else if (!p.bgr) { p._pickBg = true; nearMsg(T("mapcorr.pick")); }
+    }
+    ctl(p); draw(p); uiSave();
+  }
+  // the request suffix of the correction that is not a file: the automatic background or the mean of the chosen stretch
+  function corrQ(p) {
+    corrInit(p);
+    if (p.corr === "auto") return "&bg=1";
+    if (p.corr === "tract" && p.bgr) return `&bgrt0=${+(+p.bgr[0]).toFixed(4)}&bgrt1=${+(+p.bgr[1]).toFixed(4)}`;
+    return "";
+  }
+  function corrPick(p) {                                                // «Background of a stretch» chosen with no stretch yet: the next stretch selected with Alt + drag is the one
+    if (!p._pickBg || !p.sel || !(p.sel[1] > p.sel[0])) return false;
+    p.bgr = [...p.sel]; p.sel = null; p._pickBg = false; ctl(p); uiSave(); return true;
+  }
+  // what is not at its default in «Options»: chips next to the button
+  function optChips(p) {
+    const o = [], d = diffOpt(corrState(p).now[0] === "f");
+    if (p.scale && p.scale !== "sqrt") o.push(T(`ctl.map.scale.${p.scale}`));
+    if (PREF.pal === "cividis") o.push("cividis");
+    if (PREF.thr != null && Math.abs(PREF.thr - (corrState(p).now[0] === "f" ? 0.02 : 0.004)) > 1e-9) o.push(`${T("mappa.thr")} ${+(PREF.thr * 100).toFixed(1)} %`);
+    if (corrState(p).now[0] === "f" && p.norm && p.norm !== "abs") o.push(T(`ctl.map.norm.${p.norm}`));
+    if (d.show !== "all" && corrState(p).now[0] === "f") o.push(T(`mappa.show.${d.show}`));
+    return o;
+  }
   // ---- «How it is extracted»: the module loads the first time
   async function explain(p, on) {
     const s = st(p); if (on === undefined) on = !s.ex;
@@ -738,12 +777,11 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
   function decorate(p, c) {
     if (p.type !== "map") return;
-    const hasRef = p.ref !== "" && p.ref != null, o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";
+    const hasRef = corrState(p).now[0] === "f", o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";
     const opt = (v, cur, lab) => `<option value="${v}" ${cur === v ? "selected" : ""}>${lab}</option>`;
     const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
     if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
-      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
-      `<label class="muted" title="${T("mappa.bg.title")}"><input type="checkbox" data-mz="bg"${PREF.bg ? " checked" : ""}> ${T("mappa.bg")}</label>`;
+      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
     if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
     g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}" aria-label="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
@@ -752,7 +790,6 @@ window.MAPPA = (() => {
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => parseFloat(String(el.value).replace(",", "."));
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
-    Q("bg").onchange = ev => { PREF.bg = ev.target.checked; prefSave(); draw(p); };
     if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
@@ -767,7 +804,7 @@ window.MAPPA = (() => {
     try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
   }
 
-  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's

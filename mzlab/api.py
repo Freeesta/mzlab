@@ -112,6 +112,10 @@ def _map(app, q: dict) -> dict:
     if scale not in ("lin", "log"):
         raise UserError("err.map.mzscale", {"mzscale": str(scale)[:20]}, "mzscale must be lin or log")
     bg = q.get("bg") in ("1", "true", 1, True)
+    stretch = (float(q["bgrt0"]), float(q["bgrt1"])) if q.get("bgrt0") not in (None, "") and q.get("bgrt1") not in (None, "") else None     # background of a stretch (mean over this RT interval), instead of the median over the run
+
+    def stretch_bg(it, lv, m0, m1, n, lg, ag):
+        return it.map_stretch(lv, stretch[0], stretch[1], m0, m1, n, lg) if stretch else it.map_background(lv, m0, m1, n, lg, ag)
     hr = bool(app._item(k).profile(level)["hr"])
     if region:
         rt0, rt1, mz0, mz1 = float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"])
@@ -128,7 +132,7 @@ def _map(app, q: dict) -> dict:
         def get(kk):
             it = app._item(kk)
             m = it.ionmap_region(level, rt0, rt1, nrt, mz0, mz1, nmz, agg, log)
-            return subtract_constant(m, it.map_background(level, mz0, mz1, nmz, log, agg)) if bg else m
+            return subtract_constant(m, stretch_bg(it, level, mz0, mz1, nmz, log, agg)) if bg or stretch else m
     else:
         grid = app.session.grid(level)
         log = False
@@ -136,9 +140,9 @@ def _map(app, q: dict) -> dict:
         def get(kk):
             m = app._item(kk).ionmap(level, grid, agg)
             it = app._item(kk)
-            return subtract_constant(m, it.map_background(level, grid["mz0"], grid["mz0"] + grid["nmz"] * grid["dmz"], grid["nmz"], False, agg)) if bg else m
+            return subtract_constant(m, stretch_bg(it, level, grid["mz0"], grid["mz0"] + grid["nmz"] * grid["dmz"], grid["nmz"], False, agg)) if bg or stretch else m
     m = get(k)
-    out = {**grid, "level": level, "region": region, "agg": agg, "log": log, "bg": bg, "hr": hr}
+    out = {**grid, "level": level, "region": region, "agg": agg, "log": log, "bg": bg or bool(stretch), "bgstretch": list(stretch) if stretch else None, "hr": hr}
     if not region:
         out["extent"] = app._item(k).data_extent(level)           # where the file has data: the page shows this part as the whole view
     if ref is not None:

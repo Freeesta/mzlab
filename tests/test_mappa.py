@@ -181,3 +181,23 @@ def test_sticks_endpoint_gives_the_strongest_points_up_to_the_cap(tmp_path):
     assert list(y) == [100.0, 90.0, 80.0] and list(mz) == [159.0, 158.0, 157.0] and rt[0] == pytest.approx(1.9)
     assert json.loads(dispatch(app, "GET", "/api/mappunti3d", {**q, "max": "1000000"})[2])["n"] == 20      # the cap never grows past 200000
     assert dispatch(app, "GET", "/api/mappunti3d", {**q, "rt1": "-1"})[0] == 400                              # empty region: error
+
+
+def test_background_of_a_stretch_is_the_mean_over_that_interval(tmp_path):
+    """bgrt0/bgrt1: each m/z cell loses its mean over the chosen RT stretch (no median over the run); a line in the stretch disappears, a peak outside it stays."""
+    import base64, json
+    import numpy as np
+    from mzlab.api import dispatch
+    from mzlab.app import App
+    app = App(tmp_path)
+    scans = [_scan_xml(i, 1.0 + 0.1 * i, [400.0] + ([401.0] if i == 12 else []), [50.0] + ([900.0] if i == 12 else [])) for i in range(20)]
+    app.session = _session(tmp_path, scans)
+    q = {"k": "0", "rt0": "0.9", "rt1": "3.1", "mz0": "399", "mz1": "403", "nrt": "22", "nmz": "10"}
+    get = lambda **e: json.loads(dispatch(app, "GET", "/api/map", {**q, **e})[2])
+    j = get(bgrt0="1.0", bgrt1="1.5")                                       # the stretch holds only the constant line at 400
+    m = np.frombuffer(base64.b64decode(j["data"]), "<f4").reshape(22, j["nmz"])
+    assert j["bg"] is True and j["bgstretch"] == [1.0, 1.5]
+    assert m.max() == 900.0 and (m > 0).sum() == 1                         # the line is gone, the peak (outside the stretch) stays
+    j2 = get(bgrt0="2.0", bgrt1="2.4")                                      # a stretch with the peak (RT 2.2): that cell is taken away, the line remains
+    m2 = np.frombuffer(base64.b64decode(j2["data"]), "<f4").reshape(22, j2["nmz"])
+    assert m2.max() < 900.0
