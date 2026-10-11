@@ -36,7 +36,7 @@ try:
         def blocked():
             holder.evaluate(HOLD)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.goto(URL + "?ripresa=4000")
+            pg.goto(URL + "?ripresa=4000&motore=python")
             pg.wait_for_function("document.getElementById('ldmsg') && /altra scheda/.test(document.getElementById('ldmsg').textContent)", timeout=90000)
             assert pg.locator("#ldbar").count() == 0, "bar on the loading screen"
             assert pg.locator("#ldsub").count() == 0, "second status line"
@@ -55,7 +55,7 @@ try:
               r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"], "readwrite"); t.objectStore("files").put(new ArrayBuffer(8), "old.mzML"); t.objectStore("kv").put('{"k":1}', "notebook"); t.oncomplete = () => { db.close(); res(true); }; };
               r.onerror = () => rej(String(r.error));
             })""")
-            pg = ctx.new_page(); pg.goto(URL + "?riparti=1")
+            pg = ctx.new_page(); pg.goto(URL + "?riparti=1&motore=python")
             pg.wait_for_selector("#drop", timeout=120000)
             left = pg.evaluate("""() => new Promise(res => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"]);
               const a = t.objectStore("files").count(), n = t.objectStore("kv").get("notebook"); t.oncomplete = () => { db.close(); res([a.result, n.result]); }; }; })""")
@@ -64,7 +64,7 @@ try:
         step("«start from scratch» deletes the saved files and the notebook", keeps_notebook)
         def status_while_loading():
             holder.evaluate(GONE)
-            pg = ctx.new_page(); pg.goto(URL)
+            pg = ctx.new_page(); pg.goto(URL + "?motore=python")
             pg.wait_for_selector("#ldmsg", state="attached")
             assert pg.locator("#ldbar").count() == 0 and pg.locator("#loading [role=progressbar]").count() == 0, "bar on the loading screen"
             assert pg.get_attribute("#ldmsg", "role") == "status" and pg.get_attribute("#loading", "aria-busy") == "true"
