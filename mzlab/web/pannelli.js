@@ -472,6 +472,7 @@ function plotMeta(p) {
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
   if (p.ibk) d.push(I18N.t("export.desc.ibk", { text: ibkText(p.ibk) }));
+  if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
   return [["Title", ptitle(p.title) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
