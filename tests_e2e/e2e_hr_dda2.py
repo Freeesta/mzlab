@@ -88,14 +88,19 @@ try:
         step("isolation band: the window of the MS2 of 229.60 holds 229.05; the Full Scan zooms to the precursor", band)
         def plist():
             pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
+            drawer(pg)                                 # the list button lives in the file drawer
             assert pg.is_visible("#ddalist"), "no button of the list"
             pg.click("#ddalist"); pg.wait_for_timeout(1500)
             rows = pg.evaluate("[...document.querySelectorAll('#ddatb tr[data-r]')].map(r=>[r.children[0].textContent,r.children[1].textContent,r.children[2].textContent])"); print(rows[:4], len(rows))
             assert len(rows) >= 10 and all(len(x[0].split(".")[1]) == 4 for x in rows), rows           # the precursors, 4 decimals
             pg.click("#ddatb th[data-c=n]"); pg.wait_for_timeout(300)
             ns = [int(x) for x in pg.evaluate("[...document.querySelectorAll('#ddatb tr[data-r] td:nth-child(3)')].map(t=>t.textContent)")]; assert ns == sorted(ns), ns
-            pg.click("#ddatb tr[data-r]:has-text('346.12')"); pg.wait_for_timeout(4000)
-            v = pg.evaluate("(()=>{const t=" + TRIO + ";return {tab:E.tab,ion:t.s2.ion,sid:t.s2.sid,prec:t.s2._scan&&t.s2._scan.prec}})()"); print(v)
+            pg.click("#ddatb tr[data-r]:has-text('346.12')")
+            PROBE = "(()=>{const t=" + TRIO + ";return {tab:E.tab,ion:t.s2.ion,sid:t.s2.sid,prec:t.s2._scan&&t.s2._scan.prec}})()"
+            for _ in range(40):                          # the MS2 of the row is read when ready (the time depends on the machine)
+                pg.wait_for_timeout(500); v = pg.evaluate(PROBE)
+                if v["sid"] is not None and v["prec"] and abs(v["prec"] - 346.1218) < 0.003: break
+            print(v)
             assert v["tab"] == "full" and abs(v["ion"] - 346.1218) < 0.003 and v["sid"] is not None and abs(v["prec"] - 346.1218) < 0.003, v
         step("MS2 tab of a DDA file: list of the precursors (4 decimals, sortable); a row shows its most intense MS2 next to the Full Scan", plist)
     r.close()

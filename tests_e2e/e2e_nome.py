@@ -22,7 +22,7 @@ try:
             name = pg.evaluate("APP_NAME")
             assert pg.get_attribute("header .logo", "alt") == name
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(400)
-            t = pg.inner_text("#helppop"); assert t.replace("×", "").strip().startswith(name) and "federico.cristaudo@unito.it" in t, t[:200]
+            t = pg.inner_text("#helppop"); assert OLD not in t and "federico.cristaudo@unito.it" in t, t[:200]   # the (i) box has no title: only the contact line
             pg.keyboard.press("Escape"); pg.mouse.click(5, 400); pg.wait_for_timeout(200)
             dom = pg.evaluate("""(() => { const bad = []; const old = "QqQ lab"; const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
                 while (walk.nextNode()) if (walk.currentNode.nodeValue.includes(old) && !/^(SCRIPT|STYLE)$/.test(walk.currentNode.parentNode.nodeName)) bad.push("text:" + walk.currentNode.nodeValue.slice(0, 40));
