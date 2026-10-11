@@ -224,3 +224,15 @@ def dlmenu(pg, scope, kind):
     """«Scarica ▾» of a panel: open the menu, then choose the PNG image or the Excel data (kind = 'png' | 'xlsx')."""
     pg.locator(f"{scope} [data-a=dl]").first.click()
     pg.locator("#ctx div", has_text="Immagine" if kind == "png" else "Excel").first.click()
+
+
+def axe_path():
+    """Path of axe.min.js ($AXE_JS or the axe-playwright-python package), None when axe-core is not available."""
+    p = os.environ.get("AXE_JS")
+    if p and os.path.exists(p): return p
+    try:
+        import axe_playwright_python
+        q = os.path.join(os.path.dirname(axe_playwright_python.__file__), "axe.min.js")
+        return q if os.path.exists(q) else None
+    except ImportError:
+        return None

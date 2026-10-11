@@ -139,7 +139,7 @@ async function start() {
     br = py.globals.get("browser");
     br.configure(SMALL);
     postMessage({ type: "ready" });
-  } catch (e) { postMessage({ type: "fatal", text: String(e && e.message || e), key: e && e.key }); }
+  } catch (e) { if (dead(e) && !e.key) postMessage({ type: "dead" }); else postMessage({ type: "fatal", text: String(e && e.message || e), key: e && e.key }); }
 }
 const started = start();
 
@@ -175,7 +175,7 @@ async function lowSpace() { const e = await ARCH.estimate(); return e.quota > 0 
 async function settle() {
   if (!OPFS || !br) return;
   let list;
-  try { const r = br.new_indexes(); list = r.toJs(); r.destroy(); } catch (_) { return; }
+  try { const r = br.new_indexes(); list = r.toJs(); r.destroy(); } catch (e) { lost(e); return; }
   for (const [name, path] of list) {
     try {
       if (await lowSpace()) await freeSpace();
@@ -183,12 +183,12 @@ async function settle() {
       const f = await ARCH.putFromFS("idx", iname, py.FS, path);
       const ok = br.adopt_index(name, mountBlob(f, "idx/" + name, "/idx") );
       if (!ok) { unmount("idx/" + name); await ARCH.remove("idx", iname); }
-    } catch (e) { console.debug("[mzLab] index kept in memory", name, e); }
+    } catch (e) { if (!lost(e)) console.debug("[mzLab] index kept in memory", name, e); }
   }
 }
 async function buildIndex(name) {
   if (!OPFS || !br) return;
-  try { if (br.build_index(name)) await settle(); } catch (_) { /* optional */ }
+  try { if (br.build_index(name)) await settle(); } catch (e) { lost(e); /* optional */ }
 }
 
 // ---- the indexes of the uploaded files: Python builds them, unless the pool of Rust workers is on (idxpool.js, idx-worker.js: ?pool=N|auto, ?motore=rust, localStorage qqq.pool; browser.js decides); it falls back to Python when it cannot
@@ -269,12 +269,16 @@ function buildFor(base, file, nid = null) {
 let chain = Promise.resolve();      // the requests are answered one after the other: an index moved to OPFS is never swapped under a request in the middle
 // Python lost its footing (a frozen or discarded tab came back: "NoGilError: Attempted to use PyProxy when Python GIL not held"): the page recreates the engine
 const dead = e => /GIL|PyProxy|has been destroyed|Pyodide/i.test(String(e && (e.name + " " + e.message) || e));
+// wherever the error comes up (a request, an index moved in the background, a promise nobody awaits) the page is told: it recreates the engine
+const lost = e => { if (dead(e)) { postMessage({ type: "dead" }); return true; } return false; };
+addEventListener("unhandledrejection", ev => { if (lost(ev.reason)) ev.preventDefault(); });
+addEventListener("error", ev => { lost(ev.error || ev.message); });
 onmessage = ev => {
-  if (ev.data && ev.data.ping) {                    // health check of the page after a resume: one trivial Python call
-    chain = chain.then(async () => { await started; let ok = !!py && !!handle; if (ok) try { py.runPython("1"); } catch (e) { ok = false; } postMessage({ type: "pong", ok }); }).catch(() => postMessage({ type: "pong", ok: false }));
+  if (ev.data && ev.data.ping) {                    // health check of the page after a resume: one trivial Python call, answered at once (not queued behind a request that may be stuck)
+    (async () => { await started; let ok = !!py && !!handle; if (ok) try { py.runPython("1"); } catch (e) { ok = false; } postMessage({ type: "pong", ok }); })().catch(() => postMessage({ type: "pong", ok: false }));
     return;
   }
-  chain = chain.then(() => answer(ev.data)).catch(e => console.debug("[mzLab]", e));
+  chain = chain.then(() => answer(ev.data)).catch(e => { if (!lost(e)) console.debug("[mzLab]", e); });
 };
 
 async function answer({ id, method, url, body, blob }) {
@@ -325,7 +329,7 @@ async function answer({ id, method, url, body, blob }) {
     if (dead(e)) return postMessage({ id, status: 500, dead: true, text: JSON.stringify({ error: m }) });
     status = 500; text = JSON.stringify(e && e.key ? { error: m, error_key: e.key } : /memory|alloc|RangeError/i.test(m) ? { error: "this file is too big for the memory of the browser", error_key: "err.memory.tooBig" } : { error: m });
   }
-  if (later) { later.then(([st, tx]) => postMessage({ id, status: st, text: tx, ms: performance.now() - t0 }), e => postMessage({ id, status: 500, text: JSON.stringify({ error: String(e && e.message || e) }) })); return; }
+  if (later) { later.then(([st, tx]) => postMessage({ id, status: st, text: tx, ms: performance.now() - t0 }), e => postMessage({ id, status: 500, dead: dead(e), text: JSON.stringify({ error: String(e && e.message || e) }) })); return; }
   if (text instanceof Uint8Array) postMessage({ id, status, buf: text, ctype, ms: performance.now() - t0 }, [text.buffer]);       // a binary block (api/scanbin): moved, not copied
   else postMessage({ id, status, text, ms: performance.now() - t0 });
   if (uploaded) { const t1 = performance.now(); await buildIndex(uploaded); postMessage({ type: "idx", name: uploaded, engine: "python", why: "off", ms: Math.round(performance.now() - t1) }); }       // right after the upload, before the next request: the first chart then finds the index

@@ -3,15 +3,6 @@ axe-playwright-python (pip install axe-playwright-python) or from $AXE_JS; witho
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
-def axe_path():
-    p = os.environ.get("AXE_JS")
-    if p and os.path.exists(p): return p
-    try:
-        import axe_playwright_python
-        q = os.path.join(os.path.dirname(axe_playwright_python.__file__), "axe.min.js")
-        return q if os.path.exists(q) else None
-    except ImportError:
-        return None
 
 AXE = axe_path()
 if not AXE:

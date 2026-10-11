@@ -22,16 +22,3 @@ class UserError(ValueError):
 def message(key: str, **params) -> dict:
     """A message for the interface (not an error): ``{"key": ..., "params": {...}}``."""
     return {"key": key, "params": params}
-
-
-def italian(msg) -> str:
-    """The Italian text of a message ``{"key", "params"}`` (for the tools that write Italian text on the server side, like TP Mine); plain placeholders only."""
-    import json
-    from pathlib import Path
-    if not isinstance(msg, dict):
-        return str(msg)
-    lines = (Path(__file__).parent / "web" / "lang" / "it.js").read_text(encoding="utf-8").strip().splitlines()
-    text = json.loads("{" + "\n".join(lines[1:-1]) + "}").get(msg["key"], msg["key"])
-    for name, value in (msg.get("params") or {}).items():
-        text = text.replace("{" + name + "}", str(value))
-    return text
