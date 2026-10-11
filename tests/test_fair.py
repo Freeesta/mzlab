@@ -1,4 +1,4 @@
-"""Open-data exports (mzlab/web/fair.js): MassBank 2.x record checked with the rules of the format (an independent validator written here), SIRIUS 6 `.ms`.
+"""Open-data exports (mzlab/web/fair.js, TP_Mine/js/30_untarget_fair.js): MassBank 2.x record checked with the rules of the format (an independent validator written here), SIRIUS 6 `.ms`, GNPS2 FBMN files read back by the readers of the untargeted tables.
 Hand-written examples in tests/data/fair/."""
 import json
 import re
@@ -176,3 +176,41 @@ def test_sirius_without_formula_and_without_energy():
     g = parse_ms(js("return F.siriusMs([{name: 'a', mass: 301.1, pol: -1, ms2: [{mz: [100], it: [5], ce: null}]}])"))[0]
     assert "formula" not in g and g["ionization"] == "[M-H]-" and "ce" in g
 
+
+
+# ---------------------------------------------------------------- GNPS2 FBMN / IIMN (TP_Mine/js/30_untarget_fair.js), read back by the readers of MATCH_UNTARGETED
+UD = ROOT / "tests" / "data" / "untargeted"
+PRE2 = f"""globalThis.window = globalThis; globalThis.FAIR = require({str(WEB / 'fair.js')!r});
+const U = require({str(ROOT / 'TP_Mine' / 'js' / '25_untarget.js')!r}); const X = require({str(ROOT / 'TP_Mine' / 'js' / '28_untarget_export.js')!r}); const N = require({str(ROOT / 'TP_Mine' / 'js' / '30_untarget_fair.js')!r});
+const fs = require('fs'); const rd = p => fs.readFileSync({str(UD)!r} + '/' + p, 'utf8');
+const T = () => U.build([{{ name: 'fbmn_quant.csv', text: rd('mzmine/fbmn_quant.csv') }}, {{ name: 'fbmn.mgf', text: rd('mzmine/fbmn.mgf') }}, {{ name: 'fbmn_edges.csv', text: rd('mzmine/fbmn_edges.csv') }}], {{ pol: 1 }});
+"""
+
+
+def js2(code):
+    p = subprocess.run(["node", "-e", PRE2 + f"console.log(JSON.stringify((() => {{ {code} }})()))"], check=True, capture_output=True, encoding="utf-8")
+    return json.loads(p.stdout)
+
+
+def test_gnps_package_is_read_back_by_the_untargeted_readers():
+    r = js2("""const t = T(), fs_ = t.features; t.edges.push({ a: '1', b: '5', type: 'MS1 annotation', score: 0.9, annotation: '[M+H]+ [M+Na]+ dm/z=21.98' }); const g = N.gnps(t, fs_); const names = g.map(x => x[0]);
+      const t2 = U.build(g.map(([n, text]) => ({ name: n === 'quant.csv' ? 'fbmn_quant.csv' : n === 'ms2.mgf' ? 'fbmn.mgf' : 'fbmn_edges.csv', text })), { pol: 1 });
+      const brief = x => x.features.map(f => [f.id, f.mz, f.rt, f.areas, f.group || null, f.iin ? f.iin.id : null, f.ms2 ? [f.ms2.mz, f.ms2.it] : null]);
+      return { names, a: brief(t), b: brief(t2), ea: t.edges.map(e => [e.a, e.b, e.type, e.score]), eb: t2.edges.map(e => [e.a, e.b, e.type, e.score]), samples: [t.samples, t2.samples], mgf: g[1][1] };""")
+    assert r["names"] == ["quant.csv", "ms2.mgf", "iin_edges.csv"]
+    assert r["a"] == r["b"] and r["samples"][0] == r["samples"][1]
+    assert r["eb"] == [["1", "5", "MS1 annotation", 0.9]]          # only IIN edges between exported features travel: cosine edges are the work of GNPS2, the edge to 6 has no row
+    assert not any(ln.startswith(("NAME=", "LEVEL=", "LIBRARY")) for ln in r["mgf"].split("\n")) and r["mgf"].count("FEATURE_ID=") == r["mgf"].count("BEGIN IONS")
+
+
+def test_quant_header_and_rows_follow_the_mzmine_format():
+    q = js2("return N.quant(T(), T().features)")
+    lines = q.strip().split("\n")
+    assert lines[0].split(",")[:7] == ["row ID", "row m/z", "row retention time", "correlation group ID", "annotation network number", "best ion", "neutral M mass"]
+    assert lines[0].endswith("Campione_A_pos.mzML Peak area,Campione_B_pos.mzML Peak area") and lines[1].startswith("1,184.1332,5.2,3,7,[M+H]+,183.1259,100000,0")
+
+
+def test_subset_edges_and_no_ms2():
+    r = js2("const t = T(); const sub = t.features.filter(f => f.id === '1'); return { e: N.edges(t, sub), m: N.mgf(t, t.features.filter(f => !f.ms2)), s: N.sirius(t, sub) };")
+    assert r["e"] == "" and r["m"] == ""                                   # an edge needs both ends; no MS2 = no block
+    assert ">compound feature_" in r["s"] and ">parentmass 184.1332" in r["s"]
