@@ -4,7 +4,7 @@
    ones (present at t0 or in the blank, profile with no trend, RT incoherent with the mass shift), separates primary from secondary products and
    chooses the time of the MS2 experiment. Masses come from LCMS (ELEMENTS through PAL), never typed by hand; pure function of (level, seed). */
 "use strict";
-const LCCIN = (() => {
+const LCCINDATA = (() => {
   const P = typeof PAL !== "undefined" ? PAL : require("./motore.js");
   const L = typeof LCMS !== "undefined" ? LCMS : require("./esercizi-lcms.js");
   const TIMES = [0, 10, 20, 40, 80, 160];                    // min of irradiation; index 0 is t0 (no light)
@@ -57,6 +57,11 @@ const LCCIN = (() => {
     return m.blankFrac <= 0.05 && m.t0Frac <= 0.2 && m.ratio <= 1.7 && m.max <= 70;               // flat
   }
 
+  return { P, L, TIMES, LOQ, FRAC, POLAR, APOLAR, LEVELS, KIND_TRUTH, pick, fx, round1, shapeB, shapeC, profile, metrics, consistent };
+})();
+
+const LCCIN = (() => {
+  const { P, L, TIMES, LOQ, FRAC, POLAR, APOLAR, LEVELS, KIND_TRUTH, pick, fx, round1, shapeB, shapeC, profile, metrics, consistent } = LCCINDATA;
   function genCin(level, seed) {
     const cfg = LEVELS[level] || LEVELS[1];
     for (let attempt = 0; attempt < 120; attempt++) {

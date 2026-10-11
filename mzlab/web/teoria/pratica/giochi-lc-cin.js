@@ -3,8 +3,8 @@
    Synthetic data, declared as such. Three steps: discard the false candidates, primary or secondary, time of the MS2 experiment.
    The coherence feedback gives numbers; the aids (3 levels: observation, family, zone) never say which candidate is which. */
 "use strict";
-const LCCINUI = (() => {
-  const { sgn, frame, seed, fbSet, lock, open, aids, last } = LCUI;
+const LCCINVIEW = (() => {
+  const { sgn } = LCUI;
   const fx = LCCIN.fx, T = LCCIN.TIMES;
   const LVC = `<option value="1">1 · quattro candidati, rumore basso</option><option value="2" selected>2 · cinque candidati, più tipi di falsi</option><option value="3">3 · sei candidati, isomeri, rumore alto</option>`;
   const CLS = { tengo: "prodotto vero", t0bianco: "già presente a t0 o nel bianco", rt: "RT incoerente con il Δm", piatto: "profilo piatto, senza cinetica" };
@@ -39,13 +39,9 @@ const LCCINUI = (() => {
     return `<div class="cin-tw"><table class="eitab cin-tab" id="${tabId}"><caption class="note">Aree XIC (migliaia di conteggi), un campione per colonna. Il precursore è dato come riferimento.</caption>${head}${row("Precursore", e.precursor, true)}${e.features.map(f => row(f.id, f)).join("")}</table></div>`;
   }
 
-  function cin(root) {
-    const fr = frame(root, LVC, next);
-    function next() {
-      const e = last.cin = LCCIN.genCin(fr.level(), seed()), tabId = "cin-t" + e.seed;
-      const kept = e.features.filter(f => f.truth === "tengo");
-      const opts = `<option value="">—</option>`;
-      fr.wk.innerHTML = `<h3>Profili di un prodotto di trasformazione</h3>
+  function markup(e, tabId, kept) {
+    const opts = `<option value="">—</option>`;
+    return `<h3>Profili di un prodotto di trasformazione</h3>
         <p>Il precursore <b>${LCUI.sub(e.precursor.f)}</b> (${e.desc}) è stato irraggiato con TiO<sub>2</sub>; i campioni sono stati prelevati a ${T.slice(1).join(", ")} min, più un campione a t0 (senza luce) e un bianco. Le aree XIC dei candidati sono in tabella e nel grafico.</p>
         <p class="note">Dati sintetici costruiti a scopo didattico: cinetica del primo ordine più rumore, formule inventate, non misure. Regola didattica per la fase inversa: un prodotto più polare (per esempio ossidato) eluisce prima del precursore, uno meno polare dopo.</p>
         <div class="hpbox noprint"></div>${chart(e, tabId)}${table(e, tabId)}
@@ -57,6 +53,19 @@ const LCCINUI = (() => {
         <div class="row"><button type="button" class="pri ck2">Controlla</button></div><div class="fb"></div></div>
         <div class="st off" inert><h4 id="c3">3. Il campione per l'MS<sup>2</sup></h4><p class="note">Scegli un prodotto da frammentare e il tempo di irraggiamento a cui prelevare il campione.</p>
         <div class="row"><label>Prodotto <select class="c3p"><option value="">—</option>${kept.map(f => `<option value="${f.id}">${f.id}</option>`).join("")}</select></label><label>Tempo <select class="c3t"><option value="">—</option>${T.slice(1).map((t, i) => `<option value="${i + 1}">${t} min</option>`).join("")}</select></label><button type="button" class="pri ck3">Controlla</button></div><div class="fb"></div></div>`;
+  }
+  return { CLS, T, LVC, markup };
+})();
+
+const LCCINUI = (() => {
+  const { sgn, frame, seed, fbSet, lock, open, aids, last } = LCUI;
+  const { CLS, T, LVC } = LCCINVIEW;
+  function cin(root) {
+    const fr = frame(root, LVC, next);
+    function next() {
+      const e = last.cin = LCCIN.genCin(fr.level(), seed()), tabId = "cin-t" + e.seed;
+      const kept = e.features.filter(f => f.truth === "tengo");
+      fr.wk.innerHTML = LCCINVIEW.markup(e, tabId, kept);
       aids(fr.wk.querySelector(".hpbox"), e.help);
       const st = fr.wk.querySelectorAll(".st");
       let s1 = 0, s2 = 0;
