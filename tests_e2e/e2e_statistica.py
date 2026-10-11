@@ -39,9 +39,12 @@ try:
         pg = r.page(p)
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "S_t60.mzML", D / "Blank_1.mzML"], 4)
         def lr_sections():
-            assert pg.get_attribute("#stbar [data-cmd=stat]", "aria-label") or pg.inner_text("#stbar [data-cmd=stat]")
+            pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
+            assert "Statistica" in pg.inner_text("#stmenu"), "the panel is reached from «Altro» (the toolbar has no room for one more button)"
+            pg.click("#stmenu >> text=Statistica"); pg.wait_for_selector("#sb-panel-stat details.stat-sec")
             assert sections(pg)[0] == "meta", "metadata first"
-        step("toolbar button «Statistica» opens the panel; metadata is the first section", lr_sections)
+            assert any(c["id"] == "stat" for c in pg.evaluate("BARRA.commands.map(c=>({id:c.id}))")), "and from the palette"
+        step("«Altro» opens the Statistica panel; metadata is the first section", lr_sections)
         def meta_table():
             rows = pg.evaluate("[...document.querySelectorAll('#cmp-tab tbody tr')].map(tr=>[tr.querySelector('[data-m=type]').value, tr.querySelector('[data-m=time]').value])")
             d = dict(zip(pg.evaluate("E.files.map(f=>f.file)"), rows))
