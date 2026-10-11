@@ -7,7 +7,7 @@
 //  - zoom history (Ctrl/Cmd+Z), whole view (Backspace), linked time axes, one-line description of the scan
 
 const IC_RULER = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="13" height="6" rx="1"/><path d="M4.5 5v2.4M7.5 5v3.2M10.5 5v2.4M13 5v1.6"/></svg>';
-const IC_LINK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.4-2.4a2.6 2.6 0 0 0-3.7-3.7l-.7.7"/><path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.1 9.2a2.6 2.6 0 0 0 3.7 3.7l.7-.7"/></svg>';
+const IC_SYNC = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 5.5c1.5 0 1.5-3 3-3s1.5 3 3 3 1.5-1.5 2.5-1.5M1.5 13c1.5 0 1.5-3 3-3s1.5 3 3 3 1.5-1.5 2.5-1.5"/><path d="M11.5 1.5v13" stroke-dasharray="1.6 1.6"/><path d="M13 7.5 11.5 9 10 7.5" /></svg>';
 
 // y axis in % of the highest peak: the default is % for the MS2 spectra (the relative intensities of the fragments are what is compared), cps for Full Scan
 const specRel = p => p.rel ?? false;
@@ -126,7 +126,7 @@ function syncT(p) {
     .forEach(q => { q.zoom = p.zoom ? [...p.zoom] : null; q._zs = key; draw(q); });
 }
 function toggleTl(p) {
-  p.tl = !p.tl; const b = p.el.querySelector('[data-a="tlink"]'); if (b) b.classList.toggle("on", p.tl);
+  p.tl = !p.tl; const b = p.el.querySelector('[data-a="tlink"]'); if (b) { b.classList.toggle("on", p.tl); b.setAttribute("aria-pressed", String(!!p.tl)); }
   if (p.tl) { const o = tabPanels().find(q => q !== p && q.tl && q.type !== "spec" && q.type !== "map"); if (o) { p.zoom = o.zoom ? [...o.zoom] : null; p._zs = JSON.stringify(p.zoom || null); draw(p); } }
   uiSave();
 }

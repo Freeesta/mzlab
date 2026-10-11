@@ -101,8 +101,8 @@ try:
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
             hov = pg.evaluate(f"(()=>{{const p={q}, a=p._a; const j=a.data[0].d.y.indexOf(Math.min(...a.data[0].d.y)); const h=a.hov(a.X(a.data[0].d.mz[j])); return h&&h.html}})()")
             assert hov and "cala" in hov and "−" in hov, hov                 # the sign and the word in the tooltip, not only the colour
-            sel = pg.evaluate(f"{q}.el.querySelector('[data-o=bg]').selectedOptions[0].textContent")
-            assert "SUB_t0" in sel, sel                                      # the «fondo» menu starts from the reference of the session
+            sel = pg.evaluate(f"{q}.el.querySelector('[data-o=corr]').getAttribute('aria-label')")
+            assert "SUB_t0" in sel, sel                                      # the «Correzione» menu starts from the reference of the session
         step("the spectrum is a mirror: up higher in the sample, down higher in the reference, sign in words, menu starts from the session", mirror)
         def spec_clip():
             pg.evaluate("S.ref.clip=true; SUBREF.refresh(E.tab,true)"); ready(pg); pg.wait_for_timeout(600)
