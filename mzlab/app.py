@@ -469,6 +469,9 @@ class App:
         item = self._item(k)
         pt = item.ptol(level, precursor, hr)
         mz, y, n = item.spectrum(rt0, rt1, level, precursor, prec_tol=pt, bin_da=bin_da, bg=bg, hr=hr, filt=filt)
+        if bg is not None:           # a difference is drawn as lines (up and down), never as a profile
+            return {"mode": "centroid", "diff": True, "mz": [round(float(v), 4) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n,
+                    **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
         return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request

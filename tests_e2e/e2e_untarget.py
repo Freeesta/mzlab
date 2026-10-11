@@ -97,6 +97,13 @@ try:
             pg.select_option("#unt-lv", "5"); pg.check("#unt-xf"); n, b = get("#unt-x-csv"); assert len(b.decode("utf-8").lstrip("\ufeff").split("\r\n")[:-1]) == 1 + 3          # only the filtered features
             pg.uncheck("#unt-xf"); pg.select_option("#unt-lv", "all")
         step("export: CSV with «;», xlsx and MGF with levels, decided level, licences; only the filtered features", export)
+        def fair():
+            def get(sel):
+                with pg.expect_download() as d: pg.click(sel)
+                return d.value.suggested_filename, Path(d.value.path()).read_bytes()
+            n, b = get("#unt-x-gnps"); assert n.startswith("gnps2_") and n.endswith(".zip") and b[:2] == b"PK" and b"quant.csv" in b and b"ms2.mgf" in b and b"row retention time" in b, n
+            n, b = get("#unt-x-sirius"); t = b.decode("utf-8"); assert n.endswith(".ms") and t.count(">compound") == 4 and ">parentmass" in t and ">ms2" in t and "NAME=" not in t, n
+        step("export for GNPS2 (zip with quant + MGF) and SIRIUS (.ms of the features with MS2)", fair)
         if os.environ.get("UNT_BENCH"):
             def bench():
                 rnd = random.Random(7); N = 5000

@@ -101,6 +101,21 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 
 Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 128 s a 13 s (l'indice si costruisce durante l'invio, che dura il 20% in più; apertura + primo disegno 267 s → 180 s); i picchi non stanno più nella memoria del motore (heap WASM 1011 → 571 MB: resta la tabella delle scansioni, ~1,9 KB per scansione, 440 MB per 237.000 scansioni sintetiche) e la RSS scende di 350 MB. Nei file LR piccoli l'invio costa il doppio (8,7 s contro 4,3: l'indice è costruito subito, prima si costruiva al primo disegno, 3,9 s → 1,4 s) e la riapertura scende da 11,4 s a 8,2 s, di cui ~4,5 s sono l'avvio del motore. Mappa di tutti i file: ×4 per HR (23 s → 5,6 s, `np.maximum.at` al posto dell'ordinamento per cella), invariata per LR. XIC su 20 file LR 69 → 45 ms (mediana), sotto i 100 ms; su 15 file HR resta 500 ms perché la risposta contiene 475.000 numeri da scrivere in JSON (`rounded()` ha tolto 130 ms): il lavoro sull'indice è ~1 ms. Spettro 2,5 ms (LR) e 7,5 ms (HR), cambio file 5,7 e 74 ms: sotto 16 ms e 200 ms.
 
+## Costruttore del `.mzidx` (`python3 tools/bench.py --indici`, Chromium Linux 4 CPU, 2026-10-11)
+«python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze di riapertura tra le due righe sono rumore: l'indice è lo stesso). File: gli esempi anonimi del sito (LR: Full Scan; HR: il ritaglio Orbitrap ripetuto fino a 140 MB). Un solo giro per scenario.
+
+| scenario | constructor | files | file_mb | build_total_s | rss_peak_build_mb | first_draw_s | reopen_first_draw_s | rust_passes_max | digest |
+|---|---|---|---|---|---|---|---|---|---|
+| 20 Full Scan LR | python | 20 | 107.3 | 15.39 | 747.9 | 0.26 | 5.96 | 0 | 35255d6425e8 |
+| 20 Full Scan LR | pool | 20 | 107.3 | 9.51 | 749.5 | 0.34 | 7.91 | 1 | 35255d6425e8 |
+| 15 HR DDA (140 MB each) | python | 15 | 2101.0 | 299.63 | 1010.2 | 1.85 | 12.19 | 0 | 77a5810c63d1 |
+| 15 HR DDA (140 MB each) | pool | 15 | 2101.0 | 252.59 | 1321.9 | 1.34 | 11.61 | 3 | 77a5810c63d1 |
+
+- 20 Full Scan LR: tempo totale −38 %, memoria uguale, array identici. 15 HR DDA: tempo −16 %, memoria massima +31 %, array identici. Somma dei due scenari: −17 %.
+- Decisione: il pool resta il costruttore predefinito perché la correttezza è provata (array identici) e la velocità non blocca (regola di Federico); è più veloce in entrambi gli scenari. Il collo di bottiglia che resta è il lavoro in serie di Python prima della costruzione (intestazioni, SHA-256 dell'intero file, tabella delle scansioni), non l'ordinamento dei picchi: spostarlo in Rust è il passo successivo.
+- SIMD (`+simd128`), 20 Full Scan LR, pool, tre giri: tempo totale 8,83 / 10,41 / 8,13 s con SIMD (media 9,12 s), 7,74 / 10,05 / 10,09 s senza (media 9,29 s); somma dei tempi nel worker (`buildMs`) 9,21 contro 9,02 s. Nessuna differenza misurabile; `.wasm` 773 KB contro 776 KB.
+- Il costruttore nativo del desktop (memmap2 + rayon) non è misurato qui: va misurato sul Mac con `python3 tools/bench.py --indici` dentro l'app.
+
 ## Pulizia del codice (motore Python, 5 file Full Scan sintetici, 3 giri; Chromium cloud senza WASM Rust)
 | misura | prima | dopo |
 |---|---|---|
@@ -118,6 +133,9 @@ Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (
 | byte scaricati fino a rete ferma | 1 034 427 | 330 178 (comprende ~85 KB di Teoria scaldata) |
 
 Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
+
+## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
+Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
 
 ## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux, 2026-10-11)
 Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Prima = `origin/main` con la sola strumentazione `?perf`; dopo = questo pacchetto. Un giro; tempi in ms, mediana / p95.

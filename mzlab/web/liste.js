@@ -385,6 +385,12 @@ const LISTE = (() => {
     };
   }
 
+  // m => true when the m/z matches a Keller 2008 entry; null while the lists load. Independent of the global contaminant switch: it serves "remove contaminants" of a spectrum.
+  function keller(polarity, ppm) {
+    const idx = ST.idx || ensure(); if (!idx) return null;
+    return m => find(idx, polarity, m, ppm).some(x => x.list === "keller");
+  }
+
   // Peak tables (HR): compatible entries of an m/z, split into shown and hidden-by-exclusion; null if the switch is off
   function compat(mz, polarity, ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return null;
@@ -770,7 +776,7 @@ const LISTE = (() => {
     addUserListFromCsv,
     deleteUserList,
     toggleListActive,
-    forSpec,
+    forSpec, keller,
     textFor,
     compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,

@@ -215,7 +215,7 @@ function uiSave(now = false) {
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
         dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -761,16 +761,18 @@ function menu(ev, items) {
       d.appendChild(ic);
       d.appendChild(document.createTextNode(it.label));
     } else {
-      d.textContent = it.label;
+      d.textContent = (it.check ? "\u2713 " : "") + it.label;
     }
     if (it.tip) d.title = it.tip;
-    d.setAttribute("role", "menuitem");
+    if (it.aria) d.setAttribute("aria-label", it.aria);
+    d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
+    if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
     if (it.dim) d.className = "dim"; else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     m.appendChild(d);
   });
   m.hidden = false; m.setAttribute("role", "menu");
   if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {                 // keyboard: arrows move, Enter/Space choose, Esc closes
-    const its = [...m.querySelectorAll('div[role=menuitem]:not(.dim)')], i = its.indexOf(document.activeElement);
+    const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim)')], i = its.indexOf(document.activeElement);
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
@@ -779,7 +781,7 @@ function menu(ev, items) {
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
-  if (ev.kbd) { const f = m.querySelector('div[role=menuitem]:not(.dim)'); if (f) f.focus(); }
+  if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere

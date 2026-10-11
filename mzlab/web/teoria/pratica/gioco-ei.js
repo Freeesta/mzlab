@@ -298,7 +298,7 @@ function stepStructure(el) {
 
 // ------------------------------------------------------------------ end of a problem
 const solutionSvg = it => `<div class="solsvg" data-smi="${EH(it.smiles)}"></div>`;
-function fillSvg(root) { ocl().then(O => root.querySelectorAll(".solsvg").forEach(d => { try { d.innerHTML = O.Molecule.fromSmiles(d.dataset.smi).toSVG(260, 170); } catch (_) { /* no drawing */ } })).catch(() => { /* offline file: no drawing */ }); }
+function fillSvg(root) { ocl().then(O => root.querySelectorAll(".solsvg").forEach(d => { try { d.innerHTML = (window.MOLUI ? MOLUI.svg(O.Molecule.fromSmiles(d.dataset.smi).toSVG(260, 170)) : O.Molecule.fromSmiles(d.dataset.smi).toSVG(260, 170)); } catch (_) { /* no drawing */ } })).catch(() => { /* offline file: no drawing */ }); }
 function finish() {
   const it = S.item, R = S.res, total = S.pts;
   const sc = { M: R.M ?? 0, formula: R.formula ?? 0, iso: R.formula ?? 0, meccanismi: R.ioni ?? 0, serie: R.ioni ?? 0, struttura: R.struttura ?? 0 };
