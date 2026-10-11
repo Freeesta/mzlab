@@ -625,27 +625,43 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     return { rows };
   }
 
+  // one handler per command: (message, request id) -> the fields of the answer
+  async function listCmd() {
+    await migrateAll();
+    let voci = [], r = {};
+    if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e) { r = { folderError: String(e && e.name || e) }; } }
+    return { ...r, libs: [...(await listLibraries()), ...FOLD.infos], voci, folder: { mode: FOLD.mode, name: foldName() }, opfs: await probeOpfs() };
+  }
+  async function indexCmd(m, reqId) {
+    const w = await wasm();
+    if (!w || !FOLD.dir) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" });
+    return { info: await foldAdd(w, await FOLD.dir.file(m.name), reqId) };
+  }
+  const COMMANDS = {
+    config: m => { forceJs = !!m.forceJs; allowWasm = !!m.wasm; return {}; },
+    engine: async () => ({ wasm: !!(await wasm()) }),
+    crash: async () => { const w = await wasm(); if (w) w.crash(); return {}; },
+    folder: async () => { await FOLD.pending; return {}; },
+    catalog: m => catalogCmd(m),
+    download: (m, reqId) => downloadCmd(m, reqId),
+    cancel: () => { if (DL.abort) DL.abort.abort(); return {}; },
+    list: listCmd,
+    add: async (m, reqId) => ({ info: await addLibrary(m.file, reqId) }),
+    index: indexCmd,
+    remove: async m => { if (CARTELLA.isFolderId(m.id)) await foldRemove(m.id); else await removeLibrary(m.id); return {}; },
+    search: m => runSearch(m),
+    searchAll: (m, reqId) => runAll(m, reqId),
+    analogs: m => runAnalogs(m),
+  };
+
   onmessage = async e => {
     const m = e.data, reqId = m.reqId;
     try {
-      let r;
       if (m.cmd === "folder") { FOLD.tried = true; FOLD.pending = (FOLD.pending || Promise.resolve()).then(() => setFolder(m)); }      // in order, and set at once: the messages that follow wait for it
       else if (m.cmd !== "config" && FOLD.pending) await FOLD.pending;
-      if (m.cmd === "config") { forceJs = !!m.forceJs; allowWasm = !!m.wasm; r = {}; }
-      else if (m.cmd === "engine") r = { wasm: !!(await wasm()) };
-      else if (m.cmd === "crash") { const w = await wasm(); if (w) w.crash(); r = {}; }
-      else if (m.cmd === "folder") { await FOLD.pending; r = {}; }
-      else if (m.cmd === "catalog") r = await catalogCmd(m);
-      else if (m.cmd === "download") r = await downloadCmd(m, reqId);
-      else if (m.cmd === "cancel") { if (DL.abort) DL.abort.abort(); r = {}; }
-      else if (m.cmd === "list") { await migrateAll(); let voci = []; if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e) { r = { folderError: String(e && e.name || e) }; } } r = { ...r, libs: [...(await listLibraries()), ...FOLD.infos], voci, folder: { mode: FOLD.mode, name: foldName() }, opfs: await probeOpfs() }; }
-      else if (m.cmd === "add") r = { info: await addLibrary(m.file, reqId) };
-      else if (m.cmd === "index") { const w = await wasm(); if (!w || !FOLD.dir) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" }); r = { info: await foldAdd(w, await FOLD.dir.file(m.name), reqId) }; }
-      else if (m.cmd === "remove") { if (CARTELLA.isFolderId(m.id)) await foldRemove(m.id); else await removeLibrary(m.id); r = {}; }
-      else if (m.cmd === "search") r = await runSearch(m);
-      else if (m.cmd === "searchAll") r = await runAll(m, reqId);
-      else if (m.cmd === "analogs") r = await runAnalogs(m);
-      else throw new Error("comando sconosciuto: " + m.cmd);
+      const run = Object.hasOwn(COMMANDS, m.cmd) ? COMMANDS[m.cmd] : null;
+      if (!run) throw new Error("comando sconosciuto: " + m.cmd);
+      const r = await run(m, reqId);
       postMessage({ type: "done", reqId, ...r });
     } catch (err) {
       let j = null; if (typeof err === "string" && err.startsWith("{")) { try { j = JSON.parse(err); } catch (e2) { j = null; } }      // an error of the engine itself: {"error_key", "params"}

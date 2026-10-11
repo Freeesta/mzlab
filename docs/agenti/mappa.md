@@ -62,7 +62,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `lang/it.js` (3121) (it)
 - `libreria-cartella.js` (194) The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of  — CARTELLA:15, nativeDir:123
 - `libreria-scarica.js` (87) Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page  — SCARICA:8, downloadPackage:47
-- `libreria-worker.js` (657) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, runAll:608
+- `libreria-worker.js` (673) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, indexCmd:635
 - `libreria.js` (570) Part D: compare a MS2 spectrum with the spectral libraries (MSP, MGF) the user has loaded. Classic s — LIB:5, mirror:249, searchFrom:333, whatIs:403, identifyAll:511
 - `liste.js` (817) Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists — LISTE:6, csvParse:142, userList:207, mount:532, open:759
 - `livelli-1.js` (105) Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of 
@@ -117,7 +117,8 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 ## Python (`mzlab/`)
 - `__init__.py` (3) mzlab: look for transformation products (TP) in full-scan data, prepare MRM transitions.
 - `analog.py` (259) Analog traces of an mzML (pump pressure, flow, temperature...) and the LC gradient model. — parse_chromeleon:123, detector_delay:222
-- `api.py` (459) The endpoints of the program, independent of the transport. — _map:101, dispatch:193
+- `api.py` (419) The endpoints of the program, independent of the transport. — dispatch:385
+- `api_aiuti.py` (185) Helpers of the endpoints (mzlab/api.py): parsing of query values, the difference options, the JSON a — _map:95
 - `app.py` (612) The engine behind the page: the files the student opened, the session and the notebook. Runs inside  — App:59
 - `bigfiles.py` (37) Very large and high-resolution profile files: how to recognise them and what to tell the user.
 - `browser.py` (148) Entry point of the browser version: this module runs inside Pyodide (see web/browser-worker.js).
