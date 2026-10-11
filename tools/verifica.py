@@ -244,6 +244,7 @@ AREE = [
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio", "e2e_mzidx"}), ("mzlab/web/archivio", {"e2e_mzidx"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
+    ("mzlab/web/barra.js", {"e2e_strumenti", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}),
     ("mzlab/web/pannelli.js", {"e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco"}),
     ("mzlab/web/grafici.js", {"e2e_cromato", "e2e_mappa", "e2e_map3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour"}),
     ("mzlab/web/picchi.js", {"e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour"}),

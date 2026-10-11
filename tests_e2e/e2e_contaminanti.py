@@ -146,7 +146,7 @@ try:
             assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
             assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "liste"
             # Close dialog
-            shut(pg, "#listex"); pg.wait_for_timeout(400)
+            pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); pg.wait_for_timeout(400)
         step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
 
         def user_csv():

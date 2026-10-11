@@ -15,14 +15,15 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1500})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        tab = lambda t: (pg.click(f"#hri-tabs [data-t={t}]"), pg.wait_for_timeout(900))
+        tab = lambda t: (pg.evaluate(f"BARRA.setTab('{t}')"), pg.wait_for_timeout(900))
         body = lambda: pg.inner_text("#hri-body")
         def visible():
-            assert pg.locator("#hri-tabs button").count() == 9 and not pg.is_visible("#hrinfo"), "the sidebar opens on the File tab"
-            tab("hdr")                                       # an info tab of the sidebar brings the bar up
+            assert pg.locator("#stbar [data-cmd=scan], #stbar [data-cmd=form], #stbar [data-cmd=idn]").count() == 3 and not pg.is_visible("#hrinfo"), "closed until a tool is chosen"
+            pg.evaluate("BARRA.setPinned(true)")
+            tab("hdr")                                       # an information tool of the toolbar brings the panel up
             assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "hdr"
-            assert pg.evaluate("getComputedStyle(document.querySelector('#dfiles')).position") == "sticky", "the sidebar stays on screen while the page scrolls"
-        step("information bar with its 9 tabs, in the sticky sidebar", visible)
+            assert pg.evaluate("getComputedStyle(document.querySelector('#dfiles')).position") == "sticky", "pinned, the panel stays on screen while the page scrolls"
+        step("information tools of the toolbar (six), in the pinned panel", visible)
         def hdr():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.45, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(1500)
@@ -46,29 +47,14 @@ try:
         def fil():
             tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t and "Status log" in t, t[:300]
         step("tab 3: file and instrument as the mzML says them", fil)
-        def comp():
-            c = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
-            pg.evaluate(f"(()=>{{const c={c};setActive(c);c.sel=[{c}._a.full[0]+2,{c}._a.full[0]+4];draw(c)}})()"); pg.wait_for_timeout(800)
-            tab("com"); n0 = pg.evaluate("E.panels.length"); pg.click("#hri-go"); pg.wait_for_timeout(2500)
-            s = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito|@composite/.test(p.title));return s?{r0:s.r0,r1:s.r1,n:s._a&&s._a.data?s._a.data[0].d.mz.length:0}:null})()")
-            assert pg.evaluate("E.panels.length") == n0 + 1 and s and s["n"] > 10, s
-            pg.evaluate(f"(()=>{{const c={c};setActive(c);c.sel=[{c}._a.full[0]+6,{c}._a.full[0]+8];draw(c)}})()"); pg.wait_for_timeout(600)
-            pg.evaluate("document.querySelector('#hri-tabs [data-t=com]').click()"); pg.wait_for_timeout(600)
-            pg.check("#hri-fol") if False else pg.evaluate("document.querySelector('#hri-fol').click()")
-            pg.evaluate(f"(()=>{{const c={c};c.sel=[{c}._a.full[0]+10,{c}._a.full[0]+12];draw(c)}})()"); pg.wait_for_timeout(2500)
-            s2 = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito|@composite/.test(p.title));return [s.r0,s.r1]})()")
-            assert abs(s2[0] - (pg.evaluate(f"{c}._a.full[0]") + 10)) < 0.01, s2
-        step("tab 7: the composite spectrum of an interval, and «Segui» keeps it on the selection", comp)
         def launchers():
             tab("cmp"); pg.click("#hri-go"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
-            tab("pks"); assert "Parametri" in body() and pg.is_visible("#hri-all") and pg.is_visible("#hri-tab")
             tab("idn"); assert "Identifica tutte" in body()
-            tab("tre"); pg.click("#hri-go"); pg.wait_for_selector("#mt-out", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("tabs 4-9 open the functions that already exist (formulae, isotopes, peaks, libraries, MSn tree)", launchers)
+        step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.banco.info')).tab") == "tre"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.banco.info')).tab") == "idn"
             h = pg.evaluate("document.querySelector('#hrinfo').offsetHeight"); assert h >= 160
         step("the tab and the height are remembered", persist)
     r.close()
@@ -97,7 +83,7 @@ if MSN:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1500})
             load(pg, [MSN], 8000, 2)
             def msn():
-                pg.wait_for_timeout(2500); pg.click("#hri-tabs [data-t=fil]"); pg.wait_for_timeout(1500)
+                pg.wait_for_timeout(2500); pg.evaluate("BARRA.setTab('fil')"); pg.wait_for_timeout(1500)
                 t = pg.inner_text("#hri-body"); assert "MS8" in t or "MS8:" in t.replace(" ", "") or "ms8" in t.lower(), t[:400]
                 assert "317 > 261 > 244" in t, t[-600:]
             step("infusion MSn: the file tab lists the scan types up to MS8, one per path", msn)

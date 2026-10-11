@@ -733,23 +733,14 @@ const LISTE = (() => {
     return { render, state };
   }
 
-  // Opens the reference list panel: switches tab in sidebar if available, or opens modal dialog #listedlg
+  // Opens the reference lists: the Liste panel of the drawer in the Dati view, the modal dialog #listedlg elsewhere
   function open(opt = {}) {
     ensure();
     if (window.BARRA && BARRA.isDataView()) {
       BARRA.setTab("lists", opt);
       return;
     }
-    // 1. Check if sidebar tab for lists exists in DOM (e.g. from Binario A or sidebar)
-    const asideTabBtn = document.querySelector("#tab-btn-liste, [data-tab='liste'], #sb-tab-lists");
-    const asidePanel = document.querySelector("#aside-panel-liste, [data-panel='liste'], #sb-panel-lists");
-    if (asideTabBtn && asidePanel) {
-      if (typeof asideTabBtn.click === "function") asideTabBtn.click();
-      mount(asidePanel, opt);
-      return;
-    }
-
-    // 2. Otherwise open in a dedicated modal dialog
+    // outside the Dati view the lists open in a dedicated modal dialog
     let dlg = document.querySelector("#listedlg");
     if (!dlg) {
       dlg = document.createElement("dialog");
@@ -798,18 +789,6 @@ const LISTE = (() => {
     openSearch: open
   };
 })();
-
-if (typeof document !== "undefined") {
-  const bindListeBtn = () => {
-    const b = document.querySelector("#np-liste");
-    if (b) b.onclick = () => {
-      if (window.BARRA && BARRA.isDataView()) BARRA.setTab("lists");
-      else LISTE.open();
-    };
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindListeBtn);
-  else bindListeBtn();
-}
 
 if (typeof module !== "undefined") module.exports = LISTE;
 if (typeof window !== "undefined") window.LISTE = LISTE;
