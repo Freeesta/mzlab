@@ -304,6 +304,7 @@ I18N.add("it", {
   "load.err.oldBrowser": "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari.",
   "load.err.engineStart": "Non riesco ad avviare il motore di calcolo: {text}",
   "load.err.worker": "Errore: {text}",
+  "load.err.engineLost": "Il motore di calcolo si è fermato: ricarica la pagina.",
   "load.phrase.1": "Ignorando i warning",
   "load.phrase.2": "Schivando gli ftalati",
   "load.phrase.3": "Minando crypto di nascosto",

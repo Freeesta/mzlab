@@ -267,7 +267,15 @@ function buildFor(base, file, nid = null) {
 }
 
 let chain = Promise.resolve();      // the requests are answered one after the other: an index moved to OPFS is never swapped under a request in the middle
-onmessage = ev => { chain = chain.then(() => answer(ev.data)).catch(e => console.debug("[mzLab]", e)); };
+// Python lost its footing (a frozen or discarded tab came back: "NoGilError: Attempted to use PyProxy when Python GIL not held"): the page recreates the engine
+const dead = e => /GIL|PyProxy|has been destroyed|Pyodide/i.test(String(e && (e.name + " " + e.message) || e));
+onmessage = ev => {
+  if (ev.data && ev.data.ping) {                    // health check of the page after a resume: one trivial Python call
+    chain = chain.then(async () => { await started; let ok = !!py && !!handle; if (ok) try { py.runPython("1"); } catch (e) { ok = false; } postMessage({ type: "pong", ok }); }).catch(() => postMessage({ type: "pong", ok: false }));
+    return;
+  }
+  chain = chain.then(() => answer(ev.data)).catch(e => console.debug("[mzLab]", e));
+};
 
 async function answer({ id, method, url, body, blob }) {
   await started;
@@ -314,6 +322,7 @@ async function answer({ id, method, url, body, blob }) {
     }
   } catch (e) {
     const m = String(e && e.message || e);
+    if (dead(e)) return postMessage({ id, status: 500, dead: true, text: JSON.stringify({ error: m }) });
     status = 500; text = JSON.stringify(e && e.key ? { error: m, error_key: e.key } : /memory|alloc|RangeError/i.test(m) ? { error: "this file is too big for the memory of the browser", error_key: "err.memory.tooBig" } : { error: m });
   }
   if (later) { later.then(([st, tx]) => postMessage({ id, status: st, text: tx, ms: performance.now() - t0 }), e => postMessage({ id, status: 500, text: JSON.stringify({ error: String(e && e.message || e) }) })); return; }
