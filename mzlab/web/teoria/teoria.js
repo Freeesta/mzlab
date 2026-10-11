@@ -106,6 +106,17 @@ const TP = (() => {
     pn.innerHTML = (p ? `<a href="${p[0]}"><small>&larr; Precedente</small>${p[1]}. ${p[2]}</a>` : "<span></span>") +
                    (n ? `<a href="${n[0]}" style="text-align:right"><small>Successivo &rarr;</small>${n[1]}. ${n[2]}</a>` : "<span></span>");
     $("main").appendChild(pn);
+    // the index keeps its scroll from one chapter to the next (the active entry is brought into view if it would be hidden)
+    try { const y = sessionStorage.getItem("qqq.teoria.side"); if (y !== null) side.scrollTop = +y || 0; } catch (_) { /* no storage: top */ }
+    const cur = side.querySelector("li a.on"), sr = side.getBoundingClientRect();
+    if (cur && sr.height) { const cr = cur.getBoundingClientRect(); if (cr.top < sr.top) side.scrollTop -= sr.top - cr.top; else if (cr.bottom > sr.bottom) side.scrollTop += cr.bottom - sr.bottom; }
+    addEventListener("pagehide", () => { try { sessionStorage.setItem("qqq.teoria.side", String(side.scrollTop)); } catch (_) { /* not kept */ } });
+    // the neighbouring chapters are fetched ahead (small pages), unless the connection is saving data, slow or cellular (and never on a phone)
+    const net = navigator.connection || {};
+    if (!embedded && !PHONE && location.protocol !== "file:" && !net.saveData && net.type !== "cellular" && (!net.effectiveType || net.effectiveType === "4g") && window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports("speculationrules")) {
+      const urls = [p, n].filter(Boolean).map(c => c[0]);
+      if (urls.length) { const sr2 = document.createElement("script"); sr2.type = "speculationrules"; sr2.textContent = JSON.stringify({ prefetch: [{ source: "list", urls, eagerness: "immediate" }] }); document.head.appendChild(sr2); }
+    }
     // highlight the current section in the TOC
     const links = [...side.querySelectorAll(".toc a")];
     if (links.length && "IntersectionObserver" in window) {

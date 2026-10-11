@@ -18,6 +18,16 @@
   }
   window.QA11Y = { read: a11yRead, apply: a11yApply, write: function (o) { try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* not stored */ } a11yApply(o); } };
   a11yApply(a11yRead());
+  // chapter-to-chapter fade (teoria.css): without cross-document view transitions (or inside the app's iframe) the page gets a short CSS fade instead
+  if (window.top !== window || !("PageRevealEvent" in window)) R.classList.add("vt-no");
+  else {
+    // a transition the browser skips (page not ready, next page not opted in, fast successive navigations) is not an error; one that starts while the index
+    // and the header are not built yet (loaded machine) is skipped too: the page then simply appears, as before
+    var quiet = function (ev) { var t = ev.viewTransition; if (t) [t.ready, t.finished, t.updateCallbackDone].forEach(function (p) { p.catch(function () { /* skipped */ }); }); return t; };
+    // leaving the Teoria for the program (which does not opt in) skips the transition instead of aborting it
+    addEventListener("pageswap", function (ev) { var t = quiet(ev), u = ev.activation && ev.activation.entry && ev.activation.entry.url; if (t && u && !/\/teoria\/|\/static\/teoria\//.test(u)) t.skipTransition(); });
+    addEventListener("pagereveal", function (ev) { var t = quiet(ev); if (t && !document.querySelector("#side li")) t.skipTransition(); });
+  }
   // the drawings on canvas use fixed colours of the light theme: in the dark one they are swapped for their dark equivalents (the SVG ones are in teoria.css)
   var MAP = { "#24231f": "#e4e7eb", "#fff": "#1d2127", "#ffffff": "#1d2127", "#f4f3ef": "#252a31", "#c9c5bb": "#3a424e", "#e9e7e1": "#2c323b", "#6b675c": "#98a2b0",
     "#57534e": "#b6bfcb", "#2b5c8a": "#7db4e6", "#c2410c": "#fb923c", "#b42318": "#f87171", "#0e7490": "#22d3ee", "#b45309": "#fbbf24", "#efe3dc": "#3a2f29", "#e4cfc3": "#5a463b",

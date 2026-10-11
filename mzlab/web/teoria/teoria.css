@@ -313,3 +313,21 @@ html.lbon{overflow:hidden}
 /* standalone Teoria: link back to the program */
 #top a.btn#goapp{font-size:14px;white-space:nowrap}
 @media (max-width:480px){#top .t small{display:none}#top{flex-wrap:wrap}}
+
+/* between chapters: View Transitions across documents (Chrome/Edge/Safari; elsewhere ignored). Header and index stay still, the page content fades in
+   (the old page stays underneath, so there is no dip). No flash: <html> already has the theme background in both documents (tema_testa.py). */
+@view-transition{navigation:auto}
+#top{view-transition-name:vt-top}
+#side{view-transition-name:vt-side}
+::view-transition-group(vt-top),::view-transition-group(vt-side){animation:none}
+::view-transition-old(vt-top),::view-transition-old(vt-side){display:none}
+::view-transition-new(vt-top),::view-transition-new(vt-side){animation:none}
+::view-transition-old(root){animation:none}
+::view-transition-new(root){animation:vt-in 180ms ease-out both}
+@keyframes vt-in{from{opacity:0;transform:translateY(4px)}}
+/* without view transitions (tema.js sets html.vt-no): a short fade-in of the content */
+html.vt-no main{animation:vt-fade 120ms ease-out}
+@keyframes vt-fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){@view-transition{navigation:none}html.vt-no main{animation:none}}
+:root[data-a11y-reduce]::view-transition-group(*),:root[data-a11y-reduce]::view-transition-old(*),:root[data-a11y-reduce]::view-transition-new(*){animation:none!important}
+:root[data-a11y-reduce].vt-no main{animation:none!important}
