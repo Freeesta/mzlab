@@ -23,7 +23,7 @@ pub fn rankdata(a: &[f64]) -> Vec<f64> {
 
 /// `ndarray.sum()` of a contiguous float64 array: numpy adds pairwise (blocks of 8 accumulators), so a constant vector gives the same
 /// exact zero after centring here as in Python.
-fn psum(a: &[f64]) -> f64 {
+pub(crate) fn psum(a: &[f64]) -> f64 {
     let n = a.len();
     if n < 8 {
         let mut r = 0.0;

@@ -31,7 +31,7 @@ impl Query {
     pub fn some(&self, k: &str) -> Option<&str> {
         self.get(k).filter(|v| !v.is_empty())
     }
-    fn num(&self, k: &str) -> Result<Option<f64>> {
+    pub(crate) fn num(&self, k: &str) -> Result<Option<f64>> {
         match self.some(k) {
             None => Ok(None),
             Some(v) => v
@@ -40,7 +40,7 @@ impl Query {
                 .map_err(|_| Error::new("err.request.badNumber").with("name", k)),
         }
     }
-    fn level(&self) -> u8 {
+    pub(crate) fn level(&self) -> u8 {
         self.get("level").and_then(|v| v.parse().ok()).unwrap_or(1)
     }
 }
@@ -89,6 +89,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/filters" => self.filters().map(Some),
             "/api/scanlist" => self.scanlist(q),
             "/api/nearest_scan" => self.nearest_scan(q),
+            "/api/spectrum" => self.spectrum(q),
             _ => Ok(None),
         }
     }

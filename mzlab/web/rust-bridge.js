@@ -22,6 +22,7 @@ export function createBridge({ workerUrl, notify }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
+      if (m.op === "notice") { notify(m.key); return; }                                                    // e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -101,6 +102,7 @@ export function createBridge({ workerUrl, notify }) {
     return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
   api.crash =() => rpc({ op: "crash" });
+  api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
@@ -113,7 +115,7 @@ export function createBridge({ workerUrl, notify }) {
     return out;
   };
 
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
   api.handle = async (method, url) => {
@@ -132,6 +134,20 @@ export function createBridge({ workerUrl, notify }) {
       if (r.dead || r.error || !r.info) return null;
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
+    }
+    if (path === "/api/mrm" && !hasRef(q)) {                         // the SRM transitions: chromatograms of the mzML (no scans, no peaks)
+      const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
+      if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
+      await Promise.all(ks.map(k => slots[k].opening));
+      if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
+      const parts = [];
+      for (const k of ks) {
+        const r = await rpc({ op: "mrm", slot: k, blob: slots[k].blob });
+        if (r.dead || r.error || !r.info) return null;
+        parts.push(`{"k":${k},"transitions":${r.info}}`);
+      }
+      stats.rust++;
+      return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
