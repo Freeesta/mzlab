@@ -802,8 +802,19 @@ window.MAPPA = (() => {
   function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
 
     // «Open in 3D»: the viewer is loaded the first time it is asked for
+  // what the student sees when the 3D viewer cannot open: the real cause in a sentence, what to try, and the technical lines (copyable); the 2D map is untouched
+  function failure3d(kind, detail, diag) {
+    const k = ["nowebgl2", "shader", "import", "lost"].includes(kind) ? kind : "error", d = { kind, detail, ...diag }, esc = x => EH(String(x == null ? "" : x));
+    const tech = Object.entries(d).filter(([, v]) => v !== undefined && v !== "").map(([a, v]) => `${a}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join("\n");
+    document.querySelectorAll("dialog.m3d").forEach(x => x.remove());            // a half-built viewer must not stay on the page
+    big(T("m3d.err.title"), `<p>${I18N.t(`m3d.err.${k}`)}</p>${k === "nowebgl2" ? `<p>${T("m3d.err.how")}</p>` : ""}<p>${T("m3d.err.2d")}</p><pre class="m3d-tech" tabindex="0" aria-label="${T("m3d.err.tech")}">${esc(tech)}</pre>`);
+  }
   async function open3d(p, opener) {
-    try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
+    let mod; try { mod = await import("./mappa3d.js"); } catch (e) { console.error(e); return failure3d("import", String(e && e.message || e), {}); }
+    try { mod.open(p, opener); } catch (e) {
+      const k = e && e.kind ? e.kind : "error"; console.error("mzLab 3D:", k, e && e.detail || e, e && e.diag || "");
+      failure3d(k, e && e.detail != null ? e.detail : String(e && e.message || e), e && e.diag || {});
+    }
   }
 
   return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
