@@ -79,10 +79,11 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
-            pg.reload(); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
             json_close(st["files"], lr_snap["state"]["files"], path="files")
+            json_close(pg.evaluate(JSON, "api/session")["j"]["session"], lr_snap["session"]["session"], path="resumed session")
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
         # the classic engine on the same files: the JSON must be the same
@@ -97,7 +98,7 @@ try:
             json_close(lr_snap["session"], py["session"], path="session")
         step("the JSON of state and session equals the classic engine's (Pyodide)", classic)
         def late_python():
-            open_files(pg) if not pg.evaluate("window.S && S.sess") else None
+            open_files(pg) if not pg.evaluate("typeof S !== 'undefined' && !!S.sess") else None
             before = pg.evaluate(JSON, "api/session")["j"]["session"]
             r = pg.evaluate(JSON, "api/gradient?k=0")                   # a route only Python knows
             assert r["status"] == 200, r
