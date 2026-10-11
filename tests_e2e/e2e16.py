@@ -26,14 +26,15 @@ try:
         def arrows():
             S = "E.panels.slice().sort((a,b)=>a.y-b.y)"
             order = lambda: pg.evaluate(S + ".map(p=>p.id)")
-            dis = lambda i, a: pg.evaluate(f"{S}[{i}].el.querySelector('[data-a={a}]').disabled")
+            move = lambda i, d: pg.evaluate(f"movePanel({S}[{i}], {d})")
             n = pg.evaluate("E.panels.length")
-            # the chromatogram carries its spectra, so it has nothing to pass: the arrows are tested on the spectra (children, they move alone)
-            assert dis(0, "up") and dis(0, "down") and not dis(1, "up") and not dis(1, "down") and not dis(n - 1, "up") and dis(n - 1, "down")
-            o0 = order(); pg.evaluate(f"{S}[1].el.querySelector('[data-a=down]').click()"); pg.wait_for_timeout(700); o1 = order()
+            # panels are moved by dragging the header (no arrow buttons any more); movePanel is the same move: the chromatogram carries its spectra, so the swap is tested on a spectrum
+            assert pg.evaluate("document.querySelectorAll('[data-a=up],[data-a=down]').length") == 0
+            o0 = order(); move(1, 1); pg.wait_for_function(f"{S}.map(p=>p.id).join() !== '{','.join(map(str, o0))}'"); o1 = order()
             assert o1[0] == o0[0] and o1[1] == o0[2] and o1[2] == o0[1], (o0, o1)
-            pg.evaluate(f"{S}[2].el.querySelector('[data-a=up]').click()"); pg.wait_for_timeout(700); assert order() == o0
-        step("arrows swap panels (first has no up, last no down)", arrows)
+            move(2, -1); pg.wait_for_function(f"{S}.map(p=>p.id).join() === '{','.join(map(str, o0))}'"); assert order() == o0
+            move(n - 1, 1); move(0, -1); assert order() == o0, "the last cannot go down, the first cannot go up"
+        step("panels swap with their neighbour (the first cannot go up, the last cannot go down)", arrows)
         def method():
             b = pg.locator("#np-method"); assert "imp" in b.get_attribute("class")
             pg.screenshot(path=SH + "162_method.png", clip={"x": 0, "y": 40, "width": 1500, "height": 120})

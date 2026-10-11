@@ -50,7 +50,7 @@ try:
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
-            for need in ("hydroxylation", "loss of propene", "dehydrogenation"): assert need in t, need
+            for need in ("hydroxylation", "loss of propene", "dehydrogenation"): assert need in t.lower(), need      # names are shown capitalised
             pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode"); assert pg.evaluate("document.querySelectorAll('.mnode').length") >= 4
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
             pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play")
@@ -128,7 +128,9 @@ try:
             assert pg.evaluate("document.getElementById('tp-draw').offsetParent !== null")
             assert not any("composti" in u for u in reqs), reqs
         step("parent: name list, SMILES field, PubChem link, structure in the title", parent_list)
-        if MZ.exists() and (MZ / "B_FullMass-t0.mzML").exists():
+        if "dati_sintetici" in str(MZ):
+            steps.append(("real B_ series: offset +0.3 Da, decay, strong candidates", "SKIP the numbers of the real series need the private data (MZLAB_DATI); the synthetic look-alikes are not enough"))
+        elif MZ.exists() and (MZ / "B_FullMass-t0.mzML").exists():
             def real():
                 pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
                 pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
@@ -152,4 +154,4 @@ finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
 for s_ in steps: print(s_)
 print("page errors:", errs)
-sys.exit(1 if any(s_[1] != "ok" for s_ in steps) or errs else 0)
+sys.exit(1 if any(s_[1] != "ok" and not s_[1].startswith("SKIP") for s_ in steps) or errs else 0)
