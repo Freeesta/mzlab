@@ -6,7 +6,7 @@ window.DESKUPD = (() => {
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
-  let box = null, busy = false;
+  let box = null, busy = false, quiet = false;     // quiet: the check in flight is the silent one
 
   function show(html, buttons, title) {
     if (!box || !box.isConnected) {
@@ -37,12 +37,16 @@ window.DESKUPD = (() => {
   }
 
   async function check(silent) {
-    if (!live() || busy) return;
-    busy = true;
+    if (!live()) return;
+    if (busy) {                                    // a click during the silent check takes it over: same answer, shown as a dialog
+      if (quiet && !silent) { quiet = false; show(EH(I18N.t("update.checking")), []); }
+      return;
+    }
+    busy = true; quiet = silent;
     try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
     if (!silent) show(EH(I18N.t("update.checking")), []);
-    try { offer(JSON.parse(await T().core.invoke("update_check")), silent); }
-    catch (_) { if (!silent) show(EH(I18N.t("update.error.io")), [closeBtn()]); }
+    try { const r = JSON.parse(await T().core.invoke("update_check")); offer(r, quiet); }
+    catch (_) { if (!quiet) show(EH(I18N.t("update.error.io")), [closeBtn()]); }
     busy = false;
   }
 
