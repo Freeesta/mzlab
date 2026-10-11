@@ -40,7 +40,7 @@ def _map_factor(app, k: int, level: int, norm: str, agg: str = "mean") -> float:
 
 
 def _map(app, q: dict) -> dict:
-    """/api/map with a region (rt0, rt1, mz0, mz1, nrt, nmz; at most 1000 x 1000) and/or a reference (ref, norm, rttol = tolerance in RT of the
+    """/api/map with a region (rt0, rt1, mz0, mz1, nrt, nmz; at most 1024 x 1024) and/or a reference (ref, norm, rttol = tolerance in RT of the
     difference, default 0.1 min: the reference is replaced by its local maximum over +-rttol).
     agg = max (default: a peak is never diluted by the bin) | mean (default for a difference). mzscale = lin | log (cells of equal ppm; high
     resolution). bg = 1 takes the constant background away (median of every m/z cell along the run). The m/z cells follow the instrument
@@ -58,7 +58,7 @@ def _map(app, q: dict) -> dict:
         rt0, rt1, mz0, mz1 = float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"])
         if not (rt1 > rt0 and mz1 > mz0 and mz0 > 0):
             raise UserError("err.map.region", {}, "empty region: rt1 > rt0 and mz1 > mz0 > 0 are needed")
-        nrt, nmz = min(1000, max(1, int(q.get("nrt", 400)))), min(1000, max(1, int(q.get("nmz", 400))))
+        nrt, nmz = min(1024, max(1, int(q.get("nrt", 400)))), min(1024, max(1, int(q.get("nmz", 400))))
         mz0, mz1, nmz, log = map_cells(hr, mz0, mz1, nmz, hr and scale == "log")
         grid = {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "mz1": mz1, "nmz": nmz}
         if log:
