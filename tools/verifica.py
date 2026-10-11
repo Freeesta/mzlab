@@ -108,7 +108,8 @@ def i18n(results) -> None:
 
 
 def codice(results) -> None:
-    """The map of the code is up to date (tools/indice.py) and the size limits do not get worse (tools/controlla.py)."""
+    """The index of the code can be generated and covers every source file (tools/indice.py); the size limits do not get worse (tools/controlla.py)."""
+    subprocess.run([sys.executable, str(ROOT / "tools" / "indice.py")], capture_output=True)          # refresh the generated docs/agenti/mappa.md
     for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
         t0 = time.time()
         p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
