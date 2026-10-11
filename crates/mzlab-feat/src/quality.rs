@@ -146,7 +146,7 @@ pub(crate) fn measure(
 }
 
 /// First and last scan within `half` minutes of the scan `apex`.
-fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) {
+pub(crate) fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) {
     let (mut a, mut b) = (apex, apex);
     while a > 0 && (rt[apex] - rt[a - 1]).abs() <= half {
         a -= 1;
@@ -157,12 +157,68 @@ fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) {
     (a, b)
 }
 
+/// Quality columns of row `i` from its trace `y`, which starts at scan `w0`; `(w0, wa, wb)` with `wa..=wb` the scans of the area window.
+/// `scan_lo`, `scan_hi`, `apex` and `npts` of the row are already set.
+pub(crate) fn fill_row(
+    f: &mut FileFeatures,
+    i: usize,
+    rt: &[f64],
+    y: &[f64],
+    win: (usize, usize, usize),
+    floor: f64,
+    q: &QParams,
+) {
+    let (w0, wa, wb) = win;
+    let nscan = rt.len();
+    let (slo, shi) = (
+        f.scan_lo[i] as usize,
+        (f.scan_hi[i] as usize).min(nscan - 1),
+    );
+    f.flags[i] &= !(FLAG_GOOD | FLAG_EDGE);
+    f.area_win[i] = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
+    let (snr, shape, fwhm, asym, gaps) =
+        measure(&rt[w0..w0 + y.len()], y, slo - w0, shi - w0, floor);
+    f.snr[i] = snr as f32;
+    f.shape[i] = shape as f32;
+    f.fwhm[i] = fwhm as f32;
+    f.asym[i] = asym as f32;
+    f.gaps[i] = gaps;
+    let mut why = 0u8;
+    if shape < q.min_shape {
+        why |= Q_SHAPE;
+    }
+    if snr < q.min_snr {
+        why |= Q_SNR;
+    }
+    if f.npts[i] < q.min_points {
+        why |= Q_POINTS;
+    }
+    f.qreason[i] = why;
+    if why == 0 {
+        f.flags[i] |= FLAG_GOOD;
+    }
+    if slo == 0 || shi == nscan - 1 {
+        f.flags[i] |= FLAG_EDGE;
+    }
+}
+
 /// Fill the quality columns of `f` (computed by `trace::detect` on the same section) from the peak table of `index`.
 pub fn assess<R: ReadAt>(
     index: &mut Index<R>,
     f: &mut FileFeatures,
     p: &Params,
     q: &QParams,
+) -> Result<()> {
+    assess_with(index, f, p, q, |_, _, _, _, _| {})
+}
+
+/// `assess`, and after every row `hook(f, i, rt, y, w0)` sees the finished row and its trace `y` (scans `w0..`) while the peaks are in memory.
+pub(crate) fn assess_with<R: ReadAt>(
+    index: &mut Index<R>,
+    f: &mut FileFeatures,
+    p: &Params,
+    q: &QParams,
+    mut hook: impl FnMut(&FileFeatures, usize, &[f64], &[f64], usize),
 ) -> Result<()> {
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(());
@@ -187,30 +243,8 @@ pub fn assess<R: ReadAt>(
                 y[s - w0] += slab.it[j];
             }
         }
-        f.area_win[i] = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
-        let (snr, shape, fwhm, asym, gaps) = measure(&rt[w0..=w1], &y, slo - w0, shi - w0, p.floor);
-        f.snr[i] = snr as f32;
-        f.shape[i] = shape as f32;
-        f.fwhm[i] = fwhm as f32;
-        f.asym[i] = asym as f32;
-        f.gaps[i] = gaps;
-        let mut why = 0u8;
-        if shape < q.min_shape {
-            why |= Q_SHAPE;
-        }
-        if snr < q.min_snr {
-            why |= Q_SNR;
-        }
-        if f.npts[i] < q.min_points {
-            why |= Q_POINTS;
-        }
-        f.qreason[i] = why;
-        if why == 0 {
-            f.flags[i] |= FLAG_GOOD;
-        }
-        if slo == 0 || shi == nscan - 1 {
-            f.flags[i] |= FLAG_EDGE;
-        }
+        fill_row(f, i, &rt, &y, (w0, wa, wb), p.floor, q);
+        hook(f, i, &rt, &y, w0);
         Ok(())
     })
 }

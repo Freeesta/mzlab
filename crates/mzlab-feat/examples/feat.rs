@@ -7,8 +7,9 @@
 use std::time::Instant;
 
 use mzlab_core::idxread::Index;
+use mzlab_feat::ms2::Ms2Links;
 use mzlab_feat::pipeline::Steps;
-use mzlab_feat::table::{FLAG_GOOD, FLAG_ISOTOPE};
+use mzlab_feat::table::{FileFeatures, FLAG_GOOD, FLAG_ISOTOPE};
 use mzlab_feat::trace::{detect, Params};
 use sha2::{Digest, Sha256};
 
@@ -27,12 +28,13 @@ fn peak_rss_mb() -> f64 {
 fn main() {
     let mut p = Params::default();
     let mut files = Vec::new();
-    let (mut full, mut tsv) = (false, None::<String>);
+    let (mut full, mut tsv, mut split) = (false, None::<String>, true);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--neg" => p.polarity = Some(-1),
             "--analyse" => full = true,
+            "--no-split" => split = false,
             "--tsv" => tsv = args.next(),
             "--budget-mb" => {
                 p.budget = args
@@ -51,23 +53,7 @@ fn main() {
         let mut ix = Index::open(f, size).unwrap_or_else(|e| panic!("{path}: {e}"));
         let t0 = Instant::now();
         let (feats, links) = if full {
-            let st = Steps::default();
-            let t = |t0: Instant| format!("{:.2}", t0.elapsed().as_secs_f64());
-            let mut f = detect(&mut ix, &p).unwrap_or_else(|e| panic!("{path}: {e}"));
-            let d = t(t0);
-            let t1 = Instant::now();
-            mzlab_feat::quality::assess(&mut ix, &mut f, &p, &st.quality).unwrap();
-            let q = t(t1);
-            let t2 = Instant::now();
-            mzlab_feat::isotopes::group(&mut f, &st.iso);
-            let i = t(t2);
-            let t3 = Instant::now();
-            let l = mzlab_feat::ms2::link(&mut ix, &mut f, &p, &st.ms2).unwrap();
-            eprintln!(
-                "  detect {d} s, quality {q} s, isotopes {i} s, MS2 {} s",
-                t(t3)
-            );
-            (f, l)
+            analyse_timed(&mut ix, &p, split, path, t0)
         } else {
             (
                 detect(&mut ix, &p).unwrap_or_else(|e| panic!("{path}: {e}")),
@@ -101,6 +87,49 @@ fn main() {
         total += feats.len();
     }
     println!("total\t{total} features");
+}
+
+/// The whole pipeline with the time of every step on stderr.
+fn analyse_timed(
+    ix: &mut Index<std::fs::File>,
+    p: &Params,
+    split: bool,
+    path: &str,
+    t0: Instant,
+) -> (FileFeatures, Ms2Links) {
+    let st = Steps::default();
+    let t = |t0: Instant| format!("{:.2}", t0.elapsed().as_secs_f64());
+    let mut f = detect(ix, p).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let d = t(t0);
+    let t1 = Instant::now();
+    let mut multi = Vec::new();
+    if split {
+        let r = mzlab_feat::resolve::assess_and_resolve(ix, &mut f, p, &st.quality, &st.resolve)
+            .unwrap();
+        eprintln!(
+            "  resolved: {} cut into {} rows, {} with several maxima left",
+            r.split,
+            r.pieces,
+            r.multi.len()
+        );
+        multi = r.multi;
+    } else {
+        mzlab_feat::quality::assess(ix, &mut f, p, &st.quality).unwrap();
+    }
+    let q = t(t1);
+    let t2 = Instant::now();
+    mzlab_feat::isotopes::group(&mut f, &st.iso);
+    let i = t(t2);
+    let t3 = Instant::now();
+    let l = mzlab_feat::ms2::link(ix, &mut f, p, &st.ms2).unwrap();
+    let ms2s = t(t3);
+    let t4 = Instant::now();
+    let mx = mzlab_feat::resolve::mark_mixtures(ix, &mut f, &l, &multi, p, &st.resolve).unwrap();
+    eprintln!(
+        "  detect {d} s, quality+resolve {q} s, isotopes {i} s, MS2 {ms2s} s, mixtures {mx} ({} s)",
+        t(t4)
+    );
+    (f, l)
 }
 
 /// One line per feature: the columns a script needs to compare the table with a truth.
