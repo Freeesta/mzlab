@@ -27,7 +27,7 @@ pub fn cache_budget(small_device: bool) -> usize {
 
 /// Largest decoded size accepted for a block of each kind.
 const MAX_TABLE_RAW: u32 = SPEC_REC_LEN as u32 * RECORDS_PER_TABLE_CHUNK;
-const MAX_PEAKS_RAW: u32 = 6 * 4096 * 500;
+const MAX_PEAKS_RAW: u32 = 6 * SPECTRA_PER_PEAK_CHUNK * 500;
 const MAX_META_RAW: u32 = RECORDS_PER_META_CHUNK * 10 * (crate::spec::MAX_FIELD_BYTES as u32 + 4);
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]

@@ -55,10 +55,10 @@ Blocchi da 4096 record da 32 byte, grezzi. Ordine: chiave di polarità (0 negati
 | 28 | u32 | riservato |
 
 ### Picchi (tipo 2)
-Blocchi da 4096 spettri, zstd. Contenuto decompresso di un blocco con P picchi: quattro piani di byte delle differenze di m/z (u32, 1e-5 Da; il primo picco di ogni spettro è assoluto, gli altri sono differenze strettamente positive), poi due piani di byte delle intensità (u16 = intensità pulita / massimo × 65535, almeno 1). Totale 6·P byte. m/z massimo 40 000 Da; errore di quantizzazione ≤ 5·10⁻⁶ Da (0,005 ppm a m/z 1000).
+Blocchi da 512 spettri, zstd. Contenuto decompresso di un blocco con P picchi: quattro piani di byte delle differenze di m/z (u32, 1e-5 Da; il primo picco di ogni spettro è assoluto, gli altri sono differenze strettamente positive), poi due piani di byte delle intensità (u16 = intensità pulita / massimo × 65535, almeno 1). Totale 6·P byte. m/z massimo 40 000 Da; errore di quantizzazione ≤ 5·10⁻⁶ Da (0,005 ppm a m/z 1000).
 
 ### Metadati (tipo 3)
-Blocchi da 1024 spettri, zstd; per ogni spettro, nell'ordine della tabella, 10 testi: ciascuno `varint` lunghezza + byte UTF-8: nome, addotto, energia di collisione, strumento, formula, InChIKey, SMILES, accessione, autori, licenza (testo). Si leggono solo per i candidati mostrati.
+Blocchi da 128 spettri, zstd; per ogni spettro, nell'ordine della tabella, 10 testi: ciascuno `varint` lunghezza + byte UTF-8: nome, addotto, energia di collisione, strumento, formula, InChIKey, SMILES, accessione, autori, licenza (testo). Si leggono solo per i candidati mostrati.
 
 ### Indici Flash (tipi 4 frammenti e 5 perdite neutre)
 Voci da 10 byte: m/z (u32, 1e-5 Da; per le perdite neutre: precursore − m/z), indice dello spettro (u32), intensità pesata d'entropia (u16 = p / `scale` × 65535, almeno 1), ordinate per m/z e poi per spettro. Una voce di perdita neutra con valore < 1e-5 Da non si scrive.

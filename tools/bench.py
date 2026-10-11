@@ -361,8 +361,9 @@ def lib_scenario(engine: str, path: Path, ident: list, analog: list, port: int, 
     out: dict = {"library": label, "engine": engine, "file_mb": round(path.stat().st_size / 2**20, 1)}
     try:
         with sync_playwright() as p, Peak() as pk:
-            b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--enable-precise-memory-info"])
-            ctx = b.new_context(service_workers="block")
+            # a persistent profile: the storage quota of a private context is too small for libraries of 1e6 spectra
+            import tempfile
+            b = ctx = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="mzlab-bench-prof-"), executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--enable-precise-memory-info"], service_workers="block")
             pg = ctx.new_page()
             pg.goto(f"http://127.0.0.1:{port}/" + ("?libjs=1" if engine == "js" else ""))
             pg.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=120000)

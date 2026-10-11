@@ -394,7 +394,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   // a file the engine reads and writes by offset: an OPFS synchronous handle, or memory (browsers without OPFS)
   async function openSyncFile(name) {
     const h = await (await (await root()).getFileHandle(name, { create: true })).createSyncAccessHandle(); h.truncate(0);
-    return { read: (off, len) => { const b = new Uint8Array(len); h.read(b, { at: off }); return b; }, write: (off, data) => { h.write(data, { at: off }); }, size: () => h.getSize(),
+    return { read: (off, len) => { const b = new Uint8Array(len); h.read(b, { at: off }); return b; }, write: (off, data) => { if (h.write(data, { at: off }) !== data.length) throw new Error("storage full"); }, size: () => h.getSize(),
       async close(remove) { try { h.flush(); h.close(); } catch (e) { /* closed */ } if (remove) { try { await (await root()).removeEntry(name); } catch (e) { /* not there */ } } } };
   }
   function memFile() {

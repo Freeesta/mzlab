@@ -18,8 +18,8 @@ pub const SEC_META: u32 = 3;
 pub const SEC_FRAG: u32 = 4;
 pub const SEC_NL: u32 = 5;
 
-pub const SPECTRA_PER_PEAK_CHUNK: u32 = 4096;
-pub const RECORDS_PER_META_CHUNK: u32 = 1024;
+pub const SPECTRA_PER_PEAK_CHUNK: u32 = 512;
+pub const RECORDS_PER_META_CHUNK: u32 = 128;
 pub const RECORDS_PER_TABLE_CHUNK: u32 = 4096;
 pub const SPEC_REC_LEN: usize = 32;
 pub const CHUNK_ENTRY_LEN: usize = 40;
