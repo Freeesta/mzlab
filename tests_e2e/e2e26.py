@@ -27,7 +27,7 @@ try:
                     pg.click("#np-nl")
                 pg.wait_for_timeout(400)
                 assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Perdite neutre", w
-                pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), w
+                pg.click("#sb-x"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); pg.wait_for_timeout(800); pg.click("#np-spec"); pg.wait_for_timeout(800)

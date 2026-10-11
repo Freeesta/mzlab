@@ -87,6 +87,7 @@ async function ogRun() {
 // ---- small canvas plots (same helpers as the rest of the program: setup, frame, nice, M)
 function ogPlot(cv, o) {
   const { g, W, H } = setup(cv); g.clearRect(0, 0, W, H);
+  if (window.TDATI) TDATI.series(cv, o);                    // description and table of the data (tdati.js)
   const xs = o.series.flatMap(s => s.x), ys = o.series.flatMap(s => s.y).filter(isFinite);
   if (!xs.length) { g.fillStyle = css("--muted"); g.fillText(I18N.t("og.noData"), M.l, 30); return; }
   let x0 = o.x0 ?? Math.min(...xs), x1 = o.x1 ?? Math.max(...xs), y0 = o.y0 ?? Math.min(0, ...ys), y1 = o.y1 ?? Math.max(...ys) * 1.05;

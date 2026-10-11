@@ -11,6 +11,7 @@ pub mod isoscore;
 pub mod iteminfo;
 pub mod json;
 pub mod mzidx;
+pub mod msntree;
 pub mod mzml;
 pub mod mzmlhead;
 pub mod peakq;
