@@ -155,7 +155,7 @@ details.poe summary{cursor:pointer;font-weight:600;color:#0e7490}details.poe[ope
 main pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--code);border-radius:6px;padding:8px 10px;font-size:13px}
 .eitab{display:block;overflow-x:auto;max-width:100%}
 main{min-width:0;overflow-wrap:break-word}
-@media (max-width:980px){#side.open{position:fixed;inset:0;z-index:19;background:var(--panel);padding:64px 18px 28px;max-height:none;overflow:auto;font-size:16px}#side.open li a{padding:8px}#top{z-index:25}body.emb #side.open{padding-top:16px}}
+
 #info{display:none}
 html.phone #top{transition:transform .2s}html.phone #top.away{transform:translateY(-110%)}
 html.phone #top #info{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border-radius:50%;font:700 16px Georgia,serif;color:var(--accent);margin-left:auto}
@@ -200,7 +200,7 @@ body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 :root[data-a11y-reduce]{scroll-behavior:auto}
 :root[data-a11y-reduce] *,:root[data-a11y-reduce] *::before,:root[data-a11y-reduce] *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 /* concentration mode: no index and no menu, a progress bar */
-:root[data-a11y-focus] :is(#side,#menu,#top .sp,.pn){display:none}
+:root[data-a11y-focus] :is(#side,#cbar,#top .sp,.pn){display:none}
 :root[data-a11y-focus] .wrap{grid-template-columns:minmax(0,1fr);max-width:860px}
 #a11y-prog{position:fixed;left:0;top:0;height:4px;width:0;background:var(--accent);z-index:60;display:none}
 :root[data-a11y-focus] #a11y-prog{display:block}
@@ -256,3 +256,58 @@ main:focus{outline:none}
 :root[data-a11y-bg=hc] svg [fill="#b45309"],:root[data-a11y-bg=hc] svg [style*="fill:#b45309"]{fill:var(--c5)}
 :root[data-a11y-bg=hc] svg [stroke="#b45309"],:root[data-a11y-bg=hc] svg [style*="stroke:#b45309"]{stroke:var(--c5)}
 :root[data-a11y-bg=hc] svg text:not([fill]){fill:var(--ink)}
+
+/* narrow screens: one fixed button (icon + current chapter) opens the chapter list as a sheet from the bottom; thin progress bar under it */
+#cbar{display:none}#sheetbg{display:none}.sheethd{display:none}
+.resume{display:none}
+@media (max-width:980px){
+  body{padding-top:52px}
+  #cbar{display:flex;position:fixed;top:0;left:0;right:0;z-index:30;height:52px;align-items:center;padding:4px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+  body.emb #cbar{padding-right:64px}
+  #cbar #menu{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:44px;font:inherit;font-size:16px;font-weight:650;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:4px 12px;cursor:pointer}
+  #cbar #menu .mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cbar #menu svg{flex:none;color:var(--accent)}
+  #prog{position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;pointer-events:none}
+  #top{position:static;top:auto}body.emb #top{display:none}
+  html.phone #top.away{transform:none}
+  #sheetbg{display:block;position:fixed;inset:0;z-index:58;background:rgba(0,0,0,.45)}#sheetbg[hidden]{display:none}
+  #side.open{display:block;position:fixed;left:0;right:0;top:auto;bottom:0;height:90vh;height:90dvh;align-self:auto;max-height:none;z-index:59;background:var(--panel);border-radius:16px 16px 0 0;box-shadow:0 -6px 28px rgba(0,0,0,.28);padding:0 14px 28px;overflow:auto;overscroll-behavior:contain;font-size:16px;transition:transform .2s}
+  body.emb #side.open{height:94vh;height:94dvh;padding-top:0}
+  .sheethd{display:flex;position:sticky;top:0;z-index:1;align-items:center;justify-content:space-between;background:var(--panel);padding:8px 0 6px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .sheethd .grab{position:absolute;left:50%;top:4px;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line)}
+  .sheetx{min-height:44px;min-width:44px;margin-left:auto;margin-top:6px;font:inherit;font-size:16px;font-weight:650;color:var(--accent);background:none;border:0;cursor:pointer;padding:0 8px}
+  #side.open .resume{display:flex;align-items:center;min-height:44px;margin:0 0 8px;padding:8px 12px;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-weight:650;text-decoration:none}
+  #side li a{min-height:44px;align-items:center;padding:6px 8px}
+  #side li a span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #side .toc a{display:flex;align-items:center;min-height:44px}
+  main table,main figcaption,.box,.obj,.cards a span,.sim .note,.ctl label{font-size:16px}
+  .eq{overflow-x:auto;max-width:100%}
+  main{max-width:100%}
+}
+@media (prefers-reduced-motion:reduce){#side.open{transition:none}#lb *{transition:none!important}}
+@media print{#cbar,#sheetbg,.fzoom,#lb{display:none!important}body{padding-top:0}}
+:root[data-a11y-reduce] #side.open{transition:none}
+/* line length around 65 characters */
+main p,main li,.gl dd{max-width:65ch}
+.tw,main pre,.eitab{max-width:100%;overflow-x:auto}
+
+/* figure viewer (lettura.js) */
+figure.zoomable{position:relative}
+.fzoom{position:absolute;top:6px;right:6px;z-index:2;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--accent);cursor:pointer;opacity:.92}
+.fzoom:hover,.fzoom:focus-visible{border-color:var(--accent);opacity:1}
+figure.zoomable>svg,figure.zoomable>img{cursor:zoom-in}
+#lb{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;flex-direction:column}#lb[hidden]{display:none}
+.lbstage{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.lbstage:active{cursor:grabbing}
+.lbnode{position:absolute;left:0;top:0;width:100%;height:auto;max-height:none;background:var(--panel);transform-origin:0 0;will-change:transform}
+.lbcap{margin:0;padding:8px 14px 10px;font-size:15px;line-height:1.4;color:var(--ink);max-height:22vh;overflow:auto;border-top:1px solid var(--line);background:var(--panel)}
+.lbtools{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.lbtools button{min-width:44px;min-height:44px;font:inherit;font-size:20px;font-weight:700;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);cursor:pointer}
+.lbtools button:hover,.lbtools button:focus-visible{border-color:var(--accent)}
+html.lbon{overflow:hidden}
+/* a grey fixed in the dynamic tables of modi.js (shared with the program): readable on the dark background too */
+:root[data-theme=dark] [style*="#687080"]{color:var(--muted)!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) [style*="#687080"]{color:var(--muted)!important}}
+/* standalone Teoria: link back to the program */
+#top a.btn#goapp{font-size:14px;white-space:nowrap}
+@media (max-width:480px){#top .t small{display:none}#top{flex-wrap:wrap}}

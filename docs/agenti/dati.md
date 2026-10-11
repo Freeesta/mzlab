@@ -44,3 +44,4 @@ Stato attuale; aggiornalo riscrivendo le righe, non aggiungendo storia. Il nucle
 - Scostamento dell'asse m/z: +0,14…+0,38 (mediana +0,24) sopra il calcolato.
 - File MRM: solo cromatogrammi. File MS2: molte scansioni vuote (gestite). Q1 contro EMS non è nell'mzML: lo sceglie lo studente.
 - Il QTRAP frammenta molto in sorgente: molti ioni che sembrano TP sono frammenti del progenitore (Teoria cap. 17).
+- **Indirizzi** (`index.html`): `#/dati` e `#/disegno` aprono la vista giusta subito (`hashView`, `VIEW_HASH`); un clic su una scheda fa `pushState`, Indietro/Avanti seguono `popstate`; `applyView` aggiorna il titolo della scheda per vista. `#/teoria[/x]` e `#/pratica` (script in `<head>` dopo `telefono.js`) rimandano alla Teoria autonoma (`teoria.md`) prima di caricare il motore. Il motore parte comunque anche per `#/disegno` (lo avvia `init()` per la sessione).
