@@ -1,6 +1,6 @@
-"""Workflow serialization (.mzworkflow) and MGF / MSP spectral export.
+"""Workflow serialization (.mzflow) and MGF / MSP spectral export.
 
-.mzworkflow: JSON format (formato: "mzworkflow/1") containing file SHA-256 digests,
+.mzflow: JSON format (formato: "mzflow/1") containing file SHA-256 digests,
 program version and commit, language, parameters (ppm, peak detection, corrections,
 filters, library thresholds), and the sequence of operations with UTC timestamps.
 """
@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-FORMAT_VERSION = "mzworkflow/1"
+FORMAT_VERSION = "mzflow/1"
+LEGACY_FORMATS = ("mzworkflow/1",)   # old name, still accepted when opening
+KNOWN_OPS = frozenset({
+    "export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum",
+    "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "workflow_applied",
+})
 
 
 def create_workflow(
@@ -20,7 +25,7 @@ def create_workflow(
     git_commit_hash: str = "unknown",
     language: str = "it",
 ) -> dict:
-    """Create a .mzworkflow dictionary structure."""
+    """Create a .mzflow dictionary structure."""
     return {
         "formato": FORMAT_VERSION,
         "programma": {
@@ -48,16 +53,26 @@ def create_workflow(
 
 
 def validate_workflow(wf: dict) -> tuple[bool, str]:
-    """Validate a .mzworkflow dictionary structure."""
+    """Validate a .mzflow dictionary structure."""
     if not isinstance(wf, dict):
         return False, "Not a valid JSON object"
-    if wf.get("formato") != FORMAT_VERSION:
+    if wf.get("formato") not in (FORMAT_VERSION, *LEGACY_FORMATS):
         return False, f"Invalid format: expected {FORMAT_VERSION}, got {wf.get('formato')!r}"
     if "file" not in wf or not isinstance(wf["file"], list):
         return False, "Missing or invalid 'file' list"
     if "parametri" not in wf or not isinstance(wf["parametri"], dict):
         return False, "Missing or invalid 'parametri' dictionary"
     return True, "OK"
+
+
+def unknown_operations(wf: dict) -> list[str]:
+    """Names of the operations a reader of mzflow/1 does not know (ignored with a warning: forward compatibility)."""
+    seen = []
+    for o in wf.get("operazioni") or []:
+        n = o.get("op") if isinstance(o, dict) else None
+        if n not in KNOWN_OPS and n not in seen:
+            seen.append(n)
+    return seen
 
 
 def verify_file_hashes(wf: dict, actual_files: dict[str, str]) -> list[dict]:
