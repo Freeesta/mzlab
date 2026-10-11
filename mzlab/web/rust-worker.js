@@ -36,6 +36,14 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
         return;
       }
+      case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
+        let blob;
+        try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
+        catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
+        info = engine.open_index(m.slot, blob.size, readerFor(blob)); break;
+      }
+      case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
+      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;
       case "reset": engine.close_all(); blobs.clear(); break;
       case "crash": engine.crash(); break;                                           // test hook: the supervisor must recover
