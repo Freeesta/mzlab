@@ -107,6 +107,28 @@ def i18n(results) -> None:
     results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
+def codice(results) -> None:
+    """The map of the code is up to date (tools/indice.py) and the size limits do not get worse (tools/controlla.py)."""
+    for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
+        t0 = time.time()
+        p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = (p.stdout or "") + (p.stderr or "")
+        (LOG / f"{script[:-3]}.log").write_text(out, encoding="utf-8")
+        results.append((name, "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
+def noti_rossi() -> dict[str, str]:
+    """tools/noti_rossi.txt: `name | reason` per line, `#` comments. A FAIL of one of these is reported as NOTO (not blocking)."""
+    f = ROOT / "tools" / "noti_rossi.txt"
+    out: dict[str, str] = {}
+    if f.exists():
+        for l in f.read_text(encoding="utf-8").splitlines():
+            if l.strip() and not l.lstrip().startswith("#"):
+                n, _, why = l.partition("|")
+                out[n.strip()] = why.strip()
+    return out
+
+
 def teoria(results) -> None:
     """Teoria chapters: structure, accessibility, markers, noindex; with MZLAB_DATI also forbidden names and copying (tools/controlla_teoria.py)."""
     t0 = time.time()
@@ -376,6 +398,7 @@ def main() -> None:
     if not a.fumo and not a.ultimi_falliti:
         js_syntax(results)
         i18n(results)
+        codice(results)
         if a.teoria:
             teoria(results)
         pytest(results, 1200)
@@ -394,6 +417,10 @@ def main() -> None:
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
+    noti = noti_rossi()
+    results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
+               (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
+               for n, st, dt, notes in results]
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
