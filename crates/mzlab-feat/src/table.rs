@@ -15,6 +15,26 @@ pub const FLAG_MIXTURE: u8 = 1 << 6;
 /// The purity of the MS2 was estimated with the default isolation window (the index does not carry it).
 pub const FLAG_PURITY_EST: u8 = 1 << 7;
 
+/// Roles of `FileFeatures::role` (set by `family::build_families`; 0 = the row takes no part in any family).
+pub const ROLE_NONE: u8 = 0;
+/// The ion the others of its family derive from (a family of one row has only this).
+pub const ROLE_M: u8 = 1;
+pub const ROLE_ISOTOPE: u8 = 2;
+pub const ROLE_ADDUCT: u8 = 3;
+/// In-source fragment, declared only with the proof of the MS2 of its parent.
+pub const ROLE_ISF: u8 = 4;
+pub const ROLE_DIMER: u8 = 5;
+/// Linked to the family by a step that two readings explain and no proof separates.
+pub const ROLE_UNDETERMINED: u8 = 6;
+
+/// Bits of `FileFeatures::alt`: readings that stay open for the row.
+pub const ALT_NH3: u8 = 1 << 0;
+pub const ALT_FORMATE: u8 = 1 << 1;
+/// Another role also fits the same step (adduct and loss), not NH3 or formate.
+pub const ALT_ROLE: u8 = 1 << 2;
+/// More than one ion could be the one it derives from.
+pub const ALT_PARENT: u8 = 1 << 3;
+
 /// Features of one file and polarity, sorted by m/z. `rt`, `left`, `right` in minutes; `area` in counts x seconds.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FileFeatures {
@@ -49,6 +69,12 @@ pub struct FileFeatures {
     pub purity: Vec<f32>,
     /// Area of the raw trace (no floor) within `quality::AREA_HALF_WINDOW` minutes of the apex, counts x seconds: the isotope ratios use it.
     pub area_win: Vec<f64>,
+    /// Family of the row = position + 1 of its `ROLE_M` row (0 = none); the unit that is aligned across files.
+    pub family_id: Vec<u32>,
+    /// `ROLE_*`.
+    pub role: Vec<u8>,
+    /// `ALT_*`: readings left open.
+    pub alt: Vec<u8>,
     /// Median scan interval, seconds.
     pub dt: f64,
 }
@@ -75,7 +101,7 @@ impl FileFeatures {
 
     /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b = Vec::with_capacity(self.len() * 85 + 16);
+        let mut b = Vec::with_capacity(self.len() * 91 + 16);
         b.extend_from_slice(&(self.len() as u64).to_le_bytes());
         b.extend_from_slice(&self.dt.to_le_bytes());
         macro_rules! put {
@@ -87,6 +113,9 @@ impl FileFeatures {
         b.extend(self.charge.iter().map(|&v| v as u8));
         put!(shape, snr, fwhm, asym, purity, gaps, ms2_n, area_win);
         b.extend_from_slice(&self.qreason);
+        put!(family_id);
+        b.extend_from_slice(&self.role);
+        b.extend_from_slice(&self.alt);
         b
     }
 }
