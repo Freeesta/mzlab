@@ -1,8 +1,9 @@
 /* QqQ lab - Pratica: exercises and games (pages teoria/pratica*.html), on top of teoria.css */
+:root{--pa:#0e7490}:root[data-theme=dark]{--pa:#38bdf8}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--pa:#38bdf8}}   /* teal for text on the panels, readable in both themes */
 .gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:14px 0}
 .gcards a{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-decoration:none;color:var(--ink)}
 .gcards a:hover{border-color:#0e7490;box-shadow:0 2px 10px rgba(30,40,60,.07)}
-.gcards a b{color:#0e7490;font-size:16px}.gcards a span{font-size:14px;color:var(--muted)}.gcards a i{font-style:normal;font-size:12px;color:var(--muted)}
+.gcards a b{color:var(--pa);font-size:16px}.gcards a span{font-size:14px;color:var(--muted)}.gcards a i{font-style:normal;font-size:12px;color:var(--muted)}
 .skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 18px;margin:10px 0}
 .skill{font-size:14px}.skill .bar{height:8px;background:var(--code);border-radius:5px;overflow:hidden;margin-top:3px}
 .skill .bar i{display:block;height:100%;background:#0e7490;border-radius:5px}
@@ -10,25 +11,25 @@
 .ready{border:2px solid var(--line);border-radius:10px;padding:10px 14px;margin:12px 0;background:var(--panel)}
 .ready.ok{border-color:var(--ok);background:#f0fbf6}
 .gbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:8px 0 12px;padding:8px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:14px}
-.gbar select,.gbar input,.gbar button,.wk button,.wk select,.wk input,.wk textarea{font:inherit;font-size:14px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+.gbar select,.gbar input,.gbar button,.wk button,.wk select,.wk input,.wk textarea{font:inherit;font-size:14px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
 .gbar button,.wk button{cursor:pointer}.gbar button:hover,.wk button:hover{border-color:#0e7490}
-.gbar .pts{margin-left:auto;font-weight:700;color:#0e7490}
+.gbar .pts{margin-left:auto;font-weight:700;color:var(--pa)}
 .wk{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:12px 0}
 .wk h3{margin:2px 0 6px;font-size:17px}.wk .st{border-top:1px solid var(--line);padding:10px 0 6px}.wk .st:first-of-type{border-top:0}
 .wk .st.done h4::after{content:" ✓";color:var(--ok)}.wk .st.off{opacity:.45;pointer-events:none}
 .wk h4{margin:0 0 4px;font-size:15.5px}.wk .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
 .wk button.pri{background:#0e7490;border-color:#0e7490;color:#fff}.wk button.pri:hover{background:#0b5f75}
-.wk button.hint{border-style:dashed;color:#0e7490}
+.wk button.hint{border-style:dashed;color:var(--pa)}
 .wk textarea{width:100%;min-height:70px;resize:vertical}
-.fb{font-size:14.5px;border-radius:6px;padding:6px 10px;margin:6px 0}.fb:empty{display:none}
+.fb .a11y-say{color:inherit}.fb{font-size:14.5px;border-radius:6px;padding:6px 10px;margin:6px 0}.fb:empty{display:none}
 .fb.ok{background:#ecfdf5;color:#065f46}.fb.no{background:#fef2f2;color:#991b1b}.fb.hi{background:#f0f9ff;color:#0c4a6e}
 .opts{display:flex;flex-wrap:wrap;gap:6px}.opts button{border-radius:16px}
-.opts button.right{background:#ecfdf5;border-color:var(--ok)}.opts button.wrong{background:#fef2f2;border-color:var(--bad)}
+.opts button.right{background:#ecfdf5;color:#065f46;border-color:var(--ok)}.opts button.wrong{background:#fef2f2;color:#991b1b;border-color:var(--bad)}
 .kframe{width:100%;height:520px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-.score{font-size:22px;font-weight:700;color:#0e7490}
+.score{font-size:22px;font-weight:700;color:var(--pa)}
 .cards2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}
-.cards2 button{min-height:62px;text-align:left;border-radius:10px;padding:6px 10px;font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;cursor:pointer}
+.cards2 button{min-height:62px;text-align:left;border-radius:10px;padding:6px 10px;font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .cards2 button.on{border-color:#0e7490;background:#e6f6fa;box-shadow:inset 0 0 0 1px #0e7490}
 .cards2 button small{display:block;color:var(--muted);font-size:12px}
 .printonly{display:none}
@@ -36,3 +37,8 @@
 .wk .st:empty{display:none}
 .gbar button.pri{background:#0e7490;border-color:#0e7490;color:#fff}
 .wk .duo>div{min-width:0}
+/* hard mode (ei-difficile.js): colours only from the page variables */
+.hnote{margin:4px 0 2px;padding-left:18px}.hnote li.ok{color:var(--ok)}.hnote li.no{color:var(--bad)}
+.htab{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0}.htab caption{text-align:left;font-weight:600;padding:2px 0}
+.htab th,.htab td{border:1px solid var(--line);padding:3px 8px;text-align:left}
+@media (pointer:coarse){.wk button,.wk select,.wk input,.gbar select,.gbar button{min-height:40px}}

@@ -103,6 +103,15 @@ jobs:
           PY
           # classic scripts share globals: check explore.js + inline together (no duplicate const)
           cat mzlab/web/explore.js mzlab/web/pannelli.js mzlab/web/grafici.js mzlab/web/picchi.js mzlab/web/eventi.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Map of the code and size limits
+        run: |
+          python3 tools/indice.py --controlla
+          python3 tools/controlla.py
+      - name: Teoria chapters (no private data)
+        run: python3 tools/controlla_teoria.py
 
   # Types without a build step: tsc only reads the JS files listed in tsconfig.json (each one starts with `// @ts-check`). Not a required check yet.
   tipi:
