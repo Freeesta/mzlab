@@ -40,6 +40,10 @@ const CHAPTERS = [
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
+// «Teoria estesa»: unlocked by 5 clicks on the logo (sblocco.js), kept in localStorage «qqq.teoria.esteso»; a chapter with a 5th field `true` is listed only then
+const ESTESO = (() => { try { return localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } })();
+(window.TEORIA = window.TEORIA || {}).esteso = () => ESTESO;
+if (ESTESO) document.documentElement.classList.add("esteso"); else for (let i = CHAPTERS.length; i--;) if (CHAPTERS[i][4]) CHAPTERS.splice(i, 1);
 // the chapters were written before the name changed: the old name in the text of the page is shown as the current one
 function renameApp(root = document.body) {
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName) || !n.nodeValue.includes("QqQ lab") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }), l = [];
@@ -370,7 +374,7 @@ const TP = (() => {
   function load(src) { const s = document.createElement("script"); s.src = src; s.async = false; document.head.appendChild(s); }
   // comandi.js: TCMD, the commands of the header; impostazioni.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
   // lettura.js: menu sheet, reading position, figure viewer; cerca.js: search dialog (Ctrl/⌘K, TEORIA.cerca(), index read on first use);
-  // strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "strumenti/pannello.js"].forEach(load); });
+  // sblocco.js: 5 clicks on the logo unlock the extended Teoria; strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();
