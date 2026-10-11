@@ -1,5 +1,5 @@
 """Touch and pen (touch.js): one finger / pen = the mouse, long press = right click, double tap, two-finger pinch / pan / scroll, pen hover, palm rejection,
-the bar of keys, the grip for the height, 3D rotation. The touches are real pointer events (CDP Input.dispatchTouchEvent / pen mouse events)."""
+the dot of the cursor, the grip for the height, 3D rotation. The touches are real pointer events (CDP Input.dispatchTouchEvent / pen mouse events)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -102,23 +102,23 @@ try:
             assert pg.evaluate(f"{CH}.sel") is None, "a palm next to the pen did nothing"
             wait(1100); pen("mouseMoved", 5, 5); wait(1100)
         step("palm rejection: a touch while the pen is near is ignored", palm)
-        def keybar():
-            assert pg.is_visible("#tbar") and pg.locator("#tbar button").count() == 6
-            c0 = pg.evaluate(f"E.active && E.active.cur"); x, y = X(12), Ymid(); T("touchStart", [(x, y)]); T("touchEnd", []); wait(500)
-            c0 = pg.evaluate(f"{CH}.cur"); pg.evaluate(f"setActive({CH})")
-            b = pg.locator('#tbar [data-k=next]').bounding_box(); bx, by = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
-            T("touchStart", [(bx, by)]); wait(700); T("touchEnd", []); wait(300)
-            c1 = pg.evaluate(f"{CH}.cur"); assert c1 > c0 + 0.1, (c0, c1)                      # held: it keeps stepping
-            b = pg.locator('#tbar [data-k=fit]').bounding_box(); pg.evaluate(f"zoomTo({CH}, 10, 14)"); wait(300)
-            T("touchStart", [(b["x"] + 20, b["y"] + 20)]); T("touchEnd", []); wait(400)
-            assert pg.evaluate(f"{CH}.zoom") is None, "the bar's whole-view key"
-        step("the bar of keys: hold next to step through the scans, whole view", keybar)
-        def fold():
-            pg.click("#tbar .tg"); wait(200)
-            assert pg.evaluate("document.querySelector('#tbar').classList.contains('min')") and pg.locator("#tbar [data-k=next]").is_hidden(), "folded to one small button"
-            pg.click("#tbar .tg"); wait(200)
-            assert pg.locator("#tbar [data-k=next]").is_visible(), "unfolded"
-        step("the bar of keys folds away to a small button and back", fold)
+        def dot():
+            assert pg.locator("#tbar").count() == 0, "the bar of scan keys is gone"
+            x, y = X(12), Ymid(); T("touchStart", [(x, y)]); T("touchEnd", []); wait(500)
+            h = pg.locator(".pnl.chrom .clh:visible").first
+            assert h.is_visible() and h.get_attribute("role") == "slider" and h.get_attribute("aria-label"), "the cursor dot"
+            bb = h.bounding_box(); bx, by = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+            c0 = pg.evaluate(f"{CH}.cur"); tx = X(c0 + 2)
+            T("touchStart", [(bx, by)]); wait(60)
+            for k in range(1, 9): T("touchMove", [(bx + (tx - bx) * k / 8, by)]); wait(30)
+            T("touchEnd", []); wait(500)
+            c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - (c0 + 2)) < 0.3, (c0, c1)
+            assert pg.evaluate(f"{CH}.sel") is None
+        step("a finger drags the dot of the cursor line", dot)
+        def tapelsewhere():
+            c0 = pg.evaluate(f"{CH}.cur"); x, y = X(5), Ymid(); T("touchStart", [(x, y)]); T("touchEnd", []); wait(700)
+            c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - 5) < 0.3 and abs(c1 - c0) > 1, (c0, c1)
+        step("a tap elsewhere acts as always (it places the cursor, the dot follows)", tapelsewhere)
         def grip():
             h0 = pg.evaluate(f"{CH}.h"); b = pg.evaluate(f"(() => {{ const r = {CH}.el.querySelector('.rzg').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }})()")
             T("touchStart", [(b[0], b[1])]); wait(60)

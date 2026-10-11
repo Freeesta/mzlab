@@ -40,8 +40,8 @@ try:
             b1 = nb(); assert b1 == b0 + 1, f"one tap on an atom must add ONE bond, bonds {b0} -> {b1}"
         step("molecule editor: one tap on an atom adds one bond", one)
         def nobar():
-            assert not pg.is_visible("#tbar"), "the bar of scan keys is for the Data tab only"
-        step("the floating bar is not shown in the Drawing tab", nobar)
+            assert pg.locator("#tbar").count() == 0, "no floating bar of scan keys"
+        step("there is no floating bar of scan keys", nobar)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
