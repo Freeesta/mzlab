@@ -2,12 +2,12 @@
    1) competition between a rearrangement (tight TS) and a simple cleavage (loose TS), classical RRK model;
    2) neutral-loss calculator: losses from the precursor and between fragments, nitrogen-rule parity. */
 "use strict";
-document.addEventListener("DOMContentLoaded", () => {
-  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue("--c" + n).trim();
+// The two simulations are functions of their container, so the Teoria pages and the side panel «Frammenta» (strumenti/frammenta.js) share them.
+const SIMFRAG = (() => {
+  const col = n => getComputedStyle(document.documentElement).getPropertyValue("--c" + n).trim();
 
   // ------------------------------------------------------------ 1) RRK competition
-  const rk = document.getElementById("sim-rrk");
-  if (rk) {
+  function rrk(rk) {
     const v = TP.controls(rk, [
       { id: "e", label: "Energia interna dello ione E", min: 0.5, max: 10, step: 0.05, value: 3.5, unit: "eV", fmt: x => TP.fmt(x, 2) },
       { id: "s", label: "Oscillatori effettivi s (dimensione)", min: 8, max: 60, step: 1, value: 25, fmt: x => x },
@@ -41,8 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ------------------------------------------------------------ 2) neutral-loss calculator
-  const nl = document.getElementById("sim-loss");
-  if (nl) {
+  function perdite(nl, init = { p: "216", f: "174, 146, 132, 104" }) {
     // nominal neutral losses, [mass, label, radical?]
     const L = [
       [1, "H•", 1], [2, "H₂"], [15, "CH₃•", 1], [16, "O (N-ossidi), CH₄, NH₂•"], [17, "NH₃ / OH•"], [18, "H₂O"], [20, "HF"],
@@ -52,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
       [57, "CH₃NCO"], [60, "CH₃COOH"], [64, "SO₂ / CH₃SOH"], [80, "HBr / SO₃"], [128, "HI"]
     ];
     const v = TP.controls(nl, [
-      { id: "p", label: "m/z del precursore", text: true, value: "216" },
-      { id: "f", label: "m/z dei frammenti (separati da virgole o spazi)", text: true, value: "174, 146, 132, 104" },
+      { id: "p", label: "m/z del precursore", text: true, value: init.p },
+      { id: "f", label: "m/z dei frammenti (separati da virgole o spazi)", text: true, value: init.f },
     ], () => draw());
     const out = document.createElement("div"); out.className = "readout"; nl.appendChild(out);
     const num = s => parseFloat(String(s).replace(",", "."));
@@ -73,4 +72,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     draw();
   }
-});
+
+  function init() {
+    const a = document.getElementById("sim-rrk"), b = document.getElementById("sim-loss");
+    if (a) rrk(a);
+    if (b) perdite(b);
+  }
+  return { rrk, perdite, init };
+})();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", SIMFRAG.init); else SIMFRAG.init();
