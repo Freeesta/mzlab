@@ -365,5 +365,13 @@
   "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole.",
   "prof.chart.aria": "Etichetta accessibile del grafico del profilo nel tempo. {ion} = etichetta dell'ione scelto.",
   "prof.sum": "Riga sopra il grafico del profilo nel tempo. {mz} = m/z, {rt} = RT atteso in minuti.",
-  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno."
+  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno.",
+  "feat.err.lines": "Errore sotto la lista di ioni. {n} = righe non valide, {list} = numeri delle prime righe.",
+  "feat.err.many": "Errore: lista troppo lunga. {max} = massimo di ioni.",
+  "feat.sum": "Riepilogo della tabella. {n} = feature, {m} = file, {src} = origine (frase).",
+  "feat.unmatched": "Avviso. {list} = nomi dei file senza colonna.",
+  "feat.more": "Nota sotto l'anteprima. {n} = feature non mostrate.",
+  "feat.row.aria": "Etichetta accessibile di una riga della tabella. {mz} = m/z, {rt} = RT.",
+  "feat.progress": "Avanzamento. {i} = ione corrente, {n} = totale.",
+  "blank.sum": "Riepilogo della sottrazione del bianco. {k} = tenute, {d} = scartate, {stat} = massimo/media, {nb} = numero di bianchi, {thr} = fattore, {min} = rilevazioni minime."
 }

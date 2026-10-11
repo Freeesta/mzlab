@@ -14,7 +14,7 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
-  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "workflow_applied"];
+  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "workflow_applied"];
   // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
   function splitOps(ops) {
     const keep = [], unknown = [];

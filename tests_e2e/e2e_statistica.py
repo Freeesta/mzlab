@@ -122,6 +122,38 @@ try:
             assert res["normalized"] and pg.locator("#prof-tab thead th").count() == 7
             assert pg.evaluate("PROFILO.result.rows.find(r=>r.file==='HR_Blank_1.mzML').value") is None, "the blank has no peak of the ion"
         step("HR: profile of an ion divided by the internal standard of the same file", hr_profile)
+        def hr_table():
+            assert sections(pg) == ["meta", "profile", "features", "blank"], sections(pg)
+            pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0\nabc; 1"); pg.click("#feat-go")
+            assert "1" in pg.inner_text("#feat-msg") and pg.evaluate("TABELLA.table") is None, "an invalid line is refused with its number"
+            pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0"); pg.click("#feat-go")
+            pg.wait_for_selector("#feat-tab tbody tr", timeout=60000)
+            tb = pg.evaluate("TABELLA.table")
+            assert len(tb["features"]) == 2 and tb["files"] == pg.evaluate("CAMPIONI.files().map(f=>f.file)")
+            a = tb["features"][0]["areas"]
+            assert a["HR_t60.mzML"] > a["HR_t30.mzML"] > a["HR_t0.mzML"] > 0 and a["HR_Blank_1.mzML"] == 0, a
+            assert tb["features"][1]["areas"]["HR_Blank_1.mzML"] > 1e3, "the internal standard is also in the blank"
+        step("HR: feature table measured from a list of ions", hr_table)
+        def hr_blank():
+            pg.fill("#blank-f", "3"); pg.fill("#blank-n", "1"); pg.click("#blank-go")
+            pg.wait_for_selector("#blank-kept", timeout=30000)
+            r = pg.evaluate("BIANCO.result.r")
+            assert r["kept"] == [0] and r["discarded"] == [1], r                 # the ion that is in the blank at the level of the samples goes to the discarded list
+            assert pg.locator("#blank-kept tbody tr").count() == 1 and pg.locator("#blank-disc tbody tr").count() == 1, "both lists are visible"
+            pg.fill("#blank-f", "0.1"); pg.click("#blank-go"); pg.wait_for_function("BIANCO.result.r.factor===0.1")
+            assert pg.evaluate("BIANCO.result.r.kept.length") == 2
+            pg.select_option("#blank-s", "mean"); pg.fill("#blank-n", "4"); pg.click("#blank-go"); pg.wait_for_function("BIANCO.result.r.min_detect===4")
+            assert pg.evaluate("BIANCO.result.r.kept.length") == 0, "four detections are impossible with three samples"
+            pg.click("#blank-disc tbody tr, #blank-kept tbody tr") if pg.locator("#blank-disc tbody tr").count() else None
+        step("HR: blank subtraction with the factor, the level and the minimum chosen by the user; two lists", hr_blank)
+        def hr_import():
+            names = pg.evaluate("CAMPIONI.files().map(f=>f.file)")
+            val = {"HR_t0.mzML": 10, "HR_t30.mzML": 20, "HR_t60.mzML": 30, "HR_Blank_1.mzML": 0}
+            csv = "row ID,row m/z,row retention time," + ",".join(n + " Peak area" for n in names) + "\n1,305.1234,6.0," + ",".join(str(val[n]) for n in names) + "\n"
+            n = pg.evaluate("(tx)=>{TABELLA.fromText(tx);return TABELLA.table.features.length}", csv)
+            assert n == 1 and pg.evaluate("TABELLA.table.source") == "file"
+            assert pg.evaluate("TABELLA.matrix()") == [[val[x] for x in names]], "the areas of the table, in the order of the files"
+        step("HR: an mzmine table is imported with its areas", hr_import)
 finally:
     r2.close()
 for s in steps: print(s)
