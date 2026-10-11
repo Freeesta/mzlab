@@ -58,6 +58,7 @@ try:
             pg.keyboard.press("Escape"); return labs
         def no_entry():
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}"); pg.wait_for_timeout(300)
+            pg.evaluate("(async () => { await GRADIENTE.set(E.files[0], null); redrawAll(); })()"); pg.wait_for_timeout(1200); ready(pg)
             assert not any("gradiente" in l.lower() for l in ctx_items())
         step("right click on a chromatogram: no gradient entry without a gradient", no_entry)
         def entry():
@@ -88,7 +89,7 @@ try:
             r = pg.evaluate(f"GRADIENTE.reading({TIC}, 12.5)"); assert abs(r["b"] - 65) < 1e-6 and abs(r["bcol"] - 57.5) < 1e-6, r
         step("a delay of 1.0 min moves the reading at the column", delay)
         def saved():
-            pg.evaluate("uiSave()"); pg.wait_for_timeout(300)
+            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(300)
             u = pg.evaluate("NB.ui.panels.filter(q=>q.overlay).map(q=>[q.overlay,q.gdelay])"); assert u == [["grad", 1]], u
             assert pg.evaluate("!!GRADIENTE.exportState()")
         step("overlay and delay are saved with the session; the gradient goes to the .mzflow", saved)
