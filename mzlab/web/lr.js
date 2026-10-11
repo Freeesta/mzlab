@@ -9,6 +9,15 @@ const VERSION = "0.1.0";                 // mzlab.__version__ (tests/test_lr_ver
 const WORKDIR = "/work/sessione";
 const ACCEPT = /\.(mzml|dam)$/i;
 
+// the developer text that Python's UserError carries for the errors of /api/formula (the page translates the key)
+const formulaText = ({ error_key: k, params: p = {} }) => ({
+  "err.formula.empty": "empty formula",
+  "err.formula.unreadable": `cannot read the formula '${p.formula}'`,
+  "err.formula.element": `unknown element '${p.element}' in '${p.formula}'`,
+  "err.formula.parens": `unbalanced parentheses in '${p.formula}'`,
+  "err.adduct.unknown": `unknown adduct '${p.adduct}'`,
+}[k] || k);
+
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let samples = [];                      // the session as the page asked for it, with the later edits (what replay() sends to Python)
@@ -143,7 +152,7 @@ export function createLr({ rb }) {
         if (path === "/api/gradient") return json({ gradient: null });                      // none typed, none in a .dam (a POST would have sent everything to Python)
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
-          catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: j.error_key, error_key: j.error_key, params: j.params || {} }, 400); throw e; }
+          catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
