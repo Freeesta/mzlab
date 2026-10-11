@@ -1000,7 +1000,7 @@ function addPanel(type, o, after) {
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, lock: o.lock ? { pending: true } : null, si: null,
     rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
   if (type !== "xic") p.traces = p.traces || [];
-  const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place();
+  const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place(undefined, type === "map" ? 360 : undefined);
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
@@ -1353,11 +1353,11 @@ function ctl(p) {
   }
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
-    c.innerHTML = `<span class="seg" role="group" title="${I18N.t("ctl.map.view.title")}"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
-      `<select data-o="k"${follow(p.tab || E.tab) ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, follow(p.tab || E.tab) ? E.cur : p.k, x.label)).join("")}</select>` +
-      `<select data-o="scale" title="${I18N.t("ctl.map.scale.title")}">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select>` +
-      `<label class="muted" title="${I18N.t("ctl.map.diff.title")}">${I18N.t("ctl.map.diff", { select: `<select data-o="ref"${off(sf.length <= 1, I18N.t("ctl.map.diff.need"))}><option value="">${I18N.t("ctl.map.diff.none")}</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select>` })}</label>` +
-      `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select>`;
+    const G = (lab, inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;
+    c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k"${fol ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
+      G(I18N.t("ctl.map.grp.col"), `<select data-o="scale" title="${I18N.t("ctl.map.scale.title")}">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select><span data-mzslot="col"></span>`) +
+      G(I18N.t("ctl.map.grp.diff"), `<label class="muted" title="${I18N.t("ctl.map.diff.title")}">${I18N.t("ctl.map.diff", { select: `<select data-o="ref"${off(sf.length <= 1, I18N.t("ctl.map.diff.need"))}><option value="">${I18N.t("ctl.map.diff.none")}</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select>` })}</label>` +
+        `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select><span data-mzslot="diff"></span>`);
   }
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2);
@@ -1936,7 +1936,6 @@ function zoomYTo(p, lo, hi, quiet) {
 function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, z1, f0, f1); draw(p); }
 
 // ---- mappa RT-m/z (come "Ion Map" di Xcalibur e il visualizzatore 2D di MZmine): ogni pixel è l'intensità media di uno ione in un istante
-const RAMP = [[0, [250, 250, 246]], [0.12, [214, 234, 236]], [0.4, [120, 190, 205]], [0.7, [22, 120, 160]], [1, [28, 36, 110]]];
 const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {
   const out = new Uint8ClampedArray(256 * 4);
@@ -1947,8 +1946,18 @@ function lut(stops) {
   }
   return out;
 }
-const LUT_SEQ = lut(RAMP), LUT_DIV = lut(DIV);
-const getMap = (k, lv) => memo(`g${k}|${lv}`, () => J(`api/map?k=${k}&level=${lv}`).then(j => {
+const LUT_DIV = lut(DIV);
+// sequential palettes of the map (2D and 3D): viridis (default) and cividis, both readable by colour-blind people
+const MAP_PAL = {
+  viridis: [[68, 1, 84], [70, 50, 126], [54, 92, 141], [39, 127, 142], [31, 161, 135], [74, 194, 109], [159, 218, 58], [253, 231, 37]],
+  cividis: [[0, 32, 76], [31, 55, 108], [70, 77, 110], [105, 100, 112], [139, 125, 119], [177, 153, 117], [217, 184, 100], [254, 232, 56]]
+};
+const LUTS_SEQ = {};
+const lutSeq = name => LUTS_SEQ[name] || (LUTS_SEQ[name] = lut(MAP_PAL[name].map((c, i, a) => [i / (a.length - 1), c])));
+const mapPal = () => window.MAPPA && MAPPA.prefs.pal === "cividis" ? "cividis" : "viridis";
+const mapBg = () => !!(window.MAPPA && MAPPA.prefs.bg);                  // «remove the constant background»
+const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : `linear-gradient(90deg,${MAP_PAL[name].map(c => `rgb(${c})`).join(",")})`;
+const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg ? 1 : 0}`, () => J(`api/map?k=${k}&level=${lv}${bg ? "&bg=1" : ""}`).then(j => {
   const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return { ...j, m: new Float32Array(u.buffer) };
 }));
@@ -1960,8 +1969,8 @@ function mapNorm(m, norm) {
   const f = t > 0 ? (norm === "max" ? 1 : 1000) / t : 1, o = new Float32Array(m.length); for (let i = 0; i < m.length; i++) o[i] = m[i] * f; return o;
 }
 function mapImage(p, A, B, scale, norm = "abs") {
-  const dop = B && window.MAPPA ? MAPPA.diffOpt() : { show: "all", thr: 0.02, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
-  const key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${JSON.stringify(dop)}`;
+  const dop = window.MAPPA ? MAPPA.diffOpt(!!B) : { show: "all", thr: B ? 0.02 : 0.004, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
+  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${pal}|${mapBg()}|${JSON.stringify(dop)}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
   if (B && B.d) v.set(B.d);                                              // the difference computed by the server (numpy, with the tolerance in RT)
@@ -1969,10 +1978,10 @@ function mapImage(p, A, B, scale, norm = "abs") {
   const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
   nz.sort((a, b) => a - b);
   const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5° percentile: un solo picco enorme non appiattisce il resto
-  const floor = B ? dop.thr : 0.004;                                             // sotto questa frazione è rumore: resta bianco
+  const floor = dop.thr;                                             // sotto questa frazione è rumore: resta bianco
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
-  const ctx = off.getContext("2d"), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : LUT_SEQ;
+  const ctx = off.getContext("2d"), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
   for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
     const x = v[i * nmz + j], t = T(x), q = B ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
     im.data[o] = tab[q * 4]; im.data[o + 1] = tab[q * 4 + 1]; im.data[o + 2] = tab[q * 4 + 2]; im.data[o + 3] = 255;
@@ -2018,7 +2027,7 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
     cells.push([a, b, pr(u, w, z)[2]]);
   }
   cells.sort((p1, p2) => p2[2] - p1[2]);
-  const tab = B ? LUT_DIV : LUT_SEQ, up = (a, b) => P(a / (nx - 1) - .5, b / (ny - 1) - .5, Z[a * ny + b]);
+  const tab = B ? LUT_DIV : lutSeq(mapPal()), up = (a, b) => P(a / (nx - 1) - .5, b / (ny - 1) - .5, Z[a * ny + b]);
   g.lineWidth = .6;
   for (const [a, b] of cells) {
     const z = (Z[a * ny + b] + Z[(a + 1) * ny + b] + Z[a * ny + b + 1] + Z[(a + 1) * ny + b + 1]) / 4;
@@ -2053,7 +2062,7 @@ async function drawMap(p) {
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
   if (!f || f.kind === "mrm") f = sf[0];
   const lv = f.lv, rf = p.ref !== "" && p.ref != null && E.files[+p.ref] && E.files[+p.ref].kind !== "mrm" && E.files[+p.ref].lv === lv && +p.ref !== f.k ? E.files[+p.ref] : null;
-  const A = { ...(await getMap(f.k, lv)), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv)), k: rf.k } : null;
+  const A = { ...(await getMap(f.k, lv, mapBg())), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg())), k: rf.k } : null;
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const im = mapImage(p, A, B, p.scale, p.norm || "abs");
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
@@ -2062,7 +2071,7 @@ async function drawMap(p) {
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = I18N.t(`map.sc.${p.scale}`);
   if (p.view === "3d") {
     draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scTxt);
-    const bar3 = B ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
+    const bar3 = palCss(mapPal(), !!B);
     p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar3}"></span><span class="sm">${I18N.t(B ? "map.leg3d.diff" : "map.leg3d.mean")} ${I18N.t("map.leg3d.scale", { scale: scTxt, norm: nTxt })}</span><span class="sm">${I18N.t("map.leg3d.help")}</span>`;
     if (window.MAPPA) MAPPA.after(p);
     return;
@@ -2083,8 +2092,8 @@ async function drawMap(p) {
     
     return { px, rt, html: I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
-  const bar = B ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
-  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar}"></span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
+  const rng = B ? [`+${fmt(im.ref)}`, `−${fmt(im.ref)}`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
+  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm mzhelp">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
   if (window.MAPPA) MAPPA.after(p);
 }
 

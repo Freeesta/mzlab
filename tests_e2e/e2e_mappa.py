@@ -139,6 +139,24 @@ try:
             assert pg.evaluate(f"!!{M}._mz.lock")
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Delete"); pg.wait_for_function(f"MAPPA.pts({M}).length===2", timeout=5000)
         step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
+        def panel2d():
+            pg.evaluate("localStorage.removeItem('qqq.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); pg.wait_for_timeout(800)
+            assert pg.locator(".pnl.map .mzg").count() >= 4, "groups of controls: file, colors, difference, tools"
+            assert pg.locator(".pnl.map [data-o=view][data-v='3d']").count() == 1 and pg.locator(".pnl.map .seg [data-o=view]").count() == 0   # a single «Open in 3D» button
+            assert pg.locator(".pnl.map [data-mz=pal]").input_value() == "viridis"
+            v0 = pg.evaluate(M + "._img.v.length"); img0 = pg.evaluate(M + "._img.key")
+            pg.select_option(".pnl.map [data-mz=pal]", "cividis"); pg.wait_for_timeout(1200)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
+            bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
+            assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
+            pg.check(".pnl.map [data-mz=bg]"); pg.wait_for_timeout(1500)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).bg") is True and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
+            pg.uncheck(".pnl.map [data-mz=bg]"); pg.wait_for_timeout(800)
+        step("2D panel: groups, one «Open in 3D» button, palette, constant background, colour bar with values", panel2d)
+        def height():
+            h = pg.evaluate("(()=>{const q=" + M + ";return q.h})()")
+            assert h >= 360 or h >= 300, h
+        step("panel height", height)
         b.close()
     r.close()
 except Exception as e:

@@ -36,7 +36,7 @@ try:
             pg.screenshot(path=SH + "m3d_b.png", full_page=True)
         step("difference between two files, normalised, in 3D", diff)
         def back():
-            pg.locator("[data-o=view][data-v='2d']").first.click(); pg.wait_for_timeout(1500)
+            pg.locator("[data-v3=top]").first.click(); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.find(q=>q.type==='map')._a.is3d") is not True
             pg.screenshot(path=SH + "m3d_c.png", full_page=True)
         step("back to 2D keeps the difference", back)
