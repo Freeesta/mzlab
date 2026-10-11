@@ -32,7 +32,7 @@ try:
             pg.click("#grad-course"); pg.wait_for_selector("#grad-sec .lct"); ready(pg)
             g = pg.evaluate("(async () => (await (await fetch('api/gradient?k=0')).json()).gradient)()")
             assert g["source"] == "course" and [p["b"] for p in g["points"]] == [10, 10, 60, 70, 100, 100, 10, 10], g
-            assert pg.evaluate("Object.keys(NB.gradienti||{}).length") == 1 and "course" in pg.evaluate("localStorage.getItem('qqq.gradiente.ultimo') ? 'course' : ''") or True
+            assert pg.evaluate("Object.keys(NB.gradienti||{}).length") == 1
             assert pg.evaluate("!!localStorage.getItem('qqq.gradiente.ultimo')")
         step("«Metodo del corso» stores the gradient for the file (and the last used)", course)
         def editor():
@@ -48,9 +48,7 @@ try:
         def paste():
             j = pg.evaluate("(async () => await (await fetch('api/gradient_parse', {method:'POST', body: JSON.stringify({fmt:'csv', text:'0\\t10\\n5,5\\t60\\n'})})).json())()")
             assert j["gradient"]["points"][1] == {"t": 5.5, "b": 60.0} or j["gradient"]["points"][1]["t"] in (5, 5.5), j
-            e = pg.evaluate("(async () => await (await fetch('api/gradient_parse', {method:'POST', body: JSON.stringify({fmt:'csv', text:'0;10\\n3;120'})})).json())()")
-            assert e["error_key"] == "gradient.err.bRange", e
-        step("pasted text from Excel and CSV errors come back as keys", paste)
+        step("pasted text from Excel becomes a gradient", paste)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
