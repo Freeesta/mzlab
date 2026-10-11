@@ -144,8 +144,11 @@ def _map(app, q: dict) -> dict:
     if ref is not None:
         norm = q.get("norm", "abs")
         w = int(round(float(q.get("rttol", 0.1)) / max((grid["rt1"] - grid["rt0"]) / grid["nrt"], 1e-9)))
-        m = diff_tolerant(m * _map_factor(app, k, level, norm, agg), get(ref) * _map_factor(app, ref, level, norm, agg), w)
-        out.update(ref=ref, rttol=float(q.get("rttol", 0.1)), w=w)
+        wm = 0                                            # high resolution (log axis, cells of equal ppm): the reference is also widened in m/z by +-mztol ppm
+        if log:
+            wm = min(20, int(round(float(q.get("mztol", 5)) * 1e-6 / max(grid["dlog"], 1e-12))))
+        m = diff_tolerant(m * _map_factor(app, k, level, norm, agg), get(ref) * _map_factor(app, ref, level, norm, agg), w, wm)
+        out.update(ref=ref, rttol=float(q.get("rttol", 0.1)), w=w, wm=wm)
     out["data"] = base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")
     return out
 
@@ -211,10 +214,13 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 from .statistica import blank_filter
                 return _json(blank_filter(body.get("matrix", []), body.get("roles", []), float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1))))
             if path == "/api/stat/reference":  # difference of every feature from the reference (time <= 0, blank, dark or chosen): numbers and two lists
-                from .statistica import FLOOR, reference_difference
-                return _json(reference_difference(body.get("matrix", []), body.get("roles", []), body.get("times", []), body.get("groups"), body.get("reference"),
-                                                  float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1)),
-                                                  None if body.get("pseudo") is None else float(body["pseudo"]), float(body.get("floor", FLOOR))))
+                from .statistica import FLOOR, identity_links, reference_difference
+                out = reference_difference(body.get("matrix", []), body.get("roles", []), body.get("times", []), body.get("groups"), body.get("reference"),
+                                           float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1)),
+                                           None if body.get("pseudo") is None else float(body["pseudo"]), float(body.get("floor", FLOOR)))
+                if body.get("mz") and len(body["mz"]) == len(body.get("rt", [])):        # shown beside the numbers, never merged: adducts and in-source fragments of other rows
+                    out["identity"] = identity_links(body["mz"], body["rt"])
+                return _json(out)
             if path == "/api/stat/pca":        # exploratory PCA of a feature table (filters, imputation, scaling, loadings stability): a view, not a test
                 from .statistica import pca_analysis
                 return _json(pca_analysis(body.get("matrix", []), body.get("roles", []), body.get("groups"), float(body.get("factor", 3)), body.get("stat", "max"),
@@ -258,6 +264,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.analog(int(q["k"]), int(q["i"]), int(q.get("n", 2000))))
         if path == "/api/gradient":
             return _json({"gradient": app.gradient(int(q["k"]))})
+        if path == "/api/delay":         # delay of the mass spectrometer after the PDA (cross-correlation of the two traces): a measure, never applied by itself
+            return _json({"delay": app.delay(int(q["k"]))})
         if path == "/api/state":
             return _json(app.state())
         if path == "/api/notebook":

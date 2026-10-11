@@ -108,6 +108,7 @@ function attach(p) {
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true;
+    if (p.type === "map" && window.MAPPA && MAPPA.touched(p)) { zl.hidden = true; return; }       // mappa.js: the mouse events after a finger gesture
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
@@ -182,17 +183,10 @@ function attach(p) {
       }
       return;
     }
-    if (p.type === "map") {
-      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }
-      const x = xd(rect(e)), k = p.k != null ? p.k : (p._a?.f?.k ?? 0), f = E.files[k];
-      if (!p._a || !f || f.kind === "mrm") return;
-      let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2;
-      let at = x;
-      const n = await nearScan(k, x);
-      if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; }
-      p.sel = null; p.cur = at;
-      newSpec(p, r0, r1, p.k != null ? p.k : k);
-      draw(p); return;
+    if (p.type === "map") {                                              // double click = whole view (the spectrum at that RT is in the right-click menu)
+      if (window.MAPPA && p._a && p._a.map && Date.now() - (MAPPA.st(p).dtap || 0) < 600) return;      // the double tap has already done it
+      if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
+      return;
     }
     if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
@@ -374,6 +368,8 @@ function ctxFor(p, e, x, px, py) {
     }
     if (p.type === "chrom") items.push({ label: I18N.t("ctx.chrom.xic"), fn: () => openXic(null, { after: p }) });
     if (window.DISP && window.BANCO && BANCO.on() && (p.type === "chrom" || p.type === "xic")) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
+    if (window.GRADIENTE && GRADIENTE.pressHave(p) && !isAnalog(p.kind)) items.push({ label: I18N.t("ctx.chrom.press"), check: p.overlay === "press", aria: I18N.t("ctx.chrom.press.aria"), fn: () => { p.overlay = p.overlay === "press" ? null : "press"; draw(p); uiSave(); } });
+    if (window.GRADIENTE && GRADIENTE.have(p)) items.push({ label: I18N.t("ctx.chrom.grad"), check: p.overlay === "grad", aria: I18N.t("ctx.chrom.grad.aria"), fn: () => { p.overlay = p.overlay === "grad" ? null : "grad"; draw(p); uiSave(); } });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
     if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: I18N.t("ctx.chrom.identAll"), fn: () => LIB.identifyAll(k) });
     if (p.type === "chrom" && window.COMP && window.HR && HR.isHr(E.files[k], 2) && E.files[k].kind === "ms2") items.push({ label: I18N.t("ctx.chrom.tree"), fn: () => COMP.tree(k) });

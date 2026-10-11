@@ -137,6 +137,7 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 
 // ------------------------------------------------------------------ schermata di caricamento
 // small inline icons (no external files): download arrow and "fit to window" corners
+const IC_DATA = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px" aria-hidden="true"><rect x="1.5" y="2" width="9" height="8" rx="1"/><path d="M1.5 5h9M1.5 7.6h9M5 2v8"/></svg>';
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
 const IC_AUTO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14C5 14 6 4.5 8 4.5S11 14 13 14z" fill="currentColor" fill-opacity=".3"/><path d="M13 1.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="currentColor" stroke="none"/></svg>';   // peak with its area + sparkle = automatic
 const IC_MAN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M4.5 14C6 14 6.5 5 8 5s2 9 3.5 9" /><path d="M4 2.5v11.5M12 2.5v11.5" stroke-dasharray="2 1.6"/></svg>';   // peak between two edge bars = manual
@@ -145,7 +146,8 @@ const IC_ZOOM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" str
 const IC_TAB = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2" width="11" height="10" rx="1.2"/><path d="M1.5 5.5h11M1.5 8.7h11M6 5.5V12"/></svg>';
 const IC_FS = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M8.5 1.5h4v4M12.5 1.5 8 6M5.5 12.5h-4v-4M1.5 12.5 6 8"/></svg>';   // full screen: arrows pointing out
 const IC_FSX = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 5.5H8.5V2M8.5 5.5 13 1M2 8.5h3.5V12M5.5 8.5 1 13"/></svg>';  // leave full screen: arrows pointing in
-const IC_SMOOTH = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 11c1.2-4 2-1 3-4s1.6 2 2.8 1.5S8 3 9.3 5.5s1.7 4.5 2.7 2.5 1.4-2 2.5-3" stroke-opacity=".35"/><path d="M1.5 10.5C4 10.5 5 4 8 4s4 6.5 6.5 6.5"/></svg>';
+const IC_SMOOTH = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 11L2.6 7.5 4 10.5 5.6 5.5 7 9.5 8.6 4.5 10 8.5 11.6 6 13 9.5 15 7" stroke-width="1" stroke-opacity=".6"/><path d="M1 11C4 11 5 4 8 4s4 7 7 7" stroke-width="2"/></svg>';
+const IC_RANGE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2v10M12 2v10M2 7h10M4.5 4.7 2 7l2.5 2.3M9.5 4.7 12 7l-2.5 2.3"/></svg>';
 const IC_FIT = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
 const IC_LOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 5 0v1.9"/></svg>';
 const IC_UNLOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 4.8-1"/></svg>';
@@ -216,7 +218,7 @@ function uiSave(now = false) {
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
         dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -781,13 +783,14 @@ function menu(ev, items) {
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
   }); }
-  m._ret = ev.kbd ? document.activeElement : null;
+  m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
   if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
-document.addEventListener("click", () => { Q("#ctx").hidden = true; });
+document.addEventListener("pointerup", () => { const m = Q("#ctx"); if (m._lp && !m.hidden) m._up = Date.now(); }, true);
+document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._up && Date.now() - m._up < 400) { m._lp = false; m._up = 0; return; } m.hidden = true; });       // a long press opens the menu: the click that may follow the lifted finger must not close it
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
@@ -800,7 +803,7 @@ const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(p) {
   const a = p._a; if (!a) return null;
-  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : I18N.t("export.col.intensity");
+  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
   if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));   // total chromatograms of one run type share the time axis: one RT column
