@@ -125,3 +125,11 @@ Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 1
 | JS degli script di `mzlab/web/` (senza vendor e teoria), byte | 1 124 713 | 1 122 273 (−2 440) |
 
 Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (partono dopo gli script classici).
+
+## Schermata smartphone (iPhone 390×844, touch, server di sviluppo, mediana di 5)
+| | prima | dopo |
+|---|---|---|
+| primo disegno (FCP), ms | 92 | 88 |
+| byte scaricati fino a rete ferma | 1 034 427 | 330 178 (comprende ~85 KB di Teoria scaldata) |
+
+Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.

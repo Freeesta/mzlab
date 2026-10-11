@@ -14,7 +14,7 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
-  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "workflow_applied"];
+  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "workflow_applied"];
   // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
   function splitOps(ops) {
     const keep = [], unknown = [];
@@ -299,8 +299,9 @@ const WORKFLOW = (() => {
       if (d.y[i] > 0) peaks.push([d.mz[i], d.y[i]]);
     }
     const sid = d.sid != null ? d.sid : (p.sid != null ? p.sid : (p.si != null ? p.si : 0));
-    const rt = d.rt != null ? d.rt : (p.r0 != null ? (p.r0 + (p.r1 ?? p.r0)) / 2 : 0.0);
-    const prec = d.prec != null ? d.prec : (p.prec != null ? p.prec : null);
+    const sc = d.scan || {};          // a DDA panel keeps the scan record (precursor, RT, activation) in d.scan
+    const rt = d.rt != null ? d.rt : sc.rt != null ? sc.rt : (p.r0 != null ? (p.r0 + (p.r1 ?? p.r0)) / 2 : 0.0);
+    const prec = d.prec != null ? d.prec : sc.prec != null ? sc.prec : (p.prec != null ? p.prec : null);
     const pol = f && f.polarity === "negative" ? -1 : 1;
 
     return {
@@ -383,6 +384,7 @@ const WORKFLOW = (() => {
     exportSpectrumMsp,
     exportQueriesMgf,
     exportQueriesMsp,
+    extractSpecData,
   };
 })();
 window.WORKFLOW = WORKFLOW;

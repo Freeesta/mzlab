@@ -9,19 +9,18 @@
 //   two fingers       = pinch zooms (as Ctrl + wheel). On a graph: sideways pans it (as Shift + drag), up / down scrolls the page. In the editor: both pan the drawing
 //   pen hover         = the hover information (Apple Pencil on the newest iPads)
 //   a pen in range    = palm rejection: touches are ignored for a moment
-// The keys a touch screen lacks (previous / next scan, play, whole view, undo) are on a small bar. Everything switches on only when a touch or a pen is really
+// The keys a touch screen lacks are not needed: the dot on the cursor line of a chromatogram moves it. Everything switches on only when a touch or a pen is really
 // used, so a computer with a mouse does not change at all.
 const TOUCH = (() => {
   const LONG = 550, MOVE = 8, DTAP = 350, PALM = 900;
-  let penAt = 0, bar = null, seen = false, lastTouch = 0, lastUp = 0, lpFired = false;
+  let penAt = 0, seen = false, lastTouch = 0, lastUp = 0, lpFired = false;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y), mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   // events are built in the realm of the element that receives them (the editor lives in an iframe)
   const win = el => (el.ownerDocument && el.ownerDocument.defaultView) || window;
   const mouse = (type, el, x, y, o = {}) => el.dispatchEvent(new (win(el).MouseEvent)(type, { bubbles: true, cancelable: true, view: win(el), clientX: x, clientY: y, button: o.button || 0, buttons: type === "mouseup" ? 0 : o.buttons ?? 1, shiftKey: !!o.shift, ctrlKey: !!o.ctrl, detail: o.detail || 1 }));
   const wheel = (el, x, y, o) => el.dispatchEvent(new (win(el).WheelEvent)("wheel", { bubbles: true, cancelable: true, view: win(el), clientX: x, clientY: y, deltaX: o.dx || 0, deltaY: o.dy || 0, ctrlKey: !!o.ctrl, deltaMode: 0 }));
-  const key = (type, k, o = {}) => document.body.dispatchEvent(new KeyboardEvent(type, { key: k, bubbles: true, cancelable: true, ctrlKey: !!o.ctrl }));
 
-  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); ensureBar(); }
+  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); }
 
   // ============================================================ the engine: one per document (the page, the editor)
   // hooks.surface(target) -> { el, ctx } | null   the element that takes the mouse events, and what the page knows about it
@@ -158,36 +157,6 @@ const TOUCH = (() => {
     engine(d, { panDrag: false, hit: true, surface: t => { const c = t.closest(CANVAS); return c ? { el: c, ctx: null } : null; } });
   }
   setInterval(bridgeKetcher, 1000);
-
-  // ============================================================ the keys the touch screen does not have
-  function ensureBar() {
-    if (bar) return;
-    bar = document.createElement("div"); bar.id = "tbar"; bar.hidden = true;
-    const B = (id, label, title, svg) => `<button type="button" data-k="${id}" title="${title}" aria-label="${title}">${svg}<span>${label}</span></button>`;
-    const ic = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-    bar.innerHTML = B("prev", I18N.t("touch.prev"), I18N.t("touch.prev.title"), ic('<path d="M15 5l-7 7 7 7"/>')) +
-      B("play", I18N.t("touch.play"), I18N.t("touch.play.title"), ic('<path d="M8 5l11 7-11 7z"/>')) +
-      B("next", I18N.t("touch.next"), I18N.t("touch.next.title"), ic('<path d="M9 5l7 7-7 7"/>')) +
-      B("fit", I18N.t("touch.fit"), I18N.t("touch.fit.title"), ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')) +
-      B("undo", I18N.t("touch.undo"), I18N.t("touch.undo.title"), ic('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>'));
-    const tg = document.createElement("button"); tg.type = "button"; tg.className = "tg"; tg.dataset.k = "hide";     // fold the bar away to a small round button (and back)
-    const fold = on => { bar.classList.toggle("min", on); const t = I18N.t(on ? "touch.bar.show" : "touch.bar.hide"); tg.title = t; tg.setAttribute("aria-label", t); tg.setAttribute("aria-expanded", String(!on)); tg.innerHTML = ic(on ? '<path d="M5 15l7-7 7 7"/>' : '<path d="M5 9l7 7 7-7"/>'); try { localStorage.setItem("qqq.tocco.barra", on ? "1" : "0"); } catch (_) { /* not saved */ } };
-    tg.addEventListener("click", () => fold(!bar.classList.contains("min")));
-    bar.appendChild(tg); document.body.appendChild(bar);
-    let folded = false; try { folded = localStorage.getItem("qqq.tocco.barra") === "1"; } catch (_) { /* not saved */ } fold(folded);
-    const send = (k, o) => { key("keydown", k, o); return () => key("keyup", k, o); };
-    bar.querySelectorAll("button:not(.tg)").forEach(b => {
-      const k = b.dataset.k, map = { prev: ["ArrowLeft"], next: ["ArrowRight"], play: [" "], fit: ["Backspace"], undo: ["z", { ctrl: true }] };
-      let release = null;
-      b.addEventListener("pointerdown", e => { e.preventDefault(); if (release) release(); release = send(...map[k]); b.classList.add("on"); try { b.setPointerCapture(e.pointerId); } catch (_) { /* fine */ } });
-      const stop = () => { if (release) { release(); release = null; } b.classList.remove("on"); };
-      b.addEventListener("pointerup", stop); b.addEventListener("pointercancel", stop); b.addEventListener("lostpointercapture", stop);
-      b.addEventListener("click", e => e.preventDefault());
-    });
-    syncBar();
-  }
-  const syncBar = () => { if (bar) bar.hidden = !(seen && S.view === "data" && !!Q("#dpanels") && !Q("#dpanels").hidden && E.panels.length > 0); };
-  document.addEventListener("tpview", syncBar); setInterval(syncBar, 700);
 
   // ============================================================ a grip to change the height of a panel (the CSS handle does not work with a finger)
   function grip(p) {

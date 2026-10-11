@@ -365,6 +365,35 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dic
     return {"n_ms1": len(rts_ms1), "n_ms2": n_ms2, "parent_mz": mz_par}
 
 
+def hr_series(path: Path, rng, features: list[tuple], rt_end: float = 12.0, cyc: float = 0.04) -> None:
+    """Orbitrap-like Full Scan file (MS1 only, centroids, ~100 noise peaks per scan) whose ions are given by the caller.
+    features: (m/z, RT, sigma in min, amplitude); an amplitude of 0 leaves the ion out. Used by the tests of the series statistics."""
+    pre, specs, rts, tic = "controllerType=0 controllerNumber=1 scan=", [], [], []
+    filt = "FTMS + p ESI Full ms [100.0000-900.0000]"
+    for i, rt in enumerate(np.arange(0.5, rt_end, cyc)):
+        mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(np.log(3e3), 0.5, 100))
+        for m, c, sg, a in features:
+            v = a * float(_g(rt, c, sg)) * rng.normal(1, 0.02) if a > 0 else 0.0
+            if v >= 1e3:
+                mz.append(m * (1 + rng.normal(0, 0.8e-6))); it.append(v)
+        o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
+        n, b = len(mz), int(np.argmax(it))
+        specs.append(f'<spectrum index="{i}" id="{pre}{i + 1}" defaultArrayLength="{n}">' + _cvp("MS:1000579", "MS1 spectrum") + _cvp("MS:1000511", "ms level", 1)
+                     + _cvp("MS:1000130", "positive scan") + _cvp("MS:1000127", "centroid spectrum")
+                     + _cvp("MS:1000504", "base peak m/z", f"{mz[b]:.6f}", _U_MZ) + _cvp("MS:1000505", "base peak intensity", f"{it[b]:.6g}")
+                     + _cvp("MS:1000285", "total ion current", f"{float(np.sum(it)):.6g}")
+                     + f'<scanList count="1">{_cvp("MS:1000795", "no combination")}<scan>'
+                     + _cvp("MS:1000016", "scan start time", f"{rt:.6f}", ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"')
+                     + _cvp("MS:1000800", "mass resolving power", 60000) + _cvp("MS:1000512", "filter string", filt)
+                     + '<scanWindowList count="1"><scanWindow>' + _cvp("MS:1000501", "scan window lower limit", 100.0, _U_MZ)
+                     + _cvp("MS:1000500", "scan window upper limit", 900.0, _U_MZ) + '</scanWindow></scanWindowList></scan></scanList>'
+                     + '<binaryDataArrayList count="2">' + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
+        rts.append(rt); tic.append(float(it.sum()))
+    chroms = [_chrom(0, "TIC", np.array(rts), np.array(tic))]
+    Path(path).write_text(_hr_head("exploris", False, Path(path).stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
+                          + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
+
+
 def make(out: Path) -> Path:
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)

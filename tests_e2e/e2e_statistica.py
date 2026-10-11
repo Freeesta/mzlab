@@ -23,6 +23,12 @@ def load(pg, files, n):
     pg.wait_for_function(f"typeof E!=='undefined' && E.files.length>={n}", timeout=60000)
     ready(pg)
 
+# high resolution series: ion A grows with time, the internal standard (IS) does not; the blank has only the IS
+HRD = HERE / "shots" / "stat_hr_tmp"; HRD.mkdir(parents=True, exist_ok=True)
+A_MZ, IS_MZ = 305.1234, 250.0000
+for name, amp_a, amp_is in (("HR_t0", 1e5, 5e5), ("HR_t30", 4e5, 1e6), ("HR_t60", 8e5, 5e5), ("HR_Blank_1", 0, 5e5)):
+    ds.hr_series(HRD / (name + ".mzML"), np.random.default_rng(len(name) + int(amp_a % 97)), [(A_MZ, 6.0, 0.06, amp_a), (IS_MZ, 4.0, 0.06, amp_is)])
+
 def sections(pg):
     drawer(pg, "stat"); pg.wait_for_selector("#sb-panel-stat details.stat-sec")
     return pg.evaluate("[...document.querySelectorAll('#sb-panel-stat details.stat-sec')].map(d=>d.dataset.s)")
@@ -78,11 +84,46 @@ try:
             pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});redrawAll()})()"); ready(pg); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.some(p=>p.leg&&p.leg.querySelector('.cmp-grad'))"), "the legend of a chart with the files of a time series carries the gradient bar"
         step("chart legend carries the gradient bar", chart_legend)
-        def lr_only_meta():
-            assert sections(pg) == ["meta"], sections(pg)                      # low resolution: PR 1 only has the metadata section
-        step("low resolution shows the metadata section", lr_only_meta)
+        def lr_profile():
+            assert sections(pg) == ["meta", "profile"], sections(pg)           # low resolution: only the metadata and the profile
+            assert pg.locator("#prof-istd").count() == 0, "no normalization in low resolution"
+            pg.evaluate("CAMPIONI.apply([{file:'S_t60.mzML',type:'sample',time:60}])")
+            pg.fill("#prof-mz", "391.3"); pg.fill("#prof-rt", "18.3"); pg.click("#prof-go")
+            pg.wait_for_selector("#prof-res svg.prof-chart", timeout=60000)
+            res = pg.evaluate("PROFILO.result")
+            pts = [res["rows"][i] for i in res["series"]]
+            assert [p["file"] for p in pts] == ["S_t0.mzML", "S_t30.mzML", "S_t60.mzML"], pts            # in time order, the blank has no time
+            assert all(p["value"] > 1e4 and abs(p["rt"] - 18.3) < 0.2 for p in pts), pts
+            assert pg.locator("#prof-tab tbody tr").count() == 4 and pg.locator("#prof-res circle, #prof-res path[fill]").count() >= 3
+            assert pg.locator("#prof-res polyline").count() == 1, "points joined by a line"
+            assert pg.evaluate("PROFILO.tsv(PROFILO.result).split('\\n')[0].split('\\t').length") >= 6
+            pg.select_option("#prof-metric", "height"); pg.click("#prof-go"); pg.wait_for_timeout(500); ready(pg)
+            assert pg.evaluate("PROFILO.result.metric") == "height"
+        step("LR: profile of an ion chosen by the student, time order, line, table; no normalization, no ion list", lr_profile)
+
 finally:
     r.close()
+
+r2 = Run(port=8933, wd="/tmp/wdstathr")
+try:
+    with sync_playwright() as p:
+        pg = r2.page(p)
+        load(pg, sorted(HRD.glob("*.mzML")), 4)
+        def hr_profile():
+            assert pg.evaluate("BANCO.on()"), "high resolution"
+            assert sections(pg)[:2] == ["meta", "profile"], sections(pg)
+            pg.evaluate("QAQC.addIon('250.0000','4.0','IS','is')"); drawer(pg, "file"); drawer(pg, "stat"); ready(pg)
+            pg.wait_for_selector("#prof-istd option[value='1']", state="attached")
+            pg.select_option("#prof-istd", "1"); pg.fill("#prof-mz", "305.1234"); pg.fill("#prof-rt", "6.0"); pg.click("#prof-go")
+            pg.wait_for_selector("#prof-res svg.prof-chart", timeout=60000)
+            res = pg.evaluate("PROFILO.result")
+            pts = [res["rows"][i] for i in res["series"]]
+            assert [round(p["norm"], 1) for p in pts] == [0.2, 0.4, 1.6], pts
+            assert res["normalized"] and pg.locator("#prof-tab thead th").count() == 7
+            assert pg.evaluate("PROFILO.result.rows.find(r=>r.file==='HR_Blank_1.mzML').value") is None, "the blank has no peak of the ion"
+        step("HR: profile of an ion divided by the internal standard of the same file", hr_profile)
+finally:
+    r2.close()
 for s in steps: print(s)
-print("ERRORS", [e for e in r.errs if e[0] != "console.warning"][:5])
+print("ERRORS", [e for e in r.errs + r2.errs if e[0] != "console.warning"][:5])
 sys.exit(1 if [s for s in steps if s[1] != "ok"] else 0)
