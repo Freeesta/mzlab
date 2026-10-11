@@ -434,5 +434,11 @@
   "sub.norm.istd.short": "{mz} = m/z dello standard interno scelto dallo studente.",
   "sub.note": "{file} = file di riferimento; {f} = fattore; {norm} = normalizzazione.",
   "sub.on": "{file} = file di riferimento; {f} = fattore.",
-  "int.cmp.aria": "Descrizione accessibile del grafico di confronto. {a} = picchi trovati dalla CWT, {b} = picchi trovati da prominenza + minimo locale."
+  "int.cmp.aria": "Descrizione accessibile del grafico di confronto. {a} = picchi trovati dalla CWT, {b} = picchi trovati da prominenza + minimo locale.",
+  "mapex.spec.cap": "Didascalia sotto lo spettro laterale della mappa; {a} e {b} = estremi della finestra di RT del riquadro, in minuti, già formattati.",
+  "mapfeat.read": "Lettura al passaggio su un marcatore di mzFinder sulla mappa; {mz} = m/z, {rt} = RT in minuti, {v} = intensità, già formattati.",
+  "mapfeat.title": "Titolo del blocco «Come è stata trovata»; {id} = identificativo della feature in mzFinder.",
+  "mapfeat.win": "Finestra m/z dell'ione di una feature; {mz} = m/z, {ppm} = tolleranza in ppm, {a} e {b} = estremi della finestra.",
+  "mapfeat.edges.auto": "Bordi del picco calcolati dalla pagina; {a} e {b} = RT in minuti.",
+  "mapfeat.edges.rec": "Bordi dell'integrazione registrati da mzFinder; {a} e {b} = RT in minuti."
 }
