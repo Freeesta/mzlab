@@ -111,7 +111,7 @@ jobs:
           python tools/build_site.py
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
           cargo install wasm-bindgen-cli --version "$ver" --locked
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm --config 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
           python tools/verifica.py --browser chromium --solo e2e_rust
       # times and memory of the two engines (skipped without the real data: bench.py needs Full Scan files)

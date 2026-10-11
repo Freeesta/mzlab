@@ -12,8 +12,14 @@
   let worker;
   // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
   // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database and ?opfs=0 keeps the files in memory and IndexedDB (tests)
+  // The index builder: the pool of Rust workers by default (it falls back to Python when it cannot run); ?pool=N sets the workers, ?pool=0 or localStorage qqq.pool = "0" force Python (the reference).
+  const poolMode = q => {
+    const v = q.get("pool");
+    if (/^\d+$/.test(v || "")) return v;
+    try { return localStorage.getItem("qqq.pool") === "0" ? "0" : "auto"; } catch (_) { return "auto"; }
+  };
   const wurl = new URL("browser-worker.js", SRC);
-  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); if (/^\d+$/.test(q.get("pool") || "")) wurl.searchParams.set("pool", q.get("pool")); }
+  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); wurl.searchParams.set("pool", poolMode(q)); if (window.MZLAB_DESKTOP) wurl.searchParams.set("desk", "1"); }
   try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;

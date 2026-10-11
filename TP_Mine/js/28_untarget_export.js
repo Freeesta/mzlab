@@ -71,12 +71,13 @@
   const base = table => "untargeted_" + String(table.file.name || "table").replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_").slice(0, 60) + "_" + stamp();
 
   // ------------------------------------------------------------ the buttons of the window (27_untarget_ui.js asks for them and gives the state)
-  const buttons = () => `<label class="mut"><input type="checkbox" id="unt-xf"> only the filtered features</label> <button type="button" id="unt-x-xlsx">Excel (.xlsx)</button><button type="button" id="unt-x-csv" title="Text with ';' as separator, UTF-8">CSV (;)</button><button type="button" id="unt-x-mgf" title="MS2 of the features with their level and the licences of the library records">MGF</button>`;
+  const buttons = () => `<label class="mut"><input type="checkbox" id="unt-xf"> only the filtered features</label> <button type="button" id="unt-x-xlsx">Excel (.xlsx)</button><button type="button" id="unt-x-csv" title="Text with ';' as separator, UTF-8">CSV (;)</button><button type="button" id="unt-x-mgf" title="MS2 of the features with their level and the licences of the library records">MGF</button>` + (G.UNTF ? G.UNTF.buttons() : "");
   function bind(dlg, state) {
     const pick = () => { const s = state(), only = dlg.querySelector("#unt-xf").checked; return { s, feats: only ? s.visible() : s.all() }; };
     dlg.querySelector("#unt-x-xlsx").onclick = () => { const { s, feats } = pick(); G.dlx(base(s.table) + ".xlsx", sheets(s.table, s.res, feats, { tol: s.tol })); };
     dlg.querySelector("#unt-x-csv").onclick = () => { const { s, feats } = pick(); G.dl(base(s.table) + ".csv", csv(s.table, s.res, feats), "text/csv;charset=utf-8"); };
     dlg.querySelector("#unt-x-mgf").onclick = () => { const { s, feats } = pick(); G.dl(base(s.table) + ".mgf", mgf(s.table, s.res, feats), "text/plain;charset=utf-8"); };
+    if (G.UNTF && dlg.querySelector("#unt-x-gnps")) G.UNTF.bind(dlg, pick);
   }
 
   G.UNTX = { HEAD, head, rows, csv, mgf, sheets, sources, licenceSummary, buttons, bind, base };
