@@ -20,12 +20,14 @@ try:
             assert pg.get_attribute("header .logo", "alt") == "mzLab"
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(200)
-                for b, t in (("#np-nl", "ls"),):
-                    assert pg.is_visible(b), (w, b)
-                    pg.click(b); pg.wait_for_timeout(300)
-                    assert pg.evaluate("document.querySelector('#reftabs button[data-t=%s]').classList.contains('on')" % t) or pg.evaluate("[...document.querySelectorAll('#reftabs .on')].some(e=>e.dataset.t=='%s')" % t), (w, t)
-                    pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
-                    if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+                if w < 600:      # very narrow: everything but File is in «Altro»
+                    assert not pg.is_visible("#np-nl"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Perdite neutre").click()
+                else:
+                    assert pg.is_visible("#np-nl"), w
+                    pg.click("#np-nl")
+                pg.wait_for_timeout(400)
+                assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Perdite neutre", w
+                pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); pg.wait_for_timeout(800); pg.click("#np-spec"); pg.wait_for_timeout(800)

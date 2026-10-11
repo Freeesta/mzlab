@@ -40,10 +40,13 @@ try:
             assert "Previous scan" in pg.get_attribute("#hrbar [data-hb=prev]", "title"), pg.get_attribute("#hrbar [data-hb=prev]", "title")
         step("bench toolbar and cells", bench)
         def info_tabs():
-            for t in ("hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"):
-                pg.click(f"#hri-tabs [data-t={t}]"); pg.wait_for_timeout(1000)
+            labs = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.getAttribute('aria-label'))")
+            for w in ("Scan: Header of the scan", "Formulas: Elemental composition", "Identification with the libraries"): assert w in labs, (w, labs)
+            for t in ("hdr", "lst", "fil", "cmp", "iso", "idn"):
+                pg.evaluate(f"BARRA.setTab('{t}')"); pg.wait_for_timeout(1000)
                 it = italian(pg); assert not it, (t, it)
-        step("information bar: the nine tabs", info_tabs)
+            pg.evaluate("BARRA.close(false)")
+        step("information tools of the toolbar: the six panels", info_tabs)
         def stacked():
             pg.evaluate("addRangeTest = 1") if False else None
             btn = pg.locator("[data-bf=range]").first

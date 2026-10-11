@@ -22,7 +22,7 @@ window.toast = function(msg) {
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
-const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, fold: false, tab: "full" };
+const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
 const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4, tog: false };      // merge = join the centroids of the same nominal mass (centroid files only)
@@ -115,6 +115,7 @@ const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
 const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
+const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);                // formula in plain text for the canvas (subscript digits)
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
 const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
@@ -127,8 +128,11 @@ const lrTog = () => !!UIP.tog && !(window.BANCO && BANCO.on());
 const allTabs = () => !!(window.BANCO && BANCO.on()) || !!UIP.tog;
 const tabPanels = t => (t === undefined && allTabs() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
 // group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
-const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : kindOf(f)) : kindOf(f);
-const grpLabel = g => ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
+const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.dda": () => I18N.t("files.group.dda"), "hr.infusion": () => I18N.t("files.group.infusion") };
+const grpLabel = g => GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+// the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
+const sibsOf = f => E.files.filter(x => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
 // ------------------------------------------------------------------ schermata di caricamento
@@ -204,7 +208,7 @@ function uiSave(now = false) {
     NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
-      tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
+      tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
@@ -275,10 +279,13 @@ async function bootSession0() {
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   const isFirstLoad = !oldNames.length;
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
+  const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
   E.files = j.session.map((s, k) => {
     let vis = true;
     if (oldVis[s.file]) {
       vis = oldVis[s.file].vis;
+    } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
+      vis = fileBase(s.file) === fileBase(j.session[0].file);          // high resolution: only the first file (in the order of the list) is open, a click opens the others
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
       const firstIdx = j.session.findIndex(x => x.kind === s.kind);
       vis = (k === firstIdx);
@@ -316,7 +323,7 @@ async function apexSpectrum(c, sp) {
 // width available for the panels (the panel area may still be hidden while the files are being opened)
 function hostWidth() {
   const w = Q("#dpanels").clientWidth;
-  return w > 100 ? w : Math.max(600, innerWidth - 28 - (E.fold ? 0 : 240));
+  return w > 100 ? w : Math.max(600, innerWidth - 28 - (window.BARRA ? BARRA.pinnedWidth : 0));
 }
 // full-width panels follow the page: when the window or the file list changes size
 function fitWidth() {
@@ -324,12 +331,6 @@ function fitWidth() {
   E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
   if (window.DDA && E.panels.some(q => q.dock != null)) { relayout(); DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
 }
-function setFold(on) {
-  E.fold = on; Q("#v-data").classList.toggle("fold", on); Q("#funfold").hidden = !on;
-  requestAnimationFrame(() => { fitWidth(); redrawAll(); });
-}
-Q("#ffold").onclick = () => { setFold(true); uiSave(); };
-Q("#funfold").onclick = () => { setFold(false); uiSave(); };
 function restoreUi() {
   const u = NB.ui;
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
@@ -337,7 +338,7 @@ function restoreUi() {
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
   u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
-  E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; setFold(!!u.fold); E.tab = pickTab(u.tab);
+  E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; E.tab = pickTab(u.tab);
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   const made = u.panels.map(sp => addPanel(sp.type, {
     ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" ? "w" : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
@@ -430,12 +431,16 @@ function reorderFiles(fromK, toK, isBefore) {
   uiSave();
 }
 
+const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
+function flGrpGet() { try { return JSON.parse(localStorage.getItem("qqq.flgrp") || "{}") || {}; } catch (_) { return E._flgrp || {}; } }
+function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
   const groups = [];
   const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
+  groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });       // a DDA file is ONE row (its Full Scan and MS2 parts open together)
   if (window.BANCO && BANCO.on() && (E.tab === "mrm" || lrTog())) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
@@ -459,13 +464,17 @@ function renderFileList() {
     return `<div class="fgh sep" data-gt="${t}" style="cursor:pointer"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div><div class="grp-files" style="${open ? "" : "display:none"}">${tabFiles(t).map(ghost).join("")}</div>`;
   }).join("");
   const isMainOpen = isExpOpen(E.tab);
+  // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
+  const compact = !!(window.BANCO && BANCO.on() && flCompact());
+  const grpClosed = g => compact && flGrpGet()[g] === 1;
   const gh = (G, label, cls = "") => {
     const isSub = !!cls;
     const open = isSub ? true : isMainOpen;
+    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv" style="font-size:10px;margin-right:2px">${grpClosed(G.g) ? "▸" : "▾"}</span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
-  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
+  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").innerHTML = pre + body + others;
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
@@ -482,6 +491,11 @@ function renderFileList() {
     const f = E.files[+tog.dataset.prk];
     if (f) { f._prOpen = f._prOpen === false; renderFileList(); }
   });
+  Q("#flst").querySelectorAll(".fgh[data-gg]").forEach(el => {
+    const flip = () => { const m = flGrpGet(); m[el.dataset.gg] = m[el.dataset.gg] === 1 ? 0 : 1; flGrpSet(m); renderFileList(); };
+    el.onclick = e => { if (!e.target.closest("input")) flip(); };
+    el.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("input")) { e.preventDefault(); flip(); } };
+  });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
     side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
     if (!x.checked) cleanupOrphanPanels();
@@ -490,7 +504,7 @@ function renderFileList() {
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
-    E.files[+x.dataset.k].vis = x.checked;
+    sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
     if (!x.checked) cleanupOrphanPanels();
     redrawAll();
     uiSave();
@@ -501,6 +515,10 @@ function renderFileList() {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = e => {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
+      const f0 = E.files[+nm.dataset.k];
+      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
+        sibsOf(f0).forEach(f => { f.vis = true; }); E.cur = f0.k; renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+      }
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);

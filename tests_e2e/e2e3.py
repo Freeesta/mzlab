@@ -77,7 +77,7 @@ try:
             pg.evaluate("E.browse=false;E.cur=0;renderFileList();renderNav();redrawAll()")
         step("method popup (full + mrm)", method)
         def bt():
-            pg.click("#np-bt"); pg.wait_for_timeout(500)
+            pg.click("#tb-more"); pg.click("#np-bt"); pg.wait_for_timeout(500)
             pg.screenshot(path=SH + "17_bt.png")
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
         step("BioTransformer popup", bt)

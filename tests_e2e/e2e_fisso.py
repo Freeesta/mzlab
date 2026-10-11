@@ -23,7 +23,7 @@ try:
             assert pg.evaluate("scrollY") > 300 and top() == 0, (pg.evaluate("scrollY"), top())
             assert pg.evaluate("document.querySelector('header').classList.contains('scrolled')")
             hh = pg.evaluate("document.querySelector('header').offsetHeight")
-            assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().top") >= hh, "the file list sits below the header"
+            drawer(pg, pin=False); assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().top") >= hh, "the file list sits below the header"; pg.evaluate("BARRA.close(false)")
             pg.evaluate("window.scrollTo(0, 0)"); pg.wait_for_timeout(200); assert not pg.evaluate("document.querySelector('header').classList.contains('scrolled')")
         step("header sticky, shadow only when scrolled, file list below it", sticky)
         def noscroll():

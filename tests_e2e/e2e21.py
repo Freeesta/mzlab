@@ -33,7 +33,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('.pnum')].every(n=>!n.hidden)"), "numbers are always shown"
         step("panels are numbered from the top; key 2 activates the second", numbering)
         def files():
-            nm = pg.locator("#flst .fl:not(.ghost) .nm").first
+            drawer(pg); nm = pg.locator("#flst .fl:not(.ghost) .nm").first
             nm.click(button="right"); pg.wait_for_timeout(200)
             assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi").count() == 1
             pg.locator("#ctx div", has_text="Rinomina").click(); pg.wait_for_timeout(300)

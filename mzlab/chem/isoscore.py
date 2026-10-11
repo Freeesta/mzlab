@@ -97,14 +97,15 @@ def merge_res(pat: list[dict], r200: float) -> list[dict]:
 
 
 def isotope_score(counts: dict[str, int], z: int, obs: list[tuple[float, float]], *, r200: float = 70000.0, sigma_ppm: float = 3.0,
-                  sigma_int: float = 0.10, min_rel: float = 1.0, noise_rel: float = 1.0) -> dict:
+                  sigma_int: float = 0.10, min_rel: float = 1.0, noise_rel: float = 1.0, norm: str = "fit") -> dict:
     """Score of the isotope pattern of `counts` against the observed peaks `obs` = [(mz, intensity)] around the monoisotopic peak.
 
     sigma_ppm  expected mass error of a peak (ppm); sigma_int  expected relative error of an intensity (0.10 = 10 %, log-normal).
     min_rel    theoretical peaks below this % of the base peak are not required to be seen; noise_rel  observed peaks below this % are ignored.
     Returns {score, peaks: [{mz, rel, obs_mz, obs_rel, d_ppm, t_mass, t_int, t, w}], extra: [{mz, rel, w}], scale, n_missing, n_extra}. Each theoretical
     peak carries its weight w (share of the theory), the Gaussian mass term and the log-normal intensity term (their product t is its contribution).
-    The observed intensities are scaled to the theory by the weighted least squares factor (the monoisotopic peak is not privileged).
+    The observed intensities are scaled to the theory by the weighted least squares factor (norm="fit", the monoisotopic peak is not privileged) or, with
+    norm "mono" / "max" / "sum", so that the monoisotopic peak / the theoretically most intense peak / the sum of the matched peaks agree with the theory.
     """
     th = [p for p in merge_res(fine_pattern(counts, z), r200) if p["rel"] >= min_rel]
     if not th or not obs:
@@ -127,6 +128,15 @@ def isotope_score(counts: dict[str, int], z: int, obs: list[tuple[float, float]]
     num = sum(p["rel"] * o[mt[0]][1] for p, mt in zip(th, match) if mt)
     den = sum(p["rel"] ** 2 for p, mt in zip(th, match) if mt)
     scale = num / den if den > 0 else None                          # observed intensity per unit of theoretical %
+    if norm in ("mono", "max", "sum"):                              # another normalisation mode: when its anchor is not matched the fit stays
+        mt_ = [(p, mt) for p, mt in zip(th, match) if mt]
+        if norm == "sum" and mt_:
+            scale = sum(o[mt[0]][1] for _, mt in mt_) / sum(p["rel"] for p, _ in mt_)
+        else:
+            a = th[0] if norm == "mono" else max(th, key=lambda p: p["rel"])
+            mt = match[th.index(a)]
+            if mt:
+                scale = o[mt[0]][1] / a["rel"]
     wt = lambda r: r ** WEIGHT_POW
     tot_th = sum(wt(p["rel"]) for p in th)
     extra = []

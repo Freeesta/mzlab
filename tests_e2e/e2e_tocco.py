@@ -127,7 +127,7 @@ try:
             h1 = pg.evaluate(f"{CH}.h"); assert h1 > h0 + 60, (h0, h1)
         step("the grip changes the height of a panel", grip)
         def filelong():
-            b = pg.locator("#flst .fl:not(.ghost) .nm").first.bounding_box(); x, y = b["x"] + 10, b["y"] + b["height"] / 2
+            drawer(pg); b = pg.locator("#flst .fl:not(.ghost) .nm").first.bounding_box(); x, y = b["x"] + 10, b["y"] + b["height"] / 2
             T("touchStart", [(x, y)]); wait(800); T("touchEnd", []); wait(300)
             assert pg.is_visible("#ctx") and "Rinomina" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
             pg.keyboard.press("Escape"); pg.mouse.click(2, 2); wait(200)

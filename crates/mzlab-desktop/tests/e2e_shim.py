@@ -36,10 +36,11 @@ class Quiet(SimpleHTTPRequestHandler):
 page = ThreadingHTTPServer(("127.0.0.1", PAGE_PORT), partial(Quiet, directory=str(DIST)))
 threading.Thread(target=page.serve_forever, daemon=True).start()
 
-FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [] };
+FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [], delay: 0 };
+try { localStorage.setItem("qqq.upd.last", String(Date.now())); } catch (_) {}       // the daily silent check stays out of the way: the steps drive it
 window.__TAURI__ = { core: { invoke: async (cmd, a) => {
     if (cmd === "pick_files") return a.dam ? [] : %s;
-    if (cmd === "update_check") { window.__UPD.calls.push(cmd); return JSON.stringify(window.__UPD.check); }
+    if (cmd === "update_check") { window.__UPD.calls.push(cmd); if (window.__UPD.delay) await new Promise(r => setTimeout(r, window.__UPD.delay)); return JSON.stringify(window.__UPD.check); }
     if (cmd === "update_apply") {
       window.__UPD.calls.push(cmd);
       for (let i = 1; i <= 3; i++) for (const f of window.__UPD.listeners) f({ payload: { done: i, total: 3, bytes: i * 1e6, total_bytes: 3e6 } });
@@ -144,6 +145,15 @@ try:
             upd_set({"status": "available", "version": "c", "files": 1, "bytes": 1000})
             pg.evaluate("DESKUPD.check(true)"); pg.wait_for_selector("#updbox")
             assert t("update.notice") in pg.inner_text("#updbox")
+        def upd_click_during_silent():          # the manual click while the silent check is in flight is not lost: it shows the same answer as a dialog
+            pg.evaluate("document.querySelector('#updbox') && document.querySelector('#updbox').remove()")
+            upd_set({"status": "available", "version": "d", "files": 2, "bytes": 2000000})
+            pg.evaluate("() => { window.__UPD.delay = 1500; DESKUPD.check(true); }"); pg.wait_for_function("window.__UPD.calls.length === 1")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-upd"); pg.click("#uip-upd")
+            pg.wait_for_selector("#updbox button[data-a=go]", timeout=10000)
+            assert pg.evaluate("window.__UPD.calls.length") == 1, pg.evaluate("window.__UPD.calls"); assert t("update.notice") not in pg.inner_text("#updbox"), pg.inner_text("#updbox")
+            pg.evaluate("window.__UPD.delay = 0")
+        step("settings: a click during the silent check takes it over", upd_click_during_silent)
         step("silent check: nothing when up to date, a small notice when an update exists", upd_silent)
         # ---- the native folder of the libraries (crates/mzlab-desktop/src/librerie.rs behind lib/*, read by libreria-worker.js with the same code as the browsers)
         def rec(name, prec): return f"Name: {name}\nPrecursorMZ: {prec}\nIon_mode: Positive\nPrecursor_type: [M+H]+\nNum Peaks: 4\n60.5\t100\n100.1\t400\n150.2\t900\n200.3\t300\n"
