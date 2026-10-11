@@ -88,50 +88,44 @@
   const sgn = x => (x >= 0 ? "+" : "&minus;");
   const AD_MORE = { 1: false, "-1": false };                // the less common adducts stay folded until the student opens them
 
-  // Differences between adducts: to recognise pairs of peaks belonging to the same compound (Huang et al. 1999)
+  // Differences between adducts, to recognise pairs of peaks of the same compound (Huang et al. 1999). Only the essential pairs: references, never labels on the user's spectrum
   function calcAdductDiffs() {
     const shift = n => { const a = ADD.find(x => x.n === n); return a ? a.shift : 0; };
     return [
-      { p: 1, pair: "[M+Na]+ &minus; [M+H]+", d: shift("[M+Na]+") - shift("[M+H]+"), nom: 22, note: "tbl.diff.note.1", src: "Huang 1999" },
-      { p: 1, pair: "[M+NH4]+ &minus; [M+H]+", d: shift("[M+NH4]+") - shift("[M+H]+"), nom: 17, note: "tbl.diff.note.2", src: "Huang 1999" },
-      { p: 1, pair: "[M+K]+ &minus; [M+H]+", d: shift("[M+K]+") - shift("[M+H]+"), nom: 38, note: "tbl.diff.note.3", src: "Huang 1999" },
-      { p: 1, pair: "[M+K]+ &minus; [M+Na]+", d: shift("[M+K]+") - shift("[M+Na]+"), nom: 16, note: "tbl.diff.note.4", src: "Huang 1999" },
-      { p: 1, pair: "[M+H+ACN]+ &minus; [M+H]+", d: shift("[M+H+ACN]+") - shift("[M+H]+"), nom: 41, note: "tbl.diff.note.5", src: "Huang 1999" },
-      { p: 1, pair: "[M+CH3OH+H]+ &minus; [M+H]+", d: shift("[M+CH3OH+H]+") - shift("[M+H]+"), nom: 32, note: "tbl.diff.note.6", src: "Huang 1999" },
-      { p: 1, pair: "[2M+H]+ &minus; [M+H]+", d: null, nom: "M", note: "tbl.diff.note.7", src: "Huang 1999" },
-      { p: 1, pair: "[M+H]+ &minus; [M+H-H2O]+", d: shift("[M+H]+") - shift("[M+H-H2O]+"), nom: 18, note: "tbl.diff.note.8", src: "Huang 1999" },
-
-      { p: -1, pair: "[M+HCOO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+HCOO]-") - shift("[M-H]-"), nom: 46, note: "tbl.diff.note.9", src: "Huang 1999" },
-      { p: -1, pair: "[M+CH3COO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+CH3COO]-") - shift("[M-H]-"), nom: 60, note: "tbl.diff.note.10", src: "Huang 1999" },
-      { p: -1, pair: "[M+Cl]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Cl]-") - shift("[M-H]-"), nom: 36, note: "tbl.diff.note.11", src: "Huang 1999" },
-      { p: -1, pair: "[M+Na-2H]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Na-2H]-") - shift("[M-H]-"), nom: 22, note: "tbl.diff.note.12", src: "Huang 1999" },
-      { p: -1, pair: "[2M&minus;H]&minus; &minus; [M&minus;H]&minus;", d: null, nom: "M", note: "tbl.diff.note.13", src: "Huang 1999" },
-      { p: -1, pair: "[M&minus;H]&minus; &minus; [M&minus;H-H2O]&minus;", d: shift("[M-H]-") - shift("[M-H-H2O]-"), nom: 18, note: "tbl.diff.note.14", src: "Huang 1999" },
+      { p: 1, pair: "Na &minus; H", d: shift("[M+Na]+") - shift("[M+H]+") },
+      { p: 1, pair: "NH<sub>4</sub> &minus; H", d: shift("[M+NH4]+") - shift("[M+H]+") },
+      { p: 1, pair: "K &minus; H", d: shift("[M+K]+") - shift("[M+H]+") },
+      { p: 1, pair: "ACN", d: shift("[M+H+ACN]+") - shift("[M+H]+") },
+      { p: -1, pair: "HCOO", d: shift("[M+HCOO]-") - shift("[M-H]-") },
+      { p: -1, pair: "Cl", d: shift("[M+Cl]-") - shift("[M-H]-") },
     ];
   }
   window.QADD_DIFFS = calcAdductDiffs();
 
+  const fmtSh = x => sgn(x) + Math.abs(x).toFixed(4);
   function diffsHtml() {
-    const l = calcAdductDiffs();
-    const rows = l.map(d => `<tr><td><b>${d.pair}</b></td><td class="num">${d.d != null ? (d.d >= 0 ? "+" : "") + d.d.toFixed(4) : "+M"}</td><td class="num">${d.nom != null ? (typeof d.nom === "number" ? (d.nom >= 0 ? "+" : "") + d.nom : "+" + d.nom) : ""}</td><td class="sm">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td><td class="muted sm">${I18N.t(d.note)}</td></tr>`).join("");
-    return `<div style="margin-top:16px"><h4 style="margin:10px 0 4px">${I18N.t("tbl.diff.title")}</h4>
-      <div class="muted sm" style="margin-bottom:6px">${I18N.t("tbl.diff.intro")}</div>
-      <table><tr><th>${I18N.t("tbl.diff.col.pair")}</th><th class="num">${I18N.t("tbl.diff.col.exact")}</th><th class="num">${I18N.t("tbl.diff.col.nominal")}</th><th>${I18N.t("tbl.diff.col.mode")}</th><th>${I18N.t("tbl.diff.col.note")}</th></tr>${rows}</table></div>`;
+    const rows = calcAdductDiffs().map(d => `<tr><th scope="row" class="num">${fmtSh(d.d)}</th><td>${d.pair}</td><td class="muted">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td></tr>`).join("");
+    return `<div class="ad-diffs"><h4>${I18N.t("tbl.diff.title")}</h4>
+      <div class="muted sm">${I18N.t("tbl.diff.intro")}</div>
+      <table class="adt"><tbody>${rows}</tbody></table>
+      <div class="muted ad-src">${I18N.t("tbl.diff.src")}</div></div>`;
   }
 
+  // One table: a thin group header per polarity; every adduct = one data row + one note row (colspan) under it
   function adducts(M) {
-    const ref = { 1: ADD[0], "-1": ADD.find(a => a.n === "[M-H]-") };
-    const row = (a, pol) => {
-      const expr = `${a.k > 1 ? a.k : ""}M ${sgn(a.shift)} ${Math.abs(a.shift).toFixed(4)}${Math.abs(a.z) > 1 ? I18N.t("tbl.add.divided", { z: Math.abs(a.z) }) : ""}`;
-      const d = a === ref[pol] || Math.abs(a.z) > 1 || a.k > 1 ? "" : sgn(a.shift - ref[pol].shift) + Math.abs(a.shift - ref[pol].shift).toFixed(4);
-      return `<tr${a.exp ? ' class="exp"' : ""}><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? rh(mzOf(a, M), 0) : ""}</td><td class="num">${d}</td><td class="muted sm">${I18N.t(a.note)}</td></tr>`;
+    const row = a => {
+      const sh = (a.k > 1 ? a.k + "M " : "") + fmtSh(a.shift) + (Math.abs(a.z) > 1 ? " &divide;" + Math.abs(a.z) : "");
+      return `<tr class="adr${a.exp ? " exp" : ""}"><th scope="row">${fmtAd(a.n)}</th><td class="num">${sh}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td></tr><tr class="adn${a.exp ? " exp" : ""}"><td colspan="3">${I18N.t(a.note)}</td></tr>`;
     };
-    const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
-      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr class="admore" data-pol="${pol}"><td colspan="6" style="padding-top:8px"><a href="#" class="adtog">${AD_MORE[pol] ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</a></td></tr>` + (AD_MORE[pol] ? l.filter(a => !a.exp).map(a => row(a, pol)).join("") : ""); };
-    const head = pol => `<tr><th>${I18N.t("tbl.add.col.adduct")}</th><th>m/z =</th><th class="num">${I18N.t("tbl.add.col.exact")}</th><th class="num">${I18N.t("tbl.add.col.nominal")}</th><th class="num">${I18N.t("tbl.add.col.delta", { ref: pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>" })}</th><th>${I18N.t("tbl.add.col.when")}</th></tr>`;
-    const blk = pol => `<div class="ad-card ${pol > 0 ? "pos" : "neg"}"><div class="ad-hd"><span class="ad-badge ${pol > 0 ? "pos" : "neg"}">${pol > 0 ? "ESI+" : "ESI&minus;"}</span> <b>${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</b></div><div class="ad-sc"><table>${head(pol)}${rows(pol)}</table></div></div>`;
+    const group = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
+      const open = AD_MORE[pol];
+      return `<tbody><tr class="adh"><th scope="colgroup" colspan="3">${pol > 0 ? "ESI+" : "ESI&minus;"} &middot; ${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</th></tr>`
+        + l.filter(a => a.exp).map(row).join("")
+        + `<tr class="admore" data-pol="${pol}"><td colspan="3"><button type="button" class="adtog" aria-expanded="${open ? "true" : "false"}">${open ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</button></td></tr>`
+        + (open ? l.filter(a => !a.exp).map(row).join("") : "") + `</tbody>`; };
+    const head = `<thead><tr><th scope="col">${I18N.t("tbl.add.col.adduct")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.shift")}</th><th scope="col" class="num">${I18N.t("tbl.add.col.exact")}</th></tr></thead>`;
     const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
-    return (neg ? blk(-1) + blk(1) : blk(1) + blk(-1)) + diffsHtml();
+    return `<table class="adt">${head}${neg ? group(-1) + group(1) : group(1) + group(-1)}</table>` + diffsHtml();
   }
   function adductTab() {
     return `<div class="adbar" style="margin-bottom:8px"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" autocomplete="off"></div><div id="ad-msg" class="muted sm" style="margin-top:4px"></div></div>
@@ -141,7 +135,7 @@
     const inp = root.querySelector("#ad-in"), msg = root.querySelector("#ad-msg"), tb = root.querySelector("#ad-tbl");
     let lastM = null;                                               // the table is rebuilt at every keystroke: the open / folded state lives in AD_MORE
     const redo = () => { tb.innerHTML = adducts(lastM); };
-    tb.onclick = e => { const t = e.target.closest(".adtog"); if (!t) return; e.preventDefault(); const pol = t.closest("tr").dataset.pol; AD_MORE[pol] = !AD_MORE[pol]; redo(); };
+    tb.onclick = e => { const t = e.target.closest(".adtog"); if (!t) return; e.preventDefault(); const pol = t.closest("tr").dataset.pol; AD_MORE[pol] = !AD_MORE[pol]; redo(); const nt = tb.querySelector(`.admore[data-pol="${pol}"] .adtog`); if (nt) nt.focus(); };
     inp.oninput = async () => {
       const t = inp.value.trim().replace(",", ".");
       if (!t) { msg.textContent = ""; lastM = null; redo(); return; }
@@ -258,17 +252,15 @@
     if (Object.values(n).some(k => k < 0)) throw new Error(I18N.t("tbl.iso.adductTooMany"));
     return { n, z: a.z, ad: a.n };
   }
-  // ---------------------------------------------------------------- dialog with three tabs (Tavola periodica, Addotti, Perdite neutre)
+  // ---------------------------------------------------------------- dialog #refdlg: one content at a time (Tavola periodica; Addotti and Perdite neutre outside the Dati view), titled with its name, no tab bar
   const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ad", I18N.t("icon.adduct"), adductTab, bindAdducts], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
   function open(which, opt = {}) {
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
     const show = id => {
       const t = TABS.find(x => x[0] === id); body.innerHTML = t[2](); if (t[3]) t[3](body, show);
-      d.querySelectorAll("#reftabs button").forEach(b => b.classList.toggle("on", b.dataset.t === id));
+      Qs("#reftitle").textContent = t[1];
     };
-    Qs("#reftabs").innerHTML = TABS.map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join("");
-    Qs("#reftabs").querySelectorAll("button").forEach(b => b.onclick = () => show(b.dataset.t));
     Qs("#refx").onclick = () => d.close();
     show(which); if (!d.open) d.showModal();
     if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
