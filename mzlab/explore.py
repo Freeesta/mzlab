@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from .bigfiles import hr_profile
+from .differenza import subtract_spectrum
 from .i18n import UserError
 from .project import guess_sample
 from .reader.mzml import Run
@@ -765,20 +766,16 @@ class Item:
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False, filt: str | None = None):
         """Mean spectrum of the scans in [rt0, rt1], peaks merged within bin_da.
 
-        bg = {"item": Item, "rt0": .., "rt1": .., "factor": 1.0} subtracts a background spectrum
-        (another time window, or the blank file) bin by bin and clips at zero, like Xcalibur's
-        "subtract spectrum". Both spectra are mean intensity per scan, so windows of different length are comparable.
+        bg = {"item": Item, "rt0": .., "rt1": .., "factor": 1.0, "tol": 5.0 (ppm, high resolution), "clip": True} subtracts a reference spectrum
+        (another time window, or the blank file, see differenza.subtract_spectrum): the same nominal mass in low resolution, +-tol ppm in high;
+        what is only in the reference stays negative unless clip. Both spectra are mean intensity per scan, so windows of different length are comparable.
         """
         u, smz, sy, n = self._binned(rt0, rt1, level, precursor, prec_tol, bin_da, hr, raw1=bg is None, filt=filt)
         if bg is not None and len(u):
-            bu, _, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da, hr)
+            bu, bmz, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da, hr)
             if bn and len(bu):
-                idx = np.searchsorted(bu, u)
-                idx[idx >= len(bu)] = len(bu) - 1
-                hit = bu[idx] == u
-                sy = np.maximum(sy - np.where(hit, by[idx], 0.0) * float(bg.get("factor", 1.0)), 0.0)
-                keep = sy > 0
-                smz, sy = smz[keep], sy[keep]
+                smz, sy = subtract_spectrum(smz, sy, bmz, by, float(bg.get("factor", 1.0)), unit=not self.hr_on(level, hr),
+                                            tol=float(bg.get("tol", 5.0)), clip=bool(bg.get("clip", True)))
         if min_rel > 0 and len(sy):
             keep = sy >= min_rel * sy.max()
             smz, sy = smz[keep], sy[keep]

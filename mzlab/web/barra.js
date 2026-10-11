@@ -16,7 +16,7 @@ const BARRA = (() => {
   const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
   const PHONE_W = 600;
   const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
-  const DROP_ORDER = ["ptable", "stat", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
   let _open = false;
@@ -72,7 +72,7 @@ const BARRA = (() => {
     { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
     { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
-    { id: "stat", dom: "np-stat", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
+    
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
     { id: "scan", hr: true, items: ["hdr", "lst", "fil"], ic: () => ICONS[_last.scan] },
@@ -109,6 +109,7 @@ const BARRA = (() => {
     { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
     { id: "pin", bar: false, group: "panel", ic: () => ICONS.file, visible: () => inData() && !narrow(), run: () => { if (!_open) show(_tab); togglePin(); } },
     // external links, rare: in "Altro"
+    { id: "stat", dom: "np-stat", more: true, ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];

@@ -85,6 +85,12 @@ try:
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
         step("a file picked in the dialog is opened and its TIC is drawn by the native engine", load)
+        def native_index():
+            idx = pg.evaluate("window.MZLAB_IDX || []")
+            assert idx and all(i["engine"] == "native" for i in idx), idx
+            perf = pg.evaluate("fetch('api/perf').then(r=>r.json())")
+            assert perf["files"] and all(f["indexed"] and "costruzione .mzidx" not in f["timing"] for f in perf["files"]), perf
+        step("the .mzidx of the picked file is built by the native side (cache folder of the app) and Python reads it without building another", native_index)
         def tic_xic():
             for url in ("api/chrom?k=0&kind=tic&level=1", "api/xic?k=0&mz=364&tol=0.35&level=1", "api/xic?k=0&mz=300&tol=0.5&level=1&px=200"):
                 pg.evaluate("window.MZLAB_RUST.enabled = true"); r = pg.evaluate(GET, url)

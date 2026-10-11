@@ -33,6 +33,9 @@ async function write(kind, name, size, chunk) {
   return fh.getFile();
 }
 
+// `size` bytes produced by chunk(offset, length) -> Promise<Uint8Array> -> File in OPFS (the desktop copies the index built by the native side)
+export const putChunks = (kind, name, size, chunk) => write(kind, name, size, chunk);
+
 // a Blob, an ArrayBuffer or a Uint8Array -> File in OPFS
 export async function put(kind, name, data) {
   if (data instanceof Blob) return write(kind, name, data.size, async (o, n) => new Uint8Array(await data.slice(o, o + n).arrayBuffer()));
