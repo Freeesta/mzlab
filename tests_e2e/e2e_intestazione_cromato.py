@@ -80,6 +80,30 @@ try:
             pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corri', has_text="Nessuna").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
+        def tlink():
+            b = pg.locator(f'{C} [data-a=tlink]'); assert b.get_attribute("aria-pressed") == "true" and "Collega zoom e cursore" in b.get_attribute("aria-label")
+            b.click(); assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split(); b.click()
+        step("chromatogram link button: own icon, label and aria-pressed", tlink)
+        def follow():
+            pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); pg.wait_for_timeout(1500)
+            S = ".pnl.spec"; fol = pg.locator(f'{S} .fol.on').first
+            assert "Segue: pann." in fol.inner_text() and "on" in fol.get_attribute("class").split() and fol.get_attribute("aria-label")
+            fol.click(); pg.wait_for_timeout(200)
+            t = pg.inner_text("#ctx"); assert "Nessuno (spettro fisso)" in t and "Pannello" in t, t
+            pg.locator("#ctx div", has_text="Nessuno").click(); pg.wait_for_timeout(500)
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .fol', has_text="Fisso").count() >= 1
+            pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); pg.wait_for_timeout(500)
+            assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.link)")
+        step("spectrum chip: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
+        def spcorr():
+            S = ".pnl.spec"; pg.locator(f'{S} [data-o=corr]').first.click(); pg.wait_for_timeout(150)
+            n = (pg.locator(f'{S} .corrm').first.locator('.corri').count(), pg.locator(f'{S} .corrm').first.locator('select').count())
+            assert n == (3, 1), n
+            pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Fondo di un tratto").click(); pg.wait_for_timeout(500)
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')") and pg.locator(f'{S} [data-o=bw0]').count() == 1
+            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Nessuna").click(); pg.wait_for_timeout(300)
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
+        step("spectrum Correzione: same menu as the chromatogram, without the baseline", spcorr)
         def single():
             pg.evaluate("document.querySelector('.pnl.xic [data-o=corr]').click()")
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');const keep=E.files;E.files=[keep[0]];window.__k=keep;ctl(p)})()"); pg.wait_for_timeout(200)
