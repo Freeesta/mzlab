@@ -113,6 +113,8 @@ const BARRA = (() => {
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
+  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
+  if (window.MAPPA) MAPPA.CMDS.filter(c => c.kinds.includes("2d")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
   const byId = id => CMD.find(c => c.id === id);
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
