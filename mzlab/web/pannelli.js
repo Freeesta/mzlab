@@ -684,7 +684,7 @@ function fitHd(p) {
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
   } finally { p._fitBusy = false; }
 }
-function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); }
+function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }       // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
 function hdMorePlace(p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
 function hdMoreInit(p) {
   const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;
