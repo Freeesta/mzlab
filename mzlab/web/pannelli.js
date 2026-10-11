@@ -215,7 +215,7 @@ function addPanel(type, o, after) {
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
     const gv = `<span class="tbg">${lens ? `<button class="bt" data-a="izoom" title="${I18N.t("panel.izoom.title")}">${IC_ZOOM}</button>` : ""}${fit}</span>`;
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button></span>` : "";
-    const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" title="${I18N.t("panel.tlink.title")}">${IC_LINK}</button></span>` : "";
+    const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button></span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
@@ -499,16 +499,45 @@ async function pngWithMeta(blob, fields) {
   parts.push(src.slice(33)); return new Blob(parts, { type: "image/png" });
 }
 
+// ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;
+// o = { files: files that can be subtracted, cur: "" | "f<k>" | "tract" | "snip", snip: offer the automatic baseline, dis: reason why it is off ("" = on) }
+const ICN = d => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M5 2.5h5.5L13.5 5.5v10h-8.5z"/><path d="M10.5 2.5v3h3"/><path d="M7 11.5h4"/>'),
+  tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>') };
+  // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
+function corrWidget(p, o) {
+  const T0 = p.tab || E.tab, fileOpts = o.files.length > 1 ? o.files : [], cfile = o.cur[0] === "f";
+  const refK = S.ref.k !== "auto" && fileOpts.some(x => x.k === S.ref.k) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;      // default file: the reference of the session
+  const subK = cfile ? +o.cur.slice(1) : fileOpts.some(x => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
+  const items = [["", "none", I18N.t("corr.none"), I18N.t("corr.none.desc")],
+    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? I18N.t("corr.file.desc") : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : ""],
+    ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
+    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), I18N.t("corr.snip.desc")]] : [])];
+  const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
+  const tip = I18N.t("corr.button.title") + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
+  const sel = fileOpts.length > 1 ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
+  return `<span class="corrw"><button type="button" data-o="corr" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
+    <span class="corrm" role="group" aria-label="${EH(I18N.t("corr.button.title"))}" hidden>${items.map(i => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b><span class="sm muted">${EH(i[3])}</span></span></button>${i[1] === "blank" ? sel : ""}`).join("")}</span></span>`;
+}
+function corrWire(x, pick) {          // pick("" | "f<k>" | "tract" | "snip")
+  const m = x.parentNode.querySelector(".corrm"), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
+  const shut = back => { m.hidden = true; x.setAttribute("aria-expanded", "false"); if (back) x.focus(); };
+  x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); };
+  x.onkeydown = e => { if ((e.key === "ArrowDown" || e.key === "ArrowUp") && m.hidden && !x.disabled) { e.preventDefault(); x.click(); } };
+  m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { shut(false); pick(b.dataset.c); });
+  const cf = m.querySelector('[data-o="corrf"]'); if (cf) cf.onchange = () => { shut(false); pick("f" + cf.value); };
+  m.onkeydown = e => {                           // arrows move between the entries, Enter activates (native), Esc closes and gives the focus back
+    if (e.key === "Escape") { e.stopPropagation(); shut(true); return; }
+    if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.target.tagName === "SELECT") return;
+    e.preventDefault(); const l = items(), i = l.indexOf(document.activeElement); if (l.length) l[(i + (e.key === "ArrowDown" ? 1 : l.length - 1)) % l.length].focus();
+  };
+}
 function ctl(p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);      // a single trace is named in the title
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
-  if (p.type === "spec" && p.link) {
-    const srcP = E.panels.find(q => q.id === p.link);
-    t.insertAdjacentHTML("beforeend", ` <span class="lk" style="color:var(--a); font-weight:bold" title="${I18N.t("ctl.linked.title")}">&#128279; ${I18N.t("ctl.linked", { n: srcP && srcP.num ? srcP.num : "?" })}</span>`);
-  }
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) { p.bk = ""; p.snip = false; }
@@ -534,23 +563,7 @@ function ctl(p) {
     const blanks = TF.filter(x => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);          // an old notebook may point to a file that is not marked as blank: keep it
   const cval = bkOn ? "f" + p.bk : p.ibk || p._pickIbk ? "tract" : p.snip ? "snip" : "";
-  // "Correzione": a drop-down with an icon and a one-line label for every choice (same drop-down look as the "Parametri" of the spectrum)
-  const ICN = d => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M5 2.5h5.5L13.5 5.5v10h-8.5z"/><path d="M10.5 2.5v3h3"/><path d="M7 11.5h4"/>'),
-    tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>') };
-  // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
-  const fileOpts = bkList.length > 1 ? bkList : [];
-  const refK = S.ref.k !== "auto" && fileOpts.some(x => x.k === S.ref.k) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;
-  const subK = bkOn ? +p.bk : fileOpts.some(x => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
-  const corrItems = [["", "none", I18N.t("corr.none"), I18N.t("corr.none.desc")],
-    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? I18N.t("corr.file.desc") : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : ""],
-    ["tract", "tract", I18N.t("corr.tract"), I18N.t("corr.tract.desc")],
-    ["snip", "snip", I18N.t("corr.snip"), I18N.t("corr.snip.desc")]];
-  const corrNow = corrItems.find(i => i[1] === "blank" ? bkOn : i[0] === cval && i[1] !== "none") || corrItems[0];
-  const corrTip = I18N.t("corr.button.title") + (corrNow === corrItems[0] ? "" : ": " + (corrNow[4] ?? corrNow[2]));
-  const corrSel = fileOpts.length > 1 ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
-  const corr = `<span class="corrw"><button type="button" data-o="corr" class="corrb${corrNow === corrItems[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="${EH(corrTip)}" aria-label="${EH(corrTip)}">${CIC[corrNow[1]]}<span aria-hidden="true">&#9662;</span></button>
-    <span class="corrm" role="group" aria-label="${EH(I18N.t("corr.button.title"))}" hidden>${corrItems.map(i => `<button type="button" class="corri${i === corrNow ? " on" : ""}" aria-pressed="${i === corrNow}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b><span class="sm muted">${EH(i[3])}</span></span></button>${i[1] === "blank" ? corrSel : ""}`).join("")}</span></span>`
+  const corr = corrWidget(p, { files: bkList, cur: cval, snip: true, dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + `${p.snip && !bkOn ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter(f => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter(f => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
@@ -574,7 +587,7 @@ function ctl(p) {
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     const G = (lab, inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;
-    c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k"${fol ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
+    c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${fol ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
       G(I18N.t("ctl.map.grp.col"), `<select data-o="scale" title="${I18N.t("ctl.map.scale.title")}">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select><span data-mzslot="col"></span>`) +
       G(I18N.t("ctl.map.grp.diff"), `<label class="muted" title="${I18N.t("ctl.map.diff.title")}">${I18N.t("ctl.map.diff", { select: `<select data-o="ref"${off(sf.length <= 1, I18N.t("ctl.map.diff.need"))}><option value="">${I18N.t("ctl.map.diff.none")}</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select>` })}</label>` +
         `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select><span data-mzslot="diff"></span>`);
@@ -582,12 +595,23 @@ function ctl(p) {
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
-    c.innerHTML = `<select data-o="k"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
+    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
-      `<select data-o="bg" title="${I18N.t("ctl.spec.bg.title")}">` +
-      `<option value="${sref0 ? "x" : ""}" ${p.bg === "x" || (!sref0 && !p.bg) ? "selected" : ""}>${I18N.t("ctl.spec.bg.none")}</option><option value="w" ${p.bg === "w" ? "selected" : ""}>${I18N.t("ctl.spec.bg.window")}</option><optgroup label="${I18N.t("ctl.spec.bg.other")}">${(() => { const bl = f.filter(x => x.kind !== "mrm"); return bl.length ? bl.map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) || (sref0 && sref0.k === x.k && p.bg !== "x" && p.bg !== "w") ? "selected" : ""}>${EH(x.label)}</option>`).join("") : `<option disabled>${I18N.t("ctl.spec.bg.noOther")}</option>`; })()}</optgroup></select>` +
+      corrWidget(p, { files: f.filter(x => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) +
       (p.bg === "w" ? `<label class="muted">${I18N.t("ctl.range.from")} <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> ${I18N.t("ctl.range.to")} <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
       (p.level === 2 ? `<select data-o="prec" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
+  }
+  if (p.type === "spec" && c.firstElementChild) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
+    const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
+    c.firstElementChild.insertAdjacentHTML("afterend", `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`);
+    const fb = c.querySelector(".fol");
+    if (!p.link) fb.classList.remove("lk");
+    fb.onclick = e => {
+      e.stopPropagation();
+      const cands = E.panels.filter(q => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
+      menu(e, [...cands.map(q => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => liveSpec(p, q) })),
+        ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { freezeSpec(p); uiSave(); } }]);
+    };
   }
   if (window.BANCO) BANCO.decorate(p, c);
   if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
@@ -622,19 +646,7 @@ function ctl(p) {
       if (lo != null && hi != null && hi > lo) { pushZh(p); zoomTo(p, lo, hi); uiSave(); }
     };
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
-    else if (k === "corr") {
-      const m = x.parentNode.querySelector(".corrm"), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
-      const shut = back => { m.hidden = true; x.setAttribute("aria-expanded", "false"); if (back) x.focus(); };
-      x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); };
-      x.onkeydown = e => { if ((e.key === "ArrowDown" || e.key === "ArrowUp") && m.hidden && !x.disabled) { e.preventDefault(); x.click(); } };
-      m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { shut(false); setCorr(p, b.dataset.c); });
-      const cf = m.querySelector('[data-o="corrf"]'); if (cf) cf.onchange = () => { shut(false); setCorr(p, "f" + cf.value); };
-      m.onkeydown = e => {                           // arrows move between the entries, Enter activates (native), Esc closes and gives the focus back
-        if (e.key === "Escape") { e.stopPropagation(); shut(true); return; }
-        if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.target.tagName === "SELECT") return;
-        e.preventDefault(); const l = items(), i = l.indexOf(document.activeElement); if (l.length) l[(i + (e.key === "ArrowDown" ? 1 : l.length - 1)) % l.length].focus();
-      };
-    }
+    else if (k === "corr") corrWire(x, v => setCorr(p, v));
         else x.onchange = () => {
       if (k === "tr" && x.value === "__quant_qual") {
         p.tr = [window.CAL?.quant, window.CAL?.qual].filter(Boolean);

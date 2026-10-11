@@ -203,6 +203,15 @@ function attach(p) {
     if (p.type === "spec") { p.lock = null; if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); } }                     // double click on a spectrum: whole spectrum, free axes, no measures
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   };
+  // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
+  cv.addEventListener("keydown", e => {
+    const a = p._a; if (e.ctrlKey || e.metaKey || e.altKey || !a || !a.full || p.type === "map" || e.target !== cv) return;
+    const span = a.x1 - a.x0, c = p.cur != null && p.cur >= a.x0 && p.cur <= a.x1 ? p.cur : (a.x0 + a.x1) / 2;
+    const z = e.key === "+" || e.key === "=" ? [c - (c - a.x0) / 2, c + (a.x1 - c) / 2] : e.key === "-" || e.key === "_" ? [a.x0 - span / 2, a.x1 + span / 2]
+      : e.key === "[" ? [a.x0 - span / 4, a.x1 - span / 4] : e.key === "]" ? [a.x0 + span / 4, a.x1 + span / 4] : e.key === "0" ? [a.full[0], a.full[1]] : null;
+    if (!z) return;
+    e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
+  });
   cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }

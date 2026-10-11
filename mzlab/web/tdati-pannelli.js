@@ -63,4 +63,9 @@ function update(p) {
   TDATI.describe(p.cv, text(p));
   p.cv.setAttribute("aria-label", ptitle(p) || T("a11y.chart"));
 }
+// SVG charts that already sit next to a table of the same values (QA/QC, profile, PCA loadings): the same dialog shows that table
+TDATI.watch("svg.qq-chart", (el, t) => TDATI.fromDom(el.closest(".qq-ion")?.querySelector("table"), t));
+TDATI.watch("svg.prof-chart", (el, t) => TDATI.fromDom(el.closest("#prof-res")?.querySelector("table"), t));
+TDATI.watch("svg#pca-loadings", (el, t) => TDATI.fromDom(document.querySelector("#pca-tab"), t));
+TDATI.watch("svg#pca-scores", (el, t) => (window.PCA && PCA.scoresTable ? { title: t, ...PCA.scoresTable() } : null));
 window.TDATI_P = { update, data, text };
