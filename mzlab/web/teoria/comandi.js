@@ -25,7 +25,7 @@
   const svg = k => `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
   // ---------------------------------------------------------------- the commands
-  const go = file => { location.href = file; };
+  const go = file => { location.href = new URL(file, document.baseURI).href; };      // absolute: the program's bar calls this from its own page, which would resolve a relative address by itself
   /** Where the exercises of this chapter are: the first «Allenati» box, else the «Verifica» section; else the Pratica index. */
   function esercizi() {
     if (/^pratica/.test(here)) { const h = $("main h2, main h1"); if (h) { h.tabIndex = -1; h.scrollIntoView({ block: "start" }); h.focus({ preventScroll: true }); } return; }
@@ -64,6 +64,7 @@
     per: id => TCMD.lista.find(c => c.id === id),
   };
   window.TCMD = TCMD;
+  T().settings = () => { const b = $("#a11y-btn"); if (b) b.click(); };      // the gear of the program opens the settings of the Teoria
   if (embedded) { document.dispatchEvent(new Event("tcmd-pronto")); return; }   // in the program the bar of the app draws them
 
   // ---------------------------------------------------------------- the bar of the standalone page
