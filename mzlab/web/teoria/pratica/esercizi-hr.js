@@ -7,7 +7,7 @@
    Every mass and every abundance is computed from ELEMENTS through PAL (motore.js): nothing is copied from a table. The unit-resolution pattern
    of PAL.isoPattern is the reference the fine structure must add up to. Generators are pure functions of the seed (PAL.rng). */
 "use strict";
-const HRNT = (() => {
+const HRBASE = (() => {
   const P = typeof PAL !== "undefined" ? PAL : require("./motore.js");
   const EL = typeof ELEMENTS !== "undefined" ? ELEMENTS : global.ELEMENTS;
   const ELECTRON = 0.000548579909;
@@ -51,9 +51,16 @@ const HRNT = (() => {
   /** sum of the fine structure per nominal shift, in percent of M: the same numbers as PAL.isoPattern (checked by the tests) */
   const fineSums = f => { const s = [100, 0, 0]; fineStructure(f).forEach(p => { s[p.shift] += p.rel * 100; }); return s; };
 
+  /** abundance per atom (percent of the main isotopologue) of a substitution, from ELEMENTS */
+  const perAtom = sym => isoOf(sym).subs.map(s => ({ label: s.label, shift: s.shift, dm: s.dm, pct: s.r * 100 }));
+  const subOf = label => { const m = label.match(/^(\d+)([A-Z][a-z]?)$/); return m ? perAtom(m[2]).find(s => s.label === label) : null; };
+  return { P, EL, ELECTRON, mono, SHIFT_H, ISO_TOL, HC_MIN, HC_MAX, TESTS, fx, pick, ri, pct, isoOf, fineStructure, fineSums, perAtom, subOf };
+})();
+
+const HRNTNT = (() => {
+  const { P, SHIFT_H, mono, fx, pick, ri, pct, ISO_TOL, HC_MIN, HC_MAX, TESTS } = HRBASE;
   // ================================================================ H6: formula from a non-target ion
-  const NT_ELEMENTS = { N: [0, 6], O: [0, 10], S: [0, 2] };
-  const dbeOf = f => P.rdb(f);
+  const NT_ELEMENTS = { N: [0, 6], O: [0, 10], S: [0, 2] }, dbeOf = f => P.rdb(f);
 
   /** tests a student can do on a neutral candidate formula (never "right": the list of the tests it fails) */
   function checks(f, obs) {
@@ -128,6 +135,11 @@ const HRNT = (() => {
   /** was the answer "reason" a correct statement about candidate c? ("ok" is correct only for a candidate with no failed test) */
   const judgeReason = (c, reason) => reason === "ok" ? c.fails.length === 0 : c.fails.includes(reason);
 
+  return { checks, enumerate, genNt, judgeReason };
+})();
+
+const HRNT = (() => {
+  const { P, ELECTRON, mono, fx, ri, pct, fineStructure, fineSums, subOf, isoOf } = HRBASE;
   // ================================================================ H8: fine isotopic structure
   const FINE_LABELS = ["13C", "15N", "2H", "33S", "34S", "13Cx2", "18O"];
   const THRESHOLD = 0.25;                                   // peaks below this (percent of M) are not listed
@@ -157,9 +169,6 @@ const HRNT = (() => {
     throw new Error("genFine: no exercise for seed " + seed);
   }
 
-  /** abundance per atom (percent of the main isotopologue) of a substitution, from ELEMENTS */
-  const perAtom = sym => isoOf(sym).subs.map(s => ({ label: s.label, shift: s.shift, dm: s.dm, pct: s.r * 100 }));
-  const subOf = label => { const m = label.match(/^(\d+)([A-Z][a-z]?)$/); return m ? perAtom(m[2]).find(s => s.label === label) : null; };
 
   function helpFine(e) {
     const d = l => fx(subOf(l).dm, 5), p = l => fx(subOf(l).pct, 3);
@@ -176,6 +185,6 @@ const HRNT = (() => {
     return { id, dm, label: p.label, rel: p.rel, perAtomPct: sub ? sub.pct : null, atoms: sub ? p.rel / sub.pct : null };
   }
 
-  return { SHIFT_H, TESTS, ISO_TOL, HC_MIN, HC_MAX, FINE_LABELS, THRESHOLD, isoOf, fineStructure, fineSums, checks, enumerate, genNt, judgeReason, genFine, coherenceFine, perAtom, subOf, fx };
+  return { ...HRBASE, ...HRNTNT, FINE_LABELS, THRESHOLD, genFine, coherenceFine };
 })();
 if (typeof module !== "undefined") module.exports = HRNT;

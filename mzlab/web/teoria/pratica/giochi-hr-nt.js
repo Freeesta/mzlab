@@ -2,14 +2,19 @@
    Classic script on top of esercizi-hr.js (HRNT), giochi-lc.js (LCUI helpers) and motore.js (PAL). Data are CONSTRUCTED for teaching.
    The program never gives the answer before an attempt: aids (3 levels) narrow the reasoning, the check gives numbers. */
 "use strict";
-const HRNTUI = (() => {
-  const { fbSet, lock, open, aids, seed, num, last, ds } = LCUI;
-  const { fx } = HRNT;
+const HRUIB = (() => {
   const REASONS = [["", "scegliete…"], ["ok", "supera tutti i controlli"], ["parita", "regola dell'azoto (DBE non intero)"], ["dbe", "DBE negativo"], ["hc", "H/C fuori intervallo"], ["iso", "isotopi non compatibili"]];
   const FINE_TXT = { "13C": "¹³C", "15N": "¹⁵N", "2H": "²H", "33S": "³³S", "34S": "³⁴S", "13Cx2": "2 × ¹³C", "18O": "¹⁸O" };
   const opts = a => a.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
   const stepsOf = wk => wk.querySelectorAll(".st");
   const score = (...a) => a.reduce((x, y) => x + y, 0) / a.length;
+  return { REASONS, FINE_TXT, opts, stepsOf, score };
+})();
+
+const HRNTVIEW = (() => {
+  const { fbSet, lock, open, aids, seed, last, ds } = LCUI;
+  const { fx } = HRNT;
+  const { REASONS, opts, stepsOf, score } = HRUIB;
 
   // =========================================================== H6: formula from a non-target ion
   function ntMarkup(e) {
@@ -52,6 +57,13 @@ const HRNTUI = (() => {
     });
   }
 
+  return { nt };
+})();
+
+const HRNTUI = (() => {
+  const { fbSet, lock, open, aids, seed, num, last, ds } = LCUI;
+  const { fx } = HRNT;
+  const { FINE_TXT, opts, stepsOf, score } = HRUIB;
   // =========================================================== H8: fine isotopic structure
   function fineMarkup(e) {
     const lab = FINE_TXT, rows = e.peaks.map(p => `<tr><th scope="row">${p.id}</th><td class="n">${fx(p.mz, 5)}</td><td class="n">${fx(p.rel, 2)}</td>
@@ -96,6 +108,6 @@ const HRNTUI = (() => {
     };
   }
   /** entry point used by the formula page for levels 3 (H6) and 4 (H8) */
-  const render = (fr, level) => (level === 3 ? nt(fr, 3) : fine(fr, 1));
+  const render = (fr, level) => (level === 3 ? HRNTVIEW.nt(fr, 3) : fine(fr, 1));
   return { render, last };
 })();
