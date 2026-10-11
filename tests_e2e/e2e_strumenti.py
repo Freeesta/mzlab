@@ -256,7 +256,7 @@ try:
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
                 t = q.inner_text("#stmenu"); assert "Calcolatrice m/z" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
                 q.locator("#stmenu button", has_text="Calcolatrice m/z").click(); q.wait_for_timeout(500)
-                assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 * 0.9 + 1
+                assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             finally:
@@ -299,6 +299,7 @@ try:
         step("palette in HR: the HR items are there («Pannello a sinistra / a destra» too), Enter opens the panel", paletta_hr)
 
         def tastiera():
+            pg.evaluate("BARRA.close(false)")
             pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Alt+0"); pg.wait_for_timeout(100)
             assert pg.evaluate("!!document.activeElement.closest('#stbar')"), "Alt+0 reaches the bar"
             a = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain")

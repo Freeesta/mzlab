@@ -165,16 +165,32 @@ const BARRA = (() => {
       if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
     });
   }
+  // The panels' own observers read a width change that is not theirs (the page narrowed under them) as «resized by hand» and
+  // unlock them from the page width: the full-width panels are noted before the layout moves and given back once it has settled.
+  let _fullSnap = null, _fullTimer = 0;
+  function snapFull() {
+    if (typeof E === "undefined" || !E.panels) return;
+    if (!_fullSnap) _fullSnap = E.panels.filter(p => p.full);
+    clearTimeout(_fullTimer);
+    _fullTimer = setTimeout(() => {
+      const snap = _fullSnap || [];
+      _fullSnap = null;
+      let back = false;
+      snap.forEach(p => { if (!p.full && E.panels.includes(p)) { p.full = true; back = true; } });
+      if (back || snap.length) refit();
+    }, 250);
+  }
   function watchWorkspace() {
     const dp = Q1("#dpanels");
     if (!dp || typeof ResizeObserver === "undefined") return;
-    new ResizeObserver(() => { if (dp.clientWidth !== _lastW) refit(); }).observe(dp);
+    new ResizeObserver(() => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } }).observe(dp);
   }
 
   function applyLayout() {
     const v = Q1("#v-data"), aside = Q1("#dfiles");
     if (!v || !aside) return;
     const shown = _open && inData();
+    if (shown !== v.classList.contains("sb-open") || shown && sheet() !== v.classList.contains("sb-sheet")) snapFull();
     v.classList.toggle("sb-right", _side === "right");
     v.classList.toggle("sb-open", shown);
     v.classList.toggle("sb-sheet", shown && sheet());
@@ -805,7 +821,10 @@ const BARRA = (() => {
       applyLayout();
       fit();
     });
+    let wasData = false;
     document.addEventListener("tpview", () => {
+      if (wasData && !inData()) _open = false;        // leaving Dati hides the panel (the saved state keeps it for the next visit)
+      wasData = inData();
       syncMode();
       if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);
       applyLayout();
