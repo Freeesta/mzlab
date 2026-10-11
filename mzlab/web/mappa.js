@@ -516,8 +516,8 @@ window.MAPPA = (() => {
     const s = st(p); if (on === !!s.tgrown || isMax(p)) return;
     s.tgrown = on; p.h = Math.max(200, p.h + (on ? 1 : -1) * 220); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
   }
-  async function spectrumAt(p, rt) {
-    const f = p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
+  async function spectrumAt(p, rt, k) {
+    const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
     newSpec(p, r0, r1, f.k);
   }
@@ -579,7 +579,7 @@ window.MAPPA = (() => {
   function extract(ad, what) {
     const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
     if (what !== "spec") xicDirect(q.mz, ad.p);
-    if (what !== "xic") spectrumAt(ad.p, q.rt);
+    if (what !== "xic") spectrumAt(ad.p, q.rt, ad.k);
     if (ad.after) ad.after();
   }
   const CMDS = [
@@ -647,24 +647,26 @@ window.MAPPA = (() => {
   }
   // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
   const BAR = ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"];
-  function navBar(p) {
+  function barFor(getAd) {
     const b = document.createElement("div"); b.className = "mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
     b.innerHTML = BAR.map(id => `<button type="button" data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
-    b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, ad2(p, null)); } });
+    b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
-    st(p).nav = b; return b;
+    lockBtn(b, false); return b;
   }
-  function navSync(p) {                                                 // the padlock button shows the state: closed + pressed = locked
-    const s = st(p), b = s.nav && s.nav.querySelector('[data-nav="maplock"]'); if (!b) return;
-    const on = !!s.lock; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); b.innerHTML = SV(on ? ICO.lock : ICO.unlock);
+  function lockBtn(bar, on) {                                           // the padlock button shows the state: closed + pressed = locked
+    const b = bar && bar.querySelector('[data-nav="maplock"]'); if (!b) return;
+    b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); b.innerHTML = SV(on ? ICO.lock : ICO.unlock);
     const nm = T(on ? "cmd.maplock.off.name" : "cmd.maplock.name"); b.title = nm; b.setAttribute("aria-label", nm);
   }
+  const navBar = p => { const b = barFor(() => ad2(p, null)); st(p).nav = b; return b; };
+  const navSync = p => { const s = st(p); lockBtn(s.nav, !!s.lock); };
   // ---- sheet of the gestures (one key per row: action|mouse|trackpad|touch|keyboard)
   const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "interval", "mark", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur"] };
   function help(kind) {
     const rows = HELP[kind].map(r => I18N.t(`mapnav.h.${kind}.${r}`).split("|").map(x => EH(x.trim()) || "–"));
     const head = ["act", "mouse", "pad", "touch", "key"].map(k => `<th scope="col">${I18N.t(`mapnav.h.${k}`)}</th>`).join("");
-    big(I18N.t(`mapnav.h.title.${kind}`), `<table class="mzhelp"><thead><tr>${head}</tr></thead><tbody>${rows.map(r => `<tr><th scope="row">${r[0]}</th>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="muted">${T("mapnav.h.note")}</p>`);
+    big(I18N.t(`mapnav.h.title.${kind}`), `<table class="mzhelp"><thead><tr>${head}</tr></thead><tbody>${rows.map(r => `<tr><th scope="row">${r[0]}</th>${r.slice(1).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="muted">${I18N.t(`mapnav.h.note.${kind}`)}</p>`);
   }
   // the 2D map of the active tab the palette acts on
   const activeMap = () => { const q = E.active; if (q && q.type === "map" && is2d(q) && E.panels.includes(q)) return q; return (typeof tabPanels === "function" ? tabPanels() : []).find(x => x.type === "map" && is2d(x)) || null; };
@@ -681,7 +683,7 @@ window.MAPPA = (() => {
       if (!is2d(p)) return; clearTimeout(lp); const c = cen(e.touches);
       if (e.touches.length >= 2) { g = { two: true, last: c, moved: true }; pushZh(p); return; }
       g = { two: false, last: c, start: c, moved: false, t0: Date.now() };
-      lp = setTimeout(() => { if (g && !g.moved) { g.moved = true; st(p).lpAt = Date.now(); showMenu(ad2(p, inside(c) ? { rt: xOf(p, c.x), mz: p._a.mzAt(c.y) } : null), { preventDefault() {}, clientX: c.cx, clientY: c.cy }); } }, 550);
+      lp = setTimeout(() => { if (g && !g.moved) { g.moved = true; st(p).lpAt = Date.now(); showMenu(ad2(p, inside(c) ? { rt: xOf(p, c.x), mz: p._a.mzAt(c.y) } : null), { preventDefault() {}, clientX: c.cx, clientY: c.cy, lp: true }); } }, 550);
     }, { passive: true });
     cv.addEventListener("touchmove", e => {
       if (!g || !is2d(p)) return; const c = cen(e.touches), a = p._a;
@@ -735,7 +737,7 @@ window.MAPPA = (() => {
     try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
   }
 
-  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, touched, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, ptText, peakStep, apexStep, madNoise, dropFile };
+  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's

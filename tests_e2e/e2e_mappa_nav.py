@@ -149,8 +149,9 @@ try:
         step("touch: pinch, two fingers move, one finger moves, double tap = reset", touches)
         def longpress():
             c = box(); cx, cy = c[0] + c[2] * .4, c[1] + c[3] * .5
-            touch("touchStart", [(cx, cy)]); pg.wait_for_timeout(900); touch("touchEnd", []); pg.wait_for_timeout(300)
+            touch("touchStart", [(cx, cy)]); pg.wait_for_function("!document.getElementById('ctx').hidden", timeout=4000); touch("touchEnd", []); pg.wait_for_timeout(300)
             its = menu_items(); assert any("Extract the XIC here" in i[0] for i in its), its
+            assert not pg.evaluate("document.getElementById('ctx').hidden"), "the menu stays open after the finger is lifted"
             pg.keyboard.press("Escape")
         step("touch: long press opens the menu", longpress)
         def targets():

@@ -777,13 +777,14 @@ function menu(ev, items) {
     else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
   }); }
-  m._ret = ev.kbd ? document.activeElement : null;
+  m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
   if (ev.kbd) { const f = m.querySelector('div[role^=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
-document.addEventListener("click", () => { Q("#ctx").hidden = true; });
+document.addEventListener("pointerup", () => { const m = Q("#ctx"); if (m._lp && !m.hidden) m._up = Date.now(); }, true);
+document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._up && Date.now() - m._up < 400) { m._lp = false; m._up = 0; return; } m.hidden = true; });       // a long press opens the menu: the click that may follow the lifted finger must not close it
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
