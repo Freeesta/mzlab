@@ -10,6 +10,8 @@ quick-xml = "0.42"
 base64 = "0.23"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 opentfraw = { version = "=2.0.0" }
+sha1 = { version = "0.10", default-features = false }
+sha2 = { version = "0.10", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }

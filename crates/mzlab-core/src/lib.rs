@@ -22,6 +22,7 @@ pub mod routes;
 pub mod scaninfo;
 pub mod scantable;
 pub mod specpeaks;
+pub mod upload;
 pub mod stats;
 pub mod subformulas;
 
