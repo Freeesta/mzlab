@@ -6,12 +6,6 @@
   const Qs = s => document.querySelector(s), H = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const ELECTRON = 0.00054858;
   const EL = Object.fromEntries(ELEMENTS.map(e => [e.s, e]));
-  // layout of the periodic table: fixed row heights, so the table never changes size; the info box scrolls if needed
-  const css = document.createElement("style");
-  css.textContent = ".pt{grid-template-rows:repeat(7,46px) 12px repeat(2,46px)!important}.pt-c{height:46px;min-height:0!important;overflow:hidden}" +
-    ".pt-info{height:144px;max-height:none!important;min-height:0;overflow:auto;font-size:11px!important;line-height:1.3;padding:2px 10px!important}" +
-    ".pt-info table th,.pt-info table td{padding:0 6px!important}.pt-info .pt-big b{font-size:22px}";
-  document.head.appendChild(css);
   // monoisotopic mass of an element = exact mass of its most abundant isotope
   const mono = s => { const e = EL[s]; if (!e || !e.iso.length) return null; return e.iso.reduce((a, b) => (b[2] > a[2] ? b : a))[1]; };
   function massOf(f) {                                     // simple formulas, e.g. "CH3COO", "C2H3N"
@@ -21,41 +15,9 @@
   }
   const sub = f => H(f).replace(/(\d+)/g, "<sub>$1</sub>");
 
-  // ---------------------------------------------------------------- periodic table
-  const ORGANIC = new Set(["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "Na", "K", "Si"]);
-  function info(e) {
-    const main = e.iso.length ? e.iso.reduce((a, b) => (b[2] > a[2] ? b : a)) : null;
-    let h = `<div class="pt-big"><span>${e.z}</span><b>${H(e.s)}</b></div><div><b style="font-size:15px">${H(I18N.t(`el.${e.s}`))}</b></div>
-      <div>${I18N.t("tbl.pt.avgWeight", { w: e.w != null ? e.w : I18N.t("tbl.na") })}</div>`;
-    if (main) {
-      h += `<div>${I18N.t("tbl.pt.mono", { m: main[1].toFixed(5), a: main[0], s: H(e.s) })}</div>
-        <table class="sm" style="margin-top:6px"><tr><th>${I18N.t("tbl.pt.col.iso")}</th><th class="num">${I18N.t("tbl.pt.col.mass")}</th><th class="num">${I18N.t("tbl.pt.col.abund")}</th><th class="num">${I18N.t("tbl.pt.col.delta")}</th><th></th></tr>` +
-        e.iso.map(i => `<tr><td><sup>${i[0]}</sup>${H(e.s)}</td><td class="num">${i[1] != null ? i[1].toFixed(5) : ""}</td><td class="num">${i[2]}</td>` +
-          `<td class="num">${i === main || i[1] == null ? "" : (i[1] - main[1] > 0 ? "+" : "") + (i[1] - main[1]).toFixed(4)}</td>` +
-          `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(i[2] * 0.8))}px"></i></td></tr>`).join("") + "</table>";
-      if (e.iso.length > 1) {
-        const sec = e.iso.filter(i => i !== main).reduce((a, b) => (b[2] > a[2] ? b : a));
-        h += `<div class="muted sm" style="margin-top:4px">${I18N.t("tbl.pt.peak", { s: H(e.s), off: (sec[0] - main[0] > 0 ? "+" : "") + (sec[0] - main[0]), pct: (100 * sec[2] / main[2]).toFixed(sec[2] / main[2] < 0.1 ? 1 : 0) })}</div>`;
-      }
-    } else h += `<div class="muted sm" style="margin-top:6px">${I18N.t("tbl.pt.rare")}</div>`;
-    return h;
-  }
-  function periodic() {
-    const cells = ELEMENTS.map(e => `<div class="pt-c${ORGANIC.has(e.s) ? " org" : ""}${e.iso.length ? "" : " nd"}" data-s="${e.s}" style="grid-row:${e.r};grid-column:${e.c}">` +
-      `<span>${e.z}</span><b>${e.s}</b><small>${e.w != null ? (e.w < 100 ? e.w.toFixed(3) : e.w.toFixed(2)) : ""}</small></div>`).join("");
-    // Data sources (kept here, not shown in the page): exact masses = isotope table of OpenChemLib; abundances = representative
-    // isotopic compositions, IUPAC (CIAAW); average atomic weight = Ketcher element list. Hovering an element shows masses and isotopes
-    // (click pins it); the most common elements of organic molecules are highlighted.
-    return `<div class="pt">${cells}<div class="pt-info" id="pt-info">${info(EL.C)}</div><div class="pt-gap">${I18N.t("tbl.pt.gap")}</div></div>`;
-  }
-  function bindPeriodic(root) {
-    let pinned = null; const box = root.querySelector("#pt-info");
-    root.querySelectorAll(".pt-c").forEach(c => {
-      c.onmouseenter = () => { if (!pinned) box.innerHTML = info(EL[c.dataset.s]); };
-      c.onclick = () => { root.querySelectorAll(".pt-c.pin").forEach(x => x.classList.remove("pin")); if (pinned === c.dataset.s) { pinned = null; return; }
-        pinned = c.dataset.s; c.classList.add("pin"); box.innerHTML = info(EL[pinned]); };
-    });
-  }
+  // periodic table: markup, layout and behaviour live in tavola-periodica.js (shared with the Teoria)
+  const { periodic, bindPeriodic } = TAVOLA.create({ elements: ELEMENTS, t: (k, p) => I18N.t(k, p), nome: e => I18N.t(`el.${e.s}`) });
+
 
   // ---------------------------------------------------------------- adducts
   // k: how many molecules M; add/sub: what is added or removed; z: charge

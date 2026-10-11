@@ -1387,6 +1387,7 @@ I18N.add("en", {
   "tbl.pt.peak": "Each {s} atom in the molecule gives a peak at {off} with about {pct}% of the intensity of the main peak.",
   "tbl.pt.rare": "Element rare in LC-MS: isotopic abundances not included in the program.",
   "tbl.pt.gap": "lanthanides and actinides",
+  "tbl.pt.info": "Isotopes and masses of the element",
   "tbl.add.note.mh": "protonated: the most common in ESI+",
   "tbl.add.note.mnh4": "ammonium ion, with formate/acetate",
   "tbl.add.note.mna": "sodium from glassware and sample, frequent",

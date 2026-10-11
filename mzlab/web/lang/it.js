@@ -1387,6 +1387,7 @@ I18N.add("it", {
   "tbl.pt.peak": "Ogni atomo di {s} nella molecola dà un picco a {off} con circa il {pct}% dell'intensità del picco principale.",
   "tbl.pt.rare": "Elemento raro in LC-MS: abbondanze isotopiche non incluse nel programma.",
   "tbl.pt.gap": "lantanidi e attinidi",
+  "tbl.pt.info": "Isotopi e masse dell'elemento",
   "tbl.add.note.mh": "protonato: il più comune in ESI+",
   "tbl.add.note.mnh4": "ione ammonio, con formiato/acetato",
   "tbl.add.note.mna": "sodio da vetreria e campione, frequente",

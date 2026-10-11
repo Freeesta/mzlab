@@ -352,6 +352,7 @@ const TP = (() => {
   function loadA11y() { const s = document.createElement("script"); s.src = "a11y.js"; document.head.appendChild(s); }
   function loadLettura() { const s = document.createElement("script"); s.src = "lettura.js"; document.head.appendChild(s); }   // menu sheet, reading position, figure viewer
   function loadCerca() { const s = document.createElement("script"); s.src = "cerca.js"; document.head.appendChild(s); }   // search dialog (Ctrl/⌘K, TEORIA.cerca()); its index is read on first use
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); loadLettura(); loadCerca(); });
+  function loadStrumenti() { const s = document.createElement("script"); s.src = "strumenti/pannello.js"; document.head.appendChild(s); }   // TEORIA.strumenti.*: the panel; each tool is read when opened
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); loadLettura(); loadCerca(); loadStrumenti(); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();
