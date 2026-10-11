@@ -27,10 +27,10 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `appname.js` (10) The visible name of the program: the ONLY place where it is written (chosen 7/10/2026; package and i
 - `archivio.js` (87) Archive of the browser version: the files the student opened and their .mzidx indexes live in OPFS (
 - `banco.js` (486) Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Cl — BANCO:8, subXic:127, decorate:175, tIso:358, bar:455
-- `barra.js` (1037) Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR. — BARRA:11, QI:53, bindSideDrag:748, bindGlobalEvents:818, init:955
+- `barra.js` (1040) Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR. — BARRA:11, QI:53, bindSideDrag:751, bindGlobalEvents:821, init:958
 - `bianco.js` (76) Blank subtraction of the feature table (high resolution only; «Statistica» panel): threshold = blank — BIANCO:6
 - `browser-worker.js` (353) Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab pa — start:130, buildFor:250, python:253, answer:284
-- `browser.js` (172) Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are — json:122
+- `browser.js` (174) Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are — json:124
 - `calcola.js` (52) Arithmetic of the header calculator (block 4.2): pure functions, also run by node in tests/test_calc — calcEval:11
 - `campioni.js` (202) Sample metadata («Statistica» panel, first section): one row per file with the fields of the mzmine  — CAMPIONI:8, mount:152
 - `composizione.js` (205) «Formule compatibili»: elemental composition of an ion from its exact m/z (server: mzlab/chem/compos — COMP:4, open:67, tree:163
@@ -42,6 +42,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `eventi.js` (662) Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split f — attach:3, axisHint:91, ctxFor:287, inLbl:290, calcRun:585
 - `explore.js` (837) (explore) — isDark:34, bootSession0:274, renderFileList:443, gh:476, menu:753
 - `fair.js` (179) Open data: files for MassBank (record, text format 2.x) and SIRIUS 6 (.ms) from ONE high-resolution  — FAIR:6, openDialog:125
+- `features.js` (19) Central switches of dormant features: the code stays, the interface does not show it. A switch is tu
 - `gradiente.js` (225) LC gradient (%B) of a file: read from the .dam by the server, or typed / pasted / imported by the st — bind:59
 - `grafici.js` (559) Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from exp — rawSeries:90, drawLines:277, U:302, drawMap:518
 - `help.js` (59) Context help: every <button class="hq" data-help="key"> opens a short explanation (HELP[key]) next t
@@ -50,8 +51,8 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `icons-modi.js` (38) Icons of the three acquisition modes: the triple quadrupole itself, Q1 - Q2 - Q3, with what each sta — QICON:8
 - `idx-worker.js` (32) Short-lived worker of the index pool: builds the .mzidx of ONE mzML with the Rust builder (mzlab-was
 - `idxpool.js` (81) Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). U — createPool:16, run:27
-- `lang/en.js` (3097) (en)
-- `lang/it.js` (3097) (it)
+- `lang/en.js` (3117) (en)
+- `lang/it.js` (3117) (it)
 - `libreria-cartella.js` (194) The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of  — CARTELLA:15, nativeDir:123
 - `libreria-scarica.js` (87) Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page  — SCARICA:8, downloadPackage:47
 - `libreria-worker.js` (657) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, runAll:608
@@ -69,21 +70,22 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `ordine.js` (81) Order and unit of the file times: pure functions, also run by node in tests/test_ordine.py. Times ar
 - `origine.js` (204) "Da dove viene questo ione?" (Origin of an ion). Classic script, loaded after explore.js. — ogRender:140, lossHint:147
 - `paletta.js` (124) Command palette: Ctrl+K (⌘K on the Mac) or the 🔍 button of the toolbar. It searches by name, in Ital — PALETTE:6
-- `pannelli.js` (862) Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split f — addPanel:185, ctl:535, parBox:571, openXic:768, addRow:804
+- `pannelli.js` (865) Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split f — addPanel:185, ctl:538, parBox:574, openXic:771, addRow:807
 - `pca.js` (190) Exploratory PCA of the feature table (high resolution only; «Statistica» panel). A VIEW of the serie — PCA:8
 - `peaks-worker.js` (30) Worker of the peak measures (qualita.js): the Rust functions of mzlab-wasm that need no file, only a
 - `perdite.js` (48) Neutral losses (window «Perdite neutre», tables.js): the list and the search for combinations. Pure 
 - `perf.js` (151) Performance meter. Off by default and then it costs nothing (the script returns at once).
 - `picchi.js` (557) Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafi — autoEdges:30, showInts:248, drawSpec:312, inRange:367, hidOf:412
-- `profilo.js` (155) Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every  — PROFILO:8
+- `profilo.js` (156) Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every  — PROFILO:8
 - `qaqc.js` (246) QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender — QAQC:9, mount:203 **[dormiente: QA/QC]**
 - `qualita.js` (40) Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak a
-- `rapporto.js` (110) Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measu — RAPPORTO:7, build:34
+- `rapporto.js` (114) Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measu — RAPPORTO:7, build:35, html:71
+- `reset.js` (95) The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the sessi
 - `riferimento.js` (216) «Difference from the reference» (high resolution only; «Statistica» panel): for every feature of the — RIFERIMENTO:7, run:21, inspect:133
 - `rust-bridge.js` (223) Page side of the Rust engine (?motore=rust or localStorage qqq.motore = "rust"): browser.js hands ev — createBridge:10, open:71, hasRef:119
 - `rust-worker.js` (173) Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, — lrOp:69
 - `scroll.js` (178) Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possibl
-- `settings.js` (156) Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after e — uipOpen:51
+- `settings.js` (158) Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after e — uipOpen:51
 - `sottrazione.js` (127) Reference of the session (a blank or the t0): one gesture, the same difference on traces, spectrum a
 - `spettro.js` (141) Tools for the mass spectrum (Full Scan and MS2) and for the time axes. Classic script, loaded after 
 - `stat.js` (20) «Statistica» panel of the drawer: sections added by the modules that own them (STAT.add), in the ord
@@ -247,7 +249,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `dev_server.py` (120) Local server FOR THE TESTS ONLY (tests_e2e/lib.py starts it): it serves the page (mzlab/web) and the — make_handler:42
 - `genera_anteprima.py` (50) Make the picture shown when the link of the site is shared (WhatsApp, Telegram, Slack, social networ
 - `genera_composti.py` (98) Build TP_Mine/data/composti.csv from tools/composti_nomi.txt and the PubChemLite for Exposomics CSV. — main:41
-- `genera_ei.py` (532) Builds mzlab/web/teoria/pratica/ei-dati.js: real 70 eV EI spectra for the Teoria (chapters 15-16) an — build:466
+- `genera_ei.py` (761) Builds mzlab/web/teoria/pratica/ei-dati.js: real 70 eV EI spectra for the Teoria (chapters 15-16) an — build:671
 - `genera_elementi.py` (97) Write mzlab/web/elements.js (data of the "Tavola periodica" dialog).
 - `genera_glossario.py` (67) Builds mzlab/web/teoria/glossario-dati.js from the glossary chapter (21-glossario.html).
 - `genera_icone.py` (80) Make the logo and every icon from the picture of the m/z logo (tools/logo_sorgente.jpg).
@@ -257,9 +259,11 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `indice.py` (147) Writes docs/agenti/mappa.md: one line per first-party source file (purpose + where its main function — definizioni:40, render:97
 - `info_riferimento.py` (55) Reference answers of Item.info() (mzlab/explore.py) for crates/mzlab-core/tests/iteminfo_parity.rs.
 - `librerie_pacchetti.py` (250) Builds the public spectral-library packages of the site (never committed): the CI of Pages runs this — run:199
+- `misura_redraw.py` (16) Measurement (not a test; run from the repository root): how many draw() calls a burst of 30 window r
 - `msntree_riferimento.py` (106) Reference answers of mzlab/chem/msntree.py for crates/mzlab-core/tests/msntree_parity.rs. — build:31
 - `mzidx_riferimento.py` (46) Reference `.mzidx` files built by the Python builder, for the parity test of the Rust builder (crate
 - `mzmlhead_riferimento.py` (43) Reference answers of the chromatogram list, the chromatogram arrays and the metadata of mzlab/reader
+- `nuovo_capitolo.py` (116) Writes the skeleton of a new Teoria chapter (no course text): head with the theme snippet, noindex, 
 - `parita_librerie.py` (150) Dati d'oro di parità per le librerie spettrali (SOLO per i test): punteggi di riferimento calcolati  — pair_cases:53, flash_case:90
 - `project_riferimento.py` (36) Reference answers of mzlab/project.py for crates/mzlab-core/tests/project_parity.rs.
 - `prova_hr.py` (81) Technical summary of high-resolution mzML files (Orbitrap, Q-TOF): numbers only, no sample or compou — summarize:27
@@ -284,5 +288,5 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `TP_Mine/tests/` — 27 file, 3744 righe: lc_synth, legacy_discover, lr_synth, msn_synth, test_composti, test_diretta, test_engine, test_fragtree, test_hr_edge_evidence, test_hr_engine, test_hr_features, test_hr_filters, test_hr_identity, test_hr_identity_real, test_hr_iimn, test_hr_kinetics, test_hr_localize, test_hr_msn, test_hr_network, test_hr_real, test_hr_rtalign, test_hr_similarity, test_hr_spectra, test_hr_tp_ms2, test_isf, test_mappa, test_motore_lr
 
 ## Test (`tests/`, `tests_e2e/`)
-- `tests/` — 76 file, 7631 righe: conftest, node_i18n, test_adducts, test_analog, test_anteprima, test_browser_index, test_calcola, test_campioni, test_composition, test_contaminanti, test_contaminanti_privato, test_contaminants_en, test_conversione, test_converti, test_cromato, test_differenza, test_ei_dati, test_esempi_anonimi, test_explore_parts, test_fair, test_filebuf, test_filtri, test_formula_case, test_golden, test_hr_identificazione, test_hr_reader, test_hr_spectra, test_hr_synth, test_i18n, test_idxpool, test_indice_teoria, test_ionfamily, test_isoscore, test_libreria, test_libreria_cartella, test_libreria_scarica, test_librerie_pacchetti, test_librerie_rust, test_liste, test_livelli, test_lr_version, test_manifest_sito, test_map_extent, test_map_features, test_mappa, test_metodo_incoerente, test_metodo_nome, test_molui, test_msn_reader, test_msntree, test_mzidx, test_ordine, test_peaks, test_perdite, test_pipeline, test_pratica, test_profile, test_qaqc, test_ritaglia_mzml, test_scan_axis …
-- `tests_e2e/` — 159 file, 14994 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
+- `tests/` — 77 file, 7709 righe: conftest, node_i18n, test_adducts, test_analog, test_anteprima, test_browser_index, test_calcola, test_campioni, test_composition, test_contaminanti, test_contaminanti_privato, test_contaminants_en, test_conversione, test_converti, test_cromato, test_differenza, test_ei_dati, test_esempi_anonimi, test_explore_parts, test_fair, test_filebuf, test_filtri, test_formula_case, test_golden, test_hr_identificazione, test_hr_reader, test_hr_spectra, test_hr_synth, test_i18n, test_idxpool, test_indice_teoria, test_ionfamily, test_isoscore, test_libreria, test_libreria_cartella, test_libreria_scarica, test_librerie_pacchetti, test_librerie_rust, test_liste, test_livelli, test_lr_version, test_manifest_sito, test_map_extent, test_map_features, test_mappa, test_metodo_incoerente, test_metodo_nome, test_molui, test_msn_reader, test_msntree, test_mzidx, test_nuovo_capitolo, test_ordine, test_peaks, test_perdite, test_pipeline, test_pratica, test_profile, test_qaqc, test_ritaglia_mzml …
+- `tests_e2e/` — 161 file, 15161 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
