@@ -1,7 +1,7 @@
 "use strict";
-// Reproducibility (.mzworkflow) and MGF / MSP spectral export.
+// Reproducibility (.mzflow) and MGF / MSP spectral export.
 //
-// .mzworkflow (JSON, format "mzworkflow/1"):
+// .mzflow (JSON, format "mzflow/1"):
 //   - SHA-256 of each loaded file
 //   - program version and commit
 //   - interface language
@@ -12,7 +12,18 @@
 //   - from «Identifica tutte le MS2» (HR)
 // In LR, only spectra with precursor, charge, RT, file name (no candidate annotations or names: principle 1).
 const WORKFLOW = (() => {
-  const FORMAT = "mzworkflow/1";
+  const FORMAT = "mzflow/1";
+  const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
+  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "workflow_applied"];
+  // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
+  function splitOps(ops) {
+    const keep = [], unknown = [];
+    for (const o of Array.isArray(ops) ? ops : []) {
+      if (o && KNOWN_OPS.includes(o.op)) keep.push(o);
+      else { const n = o && o.op; if (!unknown.includes(n)) unknown.push(n); }
+    }
+    return { keep, unknown };
+  }
 
   // Operation log (saved in notebook NB.ops with UTC timestamp)
   function logOp(op, details = {}) {
@@ -25,7 +36,7 @@ const WORKFLOW = (() => {
     } catch (_) {}
   }
 
-  // ---------------------------------------------------------------- .mzworkflow creation & export
+  // ---------------------------------------------------------------- .mzflow creation & export
   function buildWorkflow() {
     const files = (typeof E !== "undefined" && E.files ? E.files : [])
       .filter(f => !f.gone)
@@ -97,19 +108,19 @@ const WORKFLOW = (() => {
     const text = JSON.stringify(wf, null, 2);
     const first = E.files.find(f => !f.gone);
     const base = first ? (first.label || first.file).replace(/[^\w.-]+/g, "_") : "sessione";
-    const filename = `${base}_${new Date().toISOString().slice(0, 10)}.mzworkflow`;
+    const filename = `${base}_${new Date().toISOString().slice(0, 10)}.mzflow`;
     dl(filename, text, "application/json");
     logOp("export_workflow", { filename });
   }
 
-  // ---------------------------------------------------------------- .mzworkflow open & apply
+  // ---------------------------------------------------------------- .mzflow open & apply
   function openWorkflow() {
     let inp = document.getElementById("wf-open-input");
     if (!inp) {
       inp = document.createElement("input");
       inp.type = "file";
       inp.id = "wf-open-input";
-      inp.accept = ".mzworkflow,.json";
+      inp.accept = ".mzflow,.mzworkflow,.json";
       inp.style.display = "none";
       document.body.appendChild(inp);
     }
@@ -130,7 +141,7 @@ const WORKFLOW = (() => {
   }
 
   async function applyWorkflow(wf, wfFileName = "") {
-    if (!wf || wf.formato !== FORMAT) {
+    if (!wf || (wf.formato !== FORMAT && !LEGACY_FORMATS.includes(wf.formato))) {
       const msg = I18N.t("workflow.err.invalidFormat");
       if (typeof info === "function") info(msg); else alert(msg);
       return false;
@@ -195,7 +206,12 @@ const WORKFLOW = (() => {
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {
-      NB.ops = wf.operazioni.slice();
+      const { keep, unknown } = splitOps(wf.operazioni);
+      NB.ops = keep;
+      if (unknown.length) {
+        const msg = I18N.t("workflow.warn.unknownOps", { ops: unknown.map(String).join(", ") });
+        if (typeof info === "function") info(msg);
+      }
     }
 
     logOp("workflow_applied", { workflow: wfFileName });
@@ -356,6 +372,7 @@ const WORKFLOW = (() => {
     export: exportWorkflow,
     open: openWorkflow,
     applyWorkflow,
+    splitOps,
     formatMgf,
     formatMsp,
     exportSpectrumMgf,

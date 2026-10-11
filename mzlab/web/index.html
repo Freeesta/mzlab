@@ -294,7 +294,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
   <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav>
   <div id="stbar" role="toolbar" data-i18n-aria-label="tb.aria" aria-label="Strumenti"></div>
-  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button><button id="session-menu-btn" class="ib" hidden data-i18n-title="header.sessionMenu.title" title="Opzioni della sessione e flusso di lavoro" aria-label="Menu sessione" style="padding:0 5px;margin-left:-3px;font-size:11px">&#9662;</button></span>
+  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button></span>
   <button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
 <div id="phone" hidden>
   <h1 data-i18n="phone.title">Siete su uno smartphone</h1>
@@ -570,7 +570,7 @@ function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if($("#session-menu-btn"))$("#session-menu-btn").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};
@@ -732,17 +732,6 @@ async function wipeLocal(){
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
   try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
-function openSessionMenu(ev){ev.preventDefault();
-  menu(ev,[
-    {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
-    "-",
-    {label:I18N.t("workflow.menu.export"),fn:()=>window.WORKFLOW&&WORKFLOW.export()},
-    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()},
-    {label:I18N.t("rep.menu"),fn:()=>window.RAPPORTO&&RAPPORTO.export("html")}
-  ])}
-const smb=document.getElementById("session-menu-btn");
-if(smb)smb.onclick=e=>{e.stopPropagation();openSessionMenu(e)};
-$("#newrun").oncontextmenu=e=>openSessionMenu(e);
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
