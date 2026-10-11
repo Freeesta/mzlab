@@ -30,7 +30,7 @@ def session(b, query="", block_wasm=False):
     if block_wasm: ctx.route("**/static/wasm/**", lambda r: r.abort())
     pg = ctx.new_page()
     pg.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
-    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+    pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{PORT}/{query}"); pg.wait_for_selector("#drop", timeout=120000)
     pg.set_input_files("#pick", FILES)
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {N}", timeout=180000)
