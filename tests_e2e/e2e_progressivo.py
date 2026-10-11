@@ -60,8 +60,7 @@ try:
         def failing():
             pg.evaluate("S.adding=true")
             import shutil; shutil.copy(FILES[0], r.wd + "/ok.mzML"); shutil.copy(FILES[1], r.wd + "/ok2.mzML")
-            open(r.wd + "/broken.mzML", "w").write("<mzML><spectrum")
-            pg.evaluate("exploreList([{file:'ok.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'broken.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'ok2.mzML',time:null,type:'sample',conc:null,cunit:null,label:null}]).then(f=>f&&f())")
+            pg.evaluate("exploreList([{file:'ok.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'missing.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'ok2.mzML',time:null,type:'sample',conc:null,cunit:null,label:null}]).then(f=>f&&f())")
             pg.wait_for_function("E.pending.some(x=>x.state==='err')", timeout=60000)
             assert pg.locator("#flst .fl.pend.err").count() == 1
             assert pg.locator("#flst .fl.pend.err small").inner_text().strip() != ""
