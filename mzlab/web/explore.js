@@ -211,7 +211,7 @@ function uiSave(now = false) {
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
         dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -990,7 +990,7 @@ function addPanel(type, o, after) {
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
   if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
-  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", view: o.view === "3d" ? "3d" : "2d", norm: o.norm || "abs", az: o.az ?? 25, elv: o.elv ?? 38, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
+  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", norm: o.norm || "abs", zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
@@ -1389,7 +1389,7 @@ function ctl(p) {
       }
       ctl(p); draw(p);
     };
-    else if (k === "view") x.onclick = () => { setMapView(p, x.dataset.v); };
+    else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);       // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
     else if (k === "rt0" || k === "rt1") x.onchange = () => {            // visible time interval of the panel
       const q = c.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'), a = p._a || {}, u = numMz(q[0].value), v = numMz(q[1].value);
@@ -1413,13 +1413,6 @@ function ctl(p) {
       draw(p);
     };
   });
-}
-// the 3D view needs more height than the 2D map: the panel grows while it is in 3D and goes back afterwards
-function setMapView(p, v) {
-  p.view = v;
-  if (v === "3d" && p.h < 470) { p.h0v = p.h; p.h = 470; apply(p); relayout(); fitHost(); }
-  else if (v !== "3d" && p.h0v) { p.h = p.h0v; p.h0v = null; apply(p); relayout(); fitHost(); }
-  ctl(p); draw(p); uiSave();
 }
 function addTrace(p, mz, label, w) {
   mz = rh(mz, w != null ? 2 : 1);       // (a window centre is half of two 0.1 values: two decimals, the edges stay at one) unit-resolution instrument: one decimal is all that means anything
@@ -1989,72 +1982,6 @@ function mapImage(p, A, B, scale, norm = "abs") {
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
-// ---- 3D view of the same map: a surface (RT on one axis, m/z on the other, intensity as height) drawn with the painter's algorithm on the 2D canvas
-// (no WebGL, so it works with the strict CSP and everywhere). Each cell is the MAXIMUM of the bins it covers, so no peak disappears when the window is
-// coarser than the data. Colours are the same as the 2D map; for a difference the height is signed and the floor is the zero level.
-function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
-  if (window.MAPPA && MAPPA.draw3d) return MAPPA.draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt);       // mappa.js: smoothed, shaded surface
-  const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, dmz = A.dmz, nrt = A.nrt, nmz = A.nmz;
-  const ia = Math.max(0, Math.floor((x0 - rt0) / (rt1 - rt0) * nrt)), ib = Math.min(nrt, Math.max(ia + 1, Math.ceil((x1 - rt0) / (rt1 - rt0) * nrt)));
-  const ja = Math.max(0, Math.floor((y0 - mzA) / dmz)), jb = Math.min(nmz, Math.max(ja + 1, Math.ceil((y1 - mzA) / dmz)));
-  const MAXC = p._rot ? 48 : 96, sx = Math.max(1, Math.ceil((ib - ia) / MAXC)), sy = Math.max(1, Math.ceil((jb - ja) / MAXC));
-  const nx = Math.ceil((ib - ia) / sx), ny = Math.ceil((jb - ja) / sy), v = im.v, T = im.T;
-  const Z = new Float32Array(nx * ny), C = new Float32Array(nx * ny);          // Z: signed height in [-1, 1] (or 0..1); C: raw value for the colour
-  let zmin = 0, zmax = 0;
-  for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
-    let best = 0;
-    for (let i = ia + a * sx; i < Math.min(ib, ia + (a + 1) * sx); i++) for (let j = ja + b * sy; j < Math.min(jb, ja + (b + 1) * sy); j++) { const q = v[i * nmz + j]; if (Math.abs(q) > Math.abs(best)) best = q; }
-    const z = best === 0 ? 0 : Math.sign(best) * T(best); Z[a * ny + b] = z; C[a * ny + b] = best; if (z < zmin) zmin = z; if (z > zmax) zmax = z;
-  }
-  if (!B) zmin = 0; if (zmax === zmin) zmax = zmin + 1;
-  const az = (p.az ?? 25) * Math.PI / 180, el = (p.elv ?? 38) * Math.PI / 180, ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el);
-  const zs = 0.55 / Math.max(zmax - Math.min(zmin, 0), 1e-9) * (B ? 1 : 1);       // height of the box about 0.55 of its footprint
-  const asp = Math.min(3, Math.max(1, (W - M.l - M.r) / Math.max(1, H - M.t - M.b) * 1.1));       // the floor follows the shape of the panel (wide panel = wide floor)
-  const pr = (u, w, z) => { u *= asp; const xr = u * ca - w * sa, d = u * sa + w * ca; return [xr, z * zs * ce + d * se, d * ce - z * zs * se]; };   // [screen x, screen y (up), depth (larger = farther)]
-  const corners = []; for (const u of [-.5, .5]) for (const w of [-.5, .5]) for (const z of [zmin, zmax]) corners.push(pr(u, w, z));
-  const bx0 = Math.min(...corners.map(c => c[0])), bx1 = Math.max(...corners.map(c => c[0])), by0 = Math.min(...corners.map(c => c[1])), by1 = Math.max(...corners.map(c => c[1]));
-  const pw = W - M.l - M.r - 30, ph = H - M.t - M.b - 24, sc = Math.min(pw / (bx1 - bx0), ph / (by1 - by0));
-  const ox = M.l + 14 + (pw - (bx1 - bx0) * sc) / 2 - bx0 * sc, oy = M.t + 6 + (ph - (by1 - by0) * sc) / 2 + by1 * sc;
-  const P = (u, w, z) => { const r = pr(u, w, z); return [ox + r[0] * sc, oy - r[1] * sc, r[2]]; };
-  g.clearRect(0, 0, W, H);
-  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(12);
-  // floor
-  const fl = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(([u, w]) => P(u, w, 0));
-  g.fillStyle = "rgba(120,120,120,.07)"; g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
-  // surface, far cells first
-  const cells = []; for (let a = 0; a < nx - 1; a++) for (let b = 0; b < ny - 1; b++) {
-    const z = (Z[a * ny + b] + Z[(a + 1) * ny + b] + Z[a * ny + b + 1] + Z[(a + 1) * ny + b + 1]) / 4, u = (a + .5) / (nx - 1) - .5, w = (b + .5) / (ny - 1) - .5;
-    cells.push([a, b, pr(u, w, z)[2]]);
-  }
-  cells.sort((p1, p2) => p2[2] - p1[2]);
-  const tab = B ? LUT_DIV : lutSeq(mapPal()), up = (a, b) => P(a / (nx - 1) - .5, b / (ny - 1) - .5, Z[a * ny + b]);
-  g.lineWidth = .6;
-  for (const [a, b] of cells) {
-    const z = (Z[a * ny + b] + Z[(a + 1) * ny + b] + Z[a * ny + b + 1] + Z[(a + 1) * ny + b + 1]) / 4;
-    const q = B ? Math.round(127.5 - Math.sign(z) * Math.abs(z) * 127.5) : Math.round(Math.min(1, Math.max(0, z)) * 255);
-    const lit = Math.min(1.18, Math.max(0.78, 1 + 2.2 * ((Z[a * ny + b] + Z[a * ny + b + 1]) - (Z[(a + 1) * ny + b] + Z[(a + 1) * ny + b + 1])) / 2)), sh = k => Math.min(255, Math.round(k * lit));     // light from the low-RT side: slopes facing it are brighter
-    const col = `rgb(${sh(tab[q * 4])},${sh(tab[q * 4 + 1])},${sh(tab[q * 4 + 2])})`, c0 = up(a, b), c1 = up(a + 1, b), c2 = up(a + 1, b + 1), c3 = up(a, b + 1);
-    g.fillStyle = col; g.strokeStyle = col; g.beginPath(); g.moveTo(c0[0], c0[1]); g.lineTo(c1[0], c1[1]); g.lineTo(c2[0], c2[1]); g.lineTo(c3[0], c3[1]); g.closePath(); g.fill(); g.stroke();
-  }
-  // axes: ticks on the two floor edges nearest to the viewer
-  g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.textAlign = "center";
-  const wn = pr(0, -.5, 0)[2] < pr(0, .5, 0)[2] ? -.5 : .5, un = pr(-.5, 0, 0)[2] < pr(.5, 0, 0)[2] ? -.5 : .5;
-  const r0 = nice(x0, x1, 5).filter(t => t >= x0 && t <= x1), m0 = nice(y0, y1, 5).filter(t => t >= y0 && t <= y1);
-  g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
-  for (const t of r0) { const u = (t - x0) / (x1 - x0) - .5, q = P(u, wn, 0), o = P(u, wn * 1.08, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(o[0], o[1]); g.stroke(); g.fillText(String(+t.toFixed(2)), o[0], o[1] + (wn < 0 ? 12 : -4)); }
-  for (const t of m0) { const w = (t - y0) / (y1 - y0) - .5, q = P(un, w, 0), o = P(un * 1.06, w, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(o[0], o[1]); g.stroke(); g.textAlign = un < 0 ? "right" : "left"; g.fillText(String(Math.round(t)), o[0] + (un < 0 ? -3 : 3), o[1] + 4); g.textAlign = "center"; }
-  const tm = P(0, wn * 1.32, 0), ym = P(un * 1.3, 0, 0), zt = P(-.5, -.5, zmax), zb = P(-.5, -.5, B ? zmin : 0);
-  g.fillText("RT (min)", tm[0], tm[1] + (wn < 0 ? 18 : -14)); g.save(); g.translate(ym[0], ym[1]); g.fillText("m/z", 0, 4); g.restore();
-  g.beginPath(); g.moveTo(zb[0], zb[1]); g.lineTo(zt[0], zt[1]); g.stroke(); g.textAlign = "left"; g.fillStyle = css("--ink"); g.fillText(I18N.t("map.height3d", { scale: scaleTxt }), M.l, M.t + 8); g.fillStyle = ink;
-  const mzAtC = () => (y0 + y1) / 2, centres = [];
-  for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) { const q = P(a / (nx - 1) - .5, b / (ny - 1) - .5, Z[a * ny + b]); centres.push({ x: q[0], y: q[1], depth: q[2], v: C[a * ny + b], rt: rt0 + (ia + (a + .5) * sx) / nrt * (rt1 - rt0), mz: mzA + (ja + (b + .5) * sy) * dmz }); }
-  p._a = { x0, x1, y0, y1, X: v2 => M.l + (v2 - x0) / (x1 - x0) * (W - M.l - M.r), Y: () => 0, W, H, full: [rt0, rt1], fullY: [mzA, mzA + nmz * dmz], f, mzAt: mzAtC, map: true, is3d: true, hov: (px, py) => {
-    let best = null, bd = 18 * 18;                                  // nearest projected cell centre (the one nearer the viewer wins a tie)
-    for (const c of centres) { const d = (c.x - px) ** 2 + (c.y - py) ** 2; if (d < bd || (best && d < bd + 40 && c.depth < best.depth)) { bd = Math.min(bd, d); best = c; } }
-    if (!best) return null;
-    return { px: best.x, rt: null, novl: true, html: I18N.t("map.hov", { rt: best.rt.toFixed(2), mz: best.mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && best.v > 0 ? "+" : "") + fmt(best.v) }) };
-  } };
-}
 async function drawMap(p) {
   const { g, W, H } = setup(p.cv);
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
@@ -2069,13 +1996,6 @@ async function drawMap(p) {
   const x0 = p.zoom ? p.zoom[0] : rt0, x1 = p.zoom ? p.zoom[1] : rt1, y0 = p.zoomY ? p.zoomY[0] : mzA, y1 = p.zoomY ? p.zoomY[1] : mzB;
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = I18N.t(`map.sc.${p.scale}`);
-  if (p.view === "3d") {
-    draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scTxt);
-    const bar3 = palCss(mapPal(), !!B);
-    p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar3}"></span><span class="sm">${I18N.t(B ? "map.leg3d.diff" : "map.leg3d.mean")} ${I18N.t("map.leg3d.scale", { scale: scTxt, norm: nTxt })}</span><span class="sm">${I18N.t("map.leg3d.help")}</span>`;
-    if (window.MAPPA) MAPPA.after(p);
-    return;
-  }
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
   if (!(window.MAPPA && MAPPA.zoomImg(p, g, { A, B, im, x0, x1, y0, y1, pw, ph, norm: p.norm || "abs" })))        // mappa.js: the zoomed region on new bins
     g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
@@ -2582,11 +2502,6 @@ function attach(p) {
   };
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
-    if (drag && drag.rot) {                                   // 3D view: drag rotates (azimuth with x, elevation with y)
-      p.az = drag.az + (px - drag.x0) * 0.6; p.elv = Math.max(5, Math.min(85, drag.elv + (py - drag.y0) * 0.4)); p._rot = true;
-      if (!p._rf) { p._rf = true; requestAnimationFrame(() => { p._rf = false; draw(p); }); }
-      return;
-    }
     if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
       const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = (px - drag.x0) / pw * span;
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
@@ -2606,14 +2521,14 @@ function attach(p) {
       const u = xd(drag.x0), v = xd(drag.x), lo = Math.min(u, v), hi = Math.max(u, v);
       zl.dataset.v = p.type === "spec" ? I18N.t("zoom.mz", { lo: lo.toFixed(mzd(p, p.level)), hi: hi.toFixed(mzd(p, p.level)) }) : I18N.t("zoom.rt", { lo: lo.toFixed(2), hi: hi.toFixed(2) });
     }
-    else if (drag) { drag.x = px; drag.y = py; const mapBox = p.type === "map" && !a.is3d && !drag.alt; if (p.type === "spec" || mapBox || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together; on the map Alt + drag is the spectrum of the interval)
+    else if (drag) { drag.x = px; drag.y = py; const mapBox = p.type === "map" && !drag.alt; if (p.type === "spec" || mapBox || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together; on the map Alt + drag is the spectrum of the interval)
       if (Math.abs(px - drag.x0) > 4 || (mapBox && Math.abs(py - drag.y0) > 4)) { zr.hidden = false; const yy = canYZ(a) || mapBox ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
-    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
+    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true;
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
@@ -2640,7 +2555,6 @@ function attach(p) {
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
-    if (a.is3d) { drag = { rot: true, x0: px, y0: py, az: p.az ?? 25, elv: p.elv ?? 38 }; e.preventDefault(); return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
@@ -2648,7 +2562,6 @@ function attach(p) {
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true;
-    if (d.rot) { p._rot = false; if (window.MAPPA && MAPPA.click3(p, d)) return; draw(p); return; }       // mappa.js: a click without turning = line with RT and m/z
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
@@ -2659,8 +2572,8 @@ function attach(p) {
     if (d.xa) { if (a && Math.abs(d.x - d.x0) > 4) { const u = xd(d.x0), v = xd(d.x); zoomTo(p, Math.min(u, v), Math.max(u, v)); } return; }
     const x0 = xd(d.x0), x1 = xd(d.x);
     if (!a || x0 == null) return;
-    if (p.type === "map" && !a.is3d && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
-    if (p.type === "map" && !a.is3d && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
+    if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
+    if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
@@ -2705,7 +2618,6 @@ function attach(p) {
     const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of wheel steps is one zoom for the history
     if (rect(e) < M.l && canYZ(a)) { const v = a.yinv(recty(e)); zoomYTo(p, v - (v - a.ymin) * f, v + (a.ymax - v) * f); uiSave(); return; }      // over the y axis: only the vertical scale changes
-    if (a.is3d) { const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2; p.zoomY = clampView(cy - (cy - a.y0) * f, cy + (a.y1 - cy) * f, a.fullY[0], a.fullY[1]); zoomTo(p, cx - (cx - a.x0) * f, cx + (a.x1 - cx) * f); return; }
     if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); }
     zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f);
   }, { passive: false });
@@ -2720,8 +2632,7 @@ function attach(p) {
       }
       return;
     }
-    if (p.type === "map" && p._a?.is3d && window.MAPPA) { MAPPA.dbl3(p, rect(e), recty(e)); return; }       // mappa.js: spectrum at the RT of the point
-    if (p.type === "map" && !p._a?.is3d) {
+    if (p.type === "map") {
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }
       const x = xd(rect(e)), k = p.k != null ? p.k : (p._a?.f?.k ?? 0), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
@@ -2825,9 +2736,7 @@ function ctxFor(p, e, x, px, py) {
   const items = [];
   const inLbl = a => (p._a.lbls || []).some(l => l.ann === a && px >= l.x && px <= l.x + l.w && py >= l.y && py <= l.y + l.h);
   const near = p.anns.find(a => a.x >= p._a.x0 && a.x <= p._a.x1 && (inLbl(a) || Math.abs(p._a.X(a.x) - px) < 14));
-  if (p.type === "map" && p._a.is3d) {
-    items.push({ label: I18N.t("ctx.map3d.hint"), dim: true }, { label: I18N.t("ctx.map3d.to2d"), fn: () => setMapView(p, "2d") }, { label: I18N.t("ctx.map3d.reset"), fn: () => { p.az = 25; p.elv = 38; draw(p); uiSave(); } });
-  } else if (p.type === "map") {
+  if (p.type === "map") {
     const a = p._a, mz = a.mzAt(py), lab = mz.toFixed(mzd(p)), f = a.f, dt = scanStep();
     items.push({ label: I18N.t("ctx.map.where", { rt: x.toFixed(2), mz: lab, file: f.label }), dim: true }, "-");
     items.push({ label: I18N.t("ctx.map.xic", { mz: lab }), fn: () => openXic(null, { mz, obs: true }) });
@@ -2904,7 +2813,7 @@ function ctxFor(p, e, x, px, py) {
   }
   if (near) items.push("-", { label: I18N.t("ctx.ann.edit", { text: near.text }), fn: async () => { const v = await ask(I18N.t("ctx.ann.prompt"), near.text); if (v != null) { if (v === "") p.anns = p.anns.filter(a => a !== near); else near.text = v; draw(p); } } },
     { label: I18N.t("ctx.ann.delete", { text: near.text }), fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
-  if (!(p.type === "map" && p._a.is3d) && (p.zoom || p.zoomY)) items.unshift({ label: I18N.t("ctx.resetZoom"), fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
+  if (p.zoom || p.zoomY) items.unshift({ label: I18N.t("ctx.resetZoom"), fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
   menu(e, items);
 }
 
