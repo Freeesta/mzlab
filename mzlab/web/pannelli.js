@@ -218,7 +218,7 @@ function addPanel(type, o, after) {
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" title="${I18N.t("panel.tlink.title")}">${IC_LINK}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
-    const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL}</button></span>`;
+    const go = `<span class="tbg"><button class="bt" data-a="tab" title="${I18N.t("tdati.btn.title")}" aria-label="${I18N.t("tdati.btn.title")}">${IC_DATA}</button><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
@@ -266,6 +266,7 @@ function addPanel(type, o, after) {
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
+  const tabB = el.querySelector('[data-a="tab"]'); if (tabB) tabB.onclick = e => { e.stopPropagation(); if (window.TDATI) TDATI.open(p.cv); };
   const dlB = el.querySelector('[data-a="dl"]');
   if (dlB) dlB.onclick = e => {
     e.stopPropagation();                            // else the click reaches the document and closes the menu at once
@@ -432,6 +433,8 @@ function afterDraw(p) {
   if (btn) btn.disabled = !z;                      // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
   placeLeg(p);
+  { const hd = p.el.querySelector(".hd"); if (hd && hd.scrollWidth > hd.clientWidth + 1) fitHdSoon(p); }       // the title or the reading changed the width of the header: fit it again
+  if (window.TDATI_P) TDATI_P.update(p);                      // table of the data and description for screen readers (tdati.js)
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
   refreshIntf(p);

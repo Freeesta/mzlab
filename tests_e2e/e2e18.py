@@ -62,7 +62,7 @@ try:
             assert t[2].startswith("m/z ") and abs(t[1] - 0.5) < 1e-9, t          # default unit window [n-0.2, n+0.8]
         step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "xic", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "dl", "max"]), (".pnl.spec", ["fit", "rul", "par", "rel", "dl", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "xic", "tab", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "tab", "dl", "max"]), (".pnl.spec", ["fit", "rul", "par", "rel", "tab", "dl", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")
