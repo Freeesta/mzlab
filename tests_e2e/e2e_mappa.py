@@ -157,7 +157,7 @@ try:
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=auto]"); pg.wait_for_timeout(1500)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); pg.wait_for_timeout(1500)
             assert pg.evaluate(M + ".corr") == "auto" and pg.evaluate(M + "._img.key.includes('true') || " + M + "._img.key.includes('bg=1')") and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
             pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c='']"); pg.wait_for_timeout(800)
         step("2D panel: groups, one «3D» button, palette, constant background, colour bar with values", panel2d)

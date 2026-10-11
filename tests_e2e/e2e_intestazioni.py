@@ -70,7 +70,7 @@ try:
 
         def smoothing():
             cid = pg.evaluate("E.panels.find(p=>p.type==='chrom').id")
-            b = f"E.panels.find(p=>p.id=={cid}).el.querySelector('[data-o=smooth]')"
+            b = f"E.panels.find(p=>p.id=={cid}).el.querySelector('[data-a=smooth]')"
             assert pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "true" and pg.evaluate(f"{b}.tagName") == "BUTTON"
             pg.evaluate(f"E.active=E.panels.find(p=>p.id=={cid}); BARRA.commands.find(c=>c.id==='smooth').run()"); pg.wait_for_timeout(500)
             assert pg.evaluate(f"E.panels.find(p=>p.id=={cid}).smooth") is False and pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "false"

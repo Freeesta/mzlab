@@ -20,12 +20,12 @@ try:
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")
             pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200)
             t = pg.inner_text(".pnl.chrom .corrm"); print(t)
-            assert t.count("Sottrai il file:") == 3, t                   # any file, not only the one marked as blank
+            assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
-        step("Correzione: in the header, any of the 3 files can be subtracted", corr_out)
+        step("Correzione: in the header, one entry and a chooser with the 3 files", corr_out)
         def subtract():
             pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200)
-            pg.locator(".pnl.chrom .corri", has_text="Sottrai il file").first.click(); pg.wait_for_timeout(1500)
+            pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_timeout(1500)
             assert pg.evaluate(f"{CH}.bk") not in ("", None), "a file was chosen"
             pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_timeout(800)
         step("a non-blank file is subtracted from the chromatogram", subtract)

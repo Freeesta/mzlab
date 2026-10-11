@@ -21,8 +21,8 @@ window.MAPPA = (() => {
     if (p._mzInit || !p.cv) return; p._mzInit = true;
     const cv = p.cv, grid = document.createElement("div");
     grid.className = "mzgrid"; cv.before(grid); grid.appendChild(cv);
-    const ov = document.createElement("canvas"); ov.className = "mzov"; grid.appendChild(ov);
-    const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; grid.appendChild(sp);
+    const ov = document.createElement("canvas"); ov.className = "mzov"; ov.setAttribute("aria-hidden", "true"); grid.appendChild(ov);
+    const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; sp.setAttribute("role", "img"); grid.appendChild(sp);
     const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
     Object.assign(st(p), { ov, sp, xc, grid });
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
@@ -278,6 +278,7 @@ window.MAPPA = (() => {
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke(); g.globalAlpha = 1;
@@ -297,6 +298,7 @@ window.MAPPA = (() => {
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
     let ymax = 0; const tr = xi.tr || [];
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
+    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }); }
     const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
     tr.forEach((t, n) => {
       const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
@@ -679,7 +681,7 @@ window.MAPPA = (() => {
     return { now: p.corr === "file" && p.ref !== "" && p.ref != null ? "f" + p.ref : se ? "f" + se.k : p.corr === "tract" ? "tract" : p.corr === "auto" ? "auto" : "" };
   }
   function setCorr(p, v) {
-    corrInit(p);
+    corrInit(p); if (v === "snip") v = "auto";                                // the shared menu calls the automatic background «snip»
     if (v === "") { p.corr = "none"; p.ref = ""; p.bgr = null; }
     else if (v[0] === "f") { p.corr = "file"; p.ref = +v.slice(1); p.bgr = null; }
     else if (v === "auto") { p.corr = "auto"; p.ref = ""; p.bgr = null; }
@@ -813,7 +815,7 @@ window.MAPPA = (() => {
   const css = document.createElement("style");
   css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:10px;z-index:5;cursor:ns-resize;touch-action:none}" +
     ".pnl .pgrip.t{top:-3px}.pnl .pgrip.b{bottom:-3px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:3px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
-    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:22px}.pnl .pgrip.t{top:-10px}.pnl .pgrip.b{bottom:-10px}.pnl .pgrip::after{opacity:.8;top:9px}}" +
+    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:24px}.pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{opacity:.8;top:10px}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);
   const host = () => document.getElementById("dpanels");
@@ -821,9 +823,10 @@ window.MAPPA = (() => {
   const simple = p => !(window.DDA && (DDA.docked(p) || E.panels.some(q => q.dock === p.id && DDA.docked(q))));
   const above = p => { let best = null; for (const q of E.panels) if (q !== p && q.full && simple(q) && q.y < p.y && (!best || q.y > best.y)) best = q; return best; };
   const done = p => { if (p.full && typeof relayout === "function") relayout(); if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
-  function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); }
+  function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");
+    { const p0 = pOf(el); g.setAttribute("aria-valuemin", String(HMIN)); g.setAttribute("aria-valuemax", "2000"); g.setAttribute("aria-valuenow", String(p0 ? p0.h : el.offsetHeight)); }          // a focusable separator needs its value (the height of the panel)
     g.setAttribute("aria-label", I18N.t(side === "t" ? "mappa.rz.top" : "mappa.rz.bot")); g.title = I18N.t("mappa.rz.title");
     g.addEventListener("pointerdown", ev => {
       const p = pOf(el); if (!p || el.classList.contains("max") || ev.button > 0) return;

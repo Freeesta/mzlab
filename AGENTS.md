@@ -13,7 +13,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
   3. Interfaccia in italiano e inglese; Teoria e Pratica solo in italiano; codice e commenti in inglese. Sempre «m/z», «RT», «XIC», «TIC», «MRM», «MS2» (la pagina mostra MS<sup>2</sup>).
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
-  6. **Accessibilità**: colori solo da variabili CSS, `prefers-reduced-motion`, tastiera e `aria-label`, grafici leggibili dai daltonici (Okabe-Ito).
+  6. **Accessibilità**: colori solo da variabili CSS, `prefers-reduced-motion`, tastiera e `aria-label`, grafici leggibili dai daltonici (Okabe-Ito); **ogni grafico nuovo nasce con la sua tabella dei dati** (`TDATI.attach`/`describe`/`series`, `docs/agenti/dati.md`), con bersagli di almeno 24×24 px (40 px al tocco) e uno zoom/spostamento che non richiede il trascinamento (WCAG 2.2 AA, EN 301 549; `e2e_axe_grafici`).
 - **Dati del laboratorio**: MAI nel repository (pubblico); stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`mzML/`, `dam/`, `HRMS/`; prompt dei lavori in `scratchpad/`). Eccezione: i file anonimi di `mzlab/web/esempi/` (5 Full Scan, 2 MS2, 4 standard MRM, 1 ritaglio Orbitrap DDA autorizzato da Federico). Il nome del composto dell'esperienza, dei suoi TP e degli inquinanti dei metodi non compare mai nel repository pubblico (interfaccia, Teoria, giochi, esempi, test, commit, PR; i test lo controllano).
 
 ## 2. Regole di lavoro

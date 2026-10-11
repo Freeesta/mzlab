@@ -173,6 +173,14 @@ export function open(p, opener) {
   const xicc = dlg.querySelector(".m3d-xic"), spcc = dlg.querySelector(".m3d-spc"), main = dlg.querySelector(".m3d-main"), ov = ovc.getContext("2d");
   const num = el => { const v = parseFloat(String(el.value).replace(",", ".")); return Number.isFinite(v) ? v : null; };
 
+  // the most intense cells of the grid, for the «Dati» table (tdati.js)
+  if (window.TDATI) TDATI.addButton(glc, () => {
+    if (!V.g || !V.raw) return null;
+    const { nrt, nmz } = V.g, cells = [];
+    for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) { const v = V.raw[i * nmz + j]; if (v > 0) cells.push([i, j, v]); }
+    cells.sort((a, b) => b[2] - a[2]).splice(100);
+    return { title: T("m3d.canvas"), head: [T("tdati.col.rt"), "m/z", T("tdati.col.int")], rows: cells.map(c => [TDATI.num(V.rt[0] + (c[0] + 0.5) * (V.rt[1] - V.rt[0]) / nrt, 3), TDATI.num(V.g.log ? V.g.mz0 * Math.exp((c[1] + 0.5) * V.g.dlog) : V.g.mz0 + (c[1] + 0.5) * V.g.dmz, 3), TDATI.num(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
+  });
   // ---- WebGL
   const gl = glc.getContext("webgl2", { antialias: true, alpha: false });
   let PR;

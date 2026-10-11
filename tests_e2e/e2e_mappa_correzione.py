@@ -52,7 +52,7 @@ try:
         def numbers():
             f = pg.evaluate("[" + M + "._a.f.k, " + M + "._a.f.lv]")
             q = f"k={f[0]}&level={f[1]}"
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=auto]"); pg.wait_for_timeout(1500)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); pg.wait_for_timeout(1500)
             a = pg.evaluate("(()=>{const a=" + M + "._a; let s=0; for (const v of a.mat ? a.mat.v : []) s+=v; return s})()")
             ref = pg.evaluate(API, q + "&bg=1"); raw = pg.evaluate(API, q)
             assert pg.evaluate(M + ".corr") == "auto" and abs(ref[0] - raw[0]) > 1 and ref[0] < raw[0], (ref, raw)
