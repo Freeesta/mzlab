@@ -42,6 +42,13 @@ pub fn open<R: Read + Seek>(source: R) -> Result<RawFileReader> {
     RawFileReader::open(source).map_err(raw_error)
 }
 
+/// The text of the instrument method stored in the `.raw` (the Chromeleon script with the gradient), or `None` when the file has none.
+/// Only the first ~500 kB are read; the text goes to `mzlab.analog.parse_chromeleon` in the page.
+pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<String>> {
+    let raw = open(&mut source)?;
+    Ok(raw.instrument_method_text(&mut source))
+}
+
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.
 pub fn parse<R: Read + Seek>(mut source: R, mut on: impl FnMut(Spectrum)) -> Result<()> {
     let raw = open(&mut source)?;

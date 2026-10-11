@@ -196,6 +196,12 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/explore":
                 app.open_session(body)
                 return _json(app.session_state())
+            if path == "/api/gradient":      # the gradient the student typed, pasted or imported for a file (or null to remove it)
+                return _json({"gradient": app.set_gradient(body)})
+            if path == "/api/gradient_parse":  # the text of a Chromeleon script or a CSV -> the gradient model (nothing is stored)
+                from .analog import course_gradient, parse_chromeleon, parse_gradient_csv
+                fmt = body.get("fmt")
+                return _json({"gradient": course_gradient() if fmt == "course" else (parse_chromeleon if fmt == "chromeleon" else parse_gradient_csv)(body.get("text", ""))})
             if path == "/api/meta":          # metadata of the open files (sample table): type, time, concentration, replicate group
                 return _json(app.set_meta(body))
             if path == "/api/stat/profile":    # time profile of one ion chosen by the user (values already integrated by the page): order, normalization
@@ -248,6 +254,10 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 _diff_opts(q)                # a wrong reference setting is the user's: a JSON error with a key, not a server fault
             except ValueError as e:
                 return _fail(e)
+        if path == "/api/analog":        # one analog trace (pressure, flow...): minutes, values reduced to min/max per interval, unit to show, unit note
+            return _json(app.analog(int(q["k"]), int(q["i"]), int(q.get("n", 2000))))
+        if path == "/api/gradient":
+            return _json({"gradient": app.gradient(int(q["k"]))})
         if path == "/api/state":
             return _json(app.state())
         if path == "/api/notebook":
