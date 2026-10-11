@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Neutral losses (window «Perdite neutre», tables.js): the list and the search for combinations. Pure data and functions, also run by node in tests/test_perdite.py.
 // The exact masses are NOT written here: tables.js computes them from the formulas with the element data (elements.js), the test with mzlab/chem/elements.py.

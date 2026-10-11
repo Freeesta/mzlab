@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Central switches of dormant features: the code stays, the interface does not show it. A switch is turned on only for development and
 // tests, never from the interface: «?qaqc=1» in the address or localStorage «qqq.dev.qaqc» = «1». «?qaqc=0» turns it off again.

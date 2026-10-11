@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Arithmetic of the header calculator (block 4.2): pure functions, also run by node in tests/test_calcola.py. No eval (the page has a strict CSP):
 // a small recursive-descent parser. The field takes an EXPRESSION (only digits, decimal point or comma, + - x / ( ) and "Ans") or a chemical formula.
