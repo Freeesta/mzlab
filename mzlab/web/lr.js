@@ -58,6 +58,13 @@ export function createLr({ rb }) {
       if (!/\.mzml$/i.test(f.name) || !f.indexed) { foreign = true; continue; }
       try { files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info)); } catch (_) { foreign = true; }
     }
+    if (foreign) return;
+    // App._resume: the files that were open (the list the page keeps in the notebook) open again
+    try {
+      const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
+      const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));
+      if (list.length) await explore({ samples: list });
+    } catch (_) { items = null; samples = []; hr = lr = false; }                    // a broken notebook never stops the program
   };
 
   async function upload(name, blob) {

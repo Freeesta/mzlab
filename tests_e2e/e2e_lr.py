@@ -134,10 +134,7 @@ try:
         def five_files():
             # the flow of e2e13 in the Rust default: five files (Full Scan, MS2, MRM), reload, panels
             ctx5, pg5, reqs5 = context()
-            logs5 = []
             ctx5.add_init_script("window.MZLAB_TRACE = [];")
-            pg5.on("console", lambda m: logs5.append(m.type + ": " + m.text[:200]))
-            pg5.on("pageerror", lambda e: logs5.append("pageerror: " + str(e)[:200]))
             pg5.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
             pg5.wait_for_selector("#drop", timeout=120000)
             five = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")]
@@ -145,17 +142,13 @@ try:
             pg5.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
             pg5.click("#opbtn"); pg5.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg5.wait_for_function("E.files.length >= 5 && E.pending.length === 0", timeout=120000); pg5.wait_for_timeout(2000)
-            info = {"miss_open": why(pg5), "py_open": bool(pyodide(reqs5)), "panels": pg5.evaluate("E.panels.map(p => p.type + ':' + !!p._a)")}
-            info["trace_open"] = pg5.evaluate("MZLAB_TRACE.filter(x => /rpc|fetch</.test(x)).slice(0, 40)")
             pg5.reload()
-            try: pg5.wait_for_selector(".pnl canvas", timeout=40000); ok = True
-            except Exception: ok = False
-            info.update({"reload_canvas": ok, "miss_reload": why(pg5), "files": pg5.evaluate("window.E ? E.files.length : null"), "panels2": pg5.evaluate("window.E ? E.panels.map(p => p.type + ':' + !!p._a) : null"),
-                         "loading": pg5.evaluate("(document.getElementById('ldmsg')||{}).textContent || ''"), "errs": [e for e in errs[-4:]],
-                         "lr": pg5.evaluate("[!!window.MZLAB_LR, window.MZLAB_LR_ERR || null, !!window.MZLAB_LR_DONE]"), "trace_reload": pg5.evaluate("MZLAB_TRACE.slice(-40)"), "logs": [l for l in logs5 if "iframe" not in l][-8:]})
-            for k, v in info.items(): print("   DIAG", k, v)
-            raise AssertionError("DIAG see above")
-        step("five files: diagnostics of the e2e13 flow", five_files)
+            pg5.wait_for_selector(".pnl canvas", timeout=60000)
+            pg5.wait_for_function("E.files.length >= 1", timeout=60000)
+            assert not pyodide(reqs5), pyodide(reqs5)[:3]
+            assert not why(pg5)[0], why(pg5)
+            assert not errs, errs[:3]
+        step("five files (Full Scan, MS2, MRM): the reload resumes the session without Pyodide", five_files)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
