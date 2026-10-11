@@ -85,6 +85,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `picchi.js` (557) Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafi — autoEdges:30, showInts:248, drawSpec:312, inRange:367, hidOf:412
 - `profilo.js` (156) Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every  — PROFILO:8
 - `qaqc.js` (246) QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender — QAQC:9, mount:203 **[dormiente: QA/QC]**
+- `qqq-db.js` (23) The IndexedDB of the page ("qqq_lab": the name is kept, renaming it would lose the users' data): its
 - `qualita.js` (40) Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak a
 - `rapporto.js` (114) Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measu — RAPPORTO:7, build:35, html:71
 - `reset.js` (95) The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the sessi
