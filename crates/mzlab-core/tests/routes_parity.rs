@@ -114,7 +114,19 @@ fn rust_routes_match_python() {
                 .map(|(k, v)| format!("{k}={}", enc(v.as_str().unwrap())))
                 .collect::<Vec<_>>()
                 .join("&");
-            let got = if path == "/api/scaninfo" {
+            let got = if path == "/api/fileinfo" || path == "/api/mrm" {
+                let size = std::fs::metadata(line).unwrap().len();
+                let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
+                if path == "/api/mrm" {
+                    let end = routes.idx.scans.last().map_or(0, |s| s.end);
+                    let chroms = mz.chromatograms(end).unwrap();
+                    Some(mzlab_core::fileroutes::mrm_files(&[(0, mzlab_core::fileroutes::mrm_transitions(&mut mz, &chroms).unwrap())]))
+                } else {
+                    let head = mz.info_head().unwrap();
+                    let name = PathBuf::from(line).file_name().unwrap().to_string_lossy().to_string();
+                    Some(mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head).unwrap_or_else(|e| panic!("{what}: {e}")))
+                }
+            } else if path == "/api/scaninfo" {
                 let sid = q["sid"].as_str().unwrap().parse().unwrap();
                 Some(routes.scaninfo(sid, &mut mzml).unwrap_or_else(|e| panic!("{what}: {e}")))
             } else if path == "/api/xic" {

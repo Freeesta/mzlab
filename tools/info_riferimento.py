@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import mzidx_riferimento as ref  # noqa: E402
+from mzlab.app import App  # noqa: E402
 from mzlab.explore import Item, file_parts  # noqa: E402
 from mzlab.reader import mzidx  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
@@ -44,6 +45,7 @@ def main(argv) -> int:
             rows.append({"meta": {"file": name, "label": it.label, "sha256": it.sha256, "time": it.time, "type": it.type, "conc": it.conc, "cunit": it.cunit, "rep": it.rep},
                          "part": p, "facts": facts(it), "info": json.loads(json.dumps(it.info()))})
         (out / (f.stem + ".info.json")).write_text(json.dumps(rows), encoding="utf-8")
+        (out / (f.stem + ".sniff.json")).write_text(json.dumps(App()._sniff(f)), encoding="utf-8")
         print(f)
     return 0
 

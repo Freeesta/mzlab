@@ -8,7 +8,7 @@ use crate::json::{round, Out};
 const MARK: &[u8] = b"<binaryDataArrayList";
 
 /// Header of a spectrum, read in small steps until the arrays begin.
-fn header<M: ReadAt>(mzml: &mut M, start: u64, end: u64) -> Result<String> {
+pub(crate) fn header<M: ReadAt>(mzml: &mut M, start: u64, end: u64) -> Result<String> {
     let mut buf: Vec<u8> = Vec::new();
     let mut at = start;
     while at < end {

@@ -178,7 +178,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(trace(&pick(&rt), &pick(&y))))
     }
 
-    fn filters(&mut self) -> Result<String> {
+    pub fn filters(&mut self) -> Result<String> {
         struct G {
             key: String,
             level: u8,
