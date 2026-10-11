@@ -97,6 +97,7 @@ function toggleLock(p) {
 function drawSoon(p) { if (p._ds) return; p._ds = requestAnimationFrame(() => { p._ds = 0; draw(p); }); }   // several requests in a frame = one drawing
 function cursorLine(p) {                                           // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;
+  if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });      // one cursor for the linked chromatograms
   if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; if (h) h.hidden = true; return; }
   c.hidden = false; c.style.left = p.cv.offsetLeft + a.X(p.cur) + "px"; c.style.top = p.cv.offsetTop + M.t + "px"; c.style.height = a.H - M.t - M.b + "px";
   if (!h) return;
