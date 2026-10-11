@@ -76,6 +76,22 @@ try:
             for t in ("spec", "map"):
                 assert pg.evaluate(f"!!E.panels.find(q=>q.type==='{t}').el.querySelector('.subchip')"), t
         step("the spectrum and the map follow the same reference", spec_map)
+        def mirror():
+            q = "E.panels.find(q=>q.type==='spec')"
+            pg.evaluate(f"draw({q})"); ready(pg); pg.wait_for_timeout(600)
+            d = pg.evaluate(f"(()=>{{const a={q}._a; return [a.data[0].d.diff, Math.min(...a.data[0].d.y), Math.max(...a.data[0].d.y), a.ymin]}})()")
+            assert d[0] is True and d[1] < 0 and d[3] < 0, d              # the parent has fallen: a bar down, the axis goes below zero
+            assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
+            hov = pg.evaluate(f"(()=>{{const p={q}, a=p._a; const j=a.data[0].d.y.indexOf(Math.min(...a.data[0].d.y)); const h=a.hov(a.X(a.data[0].d.mz[j])); return h&&h.html}})()")
+            assert hov and "cala" in hov and "−" in hov, hov                 # the sign and the word in the tooltip, not only the colour
+            sel = pg.evaluate(f"{q}.el.querySelector('[data-o=bg]').selectedOptions[0].textContent")
+            assert "SUB_t0" in sel, sel                                      # the «fondo» menu starts from the reference of the session
+        step("the spectrum is a mirror: up higher in the sample, down higher in the reference, sign in words, menu starts from the session", mirror)
+        def spec_clip():
+            pg.evaluate("S.ref.clip=true; SUBREF.refresh(E.tab,true)"); ready(pg); pg.wait_for_timeout(600)
+            assert pg.evaluate("Math.min(...E.panels.find(q=>q.type==='spec')._a.data[0].d.y)") >= 0
+            pg.evaluate("S.ref.clip=false; SUBREF.refresh(E.tab,true)"); ready(pg)
+        step("«clip at zero» also cuts the spectrum", spec_clip)
         def walk():
             pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
             assert pg.evaluate("E.browse") is True and pg.evaluate("E.files[E.cur].file") != "SUB_t0.mzML"
