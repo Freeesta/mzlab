@@ -221,7 +221,6 @@ async function drawLines(p) {
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
-    if (p.d2) s.ys = sgDeriv2Inv(s.ys);
     let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m;
   });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
@@ -241,7 +240,7 @@ async function drawLines(p) {
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
   const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = p.d2 ? I18N.t("axis.d2") : nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: YT_I }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : YT_I;
+  const yt = nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: YT_I }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : YT_I;
   // waterfall: the traces are ordered by time (the first one in front), each moved up and a little to the right; the room is taken from the axes
   const pw0 = W - M.l - M.r, ph0 = H - M.t - M.b;
   const cs = cas ? sr.slice().sort((a, b) => ((E.files[a.k] || {}).time ?? 1e9) - ((E.files[b.k] || {}).time ?? 1e9) || a.k - b.k) : null;

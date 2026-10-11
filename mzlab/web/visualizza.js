@@ -27,6 +27,29 @@ const DISP = (() => {
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });
 
+  // ---- XIC in high resolution: the ion and its interval (the header only says «XIC • m/z value»); the interval is per trace, in ppm or in Da
+  const xt = p => (p && p.type === "xic" ? p.traces[Math.min(p._xt || 0, p.traces.length - 1)] : null);
+  const xhr = p => !!(window.HR && p && p.type === "xic" && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));
+  const xunit = (p, tr) => (tr.ion ? (tr.wda != null ? "da" : "ppm") : (p._xu || "da"));
+  const xrefresh = (p, tr) => {
+    const hf = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv));
+    tr.label = tr.ion && hf ? HR.ionText(tr.mz, hf, tr) : `m/z ${(+tr.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}`;
+    ctl(p); redraw(p); if (window.BANCO) BANCO.renderInfo();
+  };
+  register("chrom", { id: "xmz", label: "disp.xmz", title: "disp.xmz.title", kind: "number", min: 0, step: 0.0001, when: p => xhr(p) && !!xt(p), get: p => (+xt(p).mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1) + 1),
+    set: (p, v) => { const tr = xt(p), n = parseFloat(String(v).replace(",", ".")); if (!(n > 0)) return; tr.mz = rh(n, 5); xrefresh(p, tr); } });
+  register("chrom", { id: "xunit", label: "disp.xunit", kind: "select", when: p => xhr(p) && !!xt(p), opts: () => [["ppm", "ppm"], ["da", "Da"]], get: p => xunit(p, xt(p)),
+    set: (p, v) => {                                          // same interval, written in the other unit
+      const tr = xt(p), cur = xunit(p, tr); if (cur === v) return;
+      const f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)), tol = tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6;
+      if (tr.ion) { if (v === "da") tr.wda = rh(tr.mz * tol * 1e-6, 5); else { delete tr.wda; tr.ppm = tol; } } else p._xu = v;
+      xrefresh(p, tr); } });
+  register("chrom", { id: "xtol", label: "disp.xtol", title: "disp.xtol.title", kind: "number", min: 0, step: 0.1, when: p => xhr(p) && !!xt(p),
+    get: p => { const tr = xt(p), u = xunit(p, tr), f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)); return u === "da" ? +(tr.ion ? tr.wda : (tr.w ?? p.tol)).toFixed(5) : +(tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6).toFixed(2); },
+    set: (p, v) => { const tr = xt(p), n = parseFloat(String(v).replace(",", ".")); if (!(n > 0)) return; const u = xunit(p, tr);
+      if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5);
+      xrefresh(p, tr); } });
+
   function control(it, p, k) {
     const v = it.get(p), id = `dsp-${k}`;
     if (it.kind === "number") return `<input id="${id}" data-k="${k}" type="number" min="${it.min}" max="${it.max}" step="${it.step || 1}" value="${EH(v)}">`;

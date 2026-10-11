@@ -189,7 +189,7 @@ const BANCO = (() => {
       }).catch(() => { sel.disabled = true; });
     }
     if (p.type === "chrom") {
-      const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = I18N.t("bn.addBtn"); add.title = I18N.t("bn.addBtn.title");
+      const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = "+"; add.title = I18N.t("bn.addBtn.title"); add.setAttribute("aria-label", I18N.t("bn.addBtn.title"));
       add.onclick = e => { e.stopPropagation(); addRange(p); }; wrap.appendChild(add);
       if (p.ranges && p.ranges.length) {
         const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = I18N.t("bn.stack"); t.title = I18N.t("bn.stack.title"); ks.replaceWith(t); }
@@ -198,6 +198,8 @@ const BANCO = (() => {
         p.ranges.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.bf = "drop"; b.dataset.id = r.id; b.textContent = "\u00d7 " + (rangeLabel(r).length > 18 ? rangeLabel(r).slice(0, 17) + "…" : rangeLabel(r)); b.title = I18N.t("bn.drop", { name: rangeLabel(r) }); b.onclick = e => { e.stopPropagation(); dropRange(p, r.id); }; wrap.appendChild(b); });
       }
     }
+    const ds = document.createElement("button"); ds.type = "button"; ds.className = "bt"; ds.dataset.bf = "disp"; ds.innerHTML = svg('<path d="M2.5 5h6M11.5 5h2M2.5 11h2M7.5 11h6"/><circle cx="10" cy="5" r="1.5"/><circle cx="6" cy="11" r="1.5"/>');
+    ds.title = I18N.t("cmd.disp.name"); ds.setAttribute("aria-label", ds.title); ds.onclick = e => { e.stopPropagation(); if (window.DISP) DISP.open(p); }; wrap.appendChild(ds);
     const pin = document.createElement("button"); pin.type = "button"; pin.className = "bt pin" + (p.pin ? " on" : ""); pin.dataset.bf = "pin"; pin.innerHTML = IC_PIN;
     pin.title = I18N.t(p.pin ? "bn.pin.on" : "bn.pin.off");
     pin.onclick = e => { e.stopPropagation(); setPin(p, !p.pin); };

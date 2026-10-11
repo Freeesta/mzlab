@@ -26,7 +26,7 @@ try:
             assert o[1].startswith("spec*") and abs(float(o[1].split("@")[1]) - 14.3) < 0.3, o       # newest right under, and live
             assert sum(1 for t in o if t.startswith("spec*")) == 1, o   # only one live
             ttl = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.ttl').textContent)"); print(ttl)
-            assert "collegato a pannello" in ttl[0] and all("collegato" not in t and t.startswith("Spettro") for t in ttl[1:]), ttl
+            assert "pann. " in ttl[0] and all("pann. " not in t and t.startswith("Spettro") for t in ttl[1:]), ttl
             rt = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.rtl').textContent)"); assert all("RT" in t and "min" in t for t in rt), rt      # the time is written once, next to the title
         step("full scan: 3 double clicks -> newest on top and live, older frozen with the RT next to the title", triple)
         def single():
