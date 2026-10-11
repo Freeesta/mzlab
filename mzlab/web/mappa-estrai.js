@@ -176,7 +176,7 @@ function table(p) {
   const s = ex(p), m = MAPPA.st(p); if (!s || !m.grid) return; const hr = window.HR && HR.isHr(p._a.f, p._a.f.lv || 1), d = hr ? 4 : 2;
   let box = m.exBox; if (!box) { box = m.exBox = document.createElement("div"); box.className = "mzex"; box.setAttribute("role", "region"); box.setAttribute("aria-label", T("mapex.region")); (m.tab || m.grid).after(box); }
   const n = s.num, w = s.win || s.box, row = (k, lab, v, u) => `<div class="mzex-r"><dt>${T(lab)}</dt><dd><output data-k="${k}" aria-label="${T(lab)}">${v}</output>${u ? ` <span class="muted">${u}</span>` : ""}</dd></div>`;
-  box.innerHTML = `<dl class="mzex-n">` +
+  box.innerHTML = `<p class="mzex-d">${T("mapex.intro")}</p><dl class="mzex-n">` +
     row("mz", "mapex.n.mz", `${num(w.mz0, d)} – ${num(w.mz1, d)}`, `(± ${num((w.mz1 - w.mz0) / 2, d)})`) + row("rt", "mapex.n.rt", `${num(w.rt0, 3)} – ${num(w.rt1, 3)}`, "min") +
     row("area", "mapex.n.area", n && n.area != null ? fmt(n.area) : "–", T("mapex.u.area")) + row("height", "mapex.n.height", n && n.height != null ? fmt(n.height) : "–", T("mapex.u.height")) +
     row("rtmax", "mapex.n.rtmax", n ? num(n.rtMax, 3) : "–", "min") + row("mzmax", "mapex.n.mzmax", n ? num(n.mzMax, d) : "–", "") + `</dl>` +

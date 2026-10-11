@@ -487,7 +487,7 @@ function mapNorm(m, norm) {
 }
 function mapImage(p, A, B, scale, norm = "abs") {
   const dop = window.MAPPA ? MAPPA.diffOpt(!!B) : { show: "all", thr: B ? 0.02 : 0.004, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
-  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
+  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
   if (B && B.d) v.set(B.d);                                              // the difference computed by the server (numpy, with the tolerance in RT)
@@ -496,7 +496,7 @@ function mapImage(p, A, B, scale, norm = "abs") {
   nz.sort((a, b) => a - b);
   const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5° percentile: un solo picco enorme non appiattisce il resto
   const floor = dop.thr;                                             // sotto questa frazione è rumore: resta bianco
-  const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : Math.sqrt(r); };
+  const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = off.getContext("2d"), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
   for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
@@ -530,7 +530,7 @@ async function drawMap(p) {
   const ext = mapView(A, B, rt0, rt1, mzA, mzB);                     // the whole view is where the files have data (no empty bands at the sides)
   const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
-  const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = I18N.t(`map.sc.${p.scale}`);
+  const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = p.scale === "gamma" ? I18N.t("map.sc.gamma", { g: p.gamma || 0.6 }) : I18N.t(`map.sc.${p.scale}`);
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
   if (!(window.MAPPA && MAPPA.zoomImg(p, g, { A, B, im, x0, x1, y0, y1, pw, ph, norm: p.norm || "abs" })))        // mappa.js: the zoomed region on new bins
     g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);

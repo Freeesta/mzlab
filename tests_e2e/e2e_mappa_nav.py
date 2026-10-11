@@ -36,25 +36,22 @@ try:
         def menu():
             x, y = at(.4, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)
             its = menu_items(); names = [i[0] for i in its]
-            for want in ["Extract the XIC here", "Extract the spectrum here", "Extract both", "Lock the sight", "Reset zoom (whole view)", "Reset the RT axis only", "Reset the m/z axis only", "Zoom to the selection", "Copy the coordinates", "Gestures and shortcuts"]:
+            for want in ["XIC", "Spectrum", "Lock the sight", "Reset zoom", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
-            assert sum(1 for i in its if i[1]) >= 10, its                                          # the commands have an aria-label
+            assert not any("both" in n or "axis only" in n or "selection" in n or "How it is" in n or "Extract" in n for n in names), names     # a short menu: no duplicates, no teaching view in it
+            assert sum(1 for i in its if i[1]) >= 6 and len([n for n in names]) <= 7, its                # six commands with an aria-label (plus the line of the point)
             assert pg.evaluate("document.querySelectorAll('#ctx hr').length") >= 3
             assert "At the pointer" in names[0]
-            sel = [i for i in its if "Zoom to the selection" in i[0]][0]; assert sel[2], "no selection: grey"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(100); assert pg.evaluate("document.getElementById('ctx').hidden")
         step("right click: the menu with every command, separators, aria-labels, Esc closes", menu)
         def extract():
             n0 = (npan("xic"), npan("spec")); x, y = at(.4, .5)
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Extract the XIC here")
+            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("XIC")
             assert (npan("xic"), npan("spec")) == (n0[0] + 1, n0[1]), (n0, npan("xic"), npan("spec"))
-            mz = pg.evaluate("E.panels.filter(q=>q.type==='xic').sort((a,b)=>b.id-a.id)[0].traces[0].mz"); want = pg.evaluate(f"({M}.cv, 0)")
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Extract the spectrum here")
-            assert npan("spec") == n0[1] + 1
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Extract both")
-            assert (npan("xic"), npan("spec")) == (n0[0] + 2, n0[1] + 2)
+            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Spectrum")
+            assert (npan("xic"), npan("spec")) == (n0[0] + 1, n0[1] + 1)
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
-        step("Extract XIC / spectrum / both here: new panels", extract)
+        step("XIC and Spectrum from the menu: new panels", extract)
         def locked():
             x, y = at(.45, .4); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Lock the sight")
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk
@@ -62,29 +59,19 @@ try:
             x2, y2 = at(.7, .6); pg.mouse.click(x2, y2, button="right"); pg.wait_for_timeout(200)
             its = menu_items(); assert any("Unlock the sight" in i[0] and i[3] == "true" for i in its), its
             assert "Locked sight" in its[0][0]
-            n0 = npan("xic"); pick("Extract the XIC here"); assert npan("xic") == n0 + 1               # still works with the sight locked, on the locked point
+            n0 = npan("xic"); pick("XIC"); assert npan("xic") == n0 + 1               # still works with the sight locked, on the locked point
             mz = pg.evaluate("E.panels.filter(q=>q.type==='xic').sort((a,b)=>b.id-a.id)[0].traces[0].mz"); assert abs(mz - lk["mz"]) < 1.0, (mz, lk)
             pg.mouse.click(x2, y2, button="right"); pg.wait_for_timeout(200); pick("Unlock the sight")
             assert pg.evaluate(f"{M}._mz.lock") is None and pg.get_attribute(".pnl.map [data-nav=maplock]", "aria-pressed") == "false"
         step("lock from the menu: state on the bar (aria-pressed), commands still work, unlock", locked)
         def resets():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); zoom_in()
-            x, y = at(.5, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Reset the RT axis only")
-            zz = z(); assert zz[0] is None and zz[1], zz
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Reset the m/z axis only"); assert z() == [None, None], z()
-            zoom_in(); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Reset the m/z axis only"); zz = z(); assert zz[0] and zz[1] is None, zz
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Reset zoom (whole view)"); assert z() == [None, None]
-        step("Reset zoom: all, RT only, m/z only", resets)
-        def selzoom():
-            pg.evaluate(f"(()=>{{const a={M}._a; {M}.sel=[a.x0+(a.x1-a.x0)*.3, a.x0+(a.x1-a.x0)*.5]; draw({M})}})()"); pg.wait_for_timeout(300)
-            x, y = at(.5, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Zoom to the selection")
-            zz = z(); assert zz[0] and zz[1] is None, zz
-            pg.click(".pnl.map [data-nav=mapreset]"); pg.wait_for_timeout(300)
-        step("Zoom to the selection", selzoom)
+            x, y = at(.5, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Reset zoom"); assert z() == [None, None], z()
+        step("Reset zoom from the menu (the axes one by one are on double click and Esc)", resets)
         def copy():
-            x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(200); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Copy the coordinates")
+            x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(200); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Copy coordinates")
             t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("RT ") and "m/z" in t, t
-        step("Copy the coordinates", copy)
+        step("Copy coordinates", copy)
         def bar():
             btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
             assert [b[0] for b in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "maphelp"], btns
@@ -117,7 +104,7 @@ try:
             assert not pg.evaluate("document.getElementById('ctx').hidden"); focus = pg.evaluate("document.activeElement.getAttribute('role')"); assert focus == "menuitem", focus
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
             n0 = npan("xic"); pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ContextMenu"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(400)
-            assert npan("xic") == n0 + 1, "Enter chooses the first live item: Extract the XIC here"
+            assert npan("xic") == n0 + 1, "Enter chooses the first live item: XIC"
         step("keyboard: + − Esc Home 0, menu key, arrows and Enter in the menu", keys)
         def wheels():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.click(".pnl.map [data-nav=mapreset]"); x, y = at(.5, .45); pg.mouse.move(x, y)
@@ -150,7 +137,7 @@ try:
         def longpress():
             c = box(); cx, cy = c[0] + c[2] * .4, c[1] + c[3] * .5
             touch("touchStart", [(cx, cy)]); pg.wait_for_function("!document.getElementById('ctx').hidden", timeout=4000); touch("touchEnd", []); pg.wait_for_timeout(300)
-            its = menu_items(); assert any("Extract the XIC here" in i[0] for i in its), its
+            its = menu_items(); assert any(i[0] == "XIC" for i in its), its
             assert not pg.evaluate("document.getElementById('ctx').hidden"), "the menu stays open after the finger is lifted"
             pg.keyboard.press("Escape")
         step("touch: long press opens the menu", longpress)
@@ -162,8 +149,8 @@ try:
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(400)
-            pg.keyboard.type("extract the xic"); pg.wait_for_timeout(300)
-            assert "Extract the XIC here" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
+            pg.keyboard.type("xic from the map"); pg.wait_for_timeout(300)
+            assert "XIC from the map" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
             n0 = npan("xic"); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
             assert npan("xic") == n0 + 1 or pg.evaluate("!document.getElementById('paletta').hidden") is False
             for q in ["unlock", "gestures", "reset zoom", "copy the coord"]:

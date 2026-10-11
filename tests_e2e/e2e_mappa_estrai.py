@@ -75,10 +75,12 @@ try:
         def menu_item():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(200)
             x, y = at(.2, .3); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(250)
-            its = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(d=>[d.textContent.trim(),d.getAttribute('aria-checked')])")
-            assert any("How it is extracted" in i[0] and i[1] == "true" for i in its), its
+            its = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(d=>d.textContent.trim())")
+            assert not any("extracted" in i.lower() or "both" in i.lower() for i in its), its                 # the teaching view is not in the menu: it has its own button
             pg.keyboard.press("Escape")
-        step("the menu shows it as on", menu_item)
+            b = pg.locator(".pnl.map [data-nav=mapexplain]"); assert "How it is extracted" in b.inner_text() and b.get_attribute("aria-pressed") == "true"
+            assert "box that XIC and spectrum come from" in (b.get_attribute("title") or b.get_attribute("data-tip") or "") and "box that XIC and spectrum come from" in pg.inner_text(".pnl.map .mzex")      # a one-line description on the button and in the panel
+        step("the bar has the button with its words and description; the menu does not carry it", menu_item)
         def touch_drag():
             cdp = ctx.new_cdp_session(pg)
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")

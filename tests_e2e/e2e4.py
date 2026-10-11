@@ -85,7 +85,7 @@ try:
             i = mi(); a = pt(pg, i, 14.1, ymz=300); b = pt(pg, i, 14.6, ymz=300)
             pg.mouse.move(a["px"], a["py"]); pg.keyboard.down("Alt"); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Alt"); pg.wait_for_timeout(300)   # Alt + trascina = intervallo (trascinare da solo = zoom)
             assert pg.evaluate(f"E.panels[{i}].sel"), "Alt + drag selects an interval"
-            pg.click(".pnl.map [data-mz=menu]"); pg.wait_for_timeout(300)                                  # the «⋯» menu has the old right-click entries
+            pg.click(".pnl.map [data-mz=menu]"); pg.wait_for_timeout(300)                                  # the «⋯» menu: with a stretch selected the Spectrum entry is the average
             pg.locator("#ctx div", has_text="Spettro medio").first.click(); pg.wait_for_timeout(2000)
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').length") >= 2
         step("map Alt + drag, menu ⋯ -> averaged spectrum", mapdrag)
