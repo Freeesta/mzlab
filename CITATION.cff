@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "Se usi mzLab nella didattica o in una pubblicazione, citalo come segue. / If you use mzLab in teaching or in a publication, please cite it as below."
+title: "mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products"
+type: software
+authors:
+  - family-names: Cristaudo
+    given-names: Federico
+    affiliation: "Università degli Studi di Torino"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # DA COMPILARE da Federico
+repository-code: "https://github.com/Freeesta/mzlab"
+url: "https://freeesta.github.io/mzlab/"
+license: MIT
+version: "0.1.0"
+# date-released: "AAAA-MM-GG"  # DA COMPILARE alla prima release
+# doi: "10.5281/zenodo.XXXXXXX"  # DA COMPILARE dopo la prima release su Zenodo (vedi docs/zenodo.md)
+keywords:
+  - mass spectrometry
+  - LC-MS
+  - transformation products
+  - chemical education
+  - non-target screening
+  - WebAssembly
+abstract: "mzLab is a free teaching program that runs entirely in the web browser. Students explore real LC-MS data (triple quadrupole at unit resolution, plus high-resolution Orbitrap and Q-TOF files) to search for the transformation products of a pollutant; the program shows the data and does not give the answers. No installation, no account, no tracking: files never leave the computer."

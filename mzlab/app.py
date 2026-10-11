@@ -73,11 +73,14 @@ class App:
         key = (str(p), st.st_mtime, st.st_size)
         if key not in cache:
             import hashlib
-            h = hashlib.sha256()
-            with open(p, "rb") as fh:
-                while chunk := fh.read(1 << 20):
-                    h.update(chunk)
-            cache[key] = h.hexdigest()
+            from .reader.mzidx import known_sha
+            cache[key] = known_sha(p) if p.suffix.lower() == ".mzml" else ""          # an index of the file remembers it: no need to read the file again
+            if not cache[key]:
+                h = hashlib.sha256()
+                with open(p, "rb") as fh:
+                    while chunk := fh.read(1 << 20):
+                        h.update(chunk)
+                cache[key] = h.hexdigest()
         return cache[key]
 
     # ------------------------------------------------------------------ files and start
@@ -244,7 +247,7 @@ class App:
             if id(it.run) in seen:
                 continue
             seen.add(id(it.run))
-            out.append({"file": Path(it.file).name.partition("#")[0], "mode": it.run.mode, "size": it.path.stat().st_size, "timing": dict(it.run.timing)})
+            out.append({"file": Path(it.file).name.partition("#")[0], "mode": it.run.mode, "size": it.path.stat().st_size, "indexed": bool(it.run._idx), "timing": dict(it.run.timing)})
         return {"files": out}
 
     def _item(self, k: int):
@@ -253,7 +256,9 @@ class App:
         return self.session.items[k]
 
     def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None, filt: str | None = None) -> dict:
-        rt, y = self._item(k).total(kind, level, mz0, mz1, prec, filt)
+        item = self._item(k)
+        item.run.activate()
+        rt, y = item.total(kind, level, mz0, mz1, prec, filt)
         return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
@@ -465,13 +470,6 @@ class App:
         if len(sids) > 200:
             raise UserError("err.scan.maxAverage", {"n": 200}, "at most 200 scans per average")
         return self._item(k).scan_avg(sids, hr)
-
-    def ionmap(self, k: int, level: int) -> dict:
-        """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""
-        item = self._item(k)
-        grid = self.session.grid(level)
-        m = item.ionmap(level, grid)
-        return {**grid, "level": level, "data": base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")}
 
     def reset(self, fresh: bool = False):
         with self.lock:

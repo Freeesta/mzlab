@@ -85,7 +85,7 @@ def test_msp_blocks_fields_and_discarded():
     names = [s["meta"][0] for s in r["out"]]
     assert names == ["Alfa", "Beta, negative", "Gamma NIST style"], names
     a, b, g = r["out"]
-    assert a["prec"] == 300.1234 and a["pol"] == 1 and a["meta"][1:] == ["[M+H]+", "30", "HCD", "C10H10O", "AAAAAAAAAAAAAA-BBBBBBBBBB-N"]
+    assert a["prec"] == 300.1234 and a["pol"] == 1 and a["meta"][1:] == ["[M+H]+", "30", "HCD", "C10H10O", "AAAAAAAAAAAAAA-BBBBBBBBBB-N", "", "", ""]      # then accession, authors, license (empty here)
     assert a["mz"] == [100.5, 150.25, 200.10000610351562] or abs(a["mz"][2] - 200.1) < 1e-4       # float32
     assert a["it"][0] == 1 and abs(a["it"][2] - 0.25) < 1e-6                                       # normalised to the highest
     assert b["pol"] == -1 and g["pol"] == 0 and len(g["mz"]) == 3                                  # polarity from Ion_mode / adduct; none = 0; «50 100; 60 200;» pairs

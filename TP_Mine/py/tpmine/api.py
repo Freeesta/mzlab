@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +21,46 @@ DATA = Path("/tp_data")
 _ex: Experiment | None = None
 _hr: hr_engine.ExperimentHR | None = None
 _kinds: dict = {}         # name -> 'hr' | 'msn' | 'other' (filled by classify)
-_progress = None          # set by the worker: callable(text, frac)
+_progress = None          # set by the worker: callable(text, frac, phase, payload_json)
+
+
+class _Emitter:
+    """Live feed of a run: the engines call it as progress(text, frac, phase=None, payload=None). Text and fraction leave at most every INTERVAL s;
+    a new phase leaves at once; the payloads (dicts) pile up and leave together as a JSON list of at most MAX_BYTES (several messages if more)."""
+    INTERVAL = 0.2
+    MAX_BYTES = 50_000
+
+    def __init__(self, sink):
+        self.sink, self.phase, self.buf, self.last = sink, None, [], 0.0
+
+    def __call__(self, text, frac=None, phase=None, payload=None):
+        now = time.perf_counter()
+        new = phase is not None and phase != self.phase
+        if new:
+            self.flush()                                    # what belongs to the old phase leaves first
+            self.phase = phase
+        if payload is not None:
+            self.buf.append(payload)
+        if new or now - self.last >= self.INTERVAL:
+            self.flush(text, frac)
+
+    def flush(self, text=None, frac=None):
+        self.last = time.perf_counter()
+        if self.sink is None:
+            self.buf.clear(); return
+        chunks, cur, size = [], [], 2
+        for p in self.buf:
+            n = len(json.dumps(p, default=_enc)) + 2
+            if cur and size + n > self.MAX_BYTES:
+                chunks.append(cur); cur, size = [], 2
+            cur.append(p); size += n
+        self.buf = []
+        if cur:
+            chunks.append(cur)
+        for i, c in enumerate(chunks or [None]):
+            if c is None and text is None:
+                return
+            self.sink(text if i == 0 else None, frac if i == 0 else None, self.phase, None if c is None else json.dumps(c, default=_enc))
 
 
 def _enc(o):
@@ -92,12 +132,20 @@ def run(files_json: str, parent_json: str, settings_json: str, transf_text: str)
         for f in files:
             f["kind"] = _kinds[f["name"]]
         _ex = None
-        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=_progress)
-        return _out(_hr.run())
+        live = _Emitter(_progress)
+        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=live)
+        try:
+            return _out(_hr.run())
+        finally:
+            live.flush()
     _hr = None
     transf = chem.parse_transformations(transf_text) if transf_text.strip() else None
-    _ex = Experiment(files, json.loads(parent_json), json.loads(settings_json), None, transf, progress=_progress)
-    return _out(_ex.run())
+    live = _Emitter(_progress)
+    _ex = Experiment(files, json.loads(parent_json), json.loads(settings_json), None, transf, progress=live)
+    try:
+        return _out(_ex.run())
+    finally:
+        live.flush()
 
 
 def detail(cid: int) -> str:
@@ -108,6 +156,31 @@ def msn_tree() -> str:
     if _hr is None:
         raise ValueError("no high-resolution experiment in memory")
     return _out(_hr.msn_tree())
+
+
+def frag_tree() -> str:
+    """Fragmentation tree of the parent (fragtree.py), the same JSON for LR (supposed, from the MS2 of the parent) and HR (MSn tree)."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.hr(_hr))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    return _out(fragtree.lr(_ex))
+
+
+def frag_tree_compare(cid: int) -> str:
+    """Nodes of the parent tree found in the MS2 of one product (fragtree.compare_*): {marks: {node id: {state: same|shifted, delta}}, n_same, n_shifted}."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.compare_hr(fragtree.hr(_hr), _hr.detail(int(cid)).get("localization")))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    e = next((x for x in _ex.entries if x["id"] == int(cid)), None)
+    if e is None:
+        raise ValueError("candidate not found")
+    p = _ex.entries[0]
+    dm = e["neutral_mass"] - p["neutral_mass"] if e.get("neutral_mass") and p.get("neutral_mass") else None
+    return _out(fragtree.compare_lr(fragtree.lr(_ex), _ex.ms2(e), dm))
 
 
 def inclusion_csv(n: int = 50) -> str:
@@ -132,26 +205,3 @@ def isf_classify(mzs_json: str, formula_p: str = "") -> str:
     res = isf.classify_ions(samples, float(_ex.entries[0]["mz_x"]), [float(v) for v in json.loads(mzs_json)], formula_p or (chem.fmt(_ex.neutral) if _ex.neutral else None))
     res["sheets"] = isf.to_sheets(res)
     return _out(res)
-
-
-def esperti_trova(json_in: str) -> str:
-    """Expert tools on the difference map (esperti.py): the points of A - B. In: {diff, a (base64 float32 grids), nrt, nmz, rt0, rt1, mz0, dmz, soglie}."""
-    from . import esperti
-    q = json.loads(json_in)
-    nrt, nmz = int(q["nrt"]), int(q["nmz"])
-    pts = esperti.find_points(esperti._grid(q["diff"], nrt, nmz), esperti._grid(q["a"], nrt, nmz), float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["dmz"]), q.get("soglie"))
-    return _out({"points": pts})
-
-
-def esperti_analisi(json_in: str) -> str:
-    """Groups, roles with proof, time course and priority of the points (esperti.analyse). In: {points (with traces per file), files, hr, ppm, losses, soglie}."""
-    from . import esperti
-    q = json.loads(json_in)
-    return _out({"rows": esperti.analyse(q["points"], q["files"], bool(q.get("hr")), float(q.get("ppm") or 5.0), q.get("losses") or [], q.get("soglie"))})
-
-
-def esperti_feature(json_in: str) -> str:
-    """Card of one point (esperti.feature): integration edges and area per file, time course class, spectrum peaks of its group. In: {point, files, traces, members, spectrum, hr, ppm}."""
-    from . import esperti
-    q = json.loads(json_in)
-    return _out(esperti.feature(q["point"], q["files"], q.get("traces") or {}, q.get("members"), q.get("spectrum"), bool(q.get("hr")), float(q.get("ppm") or 5.0), float(q.get("half") or 0.3)))

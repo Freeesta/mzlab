@@ -30,12 +30,21 @@ try:
         inv_text = pg.inner_text("#tour-invito")
         assert "Prima volta qui?" in inv_text, inv_text
 
-        # Click "Non ora" -> closes and saves stato "saltato"
+        # bottom-left corner of the window, compact, non-modal dialog
+        bb = pg.locator("#tour-invito").bounding_box()
+        vp = pg.viewport_size
+        assert bb["x"] < 40 and bb["y"] + bb["height"] > vp["height"] - 40, (bb, vp)
+        assert bb["width"] < 330, bb
+        assert pg.get_attribute("#tour-invito", "role") == "dialog"
+        assert pg.get_attribute("#tour-invito", "aria-modal") == "false"
+        assert "Inizia il tour" in inv_text, inv_text
+
+        # Click "Non ora" -> closes; the invitation is recorded as already shown
         pg.click("#tour-inv-no")
         pg.wait_for_timeout(300)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
         st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
-        assert st["stato"] == "saltato", st
+        assert st["stato"] == "invitato", st
 
         # Reload: invitation does not come back
         pg.reload()

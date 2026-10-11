@@ -91,7 +91,7 @@ jobs:
           for f in mzlab/web/*.js; do
             b=$(basename "$f" .js)
             case "$b" in
-              browser-worker|draw|sw|rust-worker|rust-bridge) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
+              browser-worker|draw|sw|rust-worker|rust-bridge|mappa3d) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
               *) node --check "$f" ;;
             esac
           done

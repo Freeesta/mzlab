@@ -1,0 +1,8 @@
+Class													sample	sample
+File type													Sample	Sample
+Injection order													1	2
+Alignment ID	Average Rt(min)	Average Mz	Metabolite name	Adduct type	Formula	INCHIKEY	SMILES	Dot product	Reverse dot product	Total score	Spectrum reference file name	MS/MS spectrum	Campione_A	Campione_B
+0	5.20	184.1332	Testamine	[M+H]+	C10H17NO2	AAAAAAAAAAAAAA-UHFFFAOYSA-N	CCOC	912	890	85.5	lib.msp	56.05:120 84.08:800 156.1:300	100000	0
+1	6.00	301.1547	Unknown										80000	70000
+2	7.00	250.1000	w/o MS2:Something										0	5000
+3	8.10	310.3000	Low	[M+H]+				500		40	lib.msp	100:10 110:20	3e4	2e4

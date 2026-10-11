@@ -44,7 +44,7 @@ APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "app
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/mzlab/"
-TAGLINE = "Analisi di dati LC-MS/MS direttamente nel browser"
+TAGLINE = "Analisi MS"         # same as the static <title> of index.html and as the catalog key app.title
 DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
 
 
@@ -103,6 +103,21 @@ def pack_mzfinder(static: Path) -> None:
             if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
                 z.write(f, f.relative_to(src / "py").as_posix())
     (dst / "indice.json").write_text(json.dumps({"js": js, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
+
+
+def write_manifest(out: Path, version: str) -> None:
+    """static/manifest.json: SHA-256 and size of every file of the site (the desktop app downloads only the ones that changed),
+    the commit as `version` and `desktop_min`, the oldest native desktop binary this web part works with (crates/mzlab-desktop/DESKTOP_MIN).
+    sw.js is left out (the desktop app has no service worker) and so is the manifest itself."""
+    files = {}
+    for f in sorted(out.rglob("*")):
+        rel = f.relative_to(out).as_posix()
+        if f.is_file() and rel not in ("sw.js", "static/manifest.json"):
+            data = f.read_bytes()
+            files[rel] = {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
+    desktop_min = (ROOT / "crates" / "mzlab-desktop" / "DESKTOP_MIN").read_text(encoding="utf-8").strip()
+    doc = {"version": version, "desktop_min": desktop_min, "files": files}
+    (out / "static" / "manifest.json").write_text(json.dumps(doc, indent=1, sort_keys=True), encoding="utf-8")
 
 
 def main() -> None:
@@ -166,8 +181,9 @@ def main() -> None:
     for f in sorted(out.rglob("*")):
         if f.is_file() and "pyodide" not in f.parts and "vendor" not in f.parts:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
-    big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
+    big = PYODIDE + "-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 

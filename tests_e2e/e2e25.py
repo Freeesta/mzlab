@@ -122,7 +122,7 @@ try:
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
             pg.click("#newrun"); pg.wait_for_timeout(500)
             txt = pg.inner_text("#asktxt"); print(txt)
-            assert "il lavoro salvato sarà perso" in txt.lower() and "i file sul tuo computer non vengono toccati" in txt
+            assert "il lavoro salvato" in txt.lower() and "da zero" in txt and "i file sul tuo computer non vengono toccati" in txt
             pg.click("#askno"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
             assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('qqq.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
             pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(3000)

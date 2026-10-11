@@ -45,6 +45,18 @@ jobs:
           fi
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
+      - name: Build the libraries WASM engine (a .wasm of its own, fetched only when the libraries are opened; never committed)
+        run: |
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
+          bg=site/static/wasm-lib/mzlab_lib_wasm_bg.wasm
+          if npm install --prefix "$RUNNER_TEMP/wo" wasm-opt@1.4.0; then
+            "$RUNNER_TEMP/wo/node_modules/.bin/wasm-opt" -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int -o "$bg" "$bg"
+            size=$(stat -c %s "$bg"); echo "libraries .wasm (optimised): $size bytes"
+            if [ "$size" -ge 614400 ]; then echo "::error::the libraries .wasm is $size bytes (limit 600 KB)"; exit 1; fi
+          else
+            echo "::warning::wasm-opt could not be installed: the libraries .wasm is not optimised ($(stat -c %s "$bg") bytes)"
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

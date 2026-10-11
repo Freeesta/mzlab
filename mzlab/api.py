@@ -13,7 +13,7 @@ import numpy as np
 from .bigfiles import too_big
 from .i18n import UserError
 from .chem.elements import formula_mz
-from .explore import diff_tolerant, rt_groups
+from .explore import MAP_POINTS_MAX, check_agg, diff_tolerant, map_cells, rt_groups, subtract_constant
 
 
 def _json(obj, code=200):
@@ -30,37 +30,76 @@ def _fail(e, code=400):
 MAX_BODY = 8 << 20  # bytes accepted for a JSON request
 
 
-def _map_factor(app, k: int, level: int, norm: str) -> float:
+def _map_factor(app, k: int, level: int, norm: str, agg: str = "mean") -> float:
     """Normalisation of a map before a comparison, from the WHOLE map of the file: «max» = 1 / its most intense bin, «tic» = 1000 / its sum."""
     if norm not in ("max", "tic"):
         return 1.0
-    m = app._item(k).ionmap(level, app.session.grid(level))
+    m = app._item(k).ionmap(level, app.session.grid(level), agg)
     t = float(m.max()) if norm == "max" else float(m.sum())
     return (1.0 if norm == "max" else 1000.0) / t if t > 0 else 1.0
 
 
 def _map(app, q: dict) -> dict:
-    """/api/map with a region (rt0, rt1, mz0, mz1, nrt, nmz; at most 1000 x 1000) and/or a reference (ref, norm, rttol = tolerance in RT of the
-    difference, default 0.1 min: the reference is replaced by its local maximum over +-rttol)."""
+    """/api/map with a region (rt0, rt1, mz0, mz1, nrt, nmz; at most 1024 x 1024) and/or a reference (ref, norm, rttol = tolerance in RT of the
+    difference, default 0.1 min: the reference is replaced by its local maximum over +-rttol).
+    agg = max (default: a peak is never diluted by the bin) | mean (default for a difference). mzscale = lin | log (cells of equal ppm; high
+    resolution). bg = 1 takes the constant background away (median of every m/z cell along the run). The m/z cells follow the instrument
+    (explore.map_cells): the answer says the grid actually used (mz0, dmz or dlog, nmz, mz1)."""
     k, level = int(q["k"]), int(q.get("level", 1))
     region = q.get("rt0") not in (None, "")
+    ref = int(q["ref"]) if q.get("ref") not in (None, "") else None
+    agg = check_agg(q.get("agg") or ("mean" if ref is not None else "max"))
+    scale = q.get("mzscale") or "lin"
+    if scale not in ("lin", "log"):
+        raise UserError("err.map.mzscale", {"mzscale": str(scale)[:20]}, "mzscale must be lin or log")
+    bg = q.get("bg") in ("1", "true", 1, True)
+    hr = bool(app._item(k).profile(level)["hr"])
     if region:
         rt0, rt1, mz0, mz1 = float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"])
-        nrt, nmz = min(1000, max(1, int(q.get("nrt", 400)))), min(1000, max(1, int(q.get("nmz", 400))))
-        grid = {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": (mz1 - mz0) / nmz, "nmz": nmz}
-        get = lambda kk: app._item(kk).ionmap_region(level, rt0, rt1, nrt, mz0, mz1, nmz)
+        if not (rt1 > rt0 and mz1 > mz0 and mz0 > 0):
+            raise UserError("err.map.region", {}, "empty region: rt1 > rt0 and mz1 > mz0 > 0 are needed")
+        nrt, nmz = min(1024, max(1, int(q.get("nrt", 400)))), min(1024, max(1, int(q.get("nmz", 400))))
+        mz0, mz1, nmz, log = map_cells(hr, mz0, mz1, nmz, hr and scale == "log")
+        grid = {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "mz1": mz1, "nmz": nmz}
+        if log:
+            grid["dlog"] = float(np.log(mz1 / mz0) / nmz)
+        else:
+            grid["dmz"] = (mz1 - mz0) / nmz
+
+        def get(kk):
+            it = app._item(kk)
+            m = it.ionmap_region(level, rt0, rt1, nrt, mz0, mz1, nmz, agg, log)
+            return subtract_constant(m, it.map_background(level, mz0, mz1, nmz, log, agg)) if bg else m
     else:
         grid = app.session.grid(level)
-        get = lambda kk: app._item(kk).ionmap(level, grid)
+        log = False
+
+        def get(kk):
+            m = app._item(kk).ionmap(level, grid, agg)
+            it = app._item(kk)
+            return subtract_constant(m, it.map_background(level, grid["mz0"], grid["mz0"] + grid["nmz"] * grid["dmz"], grid["nmz"], False, agg)) if bg else m
     m = get(k)
-    out = {**grid, "level": level, "region": region}
-    if q.get("ref") not in (None, ""):
-        ref, norm = int(q["ref"]), q.get("norm", "abs")
+    out = {**grid, "level": level, "region": region, "agg": agg, "log": log, "bg": bg, "hr": hr}
+    if ref is not None:
+        norm = q.get("norm", "abs")
         w = int(round(float(q.get("rttol", 0.1)) / max((grid["rt1"] - grid["rt0"]) / grid["nrt"], 1e-9)))
-        m = diff_tolerant(m * _map_factor(app, k, level, norm), get(ref) * _map_factor(app, ref, level, norm), w)
+        m = diff_tolerant(m * _map_factor(app, k, level, norm, agg), get(ref) * _map_factor(app, ref, level, norm, agg), w)
         out.update(ref=ref, rttol=float(q.get("rttol", 0.1)), w=w)
     out["data"] = base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")
     return out
+
+
+def _map_sticks(app, q: dict) -> dict:
+    """/api/mappunti3d: the true points of a region (most intense first, up to max = 200000) for the sticks of the 3D viewer: three base64
+    arrays (rt float32, mz float64, inten float32), n = points sent, total = points in the region (n < total: the weakest are left out)."""
+    k, level = int(q["k"]), int(q.get("level", 1))
+    rt0, rt1, mz0, mz1 = float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"])
+    if not (rt1 > rt0 and mz1 > mz0):
+        raise UserError("err.map.region", {}, "empty region: rt1 > rt0 and mz1 > mz0 are needed")
+    r = app._item(k).map_points(level, rt0, rt1, mz0, mz1, int(q.get("max", MAP_POINTS_MAX)))
+    b64 = lambda a, dt: base64.b64encode(np.ascontiguousarray(a, dtype=dt).tobytes()).decode("ascii")
+    return {"k": k, "level": level, "rt0": rt0, "rt1": rt1, "mz0": mz0, "mz1": mz1, "n": r["n"], "total": r["total"],
+            "rt": b64(r["rt"], "<f4"), "mz": b64(r["mz"], "<f8"), "inten": b64(r["inten"], "<f4")}
 
 
 def _map_points(app, q: dict) -> dict:
@@ -234,12 +273,15 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             except (ValueError, KeyError) as e:
                 return _fail(e)
         if path == "/api/map":
-            if q.get("rt0") not in (None, "") or q.get("ref") not in (None, ""):      # true zoom (a region on new bins) and/or the difference with a reference
-                try:
-                    return _json(_map(app, q))
-                except (ValueError, KeyError) as e:
-                    return _fail(e)
-            return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
+            try:
+                return _json(_map(app, q))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
+        if path == "/api/mappunti3d":  # true points of a region (RT, m/z, intensity) for the sticks of the 3D viewer
+            try:
+                return _json(_map_sticks(app, q))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         if path == "/api/mapsnap":     # marked point of the map: the local maximum near the click (+-0.2 min, +-1 bin)
             try:
                 return _json(app._item(int(q["k"])).map_snap(int(q.get("level", 1)), float(q["rt"]), float(q["mz"]), float(q.get("dmz", 1.0))) or {})

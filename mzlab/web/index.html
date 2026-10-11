@@ -3,7 +3,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} · Analisi MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
@@ -14,6 +14,8 @@
 @font-face{font-family:"OpenDyslexic";src:url(static/teoria/fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
 :root[data-a11y-font=atkinson] body,:root[data-a11y-font=atkinson] button,:root[data-a11y-font=atkinson] input,:root[data-a11y-font=atkinson] select,:root[data-a11y-font=atkinson] textarea{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
 :root[data-a11y-font=dyslexic] body,:root[data-a11y-font=dyslexic] button,:root[data-a11y-font=dyslexic] input,:root[data-a11y-font=dyslexic] select,:root[data-a11y-font=dyslexic] textarea{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
+:root{--lv1:#0072B2;--lv2a:#009E73;--lv2b:#56B4E9;--lv3:#E69F00;--lv4:#CC79A7;--lv5:#999999;--lv0:#BBBBBB}
+.lvb{display:inline-block;border:2px solid var(--lvc,var(--line));border-radius:4px;padding:0 6px;font-weight:700;font-size:12px;color:var(--ink);background:color-mix(in srgb,var(--lvc,var(--line)) 18%,var(--panel));white-space:nowrap}.lv-1{--lvc:var(--lv1)}.lv-2a{--lvc:var(--lv2a)}.lv-2b{--lvc:var(--lv2b)}.lv-3{--lvc:var(--lv3)}.lv-4{--lvc:var(--lv4)}.lv-5{--lvc:var(--lv5)}.lv-0{--lvc:var(--lv0)}
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8;--soft:#f0f3f6}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}}
 :root[data-theme=dark]{color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}
@@ -179,7 +181,8 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 .ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
 #ldion{width:min(80vw,380px);height:auto;display:block}
-#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
+#ldmsg{font-size:15px;max-width:520px;min-height:44px}
+#ldact{margin-top:12px}#ldact .btn{margin:0 4px}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
 #qtip:has(.qs){max-width:540px;padding:8px 10px}#qtip .qs{white-space:normal}#qtip .qr{display:flex;align-items:stretch;gap:6px;margin:6px 0}#qtip .qb{flex:1 1 0;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:4px 7px;font-size:12px}#qtip .qb b{display:block;font-size:13px}#qtip .qa{align-self:center;font-size:16px}#qtip .qw{font-size:12px}
@@ -194,6 +197,8 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 /* touch and pen (touch.js): the graphs take the finger, the controls are larger, the keys of the keyboard are on a bar */
 .pnl canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 /* map (mappa.js): grid with the map, the overlay of the sight and the two plots at the margins */
+.pnl.map .leg{max-height:none;padding-right:0;gap:2px 12px}.pnl.map .leg span.mzhelp{display:block;flex-basis:100%;padding-right:260px;font-size:11px}
+.pnl .mzg{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 10px;border-left:1px solid var(--line)}.pnl .mzg:first-child{border-left:0;padding-left:0}.pnl .mzlv{white-space:nowrap}
 .pnl .mzgrid{flex:1 1 0;min-height:60px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.pnl .mzgrid>canvas{grid-area:1/1;width:100%;height:100%;min-height:0}.pnl .mzgrid>canvas.mzov{pointer-events:none;border-top-color:transparent}.pnl .mzgrid.mir{grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:minmax(0,1fr) 140px}.pnl .mzgrid>canvas.mzside{grid-area:1/2;cursor:default}.pnl .mzgrid>canvas.mzbot{grid-area:2/1;cursor:default}.pnl .mzgrid>canvas[hidden]{display:none}.pnl .mzgrid>canvas:focus{outline:none}.pnl .mzgrid>canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.pnl.map.max>.hd{order:-2}.pnl.map.max>.leg{order:-1}.pnl.mzmir .rd{position:static;min-width:0;margin-left:auto;text-align:right}.mzbt button{font-size:12px}.mzdif{display:inline-flex;gap:6px;align-items:center}.pnl .mztab{flex:none;max-height:210px;display:flex;flex-direction:column;border-top:1px solid var(--line);font-size:12px;margin-top:4px}.mzt-bar{display:flex;gap:8px;align-items:center;padding:4px 2px;flex-wrap:wrap}.mzt-bar .sp{flex:1}.mzt-sc{overflow:auto;min-height:0}.mztab table{border-collapse:collapse;width:100%}.mztab th,.mztab td{padding:2px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.mztab th{position:sticky;top:0;background:var(--panel);cursor:pointer;font-weight:600}.mztab tbody tr{cursor:pointer}.mztab tr.on td{background:var(--sel)}.mztab td input{width:12em}
 #tbar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9500;display:flex;gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.28)}
 #tbar button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:54px;padding:6px 8px;border-radius:12px;font-size:11px;color:var(--muted);touch-action:none;-webkit-user-select:none;user-select:none}
@@ -286,7 +291,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li data-i18n="bt.step4">Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li data-i18n-html="bt.step5">Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open" data-i18n="bt.reopen">Riapri BioTransformer</button><span class="sp"></span><button id="btx2" data-i18n="common.close">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg"></div><div id="ldsub"></div></div>
+<div id="loading" aria-busy="true"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
 <script>
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
@@ -328,27 +333,23 @@ function ldIon(on, mode) {
     },
     orbi: {
       n: 22, dt: 0.035, w: [1.0, 0.82, 0.68],
-      at(j, t) {
+      at(j, t) {                                                  // harmonic oscillation along z (horizontal) while turning round the spindle
         const a = TAU * 0.55 * this.w[j] * t + j * 1.7, r = TAU * 1.3 * t + j * TAU / 3;
-        return { x: W / 2 + 120 * Math.sin(a), y: H / 2 + 26 * Math.cos(r), z: Math.sin(r) };
+        return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(r), z: Math.sin(r) };
       },
-      draw() {
-        cx.strokeStyle = line; cx.lineWidth = 2;
-        // outer barrel electrode: split into two symmetrical halves
-        const cx0 = W / 2, cy0 = H / 2, gap = 4;
-        cx.beginPath(); cx.arc(cx0 - 15 - gap, cy0, 48, -Math.PI / 2.3, Math.PI / 2.3); cx.stroke();
-        cx.beginPath(); cx.arc(cx0 + 15 + gap, cy0, 48, Math.PI - Math.PI / 2.3, Math.PI + Math.PI / 2.3); cx.stroke();
+      draw() {                                                     // outer electrode: a barrel in two symmetrical halves with a slit in the middle, the ends closing towards the axis
+        cx.strokeStyle = v("--muted") || line; cx.globalAlpha = 0.55; cx.lineWidth = 3; cx.lineJoin = "round";
+        const c = W / 2, m = H / 2, g = 5, Rr = 50, L = 96;
+        for (const d of [-1, 1]) for (const e of [-1, 1]) {
+          cx.beginPath(); cx.moveTo(c + d * g, m + e * Rr);
+          cx.bezierCurveTo(c + d * 56, m + e * (Rr + 1), c + d * L, m + e * 40, c + d * (L + 4), m + e * 10); cx.stroke();
+        }
+        cx.globalAlpha = 1;
       },
-      mid() {
-        cx.fillStyle = line;
-        // central spindle electrode: thick in center, tapering to tips
-        const cx0 = W / 2, cy0 = H / 2;
-        cx.beginPath();
-        cx.moveTo(cx0 - 130, cy0 - 2);
-        cx.quadraticCurveTo(cx0, cy0 - 16, cx0 + 130, cy0 - 2);
-        cx.lineTo(cx0 + 130, cy0 + 2);
-        cx.quadraticCurveTo(cx0, cy0 + 16, cx0 - 130, cy0 + 2);
-        cx.closePath(); cx.fill();
+      mid() {                                                      // central electrode: a short, stout spindle, widest in the middle
+        const c = W / 2, m = H / 2, Lh = 72, th = 17;
+        cx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || line;
+        cx.beginPath(); cx.moveTo(c - Lh, m); cx.quadraticCurveTo(c, m - 2 * th, c + Lh, m); cx.quadraticCurveTo(c, m + 2 * th, c - Lh, m); cx.closePath(); cx.fill();
       },
     },
   };
@@ -374,8 +375,24 @@ function ldIon(on, mode) {
   };
   ldIonRaf = requestAnimationFrame(frame);
 }
+// the ONE status line of the loading screen (#ldmsg): the text of a load in progress (loading(true, msg)) or the phase of the engine start
+// (window.qqPhaseCur, set by browser.js) replaces the funny phrases; the bar under it is determinate only when the percentage is known
+let ldMsg = null;
+function ldRefresh() {
+  const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
+  const el = document.getElementById("ldmsg");
+  if (!el || window.qqFailed) return;
+  if (!cur) { el.setAttribute("aria-live", "off"); if (!ldTimer) return; return ldNext(); }
+  clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
+  el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
+  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
+}
+function ldAction(label, fn) {                                   // a button under the status line (stuck start: «start from scratch»)
+  const a = document.getElementById("ldact"); a.textContent = ""; a.hidden = !label; if (!label) return;
+  const b = document.createElement("button"); b.className = "btn"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
+}
 function ldNext() {
-  if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
+  if (window.qqFailed || ldMsg || window.qqPhaseCur) return;                                    // a failed start keeps its error message on screen
   if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
     ldBag = Array.from({ length: NPHRASES }, (_, i) => i).sort(() => Math.random() - 0.5);
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
@@ -454,6 +471,8 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/tabs.js"></script>
 <script src="static/banco.js"></script>
 <script src="static/settings.js"></script>
+<script src="static/aggiorna.js"></script>
+<script src="static/livelli-1.js"></script><script src="static/livelli.js"></script>
 <script src="static/libreria.js"></script>
 <script src="static/touch.js"></script>
 <script src="static/workflow.js"></script>
@@ -643,7 +662,7 @@ async function wipeLocal(){
   document.dispatchEvent(new Event("nbreset"));
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
-  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();await init()}catch(e){fail(e)}};
+  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
 function openSessionMenu(ev){ev.preventDefault();
   menu(ev,[
     {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},

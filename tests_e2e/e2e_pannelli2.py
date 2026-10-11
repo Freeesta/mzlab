@@ -60,7 +60,7 @@ try:
         step("isotope simulation switches off when the zoom changes; [M]- exists", iso)
         def map_views():
             pg.click("#np-map"); pg.wait_for_timeout(1500)
-            v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["2d", "3d"], v
+            v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["3d"], v
         step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
         def grips():
             pg.evaluate("setFold(false)")

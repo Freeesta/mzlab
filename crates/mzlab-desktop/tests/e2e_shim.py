@@ -35,8 +35,21 @@ class Quiet(SimpleHTTPRequestHandler):
 page = ThreadingHTTPServer(("127.0.0.1", PAGE_PORT), partial(Quiet, directory=str(DIST)))
 threading.Thread(target=page.serve_forever, daemon=True).start()
 
-FAKE_TAURI = """window.__TAURI__ = { core: { invoke: async (cmd, a) => (cmd === "pick_files" && !a.dam) ? %s : [] },
-  event: { listen: () => {} }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(picked)
+FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [] };
+window.__TAURI__ = { core: { invoke: async (cmd, a) => {
+    if (cmd === "pick_files") return a.dam ? [] : %s;
+    if (cmd === "update_check") { window.__UPD.calls.push(cmd); return JSON.stringify(window.__UPD.check); }
+    if (cmd === "update_apply") {
+      window.__UPD.calls.push(cmd);
+      for (let i = 1; i <= 3; i++) for (const f of window.__UPD.listeners) f({ payload: { done: i, total: 3, bytes: i * 1e6, total_bytes: 3e6 } });
+      await new Promise(r => setTimeout(r, 50));
+      return JSON.stringify({ status: "ready", files: 3 });
+    }
+    if (cmd === "update_restart") { window.__UPD.restarted = true; return null; }
+    return [];
+  } },
+  event: { listen: async (name, f) => { if (name === "update-progress") window.__UPD.listeners.push(f); return () => {}; } },
+  window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(picked)
 def native(route):                    # mzlab.localhost -> the engine over HTTP (what the window does with the custom protocol)
     u = route.request.url.replace("http://mzlab.localhost", f"http://127.0.0.1:{ENGINE_PORT}")
     try:
@@ -88,6 +101,48 @@ try:
             for a, c in zip(r["j"]["scans"], py["j"]["scans"]):
                 close(a["mz"], c["mz"], 1.1e-3); close(a["y"], c["y"], 0.11, 1e-6)
         step("single scans from the native engine: same values as Python", scans)
+        def upd_set(check):
+            pg.evaluate("c => { window.__UPD.check = c; window.__UPD.calls.length = 0; window.__UPD.progress.length = 0; }", check)
+        def gear_check():
+            pg.evaluate("document.querySelector('#updbox') && document.querySelector('#updbox').remove()")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-upd"); pg.click("#uip-upd")
+            pg.wait_for_function("document.querySelector('#updbox') && !/…/.test(document.querySelector('#updbox').textContent)", timeout=10000)
+            return pg.inner_text("#updbox")
+        def t(key, **kw): return pg.evaluate("([k, kw]) => I18N.t(k, kw)", [key, kw])
+        def upd_available():
+            upd_set({"status": "available", "version": "b", "files": 3, "bytes": 3000000})
+            txt = gear_check()
+            assert t("update.available", files=3, size="3.0") in txt or "3" in txt, txt
+            pg.click("#updbox button[data-a=go]")
+            pg.wait_for_selector("#updbox button[data-a=restart]", timeout=10000)
+            assert pg.evaluate("window.__UPD.calls") == ["update_check", "update_apply"]
+            assert t("update.ready") in pg.inner_text("#updbox")
+            pg.click("#updbox button[data-a=restart]")
+            pg.wait_for_function("window.__UPD.restarted === true")
+        step("settings: 'check for updates' offers the download, shows the progress, then 'restart now'", upd_available)
+        def upd_uptodate():
+            upd_set({"status": "uptodate", "version": "b"})
+            assert t("update.uptodate") in gear_check()
+        step("settings: up to date", upd_uptodate)
+        def upd_offline():
+            upd_set({"status": "error", "error_key": "update.error.offline", "detail": "no route"})
+            assert t("update.error.offline") in gear_check()
+        step("settings: no internet gives a clear message, not an error", upd_offline)
+        def upd_newapp():
+            upd_set({"status": "newapp", "min": "9.9.9", "url": "https://github.com/Freeesta/mzlab/actions/workflows/desktop.yml"})
+            gear_check()
+            assert pg.evaluate("document.querySelector('#updbox a').href").startswith("https://github.com/Freeesta/mzlab/")
+            assert "9.9.9" in pg.inner_text("#updbox")
+        step("settings: a web part that needs a newer app points to the installers", upd_newapp)
+        def upd_silent():
+            pg.evaluate("document.querySelector('#updbox') && document.querySelector('#updbox').remove()")
+            upd_set({"status": "uptodate", "version": "b"})
+            pg.evaluate("DESKUPD.check(true)"); pg.wait_for_function("window.__UPD.calls.length === 1")
+            assert pg.evaluate("document.querySelector('#updbox')") is None
+            upd_set({"status": "available", "version": "c", "files": 1, "bytes": 1000})
+            pg.evaluate("DESKUPD.check(true)"); pg.wait_for_selector("#updbox")
+            assert t("update.notice") in pg.inner_text("#updbox")
+        step("silent check: nothing when up to date, a small notice when an update exists", upd_silent)
         b.close()
 finally:
     eng.kill(); page.shutdown()

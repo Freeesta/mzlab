@@ -1,0 +1,4 @@
+row ID,row m/z,row retention time,correlation group ID,annotation network number,best ion,neutral M mass,Campione_A_pos.mzML Peak area,Campione_B_pos.mzML Peak area
+1,184.1332,5.20,3,7,[M+H]+,183.1259,100000,0
+2,301.1547,6.00,-1,-1,,,80000,70000
+5,299.1754,9.50,4,,[M+H]+,298.1681,60000,0
