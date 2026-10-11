@@ -137,6 +137,35 @@ fn item_info_like_python() {
             items += 1;
             parts_seen += part.is_some() as usize;
         }
+        // sniff: what the loading table shows for the file
+        let mut mz = mzlab_core::mzmlhead::Mzml::new(
+            std::fs::File::open(line).unwrap(),
+            std::fs::metadata(line).unwrap().len(),
+        );
+        let scans_end = idx.scans.last().map_or(0, |s| s.end);
+        let n_chrom = idx
+            .run
+            .get("n_chromatograms")
+            .and_then(|v| v.f64())
+            .unwrap_or(0.0) as i64;
+        let facts =
+            mzlab_core::iteminfo::facts_from(&mut mz, scans_end, n_chrom, idx.scans.is_empty())
+                .unwrap();
+        let name = PathBuf::from(line)
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let got = mzlab_core::sniff::sniff(&mut idx, &mut mz, &facts, &name)
+            .unwrap_or_else(|e| panic!("{stem}: sniff {e}"));
+        let want: Value =
+            serde_json::from_slice(&std::fs::read(out.join(format!("{stem}.sniff.json"))).unwrap())
+                .unwrap();
+        same(
+            &format!("{stem} sniff"),
+            &serde_json::from_str(&got).unwrap(),
+            &want,
+        );
         files += 1;
     }
     assert!(

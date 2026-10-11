@@ -17,6 +17,7 @@ pub mod raw;
 pub mod rois;
 pub mod routes;
 pub mod scaninfo;
+pub mod sniff;
 pub mod scantable;
 pub mod specpeaks;
 
