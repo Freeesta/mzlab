@@ -31,10 +31,37 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 
 ## Motore Rust nella pagina (`?motore=rust`)
 - Opzione: `?motore=rust` o `localStorage qqq.motore = "rust"` (`?motore=python` la spegne). Senza, `rust-bridge.js` non viene nemmeno caricato.
-- `browser.js` passa a `rust-bridge.js` ogni GET `api/chrom` (solo `kind=tic`, senza mz0/mz1/prec/filt), `api/xic` e `api/spectra` (senza prec/filt/merge; solo file a risoluzione unitaria `is_unit_resolution` e tutti centroidi); le risposte hanno lo stesso JSON di Python (intestazione `X-Engine: rust`). Tutto il resto, e ogni caso che Rust non sa rispondere identico (MRM, parti `#` di file misti, profilo, HR, file riaperti dal browser senza nuovo caricamento), va a Pyodide.
+- **Un file, un lettore**: per ogni file intero (non una parte `#` di un file misto) il worker Rust apre il suo `.mzidx` da OPFS (`mzlab/idx/<nome>.mzidx`, operazione `idxopen`; `Engine.open_index` in `mzlab-wasm`) e risponde senza leggere l'mzML. L'mzML si apre (`openMzml`, `stats.mzml`) solo per ciò che chiede gli spettri (`api/spectra`, la prima volta) o quando il file non ha indice (niente OPFS) o non ha scansioni (MRM). `rust-bridge.js` smista: `chrom`, `filters`, `scanlist`, `nearest_scan` (`Engine.route`, che dà il JSON di Python o la stringa vuota = risponde Python) e `xic` (`Engine.index_xic`, un elemento di `traces` per file); `ref=` (differenza) e `kind` diverso da `tic`/`bpc` vanno a Python.
+- Il lettore dell'indice sta in `mzlab-core`: `idxread.rs` (`Index<R: ReadAt>`: intestazione, metadati, tabella delle scansioni, array per scansione, `search` = `np.searchsorted` con la cache a blocchi di 16384, `sum_window`/`max_window` sommano nell'ordine della tabella come `np.bincount`), `routes.rs` (`Routes::handle`, `xic`; `Query`, che decodifica come `URLSearchParams`), `json.rs` (lettore e scrittore minimi, `round` come `round()` di Python, `fmt_g` come `format(x, "g")`). Gli errori sono chiavi i18n; `Ok(None)` non è mai un errore: dice «risponde Python».
+- Parità: `crates/mzlab-core/tests/routes_parity.rs` confronta le rotte con `tools/rotte_riferimento.py` (`dispatch` di Python su file sintetici ed esempi: tutti i livelli, finestre di m/z, `bpc`, `filt`, `prec`, filtri, `scanlist`, `nearest_scan`, XIC; indici e conteggi identici, numeri entro 1e-9); salta senza python3 e numpy (`MZLAB_GOLDEN_STRICT=1` fallisce). `e2e_rust` (sito e `.wasm` costruiti) confronta Rust e Python nel browser e prova che nessun mzML (salvo l'MRM) sia stato letto da Rust per disegnare i TIC.
+- `browser.js` passa a `rust-bridge.js` ogni GET `api/chrom`, `api/xic`, `api/spectra`, `api/filters`, `api/scanlist`, `api/nearest_scan` (intestazione `X-Engine: rust`). Lo stesso `api/spectra` di Rust serve solo file a risoluzione unitaria con tutti i centroidi (`is_unit_resolution`); tutto il resto, e ogni caso che Rust non sa rispondere identico (MRM, parti `#` di file misti, profilo, HR), va a Pyodide.
 - `rust-worker.js` (modulo) carica `static/wasm/` (costruito solo da `pages.yml`) e tiene un insieme di `ArrayBuffer` restituiti da `recycle`; il bridge li rimanda dopo aver costruito il JSON.
-- Supervisore (in `rust-bridge.js`): se il worker muore, lo termina, ne crea uno nuovo, riapre i file dalla sessione (`api/explore`) e mostra `error.engineRestarted`; una seconda morte entro 1 minuto spegne Rust per la sessione (`error.engineFallback`). `window.MZLAB_RUST` = `{enabled, disabled, stats, crash()}` per i test. Test `e2e_rust` (valori contro Python, morte del worker); `python3 tools/bench.py` misura i due motori, tabella in `docs/agenti/misure.md`.
-- Il motore predefinito non cambia: lo decide solo l'Architetto con le misure.
+- Supervisore (in `rust-bridge.js`): se il worker muore, lo termina, ne crea uno nuovo, riapre i file dalla sessione (`api/explore`; indice e, se serve, mzML) e mostra `error.engineRestarted`; una seconda morte entro 1 minuto spegne Rust per la sessione (`error.engineFallback`). `window.MZLAB_RUST` = `{enabled, disabled, stats, crash()}` per i test. Test `e2e_rust`; `python3 tools/bench.py` misura i due motori, tabella in `docs/agenti/misure.md`.
+- Il motore predefinito non cambia finché la parità non è provata su tutte le rotte della tabella sotto.
+
+## Inventario delle rotte `api/...` del flusso LR
+«Contenuto» = legge i dati del file (picchi, intestazioni, cromatogrammi); «stato» = solo nomi, impostazioni, taccuino. Dove sta oggi: **Rust** = risponde `Routes` dall'indice; **Python** = Pyodide, da portare.
+
+| Rotta | Che cosa legge | Dove sta oggi / dove deve stare |
+|---|---|---|
+| POST `upload` | il file (scrittura, SHA-256), poi intestazioni per la tabella delle scansioni, `sniff` (tipo, scansioni, SRM, polarità, modo, `hr_profile`) | Python (`Run`, `Item.info`); Rust deve produrre la tabella delle scansioni (colonne di `SCAN_COLUMNS`) e il riepilogo |
+| POST `explore`, `meta`, `remove`, `new` | stato della sessione (elenco file, tipo, tempo, concentrazione, replicati) | stato: Python oggi; passa a JS/Rust (punto 4) |
+| GET `state`, `session`, `notebook`, POST `notebook`, GET `perf` | stato e taccuino | stato (JS/Rust, punto 4) |
+| GET `chrom` (`tic`, `bpc`, finestra `mz0`/`mz1`, `filt`, `prec`) | indice: `sumint`, `bp_inten`, finestra di picchi | **Rust** |
+| GET `chrom` (`kind=pda`, MRM, `ref=`) | cromatogrammi dell'mzML; altro cromatogramma | Python (Rust: `mzml.rs` ha già i cromatogrammi) |
+| GET `xic` | indice: finestra di picchi per m/z | **Rust** (con `ref=` Python) |
+| GET `filters`, `scanlist`, `nearest_scan` | tabella delle scansioni e array per scansione dell'indice | **Rust** |
+| GET `scaninfo` | intestazione della scansione dall'mzML (`start`..`end`, prima di `<binaryDataArrayList`) | Python; Rust: fetta dell'mzML |
+| GET `fileinfo` | testa dell'mzML (strumento, software, file sorgente) e primo/ultimo m/z dell'indice | Python; Rust: testa dell'mzML + indice |
+| GET `spectrum`, `spectra`, `scanbin` | fette dell'mzML per le scansioni della finestra, binning, picchi di un profilo, tolleranze HR da `mass_profile` | `spectra` Rust per i file a risoluzione unitaria con soli centroidi (decodifica la fetta di tutto l'mzML aperto), il resto Python; da portare: decodifica della fetta, `mass_profile`, `profile_peaks` |
+| GET `dda`, `scan`, `scanavg` | fette e tabella delle scansioni (HR) | Python (mondo HR) |
+| GET `mrm`, `method`, `method_warnings` | cromatogrammi SRM, metadati, `.dam` | Python; MRM: cromatogrammi di `mzml.rs` |
+| GET `map`, `mappunti3d`, `mapsnap`, `mappunti` | picchi dell'indice (griglia RT × m/z) | Python (Pacchetto «algoritmi», punto 2) |
+| GET `origin`, `subxic`, `qaqc` | picchi dell'indice (`ionfamily`) | Python (Pacchetto «algoritmi», punto 1) |
+| GET `formula`, `composition`, `contaminants`, `msntree` | nessun file (chimica); `msntree` legge le scansioni | Python (HR, Pacchetto «algoritmi», punto 3) |
+| POST `workflow/validate`, `export/mgf`, `export/msp`, `stat/profile`, `stat/blank`, `qaqc/features` | solo dati già nella pagina | stato/calcolo puro: JS o Rust (punto 4) |
+
+Per non leggere il file, a Python bastano: nome, dimensione, SHA-256 e impronta (dall'indice: `source`), tipo/tempo/concentrazione dai nomi (`project.py`: solo espressioni regolari sul nome, portabile in JS) e, per i file HR, `hr_profile` (dalla tabella delle scansioni: `res`, `an`, modo). Nessuna di queste cose richiede i picchi.
 
 ## File Thermo `.raw` (solo con `?motore=rust`)
 - `Engine.raw_to_mzml(nome, size, read, sink)` (`mzlab-wasm`): il `.raw` si legge a blocchi di 1 MB da `File.slice` (`BlockReader` con `Seek` e l'ultimo blocco in memoria, mai il file intero nella memoria WASM) e l'mzML esce a pezzi verso `sink`, che la pagina tiene come parti di un Blob. Operazione `raw2mzml` di `rust-worker.js`, `convertRaw(file)` di `rust-bridge.js` (errore: `json` con `error_key`, `err.file.raw`).

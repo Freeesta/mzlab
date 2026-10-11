@@ -133,3 +133,15 @@ Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (
 | byte scaricati fino a rete ferma | 1 034 427 | 330 178 (comprende ~85 KB di Teoria scaldata) |
 
 Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
+
+## Rust legge l'indice (`python3 tools/bench.py --files 6 --json`, Chromium cloud con WASM, 6 Full Scan sintetici, un giro, commit di partenza e commit del lavoro)
+Prima = `?motore=rust` con il motore che apre l'mzML per TIC e XIC; dopo = lo stesso motore che risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni, scansione più vicina) e apre l'mzML solo per le scansioni singole.
+
+| misura | prima (Rust) | dopo (Rust) | Python (stesso giro, dopo) |
+|---|---|---|---|
+| avvio (pagina + motore), s | 5.41 | 5.38 | 4.37 |
+| apertura dei file fino al primo TIC, s | 2.13 | 2.27 | 2.24 |
+| TIC + 5 XIC di ogni file, s | 0.14 | 0.11 | 0.35 |
+| RSS del browser, MB | 1095 | 1033 | 1073 |
+
+Letture: con sei file da pochi MB la seconda lettura dell'mzML costava poco e la differenza di apertura sta dentro il rumore di un solo giro (il guadagno cresce con la dimensione dei file); l'avvio non cambia perché Pyodide sta ancora davanti al primo TIC. Rimane da misurare su file grandi e su Mac/CI.

@@ -3,10 +3,13 @@
 pub mod analysis;
 pub mod entropy;
 pub mod error;
+pub mod idxread;
+pub mod json;
 pub mod mzidx;
 pub mod mzml;
 pub mod peaks;
 pub mod raw;
+pub mod routes;
 
 pub use error::{Error, Result};
 
