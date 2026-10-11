@@ -403,6 +403,15 @@ impl<R: ReadAt> Index<R> {
         })
     }
 
+    /// Lowest and highest m/z of a section (`mz[0]`, `mz[-1]` of its peak table), None when it has no peaks.
+    pub fn mz_range(&mut self, si: usize) -> Result<Option<(f64, f64)>> {
+        let n = self.sections[si].n_peaks;
+        if n == 0 {
+            return Ok(None);
+        }
+        Ok(Some((self.mz_at(si, 0)?, self.mz_at(si, n - 1)?)))
+    }
+
     /// `np.searchsorted(mz, v, side)` where `v` has the dtype of the array (a high-resolution survey compares in `f32`).
     pub fn search(&mut self, si: usize, v: f64, right: bool) -> Result<u64> {
         let v = if self.sections[si].f4 {

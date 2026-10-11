@@ -2,10 +2,11 @@
 // Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR.
 // One list of commands (CMD): the toolbar, its menus, "Altro" and the command palette are all built from it, so a new
 // button is added in ONE place (id, i18n keys cmd.<id>.lab / .name / .tip, icon, run, visible).
-// Drawer (#dfiles): closed until a tool is chosen; open it floats over the charts (does not narrow them) and closes with Esc,
-// a click outside or the same button; "Pin" puts it in the grid next to the charts. Width is draggable, side is left or right
-// (drag the header to the other half of the window, or Alt+Shift+Left/Right).
-// State: localStorage qqq.barra.lr / qqq.barra.hr ({tab, pinned, open, w, last, side}), side shared in qqq.barra.lato.
+// Side panel (#dfiles): hidden, or docked at full height to the left or right edge; the workspace (#v-workspace) always shrinks to the
+// space left, never sits under it. Always-visible header button #sb-toggle (and Ctrl/Cmd+B) shows/hides it; a tool button shows the panel
+// on that tool and a second click hides it. Below SHEET px it is a sheet that replaces the workspace. Width is draggable (splitter
+// #sidebar-resize-handle, arrows, double click = default); side is left or right (drag the header to the other half of the window, or Alt+Shift+Left/Right).
+// State: localStorage qqq.barra.lr / qqq.barra.hr ({tab, open, w, last}), side shared in qqq.barra.lato.
 
 const BARRA = (() => {
   const K_LR = "qqq.barra.lr";
@@ -13,15 +14,17 @@ const BARRA = (() => {
   const K_SIDE = "qqq.barra.lato";
   const K_HINT = "qqq.barra.hint";   // first-visit hint under the toolbar: shown once per browser
   const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
-  const MIN_W = 220, MAX_W = 560;
-  const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
+  const MIN_W = 280, MAX_W = 560;
+  const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const PHONE_W = 600;
-  const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
+  const K_LAB = "qqq.barra.etichette";   // words next to the icons: auto (as many as fit) | always | hidden
+  const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
+  const LEVELS = ["all", "main", "none"];
+  const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
   const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
   let _open = false;
-  let _pinned = false;
   let _side = "left";
   let _w = 260;
   let _last = { scan: "hdr", form: "cmp" };
@@ -30,16 +33,19 @@ const BARRA = (() => {
   let _opener = null;
   let _before = null;
   let _dropped = new Set();
+  let _labMode = "auto", _lvl = "none";
+  let _fitRaf = 0;
+  const _fitStats = { n: 0, last: 0, max: 0 };
 
   const Q1 = s => document.querySelector(s);
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   const isHrMode = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
-  const defaultW = () => (isHrMode() ? 340 : 260);
+  const defaultW = () => (isHrMode() ? 340 : 300);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
-  const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer:coarse)").matches);
-  const narrow = () => window.innerWidth < NARROW || coarse();          // narrow window or a finger: the panel is only a drawer
-  const effPinned = () => _pinned && !narrow();
+  const sheet = () => window.innerWidth < SHEET;
+  const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _w));
   const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc", "stat"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
@@ -59,6 +65,7 @@ const BARRA = (() => {
     search: IC('<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/>'),
     ext: IC('<path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>'),
     caret: IC('<path d="M4 6l4 4 4-4"/>'),
+    panel: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/><path d="M11 5.5h1.5M11 8h1.5" stroke-width="1.2"/>'),
     left: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6.5 2.5v11"/>'),
     right: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/>')
   };
@@ -100,6 +107,7 @@ const BARRA = (() => {
     { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
+    { id: "labels", bar: false, group: "app", ic: () => ICONS.search, run: () => { setLabels(_labMode === "auto" ? "always" : _labMode === "always" ? "hidden" : "auto"); announce(t("cmd.labels.now." + _labMode)); } },
     { id: "hint", bar: false, group: "app", ic: () => ICONS.search, visible: () => inData(), run: () => { hintClose(false); hintShow(); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
@@ -112,7 +120,7 @@ const BARRA = (() => {
     { id: "closeall", bar: false, group: "graphs", ic: () => IC('<path d="M4 4l8 8M12 4l-8 8"/>'), visible: () => inData(), run: () => clickEl("#np-closeall") },
     { id: "sideL", bar: false, group: "panel", ic: () => ICONS.left, visible: () => inData(), run: () => setSide("left") },
     { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
-    { id: "pin", bar: false, group: "panel", ic: () => ICONS.file, visible: () => inData() && !narrow(), run: () => { if (!_open) show(_tab); togglePin(); } },
+    { id: "panel", bar: false, group: "panel", ic: () => ICONS.panel, visible: () => inData(), run: () => toggleDrawer() },
     // external links, rare: in "Altro"
     { id: "stat", dom: "np-stat", more: true, ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
@@ -132,10 +140,9 @@ const BARRA = (() => {
   function loadState() {
     let s = {};
     try { s = JSON.parse(localStorage.getItem(storageKey()) || "{}") || {}; } catch (_) { s = {}; }
-    _w = typeof s.w === "number" && s.w >= MIN_W && s.w <= MAX_W ? s.w : defaultW();
-    _pinned = !!s.pinned;
+    _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = !!(s.open && _pinned && !narrow());
+    _open = s.open === true;
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
@@ -147,43 +154,68 @@ const BARRA = (() => {
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, side: _side, pinned: _pinned, open: _open && _pinned, w: _w, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open, w: _w, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
 
   // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    document.documentElement.style.setProperty("--sb-w", _w + "px");
+    document.documentElement.style.setProperty("--sb-w", effW() + "px");
   }
 
+  // one redraw per frame, whatever fires it: the workspace changes width when the panel shows, hides or is resized
+  let _refitRaf = 0, _lastW = -1;
   function refit() {
-    if (typeof fitWidth === "function" && typeof redrawAll === "function") {
-      requestAnimationFrame(() => { fitWidth(); redrawAll(); });
-    }
+    if (_refitRaf) return;
+    _refitRaf = requestAnimationFrame(() => {
+      _refitRaf = 0;
+      const dp = Q1("#dpanels");
+      if (dp) _lastW = dp.clientWidth;
+      if (dp && _lastW < 100) return;             // the workspace is hidden (sheet) or not shown yet: nothing to draw
+      if (typeof fitWidth === "function" && typeof redrawAll === "function") { fitWidth(); redrawAll(); }
+    });
+  }
+  // The panels' own observers read a width change that is not theirs (the page narrowed under them) as «resized by hand» and
+  // unlock them from the page width: the full-width panels are noted before the layout moves and given back once it has settled.
+  let _fullSnap = null, _fullTimer = 0;
+  function snapFull() {
+    if (typeof E === "undefined" || !E.panels) return;
+    if (!_fullSnap) _fullSnap = E.panels.filter(p => p.full);
+    clearTimeout(_fullTimer);
+    _fullTimer = setTimeout(() => {
+      const snap = _fullSnap || [];
+      _fullSnap = null;
+      let back = false;
+      snap.forEach(p => { if (!p.full && E.panels.includes(p)) { p.full = true; back = true; } });
+      if (back || snap.length) refit();
+    }, 250);
+  }
+  function watchWorkspace() {
+    const dp = Q1("#dpanels");
+    if (!dp || typeof ResizeObserver === "undefined") return;
+    new ResizeObserver(() => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } }).observe(dp);
   }
 
-  function applyLayout(refitCharts) {
+  function applyLayout() {
     const v = Q1("#v-data"), aside = Q1("#dfiles");
     if (!v || !aside) return;
     const shown = _open && inData();
-    const pin = shown && effPinned();
-    const was = v.classList.contains("sb-pin");
+    if (shown !== v.classList.contains("sb-open") || shown && sheet() !== v.classList.contains("sb-sheet")) snapFull();
     v.classList.toggle("sb-right", _side === "right");
     v.classList.toggle("sb-open", shown);
-    v.classList.toggle("sb-pin", pin);
+    v.classList.toggle("sb-sheet", shown && sheet());
     aside.toggleAttribute("inert", !shown);
     aside.setAttribute("aria-hidden", shown ? "false" : "true");
-    const pb = Q1("#sb-pin");
-    if (pb) {
-      pb.hidden = narrow();
-      pb.setAttribute("aria-pressed", _pinned ? "true" : "false");
-      pb.classList.toggle("on", _pinned);
-      const k = _pinned ? "side.unpin" : "side.pin";
-      pb.title = t(k); pb.setAttribute("aria-label", t(k));
+    const tg = Q1("#sb-toggle");
+    if (tg) {
+      tg.hidden = !inData();
+      tg.setAttribute("aria-pressed", shown ? "true" : "false");
+      tg.classList.toggle("on", shown);
     }
+    const h = Q1("#sidebar-resize-handle");
+    if (h) { h.setAttribute("aria-valuemin", MIN_W); h.setAttribute("aria-valuemax", maxW()); h.setAttribute("aria-valuenow", effW()); }
     applyWidth();
-    if (refitCharts || was !== pin) refit();
   }
 
   function setPanelVisible(id) {
@@ -199,7 +231,9 @@ const BARRA = (() => {
     }
   }
 
+  let _painted = null;                 // the tool whose body was last built (a state restored as open paints it when the data arrive)
   function renderPane(id, opt = {}) {
+    _painted = id;
     const c = byId(id);
     const ttl = Q1("#sb-title");
     if (ttl && c) ttl.textContent = name(c);
@@ -300,10 +334,6 @@ const BARRA = (() => {
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
     if (!inData() || !validTab(id)) return false;
     const wasOpen = _open;
-    if (opt.instant) {            // no slide (the tour measures the pane at once)
-      const v = Q1("#v-data");
-      if (v) { v.classList.add("sb-instant"); setTimeout(() => v.classList.remove("sb-instant"), 450); }
-    }
     _tab = id;
     _open = true;
     if (!_opener || !wasOpen) _opener = opt.opener || openerFor(id);
@@ -350,16 +380,15 @@ const BARRA = (() => {
     return ok;
   }
 
-  function setPinned(p) {
-    _pinned = !!p;
-    applyLayout(true);
-    saveState();
+  // the header button: show the last tool used (first start: File) or hide the panel
+  function toggleDrawer() {
+    if (_open && inData()) close(true);
+    else show(validTab(_tab) ? _tab : "file", { opener: Q1("#sb-toggle") });
   }
-  function togglePin() { setPinned(!_pinned); }
 
   function setWidth(w) {
-    _w = Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
-    applyWidth();
+    _w = Math.max(MIN_W, Math.min(maxW(), Math.round(w)));
+    applyLayout();
     saveState();
   }
 
@@ -367,7 +396,7 @@ const BARRA = (() => {
     if (side !== "left" && side !== "right") return;
     const changed = _side !== side;
     _side = side;
-    applyLayout(changed);
+    applyLayout();
     saveState();
     if (changed && opt.announce !== false) announce(t(side === "left" ? "side.movedLeft" : "side.movedRight"));
   }
@@ -390,7 +419,7 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- toolbar
   function btnHtml(c, extra = "") {
     const dom = c.dom ? ` id="${c.dom}"` : "";
-    return `<button type="button" class="tb ${extra}"${dom} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
+    return `<button type="button" class="tb ${extra}"${dom}${MAIN.has(c.id) ? " data-main" : ""} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
   }
   const EHs = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
@@ -398,7 +427,7 @@ const BARRA = (() => {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
     return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
-      `<button type="button" class="tb tb-main" data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
+      `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
@@ -478,21 +507,41 @@ const BARRA = (() => {
     });
   }
 
-  // priority overflow: labels only when wide; then the least used groups move into "Altro"; never a second row
+  // Measured layout: the richest label level that fits (words on all, on the main tools, none); then the least used groups move into
+  // "Altro". Never a second row, nothing cut. One measure per frame (schedFit), whatever fires it.
+  function setLevel(lv) {
+    const bar = Q1("#stbar");
+    bar.classList.toggle("lab-all", lv === "all");
+    bar.classList.toggle("lab-main", lv === "main");
+    document.documentElement.dataset.barLab = lv;
+  }
+  function schedFit() {
+    if (_fitRaf) return;
+    _fitRaf = requestAnimationFrame(() => { _fitRaf = 0; fit(); });
+  }
   function fit() {
     const bar = Q1("#stbar");
     if (!bar || !bar.offsetParent) return;
+    const t0 = performance.now();
     _dropped = new Set();
     syncVisibility();
     const avail = () => bar.clientWidth;
     const need = () => {
       const kids = [...bar.children].filter(e => !e.hidden);
-      return kids.reduce((s, e) => s + e.getBoundingClientRect().width, 0) + Math.max(0, kids.length - 1) * 3;
+      const gap = parseFloat(getComputedStyle(bar).columnGap) || 0;
+      return kids.reduce((s, e) => { const cs = getComputedStyle(e); return s + e.getBoundingClientRect().width + (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0); }, 0) + Math.max(0, kids.length - 1) * gap;
     };
-    bar.classList.toggle("tb-lab", window.innerWidth >= LABELS_FROM);
-    if (bar.classList.contains("tb-lab") && need() > avail()) bar.classList.remove("tb-lab");
-    let i = 0;
     const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File goes into "Altro"
+    const tryLv = _labMode === "hidden" || phone ? ["none"] : _labMode === "always" ? ["all"] : LEVELS;
+    let chosen = tryLv[tryLv.length - 1];
+    for (const lv of tryLv) {
+      setLevel(lv);
+      const slack = LEVELS.indexOf(lv) < LEVELS.indexOf(_lvl) ? HYST : 0;
+      if (need() + slack <= avail()) { chosen = lv; break; }
+    }
+    setLevel(chosen);
+    _lvl = chosen;
+    let i = 0;
     while ((phone || need() > avail()) && i < DROP_ORDER.length) {
       const id = DROP_ORDER[i++];
       const c = byId(id);
@@ -505,6 +554,19 @@ const BARRA = (() => {
     if (more) more.dataset.dropped = [..._dropped].join(",");
     const rov = bar.querySelector(".tb[tabindex='0']");
     if (!rov || rov.hidden || rov.offsetParent === null) setRover(firstItem());
+    const dt = performance.now() - t0;
+    _fitStats.n++; _fitStats.last = dt; _fitStats.max = Math.max(_fitStats.max, dt);
+  }
+
+  function loadLabMode() {
+    let v = null;
+    try { v = localStorage.getItem(K_LAB); } catch (_) { /* none */ }
+    _labMode = v === "always" || v === "hidden" ? v : "auto";
+  }
+  function setLabels(mode) {
+    _labMode = mode === "always" || mode === "hidden" ? mode : "auto";
+    try { localStorage.setItem(K_LAB, _labMode); } catch (_) { /* no storage */ }
+    fit();
   }
 
   // roving tabindex
@@ -642,8 +704,8 @@ const BARRA = (() => {
       const pane = Q1("#sb-pane");
       if (!pane) return;
       const rect = pane.getBoundingClientRect();
-      _w = Math.max(MIN_W, Math.min(MAX_W, Math.round(_side === "right" ? rect.right - e.clientX : e.clientX - rect.left)));
-      applyWidth();
+      _w = Math.max(MIN_W, Math.min(maxW(), Math.round(_side === "right" ? rect.right - e.clientX : e.clientX - rect.left)));
+      applyLayout();
     };
     const onUp = e => {
       if (!dragging) return;
@@ -653,7 +715,6 @@ const BARRA = (() => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       saveState();
-      if (effPinned()) refit();
     };
     handle.onpointerdown = e => {
       if (e.button !== 0) return;
@@ -666,9 +727,20 @@ const BARRA = (() => {
     };
     handle.ondblclick = () => {
       _w = defaultW();
-      applyWidth();
+      applyLayout();
       saveState();
-      if (effPinned()) refit();
+    };
+    handle.onkeydown = e => {
+      const step = e.shiftKey ? 48 : 16;
+      let w = null;
+      if (e.key === "ArrowLeft") w = effW() + (_side === "right" ? step : -step);
+      else if (e.key === "ArrowRight") w = effW() + (_side === "right" ? -step : step);
+      else if (e.key === "Home") w = MIN_W;
+      else if (e.key === "End") w = maxW();
+      else if (e.key === "Enter") w = defaultW();
+      if (w == null) return;
+      e.preventDefault();
+      setWidth(w);
     };
   }
 
@@ -691,7 +763,7 @@ const BARRA = (() => {
       const z = zones(), side = x < innerWidth / 2 ? "left" : "right";
       z.l.classList.toggle("hot", side === "left");
       z.r.classList.toggle("hot", side === "right");
-      const w = Math.min(_w, innerWidth * 0.9);
+      const w = sheet() ? innerWidth : effW();
       z.pv.style.width = w + "px";
       z.pv.style.left = side === "left" ? "0" : "auto";
       z.pv.style.right = side === "right" ? "0" : "auto";
@@ -771,7 +843,15 @@ const BARRA = (() => {
       const calcin = Q1("#calcin");
       if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) return;      // Esc first clears the field
       if (document.querySelector("dialog[open]") || Q1("#helppop:not([hidden])") || Q1("#uipset") || (Q1("#ctx") && !Q1("#ctx").hidden)) return;
-      if (_open && !effPinned() && inData()) { e.preventDefault(); close(true); }
+      if (_open && sheet() && inData()) { e.preventDefault(); close(true); }       // the sheet replaces the workspace: Esc gives it back
+    }, true);
+
+    // show/hide the side panel from the keyboard
+    document.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
+        e.preventDefault(); e.stopPropagation();
+        toggleDrawer();
+      }
     }, true);
 
     document.addEventListener("keydown", onBarKey);
@@ -779,22 +859,18 @@ const BARRA = (() => {
     document.addEventListener("pointerdown", e => {
       const m = Q1("#stmenu");
       if (m && !m.contains(e.target) && !(m._anchor && m._anchor.contains(e.target))) closeMenu(false);
-      if (!_open || effPinned()) return;
-      const aside = Q1("#dfiles"), bar = Q1("#stbar");
-      const tg = e.target;
-      if (!tg.closest) return;
-      if ((aside && aside.contains(tg)) || (bar && bar.contains(tg)) || tg.closest("#stmenu,#ctx,dialog,[role=dialog],#helppop,#qtip,#tour-dialog,#tour-invito,.sb-dz,#paletta")) return;
-      close(false);
     }, true);
 
     window.addEventListener("resize", () => {
-      if (_open && _pinned && narrow()) { _open = false; saveState(); updateButtons(); }       // a window too narrow for the pinned panel: it closes, the charts get the page back
       applyLayout();
-      fit();
+      schedFit();
     });
+    let wasData = false;
     document.addEventListener("tpview", () => {
-      if (!inData()) { _open = false; }
+      if (wasData && !inData()) _open = false;        // leaving Dati hides the panel (the saved state keeps it for the next visit)
+      wasData = inData();
       syncMode();
+      if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);
       applyLayout();
       syncVisibility();
       updateButtons();
@@ -809,12 +885,12 @@ const BARRA = (() => {
     const prevOpen = _open;
     _mode = m;
     loadState();
-    if (!inData()) _open = false;
     applyWidth();
     syncVisibility();
     if (_open && validTab(_tab)) renderPane(_tab);
     else if (prevOpen && !_open) { /* the other world remembers its own state */ }
-    applyLayout(true);
+    applyLayout();
+    refit();
     updateButtons();
     fit();
   }
@@ -881,12 +957,17 @@ const BARRA = (() => {
     _mounted = true;
     _mode = isHrMode() ? "hr" : "lr";
     loadState();
+    loadLabMode();
     window.CMD = CMD;
     buildBar();
     const x = Q1("#sb-x");
     if (x) x.onclick = () => close(true);
-    const pin = Q1("#sb-pin");
-    if (pin) pin.onclick = () => togglePin();
+    const tg = Q1("#sb-toggle");
+    if (tg) tg.onclick = () => toggleDrawer();
+    const hd = Q1("#sidebar-resize-handle");
+    if (hd) { hd.setAttribute("role", "separator"); hd.setAttribute("aria-orientation", "vertical"); hd.tabIndex = 0; hd.setAttribute("aria-label", t("side.resize.aria")); }
+    watchWorkspace();
+    saveState();                 // writes back only the valid fields: an old state (pinned, odd side or width) is cleaned
     const add = Q1("#addf");
     if (add) add.addEventListener("click", () => { _open = false; });
     bindResizer();
@@ -895,7 +976,7 @@ const BARRA = (() => {
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
       const bar = Q1("#stbar");
-      if (bar) new ResizeObserver(() => fit()).observe(bar);
+      if (bar) new ResizeObserver(() => schedFit()).observe(bar);
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);
@@ -913,9 +994,7 @@ const BARRA = (() => {
     show,
     toggle,
     close,
-    closeOverlay: () => close(false),
-    setPinned,
-    togglePin,
+    toggleDrawer,
     setSide,
     toggleSide,
     setWidth,
@@ -923,16 +1002,19 @@ const BARRA = (() => {
     syncMode,
     syncHR: syncMode,
     fit,
+    setLabels,
+    get labels() { return _labMode; },
+    get labelLevel() { return _lvl; },
+    get fitStats() { return _fitStats; },
     focusToolbar,
     isDataView: inData,
     isOpen: id => _open && inData() && (id == null || _tab === id),
     get curTab() { return _tab; },
-    get pinned() { return effPinned(); },
     get side() { return _side; },
-    get width() { return _w; },
+    get width() { return effW(); },
     get open() { return _open && inData(); },
-    get overlayOpen() { return _open && inData() && !effPinned(); },
-    get pinnedWidth() { return _open && inData() && effPinned() ? _w : 0; },
+    get sheet() { return _open && inData() && sheet(); },
+    get dockedWidth() { return _open && inData() && !sheet() ? effW() : 0; },
     byId,
     name,
     lab,

@@ -22,7 +22,7 @@ FIT = """(() => {
   const tops = [...h.children].filter(e => e.offsetParent && e.getBoundingClientRect().height).map(e => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2));
   const btns = [...bar.querySelectorAll('.tb')].filter(b => !b.hidden && b.offsetParent);
   return {rows: Math.max(...tops) - Math.min(...tops), hh: h.getBoundingClientRect().height, clipped: btns.filter(b => { const q = b.getBoundingClientRect(); return q.right > br.right + 1 || q.left < br.left - 1; }).map(b => b.dataset.cmd || b.dataset.cmdMain || b.dataset.cmdCar),
-    cut: btns.filter(b => [...b.querySelectorAll('.tl')].some(l => l.offsetParent && l.scrollWidth > l.clientWidth + 1)).map(b => b.dataset.cmd), n: btns.length, lab: bar.classList.contains('tb-lab'), wrapped: btns.filter(b => b.getBoundingClientRect().height > 48).length};
+    cut: btns.filter(b => [...b.querySelectorAll('.tl')].some(l => l.offsetParent && l.scrollWidth > l.clientWidth + 1)).map(b => b.dataset.cmd), n: btns.length, lab: bar.classList.contains('lab-all'), lvl: bar.classList.contains('lab-all') ? 'all' : bar.classList.contains('lab-main') ? 'main' : 'none', dropped: (document.querySelector('#tb-more').dataset.dropped || ''), wrapped: btns.filter(b => b.getBoundingClientRect().height > 48).length};
 })()"""
 
 try:
@@ -53,20 +53,19 @@ try:
 
         def apri_chiudi():
             w0 = pg.evaluate("E.panels[0].w")
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300)
-            assert pg.is_visible("#dfiles") and pg.is_visible("#flst"), "file list in the drawer"
+            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)
+            assert pg.is_visible("#dfiles") and pg.is_visible("#flst"), "file list in the panel"
             assert pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "true" and "on" in pg.get_attribute("#stbar [data-cmd=file]", "class")
-            assert pg.evaluate("E.panels[0].w") == w0, "the drawer floats over the charts: it does not narrow them"
+            assert pg.evaluate("E.panels[0].w") < w0 - 150, "the panel is docked: the charts narrow"
             assert pg.evaluate("document.querySelector('#dfiles').contains(document.activeElement)"), "focus moves into the panel"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
-            assert not pg.is_visible("#dfiles") and pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "false"
-            assert pg.evaluate("document.activeElement.dataset.cmd") == "file", "Esc gives the focus back to the button"
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300); assert pg.is_visible("#dfiles")
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), "the same button closes it"
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300)
-            pg.mouse.click(700, 600); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), "click outside closes it"
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert pg.is_visible("#dfiles"), "docked: Esc does not close it"
+            pg.mouse.click(900, 500); pg.wait_for_timeout(300); assert pg.is_visible("#dfiles"), "docked: a click on the charts does not close it"
+            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)
+            assert not pg.is_visible("#dfiles") and pg.get_attribute("#stbar [data-cmd=file]", "aria-pressed") == "false", "the same button hides it"
+            assert pg.evaluate("document.activeElement.dataset.cmd") == "file", "the focus goes back to the button"
+            assert pg.evaluate("E.panels[0].w") == w0, "the charts get the page back"
             pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300); pg.click("#sb-x"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles")
-        step("drawer: opens over the charts, Esc / click outside / same button / × close it, focus in and back", apri_chiudi)
+        step("panel: docks next to the charts (they narrow), the same button / × hide it, focus in and back", apri_chiudi)
 
         def cambia():
             pg.click("#stbar [data-cmd=calc]"); pg.wait_for_timeout(400)
@@ -78,22 +77,24 @@ try:
             pg.click("#stbar [data-cmd=lists]"); pg.wait_for_timeout(500); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); pg.wait_for_timeout(500); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles")
+            pg.click("#sb-x"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles")
         step("one tool at a time in the drawer; the periodic table stays the window #refdlg", cambia)
 
-        def fissa():
+        def larghezza():
             pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300)
-            w0 = pg.evaluate("Q('#dpanels').clientWidth")
-            pg.click("#sb-pin"); pg.wait_for_timeout(500)
-            assert pg.get_attribute("#sb-pin", "aria-pressed") == "true"
-            w1 = pg.evaluate("Q('#dpanels').clientWidth"); assert w1 < w0 - 150, (w0, w1)
+            h = pg.locator("#sidebar-resize-handle")
+            assert h.get_attribute("role") == "separator" and h.get_attribute("aria-orientation") == "vertical" and h.get_attribute("tabindex") == "0"
+            pg.evaluate("BARRA.setWidth(300)"); w300 = pg.evaluate("Q('#dpanels').clientWidth")
+            h.focus(); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
+            assert pg.evaluate("BARRA.width") == 316 and pg.evaluate("Q('#dpanels').clientWidth") < w300, "left panel: → widens it, the charts narrow"
+            pg.keyboard.press("Home"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 280
+            pg.keyboard.press("End"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 560
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(100); assert pg.evaluate("BARRA.width") == 300
+            pg.evaluate("BARRA.setWidth(1000)"); assert pg.evaluate("BARRA.width") == 560, "never wider than 560 px"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
-            assert pg.evaluate("getComputedStyle(document.querySelector('#dfiles')).position") == "sticky"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert pg.is_visible("#dfiles"), "pinned: Esc does not close it"
-            pg.mouse.click(900, 500); pg.wait_for_timeout(300); assert pg.is_visible("#dfiles"), "pinned: click outside does not close it"
-            pg.click("#sb-pin"); pg.wait_for_timeout(500); assert pg.evaluate("Q('#dpanels').clientWidth") == w0
+            h.dblclick(); pg.wait_for_timeout(200); assert pg.evaluate("BARRA.width") == 300, "double click = default"
             pg.click("#sb-x"); pg.wait_for_timeout(300)
-        step("pin: the panel goes next to the charts (narrows the grid), unpin gives the page back", fissa)
+        step("splitter (role separator): keyboard, Home/End, double click, 280-560 px", larghezza)
 
         def lato():
             assert pg.locator("#sb-side-tog").count() == 0, "the useless «move to the right» button is gone"
@@ -110,38 +111,66 @@ try:
             pg.keyboard.press("Alt+Shift+ArrowLeft"); pg.wait_for_timeout(300)
             assert pg.evaluate("BARRA.side") == "left" and pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().left") < 20
             pg.keyboard.press("Alt+Shift+ArrowRight"); pg.wait_for_timeout(200); assert pg.evaluate("BARRA.side") == "right"
-            pg.click("#sb-pin"); pg.wait_for_timeout(400)
             w_dp = pg.evaluate("Q('#dpanels').getBoundingClientRect().left")
             b = pg.locator("#sb-title").bounding_box(); x0, y0 = b["x"] + 4, b["y"] + b["height"] / 2
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(100, 300, steps=6); pg.mouse.up(); pg.wait_for_timeout(500)
             assert pg.evaluate("BARRA.side") == "left"
             assert pg.evaluate("Q('#dpanels').getBoundingClientRect().left") > w_dp + 150, "the charts move to the free side"
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
-            pg.click("#sb-pin"); pg.click("#sb-x"); pg.wait_for_timeout(300)
+            pg.click("#sb-x"); pg.wait_for_timeout(300)
         step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in qqq.barra.lato", lato)
 
         def ricorda():
-            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(300); pg.click("#sb-pin"); pg.wait_for_timeout(300)
+            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(300)
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
-            st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.barra.lr'))"); assert st["pinned"] and st["w"] == 320 and st["tab"] == "adducts" and st["open"], st
+            st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "adducts" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg); pg.wait_for_timeout(500)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.pinned && BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'adducts'")
-            pg.click("#sb-pin"); pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
-            assert not pg.is_visible("#dfiles"), "unpinned: after a reload the drawer is closed"
-            pg.evaluate("localStorage.removeItem('qqq.barra.lato'); localStorage.setItem('qqq.barra.lr', JSON.stringify({tab:'calc', side:'right', pinned:true, w:300}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
-            assert not pg.is_visible("#dfiles") and pg.evaluate("BARRA.side") == "right", "old state (no «open»): closed, and its side is respected"
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'adducts'"), "open, tool, side and width come back"
+            assert pg.is_visible("#sb-panel-adducts"), "the restored panel is painted"
+            pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
+            pg.evaluate("localStorage.setItem('qqq.barra.lato','bogus'); localStorage.setItem('qqq.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.barra.lr'))"); assert "pinned" not in st and st["w"] == 300 and pg.evaluate("localStorage.getItem('qqq.barra.lato')") == "left", st
+            pg.evaluate("localStorage.setItem('qqq.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
+            assert pg.evaluate("BARRA.width") <= 560, "a width out of range goes back to the default"
             pg.evaluate("localStorage.removeItem('qqq.barra.lr'); localStorage.removeItem('qqq.barra.lato')"); pg.reload(); ready(pg)
-        step("state remembered after reload (pinned, side, width, tool); an old state without «open» opens closed", ricorda)
+            assert not pg.is_visible("#dfiles"), "first start: hidden"
+        step("state remembered after reload (open, side, width, tool); old states (pinned, bad side, width 0 or huge) are cleaned", ricorda)
 
         def larghezze():
-            for w, h in ((1280, 800), (1440, 900), (1680, 1000), (1024, 1366), (1366, 1024)):
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(500)
-                f = pg.evaluate(FIT)
-                assert f["rows"] <= 6 and f["hh"] < 70, (w, f)
-                assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
-                assert f["lab"] == (w >= 1440), (w, f)
-            pg.set_viewport_size({"width": 1500, "height": 1000})
-        step("no button wrapped, cut or clipped at 1280/1440/1680 and iPad 1024×1366 / 1366×1024; words only from 1440", larghezze)
+            # the richest level that fits: words on every button from 1280 px; a narrower bar loses words, then groups (into «Altro»), never a button cut or wrapped
+            for panel in (False, True):
+                pg.evaluate("BARRA.show('file',{noFocus:true})" if panel else "BARRA.close(false)")
+                for w, h in ((1280, 800), (1440, 900), (1500, 1000), (1680, 1000), (1024, 1366), (1366, 1024), (900, 900), (820, 1180)):
+                    pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(500)
+                    f = pg.evaluate(FIT)
+                    assert f["rows"] <= 6 and f["hh"] < 70, (w, panel, f)
+                    assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, panel, f)
+                    if w >= 1280: assert f["lvl"] == "all" and not f["dropped"], (w, panel, f)
+                    assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, (w, panel)
+                    names = pg.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.getAttribute('aria-label'))"); assert all(names), (w, names)
+                    if f["dropped"]:
+                        pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
+                        txt = pg.inner_text("#stmenu")
+                        for d in f["dropped"].split(","): assert pg.evaluate(f"BARRA.name(BARRA.byId('{d}'))") in txt, (w, d, txt)
+                        pg.keyboard.press("Escape")
+            pg.evaluate("BARRA.close(false)"); pg.set_viewport_size({"width": 1500, "height": 1000})
+        step("measured labels: words on every button from 1280 px, fewer words then fewer groups below, nothing wrapped or cut (with and without the panel, iPad included); the rest is in «Altro»", larghezze)
+
+        def preferenza():
+            pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
+            assert pg.evaluate("BARRA.labels") == "auto" and pg.evaluate(FIT)["lvl"] == "all"
+            pg.click("#np-set"); pg.wait_for_selector("#uip-etich"); pg.select_option("#uip-etich", "hidden"); pg.wait_for_timeout(300)
+            f = pg.evaluate(FIT); assert f["lvl"] == "none" and not f["dropped"] and pg.evaluate("localStorage.getItem('qqq.barra.etichette')") == "hidden", f
+            assert pg.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).every(b=>b.getAttribute('aria-label')&&b.getBoundingClientRect().width<60)"), "icons only, names kept"
+            pg.select_option("#uip-etich", "always"); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 1024, "height": 800}); pg.wait_for_timeout(500)
+            f = pg.evaluate(FIT); assert f["lvl"] == "all" and f["dropped"] and not f["clipped"] and f["wrapped"] == 0, f      # words kept, groups move to «Altro»
+            pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "always", "remembered"
+            pg.evaluate("BARRA.setLabels('auto')"); pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
+            assert pg.evaluate(FIT)["lvl"] == "all" and pg.evaluate("BARRA.fitStats.max") < 50
+            pg.evaluate("localStorage.setItem('qqq.barra.etichette','bogus')"); pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "auto"
+        step("labels preference (settings): automatic / always / hidden, remembered in qqq.barra.etichette, junk value = automatic", preferenza)
 
         def disegno():
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(800)
@@ -161,12 +190,15 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
             assert ids == ["file", "calc", "losses", "adducts", "lists", "qaqc", "ptable", "scan", "form", "idn", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
-            assert lab[-5:] == ["Scansione", "Formule", "Librerie", "Altro", "Cerca"], lab
+            assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
             assert "·" not in " ".join(lab) and not any(x.isupper() and len(x) == 3 for x in lab), lab
             assert pg.evaluate("document.querySelector('#stbar [data-hrgrp]').offsetParent !== null"), "separator before the HR group"
             for w in (1280, 1440, 1680):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
                 f = pg.evaluate(FIT); assert f["rows"] <= 6 and not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
+            for w in (900, 1024):
+                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
+                f = pg.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
         step("HR: same bar plus Scansione ▾, Formule ▾, Librerie after a separator, in words (no HDR/LST…), fits at every width", hr_barra)
 
@@ -197,27 +229,26 @@ try:
         step("HR menus from the keyboard (↓ opens, ↓ Enter chooses), last item kept on the button and reopened by a click, 6 tools in all", hr_menu)
 
         def hr_stato():
-            pg.click("#stbar [data-cmd=adducts]"); pg.click("#sb-pin"); pg.evaluate("BARRA.setWidth(400)")
+            pg.click("#stbar [data-cmd=adducts]"); pg.evaluate("BARRA.setWidth(400)")
             hr = pg.evaluate("JSON.parse(localStorage.getItem('qqq.barra.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('qqq.barra.lr')||'null')")
-            assert hr["pinned"] and hr["w"] == 400 and hr["tab"] == "adducts" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
+            assert hr["open"] and hr["w"] == 400 and hr["tab"] == "adducts" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
-            pg.click("#sb-pin"); pg.click("#sb-x")
+            pg.click("#sb-x")
         step("HR state in qqq.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
 
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def stretta():
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
-            pg.evaluate("(()=>{BARRA.setPinned(true);BARRA.setTab('adducts',{noFocus:true})})()"); pg.wait_for_timeout(300)
-            assert pg.evaluate("BARRA.pinned && BARRA.open")
-            pg.set_viewport_size({"width": 1000, "height": 900}); pg.wait_for_timeout(500)
-            assert not pg.is_visible("#dfiles") and not pg.evaluate("BARRA.pinned"), "a narrow window closes the pinned panel"
-            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(300)
-            assert pg.is_visible("#dfiles") and not pg.is_visible("#sb-pin"), "below 1100 px it is only a drawer: no pin"
-            assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 1000 * 0.9 + 1
+            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); pg.wait_for_timeout(300)
+            assert pg.evaluate("BARRA.open && !BARRA.sheet")
+            pg.set_viewport_size({"width": 800, "height": 900}); pg.wait_for_timeout(500)
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") and not pg.is_visible("#dpanels"), "below 900 px the panel is a sheet that replaces the workspace"
+            assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") >= 800 - 30 and pg.is_visible("#sb-x")
             assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            assert not pg.is_visible("#dfiles") and pg.is_visible("#dpanels")
             pg.evaluate("localStorage.removeItem('qqq.barra.hr')"); pg.set_viewport_size({"width": 1500, "height": 1000})
-        step("a narrow window closes the pinned panel; under 1100 px it is only a drawer, at most 90 % wide", stretta)
+        step("under 900 px the panel is a sheet (replaces the workspace, × and Esc give it back)", stretta)
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
@@ -231,8 +262,7 @@ try:
                     small = q.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).map(b=>b.dataset.cmd||b.dataset.cmdMain||b.dataset.cmdCar)")
                     assert not small, (w, small)
                     q.evaluate("BARRA.setTab('file',{noFocus:true})"); q.wait_for_timeout(300)
-                    assert q.is_visible("#dfiles") and not q.is_visible("#sb-pin") and not q.evaluate("BARRA.pinned"), (w, "iPad: only a drawer")
-                    assert q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= w * 0.9 + 1
+                    assert q.is_visible("#dfiles") and (w > 900) == (not q.evaluate("BARRA.sheet")), (w, "iPad: docked when landscape, a sheet when portrait")
                     big = q.evaluate("[...document.querySelectorAll('#sb-header button')].filter(b=>b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).length"); assert big == 0, big
                     q.set_viewport_size({"width": h, "height": w}); q.wait_for_timeout(600)           # rotation
                     ov = q.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(p=>p.el&&!p.el.classList.contains('max')).map(p=>p.x+p.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
@@ -254,7 +284,7 @@ try:
                 q.click("#tb-more"); q.wait_for_selector("#stmenu")
                 t = q.inner_text("#stmenu"); assert "Calcolatrice m/z" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
                 q.locator("#stmenu button", has_text="Calcolatrice m/z").click(); q.wait_for_timeout(500)
-                assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 * 0.9 + 1
+                assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 + 1
                 q.evaluate("BARRA.close(false)")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
             finally:
@@ -297,6 +327,7 @@ try:
         step("palette in HR: the HR items are there («Pannello a sinistra / a destra» too), Enter opens the panel", paletta_hr)
 
         def tastiera():
+            pg.evaluate("BARRA.close(false)")
             pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Alt+0"); pg.wait_for_timeout(100)
             assert pg.evaluate("!!document.activeElement.closest('#stbar')"), "Alt+0 reaches the bar"
             a = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain")

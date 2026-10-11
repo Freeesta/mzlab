@@ -45,10 +45,11 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels[0]._a.sr.length") >= 3
     step("live resize keeps panels fitted", live)
     def fold():
-        pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)      # below 1100 px the file list is only a drawer over the charts: it never narrows them
-        w0 = pg.evaluate("Q('#dpanels').clientWidth"); drawer(pg, pin=True); pg.wait_for_timeout(400)
-        assert pg.is_visible("#dfiles") and not pg.evaluate("BARRA.pinned") and pg.evaluate("Q('#dpanels').clientWidth") == w0 and not pg.is_visible("#sb-pin")
-        assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 700 * 0.9 + 1
+        pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)      # below 900 px the file list is a sheet that replaces the workspace
+        drawer(pg); pg.wait_for_timeout(400)
+        assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") and not pg.is_visible("#dpanels")
+        assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 700 + 1
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
         assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
     step("file list is only a drawer at narrow width", fold)
     def tabs():
