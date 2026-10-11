@@ -102,4 +102,4 @@ jobs:
           pathlib.Path("/tmp/inline.js").write_text("\n".join(inline), encoding="utf-8")
           PY
           # classic scripts share globals: check explore.js + inline together (no duplicate const)
-          cat mzlab/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
+          cat mzlab/web/explore.js mzlab/web/pannelli.js mzlab/web/grafici.js mzlab/web/picchi.js mzlab/web/eventi.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
