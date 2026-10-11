@@ -1,7 +1,9 @@
 """Writes docs/agenti/mappa.md: one line per first-party source file (purpose + where its main functions start), grouped by folder.
 
     python3 tools/indice.py              # rewrite docs/agenti/mappa.md
-    python3 tools/indice.py --controlla  # exit 1 if the file is out of date (CI); no files are written
+    python3 tools/indice.py --controlla  # exit 1 if a tracked source file is missing from the index or one has no folder group (CI); no files are written
+
+The file is generated and NOT committed (.gitignore): it would conflict on every parallel merge.
 
 Deterministic: only the tracked files and their text are read. The purpose is the first comment / docstring line of the file,
 otherwise the file name. `definizioni()` is also used by tools/controlla.py (size limits)."""
@@ -132,10 +134,11 @@ def render() -> str:
 def main() -> int:
     text = render()
     if "--controlla" in sys.argv:
-        if not OUT.exists() or OUT.read_text(encoding="utf-8") != text:
-            print("docs/agenti/mappa.md is out of date: run python3 tools/indice.py and commit it")
+        missing = [f for f in tracked() if not any(f.startswith(g[1]) for g in GROUPS)]
+        if missing:
+            print("files in no group of the index (add their folder to GROUPS in tools/indice.py):\n  " + "\n  ".join(missing[:20]))
             return 1
-        print(f"mappa.md up to date ({text.count(chr(10))} lines)")
+        print(f"index ok ({text.count(chr(10))} lines, {len(tracked())} files)")
         return 0
     OUT.write_text(text, encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)} ({text.count(chr(10))} lines)")
