@@ -168,11 +168,11 @@ class Item:
                 md = r.__dict__["_md"] = r.metadata()
             return {"prof1": mass_profile(sc1), "prof2": mass_profile(sc2), "instrument": md.get("instrument", ""),
                     "res1": med([s.res for s in sc1 if s.res]), "res2": med([s.res for s in sc2 if s.res]), "nce": bool(r.nce),
-                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2)), "max_level": max((s.level for s in r.scans), default=1),
+                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2)), "infusion": infusion_like(r.scans), "max_level": max((s.level for s in r.scans), default=1),
                     "acq": self._acq(sc1, sc2), "mode1": "profile" if any(s.profile for s in sc1[:50]) else "centroid" if sc1 else None,
                     "mode2": "profile" if any(s.profile for s in sc2[:50]) else "centroid" if sc2 else None}
         except Exception as e:  # noqa: BLE001 -- the fallback is the behaviour of today
-            return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False,
+            return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False, "infusion": False,
                     "hr_err": f"{type(e).__name__}: {e}"[:160]}
 
     @staticmethod
@@ -852,6 +852,16 @@ def rt_groups(points: list[dict], tol: float = 0.05) -> list[dict]:
         for p in mem:
             p["dm"] = p["mz"] - top["mz"]
     return out
+
+
+def infusion_like(scans) -> bool:
+    """A direct infusion as far as the scans tell: a single scan, or several scans that all sit at the same retention time."""
+    if not scans:
+        return False
+    if len(scans) == 1:
+        return True
+    rts = [s.rt for s in scans]
+    return max(rts) - min(rts) < 1e-6
 
 
 def file_parts(run) -> list[dict]:
