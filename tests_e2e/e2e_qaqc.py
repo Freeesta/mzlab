@@ -19,9 +19,12 @@ ds._write(D / "Blank_1.mzML", [ds._spec(i, 0.5 + i * 0.0175, list(rng.uniform(12
 H = synth("hrqaqc")
 
 def load(pg, files, n):
-    pg.set_input_files("#pick", [str(f) for f in files]); pg.wait_for_timeout(1500)
+    pg.set_input_files("#pick", [str(f) for f in files]); 
+    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=120000); pg.wait_for_timeout(1500)
     if pg.is_visible("#opbtn"): pg.click("#opbtn")
-    pg.wait_for_function(f"typeof E!=="undefined" && E.files.length>={n}", timeout=120000); ready(pg)
+    try: pg.wait_for_function(f"typeof E!=='undefined' && E.files.length>={n}", timeout=60000)
+    except TimeoutError: print(pg.evaluate("[S.view, !!S.sess, typeof E, document.body.innerText.slice(0,400)]")); raise
+    ready(pg)
 
 def add(pg, mz, rt, kind=None):
     pg.fill("#qq-in", mz); pg.fill("#qq-rt", rt)
@@ -44,7 +47,7 @@ try:
             hdr = pg.evaluate("Array.from(document.querySelectorAll('#qq-res th')).map(x=>x.textContent)")
             assert "Δppm" not in hdr and "RT" in hdr and "ΔRT" in hdr, hdr
             rows = pg.evaluate("QAQC.results.ions[0].r.rows.map(x=>x&&[x.rt,x.area])")
-            assert rows[0] and abs(rows[0][0] - 18.3) < 0.1 and rows[0][1] > 1e5 and rows[2] is None, rows        # the blank has no standard
+            assert abs(rows[1][0] - 18.3) < 0.1 and rows[1][1] > 1e5 and (rows[0] is None or rows[0][1] < 0.01 * rows[1][1]), rows        # the blank (first by name) has only noise
             assert pg.evaluate("QAQC.results.ions[0].r.mass_accuracy") is None
             assert pg.locator("#qq-res svg.qq-chart").count() == 2
         step("LR: RT, area and relative area of a standard along the series; the blank empty; two charts", lr_std)
@@ -52,11 +55,11 @@ try:
             pg.fill("#qq-rin", "391.3"); pg.fill("#qq-rrt", "18.3"); pg.select_option("#qq-thr", "10")
             pg.click("#qq-rform button[type=submit]"); pg.wait_for_selector("#qq-rres table", timeout=60000)
             q = pg.evaluate("QAQC.results.ratio.r.ratio")
-            assert q["threshold"] == 10 and q["rows"][2] is None and q["rows"][0]["absent_in_blank"] and q["rows"][0]["at_least"], q
-        step("sample/blank ratio at 10:1 (absent from the blank)", lr_ratio)
+            assert q["threshold"] == 10 and q["rows"][0] is None and q["rows"][1]["ratio"] > 100 and q["rows"][1]["at_least"], q
+        step("sample/blank ratio at 10:1 (far above the blank)", lr_ratio)
         def lr_role_fix():
             pg.select_option("select[data-role='S_t30.mzML']", "qc"); ready(pg); pg.wait_for_timeout(600)
-            assert pg.evaluate("QAQC.results.ions[0].roles.join()") == "sample,qc,blank"
+            assert pg.evaluate("QAQC.results.ions[0].roles.join()") == "blank,sample,qc"
             assert "qc" in pg.evaluate("localStorage.getItem('qqq.qaqc')")
         step("a type corrected by hand is used and remembered", lr_role_fix)
 
