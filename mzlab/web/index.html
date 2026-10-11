@@ -32,7 +32,7 @@ canvas{animation:none!important;transition:none!important}
 sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;font-family:inherit;font-weight:inherit}
 sub{bottom:-0.22em}
 sup{top:-0.45em}
-html{scroll-padding-top:calc(var(--hh,40px) + 6px)}header{position:sticky;top:0;z-index:6000;display:flex;gap:10px;align-items:center;padding:4px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;transition:box-shadow .15s}header.scrolled{box-shadow:0 2px 8px rgba(60,45,10,.18)}
+html{scroll-padding-top:calc(var(--hh,40px) + 6px)}header{position:sticky;top:0;z-index:6000;display:flex;gap:10px;align-items:center;padding:4px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:nowrap;transition:box-shadow .15s}header.scrolled{box-shadow:0 2px 8px rgba(60,45,10,.18)}
 header b{font-size:14px}header .ib{display:inline-flex;align-items:center;gap:5px}header .ib .ic{display:inline-flex;color:var(--accent)}header .sb{display:none}@media (max-width:1400px){header{gap:5px}header .lb{display:none}header .sb{display:inline}header button{padding-left:6px;padding-right:6px}}header .logo{height:22px;width:auto;display:block}.sp{flex:1}
 button,select,input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:3px 9px}button{cursor:pointer}#ex-jpg:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}button:hover{border-color:var(--accent)}
 main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:10px 14px}
@@ -83,36 +83,66 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
 :root{--sb-w:260px}
-#v-data{display:grid;grid-template-columns:var(--sb-col-w,var(--sb-w,260px)) minmax(0,1fr);gap:8px;padding:4px 6px 10px 6px;align-items:start}
-#v-data.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-col-w,var(--sb-w,260px))}
+/* Dati view: the side panel is a drawer over the charts (closed until a tool is chosen); "pinned" puts it in the grid next to them */
+#v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:4px 6px 10px 6px;align-items:start}
+#v-data.sb-pin{grid-template-columns:var(--sb-w) minmax(0,1fr)}
+#v-data.sb-pin.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w)}
 #v-data.sb-right #dfiles{order:2}
 #v-data.sb-right #v-workspace{order:1}
-#v-data.sb-right #sidebar-tablist{order:2;border-left:none;border-right:1px solid var(--line);border-radius:0 8px 8px 0}
-#v-data.sb-right #sb-pane{order:1;border-radius:8px 0 0 8px}
 #v-data.sb-right #sidebar-resize-handle{left:-3px;right:auto}
-#v-data.fold{grid-template-columns:1fr!important}
-#v-data.fold #dfiles{display:none!important}
-#dfiles{position:sticky;top:calc(var(--hh,40px) + 4px);height:calc(100vh - var(--hh,40px) - 16px);max-height:calc(100vh - var(--hh,40px) - 16px);display:flex;flex-direction:row;align-items:stretch;z-index:40;box-sizing:border-box}
-#sidebar-tablist{flex:0 0 38px;width:38px;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;border:1px solid var(--line);border-right:none;background:var(--bg);border-radius:8px 0 0 8px;overflow-y:auto;overflow-x:hidden;box-sizing:border-box}
-#sidebar-tablist button{width:32px;height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid transparent;border-radius:6px;background:transparent;padding:2px;cursor:pointer;color:var(--muted);font-size:8.5px;line-height:1;text-align:center;box-sizing:border-box}
-#sidebar-tablist button svg{width:16px;height:16px;flex:none}
-#sidebar-tablist button span{max-width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px}
-#sidebar-tablist button:hover{background:var(--soft);color:var(--ink)}
-#sidebar-tablist button.on{background:var(--sel);color:var(--accent);border-color:var(--accent);font-weight:600}
-#sidebar-tablist .sb-sep{width:24px;height:1px;background:var(--line);margin:4px auto;flex:none}
-#hri-tabs{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%}
-#sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:0 8px 8px 0;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
-@media (max-width:900px){
-#v-data{grid-template-columns:minmax(0,1fr)}
-#dfiles{position:relative;height:auto;max-height:none}
-}
+#dfiles{position:fixed;top:var(--hh,40px);bottom:0;left:0;width:min(var(--sb-w),90vw);display:none;flex-direction:column;align-items:stretch;z-index:5000;box-sizing:border-box;padding:4px 0 6px 6px}
+#v-data.sb-right #dfiles{left:auto;right:0;padding:4px 6px 6px 0}
+#v-data.sb-open #dfiles{display:flex;animation:sb-in-l .18s ease}
+#v-data.sb-right.sb-open #dfiles{animation-name:sb-in-r}
+@keyframes sb-in-l{from{transform:translateX(-30%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes sb-in-r{from{transform:translateX(30%);opacity:.3}to{transform:none;opacity:1}}
+#v-data.sb-open:not(.sb-pin) #sb-pane{box-shadow:0 8px 28px rgba(0,0,0,.28)}
+#v-data.sb-pin #dfiles{position:sticky;top:calc(var(--hh,40px) + 4px);bottom:auto;left:auto;right:auto;width:auto;height:calc(100vh - var(--hh,40px) - 16px);max-height:calc(100vh - var(--hh,40px) - 16px);padding:0;transform:none;animation:none!important;z-index:40}
+#v-data.sb-right.sb-pin #dfiles{right:auto;padding:0}
+@media (prefers-reduced-motion:reduce){#v-data.sb-open #dfiles{animation:none}}
+#v-data.sb-instant #dfiles{animation:none!important}
+#sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
+#sb-pane:focus{outline:none}#sb-pane:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#sb-grip{display:inline-flex;color:var(--muted);cursor:grab;padding:2px 2px 2px 0}
+#sb-header{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#sb-header button,#sb-header input{cursor:pointer;touch-action:manipulation}
+body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!important}
+.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;width:50vw;z-index:5200;display:flex;align-items:center;justify-content:center;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font-weight:700;pointer-events:none;box-sizing:border-box}
+.sb-dz.l{left:0}.sb-dz.r{right:0}
+.sb-dz.hot{background:color-mix(in srgb,var(--accent) 26%,transparent);border-style:solid}
+.sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
+@media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
+/* toolbar of the header */
+@media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
+#stbar{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
+#stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
+#stbar .tb:hover{background:var(--soft)}
+#stbar .tb .ti{display:inline-flex;color:var(--accent)}
+#stbar .tb .tl{display:none}
+#stbar.tb-lab .tb .tl{display:inline}
+#stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+#stbar .tb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#stbar .tb-split{display:inline-flex;flex:none}
+#stbar .tb-split .tb-main{border-top-right-radius:0;border-bottom-right-radius:0}
+#stbar .tb-split .tb-car{border-top-left-radius:0;border-bottom-left-radius:0;padding:4px 3px;margin-left:-1px}
+#stbar .tb-sep{width:1px;align-self:stretch;margin:4px 3px;background:var(--line);flex:none}
+#stbar [hidden]{display:none!important}
+#stmenu{position:fixed;z-index:7100;min-width:190px;max-width:min(340px,calc(100vw - 16px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:4px;display:flex;flex-direction:column;gap:1px}
+#stmenu button{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;padding:6px 10px;border-radius:5px;color:var(--ink);cursor:pointer;font-size:13px;white-space:normal;min-height:30px}
+#stmenu button:hover,#stmenu button:focus-visible{background:var(--sel);outline:none}
+#stmenu button .mi{display:inline-flex;color:var(--accent);flex:none;width:16px}
+#stmenu button[aria-checked=true]{font-weight:700}
+#stmenu button[aria-checked=true]::after{content:"";margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+#stmenu .mh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:6px 10px 2px}
+#stmenu hr{border:0;border-top:1px solid var(--line);margin:3px 0}
+@media (pointer:coarse){#stbar .tb{min-height:40px;min-width:40px;justify-content:center}#stmenu button{min-height:40px}#sb-header button{min-width:40px;min-height:40px}}
 #sb-header{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--line);flex:none;margin:0}
 #sb-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-dock-btn{background:transparent;border:0;padding:2px 4px;cursor:pointer;color:var(--muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
 .sb-dock-btn:hover{color:var(--ink);background:var(--soft)}
 #sb-panels{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 6px}
 #sb-panels [role="tabpanel"][hidden]{display:none!important}
-#sidebar-resize-handle{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:60}
+#sidebar-resize-handle{position:absolute;right:-3px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:60;touch-action:none}
 #sidebar-resize-handle:hover,body.sb-resizing #sidebar-resize-handle{background:var(--accent);opacity:0.6}
 body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #calcdlg.sb-docked{position:static!important;width:100%!important;max-height:none!important;box-shadow:none!important;padding:0!important;border:none!important;background:transparent!important}
@@ -229,12 +259,10 @@ html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justi
 html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
 </style></head><body>
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
-  <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
+  <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav>
+  <div id="stbar" role="toolbar" data-i18n-aria-label="tb.aria" aria-label="Strumenti"></div>
   <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button><button id="session-menu-btn" class="ib" hidden data-i18n-title="header.sessionMenu.title" title="Opzioni della sessione e flusso di lavoro" aria-label="Menu sessione" style="padding:0 5px;margin-left:-3px;font-size:11px">&#9662;</button></span>
-  <button id="np-pt" class="ib" data-i18n-title="header.periodic.title" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span><span class="lb" data-i18n="header.periodic.long">Tavola periodica</span><span class="sb" data-i18n="header.periodic.short">Tavola</span></button><button id="np-ad" class="ib" data-i18n-title="header.adducts.title" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span><span data-i18n="header.adducts">Addotti</span></button>
-  <button id="np-calc2" class="ib" data-i18n-title="header.calc.title" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb" data-i18n="header.calc.long">Calcolatrice m/z</span><span class="sb" data-i18n="header.calc.short">Calcolatrice</span></button><button id="np-nl" class="ib" data-i18n-title="header.losses.title" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb" data-i18n="header.losses.long">Perdite neutre</span><span class="sb" data-i18n="header.losses.short">Perdite</span></button><button id="np-liste" class="ib" data-i18n-title="header.lists.title" title="Liste di riferimento e contaminanti noti (Keller, laboratorio e sospetti)"><span class="ic" data-ic="liste"></span><span class="lb" data-i18n="header.lists">Liste</span><span class="sb" data-i18n="header.lists">Liste</span></button>
-  <button id="np-pc" data-i18n-title="header.pubchem.title" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura">PubChem &#8599;</button>
-  <button id="np-bt" data-i18n-title="header.bio.title" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button><button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
+  <button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
 <div id="phone" hidden>
   <h1 data-i18n="phone.title">Siete su uno smartphone</h1>
   <p class="phw" data-i18n-html="phone.warn"><b>Il sito non è ottimizzato per gli smartphone.</b> L'analisi dei dati (scheda Dati), il disegno delle molecole (Disegno) e gli esercizi della Pratica hanno bisogno di uno schermo grande: usateli da un computer o da un tablet.</p>
@@ -245,9 +273,9 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 </div>
 <div id="err"></div>
 <section id="v-data" hidden>
- <aside id="dfiles"><div id="sidebar-tablist" role="tablist" data-i18n-aria-label="side.tabs.aria" aria-label="Schede della barra laterale"><button type="button" role="tab" id="sb-tab-file" data-t="file" data-i18n-title="side.file" title="File" data-i18n-aria-label="side.file" aria-label="File" aria-selected="true" aria-controls="sb-panel-file" class="on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h6.5l3.5 3.5v7.5H3z"/><path d="M9.5 2.5V6H13"/></svg><span data-i18n="side.file">File</span></button><button type="button" role="tab" id="sb-tab-calc" data-t="calc" data-i18n-title="side.calc.title" title="Calcolatrice m/z" data-i18n-aria-label="side.calc.title" aria-label="Calcolatrice m/z" aria-selected="false" aria-controls="sb-panel-calc"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2" width="11" height="12" rx="2"/><path d="M5 5h6M5 8h2M9 8h2M5 11h2M9 11h2"/></svg><span data-i18n="side.calc.short">Calc</span></button><button type="button" role="tab" id="sb-tab-losses" data-t="losses" data-i18n-title="side.losses.title" title="Perdite neutre (Δm)" data-i18n-aria-label="side.losses.title" aria-label="Perdite neutre (Δm)" aria-selected="false" aria-controls="sb-panel-losses"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 13.5h7L6 3.5z"/><path d="M11 9.5l3.5 3.5M14.5 9.5l-3.5 3.5"/></svg><span data-i18n="side.losses.short">Perdite</span></button><button type="button" role="tab" id="sb-tab-adducts" data-t="adducts" data-i18n-title="side.adducts.title" title="Addotti ESI" data-i18n-aria-label="side.adducts.title" aria-label="Addotti ESI" aria-selected="false" aria-controls="sb-panel-adducts"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="9" r="4"/><circle cx="10" cy="6" r="3.5"/><path d="M6 7v4M4 9h4"/></svg><span data-i18n="side.adducts.short">Addotti</span></button><button type="button" role="tab" id="sb-tab-lists" data-t="lists" data-i18n-title="lst.title" title="Liste di riferimento e contaminanti" data-i18n-aria-label="lst.title" aria-label="Liste di riferimento e contaminanti" aria-selected="false" aria-controls="sb-panel-lists"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h7"/><circle cx="13" cy="12" r="1.5"/></svg><span data-i18n="header.lists">Liste</span></button><div id="sb-hr-sep" class="sb-sep" role="separator" hidden></div><div id="hri-tabs" role="tablist" data-i18n-aria-label="side.hr.aria" aria-label="Schede Banco HR" hidden></div></div><div id="sb-pane" class="card"><div id="sb-header" class="bar"><b id="sb-title" data-i18n="side.file">File</b><button class="hq" id="sb-help" data-help="" data-i18n-title="common.help" title="Aiuto" style="display:none">?</button><span class="sp"></span><button id="addf" data-i18n-title="side.addf" title="Carica altri file">+</button><button id="sb-side-tog" class="sb-dock-btn" data-i18n-title="side.dockTog.title" title="Sposta la barra a destra o a sinistra" data-i18n-aria-label="side.dockTog.aria" aria-label="Sposta la barra laterale"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5v-7A1.5 1.5 0 0 1 2.5 3z"/><path d="M6 3v10"/><path d="M9 7l2 1.5L9 10"/></svg></button><button id="ffold" data-i18n-title="side.fold" title="Nascondi l'elenco dei file" data-i18n-aria-label="side.fold" aria-label="Nascondi l'elenco dei file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6"/><path d="M6 2.5v11"/><path d="M11.2 6.2 9.4 8l1.8 1.8"/></svg></button></div><div id="sb-panels"><div id="sb-panel-file" role="tabpanel" aria-labelledby="sb-tab-file"><div id="flst"></div><div id="fnote"></div></div><div id="sb-panel-calc" role="tabpanel" aria-labelledby="sb-tab-calc" hidden></div><div id="sb-panel-losses" role="tabpanel" aria-labelledby="sb-tab-losses" hidden></div><div id="sb-panel-adducts" role="tabpanel" aria-labelledby="sb-tab-adducts" hidden></div><div id="sb-panel-lists" role="tabpanel" aria-labelledby="sb-tab-lists" hidden></div><div id="hrinfo" class="card" role="tabpanel" data-i18n-aria-label="side.info.aria" aria-label="Barra informazioni del banco" hidden><div id="hri-ttl"></div><div id="hri-body"></div></div></div><div id="sidebar-resize-handle" class="sb-resizer" data-i18n-title="side.resize" title="Trascina per regolare la larghezza (doppio clic per ripristinare)"></div></div></aside>
+ <aside id="dfiles"><div id="sb-pane" class="card" role="region" tabindex="-1" aria-labelledby="sb-title"><div id="sb-header" class="bar"><span id="sb-grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3.5" cy="3" r="1.2"/><circle cx="8.5" cy="3" r="1.2"/><circle cx="3.5" cy="8" r="1.2"/><circle cx="8.5" cy="8" r="1.2"/><circle cx="3.5" cy="13" r="1.2"/><circle cx="8.5" cy="13" r="1.2"/></svg></span><b id="sb-title" data-i18n="cmd.file.name">Elenco dei file</b><button class="hq" id="sb-help" data-help="" data-i18n-title="common.help" title="Aiuto" style="display:none">?</button><span class="sp"></span><button id="addf" data-i18n-title="side.addf" title="Carica altri file">+</button><button id="sb-pin" class="sb-dock-btn" type="button" aria-pressed="false" data-i18n-title="side.pin" title="Fissa il pannello accanto ai grafici" data-i18n-aria-label="side.pin" aria-label="Fissa il pannello accanto ai grafici"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.8l4.7 4.7-2 .8-2.4 2.4.1 3-1.2 1.2-3.1-3.1-4.3 4.3M6.7 4.7l-.3-.1-1.5.1L4.1 5.5l6.4 6.4"/></svg></button><button id="sb-x" class="sb-dock-btn" type="button" data-i18n-title="side.close" title="Chiudi il pannello" data-i18n-aria-label="side.close" aria-label="Chiudi il pannello"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div><div id="sb-panels"><div id="sb-panel-file" role="region" aria-labelledby="sb-title"><div id="flst"></div><div id="fnote"></div></div><div id="sb-panel-calc" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-losses" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-adducts" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-lists" role="region" aria-labelledby="sb-title" hidden></div><div id="hrinfo" class="card" role="region" data-i18n-aria-label="side.info.aria" aria-label="Barra informazioni del banco" hidden><div id="hri-ttl"></div><div id="hri-body"></div></div></div><div id="sidebar-resize-handle" class="sb-resizer" data-i18n-title="side.resize" title="Trascina per regolare la larghezza (doppio clic per ripristinare)"></div></div></aside>
  <div id="v-workspace" style="min-width:0">  <div id="dtabs"></div>
-  <div class="bar" id="tools"><button id="funfold" hidden data-i18n-title="side.unfold" title="Mostra l'elenco dei file" data-i18n-aria-label="side.unfold" aria-label="Mostra l'elenco dei file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6"/><path d="M6 2.5v11"/><path d="M9.2 6.2 11 8 9.2 9.8"/></svg></button>
+  <div class="bar" id="tools">
    <span class="tbx" id="g-file"><span id="navfile"><button id="fprev" data-i18n-title="bar.prev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" data-i18n-title="bar.next" title="File successivo (freccia destra)">&#9654;</button></span><span class="seg" id="fmode" data-i18n-title="bar.fmode.title" title="Con «Solo il file selezionato» i grafici mostrano un file alla volta (gli XIC restano, cambia il campione: le frecce ◀ ▶ lo cambiano); con «Tutti i file sovrapposti» i file spuntati nell'elenco sono disegnati insieme."><button data-m="sel" data-i18n="bar.fmode.sel">Solo il selezionato</button><button data-m="all" data-i18n="bar.fmode.all">Tutti sovrapposti</button></span></span>
    <span class="tbx" id="g-add"><button id="np-chrom" data-i18n="bar.addChrom">+ Cromatogramma</button><button id="np-spec" data-i18n="bar.addSpec">+ Spettro</button><button id="np-map" data-i18n-title="bar.addMap.title" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT" data-i18n="bar.addMap">+ Mappa RT-m/z</button><button id="np-xic" data-i18n-title="bar.addXic.title" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-mrm" data-i18n="bar.addMrm">+ Transizioni MRM</button></span>
    <span class="tbx" id="g-tools"><button id="np-tile" data-i18n-title="bar.tile.title" title="Ordina i pannelli: uno sotto l'altro, larghi come la pagina" data-i18n-aria-label="bar.tile.aria" aria-label="Ordina i pannelli"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="12" height="3.2" rx=".8"/><rect x="2" y="6.4" width="12" height="3.2" rx=".8"/><rect x="2" y="10.8" width="12" height="3.2" rx=".8"/></svg></button><button id="np-closeall" data-i18n-title="bar.closeAll.title" title="Chiudi tutti i pannelli aperti" data-i18n-aria-label="bar.closeAll.aria" aria-label="Chiudi tutti i pannelli"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></span>
@@ -476,7 +504,6 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/libreria.js"></script>
 <script src="static/touch.js"></script>
 <script src="static/workflow.js"></script>
-<script>document.getElementById("np-pc").addEventListener("click",()=>window.open("https://pubchem.ncbi.nlm.nih.gov/","_blank","noopener"));</script>
 <script src="static/tables.js"></script>
 <script src="static/barra.js"></script>
 <script src="static/help.js"></script>

@@ -63,15 +63,15 @@ try:
             v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["3d"], v
         step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
         def grips():
-            pg.evaluate("setFold(false)")
+            pg.evaluate("(()=>{BARRA.setPinned(true);BARRA.setTab('file',{noFocus:true})})()")
             pg.click("#np-spec"); pg.wait_for_timeout(1200)
             ps = pg.evaluate("E.panels.filter(q=>q.full).map(q=>q.id)"); assert len(ps) >= 2, ps
             for w in (1100, 1440, 1920):
                 for fold in (False, True):
-                    pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"setFold({str(fold).lower()})"); pg.wait_for_timeout(500)
+                    pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate("(()=>{BARRA.setPinned(true);BARRA.setTab('file',{noFocus:true})})()" if not fold else "BARRA.close(false)"); pg.wait_for_timeout(500)
                     ov = pg.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(q=>!q.el.classList.contains('max')).map(q=>q.x+q.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
                     assert ov[0] <= 1 and ov[1] <= 2, (w, fold, ov)               # no horizontal scroll, no panel wider than the column
-            pg.set_viewport_size({"width": 1280, "height": 1000}); pg.evaluate("setFold(false)"); pg.wait_for_timeout(400)
+            pg.set_viewport_size({"width": 1280, "height": 1000}); pg.evaluate("(()=>{BARRA.setPinned(true);BARRA.setTab('file',{noFocus:true})})()"); pg.wait_for_timeout(400)
             assert pg.evaluate("getComputedStyle(E.panels[0].el).resize") == "none"
             assert pg.locator(".pnl .pgrip.t").count() >= 2 and pg.locator(".pnl .pgrip.b").count() >= 2
         step("panels: grips on the top and bottom edge, never wider than the column at 1100, 1440 and 1920 px (sidebar open and closed)", grips)

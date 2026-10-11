@@ -26,6 +26,7 @@ try:
             pg.click("#np-calc2"); pg.wait_for_timeout(300)
         step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
         def usable():
+            pg.click("#sb-pin"); pg.wait_for_timeout(300)               # pinned next to the charts the calculator stays open while the student works on them
             c = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'&&q.tab==='full'),r=p.cv.getBoundingClientRect();return {x:r.left+p._a.X(14.3),y:r.bottom-60}})()")
             pg.evaluate("window.scrollTo(0,0)")
             pg.mouse.click(c["x"], c["y"] if c["y"] < 700 else 400); pg.wait_for_timeout(500)

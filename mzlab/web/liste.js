@@ -799,17 +799,5 @@ const LISTE = (() => {
   };
 })();
 
-if (typeof document !== "undefined") {
-  const bindListeBtn = () => {
-    const b = document.querySelector("#np-liste");
-    if (b) b.onclick = () => {
-      if (window.BARRA && BARRA.isDataView()) BARRA.setTab("lists");
-      else LISTE.open();
-    };
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindListeBtn);
-  else bindListeBtn();
-}
-
 if (typeof module !== "undefined") module.exports = LISTE;
 if (typeof window !== "undefined") window.LISTE = LISTE;

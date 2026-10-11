@@ -40,7 +40,7 @@ try:
             assert pg.evaluate("!document.querySelector('dialog.m3d')")
         step("«Open in 3D» button opens the viewer, Esc closes it", toggle)
         def adding():
-            pg.click("#addf"); pg.wait_for_timeout(600)
+            drawer(pg); pg.click("#addf"); pg.wait_for_timeout(600)
             assert pg.is_visible("#loaded") and "B_FullMass-t0" in pg.inner_text("#loaded")
             pg.click("#backdata"); pg.wait_for_timeout(600)
             assert pg.is_visible("#v-data")

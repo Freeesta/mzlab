@@ -1,7 +1,7 @@
 """Window sizes: phone, tablet, laptop, large screen, and live resizing. No horizontal page scroll, panels follow the window, nothing unreadable."""
 import sys
 from playwright.sync_api import sync_playwright
-from lib import Run, mz, SH
+from lib import Run, mz, SH, drawer
 
 SIZES = [(360, 740), (768, 1024), (1024, 700), (1500, 900), (2560, 1300)]
 R = []
@@ -45,9 +45,12 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels[0]._a.sr.length") >= 3
     step("live resize keeps panels fitted", live)
     def fold():
-        pg.set_viewport_size({"width": 700, "height": 900}); pg.evaluate("setFold(true)"); pg.wait_for_timeout(600)      # below 900 px the sidebar is unpinned: #ffold only closes its overlay, the fold is the setting
-        assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); pg.click("#funfold"); pg.wait_for_timeout(400)
-    step("file list fold at narrow width", fold)
+        pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)      # below 1100 px the file list is only a drawer over the charts: it never narrows them
+        w0 = pg.evaluate("Q('#dpanels').clientWidth"); drawer(pg, pin=True); pg.wait_for_timeout(400)
+        assert pg.is_visible("#dfiles") and not pg.evaluate("BARRA.pinned") and pg.evaluate("Q('#dpanels').clientWidth") == w0 and not pg.is_visible("#sb-pin")
+        assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 700 * 0.9 + 1
+        assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+    step("file list is only a drawer at narrow width", fold)
     def tabs():
         for w in (360, 1500):
             pg.set_viewport_size({"width": w, "height": 800})

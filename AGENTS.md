@@ -62,3 +62,4 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 - Un `title` su un iframe diventa un suggerimento su tutto il contenuto: usa `aria-label`. `ask()` restituisce `null` anche per il testo vuoto: per «valore predefinito» usa una parola («auto»).
 - Un `verifica.py` lanciato mentre si modificano i file contamina il risultato: un giro alla volta su un worktree fermo.
 - Il proxy GitHub del cloud può ignorare la cancellazione di rami remoti: Federico li cancella da https://github.com/Freeesta/mzlab/branches.
+- **Tour guidato**: ogni modifica dell'interfaccia (pulsanti, barre, pannelli, id o classi spostati) deve lasciare validi `tour.js`, `tests_e2e/e2e_tour.py` e l'invito «Start the tour»: controlla che ogni passo trovi il suo bersaglio visibile e riscrivi i passi se i pulsanti si spostano.

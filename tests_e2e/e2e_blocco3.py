@@ -59,14 +59,14 @@ try:
             t = pg.inner_text("#calcout").replace("\u2212", "-"); print(t[:200].replace("\n", " | "))
             assert "[M+H]+" in t and "[M-H]-" not in t and "mostra anche ESI" in t, t
             pg.click("#calcmore"); pg.wait_for_timeout(300); t = pg.inner_text("#calcout").replace("\u2212", "-"); assert "[M-H]-" in t and "ESI+" in t, t
-            shut(pg, "#calcx")
+            pg.evaluate("BARRA.close(false)"); shut(pg, "#calcx")
         step("3.4: the calculator shows only ESI+ adducts for positive files", calc)
         def neg():
             pg.evaluate("CALC_MORE=false;E.files.forEach(f=>{f.polarity='negative'})"); pg.click("#np-calc2"); pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#calcout").replace("\u2212", "-"); assert "[M-H]-" in t and "[M+H]+" not in t and "[M+Na]+" not in t, t
             pg.evaluate("E.files.forEach(f=>{f.polarity='mixed'})"); pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#calcout").replace("\u2212", "-"); assert "ESI+" in t and "[M-H]-" in t and "[M+H]+" in t, t
-            shut(pg, "#calcx")
+            pg.evaluate("BARRA.close(false)"); shut(pg, "#calcx")
         step("3.4: negative files -> only negative adducts; mixed -> both under ESI+ / ESI-", neg)
     r.close()
 except Exception as e:
