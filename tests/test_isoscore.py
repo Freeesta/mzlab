@@ -97,7 +97,7 @@ def test_halogenated_candidate_wins_with_the_full_pattern():
 def test_api_passes_peaks_and_weights():
     c = parse_formula(TRUE)
     obs = ";".join(f"{m:.5f}:{i:.2f}" for m, i in _obs(c))
-    q = {"mz": f"{ion_mass(c, 1):.5f}", "elements": "C:0-20,H:0-40,N:0-6,O:0-6,S:0-2", "tol": "5", "obs": obs, "r200": "70000", "sppm": "3", "sint": "0.15", "w": "1,2,0.5"}
+    q = {"mz": f"{ion_mass(c, 1):.5f}", "elements": "C:0-20,H:0-40,N:0-6,O:0-6,S:0-2", "tol": "5", "obs": obs, "r200": "70000", "sppm": "3", "sint": "0.10", "w": "1,2,0.5"}
     code, _, body, _ = dispatch(None, "GET", "/api/composition", q)
     j = json.loads(body)
     assert code == 200 and j["results"][0]["formula"] == TRUE and j["results"][0]["score"]["iso"] > 0.5

@@ -68,7 +68,7 @@ def rank_of(res, truth):
     return 99
 
 
-def run(n=150, seed=7, r200=70000.0, tol=10.0):
+def run(n=150, seed=7, r200=70000.0, tol=8.0):
     rng = random.Random(seed)
     table = {}
     for halo in (False, True):

@@ -62,7 +62,7 @@ try:
             assert "massa" in row and "isotopi" in row and "%" in row, row
             det = pg.inner_text("#cmp-det"); assert "Soglie" in det and "contributo" in det.lower(), repr(det)
             pg.fill("#cmp-w0", "0"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)                     # the weights are editable
-            assert "pesi massa, isotopi, frammenti = 0,1,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")
+            assert "pesi massa, isotopi, frammenti = 0,2,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("full isotope score and fragment constraint: columns, terms per peak, editable weights", score)
     r.close()

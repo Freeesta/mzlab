@@ -41,6 +41,7 @@ RATIO_RULES = {"HC": ("H", 0.2, 3.1), "NC": ("N", 0.0, 1.3), "OC": ("O", 0.0, 1.
                "FC": ("F", 0.0, 1.5), "ClC": ("Cl", 0.0, 0.8), "BrC": ("Br", 0.0, 0.8)}
 RULES = list(RATIO_RULES) + ["LEWIS", "SENIOR"]
 ATOMIC_NUMBER = {"H": 1, "C": 6, "N": 7, "O": 8, "F": 9, "Na": 11, "Si": 14, "P": 15, "S": 16, "Cl": 17, "K": 19, "Br": 35, "I": 53, "Se": 34}
+FRAG_POOL = 40                                      # candidates (best by mass and isotopes) that get the fragment constraint
 MAX_GRID = 3_000_000                                # combinations of the elements other than C and H
 
 
@@ -120,8 +121,8 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             tol: float = 5.0, unit: str = "ppm", rdb: tuple[float, float] = (-1.0, 100.0), nitrogen: str = "none",
             rules: list[str] | None = None, max_results: int = 10, parent: str | dict | None = None, dbeq: dict[str, float] | None = None,
             m1: float | None = None, m2: float | None = None, iso_tol: float = 0.20, obs: list[tuple[float, float]] | None = None,
-            frags: list[tuple[float, float]] | None = None, r200: float = 70000.0, sigma_ppm: float = 3.0, sigma_int: float = 0.15,
-            weights: tuple[float, float, float] = (1.0, 1.0, 1.0), pool: int = 100) -> dict:
+            frags: list[tuple[float, float]] | None = None, r200: float = 70000.0, sigma_ppm: float = 3.0, sigma_int: float = 0.10,
+            weights: tuple[float, float, float] = (1.0, 2.0, 1.0), pool: int = 100) -> dict:
     """Formulas of the ion at `mz`.
 
     elements   {symbol: (min, max)} of the ION formula (default: C, H, N, O, S, P, F, Cl, Br up to sensible limits); isotopes (13C, 15N, 34S, 37Cl, 81Br,
@@ -225,6 +226,8 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
         if rn in failed:
             sel &= ~failed[rn]
     idx = np.nonzero(sel)[0]
+    if len(idx):                                                     # the rounding of H (-1, 0, +1) can reach the same formula twice
+        idx = idx[np.unique(X[idx], axis=0, return_index=True)[1]]
     if not len(idx):
         return empty
     nfail = sum(failed[rn][idx].astype(int) for rn in RULES)
@@ -251,18 +254,23 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             sc = isotope_score(counts, z, obs, r200=r200, sigma_ppm=sigma_ppm, sigma_int=sigma_int)
             iso.update({"score": round(sc["score"], 4), "peaks": sc["peaks"], "extra": sc["extra"], "n_missing": sc["n_missing"], "n_extra": sc["n_extra"]})
         res["iso"] = iso
-        if frags:
-            from .isoscore import fragment_constraint
-            res["frag"] = fragment_constraint(res["formula"], z, frags, ppm=max(tol, 5.0) if unit == "ppm" else 10.0)
         if scored:
             from .isoscore import combined
             mt = math.exp(-0.5 * (res["delta_ppm"] / sigma_ppm) ** 2)
-            fr = res.get("frag", {}).get("explained")
-            res["score"] = {"mass": round(mt, 4), "iso": iso.get("score"), "frag": None if fr is None else round(fr, 4),
-                            "total": round(combined(mt, iso.get("score"), fr, weights), 4)}
+            res["score"] = {"mass": round(mt, 4), "iso": iso.get("score"), "frag": None, "total": round(combined(mt, iso.get("score"), None, weights), 4)}
         out.append(res)
     if scored:
         out.sort(key=lambda r: -r["score"]["total"])
+        if frags:                                  # the fragment constraint is the slow term: only the best FRAG_POOL by mass and isotopes get it
+            from .isoscore import combined, fragment_constraint
+            out = out[:max(max_results, FRAG_POOL)]
+            for res in out:
+                res["frag"] = fragment_constraint(res["formula"], z, frags, ppm=max(tol, 5.0) if unit == "ppm" else 10.0)
+                fr = res["frag"]["explained"]
+                sc = res["score"]
+                sc["frag"] = None if fr is None else round(fr, 4)
+                sc["total"] = round(combined(sc["mass"], sc["iso"], fr, weights), 4)
+            out.sort(key=lambda r: -r["score"]["total"])
         out = out[:max_results]
     return {"mz": mz, "charge": z, "tol": tol, "unit": unit, "ion": ion, "n_candidates": int(len(idx)), "results": out}
 

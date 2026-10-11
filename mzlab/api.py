@@ -23,12 +23,12 @@ def _peaks(text):
 
 
 def _weights(text):
-    """'1,1,0.5' -> (mass, isotopes, fragments) weights; missing or bad = 1,1,1."""
+    """'1,1,0.5' -> (mass, isotopes, fragments) weights; missing or bad = 1,2,1."""
     try:
         w = [max(0.0, float(x)) for x in (text or "").split(",")]
     except ValueError:
         w = []
-    return tuple((w + [1.0, 1.0, 1.0])[:3])
+    return tuple((w + [1.0, 2.0, 1.0][len(w):])[:3])
 
 
 def _json(obj, code=200):
@@ -277,7 +277,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      rules=[x for x in (q.get("rules") or "").split(",") if x], max_results=min(int(q.get("max", 10)), 200),
                                      parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
                                      iso_tol=float(q.get("isotol", 0.2)), obs=_peaks(q.get("obs")), frags=_peaks(q.get("frags")),
-                                     r200=float(q.get("r200", 70000)), sigma_ppm=float(q.get("sppm", 3)), sigma_int=float(q.get("sint", 0.15)),
+                                     r200=float(q.get("r200", 70000)), sigma_ppm=float(q.get("sppm", 3)), sigma_int=float(q.get("sint", 0.10)),
                                      weights=_weights(q.get("w"))))
             except (ValueError, KeyError, IndexError) as e:
                 return _fail(e)

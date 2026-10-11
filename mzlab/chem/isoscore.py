@@ -18,7 +18,7 @@ import math
 import numpy as np
 
 from .elements import ELECTRON, MASS
-from .subformulas import MAX_COMBINATIONS, subformulas
+from .subformulas import submasses
 from ..i18n import UserError
 
 # exact masses and natural abundances (fraction) of the isotopes: element -> [(mass, abundance)]
@@ -38,6 +38,7 @@ ISO = {
     "I": [(126.9044719, 1.0)],
 }
 MERGE_TOL = 0.0005            # Da: isotopologues closer than this are one peak (as in hr.js)
+WEIGHT_POW = 0.0              # a peak weighs rel ** WEIGHT_POW in the score (0: every peak the same, the monoisotopic one is fitted by construction; 1: its share of the theory)
 MAX_SHIFT = 6                 # nominal mass units above the monoisotopic peak that are considered
 
 
@@ -96,10 +97,10 @@ def merge_res(pat: list[dict], r200: float) -> list[dict]:
 
 
 def isotope_score(counts: dict[str, int], z: int, obs: list[tuple[float, float]], *, r200: float = 70000.0, sigma_ppm: float = 3.0,
-                  sigma_int: float = 0.15, min_rel: float = 1.0, noise_rel: float = 1.0) -> dict:
+                  sigma_int: float = 0.10, min_rel: float = 1.0, noise_rel: float = 1.0) -> dict:
     """Score of the isotope pattern of `counts` against the observed peaks `obs` = [(mz, intensity)] around the monoisotopic peak.
 
-    sigma_ppm  expected mass error of a peak (ppm); sigma_int  expected relative error of an intensity (0.15 = 15 %, log-normal).
+    sigma_ppm  expected mass error of a peak (ppm); sigma_int  expected relative error of an intensity (0.10 = 10 %, log-normal).
     min_rel    theoretical peaks below this % of the base peak are not required to be seen; noise_rel  observed peaks below this % are ignored.
     Returns {score, peaks: [{mz, rel, obs_mz, obs_rel, d_ppm, t_mass, t_int, t, w}], extra: [{mz, rel, w}], scale, n_missing, n_extra}. Each theoretical
     peak carries its weight w (share of the theory), the Gaussian mass term and the log-normal intensity term (their product t is its contribution).
@@ -126,17 +127,18 @@ def isotope_score(counts: dict[str, int], z: int, obs: list[tuple[float, float]]
     num = sum(p["rel"] * o[mt[0]][1] for p, mt in zip(th, match) if mt)
     den = sum(p["rel"] ** 2 for p, mt in zip(th, match) if mt)
     scale = num / den if den > 0 else None                          # observed intensity per unit of theoretical %
-    tot_th = sum(p["rel"] for p in th)
+    wt = lambda r: r ** WEIGHT_POW
+    tot_th = sum(wt(p["rel"]) for p in th)
     extra = []
     if scale:
         for j, (m, i) in enumerate(o):
             r = i / scale
             if j not in used and r >= min_rel and 0.0 <= (m - th[0]["mz"]) * abs(z) <= MAX_SHIFT + 0.5 and m >= th[0]["mz"] - 0.3 / abs(z):
                 extra.append({"mz": m, "rel": r})
-    tot_w = tot_th + sum(e["rel"] for e in extra)
+    tot_w = tot_th + sum(wt(e["rel"]) for e in extra)
     peaks, s = [], 0.0
     for p, mt in zip(th, match):
-        w = p["rel"] / tot_w if tot_w else 0.0
+        w = wt(p["rel"]) / tot_w if tot_w else 0.0
         row = {"mz": p["mz"], "rel": p["rel"], "obs_mz": None, "obs_rel": None, "d_ppm": None, "t_mass": 0.0, "t_int": 0.0, "t": 0.0, "w": w}
         if mt and scale:
             m, i = o[mt[0]]
@@ -148,7 +150,7 @@ def isotope_score(counts: dict[str, int], z: int, obs: list[tuple[float, float]]
         s += w * row["t"]
         peaks.append(row)
     for e in extra:
-        e["w"] = e["rel"] / tot_w
+        e["w"] = wt(e["rel"]) / tot_w
     return {"score": s, "peaks": peaks, "extra": extra, "scale": scale, "n_missing": sum(1 for r in peaks if r["obs_mz"] is None), "n_extra": len(extra)}
 
 
@@ -159,14 +161,13 @@ def fragment_constraint(formula: str, z: int, frags: list[tuple[float, float]], 
     from .elements import parse_formula
     f = parse_formula(formula)
     try:
-        _, subs = subformulas(formula, z, min_mz)
+        sm = submasses(formula, z, min_mz)
     except UserError:
         return {"explained": None, "n_explained": None, "n_peaks": None}
     mono = (sum(MASS[e] * k for e, k in f.items()) - z * ELECTRON) / abs(z)
     peaks = [(m, i) for m, i in frags if min_mz <= m <= mono + 0.5 and i > 0]
     if not peaks:
         return {"explained": None, "n_explained": 0, "n_peaks": 0}
-    sm = np.array([m for _, m in subs])
     tot, hit, n = 0.0, 0.0, 0
     for m, i in peaks:
         tot += i

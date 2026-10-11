@@ -59,9 +59,9 @@ const COMP = (() => {
         <div class="muted sm">${I18N.t("comp.sc.note")}</div>
         <div class="cmp-grid"><label>${I18N.t("comp.sc.r200")} <input id="cmp-r200" value="${st.r200 ?? o.r200 ?? 70000}" style="width:70px"></label>
           <label>${I18N.t("comp.sc.sppm")} <input id="cmp-sppm" value="${st.sppm ?? 3}" style="width:44px"></label>
-          <label>${I18N.t("comp.sc.sint")} <input id="cmp-sint" value="${st.sint ?? 15}" style="width:44px"></label>
+          <label>${I18N.t("comp.sc.sint")} <input id="cmp-sint" value="${st.sint ?? 10}" style="width:44px"></label>
           <span>${I18N.t("comp.sc.weights")} <label>${I18N.t("comp.sc.wm")} <input id="cmp-w0" value="${st.w0 ?? 1}" style="width:36px"></label>
-          <label>${I18N.t("comp.sc.wi")} <input id="cmp-w1" value="${st.w1 ?? 1}" style="width:36px"></label>
+          <label>${I18N.t("comp.sc.wi")} <input id="cmp-w1" value="${st.w1 ?? 2}" style="width:36px"></label>
           <label>${I18N.t("comp.sc.wf")} <input id="cmp-w2" value="${st.w2 ?? 1}" style="width:36px"></label></span></div>
         <div class="muted sm" id="cmp-nobs">${o.spec ? I18N.t("comp.sc.obs", { n: obsText(o.mz, o.spec).split(";").filter(Boolean).length }) : I18N.t("comp.sc.noobs")}</div>
         <div style="margin-top:4px">${I18N.t("comp.sc.ms2")} <button id="cmp-ms2get" type="button">${I18N.t("comp.sc.ms2get")}</button>
@@ -75,7 +75,7 @@ const COMP = (() => {
         const rules = [...document.querySelectorAll("#bigbody [data-r]")].filter(x => x.checked).map(x => x.dataset.r);
         const q = { mz: num($("#cmp-mz").value), ion: $("#cmp-ion").value, tol: num($("#cmp-tol").value) ?? 5, unit: $("#cmp-unit").value, max: parseInt($("#cmp-max").value) || 10,
           n: $("#cmp-n").value, rdb: `${num($("#cmp-r0").value) ?? -1},${num($("#cmp-r1").value) ?? 100}`, elements: $("#cmp-els").value.replace(/\s+/g, ""), rules: rules.join(","), parent: $("#cmp-par").value.trim(), m1: num($("#cmp-m1").value), m2: num($("#cmp-m2").value) };
-        const sc = { r200: num($("#cmp-r200").value) ?? 70000, sppm: num($("#cmp-sppm").value) ?? 3, sint: (num($("#cmp-sint").value) ?? 15) / 100, w: [0, 1, 2].map(i => num($(`#cmp-w${i}`).value) ?? 1).join(",") };
+        const sc = { r200: num($("#cmp-r200").value) ?? 70000, sppm: num($("#cmp-sppm").value) ?? 3, sint: (num($("#cmp-sint").value) ?? 10) / 100, w: [0, 1, 2].map(i => num($(`#cmp-w${i}`).value) ?? [1, 2, 1][i]).join(",") };
         Object.assign(q, sc, { obs: o.spec ? obsText(o.mz, o.spec) : "", frags: peaksParam($("#cmp-ms2").value) });
         if (!q.obs && !q.frags) delete q.w;
         if (q.mz == null) { $("#cmp-out").innerHTML = `<span class="fail">${I18N.t("comp.typeMz")}</span>`; return; }
@@ -95,7 +95,7 @@ const COMP = (() => {
             const det = i => {
               const r = j.results[i], pk = r.iso.peaks || [];
               $("#cmp-out").querySelectorAll("tr[data-i]").forEach(t => { t.style.background = +t.dataset.i === i ? "var(--sel, rgba(120,160,255,.2))" : ""; });
-              $("#cmp-det").innerHTML = `<div><b>${fmtFormula(r.formula)}</b> · ${I18N.t("comp.det.title")}</div><div class="muted sm">${I18N.t("comp.det.limits", { r: sc.r200, p: sc.sppm, s: Math.round(sc.sint * 100), mn: 1, w: q.w || "1,1,1" })}</div>
+              $("#cmp-det").innerHTML = `<div><b>${fmtFormula(r.formula)}</b> · ${I18N.t("comp.det.title")}</div><div class="muted sm">${I18N.t("comp.det.limits", { r: sc.r200, p: sc.sppm, s: Math.round(sc.sint * 100), mn: 1, w: q.w || "1,2,1" })}</div>
                 <table class="lct"><tr><th class="num">m/z</th><th class="num">${I18N.t("comp.det.th")}</th><th class="num">${I18N.t("comp.det.obs")}</th><th class="num">Δ ppm</th><th class="num">${I18N.t("comp.det.tm")}</th><th class="num">${I18N.t("comp.det.ti")}</th><th class="num">${I18N.t("comp.det.w")}</th><th class="num">${I18N.t("comp.det.contrib")}</th></tr>
                 ${pk.map(x => `<tr><td class="num">${x.mz.toFixed(4)}</td><td class="num">${x.rel.toFixed(1)}</td><td class="num">${x.obs_rel == null ? I18N.t("comp.det.missing") : x.obs_rel.toFixed(1)}</td><td class="num">${x.d_ppm == null ? "" : x.d_ppm.toFixed(1)}</td><td class="num">${f2(x.t_mass)}</td><td class="num">${f2(x.t_int)}</td><td class="num">${f2(x.w)}</td><td class="num">${f2(x.w * x.t)}</td></tr>`).join("")}
                 ${(r.iso.extra || []).map(x => `<tr><td class="num">${x.mz.toFixed(4)}</td><td class="num">–</td><td class="num">${x.rel.toFixed(1)}</td><td></td><td colspan="3" class="muted sm">${I18N.t("comp.det.extra")}</td><td class="num">${f2(x.w)}</td></tr>`).join("")}</table>`;
