@@ -173,11 +173,13 @@ Peso: 0,9 KB gzip il CSS + 2,2 KB gzip il JS (3,1 KB in tutto, soglia 4 KB). Ape
 | TP_Mine | 12885 | 770 |
 
 ## Flusso Rust senza Pyodide (`tests_e2e/e2e_lr.py`, riga «MISURA»)
-Runner GitHub Actions (ubuntu-latest, Chromium), 2 file Full Scan sintetici (`tools/dati_sintetici.py`), un giro. «avvio→pagina pronta» = dall'apertura dell'indirizzo alla schermata di partenza; «apertura» = dal caricamento dei due file al primo TIC disegnato.
+Container cloud (Chromium 1194; su un runner GitHub Actions prima della correzione: Rust 0.46 s / 6.0 s, classico 2.47 s / 0.67 s), 2 file Full Scan sintetici (`tools/dati_sintetici.py`), un giro. «avvio→pagina pronta» = dall'apertura dell'indirizzo alla schermata di partenza; «apertura» = dal caricamento dei due file al primo TIC disegnato.
 
 | flusso | avvio→pagina pronta (s) | apertura (s) |
 |---|---|---|
-| Rust (predefinito) | 0.46 | 6.0 |
-| classico (`?motore=python`) | 2.47 | 0.67 |
+| Rust (predefinito) | 0.46 | 1.3 |
+| classico (`?motore=python`) | 2.47 | 1.2 |
 
-L'avvio è 5 volte più rapido; l'apertura è circa 9 volte più lenta, perché il caricamento aspetta il `.mzidx` (costruito dal pool di worker: con cinque file in parallelo ~13 s sul runner), mentre il percorso classico legge subito l'mzML con Python e costruisce l'indice in secondo piano. Con file veri (centinaia di MB) Python deve leggere tutto il file per il primo TIC; la misura sui file del laboratorio non è stata fatta.
+Stesso container prima della correzione: Rust 6.5 s di apertura, classico 1.2 s. L'apertura costava la tabella delle scansioni (`prepare_upload`, 4.5 s a file).
+Senza `indexList` (i file sintetici) lo scorrimento rileggeva 1 MB per ogni spettro e ogni lettura sincrona di `Blob` in OPFS costa circa 1 ms; ora `idxread::Windowed` serve le letture piccole da una finestra di 1 MB e lo scorrimento tiene il suo buffer (688 letture da 1 MB → 5). 
+Resta ~0.7 s per la costruzione dell'indice (avvio del worker, 0.2 s di calcolo a file, in parallelo). Con file veri (centinaia di MB, di norma con `indexList`) la misura non è stata fatta.
