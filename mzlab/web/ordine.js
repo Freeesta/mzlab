@@ -47,6 +47,12 @@ const fileBase = name => String(name).split("#")[0];
 // time in minutes <-> value shown in a unit
 const timeShown = (min, unit) => min == null ? null : +(min / (TIME_UNITS[unit] || 1)).toPrecision(6);
 const timeStored = (val, unit) => val == null ? null : +(val * (TIME_UNITS[unit] || 1)).toPrecision(12);
+// download a Blob as a file (the object URL is released after `wait` ms)
+function saveBlob(blob, name, wait = 4000) {
+  const a = document.createElement("a"), u = URL.createObjectURL(blob);
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), wait);
+}
 // decimal text typed by the student ("0,5" or "0.5") -> number | NaN; lenient like parseFloat (a trailing unit is ignored)
 const numIt = t => parseFloat(String(t).replace(",", "."));
 // text typed in the time field: "", "12", "0,5", "1.25" -> number | null (empty) | NaN (not a number); no exponent, no sign

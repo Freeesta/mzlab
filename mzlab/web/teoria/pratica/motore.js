@@ -124,14 +124,7 @@ const PAL = (() => {
     const m0 = dist[0] || 1;
     return dist.map(v => v / m0 * 100);
   }
-  /** Agreement between a proposed formula and the observed cluster at M (peaks: [[mz, rel]]): mean absolute difference (% of M) on M+1, M+2, M+4. */
-  function isoMismatch(f, M, peaks, EL) {
-    const get = m => { const p = peaks.find(q => q[0] === m); return p ? p[1] : 0; }, m0 = get(M);
-    if (!m0) return null;
-    const pat = isoPattern(f, 6, EL), idx = [1, 2, 4];
-    return idx.reduce((a, d) => a + Math.abs((get(M + d) / m0 * 100) - (pat[d] || 0)), 0) / idx.length;
-  }
   return { SKILLS, load, save, reset, record, pick, stats, skill, levelOf, prob, oralReady, exportText, rng, code, seedOf, shuffle,
-    parse, nominal, rdb, fstr, fhtml, exact, isoPattern, isoMismatch, NOMINAL };
+    parse, nominal, rdb, fstr, fhtml, exact, isoPattern, NOMINAL };
 })();
 if (typeof module !== "undefined") module.exports = PAL;

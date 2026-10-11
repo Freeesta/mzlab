@@ -279,7 +279,7 @@ function addPanel(type, o, after) {
         try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; draw(p); }
         cvs.toBlob(async b => {
           let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { }
-          const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          saveBlob(out, plotName(p) + ".png");
         });
       }},
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
@@ -632,8 +632,8 @@ function ctl(p) {
     const k = x.dataset.o;
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
-    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((parseFloat(String(x.value).replace(",", ".")) || 0) * 10) / 10)); draw(p); uiSave(); };
-    else if (k === "pdadelay") x.onchange = () => { const n = parseFloat(String(x.value).replace(",", ".")); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
+    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); draw(p); uiSave(); };
+    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
     else if (k === "pdaAlign") x.onchange = () => { p.pdaAlign = x.checked; draw(p); uiSave(); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
       const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);

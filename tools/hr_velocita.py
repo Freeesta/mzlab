@@ -1,7 +1,7 @@
-"""Measurement (not a test): cost of the data of scan-by-scan navigation on a high-resolution file, JSON (api/spectra) against the binary block (api/scanbin).
+"""Measurement (not a test; run from the repository root): cost of the data of scan-by-scan navigation on a high-resolution file, JSON (api/spectra) against the binary block (api/scanbin).
 Local server by default; the built site (Pyodide) with QQQ_SITE=1 (python tools/build_site.py first). File: $HR_FILE or the Exploris file of the data repository."""
 import os, subprocess, sys, time, json
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests_e2e"))
 from lib import *
 f = os.environ.get("HR_FILE") or str(Path(os.environ.get("QQQ_DATI", "/home/user/QqQ-lab-dati")) / "HRMS" / "Orbitrap_Exploris120_DDApos_10-15min.mzML")
 SITE = os.environ.get("QQQ_SITE") == "1"

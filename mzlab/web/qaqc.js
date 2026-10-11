@@ -13,7 +13,7 @@ const QAQC = (() => {
   const COL = ["var(--lv1)", "var(--lv3)", "var(--lv2a)", "var(--lv4)", "var(--lv2b)", "var(--lv5)"];
   const t = (k, p) => I18N.t(k, p);
   const Q1 = s => document.querySelector(s);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
   const blankState = () => ({ roles: {}, ions: [], thr: 3, win: 0.5, ratio: { text: "", rt: "" }, seq: 1 });
   let st = blankState();
