@@ -9,7 +9,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 - **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, `pages.yml` a ogni push su `main`). Tutto gira nel browser (Pyodide); i file degli studenti non lasciano il computer. Nessun tracciamento né statistica.
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** nel mondo LR (niente «ecco i TP», niente rette di taratura o tabelle della relazione: gli studenti le fanno in Excel). Il mondo HR è uno strumento di ricerca: librerie, formule e analoghi come candidati con punteggio e prove, mai come verità. Eccezione: mzFinder (nascosto, solo per Federico).
-  2. Leggero: Python ≥ 3.11 + numpy; HTML/JS semplice, nessun bundler, nessuna dipendenza pesante; JS senza build; Rust → .wasm solo nella CI (mai committato).
+  2. Leggero: il calcolo pesante vive in Rust (`crates/`: `.wasm` nel sito, nativo nell'app desktop), con dipendenze pure Rust; Python ≥ 3.11 + numpy (Pyodide nel sito) risponde alle rotte non ancora portate ed è il RIFERIMENTO dei test di parità (dati d'oro, `tools/*_riferimento.py`); HTML/JS semplice, nessun bundler, nessuna dipendenza pesante; JS senza build; Rust → .wasm solo nella CI (mai committato).
   3. Interfaccia in italiano e inglese; Teoria e Pratica solo in italiano; codice e commenti in inglese. Sempre «m/z», «RT», «XIC», «TIC», «MRM», «MS2» (la pagina mostra MS<sup>2</sup>).
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.

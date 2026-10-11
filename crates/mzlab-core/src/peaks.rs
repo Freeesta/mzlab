@@ -146,7 +146,7 @@ pub fn savgol(y: &[f64], window: usize, poly: usize) -> Vec<f64> {
         .collect()
 }
 
-fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
+pub(crate) fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
     let n = y.len();
     let mut v: Vec<f64> = y
         .iter()
@@ -269,7 +269,7 @@ fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
 }
 
 /// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
-fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
+pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
     let n = y.len();
     let half = 2usize;
     let a = i.saturating_sub(half);
