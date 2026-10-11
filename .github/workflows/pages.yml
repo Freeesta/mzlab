@@ -66,6 +66,8 @@ jobs:
         with:
           path: site/static/librerie
           key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+      - name: Build the suspect index of mzFinder (pinned CC BY sources, never committed; a network failure only warns)
+        run: python tools/genera_sospetti.py --pacchetto site/static/mzfinder/sospetti
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
