@@ -238,7 +238,7 @@ const LISTE = (() => {
 
   // ---------------------------------------------------------------- page & storage (IndexedDB "qqq_lab", store "liste_utente")
   const KEY_ROWS = "qqq.contaminanti", KEY_ON = "qqq.contaminanti.on", KEY_LISTS = "qqq.liste.attive";
-  const IDB_NAME = "qqq_lab", IDB_VER = 2, IDB_STORE = "liste_utente";
+  const IDB_STORE = "liste_utente";
 
   const ST = {
     lists: [],           // built-in lists (/api/contaminants: Keller 2008)
@@ -292,16 +292,12 @@ const LISTE = (() => {
   const saveRows = rows => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
   function idbOpen() {
-    return new Promise(res => {
+    return new Promise(async res => {
       if (typeof indexedDB === "undefined") return res(null);
       try {
-        const req = indexedDB.open(IDB_NAME, IDB_VER);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
-          if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
-          if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: "id" });
-        };
+        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");          // the schema is written once (qqq-db.js)
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = () => upgrade(req.result);
         req.onsuccess = () => res(req.result);
         req.onerror = () => res(null);
       } catch (_) { res(null); }
