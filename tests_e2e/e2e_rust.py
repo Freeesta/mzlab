@@ -85,7 +85,7 @@ try:
             for k in range(n):
                 f = pg.evaluate(GET, f"api/filters?k={k}")
                 urls = [f"api/chrom?k={k}&kind=bpc&level=1", f"api/chrom?k={k}&kind=tic&level=1&mz0=150&mz1=400", f"api/chrom?k={k}&kind=bpc&level=1&mz0=200",
-                        f"api/filters?k={k}", f"api/scanlist?k={k}&level=1", f"api/scanlist?k={k}&level=2", f"api/nearest_scan?k={k}&rt=4.2&level=1", f"api/nearest_scan?k={k}&rt=9&level=2"]
+                        f"api/filters?k={k}", f"api/scanlist?k={k}&level=1", f"api/scanlist?k={k}&level=2", f"api/nearest_scan?k={k}&rt=4.2&level=1", f"api/nearest_scan?k={k}&rt=9&level=2", f"api/scaninfo?k={k}&sid=0", f"api/scaninfo?k={k}&sid=2"]
                 for url in urls:
                     pg.evaluate("window.MZLAB_RUST.enabled = true"); r = pg.evaluate(GET, url)
                     pg.evaluate("window.MZLAB_RUST.enabled = false"); py = pg.evaluate(GET, url)
@@ -96,7 +96,7 @@ try:
                     else:
                         assert py["eng"] is None
             assert rust_n >= 8, rust_n
-        step("index routes (chrom with m/z window and bpc, filters, scanlist, nearest_scan): same JSON as Python", index_routes)
+        step("index routes (chrom with m/z window and bpc, filters, scanlist, nearest_scan, scaninfo): same JSON as Python", index_routes)
         def other_routes():
             r = pg.evaluate(GET, "api/spectra?k=0&i0=0&i1=2&level=1&filt=x"); assert r["eng"] is None       # a filter is left to Python
             r = pg.evaluate(GET, "api/chrom?k=0&kind=pda&level=1"); assert r["eng"] is None
