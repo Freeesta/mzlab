@@ -8,7 +8,7 @@ function attach(p) {
   const rect = e => { const r = cv.getBoundingClientRect(); return e.clientX - r.left; };
   const recty = e => e.clientY - cv.getBoundingClientRect().top;
   const canYZ = a => a && !a.map && !a.stk && !a.logy && !a.cas && a.yinv;                      // y zoom exists for chromatograms, XIC, MRM and spectra (not stacked / log views)
-  const inPlotY = py => py >= M.t && py <= p._a.H - M.b, inPlotX = px => px >= M.l && px <= p._a.W - M.r;
+  const inPlotY = py => py >= M.t && py <= p._a.H - M.b;
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
   const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
