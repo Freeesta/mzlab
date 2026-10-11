@@ -79,6 +79,7 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 2)", timeout=30000)   # the notebook is saved 0.5 s after the last change: a reload before it loses the session
             pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=180000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
