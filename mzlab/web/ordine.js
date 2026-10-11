@@ -59,7 +59,7 @@ function tunitSet(u) {
   try { localStorage.setItem("qqq.tunit", u); } catch (_) { /* no storage */ }
 }
 // "30 min", "0.5 h", "2 d" for a time in minutes
-const tunitLabel = u => typeof I18N !== "undefined" ? I18N.t("unit.t." + u) : u;
+const tunitLabel = u => typeof I18N !== "undefined" ? { min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
 const fmtTime = min => min == null ? "" : timeShown(min, tunitGet()) + " " + tunitLabel(tunitGet());
 
 if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime };
