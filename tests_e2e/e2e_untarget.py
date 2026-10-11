@@ -96,10 +96,10 @@ try:
                     rows.append(f"{i},{mz:.4f},{rnd.random() * 20:.2f},\"1,2\",DETECTED,{1000 + i},,,,,,"); blocks.append(f"BEGIN IONS\nFEATURE_ID={i}\nPEPMASS={mz:.4f}\nMSLEVEL=2\nIONMODE=Positive\n" + "".join(f"{m} {k}\n" for m, k in pk) + "END IONS\n")
                 (tmp / "big_pos.csv").write_text(HEAD + "\n".join(rows) + "\n"); (tmp / "big.mgf").write_text("".join(blocks))
                 pg.evaluate("UNTUI.state.files.length = 0")
-                pg.set_input_files("#unt-in", [str(tmp / "big_pos.csv"), str(tmp / "big.mgf")]); pg.wait_for_function("document.querySelector('#unt-sum').textContent.includes('5,000 features')", timeout=60000)
-                t0 = time.time(); pg.click("#unt-go"); pg.wait_for_function("document.querySelector('#unt-msg').textContent.includes('spectra searched')", timeout=600000)
+                t1 = time.time(); pg.set_input_files("#unt-in", [str(tmp / "big_pos.csv"), str(tmp / "big.mgf")]); pg.wait_for_function("document.querySelector('#unt-sum').textContent.includes('5,000 features')", timeout=60000)
+                dl_ = time.time() - t1; t0 = time.time(); pg.click("#unt-go"); pg.wait_for_function("document.querySelector('#unt-msg').textContent.includes('spectra searched')", timeout=600000)
                 dt = time.time() - t0; eng = pg.evaluate("LIB.engine.info()")
-                print("   BENCH 5000 features x 20000-entry library:", round(dt, 1), "s; wasm engine:", eng.get("wasm"))
+                print("   BENCH 5000 features x 20000-entry library: read", round(dl_, 1), "s, match", round(dt, 1), "s; wasm engine:", eng.get("wasm"))
                 if eng.get("wasm"): assert dt < 15, dt
             step("5000 features in under 15 s (WebAssembly engine)", bench)
         b.close()
