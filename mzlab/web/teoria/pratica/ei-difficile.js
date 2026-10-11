@@ -107,9 +107,126 @@ export function hintTexts(it) {
   return { band, l1, l2, l3: (typeof EI_AIUTI !== "undefined" && EI_AIUTI[it.id]) || "Riguarda gli ioni a elettroni dispari e le perdite di molecole neutre: ti dicono in che parte dello scheletro cercare." };
 }
 
+/** Section 1: the molecular ion chosen by the student. */
+function sectionM(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const setM = (M, vis) => {
+    H.M = M; H.Mvis = vis;
+    fb($("#h-m-fb"), "hi", `M = ${M}${vis ? "" : " (non visibile)"}.${list(checkM(it, M, vis))}`);
+    if (H.f) $("#h-f-ok").click();
+  };
+  $("#h-m-set").onclick = () => { const m = S.sel[0]; if (m == null) return fb($("#h-m-fb"), "hi", "Prima seleziona un picco con un clic sullo spettro."); setM(m, true); };
+  $("#h-m-hid").onclick = () => { const v = parseInt($("#h-m-val").value, 10); if (!(v > 0)) return fb($("#h-m-fb"), "hi", "Scrivi la massa che ipotizzi per M (un numero intero)."); setM(v, false); };
+}
+
+/** Section 2: the proposed formula. */
+function sectionFormula(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  $("#h-f-ok").onclick = () => {
+    const f = PAL.parse($("#h-f").value.trim());
+    if (!f) return fb($("#h-f-fb"), "no", "Formula non valida: usa i simboli degli elementi con le maiuscole giuste (C, H, N, O, S, Cl, Br, F, Si, P, I).");
+    H.f = f;
+    fb($("#h-f-fb"), "hi", list(checkFormula(it, f, H.M, H.Mvis)));
+  };
+}
+
+/** Section 3: the hypothesis for each peak. */
+function sectionIons(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const renderTab = () => {
+    $("#h-tab").innerHTML = H.marks.length ? `<table class="eitab htab"><caption>Le tue annotazioni</caption><tr><th>m/z</th><th>Ione</th><th>Δm da M</th><th>Meccanismo</th><th></th></tr>${H.marks.map((m, i) =>
+      `<tr><td class="n">${m.mz}</td><td>${m.ion ? EISPEC.ionHtml(m.ion.text) : "–"}</td><td class="n">${H.M != null ? H.M - m.mz : "–"}</td><td>${m.mech ? EISPEC.TYPE[m.mech] : "non so"}</td><td><button data-rm="${i}" aria-label="Togli l'annotazione del picco ${m.mz}">Togli</button></td></tr>`).join("")}</table>` : "";
+    $("#h-tab").querySelectorAll("[data-rm]").forEach(b => { b.onclick = () => { H.marks.splice(+b.dataset.rm, 1); renderTab(); S.spec.redraw(); }; });
+  };
+  $("#h-add").onclick = () => {
+    const mz = S.sel.length ? S.sel[S.sel.length - 1] : null;
+    if (mz == null) return fb($("#h-i-fb"), "hi", "Seleziona prima il picco da annotare (clic sul grafico o frecce).");
+    const txt = $("#h-ion").value.trim(), ion = txt ? parseIon(txt) : null, mech = $("#h-mech").value;
+    if (txt && !ion) return fb($("#h-i-fb"), "no", "Formula dello ione non valida: es. C3H7O+ oppure C4H8+. (la carica è facoltativa).");
+    if (!txt && !mech) return fb($("#h-i-fb"), "hi", "Scrivi la formula dello ione o scegli un meccanismo: l'annotazione nasce dalla tua ipotesi.");
+    const checks = checkIon(it, mz, ion, mech, H.f, H.M, LOSSNAME);
+    H.marks = H.marks.filter(m => m.mz !== mz); H.marks.push({ mz, ion, mech });
+    H.marks.sort((a, b) => a.mz - b.mz);
+    fb($("#h-i-fb"), "hi", `<b>m/z ${mz}</b>${list(checks)}`);
+    renderTab(); S.spec.redraw();
+    $("#h-ion").value = ""; $("#h-mech").value = "";
+  };
+}
+
+/** Section 4: the drawn structure against the formula and the ions. */
+function sectionStructure(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const current = async () => { await env.ocl(); return env.proposal(); };
+  $("#h-s-ok").onclick = async () => {
+    let mol;
+    try { mol = await current(); } catch (e) { return fb($("#h-s-fb"), "hi", EH(e.message)); }
+    const gf = PAL.parse(mol.getMolecularFormula().formula), cs = [];
+    cs.push({ ok: null, t: `La tua struttura è ${PAL.fhtml(gf)} (massa nominale ${PAL.nominal(gf)}, RDB ${PAL.rdb(gf)}).` });
+    if (H.f) cs.push(PAL.fstr(gf) === PAL.fstr(H.f) ? { ok: true, t: "Coincide con la formula che hai proposto." } : { ok: false, t: `Non coincide con la formula che hai proposto (${PAL.fhtml(H.f)}).` });
+    if (H.M != null) cs.push(PAL.nominal(gf) === H.M ? { ok: true, t: "La massa nominale coincide con M." } : { ok: false, t: `La massa nominale è diversa da M (${H.M}).` });
+    H.marks.filter(m => m.ion).forEach(m => { if (!subFormula(m.ion.f, gf)) cs.push({ ok: false, t: `Lo ione annotato a m/z ${m.mz} (${PAL.fhtml(m.ion.f)}) non è un frammento possibile della tua struttura.` }); });
+    fb($("#h-s-fb"), "hi", list(cs));
+  };
+}
+
+/** Section 5: the three levels of hints. */
+function sectionHints(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const hb = $("#h-hint");
+  const refreshHint = () => { hb.textContent = H.hint < 3 ? `Aiuto ${H.hint + 1} (−${HINT_COST[H.hint]}): ${["una zona dello spettro", "una famiglia di ioni", "una zona della molecola"][H.hint]}` : "Nessun altro aiuto"; hb.disabled = H.hint >= 3; };
+  hb.onclick = () => {
+    if (H.hint >= 3) return;
+    const t = H.hintTexts, n = H.hint;
+    pay(HINT_COST[n], "aiuto " + (n + 1));
+    S.hints.hard = H.hint = n + 1;
+    if (n === 0) { H.band = t.band; S.spec.redraw(); }
+    $("#h-hints").insertAdjacentHTML("beforeend", `<div class="fb hi"><b>Aiuto ${n + 1}.</b> ${EH([t.l1, t.l2, t.l3][n])}</div>`);
+    refreshHint();
+  };
+  refreshHint();
+}
+
+/** Delivery: the only point where the answer appears. */
+function sectionDelivery(c) {
+  const { env, it, S, H, wk } = c, { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const current = async () => { await env.ocl(); return env.proposal(); };
+  $("#h-done").onclick = async () => {
+    if (H.delivered) return;
+    H.delivered = true;
+    wk.querySelectorAll("button:not(.keep), input, select").forEach(b => { b.disabled = true; });
+    $("#h-done").disabled = true;
+    const f = PAL.parse(it.formula), vis = env.mVisible(it);
+    let mol = null; try { mol = await current(); } catch (_) { /* nothing drawn */ }
+    const mOk = H.M === it.M && H.Mvis === vis;
+    const fOk = !!H.f && PAL.fstr(H.f) === PAL.fstr(f);
+    const isoOk = !!H.f && ["Cl", "Br", "S"].every(e => (H.f[e] || 0) === (f[e] || 0));
+    const sOk = !!mol && env.norm(mol) === env.idOf(it.smiles);
+    const qs = it.keys.filter(k => k.type !== "M" && k.type !== "isotopo");
+    const hit = qs.filter(k => H.marks.some(m => m.mz === k.mz && m.mech === k.type)).length;
+    const mech = qs.length ? hit / qs.length : 1;
+    const total = Math.round(S.pts * (0.15 * mOk + 0.2 * fOk + 0.2 * mech + 0.45 * sOk));
+    PAL.record(env.game, it.id, it.level - 1, { M: +mOk, iso: +isoOk, formula: +fOk, meccanismi: mech, serie: mech, struttura: +sOk }, total);
+    const mark = ok => ok ? "✓" : "✗";
+    const end = $("#end");
+    end.innerHTML = `<div class="st"><h4>Correzione: <span class="score">${total}</span> punti</h4>
+      <div class="grid2"><div>${env.solutionSvg(it)}</div><div><p><b>${EH(it.name)}</b>, ${PAL.fhtml(f)}, M = ${it.M}${vis ? "" : " (non visibile)"}, famiglia: ${FAMNAME[it.family] || it.family}.</p>
+      <p>Ione molecolare ${mark(mOk)} · Formula ${mark(fOk)} · Isotopi ${mark(isoOk)} · Meccanismi ${hit} su ${qs.length} · Struttura ${mark(sOk)}${!mol ? " (non disegnata)" : ""}.</p>
+      <p>Punti di partenza ${S.pts} (cento meno gli aiuti usati).</p></div></div>
+      ${EISPEC.keysHtml(it)}
+      ${it.skills ? `<p>Abilità esercitate: ${it.skills.map(k => SKILLNAME[k] || k).join(", ")}.</p>` : ""}
+      <p>Rileggi: <a href="15-ei-metodo.html">capitolo 15</a>, <a href="16-ei-famiglie.html">capitolo 16</a>.</p>
+      <div class="row"><button class="pri keep" id="h-next">Problema nuovo</button><button class="keep" id="h-print">Stampa</button></div></div>`;
+    $("#h-next").onclick = () => env.again();
+    $("#h-print").onclick = () => print();
+    env.fillSvg(end);
+    S.spec.redraw();
+    end.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
+
 /** The worksheet of the hard mode. env: see HARD_ENV in gioco-ei.js; it: the compound; g: the container of the game. */
 export function startHard(env, it, g) {
-  const { $, EH, fb, pay, LOSSNAME, FAMNAME } = env;
+  const { $, EH, fb } = env;
   const S = env.state();
   const H = S.hard_state = { M: null, Mvis: true, f: null, marks: [], hint: 0, band: null, delivered: false, hintTexts: hintTexts(it) };
   S.hardHints = 0;
@@ -153,102 +270,6 @@ export function startHard(env, it, g) {
       <div id="h-hints" aria-live="polite"></div></div>
     <div class="row"><button id="h-done" class="pri keep">Consegna e correggi</button></div><div id="end"></div>`;
   env.startKetcher($("iframe", wk)).catch(e => fb($("#h-s-fb"), "hi", EH(e.message)));
-
-  // --- 1. molecular ion
-  const setM = (M, vis) => {
-    H.M = M; H.Mvis = vis;
-    fb($("#h-m-fb"), "hi", `M = ${M}${vis ? "" : " (non visibile)"}.${list(checkM(it, M, vis))}`);
-    if (H.f) $("#h-f-ok").click();
-  };
-  $("#h-m-set").onclick = () => { const m = S.sel[0]; if (m == null) return fb($("#h-m-fb"), "hi", "Prima seleziona un picco con un clic sullo spettro."); setM(m, true); };
-  $("#h-m-hid").onclick = () => { const v = parseInt($("#h-m-val").value, 10); if (!(v > 0)) return fb($("#h-m-fb"), "hi", "Scrivi la massa che ipotizzi per M (un numero intero)."); setM(v, false); };
-
-  // --- 2. formula
-  $("#h-f-ok").onclick = () => {
-    const f = PAL.parse($("#h-f").value.trim());
-    if (!f) return fb($("#h-f-fb"), "no", "Formula non valida: usa i simboli degli elementi con le maiuscole giuste (C, H, N, O, S, Cl, Br, F, Si, P, I).");
-    H.f = f;
-    fb($("#h-f-fb"), "hi", list(checkFormula(it, f, H.M, H.Mvis)));
-  };
-
-  // --- 3. ions
-  const renderTab = () => {
-    $("#h-tab").innerHTML = H.marks.length ? `<table class="eitab htab"><caption>Le tue annotazioni</caption><tr><th>m/z</th><th>Ione</th><th>Δm da M</th><th>Meccanismo</th><th></th></tr>${H.marks.map((m, i) =>
-      `<tr><td class="n">${m.mz}</td><td>${m.ion ? EISPEC.ionHtml(m.ion.text) : "–"}</td><td class="n">${H.M != null ? H.M - m.mz : "–"}</td><td>${m.mech ? EISPEC.TYPE[m.mech] : "non so"}</td><td><button data-rm="${i}" aria-label="Togli l'annotazione del picco ${m.mz}">Togli</button></td></tr>`).join("")}</table>` : "";
-    $("#h-tab").querySelectorAll("[data-rm]").forEach(b => { b.onclick = () => { H.marks.splice(+b.dataset.rm, 1); renderTab(); S.spec.redraw(); }; });
-  };
-  $("#h-add").onclick = () => {
-    const mz = S.sel.length ? S.sel[S.sel.length - 1] : null;
-    if (mz == null) return fb($("#h-i-fb"), "hi", "Seleziona prima il picco da annotare (clic sul grafico o frecce).");
-    const txt = $("#h-ion").value.trim(), ion = txt ? parseIon(txt) : null, mech = $("#h-mech").value;
-    if (txt && !ion) return fb($("#h-i-fb"), "no", "Formula dello ione non valida: es. C3H7O+ oppure C4H8+. (la carica è facoltativa).");
-    if (!txt && !mech) return fb($("#h-i-fb"), "hi", "Scrivi la formula dello ione o scegli un meccanismo: l'annotazione nasce dalla tua ipotesi.");
-    const checks = checkIon(it, mz, ion, mech, H.f, H.M, LOSSNAME);
-    H.marks = H.marks.filter(m => m.mz !== mz); H.marks.push({ mz, ion, mech });
-    H.marks.sort((a, b) => a.mz - b.mz);
-    fb($("#h-i-fb"), "hi", `<b>m/z ${mz}</b>${list(checks)}`);
-    renderTab(); S.spec.redraw();
-    $("#h-ion").value = ""; $("#h-mech").value = "";
-  };
-
-  // --- 4. structure
-  const current = async () => { await env.ocl(); return env.proposal(); };
-  $("#h-s-ok").onclick = async () => {
-    let mol;
-    try { mol = await current(); } catch (e) { return fb($("#h-s-fb"), "hi", EH(e.message)); }
-    const gf = PAL.parse(mol.getMolecularFormula().formula), cs = [];
-    cs.push({ ok: null, t: `La tua struttura è ${PAL.fhtml(gf)} (massa nominale ${PAL.nominal(gf)}, RDB ${PAL.rdb(gf)}).` });
-    if (H.f) cs.push(PAL.fstr(gf) === PAL.fstr(H.f) ? { ok: true, t: "Coincide con la formula che hai proposto." } : { ok: false, t: `Non coincide con la formula che hai proposto (${PAL.fhtml(H.f)}).` });
-    if (H.M != null) cs.push(PAL.nominal(gf) === H.M ? { ok: true, t: "La massa nominale coincide con M." } : { ok: false, t: `La massa nominale è diversa da M (${H.M}).` });
-    H.marks.filter(m => m.ion).forEach(m => { if (!subFormula(m.ion.f, gf)) cs.push({ ok: false, t: `Lo ione annotato a m/z ${m.mz} (${PAL.fhtml(m.ion.f)}) non è un frammento possibile della tua struttura.` }); });
-    fb($("#h-s-fb"), "hi", list(cs));
-  };
-
-  // --- 5. hints
-  const hb = $("#h-hint");
-  const refreshHint = () => { hb.textContent = H.hint < 3 ? `Aiuto ${H.hint + 1} (−${HINT_COST[H.hint]}): ${["una zona dello spettro", "una famiglia di ioni", "una zona della molecola"][H.hint]}` : "Nessun altro aiuto"; hb.disabled = H.hint >= 3; };
-  hb.onclick = () => {
-    if (H.hint >= 3) return;
-    const t = H.hintTexts, n = H.hint;
-    pay(HINT_COST[n], "aiuto " + (n + 1));
-    S.hints.hard = H.hint = n + 1;
-    if (n === 0) { H.band = t.band; S.spec.redraw(); }
-    $("#h-hints").insertAdjacentHTML("beforeend", `<div class="fb hi"><b>Aiuto ${n + 1}.</b> ${EH([t.l1, t.l2, t.l3][n])}</div>`);
-    refreshHint();
-  };
-  refreshHint();
-
-  // --- delivery: the only point where the answer appears
-  $("#h-done").onclick = async () => {
-    if (H.delivered) return;
-    H.delivered = true;
-    wk.querySelectorAll("button:not(.keep), input, select").forEach(b => { b.disabled = true; });
-    $("#h-done").disabled = true;
-    const f = PAL.parse(it.formula), vis = env.mVisible(it);
-    let mol = null; try { mol = await current(); } catch (_) { /* nothing drawn */ }
-    const mOk = H.M === it.M && H.Mvis === vis;
-    const fOk = !!H.f && PAL.fstr(H.f) === PAL.fstr(f);
-    const isoOk = !!H.f && ["Cl", "Br", "S"].every(e => (H.f[e] || 0) === (f[e] || 0));
-    const sOk = !!mol && env.norm(mol) === env.idOf(it.smiles);
-    const qs = it.keys.filter(k => k.type !== "M" && k.type !== "isotopo");
-    const hit = qs.filter(k => H.marks.some(m => m.mz === k.mz && m.mech === k.type)).length;
-    const mech = qs.length ? hit / qs.length : 1;
-    const total = Math.round(S.pts * (0.15 * mOk + 0.2 * fOk + 0.2 * mech + 0.45 * sOk));
-    PAL.record(env.game, it.id, it.level - 1, { M: +mOk, iso: +isoOk, formula: +fOk, meccanismi: mech, serie: mech, struttura: +sOk }, total);
-    const mark = ok => ok ? "✓" : "✗";
-    const end = $("#end");
-    end.innerHTML = `<div class="st"><h4>Correzione: <span class="score">${total}</span> punti</h4>
-      <div class="grid2"><div>${env.solutionSvg(it)}</div><div><p><b>${EH(it.name)}</b>, ${PAL.fhtml(f)}, M = ${it.M}${vis ? "" : " (non visibile)"}, famiglia: ${FAMNAME[it.family] || it.family}.</p>
-      <p>Ione molecolare ${mark(mOk)} · Formula ${mark(fOk)} · Isotopi ${mark(isoOk)} · Meccanismi ${hit} su ${qs.length} · Struttura ${mark(sOk)}${!mol ? " (non disegnata)" : ""}.</p>
-      <p>Punti di partenza ${S.pts} (cento meno gli aiuti usati).</p></div></div>
-      ${EISPEC.keysHtml(it)}
-      ${it.skills ? `<p>Abilità esercitate: ${it.skills.map(k => SKILLNAME[k] || k).join(", ")}.</p>` : ""}
-      <p>Rileggi: <a href="15-ei-metodo.html">capitolo 15</a>, <a href="16-ei-famiglie.html">capitolo 16</a>.</p>
-      <div class="row"><button class="pri keep" id="h-next">Problema nuovo</button><button class="keep" id="h-print">Stampa</button></div></div>`;
-    $("#h-next").onclick = () => env.again();
-    $("#h-print").onclick = () => print();
-    env.fillSvg(end);
-    S.spec.redraw();
-    end.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const c = { env, it, S, H, wk };
+  sectionM(c); sectionFormula(c); sectionIons(c); sectionStructure(c); sectionHints(c); sectionDelivery(c);
 }
