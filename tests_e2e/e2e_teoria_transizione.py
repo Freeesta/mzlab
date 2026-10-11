@@ -28,7 +28,7 @@ try:
         def vt():
             for attempt in range(3):   # a loaded machine may reveal the page before the index exists: the transition is then skipped on purpose
                 ctx, pg, errs = ctxpage(b, color_scheme="dark"); pg.goto(T + "06-esi.html"); real_wait(pg, 400)
-                click_chapter(pg, "08-vuoto.html"); o = rev(pg)
+                click_chapter(pg, "08-vuoto.html"); click_chapter(pg, "06-esi.html"); o = rev(pg)   # the second hop has the scripts in cache, as a reader has
                 if o and o["side"] > 20 and o["anims"]: break
                 ctx.close()
             assert o and o["vt"], o
