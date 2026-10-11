@@ -423,6 +423,109 @@ def main_mzidx(tmp: Path, site: Path, hr_copies: int, hr_files: int, only: str =
     return [f"Files: {origin}.", ""] + table(k1, rows) + [""] + table(k2, rows) + [""] + table(k3, rows)
 
 
+def scenario_indici(name: str, files: list[str], port: int, site: Path, constructor: str) -> dict:
+    """Upload the files until all of them are listed (the index of each one is built on the way), open them, then reopen the page in the same profile.
+    constructor: "python" (?pool=0) or "pool" (the Rust workers). `digest` is the hash of TIC and XIC of every file: equal between the two = same arrays."""
+    import hashlib
+    from playwright.sync_api import sync_playwright
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    n = len(files)
+    q = "?motore=python&pool=0" if constructor == "python" else "?motore=python"
+    out: dict = {"scenario": name, "constructor": constructor, "files": n, "file_mb": round(sum(os.path.getsize(f) for f in files) / 2**20, 1)}
+    try:
+        with sync_playwright() as p:
+            ctx = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="mzlab-profile-"), executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--enable-precise-memory-info"], service_workers="block")
+            pg = ctx.new_page()
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{port}/{q}")
+            pg.wait_for_selector("#drop", timeout=300000)
+            with Peak() as pk:
+                t1 = time.perf_counter()
+                pg.set_input_files("#pick", files)
+                pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=3600000)
+                out["build_total_s"] = round(time.perf_counter() - t1, 2)
+            out["rss_peak_build_mb"] = pk.max
+            idx = pg.evaluate("window.MZLAB_IDX || []")
+            out["engines"] = ",".join(sorted({f"{i['engine']}" for i in idx})) or "python"
+            out["rust_passes_max"] = max([i.get("passes") or 0 for i in idx] or [0])
+            t2 = time.perf_counter()
+            pg.click("#opbtn")
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=1200000)
+            out["first_draw_s"] = round(time.perf_counter() - t2, 2)
+            h = hashlib.sha256()
+            for k in range(n):
+                h.update(pg.evaluate(GET_TEXT, f"api/chrom?k={k}&kind=tic&level=1").encode())
+                for mz in MZS:
+                    h.update(pg.evaluate(GET_TEXT, f"api/xic?k={k}&mz={mz}&tol=0.35&level=1").encode())
+            out["digest"] = h.hexdigest()[:12]
+            pg.close()
+            pg = ctx.new_page()
+            with Peak() as pk2:
+                t3 = time.perf_counter()
+                pg.goto(f"http://127.0.0.1:{port}/{q}")
+                pg.wait_for_function(f"!!document.querySelector('.pnl.chrom canvas') || document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=1200000)
+                if pg.query_selector(".pnl.chrom canvas") is None:
+                    pg.click("#opbtn")
+                    pg.wait_for_selector(".pnl.chrom canvas", timeout=1200000)
+                out["reopen_first_draw_s"] = round(time.perf_counter() - t3, 2)
+            out["rss_peak_reopen_mb"] = pk2.max
+            ctx.close()
+    finally:
+        srv.terminate()
+    return out
+
+
+GET_TEXT = """async u => { const r = await fetch(u); return await r.text(); }"""
+
+
+def main_indici(tmp: Path, site: Path, hr_copies: int, hr_files: int, only: str = "") -> list:
+    """The constructor of the .mzidx files, Python against the pool of Rust workers: 20 LR files, N big HR files (as --mzidx), total time until all are listed,
+    peak memory of the browser, the same arrays (digest), reopening."""
+    syn = tmp / "sintetici"
+    esempi = ROOT / "mzlab" / "web" / "esempi"
+    if list(Path(MZ).glob("*FullMass*.mzML")):
+        lr_src = sorted(p for p in Path(MZ).glob("*FullMass*.mzML") if "neg" not in p.name)
+        hr_dir = Path(os.environ.get("MZLAB_HRDDA") or Path(MZ).parent / "HRMS")
+        hr_base = (sorted(hr_dir.glob("*DDA*.mzML")) or [esempi / "HRMS_t000.mzML"])[0]
+        origin = "lab data (LR)"
+    elif list(esempi.glob("FullScan_t*.mzML")):
+        lr_src = sorted(esempi.glob("FullScan_t*.mzML"))
+        hr_base = esempi / "HRMS_t000.mzML"
+        origin = "the anonymous example files of the site (LR: Full Scan, HR: Orbitrap cutting repeated)"
+    else:
+        subprocess.run([sys.executable, str(ROOT / "tools" / "dati_sintetici.py"), str(syn)], check=True)
+        lr_src = sorted(syn.glob("B_FullMass-t*.mzML"))
+        hr_base = syn / "HR_DDA-Exploris-t30.mzML"
+        origin = "synthetic data"
+    hr_out = tmp / "hr"
+    hr_out.mkdir(parents=True, exist_ok=True)
+    hr_src = []
+    for i in range(hr_files):
+        f = hr_out / f"HR_DDA_big_{i:02d}.mzML"
+        if not f.exists():
+            inflate(hr_base, hr_copies, f)
+        hr_src.append(str(f))
+    sets = {f"{hr_files} HR DDA ({round(Path(hr_src[0]).stat().st_size / 2**20)} MB each)": hr_src, "20 Full Scan LR": replicate(lr_src, 20, tmp / "lr")}
+    rows, port = [], 8950
+    for name, fl in sets.items():
+        if only and only not in name.lower():
+            continue
+        for c in ("python", "pool"):
+            port += 1
+            rows.append(scenario_indici(name, fl, port, site, c))
+            print(rows[-1], flush=True)
+    keys = ["scenario", "constructor", "engines", "files", "file_mb", "build_total_s", "rss_peak_build_mb", "first_draw_s", "reopen_first_draw_s", "rss_peak_reopen_mb", "rust_passes_max", "digest"]
+    lines = [f"Files: {origin}.", ""] + table(keys, rows)
+    for name in sets:
+        a = next((r for r in rows if r["scenario"] == name and r["constructor"] == "python"), None)
+        b = next((r for r in rows if r["scenario"] == name and r["constructor"] == "pool"), None)
+        if a and b:
+            lines.append(f"- {name}: total time {a['build_total_s']} s -> {b['build_total_s']} s ({round(100 * (b['build_total_s'] / a['build_total_s'] - 1))} %), "
+                         f"peak memory {a['rss_peak_build_mb']} -> {b['rss_peak_build_mb']} MB, arrays {'identical' if a['digest'] == b['digest'] else 'DIFFERENT'}.")
+    return lines
+
+
 def main_velocita(tmp: Path) -> list:
     """The three "many files" scenarios; real data when MZLAB_DATI / the usual folders have them, synthetic otherwise."""
     syn = tmp / "sintetici"
@@ -625,8 +728,9 @@ def main() -> None:
     ap.add_argument("--memoria", action="store_true", help="also the memory breakdown (WASM heaps, IndexedDB, JS heaps, RSS)")
     ap.add_argument("--velocita", action="store_true", help="only the many-files scenarios (20 Full Scan LR, 9 HR DDA): time breakdown, reopening, peak memory")
     ap.add_argument("--mzidx", action="store_true", help="the .mzidx scenarios (20 LR, N big HR files): response times, map of every file, reopening, memory; prints a markdown table")
+    ap.add_argument("--indici", action="store_true", help="the constructor of the .mzidx files: Python against the pool of Rust workers (15 HR, 20 LR, reopening; total time, peak memory, same arrays)")
     ap.add_argument("--site", default=str(ROOT / "site"), help="folder of the built site to measure (default site/)")
-    ap.add_argument("--solo", default="", help="--mzidx: only the scenario whose name contains this word (lr or hr)")
+    ap.add_argument("--solo", default="", help="--mzidx, --indici: only the scenario whose name contains this word (lr or hr)")
     ap.add_argument("--hr-files", type=int, default=15, help="--mzidx: how many big high-resolution files")
     ap.add_argument("--hr-copies", type=int, default=20, help="--mzidx: how many times the base HR file is repeated inside each (20 x 4 MB ~ 80 MB)")
     ap.add_argument("--scrivi", action="store_true", help="overwrite docs/agenti/misure.md with the tables (date and commit)")
@@ -643,6 +747,21 @@ def main() -> None:
             txt = md.read_text(encoding="utf-8")
             txt = txt.split("\n## Librerie spettrali")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
             md.write_text(txt, encoding="utf-8")
+        return
+    if a.indici:
+        import tempfile
+        lines = main_indici(Path(tempfile.mkdtemp(prefix="mzlab-bench-")), Path(a.site), a.hr_copies, a.hr_files, a.solo.lower())
+        print("\n".join(lines))
+        if a.scrivi:
+            md = ROOT / "docs" / "agenti" / "misure.md"
+            commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+            sec = [f"## Costruttore del `.mzidx` (`python3 tools/bench.py --indici --scrivi`, Chromium Linux {os.cpu_count()} CPU, {time.strftime('%Y-%m-%d')}, commit {commit})",
+                   "«python» = `?pool=0` (costruttore Python in Pyodide), «pool» = worker Rust. Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); "
+                   "memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo."] + lines
+            txt = md.read_text(encoding="utf-8")
+            head, sep, rest = txt.partition("\n## Costruttore del `.mzidx`")
+            tail = ("\n## " + rest.split("\n## ", 1)[1]) if sep and "\n## " in rest else ""
+            md.write_text(head.rstrip("\n") + "\n\n" + "\n".join(sec) + "\n" + tail, encoding="utf-8")
         return
     if a.mzidx:
         import tempfile
