@@ -22,7 +22,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         url = f"http://127.0.0.1:{r.port}/static/teoria/pratica-tp.html"
-        pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.wait_for_selector("#g2 .st")
+        pg.goto(url); pg.wait_for_selector("#g1 .opts button"); pg.wait_for_selector("#g2 .st"); pg.wait_for_selector("#g3 .cin-svg")
         def dm_level(lv):
             def f():
                 pg.select_option("#g1 .lv", str(lv)); pg.wait_for_timeout(100)
@@ -65,6 +65,31 @@ try:
                 assert "problemi · media 100" in pg.inner_text("#g2 .pts")
             return f
         for lv in (1, 2, 3): step(f"H2 level {lv}: one exercise played to the end", esi_level(lv))
+        def cin_level(lv):
+            def f():
+                pg.select_option("#g3 .lv", str(lv)); pg.wait_for_timeout(100)
+                e = pg.evaluate("GIOCHI_LC.last.cin"); assert e["level"] == lv
+                assert pg.locator("#g3 .cin-svg").count() == 1 and pg.locator("#g3 table.cin-tab tr").count() == len(e["features"]) + 2, "chart or data table missing"
+                for x in e["features"]: pg.select_option(f"#g3 .c1s[data-id={x['id']}]", x["truth"])
+                pg.click("#g3 .ck1"); assert "Tutto giusto" in pg.inner_text("#g3 .st >> nth=0 >> .fb")
+                for x in e["features"]:
+                    if x["role"]: pg.select_option(f"#g3 .c2s[data-id={x['id']}]", x["role"])
+                pg.click("#g3 .ck2")
+                k = [x for x in e["features"] if x["ms2Times"]][0]
+                pg.select_option("#g3 .c3p", k["id"]); pg.select_option("#g3 .c3t", str(k["ms2Times"][0])); pg.click("#g3 .ck3")
+                t = pg.inner_text("#g3 .wk"); assert t.count("Tutto giusto") == 2 and "Giusto." in t, t[-500:]
+                assert "problemi · media 100" in pg.inner_text("#g3 .pts")
+            return f
+        for lv in (1, 2, 3): step(f"H3 level {lv}: lc-cin played to the end (chart plus data table)", cin_level(lv))
+        def cin_aids():
+            pg.click("#g3 .nw"); e = pg.evaluate("GIOCHI_LC.last.cin")
+            for i in range(3): pg.click("#g3 .hp")
+            t = pg.inner_text("#g3 .hpt"); assert "Aiuto 3" in t and pg.is_disabled("#g3 .hp")
+            assert pg.evaluate("document.querySelector('#g3 .hpt').getAttribute('aria-live')") == "polite"
+        step("H3 aids: three levels, polite live region", cin_aids)
+        def cin_targets():
+            n = pg.evaluate("[...document.querySelectorAll('#g3 select, #g3 button, #g3 input')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.height<24||r.width<24)}).length"); assert n == 0, n
+        step("H3 controls are at least 24x24 px", cin_targets)
         def keyboard():
             pg.click("#g1 .nw"); pg.focus("#g1 .opts button >> nth=0"); pg.keyboard.press("Enter")
             assert pg.evaluate("!document.querySelectorAll('#g1 .st')[1].hasAttribute('inert')"), "step 2 not open"

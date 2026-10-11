@@ -130,3 +130,61 @@ def test_esi_generator_follows_masses_and_nitrogen_rule():
                 assert abs((p[1]["mz"] - p[0]["mz"]) - (21.98194 if p[1]["adduct"] == "[M+Na]+" else 17.02655)) < 0.01
                 n = sorted(e["neg"], key=lambda s: s["mz"])
                 assert abs(n[1]["mz"] - n[0]["mz"] - 46.0049) < 0.01
+
+
+# ---------------------------------------------------------------- game lc-cin (kinetic profiles)
+def run_cin(js: str):
+    prog = ("const fs=require('fs');global.localStorage={_d:{},getItem(k){return this._d[k]||null},setItem(k,v){this._d[k]=v}};"
+            f"eval(fs.readFileSync({json.dumps(str(WEB / 'elements.js'))},'utf8').replace('const ELEMENTS','global.ELEMENTS'));"
+            f"global.PAL=require({json.dumps(str(WEB / 'teoria' / 'pratica' / 'motore.js'))});"
+            f"const C=require({json.dumps(str(WEB / 'teoria' / 'pratica' / 'cinetica-lcms.js'))});"
+            f"console.log(JSON.stringify((()=>{{{js}}})()));")
+    out = subprocess.run(["node", "-e", prog], capture_output=True, encoding="utf-8", timeout=120)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+@pytest.mark.parametrize("level", [1, 2, 3])
+def test_cin_generator_is_deterministic_and_unambiguous(level):
+    r = run_cin(f"const a=C.genCin({level},12345),b=C.genCin({level},12345);"
+                f"const es=[];for(let s=1;s<=60;s++)es.push(C.genCin({level},s));"
+                "return {same:JSON.stringify(a)===JSON.stringify(b),es}")
+    assert r["same"]
+    for e in r["es"]:
+        fs = e["features"]
+        assert len(fs) == {1: 4, 2: 5, 3: 6}[level]
+        assert any(f["role"] == "primario" for f in fs) and any(f["role"] == "secondario" for f in fs)
+        assert e["times"][0] == 0 and all(len(f["areas"]) == 6 for f in fs)
+        for f in fs:
+            mx = max(f["areas"] + [f["blank"]])
+            if f["truth"] == "tengo":
+                assert f["blank"] <= 0.1 * mx and f["areas"][0] <= 0.1 * mx, f["id"]       # a real product is absent from the blank and at t0
+                assert f["ms2Times"], f["id"]
+            if f["truth"] == "t0bianco":
+                assert f["blank"] >= 0.4 * mx or f["areas"][0] >= 0.75 * mx
+            if f["truth"] == "rt":
+                assert f["polar"] and f["rt"] > e["precursor"]["rt"]                       # polar product eluting after the precursor
+            if f["polar"] and f["truth"] != "rt":
+                assert f["rt"] < e["precursor"]["rt"]
+        if level == 3:
+            assert any(a["id"] != b["id"] and a["dm"] == b["dm"] for a in fs for b in fs), "level 3 has an isomer pair"
+
+
+def test_cin_masses_recomputed_and_aids_do_not_give_the_answer():
+    es = run_cin("return [1,2,3].map(l=>C.genCin(l,99))")
+    for e in es:
+        prec = parse_formula(e["precursor"]["f"])
+        mz_p = mass(prec) + ADDUCT_SHIFT["[M+H]+"]
+        assert abs(e["precursor"]["mz"] - mz_p) < 2e-4
+        for f in e["features"]:
+            assert abs((f["mz"] - e["precursor"]["mz"]) - f["dm"]) < 2e-4
+        txt = " ".join(e["help"])
+        assert len(e["help"]) == 3
+        for f in e["features"]:
+            assert not re.search(rf"\b{f['id']}\b[^.]*\b(falso|vero|primario|secondario|scart)", txt), "an aid labels a candidate"
+        assert "azzard" not in txt
+
+
+def test_cin_data_name_no_real_compound():
+    src = (WEB / "teoria" / "pratica" / "cinetica-lcms.js").read_text(encoding="utf-8") + (WEB / "teoria" / "pratica" / "giochi-lc-cin.js").read_text(encoding="utf-8")
+    assert "sintetic" in src.lower()

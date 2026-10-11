@@ -5,7 +5,7 @@
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Pratica</div>
 <h1>Prodotti di trasformazione: Δm ed ESI±</h1>
-<p class="lead">Due esercizi su dati costruiti a scopo didattico (formule inventate, non misure): quale trasformazione separa un prodotto dal suo precursore, e come si leggono i segnali di uno stesso composto in ESI+ e in ESI−.</p>
+<p class="lead">Tre esercizi su dati costruiti a scopo didattico (formule inventate, non misure): quale trasformazione separa un prodotto dal suo precursore, come si leggono i segnali di uno stesso composto in ESI+ e in ESI−, e come si riconoscono i prodotti veri dai profili nel tempo.</p>
 <noscript><p class="box warn">Serve JavaScript.</p></noscript>
 <div class="box key"><b>La teoria in breve</b>
 <p>La differenza tra le masse esatte di prodotto e precursore identifica la variazione di formula (ossidazione, perdita di CH<sub>2</sub>, sostituzione di Cl con OH…). A risoluzione unitaria molte variazioni hanno lo stesso valore intero, e +0,984 (NH<sub>2</sub>→OH) non va confuso con +1,003 (picco <sup>13</sup>C). Per gli ioni [M+H]<sup>+</sup> e [M−H]<sup>−</sup> la regola dell'azoto si inverte: massa nominale pari ↔ N dispari. Capitoli 6, 13, 14 e 18.</p></div>
@@ -13,8 +13,10 @@
 <div id="g1"></div>
 <h2 id="h-esi">ESI+ ed ESI−</h2>
 <div id="g2"></div>
+<h2 id="h-cin">Profili di un prodotto di trasformazione</h2>
+<div id="g3"></div>
 <p class="note">I risultati aggiornano le competenze della pagina <a href="pratica.html">Pratica</a>; restano solo in questo browser.</p>
 </main></div>
-<script src="../appname.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="pratica/motore.js"></script><script src="pratica/esercizi-lcms.js"></script><script src="pratica/giochi-lc.js"></script>
-<script>document.addEventListener("DOMContentLoaded", () => { GIOCHI_LC.dm(document.getElementById("g1")); GIOCHI_LC.esi(document.getElementById("g2")); });</script>
+<script src="../appname.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="pratica/motore.js"></script><script src="pratica/esercizi-lcms.js"></script><script src="pratica/giochi-lc.js"></script><script src="pratica/cinetica-lcms.js"></script><script src="pratica/giochi-lc-cin.js"></script>
+<script>document.addEventListener("DOMContentLoaded", () => { GIOCHI_LC.dm(document.getElementById("g1")); GIOCHI_LC.esi(document.getElementById("g2")); GIOCHI_LC.cin(document.getElementById("g3")); });</script>
 </body></html>
