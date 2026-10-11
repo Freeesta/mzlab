@@ -186,3 +186,23 @@ Le richieste per movimento salgono nel trascinamento continuo (prima il mirino n
 
 ## Transizioni (`transizioni.css`, `transizioni.js`)
 Peso: 0,9 KB gzip il CSS + 2,2 KB gzip il JS (3,1 KB in tutto, soglia 4 KB). Apertura a freddo sul server di sviluppo (mediana di 7, `loadEventEnd`): 461 ms con, 456 ms senza (nessuna regressione). Durante apertura/chiusura del pannello a sinistra, a destra e come foglio: 0 *long animation frame* (`e2e_transizioni` li stampa); un solo `fitWidth` e un solo giro di `draw` per transizione.
+
+## Pulizia finale, fase A (commit di partenza 2d50415; Chromium cloud, dati sintetici, senza WASM Rust)
+| Misura | Prima | Dopo |
+|---|---|---|
+| `golden.py --controlla` | 2 differenze (`differenza_hr`, `statistica_pca`: «missing in engine», senza WASM) | uguale |
+| `verifica.py` completa | 131 OK, rossi e2e16 e e2e25 | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
+| `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 60 | 2 |
+| `prototipi/` | 1478 KB, 14 file | cancellata |
+| `bench.py --velocita` / `--mzidx` | non eseguiti: servono `site/` e il WASM Rust, assenti nel cloud | non eseguiti |
+
+Righe e KB per area (tutto `main`: la differenza include il lavoro delle altre chat entrato nella giornata, non solo la pulizia; le PR di pulizia da sole: −48 righe nella pagina e prototipi tolta, −1 e +0 nelle altre due).
+| Area | Righe prima | Righe dopo | KB prima | KB dopo |
+|---|---|---|---|---|
+| web (pagina) | 25204 | 25707 | 1912 | 1946 |
+| web teoria | 3237 | 3858 | 268 | 334 |
+| python mzlab | 8272 | 8272 | 424 | 424 |
+| rust crates | 22279 | 22765 | 726 | 744 |
+| tools | 5352 | 6256 | 307 | 358 |
+| tests | 22207 | 22863 | 1483 | 1524 |
+| TP_Mine | 12885 | 12885 | 770 | 770 |
