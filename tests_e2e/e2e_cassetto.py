@@ -1,5 +1,5 @@
 """The toolbar drawer (#dfiles) is really visible from a cold start: with and without #/dati, at 1280, 1440 and on an iPad,
-also with saved sidebar states (side right, pinned) and a stale width. Visible = non-empty box inside the viewport, on top."""
+also with saved sidebar states (side right, open) and a stale width. Visible = non-empty box inside the viewport, on top."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,7 +20,8 @@ def cold(p, vw, vh, hash_="", saved=None, touch=False):
     pg.goto(f"http://127.0.0.1:{r.port}/{hash_}"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
     pg.click("text=Carica dati"); ready(pg)
-    pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(600)
+    if not pg.evaluate("BARRA.open"): pg.click("#stbar [data-cmd=file]")      # a saved open state comes back open: the button would hide it
+    pg.wait_for_timeout(600)
     v = pg.evaluate(CHECK); ctx.close(); r.close()
     assert not errs, errs
     assert v["w"] > 100 and v["h"] > 200 and v["x"] >= -1 and v["r"] <= v["vw"] + 1 and v["shown"] and v["vis"] == "visible" and "sb-open" in v["cls"], v
@@ -30,7 +31,7 @@ try:
             for h in ("", "#/dati"):
                 step(f"{tag} {h or 'no hash'}: the drawer opens and is visible", lambda vw=vw, vh=vh, h=h, touch=touch: cold(p, vw, vh, h, touch=touch))
         step("side right saved", lambda: cold(p, 1440, 900, saved={"qqq.barra.lato": "right"}))
-        step("pinned saved", lambda: cold(p, 1440, 900, saved={"qqq.barra.lr": '{"tab":"file","pinned":true,"open":true}'}))
+        step("open saved", lambda: cold(p, 1440, 900, saved={"qqq.barra.lr": '{"tab":"file","open":true}'}))
         step("stale width saved", lambda: cold(p, 1440, 900, saved={"qqq.barra.lr": '{"tab":"calc","w":0}'}))
 finally: pass
 bad = [s for s in steps if s[1] != "ok"]

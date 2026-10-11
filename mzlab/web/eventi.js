@@ -515,7 +515,7 @@ Object.defineProperty(calcBox, "open", {
 });
 calcBox.close = () => {
   if (window.BARRA && BARRA.isDataView()) {
-    if (!BARRA.pinned) BARRA.close(true);
+    BARRA.close(true);
   } else {
     calcBox.hidden = true;
   }
