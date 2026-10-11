@@ -104,7 +104,7 @@ function cursorLine(p) {                                           // the vertic
   h.hidden = !!p._exp; h.style.left = c.style.left; h.style.top = p.cv.offsetTop + M.t + "px";
   const t = I18N.t("cursor.handle"); h.setAttribute("aria-label", t); h.title = t;
   if (a.full) { h.setAttribute("aria-valuemin", a.full[0].toFixed(2)); h.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
-  h.setAttribute("aria-valuenow", p.cur.toFixed(2)); h.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: p.cur.toFixed(2) }));
+  h.setAttribute("aria-valuenow", p.cur.toFixed(2)); h.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: p.cur.toFixed(2) }) + (window.GRADIENTE && p.overlay === "grad" ? GRADIENTE.cursorText(p) : ""));
 }
 
 // ---- keys: ← → one scan (Maiusc: five), held = ~15 scans/s, Space = play/pause, Esc = stop, ? = list of the shortcuts

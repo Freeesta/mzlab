@@ -261,6 +261,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.analog(int(q["k"]), int(q["i"]), int(q.get("n", 2000))))
         if path == "/api/gradient":
             return _json({"gradient": app.gradient(int(q["k"]))})
+        if path == "/api/delay":         # delay of the mass spectrometer after the PDA (cross-correlation of the two traces): a measure, never applied by itself
+            return _json({"delay": app.delay(int(q["k"]))})
         if path == "/api/state":
             return _json(app.state())
         if path == "/api/notebook":
