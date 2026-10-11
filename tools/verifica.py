@@ -116,7 +116,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "mappa3d.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -235,7 +235,7 @@ AREE = [
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
     ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
-    ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_map3d", "e2e_pannelli2"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
+    ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),

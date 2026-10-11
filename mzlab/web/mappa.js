@@ -9,7 +9,7 @@ window.MAPPA = (() => {
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
   const SIDE = 180, BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
-  const is2d = p => p.type === "map" && p.view !== "3d" && p._a && p._a.map && !p._a.is3d;
+  const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
   const mirOn = p => { const s = st(p); return s.mir != null ? s.mir : isMax(p); };
   const wide = p => p.el && p.el.clientWidth >= NARROW;
@@ -57,7 +57,7 @@ window.MAPPA = (() => {
     const grow = m && !isMax(p);                                        // in the page the panel grows by the height of the XIC, and shrinks back after
     if (grow !== !!s.grown) { p.h = Math.max(200, p.h + (grow ? 1 : -1) * (BOTTOM + 80)); s.grown = grow; apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave(); }
   }
-  const is2dView = p => p.type === "map" && p.view !== "3d";
+  const is2dView = p => p.type === "map";
 
   // ---------------------------------------------------------------- the true zoom: the region in view on new bins, asked 150 ms after the last change
   function normFactor(m, norm) {
@@ -339,6 +339,14 @@ window.MAPPA = (() => {
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
+  // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
+  async function addPointAt(p, rt, mz, dmz) {
+    const a = p._a; if (!a || !a.f) return;
+    let at = null; try { at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${dmz || 1}`); } catch (e) { /* no snap */ }
+    const q = at && at.rt != null ? at : { rt, mz };
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    ptsSave(p); overlay(p); table(p);
+  }
   function nearPoint(p, px, py) {
     const a = p._a; let best = -1, bd = 81;
     pts(p).forEach((q, i) => { const d = (a.X(q.rt) - px) ** 2 + (a.Y(q.mz) - py) ** 2; if (d < bd) { bd = d; best = i; } });
@@ -481,7 +489,12 @@ window.MAPPA = (() => {
 
   function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
 
-  return { init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
+    // «Open in 3D»: the viewer is loaded the first time it is asked for
+  async function open3d(p, opener) {
+    try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
+  }
+
+  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
@@ -539,200 +552,4 @@ window.MAPPA = (() => {
   }
   window.MAPPA_PNL = { clamp, setH };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
-})();
-
-// ---- 3D surface (no libraries, Canvas 2D). Cells: at most 300 x 300 (the maximum of the bins each one covers, so no peak disappears), then a
-// Gaussian smoothing, the noise threshold and the scale (linear | square root | logarithmic). Lambert shading with a light that follows the camera,
-// viridis or cividis, contour lines on the floor, axes with labels. Back-to-front order of the grid (no sorting); while turning, a coarser grid.
-(() => {
-  const T = (k, o) => I18N.t(k, o), D3 = { thr: 0.02, sig: 1, pal: "viridis" };
-  const P3 = () => { const q = MAPPA.prefs; return { thr: q.t3thr ?? D3.thr, sig: q.t3sig ?? D3.sig, pal: q.t3pal || D3.pal }; };
-  const ANCH = {
-    viridis: [[68, 1, 84], [70, 50, 126], [54, 92, 141], [39, 127, 142], [31, 161, 135], [74, 194, 109], [159, 218, 58], [253, 231, 37]],
-    cividis: [[0, 32, 76], [31, 55, 108], [70, 77, 110], [105, 100, 112], [139, 125, 119], [177, 153, 117], [217, 184, 100], [254, 232, 56]]
-  };
-  const LUTS = {};
-  const pal = name => LUTS[name] || (LUTS[name] = (() => {
-    const A = ANCH[name] || ANCH.viridis, L = new Uint8ClampedArray(256 * 3);
-    for (let i = 0; i < 256; i++) { const t = i / 255 * (A.length - 1), k = Math.min(A.length - 2, Math.floor(t)), f = t - k; for (let c = 0; c < 3; c++) L[i * 3 + c] = A[k][c] + (A[k + 1][c] - A[k][c]) * f; }
-    return L;
-  })());
-  const scaleT = (r, sc) => sc === "lin" ? r : sc === "log" ? Math.log10(1 + 1000 * r) / 3.0004 : Math.sqrt(r);
-  function smooth(Z, nx, ny, s) {
-    if (!(s > 0.05)) return Z;
-    const r = Math.ceil(3 * s), k = new Float32Array(2 * r + 1); let sum = 0;
-    for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-i * i / (2 * s * s)); sum += k[i + r]; }
-    for (let i = 0; i < k.length; i++) k[i] /= sum;
-    const tmp = new Float32Array(Z.length), out = new Float32Array(Z.length);
-    for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) { let acc = 0; for (let t = -r; t <= r; t++) acc += k[t + r] * Z[a * ny + Math.min(ny - 1, Math.max(0, b + t))]; tmp[a * ny + b] = acc; }
-    for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) { let acc = 0; for (let t = -r; t <= r; t++) acc += k[t + r] * tmp[Math.min(nx - 1, Math.max(0, a + t)) * ny + b]; out[a * ny + b] = acc; }
-    return out;
-  }
-  function gridOf(p, A, B, im, x0, x1, y0, y1) {
-    const o = P3(), { nrt, nmz, rt0, rt1, mz0, dmz } = A;
-    const ia = Math.max(0, Math.floor((x0 - rt0) / (rt1 - rt0) * nrt)), ib = Math.min(nrt, Math.max(ia + 1, Math.ceil((x1 - rt0) / (rt1 - rt0) * nrt)));
-    const ja = Math.max(0, Math.floor((y0 - mz0) / dmz)), jb = Math.min(nmz, Math.max(ja + 1, Math.ceil((y1 - mz0) / dmz)));
-    const key = `${im.key}|${p.scale}|${ia},${ib},${ja},${jb}|${o.thr}|${o.sig}`;
-    if (p._g3 && p._g3.key === key && p._g3.v === im.v) return p._g3;
-    const MAXC = 300, sx = Math.max(1, Math.ceil((ib - ia) / MAXC)), sy = Math.max(1, Math.ceil((jb - ja) / MAXC));
-    const nx = Math.max(2, Math.ceil((ib - ia) / sx)), ny = Math.max(2, Math.ceil((jb - ja) / sy)), v = im.v;
-    let R = new Float32Array(nx * ny);
-    for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
-      let best = 0; const i1 = Math.min(ib, ia + (a + 1) * sx), j1 = Math.min(jb, ja + (b + 1) * sy);
-      for (let i = ia + a * sx; i < i1; i++) for (let j = ja + b * sy; j < j1; j++) { const q = v[i * nmz + j]; if (Math.abs(q) > Math.abs(best)) best = q; }
-      R[a * ny + b] = best;
-    }
-    R = smooth(R, nx, ny, o.sig);
-    const nz = []; for (let i = 0; i < R.length; i++) if (R[i] !== 0) nz.push(Math.abs(R[i]));
-    nz.sort((u, w) => u - w);
-    const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] || nz[nz.length - 1] : 1;
-    const Z = new Float32Array(nx * ny); let zmin = 0, zmax = 0, raw = 0;
-    for (let i = 0; i < R.length; i++) {
-      const r = Math.min(1, Math.abs(R[i]) / ref), z = r < o.thr ? 0 : Math.sign(R[i]) * scaleT(r, p.scale);
-      Z[i] = z; if (z < zmin) zmin = z; if (z > zmax) zmax = z; if (Math.abs(R[i]) > raw) raw = Math.abs(R[i]);
-    }
-    if (!B) zmin = 0; if (zmax === zmin) zmax = zmin + 1;
-    return (p._g3 = { key, v: im.v, nx, ny, Z, zmin, zmax, raw, ref, ia, ja, sx, sy });
-  }
-  function contours(g, G, st, P, levels) {
-    const { nx, ny, Z } = G;
-    for (const L of levels) {
-      g.beginPath();
-      for (let a = 0; a + st < nx; a += st) for (let b = 0; b + st < ny; b += st) {
-        const a1 = Math.min(nx - 1, a + st), b1 = Math.min(ny - 1, b + st);
-        const c = [Z[a * ny + b], Z[a1 * ny + b], Z[a1 * ny + b1], Z[a * ny + b1]], ix = [[a, b], [a1, b], [a1, b1], [a, b1]], pts = [];
-        for (let e = 0; e < 4; e++) {
-          const u = c[e], w = c[(e + 1) % 4]; if ((u >= L) === (w >= L)) continue;
-          const t = (L - u) / (w - u), p0 = ix[e], p1 = ix[(e + 1) % 4];
-          pts.push(P(p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t, 0));
-        }
-        if (pts.length >= 2) { g.moveTo(pts[0][0], pts[0][1]); g.lineTo(pts[1][0], pts[1][1]); }
-        if (pts.length === 4) { g.moveTo(pts[2][0], pts[2][1]); g.lineTo(pts[3][0], pts[3][1]); }
-      }
-      g.stroke();
-    }
-  }
-  function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
-    const o = P3(), G = gridOf(p, A, B, im, x0, x1, y0, y1), { nx, ny, Z, zmin, zmax } = G;
-    const rot = !!p._rot, s = rot ? Math.max(1, Math.ceil(Math.max(nx, ny) / 110)) : 1;
-    const az = (p.az ?? 25) * Math.PI / 180, el = (p.elv ?? 38) * Math.PI / 180, ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el);
-    const zs = 0.55 / Math.max(zmax - Math.min(zmin, 0), 1e-9);
-    const asp = Math.min(3, Math.max(1, (W - M.l - M.r) / Math.max(1, H - M.t - M.b) * 1.1));
-    const pr = (u, w, z) => { u *= asp; const xr = u * ca - w * sa, d = u * sa + w * ca; return [xr, z * zs * ce + d * se, d * ce - z * zs * se]; };
-    const corners = []; for (const u of [-.5, .5]) for (const w of [-.5, .5]) for (const z of [zmin, zmax]) corners.push(pr(u, w, z));
-    const bx0 = Math.min(...corners.map(c => c[0])), bx1 = Math.max(...corners.map(c => c[0])), by0 = Math.min(...corners.map(c => c[1])), by1 = Math.max(...corners.map(c => c[1]));
-    const pw = W - M.l - M.r - 40, ph = H - M.t - M.b - 30, sc = Math.min(pw / (bx1 - bx0), ph / (by1 - by0));
-    const ox = M.l + 20 + (pw - (bx1 - bx0) * sc) / 2 - bx0 * sc, oy = M.t + 8 + (ph - (by1 - by0) * sc) / 2 + by1 * sc;
-    const Pm = (u, w, z) => { const r = pr(u, w, z); return [ox + r[0] * sc, oy - r[1] * sc, r[2]]; };
-    const PV = (a, b, z) => Pm(a / (nx - 1) - .5, b / (ny - 1) - .5, z);          // grid vertex (fractional indices allowed)
-    g.clearRect(0, 0, W, H);
-    const ink = css("--muted"), strong = css("--ink"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(12);
-    const fl = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(([u, w]) => Pm(u, w, 0));
-    g.fillStyle = "rgba(120,120,120,.08)"; g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
-    // floor grid at the ticks and contour lines of the surface
-    const r0 = nice(x0, x1, 5).filter(t => t >= x0 && t <= x1), m0 = nice(y0, y1, 5).filter(t => t >= y0 && t <= y1);
-    g.save(); g.globalAlpha = .25; g.beginPath();
-    for (const t of r0) { const u = (t - x0) / (x1 - x0) - .5, q = Pm(u, -.5, 0), q2 = Pm(u, .5, 0); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); }
-    for (const t of m0) { const w = (t - y0) / (y1 - y0) - .5, q = Pm(-.5, w, 0), q2 = Pm(.5, w, 0); g.moveTo(q[0], q[1]); g.lineTo(q2[0], q2[1]); }
-    g.stroke(); g.restore();
-    if (!rot) { g.save(); g.strokeStyle = ink; g.globalAlpha = .55; g.lineWidth = .7; contours(g, G, Math.max(1, Math.ceil(Math.max(nx, ny) / 120)), (a, b, z) => PV(a, b, z), zmax > 0 ? [.15, .35, .6, .85].map(k => k * zmax) : []); g.restore(); }
-    // surface: far cells first
-    const lx = -.5, ld = -.45, lz = .75, ln = Math.hypot(lx, ld, lz), Lu = (lx * ca + ld * sa) / ln, Lw = (-lx * sa + ld * ca) / ln, Lz = lz / ln;
-    const du = asp / (nx - 1), dw = 1 / (ny - 1), L = pal(o.pal), tab = B ? LUT_DIV : null;
-    const na = Math.floor((nx - 1) / s), nb = Math.floor((ny - 1) / s), aD = sa > 0, bD = ca > 0;
-    g.lineWidth = .5;
-    for (let ia = 0; ia < na; ia++) {
-      const a = (aD ? na - 1 - ia : ia) * s;
-      for (let ib = 0; ib < nb; ib++) {
-        const b = (bD ? nb - 1 - ib : ib) * s, a1 = Math.min(nx - 1, a + s), b1 = Math.min(ny - 1, b + s);
-        const z00 = Z[a * ny + b], z10 = Z[a1 * ny + b], z11 = Z[a1 * ny + b1], z01 = Z[a * ny + b1];
-        if (z00 === 0 && z10 === 0 && z11 === 0 && z01 === 0) continue;
-        const dzu = ((z10 + z11) - (z00 + z01)) / 2 * zs / (du * (a1 - a)), dzw = ((z01 + z11) - (z00 + z10)) / 2 * zs / (dw * (b1 - b));
-        const nn = Math.hypot(dzu, dzw, 1), lam = Math.max(0, (-dzu * Lu - dzw * Lw + Lz) / nn), k = .42 + .7 * lam, zc = (z00 + z10 + z11 + z01) / 4;
-        let r, gg, bl;
-        if (B) { const q = Math.round(127.5 - Math.max(-1, Math.min(1, zc)) * 127.5); r = tab[q * 4]; gg = tab[q * 4 + 1]; bl = tab[q * 4 + 2]; }
-        else { const q = Math.round(Math.min(1, Math.max(0, zc)) * 255) * 3; r = L[q]; gg = L[q + 1]; bl = L[q + 2]; }
-        const col = `rgb(${Math.min(255, r * k | 0)},${Math.min(255, gg * k | 0)},${Math.min(255, bl * k | 0)})`;
-        const c0 = PV(a, b, z00), c1 = PV(a1, b, z10), c2 = PV(a1, b1, z11), c3 = PV(a, b1, z01);
-        g.fillStyle = col; g.beginPath(); g.moveTo(c0[0], c0[1]); g.lineTo(c1[0], c1[1]); g.lineTo(c2[0], c2[1]); g.lineTo(c3[0], c3[1]); g.closePath(); g.fill();
-        if (!rot) { g.strokeStyle = col; g.stroke(); }
-      }
-    }
-    // axes: ticks on the two floor edges nearest to the viewer, z axis
-    g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.textAlign = "center"; g.font = fpx(12);
-    const wn = pr(0, -.5, 0)[2] < pr(0, .5, 0)[2] ? -.5 : .5, un = pr(-.5, 0, 0)[2] < pr(.5, 0, 0)[2] ? -.5 : .5;
-    g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
-    for (const t of r0) { const u = (t - x0) / (x1 - x0) - .5, q = Pm(u, wn, 0), e2 = Pm(u, wn * 1.06, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(e2[0], e2[1]); g.stroke(); g.fillText(String(+t.toFixed(2)), e2[0], e2[1] + (wn < 0 ? 12 : -4)); }
-    for (const t of m0) { const w = (t - y0) / (y1 - y0) - .5, q = Pm(un, w, 0), e2 = Pm(un * 1.05, w, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(e2[0], e2[1]); g.stroke(); g.textAlign = un < 0 ? "right" : "left"; g.fillText(String(Math.round(t)), e2[0] + (un < 0 ? -3 : 3), e2[1] + 4); g.textAlign = "center"; }
-    const tm = Pm(0, wn * 1.3, 0), ym = Pm(un * 1.28, 0, 0), zb = Pm(-.5, -.5, B ? zmin : 0), zt = Pm(-.5, -.5, zmax);
-    g.fillStyle = strong; g.fillText("RT (min)", tm[0], tm[1] + (wn < 0 ? 18 : -14)); g.fillText("m/z", ym[0], ym[1] + 4); g.fillStyle = ink;
-    g.beginPath(); g.moveTo(zb[0], zb[1]); g.lineTo(zt[0], zt[1]); g.stroke(); g.textAlign = "right"; g.fillText(fmt(G.raw * (G.zmax >= 0 ? 1 : -1)), zt[0] - 4, zt[1] + 4); g.fillText(B ? "0" : "0", zb[0] - 4, zb[1] + 4);
-    g.textAlign = "left"; g.fillStyle = strong; g.fillText(T("map.height3d", { scale: scaleTxt }), M.l, M.t + 8); g.fillStyle = ink;
-    // centres for the pointer (about 80 x 80)
-    const cs = Math.max(1, Math.ceil(Math.max(nx, ny) / 80)), centres = [];
-    for (let a = 0; a < nx; a += cs) for (let b = 0; b < ny; b += cs) { const q = PV(a, b, Z[a * ny + b]); centres.push({ x: q[0], y: q[1], depth: q[2], a, b, v: Z[a * ny + b], rt: A.rt0 + (G.ia + (a + .5) * G.sx) / A.nrt * (A.rt1 - A.rt0), mz: A.mz0 + (G.ja + (b + .5) * G.sy) * A.dmz }); }
-    // the line the student clicked: from the floor to the surface, with RT and m/z
-    const pin = p._pin3;
-    if (pin && pin.rt >= x0 && pin.rt <= x1 && pin.mz >= y0 && pin.mz <= y1) {
-      const a = Math.round(((pin.rt - A.rt0) / (A.rt1 - A.rt0) * A.nrt - G.ia) / G.sx - .5), b = Math.round(((pin.mz - A.mz0) / A.dmz - G.ja) / G.sy - .5);
-      if (a >= 0 && a < nx && b >= 0 && b < ny) {
-        const z = Z[a * ny + b], q0 = PV(a, b, 0), q1 = PV(a, b, z);
-        g.save(); g.strokeStyle = strong; g.lineWidth = 1.6; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(q0[0], q0[1]); g.lineTo(q1[0], q1[1]); g.stroke(); g.setLineDash([]);
-        g.fillStyle = strong; g.beginPath(); g.arc(q1[0], q1[1], 3.5, 0, 6.3); g.fill();
-        const txt = T("mappa.v3.pin", { rt: pin.rt.toFixed(2), mz: pin.mz.toFixed(mzd(p)) }), tw = g.measureText(txt).width + 10, tx = Math.min(W - tw - 4, Math.max(4, q1[0] - tw / 2)), ty = Math.max(M.t + 18, q1[1] - 14);
-        g.fillStyle = css("--panel"); g.globalAlpha = .92; g.fillRect(tx, ty - 13, tw, 18); g.globalAlpha = 1; g.fillStyle = strong; g.textAlign = "left"; g.fillText(txt, tx + 5, ty); g.restore();
-      }
-    }
-    const hov = (px, py) => {
-      let best = null, bd = 18 * 18;
-      for (const c of centres) { const d = (c.x - px) ** 2 + (c.y - py) ** 2; if (d < bd || (best && d < bd + 40 && c.depth < best.depth)) { bd = Math.min(bd, d); best = c; } }
-      if (!best) return null;
-      return { px: best.x, rt: null, novl: true, html: T("map.hov", { rt: best.rt.toFixed(2), mz: best.mz.toFixed(mzd(p)), what: T(B ? "map.hov.diff" : "map.hov.mean"), v: (B && best.v > 0 ? "+" : "") + fmt(best.v * G.ref) }) };
-    };
-    p._a = { x0, x1, y0, y1, X: v2 => M.l + (v2 - x0) / (x1 - x0) * (W - M.l - M.r), Y: () => 0, W, H, full: [A.rt0, A.rt1], fullY: [A.mz0, A.mz0 + A.nmz * A.dmz], f, mzAt: () => (y0 + y1) / 2, map: true, is3d: true, hov, centres };
-  }
-  const nearest = (p, px, py) => { let best = null, bd = 22 * 22; for (const c of (p._a && p._a.centres) || []) { const d = (c.x - px) ** 2 + (c.y - py) ** 2; if (d < bd || (best && d < bd + 40 && c.depth < best.depth)) { bd = Math.min(bd, d); best = c; } } return best; };
-  // a click without moving (the drag rotates): the line with RT and m/z
-  function click3(p, d) {
-    if (!d || p.az !== d.az || p.elv !== d.elv) return false;
-    const c = nearest(p, d.x0, d.y0); if (!c) return false;
-    p._pin3 = { rt: c.rt, mz: c.mz };
-    draw(p); return true;
-  }
-  // double click: the spectrum at that RT
-  async function dbl3(p, px, py) {
-    const c = nearest(p, px, py); if (!c) return;
-    const a = p._a, k = p.k != null ? p.k : (a && a.f ? a.f.k : 0), f = E.files[k]; if (!f || f.kind === "mrm") return;
-    let r0 = c.rt - scanStep() / 2, r1 = c.rt + scanStep() / 2, at = c.rt;
-    const n = await nearScan(k, c.rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; }
-    p.sel = null; p.cur = at; newSpec(p, r0, r1, k); draw(p);
-  }
-  function view3(p, az, elv) { p.az = az; p.elv = elv; draw(p); if (typeof uiSave === "function") uiSave(); }
-  function decorate3(p, c) {
-    const o = P3(), sp = document.createElement("span"); sp.className = "seg mzbt";
-    sp.innerHTML = `<button data-v3="top" title="${T("mappa.v3.top.title")}">${T("mappa.v3.top")}</button><button data-v3="rt" title="${T("mappa.v3.rt.title")}">${T("mappa.v3.rt")}</button><button data-v3="mz" title="${T("mappa.v3.mz.title")}">${T("mappa.v3.mz")}</button><button data-v3="iso" title="${T("mappa.v3.iso.title")}">${T("mappa.v3.iso")}</button>`;
-    c.appendChild(sp);
-    const op = (v, lab) => `<option value="${v}" ${o.pal === v ? "selected" : ""}>${lab}</option>`, d2 = document.createElement("span"); d2.className = "mzdif";
-    d2.innerHTML = `<select data-v3="pal" title="${T("mappa.v3.pal.title")}">${op("viridis", "viridis")}${op("cividis", "cividis")}</select>` +
-      `<label class="muted" title="${T("mappa.v3.sig.title")}">${T("mappa.v3.sig")} <input data-v3="sig" class="mzf" inputmode="decimal" value="${o.sig}"></label>` +
-      `<label class="muted" title="${T("mappa.v3.thr.title")}">${T("mappa.v3.thr")} <input data-v3="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
-    c.appendChild(d2);
-    const Q = s => c.querySelector(`[data-v3="${s}"]`), num = el => parseFloat(String(el.value).replace(",", "."));
-    Q("top").onclick = () => setMapView(p, "2d");
-    Q("rt").onclick = () => view3(p, 0, 0);          // seen from the side along m/z: the outline is the chromatogram
-    Q("mz").onclick = () => view3(p, 90, 0);         // seen from the side along RT: the outline is the spectrum
-    Q("iso").onclick = () => view3(p, 25, 38);
-    Q("pal").onchange = e => { MAPPA.prefs.t3pal = e.target.value; MAPPA.prefSave(); draw(p); };
-    Q("sig").onchange = e => { const v = num(e.target); if (v >= 0 && v <= 4) { MAPPA.prefs.t3sig = v; MAPPA.prefSave(); } draw(p); };
-    Q("thr").onchange = e => { const v = num(e.target); if (v >= 0 && v < 100) { MAPPA.prefs.t3thr = v / 100; MAPPA.prefSave(); } draw(p); };
-  }
-  const dec0 = MAPPA.decorate, aft0 = MAPPA.after;
-  Object.assign(MAPPA, {
-    draw3d, click3, dbl3,
-    decorate: (p, c) => p.type === "map" && p.view === "3d" ? decorate3(p, c) : dec0(p, c),
-    after: p => {
-      aft0(p);
-      if (p._a && p._a.is3d) { const b = p.leg && p.leg.querySelector(".cbar"); if (b && !(p.ref !== "" && p.ref != null)) { const L = pal(P3().pal), st = [0, 36, 73, 109, 146, 182, 219, 255].map(i => `rgb(${L[i * 3]},${L[i * 3 + 1]},${L[i * 3 + 2]})`); b.style.background = `linear-gradient(90deg,${st.join(",")})`; } }
-    }
-  });
 })();

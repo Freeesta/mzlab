@@ -135,12 +135,15 @@ try:
         def map3d():
             pg.click("#np-map"); wait(2500)
             M3 = "E.panels.find(p => p.type === 'map')"
-            pg.evaluate(f"setMapView({M3}, '3d')"); wait(1500); pg.evaluate(f"{M3}.el.scrollIntoView({{block:'center'}})"); wait(400)
-            c = pg.evaluate(f"(() => {{ const q = {M3}.cv.getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }})()"); az0 = pg.evaluate(f"{M3}.az ?? 25")
+            pg.evaluate(f"{M3}.el.scrollIntoView({{block:'center'}})"); wait(400)
+            pg.locator(".pnl.map [data-o=view][data-v='3d']").click()
+            pg.wait_for_function("window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); wait(500)
+            c = pg.evaluate("(() => { const q = document.querySelector('.m3d-gl').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; })()"); az0 = pg.evaluate("window.__m3d.V.cam.az")
             T("touchStart", [(c[0], c[1])]); wait(60)
             for k in range(1, 9): T("touchMove", [(c[0] + 25 * k, c[1])]); wait(30)
             T("touchEnd", []); wait(500)
-            az1 = pg.evaluate(f"{M3}.az"); assert az1 is not None and abs(az1 - az0) > 20, (az0, az1)
+            az1 = pg.evaluate("window.__m3d.V.cam.az"); assert abs(az1 - az0) > 20, (az0, az1)
+            pg.keyboard.press("Escape"); wait(300)
         step("3D map: one finger rotates", map3d)
         K = "document.querySelector('#kframe').contentWindow.ketcher"
         def kfinger():
