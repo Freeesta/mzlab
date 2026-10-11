@@ -17,6 +17,7 @@ import json
 import os
 import struct
 import tempfile
+import threading
 
 import numpy as np
 
@@ -134,14 +135,15 @@ class LazyArray(np.lib.mixins.NDArrayOperatorsMixin):
         a, b = max(a, 0), min(b, self._n)
         out = np.empty(max(b - a, 0), dtype=self.dtype)
         if b > a:
-            self._fh.seek(self._off + a * self.dtype.itemsize)
             mv = memoryview(out).cast("B")
-            got = 0
-            while got < len(mv):
-                k = self._fh.readinto(mv[got:])
-                if not k:
-                    raise OSError("mzidx: unexpected end of file")
-                got += k
+            with _IO_LOCK:
+                self._fh.seek(self._off + a * self.dtype.itemsize)
+                got = 0
+                while got < len(mv):
+                    k = self._fh.readinto(mv[got:])
+                    if not k:
+                        raise OSError("mzidx: unexpected end of file")
+                    got += k
         return out
 
     def _block(self, k: int) -> np.ndarray:
@@ -196,6 +198,9 @@ class LazyArray(np.lib.mixins.NDArrayOperatorsMixin):
 
 
 # ---------------------------------------------------------------------------------------------------------------- reader
+_IO_LOCK = threading.Lock()      # the handle of an index is shared by the requests of a threaded server: seek + read must not interleave
+
+
 class MzIdx:
     def __init__(self, path):
         self.path = os.fspath(path)
@@ -223,8 +228,10 @@ class MzIdx:
 
     def scans(self) -> list[Scan]:
         """The scan table, exactly as the reader of the mzML produced it."""
-        self._fh.seek(self._soff)
-        rows = json.loads(self._fh.read(self._slen).decode("utf-8"))
+        with _IO_LOCK:
+            self._fh.seek(self._soff)
+            raw = self._fh.read(self._slen)
+        rows = json.loads(raw.decode("utf-8"))
         out = []
         for i, r in enumerate(rows):
             d = dict(zip(SCAN_COLUMNS, r))
