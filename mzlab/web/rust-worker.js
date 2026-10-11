@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, prepare_upload } from "./wasm/mzlab_wasm.js";
+import init, { Engine, prepare_upload, formula_mz } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { createPool, poolSize } from "./idxpool.js";
 
@@ -101,6 +101,7 @@ async function lrOp(m) {
     }
     case "lr_entry": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)) }; }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
+    case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": { engine.close(slotOf(m.name)); lrFile.delete(m.name); await ARCH.remove("files", m.name); return { info: "{}" }; }
     case "lr_space": { if (m.free) await lrFree(); return { info: JSON.stringify(await lrSpace()) }; }
     case "lr_kv_get": { const v = await safe(() => tx("kv", "readonly", s => s.get(m.key))); return { info: JSON.stringify({ value: v === undefined ? null : v }) }; }
@@ -146,6 +147,7 @@ onmessage = async ev => {
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
+      case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;
       case "reset": engine.close_all(); blobs.clear(); break;

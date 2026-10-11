@@ -26,6 +26,7 @@ pub mod scaninfo;
 pub mod sniff;
 pub mod scantable;
 pub mod specpeaks;
+pub mod spectrum;
 pub mod upload;
 pub mod stats;
 pub mod subformulas;

@@ -264,6 +264,17 @@ impl Engine {
         }
     }
 
+    /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).
+    pub fn mrm(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        };
+        let end = r.idx.scans.last().map_or(0, |s| s.end);
+        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
+        mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms).map_err(|e| error_json(&e))
+    }
+
     /// The entry of the loading table for the file at `slot` (index opened with `open_index`; the mzML is read through `read`): JSON, `App.files()` of Python.
     pub fn lr_entry(
         &mut self,
@@ -535,6 +546,12 @@ pub fn build_mzidx(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes
     ))
+}
+
+/// `/api/formula`: neutral mass and ion m/z of a formula (`mzlab-core::elements`); an error is JSON with a key.
+#[wasm_bindgen]
+pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
+    mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
 /// What the index builder and the loading table need of an uploaded mzML, without Python (`mzlab-core::upload`): the scan table as the eight inputs of

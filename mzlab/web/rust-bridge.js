@@ -115,7 +115,7 @@ export function createBridge({ workerUrl, notify }) {
     return out;
   };
 
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
   api.handle = async (method, url) => {
@@ -134,6 +134,20 @@ export function createBridge({ workerUrl, notify }) {
       if (r.dead || r.error || !r.info) return null;
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
+    }
+    if (path === "/api/mrm" && !hasRef(q)) {                         // the SRM transitions: chromatograms of the mzML (no scans, no peaks)
+      const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
+      if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
+      await Promise.all(ks.map(k => slots[k].opening));
+      if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
+      const parts = [];
+      for (const k of ks) {
+        const r = await rpc({ op: "mrm", slot: k, blob: slots[k].blob });
+        if (r.dead || r.error || !r.info) return null;
+        parts.push(`{"k":${k},"transitions":${r.info}}`);
+      }
+      stats.rust++;
+      return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);

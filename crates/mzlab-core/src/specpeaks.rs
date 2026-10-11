@@ -52,7 +52,7 @@ pub fn profile_peaks(mz: &[f64], y: &[f64], min_rel: f64) -> (Vec<f64>, Vec<f64>
         })
         .collect();
     let nom: Vec<i64> = mz.iter().map(|&m| nominal(m)).collect();
-    let (starts, g) = groups(&nom);
+    let (starts, _g) = groups(&nom);
     let ng = starts.len();
     let top: Vec<f64> = (0..n)
         .map(|i| {
@@ -131,12 +131,15 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     o.sort_by(|a, b| mz[*a].total_cmp(&mz[*b]));
     let (mzs, ys): (Vec<f64>, Vec<f64>) = o.iter().map(|&i| (mz[i], y[i])).unzip();
     let nom: Vec<i64> = mzs.iter().map(|&m| nominal(m)).collect();
-    let (starts, g) = groups(&nom);
-    let mut sy = vec![0.0f64; starts.len()];
-    let mut sx = vec![0.0f64; starts.len()];
-    for i in 0..mzs.len() {
-        sy[g[i]] += ys[i];
-        sx[g[i]] += mzs[i] * ys[i];
+    let (starts, _g) = groups(&nom);
+    // np.add.reduceat takes the first element of a run and adds the pairwise sum of the others to it
+    let ra = |v: &[f64]| if v.len() > 1 { v[0] + crate::stats::psum(&v[1..]) } else { v[0] };
+    let mut sy = Vec::with_capacity(starts.len());
+    let mut sx = Vec::with_capacity(starts.len());
+    for (k, &a) in starts.iter().enumerate() {
+        let b = starts.get(k + 1).copied().unwrap_or(mzs.len());
+        sy.push(ra(&ys[a..b]));
+        sx.push(ra(&(a..b).map(|i| mzs[i] * ys[i]).collect::<Vec<_>>()));
     }
     let smz = sx.iter().zip(&sy).map(|(a, b)| a / b.max(1e-12)).collect();
     (smz, sy)

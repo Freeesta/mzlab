@@ -101,6 +101,31 @@ try:
             after = pg.evaluate(JSON, "api/session")["j"]["session"]
             json_close(before, after, path="session")
         step("the first request only Python can answer starts Pyodide and the session is replayed into it", late_python)
+        def same_as_classic():
+            urls = ["api/spectrum?k=0&rt0=0&rt1=1000&level=1&precursor=&merge=1", "api/spectrum?k=1&rt0=1&rt1=2.5&level=1&bin=0.5", "api/spectrum?k=0&rt0=3&rt1=3&level=1",
+                    "api/formula?f=C6H12O6", "api/formula?f=c9h10cl2n2o&adduct=%5BM%2BNa%5D%2B", "api/formula?f=Xx2", "api/gradient?k=0", "api/method_warnings"]
+            for u in urls:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"], (u, a["status"], b2["status"])
+                json_close(a["j"], b2["j"], path=u)
+                if not u.startswith("api/gradient") and not u.startswith("api/method_warn"): assert a["eng"] == "rust", (u, a["eng"])
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        ctx3, pg3, reqs3 = context()
+        pg3.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        open_files(pg3)
+        step("spectrum, formula, gradient: same answers as the classic engine, still without Pyodide", same_as_classic)
+        def mrm_alone():
+            ctx4, pg4, reqs4 = context()
+            pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+            pg4.wait_for_selector("#drop", timeout=120000)
+            pg4.set_input_files("#pick", [mz("B_MRM-t0")])
+            pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg4.click("#opbtn"); pg4.wait_for_selector("canvas", timeout=120000)
+            pg4.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            assert not pyodide(reqs4), (pyodide(reqs4)[:3], why(pg4))
+            r = pg4.evaluate(JSON, "api/mrm?k=0"); assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["files"][0]["transitions"], r["eng"]
+            assert not pyodide(reqs4), (pyodide(reqs4)[:3], why(pg4))
+        step("an MRM file opens without Pyodide: the transitions come from the Rust engine", mrm_alone)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

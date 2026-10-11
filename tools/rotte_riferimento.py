@@ -39,6 +39,15 @@ def queries(item: Item) -> list[tuple[str, dict]]:
         out += [("/api/chrom", {**base, "mz0": "100", "mz1": "300"}), ("/api/chrom", {**base, "mz0": "150"}),
                 ("/api/chrom", {**base, "mz1": "250", "kind": "bpc"}), ("/api/chrom", {**base, "mz0": "120", "mz1": "280", "kind": "bpc"})]
         out += [("/api/scanlist", {**base})]
+        if item.spectrum_mode(lv) == "centroid" and not item.hr_on(lv, True):       # the spectra of a window: unit-resolution centroids (the rest is Python's)
+            for r0, r1 in ((0, 1), (1.3, 2.9), (3, 3.0), (0, 1000), (5.5, 2.2), (500, 600)):
+                for extra in ({}, {"merge": "1"}, {"bin": "0.5"}):
+                    out.append(("/api/spectrum", {**base, "rt0": str(r0), "rt1": str(r1), **extra}))
+            for p0 in sorted({round(s.precursor, 1) for s in scans if s.level == lv and s.precursor})[:2] if lv > 1 else []:
+                out.append(("/api/spectrum", {**base, "rt0": "0", "rt1": "1000", "precursor": str(p0)}))
+            for (l2, key) in list(keys)[:4]:
+                if l2 == lv:
+                    out.append(("/api/spectrum", {**base, "rt0": "0", "rt1": "1000", "filt": key, "merge": "1"}))
         precs = sorted({round(s.precursor, 1) for s in scans if s.level == lv and s.precursor})[:3]
         for p in precs:
             out += [("/api/chrom", {**base, "prec": str(p)}), ("/api/nearest_scan", {**base, "rt": "3.3", "precursor": str(p)})]
