@@ -1,0 +1,15 @@
+# Known red or unstable e2e on main (read by tools/verifica.py): `name | reason`. A FAIL listed here is shown as NOTO and does not
+# fail the run; any other FAIL is shown as NUOVO. Remove a line when the test is fixed. Measured on origin/main with synthetic data, Chromium.
+e2e16 | red on main: arrows swap panels, a button is missing (null .disabled)
+e2e25 | red on main: gear panel, number of controls (line 31)
+# unstable under load (green alone; rerun with --solo NAME)
+e2e_accessibilita | keyboard tour of a Teoria page: false trap under load
+e2e_tour | unstable under load
+e2e_tocco | unstable under load
+e2e_hr_scanbin | unstable under load
+e2e_origine | unstable under load
+e2e_pratica | unstable under load
+e2e_barra | unstable under load
+e2e_mappa | unstable under load
+e2e_pulsanti | unstable under load
+e2e_lingua | unstable under load

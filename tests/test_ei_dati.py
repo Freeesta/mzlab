@@ -16,6 +16,7 @@ from mzlab.chem.elements import parse_formula, mass
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 NOMINAL = {"H": 1, "C": 12, "N": 14, "O": 16, "F": 19, "Si": 28, "P": 31, "S": 32, "Cl": 35, "Br": 79, "I": 127}
+AIUTI = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-aiuti.js"
 SKILLS = {"M", "isotopi", "azoto", "rdb", "alpha", "induttiva", "sigma", "mclafferty", "rda", "benzilica", "orto", "serie", "perdita", "riarr", "m-assente"}
 LICENSES = {"CC BY-NC-SA", "CC BY-NC", "CC BY-SA", "CC BY", "CC0"}
 ODD = {"M", "mclafferty", "rda", "orto"}                 # mechanisms that give odd-electron ions
@@ -107,6 +108,10 @@ def test_every_spectrum_cited_in_the_theory_exists():
             assert ref in ids, (page.name, ref)
 
 
+def aiuti():
+    return dict(re.findall(r'^  "([^"]+)": "(.*)",$', AIUTI.read_text(encoding="utf-8"), re.M))
+
+
 def test_molecular_ion_and_nitrogen_rule():
     """Every compound: the M key (if any) is the formula itself as a radical cation; nominal M parity = parity of the N count; RDB integer >= 0."""
     for it in load()["items"]:
@@ -151,3 +156,17 @@ def test_key_notes_are_not_direct_answers():
         for k in it["keys"]:
             assert name not in k["text"].lower(), (it["id"], k["text"])
 
+
+def test_hints_of_the_hard_mode_do_not_reveal_the_structure():
+    """Level 3 of the hints: one sentence per compound of the path, no m/z, no name, no formula, no class or group word."""
+    h = aiuti()
+    forbidden = re.compile(r"\balcol|\bammin|\bchetone|\baldeid|\beter[ei]\b|\bester|\bacid[oi]\b|\bnitril|\bammid|\balogen|\baromatic|\bbenzen|\banell|\banello|\bcicl|\bcarbonil|\bossidril|\bnitro|\btiol|\bsolfur|\bfenol|\balchil|\bcatena|\bsimmetr|\bramific|\bdoppio legame|\bcarbossil|\bfenil", re.I)
+    path = [i for i in load()["items"] if "path" in i]
+    assert set(h) >= {i["id"] for i in path}
+    assert set(h) <= {i["id"] for i in load()["items"]}
+    for it in path:
+        t = h[it["id"]]
+        assert 40 < len(t) < 330, it["id"]
+        assert not re.search(r"\d{2,}", t), (it["id"], "a number in the hint")
+        assert it["name"].lower() not in t.lower() and it["formula"] not in t, it["id"]
+        assert not forbidden.search(t), (it["id"], forbidden.search(t).group(0))
