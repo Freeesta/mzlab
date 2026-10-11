@@ -26,6 +26,7 @@ from . import kinetics as KN
 from . import localize as LZ
 from . import msn
 from . import network as NW
+from . import rules as RU
 from . import similarity as SM
 from . import spectra as SP
 
@@ -68,6 +69,9 @@ class ExperimentHR:
         self.ion_vec = F.vec(self.ion, self.els)
         self.parent_mz = float(F.ion_mass(self.ion_vec, self.els))
         self.parent_name = parent.get("name") or ""
+        extra = self.s.get("extra_transformations") or []               # the user's list of transformations (name, delta, comment)
+        self.table = NW.transformation_table(self.els, extra)
+        self.lit = RU.literature(extra, self.els)
         # --- files
         self.files = []
         for d in files:
@@ -259,7 +263,7 @@ class ExperimentHR:
         al, idx = self.al, self.funnel.idx
         self.getters = self._runs()
         space, _ = FL.tp_space(self.ion)
-        table = NW.transformation_table(self.els)
+        table = self.table
         pv = self.ion_vec
         amax = al.area[idx][:, self.tr_c].max(1) if len(idx) else np.zeros(0)
         lg = np.log10(np.maximum(amax, 1))
@@ -310,6 +314,10 @@ class ExperimentHR:
             for j, kk in enumerate(pos):
                 cands[kk]["ms2"].update(modcos=float(sc[j]), n_matched=int(nm[j]), entropy=float(se[j]), n_matched_entropy=int(ne[j]))
             self._pad = (M, W, P, pos)
+            self._specs = {-1: (pspec, self.parent_mz)}
+            for j, kk in enumerate(pos):                 # the three components of the similarity with the parent (shifted fragments)
+                self._specs[cands[kk]["id"]] = (specs[j], precs[j])
+                cands[kk]["ms2"]["sim"] = SM.pair_components(pspec, self.parent_mz, specs[j], precs[j])
         # localisation of the candidates that have MS2 and a formula
         if self.library is not None and self.tree is not None and self.tree.subs is not None:
             groups = LZ.default_groups(self.tree.subs.mol)
@@ -398,7 +406,7 @@ class ExperimentHR:
                 for a, b, s, n in zip(ia.tolist(), ib.tolist(), sc.tolist(), nm.tolist()):
                     cos[(members[a], members[b])] = cos[(members[b], members[a])] = (float(s), int(n))
         pf = F.fmt(self.ion_vec, self.els)
-        preds = NW.predecessors(sub, self.els, pf, NW.transformation_table(self.els), cos=cos, step=self._step())
+        preds = NW.predecessors(sub, self.els, pf, self.table, cos=cos, step=self._step())
         by = {p["id"]: p for p in preds}
         prt = float(self.al.rt[self.parent_group]) if self.parent_group is not None else self.parent_rt_hint
         tk = {c["id"]: (c.get("kinetics") or {}).get("tmax") for c in cands}
@@ -409,6 +417,20 @@ class ExperimentHR:
                 c["predecessor_kinetics"] = tk.get(p["predecessor"])
             loc = c.get("localization") or {}
             c["confidence"] = NW.confidence(c, parent_rt=prt, groups_of_region=loc.get("n_groups"))
+            c["prediction"] = RU.prediction(c, self.table, self.ion_vec, self.els, self.smiles, self.lit)
+        specs = getattr(self, "_specs", {})
+        ident = lambda k: -1 if k < 0 else sub[k]["id"]
+        memo: dict = {}
+
+        def sim(a: int, b: int):             # a, b: positions in `sub`, -1 = the parent
+            ia, ib = ident(a), ident(b)
+            if ia not in specs or ib not in specs:
+                return None
+            if (ia, ib) not in memo:
+                (sa, pa), (sb, pb) = specs[ia], specs[ib]
+                memo[(ia, ib)] = SM.pair_components(sa, pa, sb, pb)
+            return memo[(ia, ib)]
+        self.mass_net = NW.mass_network(sub, self.els, pf, self.table, preds=preds, sim=sim, parent_smiles=self.smiles, lit=self.lit, step=self._step())
         self.ranked = NW.rank(cands)
         self._close_runs()
         self.timing["rete"] = round(time.perf_counter() - t0, 2)
@@ -446,7 +468,7 @@ class ExperimentHR:
                 "tmax": kin.get("tmax"), "class": kin.get("class_text"), "onset": kin.get("onset"),
                 "score": round(c["priority"]["score"], 1), "components": {k: round(c["priority"]["components"][k], 3) for k in NW.WEIGHTS},
                 "level": c["confidence"]["level"], "diagnostic": bool(c["confidence"].get("diagnostic")), "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
-                "n_matched": ms2.get("n_matched", 0), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
+                "n_matched": ms2.get("n_matched", 0), "sim": _sim_row(ms2.get("sim")), "pred": (c.get("prediction") or {}).get("level"), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
                 "predecessor": (c.get("predecessor") or {}).get("predecessor"), "transformation": (c.get("predecessor") or {}).get("transformation"),
                 "flags": flags, "filled": [int(k) for k in np.flatnonzero(self.filled[c["id"]])] if not c.get("hidden") and self.filled[c["id"]].any() else [], "series": [round(float(v)) for v in c["areas"]]}
 
@@ -460,7 +482,7 @@ class ExperimentHR:
                                          "rt": round(float(self.al.rt[self.parent_group]), 2) if self.parent_group is not None else self.parent_rt_hint, "name": self.parent_name},
                 "files": files, "times": [float(t) for t in self.times], "sessions": {"labels": self.sessions, "factors": self.sess_factors},
                 "saturation": self.saturation, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
-                "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
+                "mass_network": getattr(self, "mass_net", None), "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
                 "inclusion": [{"mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "rt_from": round(float(np.nanmin(self.al.left[c["id"]])), 2),
                                "rt_to": round(float(np.nanmax(self.al.right[c["id"]])), 2), "formula": c.get("formula"), "score": round(c["priority"]["score"], 1)} for c in incl],
                 "timing": self.timing, "warnings": self.warnings, "settings": self.s, "weights": self.s["weights"]}
@@ -486,7 +508,8 @@ class ExperimentHR:
         out = {"id": cid, "row": self._row(c), "criteria": c["confidence"]["criteria"], "level_text": c["confidence"]["text"], "components": c["priority"]["components"],
                "times": [float(t) for t in self.times], "areas": [float(a) for a in c["areas"]], "sessions": self.sessions, "kinetics": {k: v for k, v in kin.items() if k != "profile"},
                "iimn": {k: v for k, v in (c.get("iimn") or {}).items() if k != "evidence"} if c.get("iimn") else None,
-               "evidence_family": (c.get("iimn") or {}).get("evidence", []), "predecessor": c.get("predecessor"), "isotopes": c.get("isotopes")}
+               "evidence_family": (c.get("iimn") or {}).get("evidence", []), "predecessor": c.get("predecessor"), "isotopes": c.get("isotopes"),
+               "prediction": c.get("prediction"), "similarity": (c.get("ms2") or {}).get("sim")}
         if c["id"] in self._cons and self.parent_ms2 is not None:
             m2 = self._cons[c["id"]]
             loc = c.get("localization") or {}
@@ -510,6 +533,13 @@ class ExperimentHR:
         for r in rows:
             lines.append(f"{r['mz']},1,{r['rt_from']},{r['rt_to']},\"{(r['formula'] or '')} priority {r['score']}\"")
         return "\n".join(lines)
+
+
+def _sim_row(sim: dict | None) -> dict | None:
+    """Compact form of the three components for the table: [equal, shifted, loss] of the cosine, of the entropy and the matched peaks."""
+    if not sim:
+        return None
+    return {"cos": [round(sim["cos"][k], 3) for k in SM.TYPES], "ent": [round(sim["ent"][k], 3) for k in SM.TYPES], "n": [sim["n"][k] for k in SM.TYPES]}
 
 
 def _is_formula(text: str) -> bool:
