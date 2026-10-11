@@ -117,13 +117,14 @@ try:
             assert not r.errs, r.errs
         step("old t3* keys of qqq.mappa are ignored", oldkeys)
         b.close()
+    r.close(); r2 = Run(port=8839, wd="/tmp/wd_mappa3d_hr")
     with sync_playwright() as p:
-        pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
+        pg = r2.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
         pg.click("#np-map"); ready(pg); pg.wait_for_timeout(1500)
         viewer(pg, "hr", True)
-    r.close()
+    r2.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
     try: r.close()
