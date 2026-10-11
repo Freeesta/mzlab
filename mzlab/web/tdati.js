@@ -63,5 +63,50 @@ function attach(cv, fn) {
 }
 function open(cv) { const fn = providers.get(cv); const o = fn && fn(); if (o) return table(o); say(T("tdati.none")); return null; }
 
+// a small «Dati» button after the chart (any element: a canvas, an SVG), the chart focusable, T / D on it
+function addButton(el, fn) {
+  if (!el) return;
+  attach(el, fn);
+  if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
+  if (el._tdBtn && el._tdBtn.isConnected) return;
+  const b = document.createElement("button"); b.type = "button"; b.className = "bt tdbtn"; b.textContent = T("tdati.btn");
+  b.title = T("tdati.btn.title"); b.setAttribute("aria-label", T("tdati.btn.title"));
+  b.onclick = () => open(el);
+  (el._desc || el).insertAdjacentElement("afterend", b); el._tdBtn = b;
+}
+// the lines of a small chart made of series [{ x: [], y: [], name? }]: description + table
+function series(cv, o) {
+  if (!cv || !o) return;
+  const n = (o.series || []).length, xs = (o.series || []).flatMap(s => s.x).filter(isFinite), ys = (o.series || []).flatMap(s => s.y).filter(isFinite);
+  const title = o.title || [o.yl, o.xl].filter(Boolean).join(" / ") || T("a11y.chart");
+  if (!cv.hasAttribute("aria-label")) cv.setAttribute("aria-label", title);
+  describe(cv, T("a11y.small", { title, n, xl: o.xl || "x", yl: o.yl || "y", a: xs.length ? num(Math.min(...xs), 2) : "", b: xs.length ? num(Math.max(...xs), 2) : "", c: ys.length ? num(Math.min(...ys), 2) : "", d: ys.length ? num(Math.max(...ys), 2) : "" }));
+  addButton(cv, () => {
+    const rows = [];
+    (o.series || []).forEach((s, k) => {
+      const name = s.name || T("tdati.series", { n: k + 1 }), st = Math.max(1, Math.ceil(s.x.length / 300));
+      for (let i = 0; i < s.x.length; i += st) if (isFinite(s.y[i])) rows.push([name, num(s.x[i], 4), num(s.y[i], 4)]);
+    });
+    return { title, head: [T("tdati.col.trace"), o.xl || "x", o.yl || "y"], rows, rowHeader: true };
+  });
+}
+// the table that already sits next to an SVG chart (QA/QC, profile, PCA loadings): the same dialog shows it
+function fromDom(tbl, title) {
+  if (!tbl) return null;
+  const head = [...tbl.querySelectorAll("thead th")].map(h => h.textContent.trim());
+  const rows = [...tbl.querySelectorAll("tbody tr")].map(r => [...r.children].map(c => c.textContent.trim()));
+  return { title, head, rows, rowHeader: false };
+}
+// SVG charts are drawn from strings and replaced at every refresh: one observer gives each new chart its button
+const watchers = [];
+function watch(selector, provider) { watchers.push([selector, provider]); scan(document); }
+function scan(root) {
+  watchers.forEach(([sel, prov]) => root.querySelectorAll ? root.querySelectorAll(sel).forEach(el => {
+    if (el._tdWatched) return; el._tdWatched = true;
+    const t = el.getAttribute("aria-label") || el.querySelector("title")?.textContent || "";
+    addButton(el, () => prov(el, t));
+  }) : null);
+}
+new MutationObserver(ms => { if (!watchers.length) return; for (const m of ms) m.addedNodes.forEach(n => { if (n.nodeType === 1) scan(n); }); }).observe(document.documentElement, { childList: true, subtree: true });
 const num = (v, n = 3) => (v == null || !isFinite(v) ? "" : String(+Number(v).toFixed(n)));
-window.TDATI = { table, describe, say, attach, open, num };
+window.TDATI = { table, describe, say, attach, open, num, addButton, series, fromDom, watch };

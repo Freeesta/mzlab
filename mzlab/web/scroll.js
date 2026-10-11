@@ -84,7 +84,7 @@ function lockButton(p) {
   const b = p.el && p.el.querySelector('[data-a="lock"]'); if (!b) return;
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
-  b.style.left = p.cv.offsetLeft + 8 + "px"; b.style.top = p.cv.offsetTop + 0 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
+  b.style.left = p.cv.offsetLeft + 8 + "px"; b.style.top = p.cv.offsetTop - 10 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
   b.title = I18N.t(on ? "lock.on.title" : "lock.off.title");
 }
 function toggleLock(p) {
