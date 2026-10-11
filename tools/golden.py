@@ -175,6 +175,20 @@ def write_synthetic(out: Path) -> dict[str, Path]:
     return {"sintetico_FullScan": full, "sintetico_MS2": ms2, "sintetico_MRM": mrm}
 
 
+def _diff(folder: Path) -> dict:
+    """Difference from a reference on the synthetic subtraction series (t10 minus t0, tolerance 0.1 min): TIC and the XIC of the parent and the product."""
+    import dati_sintetici as ds
+    from mzlab.differenza import subtract_trace
+    a, b = (_item(p) for p in ds.subtraction_series(folder, blank=False)[:2])
+    chroms = []
+    for name, get in (("tic", lambda it: it.total("tic")), ("xic253", lambda it: it.xic(253.3, 0.5, 1)), ("xic301", lambda it: it.xic(301.3, 0.5, 1))):
+        (rt, y), (rr, ry) = get(b), get(a)
+        d = subtract_trace(rt, y, rr, ry, 1.0, 0.1)
+        ok = ~np.isnan(d)
+        chroms.append({"id": name, "kind": "diff", **_trace(np.asarray(rt)[ok], d[ok])})
+    return {"kind": "diff", "chromatograms": chroms}
+
+
 def compute(skip_missing: bool = False) -> dict[str, dict]:
     """name -> result for every golden file."""
     res: dict[str, dict] = {}
@@ -197,6 +211,7 @@ def compute(skip_missing: bool = False) -> dict[str, dict]:
         res["sintetico_FullScan"] = _full(files["sintetico_FullScan"])
         res["sintetico_MS2"] = _ms2(files["sintetico_MS2"])
         res["sintetico_MRM"] = _mrm(files["sintetico_MRM"])
+        res["sintetico_Differenza"] = _diff(Path(d) / "sub")
     return res
 
 
