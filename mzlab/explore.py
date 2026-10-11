@@ -477,6 +477,30 @@ class Item:
                 return rt[sm], y[sm]
         return rt, y
 
+    def ms2_transitions(self, top: int = 5) -> list[dict]:
+        """The precursor > fragment pairs present in the MS2 scans (unit resolution): for each precursor the `top` fragments (1 Da cells) with the largest summed
+        intensity. Numbers only: m/z, the scans that hold the fragment and its summed intensity; no names and no verdicts."""
+        t = self._tbl(2)
+        if len(t.rt) == 0:
+            return []
+        pr = np.array([sum(self.run.scans[i].iso) / 2 if self.run.scans[i].iso else self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
+        pk = np.round(pr, 1)
+        mz, pos, inten = np.asarray(t.mz, dtype=float), np.asarray(t.pos), np.asarray(t.inten, dtype=float)
+        ok = pk[pos] > 0
+        if not ok.any():
+            return []
+        key = np.stack([pk[pos][ok], np.round(mz[ok])], axis=1)
+        u, inv = np.unique(key, axis=0, return_inverse=True)
+        inv = inv.ravel()
+        tot = np.bincount(inv, weights=inten[ok])
+        nsc = np.bincount(inv)
+        out = []
+        for q1 in np.unique(u[:, 0]):
+            ix = np.flatnonzero(u[:, 0] == q1)
+            ix = ix[np.argsort(-tot[ix], kind="stable")][:top]
+            out += [{"q1": float(q1), "q3": float(u[i, 1]), "y": round(float(tot[i]), 1)} for i in sorted(ix, key=lambda i: u[i, 1])]
+        return out
+
     def _total(self, kind: str, level: int, mz0, mz1):
         if kind == "pda":                       # UV trace recorded by the PDA/DAD (own time axis, not tied to the MS scans)
             for c in self.run.chromatograms():

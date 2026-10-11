@@ -94,6 +94,11 @@ def _r_chrom(app, q):
                            float(q["prec"]) if q.get("prec") else None, q.get("filt") or None))
 
 
+@_get("/api/ms2tr")
+def _r_ms2tr(app, q):      # precursor > fragment pairs of the MS2 scans (the MS2 counterpart of the MRM transitions): m/z and intensity only
+    return _json({"files": [{"k": k, "transitions": app._item(k).ms2_transitions()} for k in _ks(q)]})
+
+
 @_get("/api/qaqc", fail=(ValueError, KeyError))
 def _r_qaqc(app, q):      # QA/QC measures of one ion over the series (standards, blanks, mass accuracy, sample / blank): numbers only
     return _json(app.qaqc_ion([int(x) for x in q["k"].split(",") if x], [x for x in q.get("roles", "").split(",")],

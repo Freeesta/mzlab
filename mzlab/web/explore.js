@@ -240,6 +240,7 @@ const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error)
 const prk = (pr, ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = pr => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [pr ?? "", ""] : [t.slice(0, i), t.slice(i + 1)]; };
 const FT = ft => ft ? `&filt=${encodeURIComponent(ft)}` : "";
+const getMs2Tr = k => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then(d => d.files[0].transitions);      // precursor > fragment pairs of an MS2 file (unit resolution)
 const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");     // + "&hr=0" when high resolution is switched off (hr.js)

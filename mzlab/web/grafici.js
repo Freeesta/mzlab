@@ -87,9 +87,26 @@ async function analogSeries(p) {
   }));
   return r.filter(s => s.x.length);
 }
+// MS2 transitions (unit resolution), the counterpart of the MRM ones: the list comes from the scans, the chromatogram of a pair is the fragment window in the scans of its precursor
+const MS2TR_MAX = 12;
+async function ms2trSeries(p) {
+  const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
+  const data = await Promise.all(mf.map(f => getMs2Tr(f.k).then(tr => ({ f, tr }))));
+  const seen = new Map();
+  data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
+  const list = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3).slice(0, MS2TR_MAX * 4);
+  if (JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; ctl(p); }
+  if (!p.tr) return null;
+  const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
+  const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
+    x: d.rt, y: d.y, k: f.k, key: `c|${f.k}|tr|${t.key}`, ion: t.key, time: f.time, color: PAL[list.indexOf(t) % PAL.length],
+    dash: f.type === "blank" ? [4, 3] : fi > 0 ? DASHES[fi % 4] : [], name: mf.length > 1 ? `${t.key} \u00b7 ${f.label}` : t.key, tid_label: t.key })))));
+  return out.filter(s => s.x.length);
+}
 async function rawSeries(p) {
   if (p.type === "chrom" && isAnalog(p.kind)) return analogSeries(p);
   if (p.type === "chrom" && p.ranges && p.ranges.length && window.BANCO) return BANCO.rangeSeries(p);       // stacked graphs of the bench (banco.js)
+  if (p.type === "chrom" && (p.tab || E.tab) === "ms2" && !isAnalog(p.kind) && p.kind !== "pda") { const s = await ms2trSeries(p); if (s) return s; }
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
