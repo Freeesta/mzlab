@@ -121,10 +121,30 @@ dialog.m3d.hid .m3d-side{display:none}
 @media (prefers-reduced-motion:reduce){.m3d *{transition:none!important;animation:none!important}}
 `;
 
+// Why the viewer could not open, said as it is: no WebGL2 at all | the shaders did not compile | a JavaScript error | the context was lost. `diag` collects what the browser says
+// (version, renderer, attributes, the first error) for the dialog and the console; nothing here is guessed.
+export class Fail extends Error { constructor(kind, detail, diag) { super(`${kind}: ${detail}`); this.kind = kind; this.detail = detail; this.diag = diag || {}; } }
+const WEBGL_TRIES = [{ antialias: true, alpha: false }, { antialias: false, alpha: false }, {}, { powerPreference: "low-power" }];
+// getContext("webgl2") with the options that the viewer prefers, then without them; the canvas is never one that already has another kind of context
+export function makeContext(canvas, tries = WEBGL_TRIES) {
+  const errs = [];
+  for (const o of tries) {
+    try { const g = canvas.getContext("webgl2", o); if (g) return { gl: g, opts: o, errs }; } catch (e) { errs.push(String(e && e.message || e)); }
+  }
+  return { gl: null, errs };
+}
+export function diagnose(gl, extra) {
+  const d = { ...extra };
+  try { d.version = gl.getParameter(gl.VERSION); d.renderer = gl.getParameter(gl.RENDERER); } catch (e) { d.version = "?"; }
+  try { const x = gl.getExtension("WEBGL_debug_renderer_info"); if (x) d.gpu = gl.getParameter(x.UNMASKED_RENDERER_WEBGL); } catch (e) { /* not given */ }
+  try { d.attributes = gl.getContextAttributes(); d.error = gl.getError(); d.lost = gl.isContextLost(); } catch (e) { /* context gone */ }
+  return d;
+}
 export function open(p, opener) {
   const a = p._a; if (!a || !a.f) return;
-  const probe = document.createElement("canvas"), gl0 = probe.getContext("webgl2");
-  if (!gl0) { if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); return; }
+  const probe = document.createElement("canvas"), c0 = makeContext(probe);                      // a throw-away canvas: is there WebGL2 at all? (the context is let go at once)
+  if (!c0.gl) { let w1 = false; try { w1 = !!document.createElement("canvas").getContext("webgl"); } catch (e) { /* none */ } throw new Fail("nowebgl2", c0.errs.join("; "), { webgl1: w1 }); }
+  try { const x = c0.gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { /* the browser will collect it */ }
   if (!document.getElementById("m3d-css")) { const s = document.createElement("style"); s.id = "m3d-css"; s.textContent = CSS; document.head.appendChild(s); }
   const prefs = MAPPA.prefs, P = Object.assign({}, DEF, prefs[PREF_KEY] || {});
   prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
@@ -182,11 +202,13 @@ export function open(p, opener) {
     return { title: T("m3d.canvas"), head: [T("tdati.col.rt"), "m/z", T("tdati.col.int")], rows: cells.map(c => [TDATI.num(V.rt[0] + (c[0] + 0.5) * (V.rt[1] - V.rt[0]) / nrt, 3), TDATI.num(V.g.log ? V.g.mz0 * Math.exp((c[1] + 0.5) * V.g.dlog) : V.g.mz0 + (c[1] + 0.5) * V.g.dmz, 3), TDATI.num(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
   });
   // ---- WebGL
-  const gl = glc.getContext("webgl2", { antialias: true, alpha: false });
+  const cx = makeContext(glc), gl = cx.gl;
+  if (!gl) { dlg.remove(); throw new Fail("nowebgl2", cx.errs.join("; "), {}); }
   let PR;
   try {
     PR = { surf: prog(gl, SURF_VS, SURF_FS), floor: prog(gl, FLOOR_VS, FLOOR_FS), stick: prog(gl, STICK_VS, STICK_FS), row: prog(gl, ROW_VS, ROW_FS), line: prog(gl, LINE_VS, LINE_FS) };
-  } catch (e) { console.error(e); dlg.remove(); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); return; }
+  } catch (e) { const d = diagnose(gl, { opts: cx.opts }); dlg.remove(); throw new Fail("shader", String(e && e.message || e), d); }
+  glc.addEventListener("webglcontextlost", e => { e.preventDefault(); V.lost = true; msg(T("m3d.err.lost")); console.warn("mzLab 3D: context lost", diagnose(gl, { opts: cx.opts })); });
   const tex = {}; const vao = gl.createVertexArray();
   const mkTex = (id, w, h, fmt, type, data, filter) => {
     if (!tex[id]) tex[id] = gl.createTexture();
