@@ -85,7 +85,7 @@ try:
             # a Worker whose engine "answers badly" to the health check once __dead is set (what a Python left without GIL does after a freeze or discard)
             pg.add_init_script("""(() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (d, t) {
               if (d && d.ping && window.__dead) { const w = this; setTimeout(() => w.onmessage({ data: { type: "pong", ok: false } }), 10); return; } return pm.call(this, d, t); }; })()""")
-            pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            pg.goto(URL + "?motore=python"); pg.wait_for_selector("#drop", timeout=120000)      # the health check is of Pyodide
             pg.evaluate("window.__mark = 1")
             pg.evaluate("window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })); document.dispatchEvent(new Event('resume')); window.MZLAB_ENGINE_CHECK()")
             pg.wait_for_timeout(1500)
