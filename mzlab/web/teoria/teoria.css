@@ -360,3 +360,6 @@ html.phone #top #a11y-btn{margin-left:0}
 @media (max-width:640px){html:not(.phone) #tbar #tc-strumenti{display:none}#top #tabs a{padding:0 6px;min-width:44px;justify-content:center}#tbar{gap:2px}#tbar .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){#top,#top *{transition:none!important}}
 @media print{#tbar{display:none}}
+
+#sblocco{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;padding:10px 16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:15px;box-shadow:0 2px 12px var(--line);pointer-events:none}
+#sblocco:not(.on){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
