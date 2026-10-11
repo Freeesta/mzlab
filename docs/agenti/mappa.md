@@ -9,7 +9,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `lettura.js` (229) mzLab - Teoria: reading aids for narrow screens and touch (loaded by teoria.js after the layout). — reduced:18, close:61, build:123
 - `pratica/domande.js` (106) QqQ lab - Pratica: the question bank of the oral exam (page pratica-orale.html).
 - `pratica/ei-aiuti.js` (73) QqQ lab - Pratica EI: third level of the hints of the hard mode, one sentence per compound of the pa
-- `pratica/ei-difficile.js` (255) QqQ lab - Pratica EI, "Modalità difficile": the student gets ONLY the spectrum (no formula, no class — startHard:111, onpick:117, refreshHint:209
+- `pratica/ei-difficile.js` (276) QqQ lab - Pratica EI, "Modalità difficile": the student gets ONLY the spectrum (no formula, no class — sectionDelivery:190, current:192, startHard:228, onpick:234
 - `pratica/esercizi-lcms.js` (202) mzLab - Pratica: data and generators of the LC-MS exercises (games "lc-dm" and "lc-esi"; classic scr — LCMS:8, ex:11, genDm:85
 - `pratica/giochi.js` (378) QqQ lab - Pratica: the short games (pages pratica-perdite, -isotopi, -formula, -strumento, -quadrupo — GIOCHI:7, perdite:62, isotopi:118, formula:181, quadrupolo:309
 - `pratica/gioco-ei.js` (452) QqQ lab - Pratica: «Dallo spettro alla struttura». A real EI spectrum (pratica/ei-dati.js) and the s — spectrumCard:77, draw:83, stepFormula:183, stepIons:229, oral:350
@@ -116,7 +116,8 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 ## Python (`mzlab/`)
 - `__init__.py` (3) mzlab: look for transformation products (TP) in full-scan data, prepare MRM transitions.
 - `analog.py` (259) Analog traces of an mzML (pump pressure, flow, temperature...) and the LC gradient model. — parse_chromeleon:123, detector_delay:222
-- `api.py` (594) The endpoints of the program, independent of the transport. — _map:101, dispatch:560
+- `api.py` (419) The endpoints of the program, independent of the transport. — dispatch:385
+- `api_aiuti.py` (185) Helpers of the endpoints (mzlab/api.py): parsing of query values, the difference options, the JSON a — _map:95
 - `app.py` (612) The engine behind the page: the files the student opened, the session and the notebook. Runs inside  — App:59
 - `bigfiles.py` (37) Very large and high-resolution profile files: how to recognise them and what to tell the user.
 - `browser.py` (148) Entry point of the browser version: this module runs inside Pyodide (see web/browser-worker.js).
