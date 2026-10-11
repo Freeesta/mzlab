@@ -378,7 +378,7 @@
         if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
-          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
+          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), $("#tp-tr").value));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           if (window.TPLIVE) TPLIVE.stop(true);
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
