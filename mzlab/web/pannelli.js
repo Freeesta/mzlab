@@ -584,7 +584,7 @@ function ctl(p) {
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
-      const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(parseFloat(String(v).replace(",", ".")), 5) : null) : numMz1(v);
+      const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
       if (t && lo != null && hi != null && hi > lo) {                       // the student writes the edges: from now on it is an explicit window in Da, the same for every file
         const d = hrE ? HR.dec(HR.xicFiles(p.tab), 1) : 1;
@@ -622,11 +622,11 @@ function addTrace(p, mz, label, w) {
   p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) });
   ctl(p); draw(p);
 }
-const numMz = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
+const numMz = t => { const v = numIt(t); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
 // ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
-const numMz1 = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? rh(v, 1) : null; };   // XIC fields: one decimal only
+const numMz1 = t => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };   // XIC fields: one decimal only
 const mzd = (p, lv = 1) => window.HR ? HR.dec(scanFiles(tabFiles(p ? p.tab || E.tab : E.tab)), p && p.level ? p.level : lv) : 1;
 const fmt2 = v => String(+(+v).toFixed(2));
 const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));                   // 363.8, 364 (no trailing zeros)
@@ -678,7 +678,7 @@ function openXic(panel, pre = {}) {
     r.ad.hidden = !t || isNum(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
-      const v = numMz1(t), x = parseFloat(t.replace(",", "."));
+      const v = numMz1(t), x = numIt(t);
       if (hrFile() && isFinite(x) && x > 0) r.ex = rh(x, 5);
       r.win = v != null ? xicWin(v, r.obs) : null; r.label = ""; r.sum.innerHTML = r.win ? sumText(r) : ""; r.pending = Promise.resolve(); return;
     }

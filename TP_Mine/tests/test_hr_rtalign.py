@@ -93,3 +93,22 @@ def test_as_dict_is_plain_json_and_reference_is_the_inverse():
     rt = np.array([2.0, 5.0, 8.0])
     for k in range(6):
         assert np.allclose(m.reference(m.expected(rt, k), k), rt, atol=1e-3)
+
+
+def test_gap_filling_looks_where_the_map_expects_the_peak():
+    from test_hr_features import table
+    rng = np.random.default_rng(11)
+    # file 1 is 0.08 min late: the weak product (height 1.5e5, under the detection height) sits at 5.08, a strong isomer-like trace of the same m/z at 5.35
+    t = table([(300.1, 5.08, 0.05, 1.5e5, 0.3, 0, 99), (300.1, 5.35, 0.03, 3e6, 0.3, 0, 99)], rng)
+
+    def al():
+        a = FT.Alignment(mz=np.array([300.1]), rt=np.array([5.0]), area=np.array([[3e7, 0.0]]), height=np.array([[5e6, 0.0]]), apex_rt=np.array([[5.0, np.nan]], np.float32),
+                         left=np.array([[4.6, np.nan]], np.float32), right=np.array([[5.4, np.nan]], np.float32), n_files=2)
+        return a
+    rm = RA.RtMap(np.array([1.0, 9.0]), np.array([[0.0, 0.0], [0.08, 0.08]]), 8, np.zeros(2))
+    plain, aligned = al(), al()
+    FT.fill_gaps(plain, [0], lambda k: t, [1])                                 # one window around the median apex: the strong trace wins
+    f = FT.fill_gaps(aligned, [0], lambda k: t, [1], rt_tol=0.04, rtmap=rm)
+    assert f[0, 1] and not f[0, 0] and aligned.area[0, 0] == 3e7                # found cells are never touched
+    assert plain.area[0, 1] > 10 * aligned.area[0, 1] > 0                       # the aligned fill is the weak product, not the neighbour
+    assert 1e5 < aligned.area[0, 1] < 3e6

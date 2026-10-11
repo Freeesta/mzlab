@@ -254,7 +254,7 @@ def detect_file(run, polarity: int = 1, **kw) -> Features:
 
 # ---------------------------------------------------------------------------------------------------------------------- gap filling
 def trace_area(table, mz: float, rt_lo: float, rt_hi: float, floor: float = FLOOR, ppm: float = 5.0, min_points: int = MIN_POINTS, max_gap: int = MAX_GAP,
-               long_trace: int = LONG_TRACE) -> tuple[float, float]:
+               long_trace: int = LONG_TRACE, edge: float | None = None) -> tuple[float, float]:
     """Area (counts x seconds, as `detect`) and apex RT of the strongest trace of `mz` +- `ppm` whose apex lies in [rt_lo, rt_hi]: the same rule as the
     detection (gaps <= `max_gap`, at least `min_points` points) but with the intensity floor as the only height threshold. (0.0, nan) when there is none."""
     nscan = len(table.rt)
@@ -288,13 +288,15 @@ def trace_area(table, mz: float, rt_lo: float, rt_hi: float, floor: float = FLOO
     return float(seg.sum() * dt), float(table.rt[apex])
 
 
-def fill_gaps(al: "Alignment", rows, tables, columns, floor: float = FLOOR, ppm: float = 5.0, rt_tol: float = 0.1) -> np.ndarray:
-    """Replace the zero areas of the groups `rows` in the files `columns` by the area of the same ion re-extracted at the intensity floor in the
-    window of the group (RT: median apex of the files where it was found, +- its half width + `rt_tol`; m/z: the group's, +- `ppm`). `tables`: a
-    callable file index -> PeakTable (one file is touched at a time by the caller). Only m/z, RT and area are looked at. Changes `al.area` and
-    returns the boolean matrix (len(al), n_files) of the filled cells."""
+def fill_gaps(al: "Alignment", rows, tables, columns, floor: float = FLOOR, ppm: float = 5.0, rt_tol: float = 0.1, rtmap=None) -> np.ndarray:
+    """Replace the zero areas of the groups `rows` in the files `columns` by the area of the same ion re-extracted at the intensity floor (m/z: the
+    group's, +- `ppm`). Where the peak is looked for: with the RT map of the series (`rtmap`, see `rtalign`) at its reference RT shifted by the
+    file's own shift, +- `rt_tol` + twice the residual of that file's curve (the apex must lie there); without a map, at the median apex of the
+    files where it was found, +- its half width + `rt_tol`. `tables`: a callable file index -> PeakTable (one file is touched at a time by the
+    caller). Only m/z, RT and area are looked at. Changes `al.area` and returns the boolean matrix (len(al), n_files) of the filled cells."""
     filled = np.zeros(al.area.shape, bool)
     rows = np.asarray(rows, int)
+    use_map = rtmap is not None and rtmap.ok
     for k in columns:
         todo = rows[al.area[rows, k] <= 0]
         if len(todo) == 0:
@@ -304,8 +306,14 @@ def fill_gaps(al: "Alignment", rows, tables, columns, floor: float = FLOOR, ppm:
             have = ~np.isnan(al.apex_rt[g])
             if not have.any():
                 continue
-            c = float(np.median(al.apex_rt[g][have]))
-            w = float(np.median((al.right[g] - al.left[g])[have])) / 2 + rt_tol
+            if use_map:
+                ks = np.flatnonzero(have)
+                ref = float(np.median([rtmap.reference(float(al.apex_rt[g, j]), j) for j in ks]))
+                c = float(rtmap.expected(ref, k))
+                w = rt_tol + 2 * float(rtmap.rms[k])
+            else:
+                c = float(np.median(al.apex_rt[g][have]))
+                w = float(np.median((al.right[g] - al.left[g])[have])) / 2 + rt_tol
             area, _ = trace_area(table, float(al.mz[g]), c - w, c + w, floor, ppm)
             if area > 0:
                 al.area[g, k] = area

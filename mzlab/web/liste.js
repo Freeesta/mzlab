@@ -427,7 +427,7 @@ const LISTE = (() => {
             <td><input data-i="${i}" data-c="note" value="${EHt(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
           document.querySelectorAll("#bigbody [data-c]").forEach(inp => inp.onchange = () => {
             const r = labRows(), x = r[+inp.dataset.i]; if (!x) return;
-            const c = inp.dataset.c; x[c] = c === "mz" ? parseFloat(String(inp.value).replace(",", ".")) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);
+            const c = inp.dataset.c; x[c] = c === "mz" ? numIt(inp.value) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);
           });
           document.querySelectorAll("#bigbody [data-del]").forEach(b => b.onclick = () => { const r = labRows(); r.splice(+b.dataset.del, 1); saveRows(r); draw(); });
           const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: I18N.t("lst.lab.newName") }); draw(); };
@@ -634,11 +634,11 @@ const LISTE = (() => {
         return;
       }
 
-      const qMz = parseFloat(String(state.mz).replace(",", "."));
+      const qMz = numIt(state.mz);
       const hasMz = isFinite(qMz) && qMz > 0;
       const qTxt = state.text.trim().toLowerCase();
       const isNom = state.mode === "da";
-      const tolVal = parseFloat(String(state.tol).replace(",", ".")) || (isNom ? 0.5 : 5);
+      const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
 
       let items = [];
       if (hasMz) {

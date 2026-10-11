@@ -23,7 +23,6 @@ ADDUCT_SHIFT = {
     "[M+Cl]-": MASS["Cl"] + ELECTRON,
     "[M+HCOO]-": MASS["C"] + MASS["H"] + 2 * MASS["O"] + ELECTRON,
 }
-POLARITY_OF = {a: (1 if a.endswith("+") else -1) for a in ADDUCT_SHIFT}
 DEFAULT_ADDUCT = {"positive": "[M+H]+", "negative": "[M-H]-"}
 
 _TOKEN = re.compile(r"([A-Z][a-z]?)(\d*)")

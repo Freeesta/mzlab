@@ -148,7 +148,7 @@ def main() -> None:
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
-    # program version and git commit for reproducibility (.mzworkflow)
+    # program version and git commit for reproducibility (.mzflow)
     try:
         import subprocess
         commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip() or "dev"

@@ -7,13 +7,11 @@
 //  - zoom history (Ctrl/Cmd+Z), whole view (Backspace), linked time axes, one-line description of the scan
 
 const IC_RULER = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="13" height="6" rx="1"/><path d="M4.5 5v2.4M7.5 5v3.2M10.5 5v2.4M13 5v1.6"/></svg>';
-const IC_PARAM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 4.5h12M2 8h12M2 11.5h12"/><circle cx="5.5" cy="4.5" r="1.7" fill="var(--panel)"/><circle cx="10.5" cy="8" r="1.7" fill="var(--panel)"/><circle cx="6.5" cy="11.5" r="1.7" fill="var(--panel)"/></svg>';
 const IC_LINK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.4-2.4a2.6 2.6 0 0 0-3.7-3.7l-.7.7"/><path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.1 9.2a2.6 2.6 0 0 0 3.7 3.7l.7-.7"/></svg>';
 
 // y axis in % of the highest peak: the default is % for the MS2 spectra (the relative intensities of the fragments are what is compared), cps for Full Scan
 const specRel = p => p.rel ?? false;
 const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
-const sgn1 = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
 // a measure belongs to one view of one spectrum: a new zoom of the m/z axis, another scan or another file/level cancels it

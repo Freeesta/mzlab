@@ -132,6 +132,10 @@
       g.strokeStyle = s.color; g.lineWidth = s.w || 1.4; g.setLineDash(s.dash || []); g.beginPath();
       s.x.forEach((x, i) => i ? g.lineTo(X(x), Y(s.y[i])) : g.moveTo(X(x), Y(s.y[i]))); g.stroke(); g.setLineDash([]);
       if (s.dots) { g.fillStyle = s.color; s.x.forEach((x, i) => { g.beginPath(); g.arc(X(x), Y(s.y[i]), 3, 0, 7); g.fill(); }); }
+      if (s.hollow) {                                         // points that are not found peaks (filled areas): an open circle, never a dot
+        const bg = css.getPropertyValue("--panel") || "#fff"; g.lineWidth = 1.8;
+        s.hollow.forEach(i => { g.beginPath(); g.arc(X(s.x[i]), Y(s.y[i]), 3.6, 0, 7); g.fillStyle = bg; g.fill(); g.stroke(); });
+      }
     }
     g.strokeStyle = ink; g.strokeRect(M.l, M.t, pw, ph);
   }

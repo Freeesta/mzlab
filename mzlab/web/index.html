@@ -294,7 +294,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
   <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav>
   <div id="stbar" role="toolbar" data-i18n-aria-label="tb.aria" aria-label="Strumenti"></div>
-  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button><button id="session-menu-btn" class="ib" hidden data-i18n-title="header.sessionMenu.title" title="Opzioni della sessione e flusso di lavoro" aria-label="Menu sessione" style="padding:0 5px;margin-left:-3px;font-size:11px">&#9662;</button></span>
+  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button></span>
   <button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
 <div id="phone" hidden>
   <h1 data-i18n="phone.title">Siete su uno smartphone</h1>
@@ -512,6 +512,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/icons-modi.js"></script>
 <script src="static/modi.js"></script>
 <script src="static/ordine.js"></script>
+<script src="static/conversione.js"></script>
 <script src="static/explore.js"></script>
 <script src="static/pannelli.js"></script>
 <script src="static/grafici.js"></script>
@@ -570,7 +571,7 @@ function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if($("#session-menu-btn"))$("#session-menu-btn").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};
@@ -626,8 +627,8 @@ function renderFiles(){const F=ST.files,el=$("#flist");
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
    `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
-   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
-  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
+   `<td class="num muted">${sz(f.size)}</td><td>${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
+  el.innerHTML=F.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
       if(k==="time"||k==="conc"){v=parseDecimal(x.value);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=timeStored(v,tunitGet())}
@@ -637,6 +638,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
       sortFiles();renderFiles();                              // the table is sorted again when a value is committed (change/blur/Enter), never while typing
       if(keep){const i=F.findIndex(q=>q.name===keep.name),b=el.querySelector(`[data-i="${i}"][data-k="${keep.k}"]`);if(b)b.focus()}};
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
+  el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
@@ -666,10 +668,11 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 function ricetta(name){const n=name.toLowerCase();return /\.raw$/.test(n)?"load.recipe.raw":/\.wiff2?$/.test(n)?"load.recipe.wiff":/\.wiff\.scan$/.test(n)?"load.recipe.wiffScan":/\.d$/.test(n)?"load.recipe.d":null}
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  const out=[];for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
-    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)} · ${I18N.t("load.raw.converting")}</span>`;box.appendChild(row);
-    try{out.push(new File([await rb.convertRaw(f)],f.name.replace(/\.raw$/i,".mzML")));row.remove()}
-    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.json?I18N.err(e.json).message:e.message)}</span>`}}
+  const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
+  for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
+    const ui=ConvUI.start(box,++i,n,f.name);
+    try{const name=f.name.replace(/\.raw$/i,".mzML"),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
 async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
   files=files.filter(f=>{const r=ricetta(f.name);if(!r)return true;const n=document.createElement("div");n.className="note recipe";n.innerHTML=`${I18N.t(r,{name:esc(f.name)})} <button type="button" class="sec" data-x="1">${I18N.t("common.close")}</button>`;n.querySelector("button").onclick=()=>n.remove();box.appendChild(n);return false});
@@ -732,17 +735,6 @@ async function wipeLocal(){
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
   try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
-function openSessionMenu(ev){ev.preventDefault();
-  menu(ev,[
-    {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
-    "-",
-    {label:I18N.t("workflow.menu.export"),fn:()=>window.WORKFLOW&&WORKFLOW.export()},
-    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()},
-    {label:I18N.t("rep.menu"),fn:()=>window.RAPPORTO&&RAPPORTO.export("html")}
-  ])}
-const smb=document.getElementById("session-menu-btn");
-if(smb)smb.onclick=e=>{e.stopPropagation();openSessionMenu(e)};
-$("#newrun").oncontextmenu=e=>openSessionMenu(e);
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"

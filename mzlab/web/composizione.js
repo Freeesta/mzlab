@@ -10,7 +10,7 @@ const COMP = (() => {
   const RULES = [["HC", I18N.t("comp.rule.HC")], ["NC", I18N.t("comp.rule.NC")], ["OC", I18N.t("comp.rule.OC")], ["PC", I18N.t("comp.rule.PC")], ["SC", I18N.t("comp.rule.SC")], ["FC", I18N.t("comp.rule.FC")], ["ClC", I18N.t("comp.rule.ClC")], ["BrC", I18N.t("comp.rule.BrC")], ["LEWIS", "Lewis"], ["SENIOR", "Senior"]];
   const rd = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } };
   const wr = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
-  const num = v => { const x = parseFloat(String(v).replace(",", ".")); return Number.isFinite(x) ? x : null; };
+  const num = v => { const x = numIt(v); return Number.isFinite(x) ? x : null; };
   // M+1/M and M+2/M seen in a spectrum d = {mz, y} around the peak at m/z `mz` (null when the peaks are not there)
   function observed(mz, d, tolDa = 0.006) {
     if (!d || !d.mz) return { m1: null, m2: null };
@@ -60,7 +60,7 @@ const COMP = (() => {
     if (!q.obs && !q.frags) delete q.w;
     return q;
   }
-  const peaksOf = t => { const mz = [], y = []; String(t || "").split(/\n/).forEach(l => { const a = l.trim().split(/[\s;,:\t]+/).map(x => parseFloat(x.replace(",", "."))); if (a.length >= 2 && a[0] > 0 && a[1] > 0) { mz.push(a[0]); y.push(a[1]); } }); return { mz, y }; };
+  const peaksOf = t => { const mz = [], y = []; String(t || "").split(/\n/).forEach(l => { const a = l.trim().split(/[\s;,:\t]+/).map(x => numIt(x)); if (a.length >= 2 && a[0] > 0 && a[1] > 0) { mz.push(a[0]); y.push(a[1]); } }); return { mz, y }; };
   // «Min spectral fit»: candidates whose combined score is below it are not listed (only when there is a score)
   const afterFit = (j, s) => { const mf = s && s.minfit; if (mf > 0) j.results = j.results.filter(r => !r.score || r.score.total * 100 >= mf); return j; };
   const DEF = { ithr: 0.1, sint: 30, minfit: 0, sn: 0, ftol: 5, norm: "fit", cent: "file", rep: false };
