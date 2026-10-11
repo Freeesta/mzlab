@@ -332,5 +332,16 @@
   "lib.what.group": "Nota sotto una voce del risultato; {n} = numero di altre voci con lo stesso primo blocco dell'InChIKey (stessa struttura piana, stereoisomeri).",
   "lib.what.nl": "Sotto lo specchio; {list} = masse delle perdite neutre in comune, già formattate.",
   "lib.what.cosVis": "Prova aggiuntiva: {lo} = limite inferiore della finestra di scansione MS2 del file, {cos} = coseno già formattato.",
-  "lib.what.attr": "Sotto lo specchio; autori, accessione e licenza della voce di libreria (testi dei file di libreria)."
+  "lib.what.attr": "Sotto lo specchio; autori, accessione e licenza della voce di libreria (testi dei file di libreria).",
+  "qaqc.ratio.atleast": "Intestazione di colonna del pannello QA/QC: il rapporto campione/bianco raggiunge la soglia scelta. {thr} = 3 o 10.",
+  "qaqc.ratio.sum": "Riga sopra la tabella del rapporto campione/bianco di uno ione. {mz} = m/z, {blank} = area media dei bianchi, {thr} = soglia (3 o 10).",
+  "qaqc.remove": "Etichetta accessibile del pulsante × che toglie uno ione di controllo. {n} = nome dello ione.",
+  "qaqc.role.of": "Etichetta accessibile del menu del tipo di un file nel pannello QA/QC. {f} = nome del file.",
+  "qaqc.sum.cv": "Riga di riepilogo del pannello QA/QC: coefficiente di variazione dell'area. {v} = percentuale.",
+  "qaqc.sum.cvqc": "Riga di riepilogo del pannello QA/QC: coefficiente di variazione dell'area nei QC. {v} = percentuale.",
+  "qaqc.sum.drift": "Riga di riepilogo: pendenza dell'RT lungo l'ordine dei file. {v} = minuti per file.",
+  "qaqc.sum.ppm": "Riga di riepilogo (alta risoluzione): errore di massa. {mean} = medio, {max} = massimo assoluto (ppm), {n} = file misurati.",
+  "qaqc.chart.rt": "Titolo accessibile del grafico dello scarto di RT. {ion} = nome dello ione.",
+  "qaqc.chart.area": "Titolo accessibile del grafico dell'area relativa. {ion} = nome dello ione.",
+  "qaqc.feat.sum": "Riga sopra la tabella delle feature di mzFinder. {n} = feature che raggiungono la soglia, {tot} = totale, {thr} = soglia, {b} = bianchi."
 }

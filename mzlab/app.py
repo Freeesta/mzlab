@@ -284,6 +284,38 @@ class App:
             out.append({"k": k, "rt": rounded(rt, 4), "y": rounded(y, 1)})
         return {"mz": mz, "tol": tol, "traces": out}
 
+    def qaqc_ion(self, ks: list[int], roles: list[str], mz: float, rt: float, win: float, tol: float, unit: str = "da",
+                 level: int = 1, thr: float = 3.0, ratio: bool = False) -> dict:
+        """QA/QC measures of ONE ion (an internal standard, a known ion) in every file of `ks`: apex RT, RT shift, area, area
+        relative to the median, observed m/z and error in ppm (the m/z of the apex window, intensity weighted), plus the summary
+        of the series (drift, CV, mass accuracy) and, with `ratio`, the sample / blank area ratio. tol in Da (unit "da") or ppm."""
+        from . import qaqc
+        if len(roles) != len(ks):
+            raise UserError("err.qaqc.roles", text="one role per file is needed")
+        tol_da = tol if unit == "da" else mz * tol * 1e-6
+        rows = []
+        for k in ks:
+            item = self._item(k)
+            item.run.activate()
+            t = item._tbl(level)
+            y = t.xic(mz, tol_da)
+            pk = qaqc.peak_in_window(t.rt, y, rt, win)
+            if not pk:
+                rows.append(None)
+                continue
+            a, b = np.searchsorted(t.mz, mz - tol_da, side="left"), np.searchsorted(t.mz, mz + tol_da, side="right")
+            sel = (t.pos[a:b] >= pk["i0"]) & (t.pos[a:b] <= pk["i1"])
+            w = t.inten[a:b][sel].astype(float)
+            mo = float(np.sum(t.mz[a:b][sel].astype(float) * w) / w.sum()) if w.sum() > 0 else None
+            rows.append({"k": k, "rt": round(pk["apex"], 4), "area": pk["area"], "height": pk["height"],
+                         "mz_obs": None if mo is None else round(mo, 5),
+                         "dppm": None if (mo is None or unit == "da") else round(qaqc.ppm_error(mo, mz), 3)})
+        out = qaqc.summarize(rows, roles, rt)
+        if ratio:
+            out["ratio"] = qaqc.sample_blank_ratios([r["area"] if r else 0.0 for r in rows], roles, thr)
+        out.update({"mz": mz, "rt": rt, "win": win, "tol": tol, "unit": unit, "level": level})
+        return out
+
     def subxic(self, k: int, formula: str, ppm: float = 5.0, min_mz: float = 100.0, z: int = 1) -> dict:
         """XIC that sums every sub-formula of `formula` (high resolution files only) and the measures of each one (chem/subformulas.py)."""
         from .chem.subformulas import measure, subformulas
