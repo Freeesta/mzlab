@@ -43,6 +43,10 @@ const BARRA = (() => {
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
   const defaultW = () => (isHrMode() ? 340 : 300);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
+  // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
+  let _ctx = "data";
+  const inTheory = () => typeof S !== "undefined" && S.view === "theory";
+  const tcmd = () => { try { const f = Q1("#tframe"); return (f && f.contentWindow && f.contentWindow.TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _w));
@@ -135,8 +139,8 @@ const BARRA = (() => {
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
   const visible = c => (!c.feature || !!FEATURES[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
-  const lab = c => t(`cmd.${c.id}.lab`);
-  const name = c => t(`cmd.${c.id}.name`);
+  const lab = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.lab`));
+  const name = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.name`));
   const tip = c => t(`cmd.${c.id}.tip`);
 
   // ---------------------------------------------------------------- state
@@ -447,9 +451,44 @@ const BARRA = (() => {
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
+  // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
+  function theoryCmds() {
+    const T = tcmd(); if (!T) return [];
+    return T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
+      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) }));
+  }
+  const theoryAll = () => theoryCmds().flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
+  function buildTheoryBar(bar) {
+    const sep = '<span class="tb-sep" role="separator"></span>';
+    const cs = theoryCmds().filter(c => !c.end);
+    const gear = theoryCmds().find(c => c.end);
+    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
+    bar.innerHTML = cs.filter(c => c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
+    bar.querySelectorAll("button[data-tcmd]").forEach(b => {
+      const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
+      b.tabIndex = -1;
+      b.onclick = () => {
+        if (c.off) return;
+        if (c.items) { if (Q1("#stmenu") && Q1("#stmenu")._anchor === b) return closeMenu(true); openMenu(b, c.items.map(f => ({ label: f.etichetta, ic: f.ic(), dom: null, fn: () => f.run() }))); b.setAttribute("aria-expanded", "true"); }
+        else c.run();
+      };
+    });
+    setRover(firstItem());
+    fit();
+  }
+  // the bar follows the view: Teoria commands in the Teoria, the data ones elsewhere
+  function syncContext() {
+    const c = inTheory() ? "theory" : "data";
+    document.documentElement.classList.toggle("in-theory", c === "theory");
+    if (c === _ctx) return false;
+    _ctx = c; closeMenu(false); buildBar();
+    return true;
+  }
+
   function buildBar() {
     const bar = Q1("#stbar");
     if (!bar) return;
+    if (_ctx === "theory") return buildTheoryBar(bar);
     const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
     const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || FEATURES[c.feature]));
     const hr = CMD.filter(c => c.hr);
@@ -485,7 +524,7 @@ const BARRA = (() => {
 
   function syncVisibility() {
     const bar = Q1("#stbar");
-    if (!bar) return;
+    if (!bar || _ctx === "theory") return;
     CMD.forEach(c => {
       if (c.item || c.more || c.bar === false) return;
       const el = bar.querySelector(`[data-cmd="${c.id}"]`);
@@ -501,7 +540,7 @@ const BARRA = (() => {
 
   function updateButtons() {
     const bar = Q1("#stbar");
-    if (!bar) return;
+    if (!bar || _ctx === "theory") return;
     const open = _open && inData();
     bar.querySelectorAll("button[data-cmd]").forEach(b => {
       const c = byId(b.dataset.cmd);
@@ -538,6 +577,11 @@ const BARRA = (() => {
   function fit() {
     const bar = Q1("#stbar");
     if (!bar || !bar.offsetParent) return;
+    if (_ctx === "theory") {          // words next to the icons while they fit, else the icons alone
+      setLevel("all");
+      if (bar.scrollWidth > bar.clientWidth) setLevel("none");
+      return;
+    }
     const t0 = performance.now();
     _dropped = new Set();
     syncVisibility();
@@ -882,7 +926,10 @@ const BARRA = (() => {
       schedFit();
     });
     let wasData = false;
+    const tf = Q1("#tframe");
+    if (tf) tf.addEventListener("load", () => { if (_ctx === "theory") { buildBar(); if (!tcmd()) setTimeout(() => _ctx === "theory" && buildBar(), 400); } });
     document.addEventListener("tpview", () => {
+      syncContext();
       if (wasData && !inData()) _open = false;        // leaving Dati hides the panel (the saved state keeps it for the next visit)
       wasData = inData();
       syncMode();
@@ -975,7 +1022,7 @@ const BARRA = (() => {
     loadState();
     loadLabMode();
     window.CMD = CMD;
-    buildBar();
+    if (!syncContext()) buildBar();
     const x = Q1("#sb-x");
     if (x) x.onclick = () => close(true);
     const tg = Q1("#sb-toggle");
@@ -1035,7 +1082,9 @@ const BARRA = (() => {
     name,
     lab,
     visible,
-    kw: c => t(`cmd.${c.id}.kw`)
+    kw: c => (c.teo ? "" : t(`cmd.${c.id}.kw`)),
+    get inTheory() { return _ctx === "theory"; },
+    theoryCommands: theoryAll
   };
 })();
 
