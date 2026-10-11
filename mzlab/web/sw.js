@@ -10,6 +10,7 @@ self.addEventListener("activate", e => e.waitUntil((async () => {
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin || req.headers.has("range")) return;
+  if (url.pathname.includes("/static/librerie/")) return;           // the spectral-library packages go to the folder of the user, not to a second copy in the cache
   const big = /\/static\/(pyodide|vendor)\//.test(url.pathname);
   e.respondWith((async () => {
     const cache = await caches.open(big ? BIG : APP);

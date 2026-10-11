@@ -1,0 +1,42 @@
+ACCESSION: MSBNK-UniTO-UT000019
+RECORD_TITLE: Cefuroxime; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+Na]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000019
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 1 injection(s), 2 scan(s).
+CH$NAME: Cefuroxime
+CH$COMPOUND_CLASS: Non-Natural Product; Antibiotic (cephalosporin)
+CH$FORMULA: C16H16N4O8S
+CH$EXACT_MASS: 424.06888
+CH$SMILES: CO/N=C(/C1=CC=CO1)\C(=O)N[C@H]2[C@@H]3N(C2=O)C(=C(CS3)COC(=O)N)C(=O)O
+CH$IUPAC: InChI=1S/C16H16N4O8S/c1-26-19-9(8-3-2-4-27-8)12(21)18-10-13(22)20-11(15(23)24)7(5-28-16(17)25)6-29-14(10)20/h2-4,10,14H,5-6H2,1H3,(H2,17,25)(H,18,21)(H,23,24)/b19-9-/t10-,14-/m1/s1
+CH$LINK: CAS 55268-75-2
+CH$LINK: INCHIKEY JFPVXVDWJQMJEE-IZRZKJBUSA-N
+CH$LINK: PUBCHEM CID:5479529
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 14.590 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 447.05811
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+Na]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-00g0-0906400000-4a25f07352b219d3f160
+PK$NUM_PEAK: 3
+PK$PEAK: m/z int. rel.int.
+  173.38322 744638.5 999
+  386.04041 511462.6 686
+  427.14874 385110.9 517
+//

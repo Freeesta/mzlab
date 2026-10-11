@@ -14,6 +14,8 @@
 @font-face{font-family:"OpenDyslexic";src:url(static/teoria/fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
 :root[data-a11y-font=atkinson] body,:root[data-a11y-font=atkinson] button,:root[data-a11y-font=atkinson] input,:root[data-a11y-font=atkinson] select,:root[data-a11y-font=atkinson] textarea{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
 :root[data-a11y-font=dyslexic] body,:root[data-a11y-font=dyslexic] button,:root[data-a11y-font=dyslexic] input,:root[data-a11y-font=dyslexic] select,:root[data-a11y-font=dyslexic] textarea{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
+:root{--lv1:#0072B2;--lv2a:#009E73;--lv2b:#56B4E9;--lv3:#E69F00;--lv4:#CC79A7;--lv5:#999999;--lv0:#BBBBBB}
+.lvb{display:inline-block;border:2px solid var(--lvc,var(--line));border-radius:4px;padding:0 6px;font-weight:700;font-size:12px;color:var(--ink);background:color-mix(in srgb,var(--lvc,var(--line)) 18%,var(--panel));white-space:nowrap}.lv-1{--lvc:var(--lv1)}.lv-2a{--lvc:var(--lv2a)}.lv-2b{--lvc:var(--lv2b)}.lv-3{--lvc:var(--lv3)}.lv-4{--lvc:var(--lv4)}.lv-5{--lvc:var(--lv5)}.lv-0{--lvc:var(--lv0)}
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8;--soft:#f0f3f6}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}}
 :root[data-theme=dark]{color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}
@@ -449,6 +451,10 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/icons-modi.js"></script>
 <script src="static/modi.js"></script>
 <script src="static/explore.js"></script>
+<script src="static/pannelli.js"></script>
+<script src="static/grafici.js"></script>
+<script src="static/picchi.js"></script>
+<script src="static/eventi.js"></script>
 <script src="static/hr.js"></script>
 <script src="static/composizione.js"></script>
 <script src="static/dda.js"></script>
@@ -466,6 +472,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/banco.js"></script>
 <script src="static/settings.js"></script>
 <script src="static/aggiorna.js"></script>
+<script src="static/livelli-1.js"></script><script src="static/livelli.js"></script>
 <script src="static/libreria.js"></script>
 <script src="static/touch.js"></script>
 <script src="static/workflow.js"></script>

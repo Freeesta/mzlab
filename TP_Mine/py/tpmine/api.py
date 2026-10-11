@@ -133,7 +133,10 @@ def run(files_json: str, parent_json: str, settings_json: str, transf_text: str)
             f["kind"] = _kinds[f["name"]]
         _ex = None
         live = _Emitter(_progress)
-        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=live)
+        settings = json.loads(settings_json) or {}
+        if transf_text.strip():              # the list of transformations of the page (editable): the rules of the network of mass differences
+            settings["extra_transformations"] = chem.parse_transformations(transf_text)
+        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), settings or None, progress=live)
         try:
             return _out(_hr.run())
         finally:
@@ -191,6 +194,28 @@ def inclusion_csv(n: int = 50) -> str:
 
 def transitions(ids_json: str) -> str:
     return _out(_ex.transitions(json.loads(ids_json)))
+
+
+def identity_graph(payload_json: str) -> str:
+    """Identities of an untargeted feature table (hr/identity.py): graph of co-eluting, correlated, mass-explained features with the evidence of
+    every edge, and the neutral-mass hypotheses of every connected component. Stateless (the table comes in the payload)."""
+    from .hr import identity
+    return _out(identity.build(json.loads(payload_json)))
+
+
+def polarity_pairs(payload_json: str) -> str:
+    """Pairs of features of the positive and negative tables with the same neutral mass under the usual adduct pairs: {pos: [{k, mz, rt}], neg: [...], ppm, rt_min}."""
+    from .hr import identity
+    d = json.loads(payload_json)
+    return _out(identity.polarity_pairs(d["pos"], d["neg"], float(d.get("ppm", 5.0)), float(d.get("rt_min", 0.15))))
+
+
+def origin_evidence(payload_json: str) -> str:
+    """Evidence list (no label) for the report «Where does this ion come from?» of the HR world: {report: the /api/origin report, pol: 1|-1}
+    -> [{key, text, strength}] (hr/edge_evidence.py). Stateless."""
+    from .hr import edge_evidence
+    d = json.loads(payload_json)
+    return _out(edge_evidence.report_evidence(d["report"], 1 if int(d.get("pol") or 1) >= 0 else -1))
 
 
 def isf_classify(mzs_json: str, formula_p: str = "") -> str:

@@ -18,7 +18,7 @@
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
-.tp .lv{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#fff;font-weight:700;font-size:11px;padding:0 4px}.tp .lv3{background:#047857}.tp .lv4{background:#2b5c8a}.tp .lv5{background:#8a6d2b}
+
 .tp .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.tp .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}
 .tp .crit li{margin:2px 0}.tp .crit .pass{color:var(--ok)}.tp .crit .fail{color:var(--bad)}.tp .crit .na{color:var(--muted)}
@@ -87,6 +87,7 @@
   }
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
+  window.TPCALL = call;                // the engine, for the other scripts of mzFinder (the identities of the feature tables)
   const callRaw = async (fn, ...args) => { await startWorker(); return send({ type: "call", fn, args }); };
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
@@ -166,6 +167,7 @@
   <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
+ <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
@@ -361,6 +363,7 @@
 
     // ---- run
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
+    $("#tp-unt").onclick = () => { if (window.UNTUI) window.UNTUI.open(); };
     $("#tp-go").onclick = async () => {
       const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");
@@ -375,7 +378,7 @@
         if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
-          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
+          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), $("#tp-tr").value));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           if (window.TPLIVE) TPLIVE.stop(true);
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
@@ -463,7 +466,7 @@
       const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1, w = 220, h = 54;
       const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
       const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
-      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
+      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lvb lv-${r.level}">${r.level}</span>` : ""}</div>
         <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
         <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
@@ -540,7 +543,7 @@
       const s = st.summary, f = st.filter;
       const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
       $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
-        <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lv lv${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
+        <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lvb lv-${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
         <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(r.name)}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
         <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td></tr>`).join("");
       $("#tp-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
@@ -566,7 +569,7 @@
       let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
       const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;
       const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time);
-      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(d.name)} ${d.level ? `<span class="lv lv${d.level}">${d.level}</span>` : ""}</h3>
+      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(d.name)} ${d.level ? `<span class="lvb lv-${d.level}">${d.level}</span>` : ""}</h3>
         <div class="kv"><b>Formula</b><span>${esc(d.formula || "-")} ${d.delta ? `<span class="mut">(${esc(d.delta)})</span>` : ""}</span>
         <b><i>m/z</i></b><span>${d.mz} calculated · ${d.mz_extracted} extracted${d.mz_observed ? ` · ${d.mz_observed.toFixed(2)} observed` : ""}</span>
         <b>RT</b><span>${d.ref_rt ? d.ref_rt.toFixed(2) + " min" : "-"}${drt != null ? ` (${drt >= 0 ? "+" : ""}${drt.toFixed(2)} relative to the parent; more polar TPs elute earlier)` : ""}</span>

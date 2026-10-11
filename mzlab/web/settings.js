@@ -69,6 +69,7 @@ function uipOpen(btn) {
     ` : ""}
     ${window.MZLAB_BROWSER ? `<div class="row" id="uip-space-row" hidden><span>${I18N.t("settings.space.label")}</span> <span id="uip-space-val" class="sm" role="status" aria-live="polite"></span> <button id="uip-space" type="button" title="${I18N.t("settings.space.title")}">${I18N.t("settings.space.button")}</button></div>` : ""}
     ${window.DESKUPD ? DESKUPD.row() : ""}
+    ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
@@ -119,6 +120,11 @@ function uipOpen(btn) {
     };
     fetch("api/spazio").then(r => r.json()).then(j => paint(j)).catch(() => {});
     uipSpace.onclick = () => fetch("api/spazio", { method: "POST" }).then(r => r.json()).then(j => paint(j, I18N.t("settings.space.freed"))).catch(() => {});
+  }
+  const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
+  if (uipExt && window.__TAURI__ && __TAURI__.core) {
+    __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});
+    uipExt.onchange = () => __TAURI__.core.invoke("lib_set_external", { on: uipExt.checked }).catch(() => { uipExt.checked = !uipExt.checked; });
   }
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {

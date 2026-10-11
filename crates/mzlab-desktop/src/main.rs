@@ -9,10 +9,13 @@
 )]
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use mzlab_desktop::librerie::{self, Config};
+use mzlab_desktop::scarica::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
-use mzlab_desktop::{handle, State};
+use mzlab_desktop::{handle_body, State};
 use serde::Serialize;
 use std::borrow::Cow;
 use tauri::http::{header, Response, StatusCode};
@@ -150,20 +153,194 @@ fn update_restart(app: AppHandle) {
     app.restart();
 }
 
+/// The folder of the libraries and the switch of the external downloads, as the page shows them in the window «Librerie» and in the settings.
+#[derive(Serialize)]
+struct LibConfig {
+    dir: String,
+    default: bool,
+    external: bool,
+}
+
+fn lib_config(app: &AppHandle, state: &State) -> LibConfig {
+    let c = data_dir(app)
+        .map(|d| librerie::read_config(&d))
+        .unwrap_or_default();
+    LibConfig {
+        dir: state.libs.root().to_string_lossy().into_owned(),
+        default: c.cartella.is_none(),
+        external: c.esterne,
+    }
+}
+
+fn save_config(app: &AppHandle, f: impl FnOnce(&mut Config)) -> Result<(), String> {
+    let d = data_dir(app).map_err(|e| e.detail)?;
+    let mut c = librerie::read_config(&d);
+    f(&mut c);
+    librerie::write_config(&d, &c).map_err(|e| e.key.to_string())
+}
+
+#[tauri::command]
+fn lib_get_config(app: AppHandle, state: tauri::State<'_, Arc<State>>) -> LibConfig {
+    lib_config(&app, &state)
+}
+
+/// System dialog to choose the folder of the libraries; the path is kept in `config.json`. None if the user cancels.
+#[tauri::command]
+async fn lib_choose_dir(
+    app: AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+) -> Result<Option<String>, String> {
+    let dlg = app.dialog().file();
+    let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
+        .await
+        .map_err(|e| e.to_string())?;
+    let Some(path) = picked.and_then(|f| f.into_path().ok()) else {
+        return Ok(None);
+    };
+    let text = path.to_string_lossy().into_owned();
+    save_config(&app, |c| c.cartella = Some(text.clone()))?;
+    state.libs.set_root(path);
+    Ok(Some(text))
+}
+
+/// The switch «Scarica librerie pubbliche da fonti esterne» (off until the user turns it on).
+#[tauri::command]
+fn lib_set_external(app: AppHandle, on: bool) -> Result<bool, String> {
+    save_config(&app, |c| c.esterne = on)?;
+    Ok(on)
+}
+
+/// Set by `lib_cancel`, read between the pieces of a download.
+struct Cancel(Arc<AtomicBool>);
+
+fn err_json(key: &str, detail: &str) -> String {
+    serde_json::json!({"status": "error", "error_key": key, "detail": detail}).to_string()
+}
+
+/// The list of the public packages of the site (a network call, only when the user asks for it).
+#[tauri::command]
+async fn lib_catalog() -> String {
+    tauri::async_runtime::spawn_blocking(|| match scarica::fetch_catalog_raw(&Http::new()) {
+        Ok((_, raw)) => serde_json::json!({"status": "ok", "catalog": raw}).to_string(),
+        Err(e) => e.to_json(),
+    })
+    .await
+    .unwrap_or_else(|e| err_json("lib.dl.err.io", &e.to_string()))
+}
+
+fn do_download(app: &AppHandle, state: &State, cancel: &AtomicBool, ids: Vec<String>) -> String {
+    cancel.store(false, Ordering::Relaxed);
+    let src = Http::new();
+    let cat = match scarica::fetch_catalog(&src) {
+        Ok(c) => c,
+        Err(e) => return e.to_json(),
+    };
+    let (mut done, mut failed) = (Vec::new(), Vec::new());
+    for id in ids {
+        let Some(pkg) = cat.librerie.iter().find(|p| p.id == id) else {
+            failed.push(
+                serde_json::json!({"id": id, "error_key": "lib.dl.err.catalog", "detail": id}),
+            );
+            continue;
+        };
+        match scarica::download_package(&state.libs, &src, pkg, cancel, &mut |p| {
+            let _ = app.emit("lib-progress", p);
+        }) {
+            Ok(()) => done.push(id),
+            Err(e) => {
+                let stop = e.key == "lib.dl.err.cancelled";
+                failed.push(serde_json::json!({"id": id, "error_key": e.key, "detail": e.detail}));
+                if stop {
+                    break;
+                }
+            }
+        }
+    }
+    serde_json::json!({"status": "ok", "done": done, "failed": failed}).to_string()
+}
+
+/// Downloads and verifies the packages the user ticked; progress as `lib-progress` events.
+#[tauri::command]
+async fn lib_download(
+    app: AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+    cancel: tauri::State<'_, Cancel>,
+    ids: Vec<String>,
+) -> Result<String, String> {
+    let (st, flag) = (state.inner().clone(), cancel.0.clone());
+    tauri::async_runtime::spawn_blocking(move || do_download(&app, &st, &flag, ids))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// An external public source (GNPS, MassBank): ONLY with the switch «Scarica librerie pubbliche da fonti esterne» on, only from the listed hosts.
+#[tauri::command]
+async fn lib_download_external(
+    app: AppHandle,
+    state: tauri::State<'_, Arc<State>>,
+    cancel: tauri::State<'_, Cancel>,
+    id: String,
+) -> Result<String, String> {
+    let (st, flag) = (state.inner().clone(), cancel.0.clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        if !data_dir(&app)
+            .map(|d| librerie::read_config(&d).esterne)
+            .unwrap_or(false)
+        {
+            return err_json("lib.dl.err.externalOff", "");
+        }
+        flag.store(false, Ordering::Relaxed);
+        let cat = match scarica::fetch_catalog(&Http::new()) {
+            Ok(c) => c,
+            Err(e) => return e.to_json(),
+        };
+        let Some(ext) = cat.esterne.iter().find(|e| e.id == id) else {
+            return err_json("lib.dl.err.catalog", &id);
+        };
+        match scarica::download_external(&st.libs, ext, &Policy::default(), &flag, &mut |p| {
+            let _ = app.emit("lib-progress", p);
+        }) {
+            Ok(sha) => serde_json::json!({"status": "ok", "sha256": sha}).to_string(),
+            Err(e) => e.to_json(),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn lib_cancel(cancel: tauri::State<'_, Cancel>) {
+    cancel.0.store(true, Ordering::Relaxed);
+}
+
 fn main() {
     let state = Arc::new(State::new());
     let for_protocol = state.clone();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(state.clone())
+        .manage(Cancel(Arc::new(AtomicBool::new(false))))
         .invoke_handler(tauri::generate_handler![
             pick_files,
             register_paths,
             update_check,
             update_apply,
-            update_restart
+            update_restart,
+            lib_get_config,
+            lib_choose_dir,
+            lib_set_external,
+            lib_catalog,
+            lib_download,
+            lib_download_external,
+            lib_cancel
         ])
         .setup(|app| {
+            if let Some(dir) = data_dir(app.handle())
+                .ok()
+                .and_then(|d| librerie::read_config(&d).cartella)
+            {
+                app.state::<Arc<State>>().libs.set_root(PathBuf::from(dir));
+            }
             // the updated web part (if any) answers before the embedded copy; a damaged folder is set aside first
             let web = data_dir(app.handle()).map(|d| {
                 update::recover(&d);
@@ -195,7 +372,12 @@ fn main() {
             // the engine can take long on a big file: never on the thread of the webview
             std::thread::spawn(move || {
                 let uri = request.uri();
-                let r = handle(&state, uri.path(), uri.query().unwrap_or(""));
+                let r = handle_body(
+                    &state,
+                    uri.path(),
+                    uri.query().unwrap_or(""),
+                    request.body(),
+                );
                 responder.respond(
                     Response::builder()
                         .status(r.status)

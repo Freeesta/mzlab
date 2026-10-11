@@ -1,0 +1,7 @@
+id,mz,rt,fragment_scans,datafile:Campione_A_pos.mzML:feature_state,datafile:Campione_A_pos.mzML:area,datafile:Campione_B_pos.mzML:feature_state,datafile:Campione_B_pos.mzML:area,ion_identities:iin_id,ion_identities:ion_identities,ion_identities:neutral_mass,feature_group,spectral_db_matches:compound_name,spectral_db_matches:similarity_score,spectral_db_matches:n_matching_signals,spectral_db_matches:ion_adduct,spectral_db_matches:mol_formula,spectral_db_matches:smiles,spectral_db_matches:precursor_mz
+1,184.1332,5.20,"11,12,13",DETECTED,100000,UNKNOWN,0,7,[M+H]+,183.1259,3,MoNA:Testamine|HCD 30,0.91,8,M+H,C10H17NO2,CCOC,184.1332
+2,301.1547,6.00,"21",DETECTED,80000,DETECTED,70000,,,,,Massbank:Testol - 30.0 eV,0.88,3,[M+H]+,C10H17NO2,CCFAKE,301.1547
+3,195.0875,4.00,,DETECTED,150000,DETECTED,160000,,,,,,,,,,,
+4,280.1000,6.50,,ESTIMATED,99999,UNKNOWN,0,,,,,,,,,,,
+5,299.1754,9.50,"31,32",DETECTED,60000,UNKNOWN,0,,,,,Testagel,0.95,9,M+H,C18H22N2O2,CCREAL,299.1754
+6,310.3000,8.00,,UNKNOWN,0,DETECTED,"3,5e4",,,,,,,,,,,
