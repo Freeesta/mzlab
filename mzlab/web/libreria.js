@@ -96,6 +96,10 @@ const LIB = (() => {
           <div class="sm" id="lib-fwhere"></div>
           <div class="sm" style="margin-top:6px"><button id="lib-fchoose" hidden></button> <button id="lib-fgrant" hidden>${I18N.t("lib.folder.grant")}</button> <button id="lib-fbrowser" hidden>${I18N.t("lib.folder.browser")}</button> <button id="lib-fscan">${I18N.t("lib.folder.scan")}</button> <button id="lib-fall" hidden>${I18N.t("lib.indexAll")}</button></div>
           <div class="sm muted" id="lib-fnote" style="margin-top:4px"></div></fieldset>
+        <fieldset class="lib-avail" aria-label="${I18N.t("lib.avail")}"><legend class="sm">${I18N.t("lib.avail")}</legend>
+          <div class="sm muted">${I18N.t("lib.avail.intro")}</div>
+          <div class="sm" style="margin-top:6px"><button id="lib-avail-load">${I18N.t("lib.avail.load")}</button> <button id="lib-avail-go" hidden>${I18N.t("lib.avail.go")}</button> <button id="lib-avail-cancel" hidden>${I18N.t("lib.avail.cancel")}</button></div>
+          <div id="lib-avail-list" aria-live="polite"></div><div id="lib-avail-st" class="sm" aria-live="polite"></div></fieldset>
         <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button> <button id="lib-pickdir">${I18N.t("lib.pickDir")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.json,.jsonl,.ndjson,.txt,.mzlib" multiple hidden><input type="file" id="lib-dirin" webkitdirectory multiple hidden></div>
         <div id="lib-st"></div><div id="lib-list"></div><div class="sm muted" id="lib-space" style="margin-top:6px"></div>`;
       d.querySelector("#lib-x").onclick = () => d.close();
@@ -107,6 +111,9 @@ const LIB = (() => {
       d.querySelector("#lib-fbrowser").onclick = async () => { await useBrowserFolder(); refresh(); };
       d.querySelector("#lib-fscan").onclick = () => refresh();
       d.querySelector("#lib-fall").onclick = () => indexAll();
+      d.querySelector("#lib-avail-load").onclick = () => loadCatalog();
+      d.querySelector("#lib-avail-go").onclick = () => downloadTicked();
+      d.querySelector("#lib-avail-cancel").onclick = () => { if (T()) T().invoke("lib_cancel"); else call("cancel"); };
       input.onchange = () => { addFiles([...input.files]); input.value = ""; };
       dirin.onchange = () => { addFiles([...dirin.files].filter(f => /\.(msp|mgf|json|jsonl|ndjson|mzlib)$/i.test(f.name))); dirin.value = ""; };
       drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
@@ -153,6 +160,64 @@ const LIB = (() => {
     await refresh();
   }
   async function indexAll() { for (const n of [...toIndex]) await indexOne(n); }
+
+  // ------------------------------------------------------------ the public packages («Disponibili»): the list comes from the site (or, in the app, from the native side) only when the user asks
+  let avail = null, busy = false;
+  const mb = n => fmtN(Math.round(n / 1e5) / 10);
+  const avLabel = st => ({ new: I18N.t("lib.avail.st.new"), update: I18N.t("lib.avail.st.update"), installed: I18N.t("lib.avail.st.installed"), damaged: I18N.t("lib.avail.st.damaged") })[st] || st;
+  const NATIVE_ERRORS = ["lib.dl.err.host", "lib.dl.err.externalOff"];        // answered by the native side (listed so that tools/controlla_i18n.py sees the keys)
+  const errText = (key, params) => I18N.t(NATIVE_ERRORS.includes(key) || key.startsWith("lib.dl.err.") ? key : "lib.dl.err.io", params || {});
+  async function nativeJson(cmd, args) {                    // the native side answers a JSON text: the result, or {status:"error", error_key, detail}
+    const j = JSON.parse(await T().invoke(cmd, args));
+    if (j.status === "error") throw new Error(errText(j.error_key, { detail: j.detail }));
+    return j;
+  }
+  async function loadCatalog() {
+    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list");
+    box.innerHTML = `<p class="sm muted">${I18N.t("lib.reading")}</p>`;
+    try {
+      avail = T() ? await call("catalog", { cat: (await nativeJson("lib_catalog")).catalog }) : await call("catalog");
+      avail.cfg = T() ? await T().invoke("lib_get_config") : null;
+      renderAvail();
+    } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
+  }
+  function renderAvail() {
+    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
+    const rows = A.cat.librerie.map(p => { const s = st.get(p.id) || "new";
+      return `<tr><td><input type="checkbox" data-dl="${EHt(p.id)}" ${s === "installed" ? "disabled" : ""} aria-label="${EHt(p.nome)}"></td><td>${EHt(p.nome)}</td><td>${EHt(p.versione)}</td><td class="num">${fmtN(p.spettri)}</td><td class="num">${mb(p.dimensione)} MB</td><td title="${EHt(p.licenza)}">${EHt(p.licenza.split(";")[0].split(":")[0])}</td><td><span class="sbadge st-${s === "installed" ? "ok" : s === "damaged" ? "bad" : "warn"}">${EHt(avLabel(s))}</span></td></tr>`; });
+    const ext = A.cfg && A.cfg.external ? A.cat.esterne : [];
+    const xrows = ext.map(e => `<tr><td><input type="checkbox" data-dlx="${EHt(e.id)}" aria-label="${EHt(e.nome)}"></td><td>${EHt(e.nome)}</td><td colspan="2" class="num">${e.dimensione ? mb(e.dimensione) + " MB" : ""}</td><td colspan="2" title="${EHt(e.licenza || "")}">${EHt((e.licenza || "").split(":")[0])}</td><td class="sm">${EHt(e.nota || "")}</td></tr>`);
+    const head = `<tr><th></th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.avail.col.version")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.avail.col.license")}</th><th>${I18N.t("lib.col.state")}</th></tr>`;
+    box.innerHTML = (rows.length ? `<table>${head}${rows.join("")}</table>` : `<p class="muted">${I18N.t("lib.avail.none")}</p>`)
+      + (xrows.length ? `<div class="sm" style="margin-top:6px"><b>${I18N.t("lib.avail.ext")}</b> ${I18N.t("lib.avail.ext.hint")}</div><table>${xrows.join("")}</table>` : "")
+      + (A.cat.librerie.length ? `<details class="sm" style="margin-top:6px"><summary>${I18N.t("lib.avail.attr")}</summary>${A.cat.librerie.map(p => `<p><b>${EHt(p.nome)}</b>: ${EHt(p.attribuzione || "")} ${p.url_sorgente ? `<span class="muted">(${EHt(p.url_sorgente)})</span>` : ""}</p>`).join("")}</details>` : "");
+    d.querySelector("#lib-avail-go").hidden = !(rows.length || xrows.length);
+  }
+  async function downloadTicked() {
+    if (busy) return;
+    const d = document.getElementById("libdlg"), st = d.querySelector("#lib-avail-st"), go = d.querySelector("#lib-avail-go"), cn = d.querySelector("#lib-avail-cancel");
+    const ids = [...d.querySelectorAll("[data-dl]:checked")].map(c => c.dataset.dl), xids = [...d.querySelectorAll("[data-dlx]:checked")].map(c => c.dataset.dlx);
+    if (!ids.length && !xids.length) return;
+    busy = true; go.disabled = true; cn.hidden = false;
+    const name = id => (avail.cat.librerie.find(p => p.id === id) || avail.cat.esterne.find(e => e.id === id) || { nome: id }).nome;
+    const show = m => { st.innerHTML = `<div>${EHt(I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) }))}</div><progress max="${m.total || 1}" value="${m.bytes}"></progress>`; };
+    let off = null; const fails = []; let done = 0;
+    try {
+      if (T() && T().event) off = await T().event.listen("lib-progress", ev => show(ev.payload));
+      if (ids.length) {
+        if (T()) { const r = await nativeJson("lib_download", { ids }); done += r.done.length; (r.failed || []).forEach(f => fails.push(`${name(f.id)}: ${errText(f.error_key, { detail: f.detail })}`)); }
+        else { const r = await call("download", { ids }, show); done += r.done.length; r.failed.forEach(f => fails.push(`${name(f.id)}: ${errText(f.key, f.params)}`)); }
+      }
+      for (const id of xids) {
+        try { await nativeJson("lib_download_external", { id }); done++; const e = avail.cat.esterne.find(x => x.id === id); await refresh(); await indexOne(`${e.id}.${e.formato}`); }
+        catch (e) { fails.push(`${name(id)}: ${e.message}`); }
+      }
+    } catch (e) { fails.push(e.message); }
+    finally { if (off) off(); busy = false; go.disabled = false; cn.hidden = true; }
+    st.innerHTML = (done ? `<div>${EHt(I18N.t("lib.avail.done", { n: done }))}</div>` : "") + fails.map(f => `<div class="err">${EHt(f)}</div>`).join("");
+    try { avail = { ...(await call("catalog", { cached: true })), cfg: avail.cfg }; renderAvail(); } catch (e) { /* the list stays as it was */ }
+    await refresh();
+  }
   async function addFiles(files) {
     const d = document.getElementById("libdlg"), st = d.querySelector("#lib-st");
     for (const f of files) {

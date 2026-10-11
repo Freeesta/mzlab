@@ -188,6 +188,6 @@ const CARTELLA = (() => {
   const blobPath = voce => (voce.tipo === "pacchetto" ? voce.nome : META + "/" + voce.nome + ".mzlib");
   const metaOf = (name, size, mtime, sha, info, bytes) => ({ v: 1, origine: { nome: name, size, mtime, sha256: sha }, info, bytes, date: Date.now() });
 
-  return { Sha256, sha256Of, statoSorgente, statoPacchetto, scan, handleDir, nativeDir, idOf, nameOfId, isFolderId, stem, safeRel, blobPath, metaOf, META, SRC, STATI };
+  return { Sha256, sha256Of, readHead, statoSorgente, statoPacchetto, scan, handleDir, nativeDir, idOf, nameOfId, isFolderId, stem, safeRel, blobPath, metaOf, META, SRC, STATI };
 })();
 if (typeof module !== "undefined") module.exports = CARTELLA;
