@@ -30,6 +30,9 @@ def queries(item: Item) -> list[tuple[str, dict]]:
     for s in scans:
         keys.setdefault((s.level, __import__("mzlab.explore", fromlist=["scan_key"]).scan_key(s)), s)
     out.append(("/api/filters", {"k": "0"}))
+    n = len(scans)
+    for sid in sorted({0, n // 3, n // 2, n - 1}) if n else []:
+        out.append(("/api/scaninfo", {"k": "0", "sid": str(sid)}))
     for lv in levels:
         base = {"k": "0", "level": str(lv)}
         out += [("/api/chrom", {**base}), ("/api/chrom", {**base, "kind": "bpc"})]

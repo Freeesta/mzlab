@@ -35,10 +35,10 @@ try:
             pg.wait_for_function(f"!!({M}._mz.reg && {M}._mz.reg.nrt > 1)", timeout=15000)     # true zoom: the region on new bins
             reg = pg.evaluate(f"[{M}._mz.reg.nrt,{M}._mz.reg.nmz,{M}._mz.reg.dmz]"); assert reg[2] <= 1 and reg[1] <= 1000 and reg[0] <= 1000, reg     # never coarser than the 1 Da of the whole map (LR cells are nominal masses)
             zy = z()[1]; pg.keyboard.down("Shift"); pg.mouse.wheel(0, -200); pg.keyboard.up("Shift"); pg.wait_for_timeout(200)
-            z2 = z(); assert z2[0] == zz[0] and z2[1] != zy, (zz, z2)                           # Shift: m/z only
+            z2 = z(); assert z2[1] == zy and z2[0] != zz[0], (zz, z2)                           # Shift: RT only
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -200); pg.keyboard.up("Alt"); pg.wait_for_timeout(200)
-            z3 = z(); assert z3[1] == z2[1] and z3[0] != z2[0], (z2, z3)                        # Alt: RT only
-        step("wheel: zoom on both axes, Shift = m/z only, Alt = RT only, true zoom on finer bins", wheel)
+            z3 = z(); assert z3[0] == z2[0] and z3[1] != z2[1], (z2, z3)                        # Alt: m/z only
+        step("wheel: zoom on both axes, Shift = RT only, Alt = m/z only, true zoom on finer bins", wheel)
         def boxz():
             before = z(); (x0, y0), (x1, y1) = at(.3, .3), at(.6, .6)
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x1, y1, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
@@ -77,13 +77,15 @@ try:
         step("arrows: next scan, one bin, Shift = apex of the XIC / next peak of the spectrum", keys)
         def lock():
             x, y = at(.4, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)
+            pg.click("#ctx [role=menuitemcheckbox]"); pg.wait_for_timeout(300)                  # right click = the menu; «Lock the sight» is in it
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk, lk
             pg.mouse.move(x + 80, y + 40); pg.wait_for_timeout(200); assert pg.evaluate(f"MAPPA.point({M})") == lk          # the mouse is free, the point stays
             assert "locked" in pg.inner_text(".pnl.map .rd")
-            pg.keyboard.press("ArrowUp"); pg.wait_for_timeout(200); lk2 = pg.evaluate(f"{M}._mz.lock"); assert lk2["mz"] > lk["mz"], (lk, lk2)   # arrows move the locked point
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ArrowUp"); pg.wait_for_timeout(200); lk2 = pg.evaluate(f"{M}._mz.lock"); assert lk2["mz"] > lk["mz"], (lk, lk2)   # arrows move the locked point
             pg.keyboard.press("l"); pg.wait_for_timeout(200); assert pg.evaluate(f"{M}._mz.lock") is None
-            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200)
-            assert pg.evaluate(f"{M}._mz.lock") is None                                          # right click again = unlock
+            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pg.click("#ctx [role=menuitemcheckbox]"); pg.wait_for_timeout(200)
+            pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pg.click("#ctx [role=menuitemcheckbox]"); pg.wait_for_timeout(200)
+            assert pg.evaluate(f"{M}._mz.lock") is None                                          # the same item unlocks
             pg.keyboard.down("Shift"); pg.mouse.click(x, y, button="right"); pg.keyboard.up("Shift"); pg.wait_for_timeout(500)
             assert pg.evaluate("!!document.querySelector('dialog[open]')"), "Shift + right click = the XIC dialog"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200)

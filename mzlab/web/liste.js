@@ -347,8 +347,11 @@ const LISTE = (() => {
     });
   }
 
+  // Per-list switches exist only when there are two or more lists; a single list (today Keller) is always on, whatever an old stored choice says
+  const activeMap = () => (ST.lists.length + ST.userLists.length < 2 ? {} : rd(KEY_LISTS, {}));
+
   function reindex() {
-    const act = rd(KEY_LISTS, {});
+    const act = activeMap();
     const all = [...ST.lists, labList(labRows()), ...ST.userLists];
     ST.idx = buildIndex(all, act);
     ST.runs = new WeakMap();
@@ -564,7 +567,7 @@ const LISTE = (() => {
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
-          <span class="muted">${I18N.t("lst.active")}</span>
+          <span class="muted" id="lst-src-lbl">${I18N.t("lst.active")}</span>
           <span id="lst-src-checks" style="display:inline-flex;gap:10px;flex-wrap:wrap"></span>
         </div>
 
@@ -600,6 +603,7 @@ const LISTE = (() => {
     const elTbody = container.querySelector("#lst-tbody");
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
+    const elChecksLbl = container.querySelector("#lst-src-lbl");
     const elUListBar = container.querySelector("#lst-userlists-bar");
     const elFileIn = container.querySelector("#lst-file-in");
 
@@ -617,6 +621,12 @@ const LISTE = (() => {
       renderExcl();
       const act = rd(KEY_LISTS, {});
       const allLists = [...ST.lists, ...ST.userLists];
+      if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
+        const L = allLists[0];
+        elChecks.innerHTML = L ? `<b>${EH((I18N.lang === "en" && L.name_en) || L.name)}</b>${L.source ? ` <span class="muted">&middot; ${EH(L.source)}</span>` : ""}` : "";
+        elChecksLbl.hidden = true;
+      } else {
+      elChecksLbl.hidden = false;
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
@@ -626,6 +636,7 @@ const LISTE = (() => {
       elChecks.querySelectorAll("input[data-lid]").forEach(chk => {
         chk.onchange = () => { toggleListActive(chk.dataset.lid, chk.checked); render(); };
       });
+      }
 
       if (ST.userLists.length) {
         elUListBar.hidden = false;
@@ -660,7 +671,7 @@ const LISTE = (() => {
         items = isNom ? findNominal(idx, state.pol, qMz, tolVal) : find(idx, state.pol, qMz, tolVal, false);
       } else {
         // Collect all items from active lists for browsing
-        const act = rd(KEY_LISTS, {});
+        const act = activeMap();
         const pool = arrays(idx, state.pol);
         const seen = new Set();
         pool.forEach(arr => {
