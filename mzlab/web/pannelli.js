@@ -198,7 +198,7 @@ function addPanel(type, o, after) {
   if (type === "chrom") p.ms2tri = !!o.ms2tri;                          // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, lock: o.lock ? { pending: true } : null, si: null,
-    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
+    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, mk: typeof o.mk === "boolean" ? o.mk : null, noCont: !!o.noCont, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
   if (type !== "xic") p.traces = p.traces || [];
   const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place(undefined, type === "map" ? 360 : undefined);
   Object.assign(p, g);

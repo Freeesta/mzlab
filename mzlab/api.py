@@ -199,6 +199,14 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/stat/profile":    # time profile of one ion chosen by the user (values already integrated by the page): order, normalization
                 from .statistica import time_profile
                 return _json(time_profile(body.get("points", []), body.get("metric", "area"), body.get("istd")))
+            if path == "/api/stat/blank":      # blank subtraction of a feature table: threshold = blank x factor; two lists (kept, discarded)
+                from .statistica import blank_filter
+                return _json(blank_filter(body.get("matrix", []), body.get("roles", []), float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1))))
+            if path == "/api/stat/pca":        # exploratory PCA of a feature table (filters, imputation, scaling, loadings stability): a view, not a test
+                from .statistica import pca_analysis
+                return _json(pca_analysis(body.get("matrix", []), body.get("roles", []), body.get("groups"), float(body.get("factor", 3)), body.get("stat", "max"),
+                                          int(body.get("min_detect", 1)), float(body.get("min_intensity", 0)), int(body.get("min_samples", 2)),
+                                          body.get("transform", "log"), body.get("scaling", "pareto"), int(body.get("ncomp", 5))))
             if path == "/api/remove":
                 app.remove_file(body.get("name", ""))
                 return _json({"files": app.files(), "methods": app.methods()})
@@ -332,6 +340,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 filter=q.get("filter"), level=int(q.get("level", 1)),
                 precursor=float(q["precursor"]) if q.get("precursor") else None
             ))
+        if path == "/api/scan_axis":     # RT and index of every scan of a level (the sight of the map picks the nearest scan in the page)
+            try:
+                return _json(app.scan_axis(int(q["k"]), int(q.get("level", 1))))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         if path == "/api/spectrum":
             pr = q.get("precursor")
             bg = None

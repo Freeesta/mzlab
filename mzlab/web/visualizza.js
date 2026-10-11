@@ -23,6 +23,8 @@ const DISP = (() => {
   register("spec", { id: "nlab", label: "spec.par.nlab", title: "spec.par.nlab.title", kind: "number", min: 1, max: 60, step: 1, get: p => p.nlab ?? SPEC_DEF.nlab, set: (p, v) => { p.nlab = clamp(Math.round(+v || 1), 1, 60); redraw(p); } });
   register("spec", { id: "sticks", label: "spec.par.sticks", title: "spec.par.sticks.title", kind: "select", when: p => (p._a && p._a.data || []).some(x => x.d.pmz),
     opts: () => [["0", t("spec.par.sticks.profile")], ["1", t("spec.par.sticks.sticks")]], get: p => (p.sticks ? "1" : "0"), set: (p, v) => { p.sticks = v === "1"; redraw(p); } });
+  register("spec", { id: "marker", label: "disp.marker", title: "disp.marker.title", kind: "check", when: p => !!(p._a && p._a.markN != null), get: p => markOn(p), set: (p, v) => { p.mk = !!v; redraw(p); } });
+  register("spec", { id: "nocont", label: "disp.noCont", title: "disp.noCont.title", kind: "check", when: p => !!p._a && !!p._a.hrp, get: p => !!p.noCont, set: (p, v) => { p.noCont = !!v; redraw(p); } });
   register("spec", { id: "rel", label: "disp.rel", kind: "check", get: p => !!specRel(p), set: (p, v) => { p.rel = !!v; redraw(p); } });
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });

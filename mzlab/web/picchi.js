@@ -225,6 +225,22 @@ function showInts() {
 }
 
 // ------------------------------------------------------------------ spettri
+// Triangles of the scans/precursors on a spectrum (dda.js): shown with the «Marker» switch (p.mk), by default only up to MARK_N of them; otherwise the
+// triangle of the peak under the mouse or the finger (p._mk).
+const MARK_N = 20;
+const markOn = p => (p.mk != null ? !!p.mk : !p._a || (p._a.markN || 0) <= MARK_N);
+// the spectrum a palette command acts on: the active one if it is a spectrum, else the first of the tab; pred tests its drawing state
+const specHere = pred => { const l = [E.active, ...E.panels.filter(q => q.tab === E.tab || allTabs())].filter(q => q && q.type === "spec" && q._a && pred(q._a)); return l[0] || null; };
+// MS2 scan of the peak last picked with the right button (palette: «open the MS2 scan»)
+const lastMs2 = () => {
+  const p = specHere(a => a.hrp && window.DDA), q = p && p._pm != null ? DDA.ms2For(p, p._pm)[0] : null;
+  return q ? { p, j: q.j } : null;
+};
+function hoverMark(p, px) {
+  if (!p._a || p._a.markN == null || markOn(p)) { if (p._mk != null) { p._mk = null; drawSoon(p); } return; }
+  const l = (p._a.lbls || []).find(b => (b.fl != null || b.nb) && Math.abs(px - (b.x + b.w / 2)) <= 9), k = l ? (l.fl != null ? l.fl : "n" + l.nb[0]) : null;
+  if (k !== (p._mk ?? null)) { p._mk = k; drawSoon(p); }
+}
 // The window of a spectrum holds no scan of the kind shown (DDA, MS1/MS2 filters): the window moves to the nearest scan of that kind (on a tie the earlier one)
 // and the cursor of the chromatogram it follows snaps to it. False only when the file has no such scan at all.
 async function snapNearest(p, f) {
@@ -271,6 +287,17 @@ async function drawSpec(p, snapped) {
   const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   if (p.iso && p.iso.only && hrp && window.QQQRef) data.forEach(x => { try { x.d = HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } });      // «Sostituisci»: the simulation takes the place of the spectrum
+  p._nCont = 0;
+  if (p.noCont && hrp && window.LISTE) {                  // «remove contaminants»: centroids compatible with the Keller list leave the peaks shown (tolerance = ppm of the Banco)
+    const km = LISTE.keller(files[0].polarity, UIP.hrPpm);
+    if (!km) LISTE.ready().then(() => drawSoon(p));
+    else data.forEach(x => {
+      const d = x.d, keep = d.mz.map(m => !km(m)), n = keep.filter(Boolean).length; if (n === d.mz.length) return;
+      p._nCont += d.mz.length - n;
+      const nd = { ...d }; Object.keys(d).forEach(k => { if (k !== "pmz" && k !== "py" && Array.isArray(d[k]) && d[k].length === d.mz.length) nd[k] = d[k].filter((_, i) => keep[i]); });
+      x.d = nd;
+    });
+  }
   const mzs = data.flatMap(x => x.d.mz);
   if (!mzs.length) {
     if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
@@ -348,7 +375,7 @@ async function drawSpec(p, snapped) {
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width, fo = p.fm && p.fm.find(z => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find(z => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
     g.fillText(t, px, Y(y) - 4 - up);
     if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = css("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
     lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
@@ -385,7 +412,7 @@ async function drawSpec(p, snapped) {
       }
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
-  p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? I18N.t("spec.bgSubtracted") : ""}</span>`;       // on the row of the x axis title, to the right
+  p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? I18N.t("spec.bgSubtracted") : ""}${p._nCont ? I18N.t("spec.contRemoved", { n: p._nCont }) : ""}</span>`;       // on the row of the x axis title, to the right
   if (isDda) DDA.caption(p);                                // scan, parent, activation, NCE, isolation
   p.leg.title = p.leg.textContent;
   if (window.SUBREF && p.bg !== "w") SUBREF.chip(p);
