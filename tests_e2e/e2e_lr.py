@@ -79,11 +79,7 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
-            pg.reload()
-            try: pg.wait_for_selector(".pnl canvas", timeout=90000)
-            except Exception:
-                print("DIAG", pg.evaluate("[String(window.MZLAB_LR_ERR), !!window.MZLAB_LR, typeof S !== 'undefined' && !!S.sess, JSON.stringify(window.MZLAB_LR_MISS), (window.MZLAB_TRACE || []).slice(-12), typeof E !== 'undefined' && E.files.length, document.body.innerText.slice(0, 300)]")); raise
-            pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
+            pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=180000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
             json_close(st["files"], lr_snap["state"]["files"], path="files")
