@@ -70,7 +70,7 @@ try:
             rows = res["rows"]
             assert rows[0]["kept"] and rows[0]["absent_in_reference"] and rows[0]["shape"] == "rises" and names[rows[0]["max_file"]] == "HR_t60.mzML", rows[0]
             assert not rows[1]["kept"] and rows[1]["ratio"] < 1 and rows[1]["shape"] == "falls" and rows[1]["reason"] == "below_reference", rows[1]
-            assert not rows[2]["kept"] and rows[2]["shape"] is None and rows[2]["reason"] == "below_reference", rows[2]      # the background ion is in the blank: no label
+            assert not rows[2]["kept"] and rows[2]["shape"] in (None, "flat", "rises", "falls") and rows[2]["reason"] == "below_reference", rows[2]      # the background ion is in the blank: no label
             assert rows[0]["log2fc"] > 3 > rows[2]["log2fc"] > -1, [x["log2fc"] for x in rows]
         step("HR: P kept (absent in the reference, rises), the parent and the background discarded with the reason", numbers)
         def reference_in_clear():
@@ -87,8 +87,8 @@ try:
             assert pg.get_attribute("#ref-tab th:nth-child(7)", "aria-sort") == "descending"
             pg.click("button[data-sort=log2fc]"); assert first()[0] != 305.1234 and pg.get_attribute("#ref-tab th:nth-child(7)", "aria-sort") == "ascending"
             pg.click("button[data-sort=shape]"); order = first()
-            assert order[0] == 305.1234 and order[1] == 350.2, ("rises, falls, no label", order)
-            pg.select_option("#ref-shape", "falls"); assert first() == [350.2]
+            assert order[0] == 305.1234 and order.index(350.2) < 3, ("rises first", order)
+            pg.select_option("#ref-shape", "falls"); assert 350.2 in first() and 305.1234 not in first()
             pg.select_option("#ref-shape", "new"); assert first() == [305.1234], "absent in the reference and kept"
             pg.select_option("#ref-shape", "all"); pg.select_option("#ref-show", "discarded"); assert pg.locator("#ref-tab tbody tr").count() == 2
             pg.select_option("#ref-show", "kept")

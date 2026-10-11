@@ -137,7 +137,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       const prof = window.PROFILO ? await PROFILO.show(mz, rt) : null;                // fills the profile, which orders the files by time
       if (typeof xicDirect !== "function") return;
       const np = xicDirect(mz, null, null);
-      const name = res.names[x.q.max_file], f = E.files.find(q => q.file === name);
+      const name = res.names[x.q.max_file], f = E.files.find(q => q.file === name && (q.lv || 1) === 1) || E.files.find(q => q.file === name);
       const row = prof && prof.rows ? prof.rows.find(q => q.file === name) : null;
       const apex = row && row.rt != null ? row.rt : rt;
       if (!f || typeof newSpec !== "function" || !np) return;
