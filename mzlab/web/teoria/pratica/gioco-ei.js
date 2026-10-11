@@ -3,7 +3,10 @@
 // OpenChemLib (same molecule, isomer or wrong formula). Levels 1-4 give feedback at every step; "Modalità orale" asks for the written
 // reasoning and corrects only at the end. Globals from classic scripts: TP (teoria.js), EI_DATA, EISPEC, PAL.
 // These exercises use library compounds with a known answer: they never look at the student's own data files.
+// "Percorso" (path of simple compounds per level, item.path / item.skills in ei-dati.js) and "Modalità difficile" (only the spectrum: no
+// formula, no class, free order, passive coherence checks and three-level hints, no answer before «Consegna»; ei-difficile.js).
 // OpenChemLib (1.1 MB) is loaded only when a structure has to be checked or drawn, Ketcher (30 MB) only when the editor is opened.
+import { startHard, SKILLNAME } from "./ei-difficile.js";
 let OCL = null;
 const ocl = async () => OCL || (OCL = await import("../../vendor/openchemlib.js"));
 
@@ -32,20 +35,40 @@ const parity = f => { const r = PAL.rdb(f); return r === Math.floor(r) ? "dispar
 function ionParts(ion) { const m = /^([A-Za-z0-9]+)(\+\.?)$/.exec(ion); return m ? { f: PAL.parse(m[1]), odd: m[2] === "+." } : null; }
 
 // ------------------------------------------------------------------ choosing the problem
+const isHard = () => $("#mode").value === "difficile" && $("#lv").value !== "orale";
+const gameKey = () => $("#lv").value === "orale" ? "ei-orale" : isHard() ? "ei-difficile" : "ei";
 function pool() {
-  const fam = $("#fam").value, lv = $("#lv").value;
+  const fam = $("#fam").value, lv = $("#lv").value, path = $("#path").value;
   let a = PLAY.filter(i => !fam || i.family === fam);
-  if (lv === "1") a = a.filter(i => i.level <= 1).length ? a.filter(i => i.level <= 1) : a.filter(i => i.level <= 2);
+  if (path) a = a.filter(i => i.path === +path);
+  else if (lv === "1") a = a.filter(i => i.level <= 1).length ? a.filter(i => i.level <= 1) : a.filter(i => i.level <= 2);
   else if (lv === "2") a = a.filter(i => i.level <= 2);
   return a.length ? a : PLAY;
+}
+/** Inside a path the compounds come in the order of the path: the first one not yet tried (or failed last time), then reviews and Elo. */
+function pathPick(a, game) {
+  const g = PAL.load().items[game] || {};
+  const todo = a.slice().sort((p, q) => p.order - q.order).find(i => !g[i.id] || !g[i.id].n);
+  if (todo) return todo;
+  return ITEMS.find(i => i.id === PAL.pick(game, a.map(i => ({ id: i.id, d0: i.level - 2, skills: ["M", "formula", "meccanismi", "struttura"], fam: i.family })), {}).id);
+}
+function pathInfo() {
+  const path = +$("#path").value, el = $("#pathinfo");
+  if (!path) { el.textContent = ""; return; }
+  const g = PAL.load().items[gameKey()] || {}, all = PLAY.filter(i => i.path === path), ok = all.filter(i => g[i.id] && g[i.id].box >= 1).length;
+  el.textContent = `Percorso ${path}: ${ok} di ${all.length} composti risolti`;
 }
 function next(id) {
   let it = id && ITEMS.find(i => i.id === id);
   if (!it && S && S.chall) it = S.chall.list[S.chall.k];
   if (!it) {
-    const items = pool().map(i => ({ id: i.id, d0: i.level - 2, skills: ["M", "formula", "meccanismi", "struttura"], fam: i.family }));
-    const ch = PAL.pick($("#lv").value === "orale" ? "ei-orale" : "ei", items, { avoidFam: S && S.item ? S.item.family : null });
-    it = ITEMS.find(i => i.id === ch.id);
+    const a = pool();
+    if ($("#path").value && $("#lv").value !== "orale") it = pathPick(a, gameKey());
+    else {
+      const items = a.map(i => ({ id: i.id, d0: i.level - 2, skills: ["M", "formula", "meccanismi", "struttura"], fam: i.family }));
+      const ch = PAL.pick(gameKey(), items, { avoidFam: S && S.item ? S.item.family : null });
+      it = ITEMS.find(i => i.id === ch.id);
+    }
   }
   start(it);
 }
@@ -57,7 +80,7 @@ function spectrumCard(el, it, opt = {}) {
   const c = TP.canvas(box, opt.h || 280);
   const read = document.createElement("div"); read.className = "fb hi"; read.setAttribute("aria-live", "polite"); box.appendChild(read);
   let ax = null;
-  const draw = () => { ax = EISPEC.plot(c, it, { sel: S.sel, keys: opt.keys }); };
+  const draw = () => { ax = EISPEC.plot(c, it, { sel: S.sel, keys: opt.keys, mark: opt.mark ? opt.mark() : undefined }); if (opt.deco) opt.deco(ax); };
   c.onresize = draw; draw();
   if (opt.table !== false) box.insertAdjacentHTML("beforeend", EISPEC.table(it));
   box.insertAdjacentHTML("beforeend", `<p class="src">${EISPEC.source(it)}</p>`);
@@ -66,6 +89,7 @@ function spectrumCard(el, it, opt = {}) {
     const pick = (best, second) => {
       S.sel = second && S.sel.length ? [S.sel[0], best] : [best];
       draw();
+      if (opt.onpick) opt.onpick(S.sel);
       const [a, b] = S.sel;
       read.innerHTML = b != null ? `m/z ${a} → ${b}: Δm = <b>${Math.abs(a - b)}</b>${LOSSNAME[Math.abs(a - b)] ? ` (perdita tipica: ${LOSSNAME[Math.abs(a - b)]})` : ""}` :
         `Selezionato m/z <b>${a}</b> (${pct(peak(it, a) / 9.99)} del picco base). Maiusc+clic su un altro picco per la differenza.`;
@@ -97,10 +121,12 @@ function spectrumCard(el, it, opt = {}) {
 // ------------------------------------------------------------------ one problem
 function start(it) {
   const lv = $("#lv").value;
-  S = { item: it, level: lv === "orale" ? 5 : +lv, oral: lv === "orale", pts: 100, sel: [], log: [], res: {}, hints: {}, chall: S && S.chall, t0: Date.now() };
+  S = { item: it, level: lv === "orale" ? 5 : +lv, oral: lv === "orale", hard: isHard(), pts: 100, sel: [], log: [], res: {}, hints: {}, chall: S && S.chall, t0: Date.now() };
+  pathInfo();
   $("#pts").textContent = "100 punti";
   const g = $("#game"); g.innerHTML = "";
   if (S.chall) g.insertAdjacentHTML("beforeend", `<p class="pill">Sfida ${S.chall.code}: problema ${S.chall.k + 1} di ${S.chall.list.length}</p>`);
+  if (S.hard) return startHard(HARD_ENV, it, g);
   S.spec = spectrumCard(g, it, S.oral ? { table: $("#fmt") && $("#fmt").value === "tab", click: false, title: "Spettro EI (70 eV) da interpretare", h: 340 } : { table: S.level !== 4 });
   if (S.oral) return oral(g, it);
   const wk = document.createElement("div"); wk.className = "wk"; g.appendChild(wk);
@@ -308,6 +334,7 @@ function finish() {
     <div class="grid2"><div>${solutionSvg(it)}</div><div><p><b>${EH(it.name)}</b>, ${PAL.fhtml(PAL.parse(it.formula))}, M = ${it.M}, famiglia: ${FAMNAME[it.family] || it.family}.</p>
     <p>${Object.entries(STEPNAME).map(([k, n]) => `${n}: ${R[k] == null ? "–" : R[k] >= 0.99 ? "✓" : R[k] > 0 ? "in parte" : "✗"}`).join(" · ")}</p></div></div>
     ${EISPEC.keysHtml(it)}
+    ${it.skills ? `<p>Abilità esercitate: ${it.skills.map(k => SKILLNAME[k] || k).join(", ")}.</p>` : ""}
     <p>Rileggi: <a href="15-ei-metodo.html">capitolo 15</a>, <a href="16-ei-famiglie.html">capitolo 16 (${FAMNAME[it.family] || it.family})</a>.</p>
     <div class="row"><button class="pri keep" id="e-next">${S.chall ? "Prossimo della sfida" : "Problema nuovo"}</button><button class="keep" id="e-fam">Un altro della stessa famiglia</button><button class="keep" id="e-print">Stampa</button></div></div>`;
   if (S.chall) { S.chall.total += total; S.chall.k++; }
@@ -386,16 +413,35 @@ function challengeEnd() {
   S.chall = null;
 }
 
+// ------------------------------------------------------------------ hard mode: what ei-difficile.js needs from this file
+const HARD_ENV = {
+  $, EH, fb, pay, peak, mVisible, ratio, pct, LOSSNAME, FAMNAME, ionParts, spectrumCard, ocl, startKetcher, proposal, idOf, norm, fillSvg, solutionSvg,
+  state: () => S, again: () => next(), game: "ei-difficile",
+  challengeNext: () => { if (S.chall && S.chall.k >= S.chall.list.length) challengeEnd(); else next(); },
+};
+
 // ------------------------------------------------------------------ start
 function init() {
   const fams = [...new Set(PLAY.map(i => i.family))];
   $("#fam").insertAdjacentHTML("beforeend", fams.map(f => `<option value="${f}">${FAMNAME[f] || f}</option>`).join(""));
   if (P.get("fam") && fams.includes(P.get("fam"))) $("#fam").value = P.get("fam");
+  if (P.get("percorso") && /^[1-5]$/.test(P.get("percorso"))) $("#path").value = P.get("percorso");
+  if (P.get("difficile")) $("#mode").value = "difficile";
   if (P.get("orale")) $("#lv").value = "orale";
-  $("#fmtl").hidden = $("#lv").value !== "orale";
+  const vis = () => {
+    const orale = $("#lv").value === "orale", hard = isHard();
+    $("#fmtl").hidden = !orale;
+    $("#model").hidden = orale;
+    $("#lvl").hidden = hard;           // in hard mode there is no feedback level: only passive checks and the hints
+    $("#faml").hidden = hard;          // the class is a clue: it is not offered in hard mode
+    pathInfo();
+  };
+  const change = () => { if (S) S.chall = null; $("#chall").innerHTML = ""; vis(); next(); };
+  vis();
   $("#new").onclick = () => { if (S) S.chall = null; $("#chall").innerHTML = ""; next(); };
-  const fmtVis = () => { $("#fmtl").hidden = $("#lv").value !== "orale"; };
-  $("#lv").onchange = () => { if (S) S.chall = null; fmtVis(); next(); };
+  $("#lv").onchange = change;
+  $("#path").onchange = change;
+  $("#mode").onchange = change;
   $("#fmt").onchange = () => { if (S && S.item) start(S.item); };
   $("#fam").onchange = () => { if (S) S.chall = null; next(); };
   if (P.get("sfida") && challenge(P.get("sfida").toUpperCase())) return;

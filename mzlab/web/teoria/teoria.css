@@ -21,7 +21,7 @@
 :root[data-theme=dark] svg [fill="#7c3aed"]{fill:var(--c4)}:root[data-theme=dark] svg [stroke="#7c3aed"]{stroke:var(--c4)}
 :root[data-theme=dark] svg [fill="#b45309"]{fill:var(--c5)}:root[data-theme=dark] svg [stroke="#b45309"]{stroke:var(--c5)}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:64px}
+html{background:var(--bg);scroll-behavior:smooth;scroll-padding-top:64px}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--accent)}a:hover{color:#1d4166}
 sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.22em}sup{top:-.45em}
@@ -310,6 +310,10 @@ html.lbon{overflow:hidden}
 /* a grey fixed in the dynamic tables of modi.js (shared with the program): readable on the dark background too */
 :root[data-theme=dark] [style*="#687080"]{color:var(--muted)!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) [style*="#687080"]{color:var(--muted)!important}}
-/* standalone Teoria: link back to the program */
-#top a.btn#goapp{font-size:14px;white-space:nowrap}
-@media (max-width:480px){#top .t small{display:none}#top{flex-wrap:wrap}}
+/* standalone Teoria: the tabs of the program (Dati · Disegno · Teoria), same look as #nav of the program, never hidden; the title gives way first */
+#tabs{display:flex;gap:2px}
+#tabs a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap}
+#tabs a:hover{color:var(--ink)}#tabs a.on{color:var(--ink);border-bottom-color:var(--accent)}
+#tabs a:focus-visible,#top #logo:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+#top #logo{display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center}
+@media (max-width:640px){#top .t{display:none}#top{gap:6px;padding:4px 10px}#tabs a{padding:0 9px}}

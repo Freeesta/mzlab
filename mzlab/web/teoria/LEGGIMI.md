@@ -11,7 +11,7 @@ Tutto il testo sta in questa cartella, un file per capitolo. Non c'è niente da 
 | Pratica (giochi ed esercizi) | `pratica.html` (pagina iniziale), `pratica-ei.html`, `pratica-orale.html`, `pratica-perdite.html`, `pratica-isotopi.html`, `pratica-formula.html`, `pratica-strumento.html`, `pratica-quadrupolo.html`; codice e dati in `pratica/` |
 | Domande dell'orale (testo e punti della risposta) | `pratica/domande.js` |
 | Spettri EI dei capitoli 15-16 e del gioco | `pratica/ei-dati.js`, generato da `tools/genera_ei.py` (non a mano) |
-| Glossario (parole sottolineate nel testo) | `21-glossario.html`, poi `python3 tools/genera_glossario.py` |
+| Glossario (parole sottolineate nel testo) | `21-glossario.html`, poi `python3 tools/genera_glossario.py` e `python3 tools/genera_indice_teoria.py` (ricerca) |
 | Elenco dei capitoli nel menu laterale | `teoria.js`, in alto: lista `CHAPTERS` |
 | Colori, caratteri, aspetto dei riquadri | `teoria.css` |
 | Figure interattive (calcoli e grafici) | `sim-quad.js`, `sim-esi.js`, `sim-qqq.js`, `sim-frag.js`, `sim-misc.js`, `sim-chrom.js` (cromatografia), `sim-ei.js` (EI), `sim-hr.js` (risoluzione e formule) |

@@ -114,7 +114,7 @@ function ensure(p) {
   filesOf(p).forEach(f => {
     const n = nameOf(f); if (cache.has(n) || pending.has(n)) return;
     pending.add(n);
-    get(f).then(g => { pending.delete(n); if (g && typeof redrawAll === "function") redrawAll(); }, () => pending.delete(n));
+    get(f).then(g => { pending.delete(n); if (g && typeof redrawSoon === "function") redrawSoon(); }, () => pending.delete(n));
   });
 }
 const have = p => filesOf(p).some(f => cache.get(nameOf(f)));
@@ -161,7 +161,7 @@ function pressEnsure(p) {
   filesOf(p).forEach(f => {
     const a = pressTrace(f); if (!a) return; const k = f.k + "|" + a.i; if (PRESS.has(k)) return;
     PRESS.set(k, null);
-    J(`api/analog?k=${f.k}&i=${a.i}&n=2000`).then(d => { PRESS.set(k, d); if (typeof redrawAll === "function") redrawAll(); }, () => {});
+    J(`api/analog?k=${f.k}&i=${a.i}&n=2000`).then(d => { PRESS.set(k, d); if (typeof redrawSoon === "function") redrawSoon(); }, () => {});
   });
 }
 const pressCurves = p => filesOf(p).map(f => ({ f, d: PRESS.get(f.k + "|" + (pressTrace(f) || {}).i) })).filter(x => x.d && x.d.t.length);

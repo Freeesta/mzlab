@@ -66,6 +66,7 @@ try:
         step("the index of a removed file is freed first", removed)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-space-row:not([hidden])", timeout=10000)
+            pg.wait_for_function("document.getElementById('uip-space-val').textContent.includes('MB')", timeout=10000)
             t = pg.inner_text("#uip-space-val"); assert "MB" in t, t
             pg.keyboard.press("Escape")
         step("the gear shows the space", gear)

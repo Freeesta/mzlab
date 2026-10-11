@@ -107,6 +107,37 @@ def i18n(results) -> None:
     results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
+def codice(results) -> None:
+    """The map of the code is up to date (tools/indice.py) and the size limits do not get worse (tools/controlla.py)."""
+    for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
+        t0 = time.time()
+        p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = (p.stdout or "") + (p.stderr or "")
+        (LOG / f"{script[:-3]}.log").write_text(out, encoding="utf-8")
+        results.append((name, "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
+def noti_rossi() -> dict[str, str]:
+    """tools/noti_rossi.txt: `name | reason` per line, `#` comments. A FAIL of one of these is reported as NOTO (not blocking)."""
+    f = ROOT / "tools" / "noti_rossi.txt"
+    out: dict[str, str] = {}
+    if f.exists():
+        for l in f.read_text(encoding="utf-8").splitlines():
+            if l.strip() and not l.lstrip().startswith("#"):
+                n, _, why = l.partition("|")
+                out[n.strip()] = why.strip()
+    return out
+
+
+def teoria(results) -> None:
+    """Teoria chapters: structure, accessibility, markers, noindex; with MZLAB_DATI also forbidden names and copying (tools/controlla_teoria.py)."""
+    t0 = time.time()
+    p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_teoria.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    out = (p.stdout or "") + (p.stderr or "")
+    (LOG / "teoria.log").write_text(out, encoding="utf-8")
+    results.append(("Teoria (capitoli)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
 def js_syntax(results) -> None:
     web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
@@ -227,9 +258,10 @@ CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js") 
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_pratica_ei_set", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_tema_lampo", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi", "e2e_teoria_cerca", "e2e_teoria_strumenti", "e2e_teoria_nav"}),
+    ("mzlab/web/tavola-periodica.js", {"e2e28", "e2e6", "e2e_teoria_strumenti"}),
     ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
-    ("mzlab/web/telefono.js", {"e2e_telefono"}),
+    ("tools/tema_testa.py", {"e2e_tema_lampo"}), ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}),
     ("tools/build_site.py", set()), ("tests_e2e/e2e_indirizzi.py", {"e2e_indirizzi"}), ("tests_e2e/e2e_teoria_mobile.py", {"e2e_teoria_mobile"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
@@ -240,20 +272,21 @@ AREE = [
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
     ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("mzlab/web/sottrazione.js", {"e2e_sottrazione"}), ("mzlab/differenza.py", {"e2e_sottrazione"}),
-    ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
-    ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2", "e2e_mappa_mirino", "e2e_mappa_nav", "e2e_mappa_nav3d", "e2e_mappa_estrai", "e2e_mappa_estrai_hr", "e2e_mappa_correzione"}), ("mzlab/web/pannelli.js", {"e2e_mappa_correzione", "e2e_intestazioni"}), ("mzlab/web/mappa-estrai.js", {"e2e_mappa_estrai", "e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_estrai.py", {"e2e_mappa_estrai"}), ("tests_e2e/e2e_mappa_estrai_hr.py", {"e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_correzione.py", {"e2e_mappa_correzione"}), ("tests_e2e/e2e_mappa3d_errori.py", {"e2e_mappa3d_errori"}), ("tests_e2e/e2e_mappa_nav.py", {"e2e_mappa_nav"}), ("mzlab/web/mirino.js", {"e2e_mappa", "e2e_mappa_mirino"}), ("tests_e2e/e2e_mappa_mirino.py", {"e2e_mappa_mirino"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d", "e2e_mappa_nav3d", "e2e_mappa3d_errori"}), ("tests_e2e/e2e_mappa_nav3d.py", {"e2e_mappa_nav3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
+    ("tools/controlla_i18n.py", set()), ("tools/controlla_teoria.py", set()), ("tools/nuovo_capitolo.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
+    ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2", "e2e_mappa_mirino", "e2e_mappa_nav", "e2e_mappa_nav3d", "e2e_mappa_estrai", "e2e_mappa_estrai_hr", "e2e_mappa_correzione"}), ("mzlab/web/pannelli.js", {"e2e_mappa_correzione", "e2e_intestazioni"}), ("mzlab/web/mappa-estrai.js", {"e2e_mappa_estrai", "e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_estrai.py", {"e2e_mappa_estrai"}), ("tests_e2e/e2e_mappa_estrai_hr.py", {"e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_correzione.py", {"e2e_mappa_correzione"}), ("tests_e2e/e2e_mappa3d_errori.py", {"e2e_mappa3d_errori"}), ("mzlab/web/reset.js", {"e2e_reset"}), ("tests_e2e/e2e_reset.py", {"e2e_reset"}), ("mzlab/web/settings.js", {"e2e_reset"}), ("tests_e2e/e2e_mappa_nav.py", {"e2e_mappa_nav"}), ("mzlab/web/mirino.js", {"e2e_mappa", "e2e_mappa_mirino"}), ("tests_e2e/e2e_mappa_mirino.py", {"e2e_mappa_mirino"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d", "e2e_mappa_nav3d", "e2e_mappa3d_errori"}), ("tests_e2e/e2e_mappa_nav3d.py", {"e2e_mappa_nav3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore", "e2e_asse_x"}), ("mzlab/web/spettro.js", {"e2e_asse_x", "e2e_spettro"}), ("tests_e2e/e2e_asse_x.py", {"e2e_asse_x"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_lr", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/lr", {"e2e_lr"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust", "e2e_lr"}), ("mzlab/web/qualita", {"e2e_picchi_qualita"}), ("mzlab/web/peaks-worker", {"e2e_picchi_qualita"}), ("tests_e2e/e2e_picchi_qualita.py", {"e2e_picchi_qualita"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
+    ("mzlab/web/transizioni", {"e2e_transizioni", "e2e_pannello", "e2e_cassetto"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti"}), ("mzlab/web/barra.js", {"e2e_strumenti", "e2e_pannello", "e2e_cassetto", "e2e_barra_hint", "e2e_barra", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
     ("mzlab/web/grafici.js", {"e2e_sottrazione", "e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour", "e2e_asse_x"}),
     ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
-    ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_tour"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/riferimento.js", {"e2e_differenza_hr", "e2e_tour"}), ("tests_e2e/e2e_differenza_hr.py", {"e2e_differenza_hr"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
+    ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_tour"}), ("mzlab/web/features.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_strumenti"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/riferimento.js", {"e2e_differenza_hr", "e2e_tour"}), ("tests_e2e/e2e_differenza_hr.py", {"e2e_differenza_hr"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
     ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/web/gradiente.js", {"e2e_gradiente", "e2e_workflow"}), ("mzlab/web/tdati.js", {"e2e_tabelle_dati"}), ("mzlab/web/tdati-pannelli.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_tabelle_dati.py", {"e2e_tabelle_dati"}), ("mzlab/web/tdati.js", {"e2e_axe_grafici"}), ("mzlab/web/mappa.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_axe_grafici.py", {"e2e_axe_grafici"}), ("mzlab/analog.py", {"e2e_gradiente"}), ("tests_e2e/e2e_gradiente.py", {"e2e_gradiente"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/workflow.py", {"e2e_workflow"}), ("mzlab/web/version.js", {"e2e_workflow"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
@@ -346,6 +379,7 @@ def main() -> None:
     ap.add_argument("--senza-e2e", action="store_true")
     ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
     ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
+    ap.add_argument("--teoria", action="store_true", help="in più, il controllo dei capitoli della Teoria (tools/controlla_teoria.py; con MZLAB_DATI anche nomi vietati e copia dalle fonti)")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
@@ -365,6 +399,9 @@ def main() -> None:
     if not a.fumo and not a.ultimi_falliti:
         js_syntax(results)
         i18n(results)
+        codice(results)
+        if a.teoria:
+            teoria(results)
         pytest(results, 1200)
         if not a.rapida:
             prova_hr(results)
@@ -381,6 +418,10 @@ def main() -> None:
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
+    noti = noti_rossi()
+    results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
+               (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
+               for n, st, dt, notes in results]
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]

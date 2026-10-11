@@ -16,6 +16,9 @@ from mzlab.chem.elements import parse_formula, mass
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 NOMINAL = {"H": 1, "C": 12, "N": 14, "O": 16, "F": 19, "Si": 28, "P": 31, "S": 32, "Cl": 35, "Br": 79, "I": 127}
+AIUTI = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-aiuti.js"
+SKILLS = {"M", "isotopi", "azoto", "rdb", "alpha", "induttiva", "sigma", "mclafferty", "rda", "benzilica", "orto", "serie", "perdita", "riarr", "m-assente"}
+LICENSES = {"CC BY-NC-SA", "CC BY-NC", "CC BY-SA", "CC BY", "CC0"}
 ODD = {"M", "mclafferty", "rda", "orto"}                 # mechanisms that give odd-electron ions
 EVEN = {"alpha", "i", "sigma", "tropilio", "serie"}      # simple cleavages: even-electron ions
 TYPES = ODD | EVEN | {"perdita", "riarr", "isotopo"}
@@ -43,8 +46,8 @@ def rdb(f: dict) -> float:
 def test_file_and_sources():
     d = load()
     items = d["items"]
-    assert len(items) >= 60 and sum(i["play"] for i in items) >= 50
-    assert DATA.stat().st_size < 700_000
+    assert len(items) >= 100 and sum(i["play"] for i in items) >= 85
+    assert DATA.stat().st_size < 160_000, "the file grows past ~150 kB: load only the data of the chosen level"
     assert "NIST" not in DATA.read_text(encoding="utf-8").upper().replace("NIST SPECTRA", "")
     ids = [i["id"] for i in items]
     assert len(ids) == len(set(ids))
@@ -103,3 +106,67 @@ def test_every_spectrum_cited_in_the_theory_exists():
     for page in (ROOT / "mzlab" / "web" / "teoria").glob("*.html"):
         for ref in _re.findall(r'data-ei="([^"]+)"', page.read_text(encoding="utf-8")):
             assert ref in ids, (page.name, ref)
+
+
+def aiuti():
+    return dict(re.findall(r'^  "([^"]+)": "(.*)",$', AIUTI.read_text(encoding="utf-8"), re.M))
+
+
+def test_molecular_ion_and_nitrogen_rule():
+    """Every compound: the M key (if any) is the formula itself as a radical cation; nominal M parity = parity of the N count; RDB integer >= 0."""
+    for it in load()["items"]:
+        f = dict(parse_formula(it["formula"]))
+        assert (it["M"] % 2) == (f.get("N", 0) % 2), (it["id"], "regola dell'azoto")
+        r = rdb(f)
+        assert r >= 0 and r == int(r), (it["id"], r)
+        for k in it["keys"]:
+            if k["type"] == "M":
+                ion, odd = split_ion(k["ion"])
+                assert odd and ion == f and k["mz"] == it["M"], (it["id"], k)
+            if k["type"] == "isotopo":
+                assert any(e in f for e in ("Cl", "Br", "S")) and k["delta"] in (2, 4), (it["id"], k)
+
+
+def test_path_of_simple_compounds():
+    """Path levels 1-5: ordered, playable, with skill tags derived from the validated keys, licence and accession of MassBank."""
+    items = load()["items"]
+    path = [i for i in items if "path" in i]
+    assert {i["path"] for i in path} == {1, 2, 3, 4, 5}
+    for lv in range(1, 6):
+        grp = sorted((i for i in path if i["path"] == lv), key=lambda i: i["order"])
+        assert len(grp) >= 8, lv
+        assert [i["order"] for i in grp] == list(range(len(grp))), lv
+    for it in path:
+        assert it["play"] and it["keys"], it["id"]
+        assert it["skills"] and set(it["skills"]) <= SKILLS and "M" in it["skills"], (it["id"], it["skills"])
+        f = dict(parse_formula(it["formula"]))
+        assert ("isotopi" in it["skills"]) == any(e in f for e in ("Cl", "Br", "S")), it["id"]
+        assert ("azoto" in it["skills"]) == ("N" in f), it["id"]
+        assert it["smiles"] and it["inchikey"], it["id"]
+        assert it["src"]["license"] in LICENSES and it["src"]["accession"].startswith("MSBNK-"), it["id"]
+    # the ids that existed before the path keep their id (progress in localStorage qqq.pratica)
+    ids = {i["id"] for i in items}
+    assert {"acetofenone", "1-butanolo", "2-esanone", "toluene", "clorobenzene", "dietil-etere", "decano"} <= ids
+
+
+def test_key_notes_are_not_direct_answers():
+    """A note never says the name of its compound (the notes are shown only after the student's own answer)."""
+    for it in load()["items"]:
+        name = it["name"].lower()
+        for k in it["keys"]:
+            assert name not in k["text"].lower(), (it["id"], k["text"])
+
+
+def test_hints_of_the_hard_mode_do_not_reveal_the_structure():
+    """Level 3 of the hints: one sentence per compound of the path, no m/z, no name, no formula, no class or group word."""
+    h = aiuti()
+    forbidden = re.compile(r"\balcol|\bammin|\bchetone|\baldeid|\beter[ei]\b|\bester|\bacid[oi]\b|\bnitril|\bammid|\balogen|\baromatic|\bbenzen|\banell|\banello|\bcicl|\bcarbonil|\bossidril|\bnitro|\btiol|\bsolfur|\bfenol|\balchil|\bcatena|\bsimmetr|\bramific|\bdoppio legame|\bcarbossil|\bfenil", re.I)
+    path = [i for i in load()["items"] if "path" in i]
+    assert set(h) >= {i["id"] for i in path}
+    assert set(h) <= {i["id"] for i in load()["items"]}
+    for it in path:
+        t = h[it["id"]]
+        assert 40 < len(t) < 330, it["id"]
+        assert not re.search(r"\d{2,}", t), (it["id"], "a number in the hint")
+        assert it["name"].lower() not in t.lower() and it["formula"] not in t, it["id"]
+        assert not forbidden.search(t), (it["id"], forbidden.search(t).group(0))

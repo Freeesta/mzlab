@@ -8,8 +8,9 @@
 const PROFILO = (() => {
   const KEY = "qqq.profilo";
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
+  const qaOn = () => !!(window.FEATURES && FEATURES.qaqc);      // «Normalise on» (internal standards of QA/QC) exists only with QA/QC on
   let st = { text: "", rt: "", metric: "area", istd: "" };
   let res = null;                                              // last result {ion, rows, series, normalized, metric}
   try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
@@ -44,7 +45,7 @@ const PROFILO = (() => {
     const pts = [];
     for (const f of fs) pts.push(rowOf(f, await measure(f, r.mz, x)));
     let istd = null, istdIon = null;
-    if (isHr() && st.istd !== "") {
+    if (isHr() && qaOn() && st.istd !== "") {
       istdIon = (window.QAQC ? QAQC.state.ions : []).find(i => String(i.id) === String(st.istd));
       if (istdIon) { istd = {}; for (const f of fs) { const m = await measure(f, istdIon.mz, istdIon.rt); istd[f.file] = m ? { area: m.area, height: m.height } : {}; } }
     }
@@ -99,13 +100,13 @@ const PROFILO = (() => {
 
   // ---------------------------------------------------------------- the section
   function paint(box) {
-    const hr = isHr(), ions = hr && window.QAQC ? QAQC.state.ions.filter(i => i.kind !== "known") : [];
-    box.innerHTML = `<p class="sm">${t(hr ? "prof.intro.hr" : "prof.intro.lr")}</p>
+    const hr = isHr(), ions = hr && qaOn() && window.QAQC ? QAQC.state.ions.filter(i => i.kind !== "known") : [];
+    box.innerHTML = `<p class="sm">${t(hr ? (qaOn() ? "prof.intro.hr" : "prof.intro.hr.plain") : "prof.intro.lr")}</p>
 <form id="prof-form" class="qq-form"><label>${t("qaqc.in.mz")} <input id="prof-mz" value="${eh(st.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="prof-rt" value="${eh(st.rt)}" inputmode="decimal" size="5" required></label>
 <label>${t("prof.metric")} <select id="prof-metric"><option value="area"${st.metric === "area" ? " selected" : ""}>${t("qaqc.col.area")}</option><option value="height"${st.metric === "height" ? " selected" : ""}>${t("prof.col.height")}</option></select></label>
-${hr ? `<label>${t("prof.istd")} <select id="prof-istd"><option value="">${t("prof.istd.none")}</option>${ions.map(i => `<option value="${i.id}"${String(i.id) === String(st.istd) ? " selected" : ""}>${eh(i.label)}</option>`).join("")}</select></label>` : ""}
+${hr && qaOn() ? `<label>${t("prof.istd")} <select id="prof-istd"><option value="">${t("prof.istd.none")}</option>${ions.map(i => `<option value="${i.id}"${String(i.id) === String(st.istd) ? " selected" : ""}>${eh(i.label)}</option>`).join("")}</select></label>` : ""}
 <button type="submit" id="prof-go">${t("prof.go")}</button></form>
-${hr && !ions.length ? `<p class="sm">${t("prof.istd.hint")}</p>` : ""}
+${hr && qaOn() && !ions.length ? `<p class="sm">${t("prof.istd.hint")}</p>` : ""}
 <div id="prof-msg" class="sm bad" role="alert"></div><div id="prof-res"></div>`;
     paintRes(box);
   }
