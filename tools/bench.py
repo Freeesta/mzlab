@@ -11,7 +11,7 @@ IndexedDB contents, JS heaps and browser RSS. Measure only, no interpretation.
 finds one), imported and searched through LIB in Chromium with the old JavaScript path (?libjs=1, only up to 1e5) and the WebAssembly engine
 (site/static/wasm-lib), and the native builder (cargo example `build`); --gb adds an MGF of about 1 GB. Measure only, no interpretation.
 Files: MZLAB_MZML or the usual data folders (tests_e2e/lib.py); Chromium: MZLAB_CHROMIUM = path of an executable, if needed."""
-import argparse, json, os, subprocess, sys, time
+import argparse, json, os, subprocess, sys, tempfile, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "tests_e2e"))
 from lib import MZ  # noqa: E402
 
 MZS = [200, 250, 300, 364, 400]
+GETB = """async u => { const t = performance.now(); const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); await r.arrayBuffer(); return performance.now() - t; }"""
 GET = """async u => { const t = performance.now(); const r = await fetch(u); await r.json(); return performance.now() - t; }"""
 
 
@@ -188,7 +189,7 @@ def main_memoria() -> list:
 
 # ---- "velocità" scenarios: many files, with the breakdown of the time and the peak memory (python engine only) ----
 STEPS = """(()=>{const W=window.Worker;window.__steps=[];window.Worker=function(...a){const w=new W(...a);
-w.addEventListener('message',e=>{const d=e.data;if(d&&(d.type==='step'||d.type==='ready'||d.type==='fatal'))window.__steps.push([d.type==='step'?d.text:d.type,Math.round(performance.now())])});return w};
+w.addEventListener('message',e=>{const d=e.data;if(d&&(d.type==='step'||d.type==='ready'||d.type==='fatal'))window.__steps.push([d.type==='step'?(d.key||d.text):d.type,Math.round(performance.now())])});return w};
 window.Worker.prototype=W.prototype})();"""
 
 
@@ -277,6 +278,149 @@ def scenario(name: str, files: list[str], port: int) -> dict:
     finally:
         srv.terminate()
     return out
+
+
+# ---- scenarios of the .mzidx work: response times, a map with every file, reopening, memory (python engine, the site given by --site) ----
+def inflate(src: Path, copies: int, out: Path) -> Path:
+    """A big file made of `copies` copies of the spectra of an mzML (ids, indexes, spectrumRef and retention times shifted): a file of the size of a real high-resolution run."""
+    import re
+    t = src.read_text(encoding="utf-8")
+    a, b = t.index("<spectrum "), t.index("</spectrumList>")
+    head, body, tail = t[:a], t[a:b], t[b:]
+    blocks = re.findall(r"<spectrum .*?</spectrum>", body, re.S)
+    n, last = len(blocks), max(int(m) for m in re.findall(r"scan=(\d+)", body))
+    rtmax = max(float(m) for m in re.findall(r'accession="MS:1000016"[^>]*value="([0-9.]+)"', body))
+    parts = []
+    for c in range(copies):
+        for bl in blocks:
+            bl = re.sub(r'index="(\d+)"', lambda m: f'index="{int(m.group(1)) + c * n}"', bl, count=1)
+            bl = re.sub(r"scan=(\d+)", lambda m: f"scan={int(m.group(1)) + c * last}", bl)
+            if c:
+                bl = re.sub(r'(accession="MS:1000016"[^>]*value=")([0-9.]+)', lambda m: f"{m.group(1)}{float(m.group(2)) + c * (rtmax + 0.1):.6f}", bl)
+            parts.append(bl)
+    head = re.sub(r'<spectrumList count="\d+"', f'<spectrumList count="{n * copies}"', head)
+    out.write_text(head + "".join(parts) + tail, encoding="utf-8")
+    return out
+
+
+def pct(v: list, q: float) -> float:
+    v = sorted(v)
+    return round(v[min(len(v) - 1, int(q * len(v)))], 1) if v else 0.0
+
+
+def scenario_mzidx(name: str, files: list[str], port: int, site: Path) -> dict:
+    """Open the files, TIC + 5 XIC of each, the map of every file, response times of the three things a student does most, then reopen the page and ask them again."""
+    from playwright.sync_api import sync_playwright
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    n = len(files)
+    out: dict = {"scenario": name, "files": n, "file_mb": round(sum(os.path.getsize(f) for f in files) / 2**20, 1)}
+    ALL = ",".join(str(k) for k in range(n))
+    def timed(pg, urls, reps=1, fn=GET):
+        v = []
+        for _ in range(reps):
+            for u in urls:
+                v.append(pg.evaluate(fn, u))
+        return v
+    def latencies(pg, tag):
+        spec = timed(pg, [f"api/scanbin?k={k}&i0={i}&i1={i + 1}&level=1" for i in (5, 40, 90) for k in range(n)], 1, GETB)
+        xic = timed(pg, [f"api/xic?k={ALL}&mz={mz}&tol=0.35&level=1" for mz in MZS], 2)
+        sw = timed(pg, [f"api/chrom?k={k}&kind=tic&level=1" for k in list(range(n)) * 2])
+        out[f"{tag}spectrum_ms_p50"], out[f"{tag}spectrum_ms_max"] = pct(spec, .5), round(max(spec), 1)
+        out[f"{tag}xic_all_files_ms_p50"], out[f"{tag}xic_all_files_ms_max"] = pct(xic, .5), round(max(xic), 1)
+        out[f"{tag}file_switch_ms_p50"], out[f"{tag}file_switch_ms_max"] = pct(sw, .5), round(max(sw), 1)
+    try:
+        with sync_playwright() as p, Peak() as pk:
+            # a persistent profile, like a student's browser: a private window has a quota of a few hundred MB, far less than 15 files of 80 MB
+            ctx = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="mzlab-profile-"), executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--enable-precise-memory-info"], service_workers="block")
+            ctx.add_init_script(STEPS)
+            ctx.route("**/browser-worker.js", lambda route: (lambda r: route.fulfill(response=r, body=HOOK + r.text(), headers={**r.headers, "content-type": "text/javascript"}))(route.fetch()))
+            pg = ctx.new_page()
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{port}/?motore=python")
+            pg.wait_for_selector("#drop", timeout=300000)
+            t1 = time.perf_counter()
+            pg.set_input_files("#pick", files)
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=1200000)
+            out["open_files_s"] = round(time.perf_counter() - t1, 2)
+            t2 = time.perf_counter()
+            pg.click("#opbtn")
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=1200000)
+            out["first_draw_s"] = round(time.perf_counter() - t2, 2)
+            t3 = time.perf_counter()
+            for k in range(n):
+                pg.evaluate(GET, f"api/chrom?k={k}&kind=tic&level=1")
+                for mz in MZS:
+                    pg.evaluate(GET, f"api/xic?k={k}&mz={mz}&tol=0.35&level=1")
+            out["tic_xic_s"] = round(time.perf_counter() - t3, 2)
+            t4 = time.perf_counter()
+            for k in range(n):
+                pg.evaluate(GET, f"api/map?k={k}&level=1")
+            out["map_all_files_s"] = round(time.perf_counter() - t4, 2)
+            latencies(pg, "")
+            for w in pg.workers:
+                if "browser-worker" in w.url:
+                    out["wasm_mb_after_work"] = round(w.evaluate(WASM_MEM) / 2**20, 1)
+            out["rss_peak_mb_work"] = pk.max
+            pg.close()
+            pg = ctx.new_page()
+            t5 = time.perf_counter()
+            pg.goto(f"http://127.0.0.1:{port}/?motore=python")
+            pg.wait_for_function(f"!!document.querySelector('.pnl.chrom canvas') || document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=1200000)
+            if pg.query_selector(".pnl.chrom canvas") is None:
+                pg.click("#opbtn")
+                pg.wait_for_selector(".pnl.chrom canvas", timeout=1200000)
+            out["reopen_first_draw_s"] = round(time.perf_counter() - t5, 2)
+            t6 = time.perf_counter()
+            for k in range(n):
+                pg.evaluate(GET, f"api/map?k={k}&level=1")
+            out["reopen_map_all_files_s"] = round(time.perf_counter() - t6, 2)
+            for w in pg.workers:
+                if "browser-worker" in w.url:
+                    out["wasm_mb_reopened"] = round(w.evaluate(WASM_MEM) / 2**20, 1)
+            out["opfs_mb"] = round(pg.evaluate("navigator.storage.estimate().then(e => e.usage)") / 2**20, 1)
+            out["rss_peak_mb"] = pk.max
+            ctx.close()
+    finally:
+        srv.terminate()
+    return out
+
+
+def main_mzidx(tmp: Path, site: Path, hr_copies: int, hr_files: int, only: str = "") -> list:
+    """The scenarios of the .mzidx work: 20 LR files, N high-resolution files of the size of a real run ("15 files of 80 MB": lab data when MZLAB_DATI has them, otherwise
+    the synthetic Orbitrap DDA file repeated up to ~80 MB), the map of every file, reopening, and memory."""
+    syn = tmp / "sintetici"
+    if not list(Path(MZ).glob("*FullMass*.mzML")):
+        subprocess.run([sys.executable, str(ROOT / "tools" / "dati_sintetici.py"), str(syn)], check=True)
+        lr_src = sorted(syn.glob("B_FullMass-t*.mzML"))
+        hr_base = syn / "HR_DDA-Exploris-t30.mzML"
+        origin = "synthetic data"
+    else:
+        lr_src = sorted(p for p in Path(MZ).glob("*FullMass*.mzML") if "neg" not in p.name)
+        hr_dir = Path(os.environ.get("MZLAB_HRDDA") or Path(MZ).parent / "HRMS")
+        hr_real = sorted(hr_dir.glob("*DDA*.mzML"))
+        hr_base = hr_real[0] if hr_real else ROOT / "mzlab" / "web" / "esempi" / "HRMS_t000.mzML"
+        origin = "lab data (LR) " + ("(HR: lab data)" if hr_real else "(HR: synthetic repetition)")
+    hr_dir_out = tmp / "hr"
+    hr_dir_out.mkdir(parents=True, exist_ok=True)
+    hr_src = []
+    for i in range(hr_files):
+        f = hr_dir_out / f"HR_DDA_big_{i:02d}.mzML"
+        if not f.exists():
+            inflate(hr_base, hr_copies, f)
+        hr_src.append(f)
+    sets = {f"20 Full Scan LR": replicate(lr_src, 20, tmp / "lr"), f"{hr_files} HR DDA ({round(hr_src[0].stat().st_size / 2**20)} MB each)": [str(x) for x in hr_src]}
+    rows, port = [], 8900
+    for name, fl in sets.items():
+        port += 1
+        if only and only not in name.lower().split()[1:3] and only not in name.lower():
+            continue
+        rows.append(scenario_mzidx(name, fl, port, site))
+        print(rows[-1], flush=True)
+    k1 = ["scenario", "files", "file_mb", "open_files_s", "first_draw_s", "tic_xic_s", "map_all_files_s", "reopen_first_draw_s", "reopen_map_all_files_s"]
+    k2 = ["scenario", "spectrum_ms_p50", "spectrum_ms_max", "xic_all_files_ms_p50", "xic_all_files_ms_max", "file_switch_ms_p50", "file_switch_ms_max"]
+    k3 = ["scenario", "wasm_mb_after_work", "wasm_mb_reopened", "opfs_mb", "rss_peak_mb_work", "rss_peak_mb"]
+    return [f"Files: {origin}.", ""] + table(k1, rows) + [""] + table(k2, rows) + [""] + table(k3, rows)
 
 
 def main_velocita(tmp: Path) -> list:
@@ -480,9 +624,14 @@ def main() -> None:
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--memoria", action="store_true", help="also the memory breakdown (WASM heaps, IndexedDB, JS heaps, RSS)")
     ap.add_argument("--velocita", action="store_true", help="only the many-files scenarios (20 Full Scan LR, 9 HR DDA): time breakdown, reopening, peak memory")
+    ap.add_argument("--mzidx", action="store_true", help="the .mzidx scenarios (20 LR, N big HR files): response times, map of every file, reopening, memory; prints a markdown table")
+    ap.add_argument("--site", default=str(ROOT / "site"), help="folder of the built site to measure (default site/)")
+    ap.add_argument("--solo", default="", help="--mzidx: only the scenario whose name contains this word (lr or hr)")
+    ap.add_argument("--hr-files", type=int, default=15, help="--mzidx: how many big high-resolution files")
+    ap.add_argument("--hr-copies", type=int, default=20, help="--mzidx: how many times the base HR file is repeated inside each (20 x 4 MB ~ 80 MB)")
     ap.add_argument("--scrivi", action="store_true", help="overwrite docs/agenti/misure.md with the tables (date and commit)")
     a = ap.parse_args()
-    if not (ROOT / "site" / "index.html").exists():
+    if not (Path(a.site) / "index.html").exists():
         sys.exit("site/ missing: python3 tools/build_site.py")
     if a.librerie:
         lines = main_librerie(a.gb)
@@ -494,6 +643,10 @@ def main() -> None:
             txt = md.read_text(encoding="utf-8")
             txt = txt.split("\n## Librerie spettrali")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
             md.write_text(txt, encoding="utf-8")
+        return
+    if a.mzidx:
+        import tempfile
+        print("\n".join(main_mzidx(Path(tempfile.mkdtemp(prefix="mzlab-bench-")), Path(a.site), a.hr_copies, a.hr_files, a.solo.lower())))
         return
     if a.velocita:
         import tempfile
