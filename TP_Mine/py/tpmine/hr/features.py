@@ -79,6 +79,9 @@ def _segments(lmz, mz, it, pos, nscan, shift, max_gap, keep_floor, min_height):
     mx = np.maximum.reduceat(I, st)
     good = (n >= 2) & (mx >= min_height)
     hit = np.flatnonzero((I == mx[seg]) & good[seg])                    # first cell of each good run that reaches its maximum = apex
+    if len(hit) == 0:                                                   # a file without any trace (a short blank): nothing to return
+        e, f = np.zeros(0, np.int64), np.zeros(0)
+        return e, f, e, e, f, f, e, e
     sh = seg[hit]
     first = np.r_[True, sh[1:] != sh[:-1]]
     apex = np.zeros(len(st), np.int64)

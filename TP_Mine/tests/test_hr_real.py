@@ -521,3 +521,18 @@ def test_gap_filling_and_entropy_on_the_real_series(experiment):
     ent = {tid: r["entropy"] for tid, r in rows.items() if r["entropy"] is not None}
     assert len(ent) >= 12 and all(0.0 <= v <= 1.0 for v in ent.values())
     assert ent["247"] > 0.6 and ent["315"] > 0.6 and ent["180"] < 0.3         # close to the parent / far from it, as the modified cosine says (0.87 / 0.80 / 0.15)
+
+
+@need
+def test_rt_alignment_narrows_the_apex_of_the_parent_and_has_many_anchors(experiment):
+    import numpy as np
+    e, truth, _, _ = experiment
+    m = e.rtmap
+    print(f"\nRT alignment: {m.n_anchors} anchors, {len(m.grid)} nodes, rms per file {np.round(m.rms, 3).tolist()}")
+    assert m.ok and m.n_anchors >= 100 and m.rms.max() <= 0.12
+    g = e.parent_group
+    apex = e.al.apex_rt[g].astype(float)
+    have = np.flatnonzero(~np.isnan(apex))
+    aligned = np.array([m.reference(apex[k], k) for k in have])
+    print(f"apex of the parent: spread {np.ptp(apex[have]):.3f} min raw, {np.ptp(aligned):.3f} aligned")
+    assert len(have) >= 8 and np.ptp(aligned) < np.ptp(apex[have]) and np.ptp(aligned) <= 0.08
