@@ -614,7 +614,7 @@ async function calcRun() {
     const ent = Object.entries(r.adducts), isPos = a => a.endsWith("+");
     // high resolution (an Orbitrap / Q-TOF file is loaded): m/z with the decimals of the profile and, if the student writes the m/z measured, the error in ppm of each adduct (the program does not guess which one it is)
     const hrf = window.HR ? E.files.filter(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) : [], hr = hrf.length > 0, dd = hr ? Math.max(HR.dec(hrf, 1), HR.dec(hrf, 2)) : 4;
-    calcObs(hr); const ob = hr ? parseFloat(String(Q("#calcobs").value).replace(",", ".")) : NaN, hasObs = hr && Number.isFinite(ob) && ob > 0;
+    calcObs(hr); const ob = hr ? numIt(Q("#calcobs").value) : NaN, hasObs = hr && Number.isFinite(ob) && ob > 0;
     const rowOf = ([a, v]) => `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${hr ? v.mz5.toFixed(dd) : v.mz.toFixed(4)}</td>${hasObs ? `<td title="${((ob - v.mz5) * 1000).toFixed(1)} mDa">${HR.ppm(ob, v.mz5).toFixed(1)}</td>` : ""}<td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="${I18N.t("calc.xic.title")}">XIC</button></td></tr>`;
     const grp = (lab, rows) => rows.length ? `<tr class="pg"><td colspan="${hasObs ? 5 : 4}"><b>${lab}</b></td></tr>` + rows.map(rowOf).join("") : "";
     const P = ent.filter(([a]) => isPos(a)), N = ent.filter(([a]) => !isPos(a));

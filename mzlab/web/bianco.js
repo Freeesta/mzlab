@@ -6,7 +6,7 @@
 const BIANCO = (() => {
   const KEY = "qqq.bianco";
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   let st = { factor: 3, stat: "max", min: 1 };
   let res = null;                                              // {r (server answer), features (the rows of the table it was computed on)}
   try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
