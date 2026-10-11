@@ -385,6 +385,15 @@ const LISTE = (() => {
     };
   }
 
+  // Entries of the lists the user uploaded (never the built-in ones) that match an m/z; null when none was uploaded (the table of the reference difference shows its list column only then)
+  const hasUser = () => ST.userLists.length > 0;
+  function userMatches(mz, polarity, ppm) {
+    if (!ST.userLists.length) return null;
+    const idx = ST.idx || ensure(); if (!idx) return null;
+    const ids = new Set(ST.userLists.map(u => u.id));
+    return find(idx, polarity, mz, ppm).filter(x => ids.has(x.list));
+  }
+
   // m => true when the m/z matches a Keller 2008 entry; null while the lists load. Independent of the global contaminant switch: it serves "remove contaminants" of a spectrum.
   function keller(polarity, ppm) {
     const idx = ST.idx || ensure(); if (!idx) return null;
@@ -776,7 +785,7 @@ const LISTE = (() => {
     addUserListFromCsv,
     deleteUserList,
     toggleListActive,
-    forSpec, keller,
+    forSpec, keller, hasUser, userMatches,
     textFor,
     compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,
