@@ -47,6 +47,9 @@ const WORKFLOW = (() => {
         tipo: f.type || "sample",
         etichetta: f.label || "",
         tempo: f.time ?? null,
+        concentrazione: f.conc ?? null,
+        unita_conc: f.cunit ?? null,
+        replica: f.rep || null,
       }));
 
     const soglieLib = window.LIVELLI ? LIVELLI.exportState() : null;       // profile and thresholds of the confidence levels (livelli.js)
@@ -204,6 +207,7 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
+    if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {
       const { keep, unknown } = splitOps(wf.operazioni);

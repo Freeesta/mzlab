@@ -16,7 +16,7 @@ const BARRA = (() => {
   const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
   const PHONE_W = 600;
   const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
-  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "stat", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
   let _open = false;
@@ -39,7 +39,7 @@ const BARRA = (() => {
   const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer:coarse)").matches);
   const narrow = () => window.innerWidth < NARROW || coarse();          // narrow window or a finger: the panel is only a drawer
   const effPinned = () => _pinned && !narrow();
-  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc", "stat"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -52,6 +52,7 @@ const BARRA = (() => {
     cmp: IC('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>'),
     iso: IC('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>'),
     idn: IC('<path d="M3 2.5h8a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h8"/>'),
+    stat: IC('<path d="M2.5 13.5h11"/><path d="M4 11V8M7 11V4M10 11V6.5M13 11V9" stroke-linecap="round"/>'),
     qaqc: IC('<path d="M2.5 13.5h11"/><path d="M3.5 10l2.5-3 2.5 2 3-5"/><circle cx="11.5" cy="4" r="1" fill="currentColor"/>'),
     more: IC('<circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/>'),
     search: IC('<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/>'),
@@ -71,6 +72,7 @@ const BARRA = (() => {
     { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
     { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
+    { id: "stat", dom: "np-stat", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
     { id: "scan", hr: true, items: ["hdr", "lst", "fil"], ic: () => ICONS[_last.scan] },
@@ -174,7 +176,7 @@ const BARRA = (() => {
   }
 
   function setPanelVisible(id) {
-    const map = { file: "#sb-panel-file", calc: "#sb-panel-calc", losses: "#sb-panel-losses", adducts: "#sb-panel-adducts", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc" };
+    const map = { file: "#sb-panel-file", calc: "#sb-panel-calc", losses: "#sb-panel-losses", adducts: "#sb-panel-adducts", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
     Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
     const hr = Q1("#hrinfo");
     if (hr) hr.hidden = true;
@@ -218,6 +220,7 @@ const BARRA = (() => {
     } else if (id === "losses") ensureLossesMounted(opt);
     else if (id === "adducts") ensureAdductsMounted();
     else if (id === "lists") ensureListsMounted(opt);
+    else if (id === "stat") { const pnl = Q1("#sb-panel-stat"); if (pnl && window.STAT) STAT.mount(pnl); }
     else if (id === "qaqc") { const pnl = Q1("#sb-panel-qaqc"); if (pnl && window.QAQC) QAQC.mount(pnl); }      // painted again at every opening: the files may have changed
   }
 

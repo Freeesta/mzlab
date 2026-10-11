@@ -358,5 +358,9 @@
   "qaqc.feat.sum": "Riga sopra la tabella delle feature di mzFinder. {n} = feature che raggiungono la soglia, {tot} = totale, {thr} = soglia, {b} = bianchi.",
   "rep.sub": "Riga sotto il titolo del rapporto di studio. {name} = nome del programma, {ver} = versione, {commit} = commit, {date} = data e ora UTC.",
   "rep.s1.sum": "Riepilogo del disegno dello studio. {n} = file, {s} campioni, {b} bianchi, {q} QC, {st} standard, {d} al buio.",
-  "rep.s3.prog": "Riga della sezione Elaborazione. {name} = programma, {ver} = versione, {commit} = commit."
+  "rep.s3.prog": "Riga della sezione Elaborazione. {name} = programma, {ver} = versione, {commit} = commit.",
+  "meta.grad.aria": "Etichetta accessibile della barra di colore del tempo. {a} = primo tempo, {b} = ultimo tempo (con unità).",
+  "meta.imported": "Messaggio dopo l'importazione della tabella dei metadati. {n} = file aggiornati.",
+  "meta.of": "Prefisso dell'etichetta accessibile dei campi della tabella dei metadati. {f} = nome del file.",
+  "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole."
 }
