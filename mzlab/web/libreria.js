@@ -140,16 +140,37 @@ const LIB = (() => {
     g.save(); g.fillStyle = mut; g.textAlign = "center"; g.translate(14, mid); g.rotate(-Math.PI / 2); g.fillText(I18N.t("lib.plot.rel"), 0, 0); g.restore();
     g.fillStyle = acc; g.textAlign = "right"; g.fillText(I18N.t("lib.plot.shared", { n: r.shared }), W - mr - 4, mt + 10);
   }
-  // thresholds of the verdict (Federico: visible and editable): strong = entropy >= ent, >= nshared common peaks, |precursor error| <= ppm; possible = entropy >= ent2
-  const SOG_KEY = "qqq.lib.soglie", SOG0 = { ent: 0.75, shared: 6, ppm: 5, ent2: 0.60 };
-  const sog = () => { try { return { ...SOG0, ...JSON.parse(localStorage.getItem(SOG_KEY) || "{}") }; } catch (e) { return { ...SOG0 }; } };
-  const setSog = o => { try { localStorage.setItem(SOG_KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
-  function verdict(r, unit, T = sog()) {                       // r = the best result (or null): one of three sentences, never a certainty (level 2a of Schymanski needs the library spectrum, 1 needs a standard)
-    if (!r) return { k: "no", t: I18N.t("lib.verdict.no") };
-    const ppm = unit === "ppm" ? Math.abs(r.dprec) : null, okp = ppm == null || ppm <= T.ppm;
-    if (r.ent >= T.ent && r.shared >= T.shared && okp) return { k: "forte", t: I18N.t("lib.verdict.strong") };
-    if (r.ent >= T.ent2) return { k: "possibile", t: I18N.t("lib.verdict.possible") };
-    return { k: "no", t: I18N.t("lib.verdict.no") };
+  // confidence levels: livelli.js (rules and thresholds in the data file livelli-1.js, the user's thresholds in qqq.lib.soglie). The candidates carry ik, ent, cos, shared, dprec (ppm), nlib
+  const assess = (cands, o = {}) => LIVELLI.assess({ cands, analogs: o.analogs, nScans: o.nScans, std: o.std || null, formulaUnique: !!o.formulaUnique });
+  const THR_KEYS = ["entropia_min", "picchi_min", "precursore_ppm_max", "scansioni_min", "margine_min", "entropia_provvisorio", "analogo_mcos_min"];
+  function levelHtml(res) {                                    // «candidate, level N, evidence»: the badge, the evidence (one line per gate), the decisive sentence, the proposed and the decided level
+    const lv = LIVELLI.shown(res), b = res.best || res.nearest || res.analog;
+    return `<div class="vd" style="margin:6px 0;padding:6px 10px;border-radius:6px;border:1px solid var(--line)"><span class="lvb ${LIVELLI.cls(lv)}">${EHt(LIVELLI.sentence(lv))}</span>${b && res.proposed !== "5" && res.proposed !== "0" ? ` <b>${EHt(b.name || "")}</b>` : ""}
+      <div class="sm" style="margin-top:4px"><b>${I18N.t("lv.evidence")}</b>: ${res.lines.length ? res.lines.map(x => EHt(x)).join(" · ") : "–"}</div><div class="sm">${EHt(res.decisive)}</div>
+      <div class="sm" style="margin-top:4px">${I18N.t("lv.proposed")}: <b>${EHt(res.proposed)}</b> · <label>${I18N.t("lv.decided")} <select id="lv-dec"><option value="">${I18N.t("lv.decided.none")}</option>${LIVELLI.ORDER.map(x => `<option value="${x}"${res.decided === x ? " selected" : ""}>${x}</option>`).join("")}</select></label> <span class="sm err" id="lv-msg" role="status"></span></div></div>`;
+  }
+  function levelBind(root, res, again) {                       // the chemist's decision: 2b is only written here
+    const sel = root.querySelector("#lv-dec"); if (!sel) return;
+    sel.onchange = () => { const r = LIVELLI.decide(res, sel.value); if (!r.ok) { sel.value = res.decided || ""; root.querySelector("#lv-msg").textContent = r.msg; } else if (again) again(); };
+  }
+  function thresholdsHtml() {
+    const T = LIVELLI.thresholds();
+    return `<details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lv.thr.title")}</summary><div class="sm" style="padding:4px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${THR_KEYS.map(k => `<label>${I18N.t(`lv.thr.${k}`)} <input data-thr="${k}" style="width:56px" value="${String(T[k]).replace(".", ",")}"></label>`).join("")}<button type="button" id="lr-sog-reset">${I18N.t("lv.thr.reset")}</button></div></details>`;
+  }
+  function thresholdsBind(root, again) {
+    root.querySelectorAll("[data-thr]").forEach(el => el.onchange = () => { const v = parseFloat(el.value.replace(",", ".")); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
+    const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach(el => { el.value = String(T[el.dataset.thr]).replace(".", ","); }); again(); };
+  }
+  async function scansOf(p) {                                  // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
+    try {
+      if (p.avg && p.avg.length > 1) return p.avg.length;
+      if (p.sid == null || p.k == null) return 1;
+      const d = await J(`api/dda?k=${p.k}` + (window.HR && HR.q ? HR.q() : "")), i0 = d.sid.indexOf(p.sid); if (i0 < 0 || !d.tgt[i0]) return 1;
+      const t0 = d.tgt[i0], rts = d.rt.filter((_, i) => d.tgt[i] && Math.abs(d.tgt[i] - t0) <= t0 * 10e-6).sort((a, b) => a - b), j = rts.indexOf(d.rt[i0]); let n = 1;
+      for (let a = j; a > 0 && rts[a] - rts[a - 1] <= 0.2; a--) n++;
+      for (let a = j; a < rts.length - 1 && rts[a + 1] - rts[a] <= 0.2; a++) n++;
+      return n;
+    } catch (e) { return 1; }
   }
   // neutral change between a query and an analogue: the usual transformations first, then the simplest formula within 3 mDa (the composition of the server)
   const TRANSF = [[15.9949146, I18N.t("lib.tr.hydroxylation")], [-2.01565, I18N.t("lib.tr.dehydrogenation")], [13.97926, "+O −2H"], [-26.01565, "−C₂H₂"], [1.97926, "−CH₂ +O"], [-56.0626, I18N.t("lib.tr.dealkylation")],
@@ -169,12 +190,12 @@ const LIB = (() => {
     if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
     let d = document.getElementById("libres");
     if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
-    const prof = profOf(q.f), st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: prof.hr ? 0.01 : 0.5, hr: prof.hr, res: null, sel: 0, tab: "id", an: null };
+    const prof = profOf(q.f), st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: prof.hr ? 0.01 : 0.5, hr: prof.hr, res: null, sel: 0, tab: "id", an: null, n: 1, decided: "" };
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.search.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
       <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> <select id="lr-unit"><option value="ppm">ppm</option><option value="Da">Da</option></select></label>
         <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
-      ${st.hr ? `<div class="qbar" id="lr-tabs"><button data-t="id" class="on">${I18N.t("lib.tab.id")}</button><button data-t="an">${I18N.t("lib.tab.an")}</button><details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lib.thr.title")}</summary><div class="sm" style="padding:4px 0">${I18N.t("lib.thr.body", { ent: '<input id="sg-ent" style="width:50px">', sh: '<input id="sg-sh" style="width:40px">', ppm: '<input id="sg-ppm" style="width:40px">', ent2: '<input id="sg-ent2" style="width:50px">' })}</div></details></div>
+      ${st.hr ? `<div class="qbar" id="lr-tabs"><button data-t="id" class="on">${I18N.t("lib.tab.id")}</button><button data-t="an">${I18N.t("lib.tab.an")}</button>${thresholdsHtml()}</div>
       <div id="lr-verdict"></div>` : ""}
       <div id="lr-body"></div><canvas id="lr-cv" hidden></canvas>`;
     d.querySelector("#lr-unit").value = st.unit;
@@ -193,9 +214,9 @@ const LIB = (() => {
       const dp = r => st.unit === "ppm" ? r.dprec.toFixed(1) + " ppm" : (r.dprec >= 0 ? "+" : "") + r.dprec.toFixed(4) + " Da";
       body.innerHTML = `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.cosine")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.library")}</th></tr>${R.results.map((r, i) => `<tr class="row${i === st.sel ? " sel" : ""}" data-i="${i}"><td class="num">${i + 1}</td><td>${EHt(r.name)}</td><td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.cos.toFixed(3)}</td><td class="num">${r.shared}</td><td class="num">${dp(r)}</td><td>${EHt(r.ce)}</td><td>${EHt(r.inst)}</td><td>${EHt(r.type)}</td><td>${EHt(r.lib)}</td></tr>`).join("")}</table></div>`;
       body.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => { st.sel = +tr.dataset.i; body.querySelectorAll("tr.row").forEach(x => x.classList.toggle("sel", x === tr)); draw(); });
-      if (st.hr && vdEl()) {                                   // a verdict only for high-resolution data (the low-resolution world gives candidates, never answers)
-        const v = verdict(R.results[0], st.unit);
-        vdEl().innerHTML = `<div class="vd ${v.k}" style="margin:6px 0;padding:6px 10px;border-radius:6px;border:1px solid var(--line);border-left:5px solid var(--${v.k === "forte" ? "ok" : v.k === "possibile" ? "accent" : "muted"})"><b>${v.t}</b>${v.k !== "no" ? `: ${EHt(R.results[0].name)}` : ""} <span class="sm muted">· ${I18N.t("lib.level2a")}</span></div>`;
+      if (st.hr && vdEl()) {                                   // levels only for high-resolution data (the low-resolution world gives candidates, never answers)
+        st.lv = assess(R.results, { nScans: st.n, analogs: st.an && st.an.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
+        vdEl().innerHTML = levelHtml(st.lv); levelBind(vdEl(), st.lv, () => { st.decided = st.lv.decided || ""; show(); });
       }
       cv.hidden = false; draw();
     };
@@ -231,10 +252,7 @@ const LIB = (() => {
       show();
     };
     d.querySelectorAll("#lr-tabs [data-t]").forEach(b => b.onclick = () => { st.tab = b.dataset.t; st.sel = 0; d.querySelectorAll("#lr-tabs [data-t]").forEach(x => x.classList.toggle("on", x === b)); if (st.tab === "an") runAn(); else show(); });
-    if (d.querySelector("#lr-sog")) {
-      const T = sog(), f = { "#sg-ent": "ent", "#sg-sh": "shared", "#sg-ppm": "ppm", "#sg-ent2": "ent2" };
-      Object.entries(f).forEach(([id, k]) => { const el = d.querySelector(id); el.value = String(T[k]).replace(".", ","); el.onchange = () => { const v = parseFloat(el.value.replace(",", ".")); if (v >= 0) { setSog({ ...sog(), [k]: v }); show(); } }; });
-    }
+    if (d.querySelector("#lr-sog")) thresholdsBind(d, show);
     d.querySelector("#lr-go").onclick = () => { if (st.tab === "an") { st.prec = parseFloat(String(d.querySelector("#lr-prec").value).replace(",", ".")); st.frag = parseFloat(String(d.querySelector("#lr-frag").value).replace(",", ".")); runAn(); } else run(); };
     d.querySelectorAll(".qbar input").forEach(i => i.onkeydown = e => { if (e.key === "Enter") run(); });
     const table = () => { const h = colHead, rs = st.res ? rowsOf(st.res.results) : []; return { h, rs }; };
@@ -248,6 +266,7 @@ const LIB = (() => {
     };
     d.querySelector("#lr-xlsx").onclick = () => { const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingSave")); dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head: h, rows: rs, widths: [5, 30, 10, 10, 16, 14, 8, 14, 12, 20] }]); };
     d.showModal(); window.addEventListener("resize", draw, { once: true });
+    if (st.hr) scansOf(p).then(n => { if (n !== st.n) { st.n = n; if (st.res) show(); } });
     if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
   }
   // ------------------------------------------------------------ «Identifica tutte le MS2 del file» (WP-H8): every MS2 of a high-resolution file against the libraries
@@ -268,11 +287,11 @@ const LIB = (() => {
     }
     return out.sort((a, b) => a.rt - b.rt);
   }
-  function groupVerdict(g, T = sog()) {              // two or more scans are needed for a strong match: a single scan is marked and capped at "possible"
-    const v = verdict(g.best && g.best.name ? g.best : null, "ppm", T);
-    if (v.k === "forte" && g.n < 2) return { k: "possibile", t: I18N.t("lib.verdict.possible1") };
-    return v;
+  function groupAssess(g) {                          // the level of a group of scans of one precursor: its best candidate, the best one of ANOTHER structure (`alt`, from the worker) and the number of scans
+    const b = g.best && g.best.name ? g.best : null;
+    return assess(b ? [b, b.alt].filter(Boolean) : [], { nScans: g.n });
   }
+  const lvCell = res => { const lv = LIVELLI.shown(res); return `<span class="lvb ${LIVELLI.cls(lv)}" title="${EHt(LIVELLI.sentence(lv) + " · " + res.decisive)}">${EHt(lv)}</span>`; };
   async function identifyAll(k) {
     ensureCss();
     const f = E.files[k]; if (!f) return;
@@ -302,11 +321,11 @@ const LIB = (() => {
       let showHid = false;                                   // contaminant exclusions (liste.js): candidates whose precursor is a contaminant the student excluded stay out of the list, counted, until «Mostra»
       const groups = groupRows(r.rows), show = all => {
         const hidOf = g => { const c = window.LISTE ? LISTE.compat(g.prec, f.polarity, UIP.hrPpm) : null; return !!(c && c.hid); };
-        const base = groups.map(g => ({ g, v: groupVerdict(g), k: window.LISTE ? LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter(x => all || x.v.k !== "no");
+        const base = groups.map(g => ({ g, v: groupAssess(g), k: window.LISTE ? LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter(x => all || (x.v.proposed !== "5" && x.v.proposed !== "0"));
         const nHid = base.filter(x => x.hid).length, rows = showHid ? base : base.filter(x => !x.hid), hasK = rows.some(x => x.k);
         d.querySelector("#li-body").innerHTML = (nHid ? `<div class="sm cont-cnt" role="status">${I18N.t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid })} · <button type="button" id="li-chid">${I18N.t(showHid ? "cont.hide" : "cont.show")}</button></div>` : "") + `<div class="bar"><button id="li-xlsx" type="button">${typeof IC_DL !== "undefined" ? IC_DL : ""}Excel</button><button id="li-mgf" type="button">${I18N.t("lib.all.exportMgf")}</button><button id="li-msp" type="button">${I18N.t("lib.all.exportMsp")}</button></div><label class="sm"><input type="checkbox" id="li-all"${all ? " checked" : ""}> ${I18N.t("lib.all.showAll", { n: groups.length })}</label>
-          <div class="tbl" style="max-height:60vh"><table><tr><th class="num">RT</th><th class="num"><i>m/z</i></th><th>${I18N.t("lib.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th class="num">${I18N.t("lib.all.bestEntropy")}</th><th class="num">${I18N.t("lib.all.scans")}</th><th>${I18N.t("lib.all.verdict")}</th>${hasK ? "<th>" + I18N.t("lib.all.contaminant") + "</th>" : ""}</tr>
-          ${rows.map((x, i) => `<tr class="row" data-i="${i}" title="${I18N.t("lib.all.openBest")}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td>${EHt(x.g.best.name || "")}</td><td>${x.g.best.formula ? fmtFormula(x.g.best.formula) : ""}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}${x.g.n < 2 ? " " + I18N.t("lib.all.oneScan") : ""}</td><td>${EHt(x.v.t)}</td>${hasK ? `<td class="sm">${EHt(x.k || "")}</td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="muted">${I18N.t("lib.all.noMatch")}</td></tr>`}</table></div>`;
+          <div class="tbl" style="max-height:60vh"><table><tr><th class="num">RT</th><th class="num"><i>m/z</i></th><th>${I18N.t("lib.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th class="num">${I18N.t("lib.all.bestEntropy")}</th><th class="num">${I18N.t("lib.all.scans")}</th><th>${I18N.t("lv.proposed")}</th>${hasK ? "<th>" + I18N.t("lib.all.contaminant") + "</th>" : ""}</tr>
+          ${rows.map((x, i) => `<tr class="row" data-i="${i}" title="${I18N.t("lib.all.openBest")}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td>${EHt(x.g.best.name || "")}</td><td>${x.g.best.formula ? fmtFormula(x.g.best.formula) : ""}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}${x.g.n < 2 ? " " + I18N.t("lib.all.oneScan") : ""}</td><td>${lvCell(x.v)}</td>${hasK ? `<td class="sm">${EHt(x.k || "")}</td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="muted">${I18N.t("lib.all.noMatch")}</td></tr>`}</table></div>`;
         d.querySelector("#li-all").onchange = e => show(e.target.checked);
         const chid = d.querySelector("#li-chid"); if (chid) chid.onclick = () => { showHid = !showHid; show(all); };
         const btnMgf = d.querySelector("#li-mgf");
@@ -314,7 +333,7 @@ const LIB = (() => {
         const btnMsp = d.querySelector("#li-msp");
         if (btnMsp) btnMsp.onclick = () => { if (window.WORKFLOW) WORKFLOW.exportQueriesMsp(queries, f); };
         d.querySelector("#li-xlsx").onclick = () => dlx(I18N.t("lib.all.xlsxPrefix") + String(f.label || f.file || "file").replace(/[^\w.-]+/g, "_") + ".xlsx", [
-          { name: I18N.t("lib.all.sheetCand"), head: ["RT (min)", I18N.t("lib.all.precMz"), I18N.t("lib.col.name"), I18N.t("lst.col.formula"), I18N.t("lib.all.bestEntropy"), I18N.t("lib.all.scans"), I18N.t("lib.all.verdict")].concat(hasK ? [I18N.t("lib.all.contaminant")] : []), rows: rows.map(x => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.t].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 40] },
+          { name: I18N.t("lib.all.sheetCand"), head: ["RT (min)", I18N.t("lib.all.precMz"), I18N.t("lib.col.name"), I18N.t("lst.col.formula"), I18N.t("lib.all.bestEntropy"), I18N.t("lib.all.scans"), I18N.t("lv.proposed"), I18N.t("lv.decided"), I18N.t("lv.evidence")].concat(hasK ? [I18N.t("lib.all.contaminant")] : []), rows: rows.map(x => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.proposed, x.v.decided || "", x.v.lines.concat([x.v.decisive]).join(" | ")].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 12, 12, 60] },
           { name: I18N.t("lib.all.sheetPar"), head: [I18N.t("lib.all.parameter"), I18N.t("lib.all.value")], rows: [[I18N.t("lib.table.file"), f.label || f.file || ""], [I18N.t("lib.all.precTol"), `${profOf(f).v} ppm`], [I18N.t("lib.all.peakTol"), I18N.t("lib.all.peakTolVal")], [I18N.t("lib.all.shown"), I18N.t("lib.all.shownVal", { n: rows.length, total: groups.length })], [I18N.t("lib.all.level"), I18N.t("lib.all.levelVal")]], widths: [28, 70] }]);
         d.querySelectorAll("#li-body tr.row").forEach(tr => tr.onclick = () => gotoScan(rows[+tr.dataset.i].g.best.key, d));
         st.innerHTML = `<div class="sm">${I18N.t("lib.all.summary", { q: queries.length, ms: Math.round(performance.now() - t0), g: groups.length, r: rows.length })}</div>`;
@@ -329,6 +348,6 @@ const LIB = (() => {
       d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
     } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
   }
-  return { open, searchFrom, call, identifyAll, groupRows, groupVerdict, verdict, engine };
+  return { open, searchFrom, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;

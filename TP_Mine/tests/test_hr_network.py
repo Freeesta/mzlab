@@ -117,8 +117,13 @@ def lv(c, **kw):
     return NW.confidence(c, parent_rt=5.0, **kw)["level"]
 
 
+def diag(c, **kw):
+    return NW.confidence(c, parent_rt=5.0, **kw)["diagnostic"]
+
+
 def test_confidence_levels():
-    assert lv(cand()) == "2b"
+    assert lv(cand()) == 3 and diag(cand())                      # the program never assigns 2b: level 3 with diagnostic evidence
+    assert not diag(cand(rt=6.0))
     assert lv(cand(rt=6.0)) == 3                                                           # a hydroxylated product after the parent: RT incoherent
     assert lv(cand(localization={**cand()["localization"], "margin": 0.1})) == 3           # region without margin
     assert lv(cand(), groups_of_region=3) == 3                                             # more than two groups
@@ -129,7 +134,7 @@ def test_confidence_levels():
     assert lv(cand(n_formulas=3, ms2=None, localization=None)) == 5
     assert lv(cand(predecessor_kinetics=100.0)) == 3                                      # the predecessor peaks long after this product
     r = NW.confidence(cand(), parent_rt=5.0)
-    assert r["level"] in NW.LEVEL_TEXT and r["text"] == NW.LEVEL_TEXT["2b"] and len(r["criteria"]) >= 9
+    assert r["level"] in NW.LEVEL_TEXT and r["text"] == NW.DIAGNOSTIC_TEXT and r["diagnostic"] and len(r["criteria"]) >= 9
     assert {c["status"] for c in r["criteria"]} <= {"pass", "fail", "n/a"} and all(c["text"] for c in r["criteria"])
     assert "2a" not in {str(x) for x in (NW.confidence(cand())["level"],)}
 
@@ -140,7 +145,7 @@ def test_rank_orders_by_score_or_by_level():
     for x, area in ((a, 0.2), (b, 1.0), (c, 1.0)):
         x["confidence"], x["priority"] = NW.confidence(x, parent_rt=5.0), NW.priority(x, area)
         rows.append(x)
-    assert [x["id"] for x in NW.rank(rows, by_level=True)] == [1, 2, 3]                  # 2b, then 3, then 4 although 3 is the most intense
+    assert [x["id"] for x in NW.rank(rows, by_level=True)] == [1, 2, 3]                  # 3 with diagnostic evidence, then 3, then 4 although 3 is the most intense
     by_score = [x["id"] for x in NW.rank(rows)]
     assert by_score == sorted(by_score, key=lambda i: -next(x["priority"]["score"] for x in rows if x["id"] == i))
 

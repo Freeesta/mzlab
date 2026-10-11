@@ -445,7 +445,7 @@ class ExperimentHR:
                 "n_formulas": c.get("n_formulas"), "delta": c.get("delta"), "derivation": c.get("derivation"), "area_max": c["area_max"],
                 "tmax": kin.get("tmax"), "class": kin.get("class_text"), "onset": kin.get("onset"),
                 "score": round(c["priority"]["score"], 1), "components": {k: round(c["priority"]["components"][k], 3) for k in NW.WEIGHTS},
-                "level": c["confidence"]["level"], "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
+                "level": c["confidence"]["level"], "diagnostic": bool(c["confidence"].get("diagnostic")), "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
                 "n_matched": ms2.get("n_matched", 0), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
                 "predecessor": (c.get("predecessor") or {}).get("predecessor"), "transformation": (c.get("predecessor") or {}).get("transformation"),
                 "flags": flags, "filled": [int(k) for k in np.flatnonzero(self.filled[c["id"]])] if not c.get("hidden") and self.filled[c["id"]].any() else [], "series": [round(float(v)) for v in c["areas"]]}
