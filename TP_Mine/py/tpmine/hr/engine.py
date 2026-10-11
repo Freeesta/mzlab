@@ -32,7 +32,7 @@ from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True}
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True, "fill_rt_tol": 0.04}
 NO_PROGRESS = lambda text, frac=None, phase=None, payload=None: None      # noqa: E731
 
 
@@ -195,8 +195,9 @@ class ExperimentHR:
             self.isf_hidden = FL.isf_hidden(self.isf_measures, self.times, types, self.isf_masses, self.sessions)
 
     def _fill_gaps(self):
-        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor (a weak product at
-        the first times falls under `min_height` and would look like a late one). The files are read again, one at a time; `self.filled` marks the cells."""
+        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor where the RT map of
+        the series expects it (a weak product at the first times falls under `min_height` and would look like a late one). The files are read
+        again, one at a time; `self.filled` marks the cells: they are never a found peak and every output says so."""
         self.filled = np.zeros(self.al.area.shape, bool)
         if not self.s["fill_gaps"] or len(self.funnel.idx) == 0:
             return
@@ -213,7 +214,8 @@ class ExperimentHR:
             r = getters[k]()
             last.append(r)
             return r.table(1, self.s["polarity"])
-        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"])
+        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"],
+                                   rt_tol=self.s["fill_rt_tol"] if self.rtmap.ok else 0.1, rtmap=self.rtmap)
         self._close_runs()
         gc.collect()
         self.timing["riempimento"] = round(time.perf_counter() - t0, 2)

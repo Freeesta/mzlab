@@ -1,4 +1,5 @@
-"""mzFinder, HR: the RT alignment card (shift against RT, one line per file). Synthetic series with a known RT drift. Run from the repo root: python3 tests_e2e/e2e_tpmine_rtalign.py   (env: PYODIDE_DIR)"""
+"""mzFinder, HR: the RT alignment card (shift against RT, one line per file) and the filled cells of a weak product (marked, never a found peak).
+Synthetic series with a known RT drift. Run from the repo root: python3 tests_e2e/e2e_tpmine_rtalign.py   (env: PYODIDE_DIR)"""
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -46,6 +47,13 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#hr-rta polyline')].every(p => p.getAttribute('stroke').startsWith('var(--rta-'))")
             pg.screenshot(path=str(HERE / "shots" / "tpmine_rtalign.png"), full_page=True)
         step("HR: the RT alignment card draws one line per file with its legend", card)
+        def filled():
+            row = pg.locator("#hr-t tr.clk", has_text="C8H11N4O3"); assert row.count() == 1
+            assert "○1" in row.inner_text(), row.inner_text()                                # the table says one area was filled
+            row.click(); pg.wait_for_selector("#hr-kleg", timeout=60000)
+            pg.wait_for_function("document.getElementById('hr-kleg').textContent.includes('filled')", timeout=30000)
+            assert "5" in pg.inner_text("#hr-kleg").split("filled")[1]                       # the file of the first treated time (5 min)
+        step("HR: the weak product has one filled area, marked in the table and in the kinetics legend", filled)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

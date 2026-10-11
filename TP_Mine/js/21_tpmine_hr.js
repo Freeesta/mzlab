@@ -11,6 +11,7 @@
 .tp{--rta-0:#000000;--rta-1:#E69F00;--rta-2:#56B4E9;--rta-3:#009E73;--rta-4:#F0E442;--rta-5:#0072B2;--rta-6:#D55E00;--rta-7:#CC79A7}
 .tp .rta-svg{display:block;width:100%;max-width:640px;height:auto}.tp .rta-svg text{fill:var(--muted);font-size:10px}.tp .rta-svg .ax{stroke:var(--line);stroke-width:1}
 .tp .rta-svg .zero{stroke:var(--muted);stroke-dasharray:2 3}.tp .rta-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:4px}
+.tp .rta-open{display:inline-block;width:8px;height:8px;border:2px solid var(--muted);border-radius:50%;vertical-align:middle;margin-right:4px}
 .tp .pd-1{--lvc:#009E73}.tp .pd-2{--lvc:#0072B2}.tp .pd-3{--lvc:#E69F00}.tp .pd-4{--lvc:#999999}
 .tp .sim-bar{display:inline-flex;width:64px;height:8px;border-radius:4px;background:var(--soft);overflow:hidden;vertical-align:middle}.tp .sim-bar i{display:block;height:100%}
 .tp .sim3{display:grid;grid-template-columns:150px 1fr 1fr 44px;gap:4px 10px;font-size:12px;align-items:center;margin:6px 0}
@@ -84,7 +85,7 @@
         k.map((r, i) => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}"><td>${o.indexOf(r) + 1}</td><td>${lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "")}</td>
           <td>${predBadge(r)}</td><td>${simBar(r.sim)}</td><td class="n">${r.score}</td><td class="n">${r.mz.toFixed(4)}</td><td>${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}</td>
           <td>${esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}</td><td class="n">${r.rt}</td><td class="n">${r.tmax ?? ""}</td><td>${esc(r.class || "")}</td>
-          <td>${esc(r.region || "")}</td><td>${spark(r.series)}</td></tr>`).join("");
+          <td>${esc(r.region || "")}</td><td>${spark(r.series)}${r.filled.length ? ` <span class="mut" title="${r.filled.length} area(s) re-integrated where no peak was found (filled)">○${r.filled.length}</span>` : ""}</td></tr>`).join("");
       $("#hr-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
     }
     $("#hr-lv").onchange = e => { st.minLevel = e.target.value === "d" ? "d" : +e.target.value; table(); };
@@ -174,10 +175,12 @@
       const labs = [...new Set(d.sessions)], t = d.times, series = [];
       labs.forEach((lab, j) => {
         const ix = t.map((_, i) => i).filter(i => d.sessions[i] === lab && t[i] >= 0).sort((a, b) => t[a] - t[b]);
-        if (ix.length) series.push({ x: ix.map(i => t[i]), y: ix.map(i => d.areas[i]), color: hue(j, Math.max(2, labs.length)), dots: true, label: lab });
+        const fl = new Set(d.row.filled || []);
+        if (ix.length) series.push({ x: ix.map(i => t[i]), y: ix.map(i => d.areas[i]), color: hue(j, Math.max(2, labs.length)), dots: true, hollow: ix.map((i, p) => fl.has(i) ? p : -1).filter(p => p >= 0), label: lab });
       });
       chart($("#hr-kin"), series, { xlabel: "treatment time (min)" });
-      $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("");
+      $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("") +
+        ((d.row.filled || []).length ? `<span class="mut"><span class="rta-open"></span> filled: area re-integrated where no peak was found (${d.row.filled.map(k => t[k]).join(", ")} min)</span>` : "");
       if (d.ms2) mirror($("#hr-ms2"), d);
       const cb = $("#hr-cmp-tree");
       if (cb) cb.onclick = () => { window.TPALBERO && window.TPALBERO.compare(id); const t = $("#hr-tree"); if (t) t.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
@@ -214,13 +217,13 @@
     async function exportAll(kind) {
       const name = (s.parent.formula || "parent") + "_TPMine_HR";
       const keys = Object.keys(s.weights), times = s.times;
-      const head = ["#", "Level", "Diagnostic evidence", "Score", "m/z", "Formula", "ppm", "Possible formulas", "Change", "RT (min)", "t max (min)", "Class", "Appears at (min)", "Region", "Margin", "Precursor", "Transformation", "MS2 scans", "Modified cosine", "Matched peaks", "Prediction level", "Cosine: equal fragments", "Cosine: shifted fragments", "Cosine: common neutral losses", "Flags", ...keys.map(k => "score " + k), ...times.map(t => "Area t" + t)];
-      const line = (r, i) => [i + 1, r.level, r.diagnostic ? "yes" : "", r.score, r.mz, r.formula ?? "", r.ppm ?? "", r.n_formulas ?? "", r.derivation ?? r.delta ?? "", r.rt, r.tmax ?? "", r.class ?? "", r.onset ?? "", r.region ?? "", r.margin ?? "", r.predecessor ?? "", r.transformation ?? "", r.ms2_scans, r.modcos ?? "", r.n_matched, r.pred ?? "", ...(r.sim ? r.sim.cos : ["", "", ""]), r.flags.join("; "), ...keys.map(k => r.components[k]), ...r.series];
+      const head = ["#", "Level", "Diagnostic evidence", "Score", "m/z", "Formula", "ppm", "Possible formulas", "Change", "RT (min)", "t max (min)", "Class", "Appears at (min)", "Region", "Margin", "Precursor", "Transformation", "MS2 scans", "Modified cosine", "Matched peaks", "Prediction level", "Cosine: equal fragments", "Cosine: shifted fragments", "Cosine: common neutral losses", "Flags", "Filled areas (t, min)", ...keys.map(k => "score " + k), ...times.map(t => "Area t" + t)];
+      const line = (r, i) => [i + 1, r.level, r.diagnostic ? "yes" : "", r.score, r.mz, r.formula ?? "", r.ppm ?? "", r.n_formulas ?? "", r.derivation ?? r.delta ?? "", r.rt, r.tmax ?? "", r.class ?? "", r.onset ?? "", r.region ?? "", r.margin ?? "", r.predecessor ?? "", r.transformation ?? "", r.ms2_scans, r.modcos ?? "", r.n_matched, r.pred ?? "", ...(r.sim ? r.sim.cos : ["", "", ""]), r.flags.join("; "), r.filled.map(k => times[k]).join("; "), ...keys.map(k => r.components[k]), ...r.series];
       if (kind === "json") return dl(name + ".json", JSON.stringify(s, null, 1), "application/json");
       if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...rows.map(line)].map(x => x.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
       toast("Preparing the Excel file...");
       const top = rows.slice(0, 50), det = []; for (const r of top) det.push(await detail(r.id));
-      const sheets = [{ name: "Ranking", head, rows: rows.map(line), widths: [6, 8, 9, 10, 18, 7, 9, 28, 8, 9, 18, 9, 30, 8, 12, 24, 9, 9, 9, 9, 9, 9, 9, 40, ...keys.map(() => 10), ...times.map(() => 11)] },
+      const sheets = [{ name: "Ranking", head, rows: rows.map(line), widths: [6, 8, 9, 10, 18, 7, 9, 28, 8, 9, 18, 9, 30, 8, 12, 24, 9, 9, 9, 9, 9, 9, 9, 40, 16, ...keys.map(() => 10), ...times.map(() => 11)] },
         { name: "Criteria", head: ["#", "Formula", "Criterion", "Outcome", "Detail"], rows: det.flatMap((d, i) => d.criteria.map(c => [i + 1, d.row.formula ?? "", c.name, c.status, c.text])), widths: [6, 18, 32, 8, 80] },
         { name: "Localisation", head: ["#", "Formula", "Region", "Fragment m/z", "% rel.", "Fragment formula", "Evidence"], rows: det.flatMap((d, i) => ((d.localization && d.localization.evidence) || []).map(e => [i + 1, d.row.formula ?? "", d.row.region ?? "", e.mz, e.rel, e.formula, e.kind])), widths: [6, 18, 30, 12, 8, 18, 8] },
         { name: "Mass differences", head: ["From", "To", "Rule", "Δm/z", "Rule scope", "Kinetics", "Shifted fragments", "Share of the cosine", "Kind"], rows: ((s.mass_network || {}).edges || []).map(e => [e.from, e.to, e.rule, e.dm, e.scope ?? "", e.kinetic, e.shifted ? e.shifted.n : "", e.shifted ? e.shifted.share : "", e.kind]), widths: [12, 12, 36, 10, 12, 12, 9, 9, 10] },
