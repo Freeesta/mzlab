@@ -22,7 +22,7 @@ FIT = """(() => {
   const tops = [...h.children].filter(e => e.offsetParent && e.getBoundingClientRect().height).map(e => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2));
   const btns = [...bar.querySelectorAll('.tb')].filter(b => !b.hidden && b.offsetParent);
   return {rows: Math.max(...tops) - Math.min(...tops), hh: h.getBoundingClientRect().height, clipped: btns.filter(b => { const q = b.getBoundingClientRect(); return q.right > br.right + 1 || q.left < br.left - 1; }).map(b => b.dataset.cmd || b.dataset.cmdMain || b.dataset.cmdCar),
-    cut: btns.filter(b => [...b.querySelectorAll('.tl')].some(l => l.offsetParent && l.scrollWidth > l.clientWidth + 1)).map(b => b.dataset.cmd), n: btns.length, lab: bar.classList.contains('tb-lab'), wrapped: btns.filter(b => b.getBoundingClientRect().height > 48).length};
+    cut: btns.filter(b => [...b.querySelectorAll('.tl')].some(l => l.offsetParent && l.scrollWidth > l.clientWidth + 1)).map(b => b.dataset.cmd), n: btns.length, lab: bar.classList.contains('lab-all'), lvl: bar.classList.contains('lab-all') ? 'all' : bar.classList.contains('lab-main') ? 'main' : 'none', dropped: (document.querySelector('#tb-more').dataset.dropped || ''), wrapped: btns.filter(b => b.getBoundingClientRect().height > 48).length};
 })()"""
 
 try:
@@ -138,14 +138,39 @@ try:
         step("state remembered after reload (open, side, width, tool); old states (pinned, bad side, width 0 or huge) are cleaned", ricorda)
 
         def larghezze():
-            for w, h in ((1280, 800), (1440, 900), (1680, 1000), (1024, 1366), (1366, 1024)):
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(500)
-                f = pg.evaluate(FIT)
-                assert f["rows"] <= 6 and f["hh"] < 70, (w, f)
-                assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
-                assert f["lab"] == (w >= 1440), (w, f)
-            pg.set_viewport_size({"width": 1500, "height": 1000})
-        step("no button wrapped, cut or clipped at 1280/1440/1680 and iPad 1024×1366 / 1366×1024; words only from 1440", larghezze)
+            # the richest level that fits: words on every button from 1280 px; a narrower bar loses words, then groups (into «Altro»), never a button cut or wrapped
+            for panel in (False, True):
+                pg.evaluate("BARRA.show('file',{noFocus:true})" if panel else "BARRA.close(false)")
+                for w, h in ((1280, 800), (1440, 900), (1500, 1000), (1680, 1000), (1024, 1366), (1366, 1024), (900, 900), (820, 1180)):
+                    pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(500)
+                    f = pg.evaluate(FIT)
+                    assert f["rows"] <= 6 and f["hh"] < 70, (w, panel, f)
+                    assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, panel, f)
+                    if w >= 1280: assert f["lvl"] == "all" and not f["dropped"], (w, panel, f)
+                    assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, (w, panel)
+                    names = pg.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.getAttribute('aria-label'))"); assert all(names), (w, names)
+                    if f["dropped"]:
+                        pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
+                        txt = pg.inner_text("#stmenu")
+                        for d in f["dropped"].split(","): assert pg.evaluate(f"BARRA.name(BARRA.byId('{d}'))") in txt, (w, d, txt)
+                        pg.keyboard.press("Escape")
+            pg.evaluate("BARRA.close(false)"); pg.set_viewport_size({"width": 1500, "height": 1000})
+        step("measured labels: words on every button from 1280 px, fewer words then fewer groups below, nothing wrapped or cut (with and without the panel, iPad included); the rest is in «Altro»", larghezze)
+
+        def preferenza():
+            pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
+            assert pg.evaluate("BARRA.labels") == "auto" and pg.evaluate(FIT)["lvl"] == "all"
+            pg.click("#np-set"); pg.wait_for_selector("#uip-etich"); pg.select_option("#uip-etich", "hidden"); pg.wait_for_timeout(300)
+            f = pg.evaluate(FIT); assert f["lvl"] == "none" and not f["dropped"] and pg.evaluate("localStorage.getItem('qqq.barra.etichette')") == "hidden", f
+            assert pg.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).every(b=>b.getAttribute('aria-label')&&b.getBoundingClientRect().width<60)"), "icons only, names kept"
+            pg.select_option("#uip-etich", "always"); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 1024, "height": 800}); pg.wait_for_timeout(500)
+            f = pg.evaluate(FIT); assert f["lvl"] == "all" and f["dropped"] and not f["clipped"] and f["wrapped"] == 0, f      # words kept, groups move to «Altro»
+            pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "always", "remembered"
+            pg.evaluate("BARRA.setLabels('auto')"); pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(400)
+            assert pg.evaluate(FIT)["lvl"] == "all" and pg.evaluate("BARRA.fitStats.max") < 50
+            pg.evaluate("localStorage.setItem('qqq.barra.etichette','bogus')"); pg.reload(); ready(pg); assert pg.evaluate("BARRA.labels") == "auto"
+        step("labels preference (settings): automatic / always / hidden, remembered in qqq.barra.etichette, junk value = automatic", preferenza)
 
         def disegno():
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(800)
@@ -165,12 +190,15 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
             assert ids == ["file", "calc", "losses", "adducts", "lists", "qaqc", "ptable", "scan", "form", "idn", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
-            assert lab[-5:] == ["Scansione", "Formule", "Librerie", "Altro", "Cerca"], lab
+            assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
             assert "·" not in " ".join(lab) and not any(x.isupper() and len(x) == 3 for x in lab), lab
             assert pg.evaluate("document.querySelector('#stbar [data-hrgrp]').offsetParent !== null"), "separator before the HR group"
             for w in (1280, 1440, 1680):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
                 f = pg.evaluate(FIT); assert f["rows"] <= 6 and not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
+            for w in (900, 1024):
+                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
+                f = pg.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
         step("HR: same bar plus Scansione ▾, Formule ▾, Librerie after a separator, in words (no HDR/LST…), fits at every width", hr_barra)
 

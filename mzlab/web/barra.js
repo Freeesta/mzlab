@@ -17,7 +17,10 @@ const BARRA = (() => {
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const PHONE_W = 600;
-  const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
+  const K_LAB = "qqq.barra.etichette";   // words next to the icons: auto (as many as fit) | always | hidden
+  const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
+  const LEVELS = ["all", "main", "none"];
+  const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
   const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
@@ -30,6 +33,9 @@ const BARRA = (() => {
   let _opener = null;
   let _before = null;
   let _dropped = new Set();
+  let _labMode = "auto", _lvl = "none";
+  let _fitRaf = 0;
+  const _fitStats = { n: 0, last: 0, max: 0 };
 
   const Q1 = s => document.querySelector(s);
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
@@ -101,6 +107,7 @@ const BARRA = (() => {
     { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
+    { id: "labels", bar: false, group: "app", ic: () => ICONS.search, run: () => { setLabels(_labMode === "auto" ? "always" : _labMode === "always" ? "hidden" : "auto"); announce(t("cmd.labels.now." + _labMode)); } },
     { id: "hint", bar: false, group: "app", ic: () => ICONS.search, visible: () => inData(), run: () => { hintClose(false); hintShow(); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
@@ -412,7 +419,7 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- toolbar
   function btnHtml(c, extra = "") {
     const dom = c.dom ? ` id="${c.dom}"` : "";
-    return `<button type="button" class="tb ${extra}"${dom} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
+    return `<button type="button" class="tb ${extra}"${dom}${MAIN.has(c.id) ? " data-main" : ""} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
   }
   const EHs = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
@@ -420,7 +427,7 @@ const BARRA = (() => {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
     return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
-      `<button type="button" class="tb tb-main" data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
+      `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
@@ -500,21 +507,41 @@ const BARRA = (() => {
     });
   }
 
-  // priority overflow: labels only when wide; then the least used groups move into "Altro"; never a second row
+  // Measured layout: the richest label level that fits (words on all, on the main tools, none); then the least used groups move into
+  // "Altro". Never a second row, nothing cut. One measure per frame (schedFit), whatever fires it.
+  function setLevel(lv) {
+    const bar = Q1("#stbar");
+    bar.classList.toggle("lab-all", lv === "all");
+    bar.classList.toggle("lab-main", lv === "main");
+    document.documentElement.dataset.barLab = lv;
+  }
+  function schedFit() {
+    if (_fitRaf) return;
+    _fitRaf = requestAnimationFrame(() => { _fitRaf = 0; fit(); });
+  }
   function fit() {
     const bar = Q1("#stbar");
     if (!bar || !bar.offsetParent) return;
+    const t0 = performance.now();
     _dropped = new Set();
     syncVisibility();
     const avail = () => bar.clientWidth;
     const need = () => {
       const kids = [...bar.children].filter(e => !e.hidden);
-      return kids.reduce((s, e) => s + e.getBoundingClientRect().width, 0) + Math.max(0, kids.length - 1) * 3;
+      const gap = parseFloat(getComputedStyle(bar).columnGap) || 0;
+      return kids.reduce((s, e) => { const cs = getComputedStyle(e); return s + e.getBoundingClientRect().width + (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0); }, 0) + Math.max(0, kids.length - 1) * gap;
     };
-    bar.classList.toggle("tb-lab", window.innerWidth >= LABELS_FROM);
-    if (bar.classList.contains("tb-lab") && need() > avail()) bar.classList.remove("tb-lab");
-    let i = 0;
     const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File goes into "Altro"
+    const tryLv = _labMode === "hidden" || phone ? ["none"] : _labMode === "always" ? ["all"] : LEVELS;
+    let chosen = tryLv[tryLv.length - 1];
+    for (const lv of tryLv) {
+      setLevel(lv);
+      const slack = LEVELS.indexOf(lv) < LEVELS.indexOf(_lvl) ? HYST : 0;
+      if (need() + slack <= avail()) { chosen = lv; break; }
+    }
+    setLevel(chosen);
+    _lvl = chosen;
+    let i = 0;
     while ((phone || need() > avail()) && i < DROP_ORDER.length) {
       const id = DROP_ORDER[i++];
       const c = byId(id);
@@ -527,6 +554,19 @@ const BARRA = (() => {
     if (more) more.dataset.dropped = [..._dropped].join(",");
     const rov = bar.querySelector(".tb[tabindex='0']");
     if (!rov || rov.hidden || rov.offsetParent === null) setRover(firstItem());
+    const dt = performance.now() - t0;
+    _fitStats.n++; _fitStats.last = dt; _fitStats.max = Math.max(_fitStats.max, dt);
+  }
+
+  function loadLabMode() {
+    let v = null;
+    try { v = localStorage.getItem(K_LAB); } catch (_) { /* none */ }
+    _labMode = v === "always" || v === "hidden" ? v : "auto";
+  }
+  function setLabels(mode) {
+    _labMode = mode === "always" || mode === "hidden" ? mode : "auto";
+    try { localStorage.setItem(K_LAB, _labMode); } catch (_) { /* no storage */ }
+    fit();
   }
 
   // roving tabindex
@@ -823,7 +863,7 @@ const BARRA = (() => {
 
     window.addEventListener("resize", () => {
       applyLayout();
-      fit();
+      schedFit();
     });
     let wasData = false;
     document.addEventListener("tpview", () => {
@@ -917,6 +957,7 @@ const BARRA = (() => {
     _mounted = true;
     _mode = isHrMode() ? "hr" : "lr";
     loadState();
+    loadLabMode();
     window.CMD = CMD;
     buildBar();
     const x = Q1("#sb-x");
@@ -935,7 +976,7 @@ const BARRA = (() => {
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
       const bar = Q1("#stbar");
-      if (bar) new ResizeObserver(() => fit()).observe(bar);
+      if (bar) new ResizeObserver(() => schedFit()).observe(bar);
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);
@@ -961,6 +1002,10 @@ const BARRA = (() => {
     syncMode,
     syncHR: syncMode,
     fit,
+    setLabels,
+    get labels() { return _labMode; },
+    get labelLevel() { return _lvl; },
+    get fitStats() { return _fitStats; },
     focusToolbar,
     isDataView: inData,
     isOpen: id => _open && inData() && (id == null || _tab === id),
