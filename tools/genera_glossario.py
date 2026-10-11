@@ -50,7 +50,7 @@ def names(dt: str) -> list[str]:
 def main() -> None:
     html = (D / "21-glossario.html").read_text(encoding="utf-8")
     items = []
-    for dt, dd in re.findall(r"<dt>(.*?)</dt><dd>(.*?)</dd>", html, re.S):
+    for dt, dd in re.findall(r"<dt(?: id=\"[^\"]*\")?>(.*?)</dt><dd>(.*?)</dd>", html, re.S):
         ns = [n for n in names(dt) if "<" not in n] + EXTRA.get(re.sub(r"<[^>]+>", "", dt), [])
         links = re.findall(r'<a href="([^"#]+)">(Cap\. [^<]+)</a>', dd)
         body = re.sub(r'\s*<a href="[^"]+">(?:Cap\.|\d)[^<]*</a>(?:,\s*)?', "", dd).strip()
