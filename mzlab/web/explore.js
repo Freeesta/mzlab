@@ -278,11 +278,12 @@ async function bootSession0() {
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   const isFirstLoad = !oldNames.length;
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
+  const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
   E.files = j.session.map((s, k) => {
     let vis = true;
     if (oldVis[s.file]) {
       vis = oldVis[s.file].vis;
-    } else if (isFirstLoad && isHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
+    } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
       vis = fileBase(s.file) === fileBase(j.session[0].file);          // high resolution: only the first file (in the order of the list) is open, a click opens the others
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
       const firstIdx = j.session.findIndex(x => x.kind === s.kind);
