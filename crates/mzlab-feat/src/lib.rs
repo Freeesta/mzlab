@@ -3,6 +3,7 @@
 
 mod channels;
 mod post;
+pub mod suspects;
 pub mod table;
 pub mod trace;
 
