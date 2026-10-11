@@ -165,7 +165,7 @@ class Run:
         if not tour:
             pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
-        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
+        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
         pg.goto(f"http://127.0.0.1:{s.port}/")
