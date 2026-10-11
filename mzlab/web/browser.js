@@ -8,7 +8,7 @@
   const SRC = document.currentScript.src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response);
-  try { if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   let worker;
   // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
   // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database and ?opfs=0 keeps the files in memory and IndexedDB (tests)
@@ -20,7 +20,8 @@
   };
   const wurl = new URL("browser-worker.js", SRC);
   { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); wurl.searchParams.set("pool", poolMode(q)); if (window.MZLAB_DESKTOP) wurl.searchParams.set("desk", "1"); }
-  try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
+  try { if (modern && !window.QQQ_PHONE && !window.QQ_RESETTING) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }       // ?reset=: reset.js wipes first, the engine starts on the reloaded page
+  window.qqEngineStop = () => { try { if (worker) worker.terminate(); } catch (_) { /* gone already */ } };      // reset.js: the worker holds sync handles on the files
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
@@ -36,6 +37,7 @@
   // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
   const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
   window.qqHardReset = async () => {
+    window.qqEngineStop();
     await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());     // the files and indexes in OPFS
     await wait(new Promise(r => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
