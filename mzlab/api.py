@@ -139,6 +139,8 @@ def _map(app, q: dict) -> dict:
             return subtract_constant(m, it.map_background(level, grid["mz0"], grid["mz0"] + grid["nmz"] * grid["dmz"], grid["nmz"], False, agg)) if bg else m
     m = get(k)
     out = {**grid, "level": level, "region": region, "agg": agg, "log": log, "bg": bg, "hr": hr}
+    if not region:
+        out["extent"] = app._item(k).data_extent(level)           # where the file has data: the page shows this part as the whole view
     if ref is not None:
         norm = q.get("norm", "abs")
         w = int(round(float(q.get("rttol", 0.1)) / max((grid["rt1"] - grid["rt0"]) / grid["nrt"], 1e-9)))

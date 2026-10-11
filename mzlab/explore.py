@@ -475,6 +475,16 @@ class Item:
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
+    def data_extent(self, level: int) -> dict:
+        """Where the level has data: RT of the first and the last scan that holds peaks, m/z of the lowest and the highest peak (null when empty).
+        The map shows this part, not the declared run or the rounded grid."""
+        t = self._tbl(level)
+        if not len(t.rt) or not len(t.mz):
+            return {"rt": None, "mz": None}
+        on = np.flatnonzero(t.sum_by_scan() > 0)
+        rt = [float(t.rt[on[0]]), float(t.rt[on[-1]])] if len(on) else None
+        return {"rt": rt, "mz": [float(t.mz[0]), float(t.mz[-1])] if rt else None}
+
     def ionmap(self, level: int, grid: dict, agg: str = "max") -> np.ndarray:
         """Intensity per cell on a common RT x m/z grid, shape (nrt, nmz), float32.
 
