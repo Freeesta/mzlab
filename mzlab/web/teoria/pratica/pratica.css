@@ -42,3 +42,8 @@
 .htab{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0}.htab caption{text-align:left;font-weight:600;padding:2px 0}
 .htab th,.htab td{border:1px solid var(--line);padding:3px 8px;text-align:left}
 @media (pointer:coarse){.wk button,.wk select,.wk input,.gbar select,.gbar button{min-height:40px}}
+/* game lc-cin (giochi-lc-cin.js): chart and table of the XIC areas; colours only from the page variables */
+.cin-svg{width:100%;height:auto;max-width:640px;display:block;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.cin-svg text{fill:var(--ink);font:12px system-ui,sans-serif}.cin-grid{stroke:var(--line)}.cin-tick{stroke:var(--muted)}.cin-loq{stroke:var(--muted);stroke-dasharray:3 3}
+.cin-leg{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0;padding:0;font-size:14px}.cin-leg li{display:flex;align-items:center;gap:6px;min-height:24px}
+.cin-tw{overflow-x:auto}.cin-tab td.n,.cin-tab th{white-space:nowrap}.cin-tab td.n{text-align:right;font-variant-numeric:tabular-nums}

@@ -8,7 +8,7 @@ Tutto il testo sta in questa cartella, un file per capitolo. Non c'è niente da 
 |---|---|
 | Introduzione e mappa | `index.html` |
 | Capitoli 1–22 | `01-tp.html` … `22-formulario.html` (il numero è nel nome; i vecchi nomi, come `06-quadrupolo.html`, sono rimandi automatici al nuovo capitolo) |
-| Pratica (giochi ed esercizi) | `pratica.html` (pagina iniziale), `pratica-ei.html`, `pratica-orale.html`, `pratica-perdite.html`, `pratica-isotopi.html`, `pratica-formula.html`, `pratica-strumento.html`, `pratica-quadrupolo.html`; codice e dati in `pratica/` |
+| Pratica (giochi ed esercizi) | `pratica.html` (pagina iniziale), `pratica-ei.html`, `pratica-orale.html`, `pratica-perdite.html`, `pratica-isotopi.html`, `pratica-formula.html`, `pratica-strumento.html`, `pratica-quadrupolo.html`, `pratica-tp.html`; codice e dati in `pratica/` |
 | Domande dell'orale (testo e punti della risposta) | `pratica/domande.js` |
 | Spettri EI dei capitoli 15-16 e del gioco | `pratica/ei-dati.js`, generato da `tools/genera_ei.py` (non a mano) |
 | Glossario (parole sottolineate nel testo) | `21-glossario.html`, poi `python3 tools/genera_glossario.py` e `python3 tools/genera_indice_teoria.py` (ricerca) |

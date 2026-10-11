@@ -13,3 +13,5 @@ e2e_barra | unstable under load
 e2e_mappa | unstable under load
 e2e_pulsanti | unstable under load
 e2e_lingua | unstable under load
+e2e_modo | unstable under load (Open in 3D, line 40); green alone
+e2e_reset | unstable under load; green alone

@@ -36,6 +36,7 @@ const CHAPTERS = [
   ["pratica-formula.html", "P5", "Formula esatta", "Pratica"],
   ["pratica-strumento.html", "P6", "Carte dello strumento", "Pratica"],
   ["pratica-quadrupolo.html", "P7", "Pilota il quadrupolo", "Pratica"],
+  ["pratica-tp.html", "P8", "Δm ed ESI± dei prodotti di trasformazione", "Pratica"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
@@ -112,6 +113,17 @@ const TP = (() => {
     pn.innerHTML = (p ? `<a href="${p[0]}"><small>&larr; Precedente</small>${p[1]}. ${p[2]}</a>` : "<span></span>") +
                    (n ? `<a href="${n[0]}" style="text-align:right"><small>Successivo &rarr;</small>${n[1]}. ${n[2]}</a>` : "<span></span>");
     $("main").appendChild(pn);
+    // the index keeps its scroll from one chapter to the next (the active entry is brought into view if it would be hidden)
+    try { const y = sessionStorage.getItem("qqq.teoria.side"); if (y !== null) side.scrollTop = +y || 0; } catch (_) { /* no storage: top */ }
+    const cur = side.querySelector("li a.on"), sr = side.getBoundingClientRect();
+    if (cur && sr.height) { const cr = cur.getBoundingClientRect(); if (cr.top < sr.top) side.scrollTop -= sr.top - cr.top; else if (cr.bottom > sr.bottom) side.scrollTop += cr.bottom - sr.bottom; }
+    addEventListener("pagehide", () => { try { sessionStorage.setItem("qqq.teoria.side", String(side.scrollTop)); } catch (_) { /* not kept */ } });
+    // the neighbouring chapters are fetched ahead (small pages), unless the connection is saving data, slow or cellular (and never on a phone)
+    const net = navigator.connection || {};
+    if (!embedded && !PHONE && location.protocol !== "file:" && !net.saveData && net.type !== "cellular" && (!net.effectiveType || net.effectiveType === "4g") && window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports("speculationrules")) {
+      const urls = [p, n].filter(Boolean).map(c => c[0]);
+      if (urls.length) { const sr2 = document.createElement("script"); sr2.type = "speculationrules"; sr2.textContent = JSON.stringify({ prefetch: [{ source: "list", urls, eagerness: "immediate" }] }); document.head.appendChild(sr2); }
+    }
     // highlight the current section in the TOC
     const links = [...side.querySelectorAll(".toc a")];
     if (links.length && "IntersectionObserver" in window) {
@@ -354,11 +366,11 @@ const TP = (() => {
     addEventListener("scroll", hide, { passive: true });
   }
 
-  // «Lettura facilitata»: tema.js has already put the choices on <html>; the panel and the reading tools come from a11y.js
-  function loadA11y() { const s = document.createElement("script"); s.src = "a11y.js"; document.head.appendChild(s); }
-  function loadLettura() { const s = document.createElement("script"); s.src = "lettura.js"; document.head.appendChild(s); }   // menu sheet, reading position, figure viewer
-  function loadCerca() { const s = document.createElement("script"); s.src = "cerca.js"; document.head.appendChild(s); }   // search dialog (Ctrl/⌘K, TEORIA.cerca()); its index is read on first use
-  function loadStrumenti() { const s = document.createElement("script"); s.src = "strumenti/pannello.js"; document.head.appendChild(s); }   // TEORIA.strumenti.*: the panel; each tool is read when opened
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); loadLettura(); loadCerca(); loadStrumenti(); });
+  // The page scripts are added in this order (async=false keeps it): the bar of commands first, then the settings button that goes into it
+  function load(src) { const s = document.createElement("script"); s.src = src; s.async = false; document.head.appendChild(s); }
+  // comandi.js: TCMD, the commands of the header; a11y.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
+  // lettura.js: menu sheet, reading position, figure viewer; cerca.js: search dialog (Ctrl/⌘K, TEORIA.cerca(), index read on first use);
+  // strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "a11y.js", "lettura.js", "cerca.js", "strumenti/pannello.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();

@@ -238,7 +238,7 @@ const LISTE = (() => {
 
   // ---------------------------------------------------------------- page & storage (IndexedDB "qqq_lab", store "liste_utente")
   const KEY_ROWS = "qqq.contaminanti", KEY_ON = "qqq.contaminanti.on", KEY_LISTS = "qqq.liste.attive";
-  const IDB_NAME = "qqq_lab", IDB_VER = 2, IDB_STORE = "liste_utente";
+  const IDB_STORE = "liste_utente";
 
   const ST = {
     lists: [],           // built-in lists (/api/contaminants: Keller 2008)
@@ -292,16 +292,12 @@ const LISTE = (() => {
   const saveRows = rows => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
   function idbOpen() {
-    return new Promise(res => {
+    return new Promise(async res => {
       if (typeof indexedDB === "undefined") return res(null);
       try {
-        const req = indexedDB.open(IDB_NAME, IDB_VER);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
-          if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
-          if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: "id" });
-        };
+        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");          // the schema is written once (qqq-db.js)
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = () => upgrade(req.result);
         req.onsuccess = () => res(req.result);
         req.onerror = () => res(null);
       } catch (_) { res(null); }
@@ -529,21 +525,9 @@ const LISTE = (() => {
   const EH = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtSub = f => EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
 
-  function mount(container, opt = {}) {
-    if (!container) return;
-    ensure();
-
-    // Initial state of controls
-    const state = {
-      mz: opt.mz != null ? String(opt.mz) : "",
-      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) ? "ppm" : "da")),
-      tolDa: 0.5,
-      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5,
-      text: "",
-      pol: opt.polarity === "positive" || opt.polarity === 1 ? 1 : opt.polarity === "negative" || opt.polarity === -1 ? -1 : 0
-    };
-
-    container.innerHTML = `
+  // the markup of the panel: search bar, active lists, user lists, exclusions and the table (the handlers are bound in mount())
+  function panelHtml(state) {
+    return `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
         <div class="liste-bar">
           <div class="lb-row">
@@ -594,7 +578,24 @@ const LISTE = (() => {
           </table>
         </div>
       </div>
-    `;
+  `;
+  }
+
+  function mount(container, opt = {}) {
+    if (!container) return;
+    ensure();
+
+    // Initial state of controls
+    const state = {
+      mz: opt.mz != null ? String(opt.mz) : "",
+      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) ? "ppm" : "da")),
+      tolDa: 0.5,
+      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5,
+      text: "",
+      pol: opt.polarity === "positive" || opt.polarity === 1 ? 1 : opt.polarity === "negative" || opt.polarity === -1 ? -1 : 0
+    };
+
+    container.innerHTML = panelHtml(state);
 
     const elMz = container.querySelector("#lst-mz");
     const elTol = container.querySelector("#lst-tol");

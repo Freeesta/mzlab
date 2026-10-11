@@ -43,6 +43,15 @@ try:
             first = pg.evaluate("EI_DATA.items.filter(i=>i.path===1).sort((a,b)=>a.order-b.order)[0].id")
             assert item()["id"] == first, (item()["id"], first)             # a fresh student starts at the first compound of the path
         step("path 1-5: one compound per level, the first of the path comes first", path_levels)
+        def extra_levels():
+            open_game()
+            assert pg.evaluate("EI_DATA.items.some(i=>i.id==='tioanisolo')") is False, "level 5 data must not be loaded before it is needed"
+            pg.evaluate("PRATICA_EI.start('tioanisolo')"); pg.wait_for_function("PRATICA_EI.state().item && PRATICA_EI.state().item.id==='tioanisolo'", timeout=15000)
+            assert pg.evaluate("PRATICA_EI.state().item.path") == 5
+            assert pg.evaluate("EI_DATA.items.some(i=>i.id==='dodecano')") is False, "other levels stay unloaded"
+            pg.select_option("#path", "1"); pg.wait_for_function("PRATICA_EI.state().item.path===1", timeout=15000)
+            assert pg.evaluate("EI_DATA.items.some(i=>i.id==='dodecano')")
+        step("level files: loaded only for the chosen level or compound", extra_levels)
         def guided_unchanged():
             open_game(); pg.select_option("#path", ""); pg.select_option("#lv", "2")
             pg.evaluate("PRATICA_EI.start('acetofenone')"); pg.wait_for_timeout(400)
