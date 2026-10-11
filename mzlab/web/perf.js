@@ -6,7 +6,7 @@
 //   - every panel draw (ms, with the panel type) and the commands that move around (tab change, arrow step);
 //   - the loading of each file as measured in Python (read of the index, peak table, reading mode) from api/perf;
 //   - long tasks (> 50 ms) where the browser reports them (not Safari).
-// «Copia» puts everything on the clipboard as text. Classic script, loaded after explore.js; the hooks wrap existing functions, no change to them.
+// «Copia» puts everything on the clipboard as text. ES module (runs after every classic script); the hooks wrap existing functions, no change to them.
 (() => {
   const url = new URL(location.href);
   const ON = url.searchParams.has("perf");

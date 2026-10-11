@@ -1,3 +1,4 @@
+// @ts-check
 // Minimal .xlsx writer (no library): an Excel file is a zip of a few XML files. Here the zip is "stored" (no compression)
 // with a CRC32 per file, which every reader accepts. Numbers are real numeric cells, text is written inline.
 //
