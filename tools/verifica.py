@@ -122,7 +122,7 @@ def js_syntax(results) -> None:
         if p.returncode:
             errs.append(f"{f.relative_to(ROOT)}: " + (p.stderr.strip().splitlines() or ["?"])[-1])
     html = (web / "index.html").read_text(encoding="utf-8")
-    inline = "\n".join(re.findall(r"<script>(.*?)</script>", html, re.S))
+    inline = "\n".join(re.findall(r"<script(?: type=\"text/plain\" id=\"shell\")?>(.*?)</script>", html, re.S))
     page = tmp / "page.js"; page.write_text("\n".join((web / n).read_text(encoding="utf-8") for n in CORE_JS) + "\n" + inline, encoding="utf-8")
     p = subprocess.run(["node", "--check", str(page)], capture_output=True, text=True)
     if p.returncode:
@@ -230,6 +230,7 @@ AREE = [
     ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita"}),
     ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
     ("mzlab/web/telefono.js", {"e2e_telefono"}),
+    ("mzlab/web/telefono-scheda.js", {"e2e_telefono"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/ordine.js", {"e2e_ordine", "e2e_lista_hr"}), ("mzlab/web/conversione.js", {"e2e_conversione"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
     ("mzlab/web/visualizza.js", {"e2e_hr_display", "e2e_hr_xic"}), ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui", "e2e_hr_display", "e2e_hr_isotopi"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2", "e2e_hr_nearest", "e2e_hr_vista"}), ("mzlab/web/banco.js", {"e2e_intestazioni", "e2e_hr_vista", "e2e_banco_barra", "e2e_banco_celle", "e2e_hr_pannelli", "e2e_banco_info", "e2e_hr_display", "e2e_hr_isotopi"}), ("mzlab/web/liste.js", {"e2e_contaminanti", "e2e_hr_pannelli"}), ("tests_e2e/e2e_hr_pannelli.py", {"e2e_hr_pannelli"}), ("mzlab/web/elementare.js", {"e2e_hr_formule", "e2e_hr_composizione", "e2e_hr_pannelli"}), ("mzlab/web/composizione.js", {"e2e_hr_formule", "e2e_hr_composizione", "e2e_hr_msntree"}), ("tests_e2e/e2e_hr_formule.py", {"e2e_hr_formule"}), ("mzlab/web/visualizza.js", {"e2e_hr_display", "e2e_banco_barra"}), ("tests_e2e/e2e_hr_display.py", {"e2e_hr_display"}), ("mzlab/chem/composition.py", {"e2e_hr_composizione", "e2e_hr_formule"}), ("mzlab/chem/isoscore.py", {"e2e_hr_composizione", "e2e_hr_formule"}), ("mzlab/chem/subformulas.py", {"e2e_hr_vista"}),
