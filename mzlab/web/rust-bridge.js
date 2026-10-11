@@ -19,6 +19,7 @@ export function createBridge({ workerUrl, notify }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
+      if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
       pending.delete(m.id);
@@ -28,11 +29,11 @@ export function createBridge({ workerUrl, notify }) {
     worker = w;
   }
   function recycle(buf) { if (worker) worker.postMessage({ op: "recycle", bufs: [buf] }, [buf]); }
-  function rpc(msg) {
+  function rpc(msg, onp) {
     return new Promise(res => {
       if (!worker || api.disabled) return res({ dead: true });
       const id = ++seq;
-      pending.set(id, { res, worker });
+      pending.set(id, { res, worker, onp });
       worker.postMessage({ ...msg, id });
     });
   }
@@ -74,14 +75,14 @@ export function createBridge({ workerUrl, notify }) {
     }
   };
   // Thermo .raw -> Blob of mzML, made in the worker; rejects with an Error whose `json` is { error, error_key, params } like the API errors
-  api.convertRaw = async file => {
-    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file });
+  api.convertRaw = async (file, onProgress) => {
+    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file }, onProgress);
     if (r.dead || r.error) {
       let e = { error_key: "err.file.raw", params: { detail: "" } };
       try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
       throw Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
     }
-    return new Blob(r.parts, { type: "application/xml" });
+    return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
   api.crash =() => rpc({ op: "crash" });
 

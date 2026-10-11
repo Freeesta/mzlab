@@ -160,11 +160,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 app.reset(bool(body.get("fresh")))
                 return _json(app.state())
             if path == "/api/workflow/validate":
-                from .workflow import validate_workflow, verify_file_hashes
+                from .workflow import unknown_operations, validate_workflow, verify_file_hashes
                 ok, msg = validate_workflow(body)
                 actual_hashes = {f["name"]: f.get("sha256", "") for f in app.files()}
                 mismatches = verify_file_hashes(body, actual_hashes) if ok else []
-                return _json({"valid": ok, "message": msg, "mismatches": mismatches})
+                return _json({"valid": ok, "message": msg, "mismatches": mismatches, "unknown_ops": unknown_operations(body) if ok else []})
             if path == "/api/qaqc/features":      # sample / blank ratio of every feature of an untargeted table: values, no list of products
                 from .qaqc import feature_ratios
                 return _json({"rows": feature_ratios(body.get("features", []), body.get("blanks", []), body.get("samples", []), float(body.get("thr", 3)))})

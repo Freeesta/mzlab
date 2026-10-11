@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "The main window: the system file dialog, the window title and the events of file drops. No file system access, no network.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-title", "dialog:allow-open"]
+  "permissions": ["core:default", "core:window:allow-set-title", "dialog:allow-open", "dialog:allow-save"]
 }

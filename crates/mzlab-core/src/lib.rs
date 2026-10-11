@@ -3,6 +3,7 @@
 pub mod analysis;
 pub mod entropy;
 pub mod error;
+pub mod mzidx;
 pub mod mzml;
 pub mod peaks;
 pub mod raw;

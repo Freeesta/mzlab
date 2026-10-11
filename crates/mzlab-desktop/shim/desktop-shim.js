@@ -25,6 +25,9 @@
     window.upload(out, into);
   }
 
+  // «Scarica mzML»: the native save dialog for a converted mzML (by its number on the disk); resolves to the chosen path or null
+  window.MZLAB_SAVE_MZML = (id, name) => T.core.invoke("save_mzml", { id, name });
+
   document.addEventListener("click", async e => {
     const t = e.target.closest && e.target.closest("#drop, #dropdam");
     if (!t) return;
