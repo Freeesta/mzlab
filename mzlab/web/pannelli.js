@@ -303,6 +303,9 @@ function addPanel(type, o, after) {
   return p;
 }
 const redrawAll = () => tabPanels().forEach(draw);
+// many requests in the same frame (window resize, a burst of answers) become one redraw
+let redrawRaf = 0;
+const redrawSoon = () => { if (!redrawRaf) redrawRaf = requestAnimationFrame(() => { redrawRaf = 0; redrawAll(); }); };
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape" || e._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
