@@ -87,7 +87,7 @@ try:
             M = "E.panels.find(q=>q.type==='map')"; pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
             c = pg.evaluate(f"(()=>{{const r={M}.cv.getBoundingClientRect(); return [r.left+r.width*.4, r.top+r.height*.5]}})()")
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='xic').length")
-            pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_timeout(300); pg.click("#ctx [role^=menuitem]:has-text('Estrai l\\'XIC qui')"); pg.wait_for_timeout(500)
+            pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_timeout(300); pg.click("#ctx [role^=menuitem]:has-text('XIC')"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.filter(q=>q.type==='xic').length") == n0 + 1, "the menu extracts from the difference map"
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.click(f".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
             assert pg.evaluate("MAPEX.numbers(" + M + ").height") is not None

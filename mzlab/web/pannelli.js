@@ -190,7 +190,7 @@ function addPanel(type, o, after) {
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
   if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
-  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
+  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "lin", gamma: o.gamma, ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
@@ -595,8 +595,9 @@ function ctl(p) {
     const mPar = inner => `<span class="cpar"><button class="bt cparl" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.cpar.titleMap")}" aria-label="${I18N.t("ctl.cpar.map")}">${I18N.t("ctl.cpar.map.lab")} &#9662;</button>${mChips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.cpar.titleMap")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${fol ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
       mCorr +
-      mPar(`<label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select></label><span data-mzslot="col"></span>` +
-        `<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>`);
+      mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
+        `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
+        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
@@ -661,7 +662,7 @@ function ctl(p) {
       }
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
-      if (["level", "all", "snip", "bg", "kind", "mz0", "mz1"].includes(k)) ctl(p);
+      if (["level", "all", "snip", "bg", "kind", "mz0", "mz1", "scale"].includes(k)) ctl(p);
       draw(p);
     };
   });

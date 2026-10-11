@@ -37,16 +37,16 @@ try:
             open3d(); pt = spot(); assert pt
             pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(300)
             its = items(); names = [i[0] for i in its]
-            for want in ["Extract the XIC here", "Extract the spectrum here", "Extract both", "Lock the sight", "Reset zoom", "View from above", "Side view along RT", "Side view along m/z", "Copy the coordinates", "Gestures and shortcuts"]:
+            for want in ["XIC", "Spectrum", "Lock the sight", "Reset zoom", "From above", "Side RT", "Side m/z", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
-            assert not any("Reset the RT axis" in n or "selection" in n for n in names), names                 # the 2D-only commands are not there
+            assert not any("axis" in n or "selection" in n or "both" in n for n in names), names                 # a short menu
             assert pg.evaluate("document.getElementById('ctx').closest('dialog.m3d') !== null"), "the menu is inside the modal dialog"
             assert pg.evaluate("(()=>{const r=document.getElementById('ctx').getBoundingClientRect();const e=document.elementFromPoint(r.left+10,r.top+10);return !!e.closest('#ctx')})()"), "the menu is on top"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
             assert pg.evaluate("document.getElementById('ctx').hidden") and pg.evaluate("!!document.querySelector('dialog.m3d[open]')"), "Esc closes only the menu"
         step("3D: right click opens the menu (inside the dialog), Esc closes only the menu", menu)
         def views():
-            for label, (az, el) in {"View from above": (0, 89), "Side view along RT": (0, 0), "Side view along m/z": (90, 0)}.items():
+            for label, (az, el) in {"From above": (0, 89), "Side RT": (0, 0), "Side m/z": (90, 0)}.items():
                 pt = spot(); pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick(label)
                 c = pg.evaluate("[window.__m3d.V.cam.az, window.__m3d.V.cam.el]"); assert c == [az, el], (label, c)
             az0 = pg.evaluate("window.__m3d.V.cam.az"); box = pg.locator(".m3d-gl").bounding_box(); cx, cy = box["x"] + box["width"] * .4, box["y"] + box["height"] * .5
@@ -60,7 +60,7 @@ try:
             assert pg.evaluate("[...window.__m3d.V.cam.t]") != t0 and pg.evaluate("document.getElementById('ctx').hidden"), "a right-button drag moves the view and does not open the menu"
         step("3D: dragging with the right button still pans", pan_right_drag)
         def copy():
-            pt = spot(); pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick("Copy the coordinates")
+            pt = spot(); pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick("Copy coordinates")
             t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("RT ") and "m/z" in t and "intensity" in t, t
         step("3D: copy the coordinates", copy)
         def lock():
@@ -88,7 +88,7 @@ try:
             cdp = ctx.new_cdp_session(pg); pt = spot()
             cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": pt[0], "y": pt[1], "id": 0}]}); pg.wait_for_function("!document.getElementById('ctx').hidden", timeout=4000)            # polling keeps the page awake; the menu opens while the finger is down
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); pg.wait_for_timeout(300)
-            assert any("Extract the XIC here" in i[0] for i in items()), items()
+            assert any(i[0] == "XIC" for i in items()), items()
             assert not pg.evaluate("document.getElementById('ctx').hidden"), "the menu stays open after the finger is lifted"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert pg.evaluate("!!document.querySelector('dialog.m3d[open]')")
         step("3D: long press opens the menu", longpress)
@@ -100,12 +100,17 @@ try:
         def extract():
             n = (npan("xic"), npan("spec")); pt = spot(); pg.mouse.move(pt[0], pt[1]); pg.wait_for_timeout(250)
             want = pg.evaluate("(()=>{const m=window.__m3d, c=m.V.cur; return [m.rtAt(c.i), m.mzAt(c.j)]})()")
-            pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick("Extract both")
+            pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick("Spectrum")
+            pg.wait_for_function("!document.querySelector('dialog.m3d[open]')", timeout=5000); pg.wait_for_timeout(800)
+            assert (npan("xic"), npan("spec")) == (n[0], n[1] + 1), (n, npan("xic"), npan("spec"))
+            open3d(); pt = spot(); pg.mouse.move(pt[0], pt[1]); pg.wait_for_timeout(250)
+            want = pg.evaluate("(()=>{const m=window.__m3d, c=m.V.cur; return [m.rtAt(c.i), m.mzAt(c.j)]})()")
+            pg.mouse.click(pt[0], pt[1], button="right"); pg.wait_for_timeout(250); pick("XIC")
             pg.wait_for_function("!document.querySelector('dialog.m3d[open]')", timeout=5000); pg.wait_for_timeout(800)
             assert (npan("xic"), npan("spec")) == (n[0] + 1, n[1] + 1), (n, npan("xic"), npan("spec"))
             mz = pg.evaluate("E.panels.filter(q=>q.type==='xic').sort((a,b)=>b.id-a.id)[0].traces[0].mz"); assert abs(mz - want[1]) <= 1.0, (mz, want)
             assert pg.evaluate("document.getElementById('ctx').parentElement === document.body"), "the menu goes back to the page when the viewer closes"
-        step("3D: Extract both from the point under the pointer: the panels appear, the viewer closes", extract)
+        step("3D: Spectrum and XIC from the point under the pointer: the panels appear, the viewer closes", extract)
         b.close()
     r.close()
 except Exception as e:

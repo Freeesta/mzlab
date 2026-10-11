@@ -454,5 +454,6 @@
   "mapfeat.title": "Titolo del blocco «Come è stata trovata»; {id} = identificativo della feature in mzFinder.",
   "mapfeat.win": "Finestra m/z dell'ione di una feature; {mz} = m/z, {ppm} = tolleranza in ppm, {a} e {b} = estremi della finestra.",
   "mapfeat.edges.auto": "Bordi del picco calcolati dalla pagina; {a} e {b} = RT in minuti.",
-  "mapfeat.edges.rec": "Bordi dell'integrazione registrati da mzFinder; {a} e {b} = RT in minuti."
+  "mapfeat.edges.rec": "Bordi dell'integrazione registrati da mzFinder; {a} e {b} = RT in minuti.",
+  "map.sc.gamma": "Scala dei colori «gamma» nella legenda della mappa; {g} = esponente scelto (numero)."
 }

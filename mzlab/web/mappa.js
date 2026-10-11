@@ -85,7 +85,7 @@ window.MAPPA = (() => {
     const s = st(p); init(p);
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
-    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${mapPal()}|${mapBg(p)}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
     if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
     clearTimeout(s.regT);
     s.regT = setTimeout(async () => {
@@ -559,13 +559,14 @@ window.MAPPA = (() => {
 
   // ---------------------------------------------------------------- navigation: ONE list of commands (CMDS) for the right-click menu of the 2D map and of the 3D viewer,
   // the bar on the map, the command palette (barra.js reads CMDS) and the sheet of gestures. An «adapter» says where a command acts:
-  //   { kind: "2d" | "3d", p, pt() -> {rt, mz, v?} | null, locked(), toggleLock(), resetAll(), resetX?(), resetY?(), hasSel?(), zoomSel?(), zoomBy(f), view?(n), after?() }
+  //   { kind: "2d" | "3d", p, pt() -> {rt, mz, v?} | null, locked(), toggleLock(), resetAll(), zoomBy(f), view?(n), after?() }
   const SV = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
   const ICO = {
     xic: '<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>', spec: '<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>',
     both: '<path d="M2 13h5"/><path d="M2.5 12c1-6 2-6 3 0M9 13V8M12 13V5"/>',
     lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>', unlock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 014.8-1"/>',
-    home: '<path d="M2.5 8L8 3l5.5 5"/><path d="M4 7v6.5h3v-3h2v3h3V7"/>', rx: '<path d="M2 8h12M2 5.5v5M14 5.5v5"/>', ry: '<path d="M8 2v12M5.5 2h5M5.5 14h5"/>',
+    home: '<g transform="translate(1 1) scale(1.0714)"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></g>',       // the corners of the «whole view» button of every panel
+     rx: '<path d="M2 8h12M2 5.5v5M14 5.5v5"/>', ry: '<path d="M8 2v12M5.5 2h5M5.5 14h5"/>',
     sel: '<rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2.5 2"/><path d="M8 6v4M6 8h4"/>', plus: '<path d="M8 3v10M3 8h10"/>', minus: '<path d="M3 8h10"/>',
     copy: '<rect x="5.5" y="5.5" width="8" height="8" rx="1.2"/><path d="M10.5 5.5V3.7a1.2 1.2 0 00-1.2-1.2H3.7a1.2 1.2 0 00-1.2 1.2v5.6a1.2 1.2 0 001.2 1.2h1.8"/>',
     help: '<circle cx="8" cy="8" r="6"/><path d="M6.2 6.3a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.8M8 11.7v.1"/>',
@@ -575,12 +576,10 @@ window.MAPPA = (() => {
   function ad2(p, at) {
     const s = st(p), a = () => p._a, mid = () => ({ rt: (a().x0 + a().x1) / 2, mz: (a().y0 + a().y1) / 2 });
     const pt = () => { const q = s.lock || at || point(p); return q ? { ...q, v: valueAt(p, q.rt, q.mz) } : null; };
-    const set = fn => () => { pushZh(p); fn(); draw(p); uiSave(); };
     return {
       kind: "2d", p, pt, locked: () => !!s.lock,
       toggleLock: () => { if (s.lock) unlock(p); else { s.lock = { ...(at || point(p) || mid()) }; s.kp = null; overlay(p); margins(p); } navSync(p); },
-      resetAll: () => whole(p), resetX: set(() => { p.zoom = null; }), resetY: set(() => { p.zoomY = null; }),
-      hasSel: () => !!p.sel, zoomSel: set(() => { const r = p.sel, f = a().full; p.zoom = clampView(r[0], r[1], f[0], f[1]); p.sel = null; }),
+      resetAll: () => whole(p),
       zoomBy: f => zoomBy(p, f, s.lock || at || point(p))
     };
   }
@@ -593,21 +592,17 @@ window.MAPPA = (() => {
     if (ad.after) ad.after();
   }
   const CMDS = [
-    { id: "mapxic", g: "extract", ic: "xic", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "xic") },
-    { id: "mapspec", g: "extract", ic: "spec", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "spec") },
-    { id: "mapboth", g: "extract", ic: "both", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "both") },
+    { id: "mapxic", g: "extract", ic: "xic", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "xic") },
+    { id: "mapspec", g: "extract", ic: "spec", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "spec") },
     { id: "maplock", g: "lock", ic: "lock", kinds: ["2d", "3d"], on: ad => ad.locked(), run: ad => ad.toggleLock() },
     { id: "mapreset", g: "view", ic: "home", kinds: ["2d", "3d"], run: ad => ad.resetAll() },
-    { id: "mapresetx", g: "view", ic: "rx", kinds: ["2d"], run: ad => ad.resetX() },
-    { id: "mapresety", g: "view", ic: "ry", kinds: ["2d"], run: ad => ad.resetY() },
-    { id: "mapzoomsel", g: "view", ic: "sel", kinds: ["2d"], ok: ad => ad.hasSel(), run: ad => ad.zoomSel() },
     { id: "map3top", g: "view", ic: "top", kinds: ["3d"], run: ad => ad.view(1) },
     { id: "map3rt", g: "view", ic: "side", kinds: ["3d"], run: ad => ad.view(2) },
     { id: "map3mz", g: "view", ic: "spec", kinds: ["3d"], run: ad => ad.view(3) },
-    { id: "mapzin", g: "zoom", ic: "plus", kinds: ["2d", "3d"], bar: true, run: ad => ad.zoomBy(0.7) },
-    { id: "mapzout", g: "zoom", ic: "minus", kinds: ["2d", "3d"], bar: true, run: ad => ad.zoomBy(1 / 0.7) },
-    { id: "mapexplain", g: "learn", ic: "learn", kinds: ["2d"], on: ad => !!st(ad.p).ex, run: ad => explain(ad.p) },
-    { id: "mapfeat", g: "learn", ic: "feat", kinds: ["2d"], vis: ad => featAvail(ad.p), on: ad => !!st(ad.p).feat, run: ad => featToggle(ad.p) },
+    { id: "mapzin", g: "zoom", ic: "plus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(0.7) },
+    { id: "mapzout", g: "zoom", ic: "minus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(1 / 0.7) },
+    { id: "mapexplain", g: "learn", ic: "learn", kinds: ["2d"], menu: false, on: ad => !!st(ad.p).ex, run: ad => explain(ad.p) },
+    { id: "mapfeat", g: "learn", ic: "feat", kinds: ["2d"], menu: false, vis: ad => featAvail(ad.p), on: ad => !!st(ad.p).feat, run: ad => featToggle(ad.p) },
     { id: "mapcopy", g: "copy", ic: "copy", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: async ad => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } },
     { id: "maphelp", g: "help", ic: "help", kinds: ["2d", "3d"], run: ad => help(ad.kind) }
   ];
@@ -620,22 +615,14 @@ window.MAPPA = (() => {
     items.push({ label: hdr, dim: true }, "-");
     let last = null;
     for (const c of CMDS) {
-      if (!c.kinds.includes(ad.kind) || c.bar && c.g === "zoom" || c.vis && !c.vis(ad)) continue;
+      if (!c.kinds.includes(ad.kind) || c.menu === false || c.vis && !c.vis(ad)) continue;
       if (last && c.g !== last) items.push("-");
       last = c.g;
       const on = c.on ? c.on(ad) : null, dis = c.ok && !c.ok(ad);
-      items.push({ label: nameOf(c, ad), icon: SV(c.id === "maplock" && on ? ICO.unlock : ICO[c.ic]), aria: nameOf(c, ad), tip: T(`cmd.${c.id}.tip`), check: on, dim: dis, fn: () => runCmd(c.id, ad) });
-      if (c.id === "mapboth" && ad.kind === "2d") extraXic(ad, items);
+      const lab = c.short ? T(`cmd.${c.id}.menu`) : nameOf(c, ad);
+      items.push({ label: lab, icon: SV(c.id === "maplock" && on ? ICO.unlock : ICO[c.ic]), aria: nameOf(c, ad), tip: T(`cmd.${c.id}.tip`), check: on, dim: dis, fn: () => runCmd(c.id, ad) });
     }
     return items;
-  }
-  // the older entries of the 2D menu: XIC with its own window, XIC added to a panel, spectrum averaged on the selection
-  function extraXic(ad, items) {
-    const q = ad.pt(), p = ad.p; if (!q) return;
-    const lab = q.mz.toFixed(mzd(p));
-    items.push({ label: T("ctx.map.xic", { mz: lab }), fn: () => openXic(null, { mz: q.mz, obs: true }) });
-    tabPanels().filter(x => x.type === "xic").forEach(x => items.push({ label: T("ctx.map.addTo", { mz: lab, panel: ptitle(x.title) }), fn: () => openXic(x, { mz: q.mz, obs: true }) }));
-    if (p.sel) items.push({ label: T("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], p._a.f.k) });
   }
   function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); }
   // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
@@ -661,7 +648,7 @@ window.MAPPA = (() => {
   const BAR = ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "mapfeat", "maphelp"];
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("div"); b.className = "mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
-    b.innerHTML = BAR.filter(id => cmdOf(id).kinds.includes(kind)).map(id => `<button type="button" data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapexplain" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
+    b.innerHTML = BAR.filter(id => cmdOf(id).kinds.includes(kind)).map(id => `<button type="button" data-nav="${id}"${id === "mapexplain" ? ' class="mznx"' : ""} title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapexplain" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}${id === "mapexplain" ? `<span>${EH(T("cmd.mapexplain.lab"))}</span>` : ""}</button>`).join("");
     b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;
@@ -705,7 +692,7 @@ window.MAPPA = (() => {
   // what is not at its default in «Options»: chips next to the button
   function optChips(p) {
     const o = [], d = diffOpt(corrState(p).now[0] === "f");
-    if (p.scale && p.scale !== "sqrt") o.push(T(`ctl.map.scale.${p.scale}`));
+    if (p.scale && p.scale !== "lin") o.push(p.scale === "gamma" ? `${T("ctl.map.scale.gamma")} ${p.gamma || 0.6}` : T(`ctl.map.scale.${p.scale}`));
     if (PREF.pal === "cividis") o.push("cividis");
     if (PREF.thr != null && Math.abs(PREF.thr - (corrState(p).now[0] === "f" ? 0.02 : 0.004)) > 1e-9) o.push(`${T("mappa.thr")} ${+(PREF.thr * 100).toFixed(1)} %`);
     if (corrState(p).now[0] === "f" && p.norm && p.norm !== "abs") o.push(T(`ctl.map.norm.${p.norm}`));
@@ -786,16 +773,16 @@ window.MAPPA = (() => {
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
     if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}" aria-label="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => parseFloat(String(el.value).replace(",", "."));
     Q("pal").onchange = ev => { PREF.pal = ev.target.value; prefSave(); draw(p); };
     Q("thr").onchange = ev => { const v = num(ev.target); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); };
     if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
+    const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
-    Q("all").onclick = () => whole(p);
     Q("menu").onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
   }
 
