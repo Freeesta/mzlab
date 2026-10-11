@@ -249,16 +249,33 @@ impl<R: ReadAt> Mzml<R> {
         Ok(String::new())
     }
 
+    /// The start of the file, read in blocks until `<run ` and `extra` more bytes are in (the whole file when there is no `<run `).
+    fn until_run(&mut self, extra: u64) -> Result<Vec<u8>> {
+        let limit = self.size.min(MAX_REGION);
+        let mut want = (256u64 << 10).min(limit);
+        loop {
+            let probe = self.read(0, want)?;
+            let ok = match find(&probe, b"<run ", 0) {
+                Some(p) => (p as u64 + extra) <= want,
+                None => false,
+            };
+            if ok || want >= limit {
+                return Ok(probe);
+            }
+            want = (want * 4).min(limit);
+        }
+    }
+
     /// The part of the file before `<run `, as text (the header the instrument facts come from).
     fn head(&mut self) -> Result<String> {
-        let probe = self.read(0, self.size.min(MAX_REGION))?;
+        let probe = self.until_run(0)?;
         let end = find(&probe, b"<run ", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
         Ok(text(&probe[..end]))
     }
 
     /// The start of the file up to `<run ` plus 3000 bytes, as text (where `fileinfo` finds the time stamp and the processing steps).
     pub fn info_head(&mut self) -> Result<String> {
-        let probe = self.read(0, self.size.min(MAX_REGION))?;
+        let probe = self.until_run(3000)?;
         let run = find(&probe, b"<run ", 0);
         let end = run.map_or(0, |p| p) + 3000;
         Ok(text(&probe[..end.min(probe.len())]))
@@ -411,7 +428,7 @@ impl<R: ReadAt> Mzml<R> {
 
     /// (instrumentConfiguration id, analyzer code) in file order, and nothing else (`Run._read_header`).
     pub fn analyzers(&mut self) -> Result<Vec<(String, String)>> {
-        let probe = self.read(0, self.size.min(MAX_REGION))?;
+        let probe = self.until_run(0)?;
         let end = match find(&probe, b"<run ", 0) {
             Some(p) if p > 0 => p,
             _ => probe.len().min(200_000),

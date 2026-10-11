@@ -89,6 +89,11 @@ def test_isf_constant_ratio_and_ms2(serie, verita):
         assert not has(_riga(verita, i)["mz"]) and _riga(verita, i)["isf_in_ms2"] == 0
 
 
+def test_isf_decoys_exist_and_are_absent_from_the_ms2_of_their_parent(verita):
+    assert {r["ruolo"] for r in verita["ioni"]} >= {"isf", "isf_finto", "tp2", "esca"}
+    assert all(r["isf_in_ms2"] in (0, 1) for r in verita["ioni"] if r["ruolo"].startswith("isf"))
+
+
 def test_isomers_valley(verita):
     pairs = [r for r in verita["ioni"] if r["ruolo"] == "isomero" and r["note"].split("isomero_di=")[1] > r["id"]]
     assert sorted(float(p["note"].split("delta_rt=")[1].split(";")[0]) for p in pairs) == [0.05, 0.1, 0.2, 0.3]
@@ -136,5 +141,81 @@ def test_blank_dark_t0_and_background(serie, verita):
 def test_validation_reads_the_series(serie):
     rep = VF.valida(T.trova_serie(serie), VF.carica_verita(serie / "verita.json"), sensibilita=False, nome="sin")
     s = rep["tabelle"]["mzFinder riempita"]["tp_veri"]["riassunto"]
-    assert s["valutabili"] == 15 and s["trovati"] >= 10
+    n = len(json.loads((serie / "verita.json").read_text(encoding="utf-8"))["tps"])
+    assert s["valutabili"] == n and s["trovati"] >= 0.6 * n
     assert rep["tabelle"]["mzFinder riempita"]["completezza"]["M"]["trovati"] >= 10
+
+
+def test_kinetics_shapes():
+    c = SI.costruisci(SEME, "piccolo")
+    por = {}
+    for o in c.ioni:
+        if o.ruolo in ("tp1", "tp2", "progenitore"):
+            por.setdefault(o.forma, o)                                  # first ion of each kinetics
+    t = c.tempi                                                    # blank, dark, t0, 5, 10, 20
+    mono, bat, piatto, decr, rit, par = (por[k].amp for k in ("monotona", "bateman", "piatto", "decrescente", "ritardo", "progenitore"))
+    assert mono[0] == mono[1] == mono[2] == 0 and mono[3] < mono[4] < mono[5]                  # formation, nothing before the treatment, nothing in the blank
+    assert bat[4] > bat[3] and bat[4] > bat[5] > 0                                              # rises and falls
+    assert piatto[3:].std() / piatto[3:].mean() < 0.02 and piatto[1] == 0                      # constant once formed
+    assert decr[0] == 0 and decr[1] == decr[2] > decr[3] > decr[4] > decr[5] > 0               # present from t0, decays
+    g = np.linspace(0.1, 200, 4000)
+    assert g[np.argmax(SI.curva("ritardo", g, dict(kp=por["bateman"].k_form, ka=por["bateman"].k_dec, kb=por["ritardo"].k_dec)))] > \
+        g[np.argmax(SI.curva("bateman", g, dict(kf=por["bateman"].k_form, kd=por["bateman"].k_dec)))]      # second generation: delayed
+    assert por["ritardo"].generazione == 2 and por["ritardo"].progenitore == por["bateman"].id
+    assert par[0] == 0 and par[1] == par[2] > par[3] > par[4] > par[5]                         # first-order decay, stable in the dark
+
+
+def test_saturated_parent(serie, verita):
+    c = SI.costruisci(SEME, "piccolo")
+    padre = next(o for o in c.ioni if o.ruolo == "progenitore")
+    cap = padre.clip[0]
+    assert padre.amp[2] > cap * 1.2 and padre.amp[4] == pytest.approx(cap, rel=1e-6) and padre.amp[5] < cap * 0.85          # saturated until t_sat, then free
+    mz = _riga(verita, "SIN-001")["mz"]
+    def h_a(nome):
+        r = Run(serie / nome)
+        h = np.array([float(max([y[np.abs(x - mz) / mz < 5e-6].max(initial=0.0)]) if len(x) else 0.0) for x, y in (r.read(s.index) for s in r.scans if s.level == 1)])
+        return h.max(), h.sum()
+    (h0, a0), (h10, a10), (h20, a20) = h_a("SIN_t0.mzML"), h_a("SIN_t10min.mzML"), h_a("SIN_t20min.mzML")
+    assert h0 == pytest.approx(cap, rel=0.1) and h10 == pytest.approx(cap, rel=0.1)           # flat apex at the cap
+    assert 0.7 < a0 / a10 < 1.5 and a20 / a10 < 0.85                                            # area about constant while saturated, then it falls
+
+
+def test_decoys_are_not_in_the_data(serie, verita):
+    esche = [r for r in verita["ioni"] if r["ruolo"] == "esca"]
+    assert esche and all(r["presente"] == 0 and r["rt_obs"] == [] for r in esche)
+    r = Run(serie / "SIN_t20min.mzML")
+    mz = np.array([e["mz"] for e in esche])
+    hit = np.zeros(len(mz), bool)
+    for s in r.scans:
+        if s.level == 1:
+            x, y = r.read(s.index)
+            x = x[y > 1e5]
+            i = np.clip(np.searchsorted(x, mz), 1, max(len(x) - 1, 1))
+            if len(x) > 1:
+                hit |= np.minimum(np.abs(x[i] - mz), np.abs(x[i - 1] - mz)) / mz < 5e-6
+    assert not hit.any()
+
+
+def test_full_profile_has_the_numbers_of_the_plan():
+    c = SI.costruisci(SEME, "completo")
+    assert len(c.tempi) == 15 and len({t for t in c.tempi if t > 0}) == 12                       # 13 times (t0 and 12 treated) + blank + dark
+    rows = SI.righe_verita(c)
+    ruoli = [r["ruolo"] for r in rows]
+    assert len({r["famiglia"] for r in rows if r["ruolo"] in ("progenitore", "tp1", "tp2")}) >= 40
+    for d in (0.05, 0.1, 0.2, 0.3):
+        assert sum(1 for r in rows if r["ruolo"] == "isomero" and f"delta_rt={d};" in r["note"] and r["note"].split("isomero_di=")[1] > r["id"]) >= 8
+    for p in (0.95, 0.7, 0.5, 0.3):
+        assert sum(1 for r in rows if r["ruolo"] == "chimerica" and r["purezza"] == p) >= 20
+    assert ruoli.count("esca") >= 200 and ruoli.count("coincidenza") >= 50
+    m = c.meta_coinc
+    assert m["osservate"] == ruoli.count("coincidenza") and abs(m["osservate"] - m["attese"]) < 5 * m["attese"] ** 0.5       # declared number of chance coincidences
+    for r in rows:
+        if r["ruolo"] == "coincidenza":
+            assert abs(r["mz"] - float(r["note"].split("ipotesi_mz=")[1].split(";")[0])) / r["mz"] <= 5e-6
+
+
+def test_numbers_script_runs(serie, verita):
+    from valida import sintetici_numeri as SN
+    r = SN.numeri(serie)
+    assert r["per_ruolo"]["progenitore"]["trovate"] == 1 and r["per_ruolo"]["esca"]["con_segnale_a_qualunque_RT"] == 0 and r["candidati"] > 0
+    assert "| tp1 |" in SN.markdown(r)

@@ -102,7 +102,8 @@
   const rustOn = (() => {
     const m = /[?&]motore=(\w+)/.exec(location.search);
     if (m) return m[1] === "rust";
-    try { return localStorage.getItem("qqq.motore") === "rust"; } catch (_) { return false; }
+    try { const v = localStorage.getItem("qqq.motore"); if (v) return v === "rust"; } catch (_) { /* default */ }
+    return true;                                                         // Rust is the default engine; ?motore=python (or qqq.motore = "python") goes back to Python
   })();
   const notice = key => {                                                    // a short message under the header (a polite live region)
     const show = () => {
@@ -124,13 +125,20 @@
   const lrOn = rustOn && modern && !window.QQQ_PHONE && (() => {
     const m = /[?&]lr=(\w+)/.exec(location.search);
     if (m) return m[1] === "1";
-    try { return localStorage.getItem("qqq.lr") === "1"; } catch (_) { return false; }
+    try { const v = localStorage.getItem("qqq.lr"); if (v) return v === "1"; } catch (_) { /* default */ }
+    return true;                                                         // on by default with the Rust engine; ?lr=0 (or qqq.lr = "0") starts Pyodide first
   })();
   let lr = null, pyP = null;
   const lrInit = async () => {
     const b = await rustReady;
     if (!b || b.disabled) return startPython();
-    try { lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b }); await lr.boot(); window.MZLAB_LR = lr; }
+    try {
+      lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
+      const u = new URL(location.href), stall = +u.searchParams.get("ripresa") || 30000;       // the browser storage held by another tab: Python's loading screen says so
+      const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("reopening the saved files timed out")), stall))]);
+      if (u.searchParams.get("riparti") === "1") { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+      await within(lr.boot()); window.MZLAB_LR = lr;
+    }
     catch (e) { console.debug("[mzLab] flow without Pyodide not available", e); window.MZLAB_LR_ERR = String(e && e.message || e); lr = null; return startPython(); }
   };
   const needPython = () => pyP || (pyP = (async () => {
@@ -154,6 +162,12 @@
     const url = typeof input === "string" ? input : input.url;
     if (typeof url !== "string" || !/^(\.\/)?api\//.test(url)) return realFetch(input, init);
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
+    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;
+    if (tr) tr.push("fetch> " + url.slice(0, 80));
+    try { return await fetchApi(url, init); }
+    finally { if (tr) tr.push(`fetch< ${url.slice(0, 80)} ${Math.round(performance.now() - t0)}ms`); }
+  };
+  const fetchApi = async (url, init) => {
     await ready;
     const method = (init.method || "GET").toUpperCase();
     const rb = await rustReady;
