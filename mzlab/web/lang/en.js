@@ -500,6 +500,7 @@ I18N.add("en", {
   "error.engineRestarted": "The Rust engine restarted: your files were reopened, you can carry on.",
   "error.engineFallback": "The Rust engine stopped again: from here on the calculations go back to Python (no data lost).",
   "error.memoryBudget": "This file is too big for the Rust engine: Python reads it.",
+  "lr.python.loading": "Loading the full calculation engine: this feature needs it, it takes a few seconds.",
   "err.memory.tooBig": "This file is too big for the memory of the browser. Reduce it with MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (to make it lighter: --filter \"scanTime [600,1500]\" in seconds, --filter \"threshold count 300 most-intense\")",
   "err.memory.over4gb": "file over 4 GB: too big. Reduce it with MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (to make it lighter: --filter \"scanTime [600,1500]\" in seconds, --filter \"threshold count 300 most-intense\")",
   "tabs.overview.title": "Times and experiments",

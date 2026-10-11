@@ -605,7 +605,6 @@ const LISTE = (() => {
     const elChecks = container.querySelector("#lst-src-checks");
     const elChecksLbl = container.querySelector("#lst-src-lbl");
     const elUListBar = container.querySelector("#lst-userlists-bar");
-    const elFileIn = container.querySelector("#lst-file-in");
 
     const KIND_LBL = { entry: () => I18N.t("cont.excl.k.entry"), cls: () => I18N.t("cont.excl.k.cls"), list: () => I18N.t("cont.excl.k.list") };
     const elExcl = container.querySelector("#lst-excl");
