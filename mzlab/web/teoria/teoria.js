@@ -36,6 +36,7 @@ const CHAPTERS = [
   ["pratica-formula.html", "P5", "Formula esatta", "Pratica"],
   ["pratica-strumento.html", "P6", "Carte dello strumento", "Pratica"],
   ["pratica-quadrupolo.html", "P7", "Pilota il quadrupolo", "Pratica"],
+  ["pratica-tp.html", "P8", "Δm ed ESI± dei prodotti di trasformazione", "Pratica"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });

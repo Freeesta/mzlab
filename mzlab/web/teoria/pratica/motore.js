@@ -11,7 +11,7 @@ const PAL = (() => {
     M: "Ione molecolare", iso: "Isotopi ed elementi", formula: "Formula, azoto e RDB", serie: "Serie e ioni caratteristici",
     perdite: "Perdite neutre", meccanismi: "Meccanismi di frammentazione", struttura: "Struttura dallo spettro EI",
     hr: "Massa esatta e alta risoluzione", strumento: "Strumenti e tecniche", quad: "Il quadrupolo", mrm: "Transizioni MRM",
-    crom: "Cromatografia (GC e LC)", ion: "Ionizzazione", anal: "Analizzatori e risoluzione", dati: "Dati, quantificazione e TP",
+    crom: "Cromatografia (GC e LC)", ion: "Ionizzazione", anal: "Analizzatori e risoluzione", dati: "Dati, quantificazione e TP", tp: "Prodotti di trasformazione",
   };
   // ------------------------------------------------------------------ storage (never throws: private windows, blocked storage)
   function blank() { return { v: 1, skills: {}, items: {}, log: [] }; }
