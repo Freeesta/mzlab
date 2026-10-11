@@ -30,6 +30,11 @@ const normText = o => (o.norm === "tic" ? T("sub.norm.tic") : o.norm === "istd" 
 // «area on the trace minus {file} × {f}»: the note of the integration table and of the Excel sheets
 const text = p => { const o = eff(p); return o ? T("sub.note", { file: o.file.label, f: num(o.factor), norm: normText(o) }) : ""; };
 
+let live = null;
+function say(t) {                                                             // announced politely: the chip shows the state, no modal dialog
+  if (!live) { live = document.createElement("div"); live.setAttribute("role", "status"); live.setAttribute("aria-live", "polite"); live.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"; document.body.appendChild(live); }
+  live.textContent = ""; setTimeout(() => { live.textContent = t; }, 30);
+}
 let timer = 0;
 function refresh(tab, now) {                                                 // the preview follows the control after 150 ms
   clearTimeout(timer);
@@ -47,8 +52,8 @@ function set(tab, on) {
   refresh(tab, true);
   const o = on ? eff(E.panels.find(p => (p.tab || E.tab) === tab && KINDS.includes(p.type))) : null;
   if (on && !o) { r.on[tab] = false; info(T("sub.none")); }
-  else if (on) info(T("sub.on", { file: o.file.label, f: num(o.factor) }));
-  else info(T("sub.off"));
+  else if (on) say(T("sub.on", { file: o.file.label, f: num(o.factor) }));
+  else say(T("sub.off"));
   if (window.BARRA && BARRA.refresh) BARRA.refresh();
 }
 const isOn = (tab = E.tab) => !!R().on[tab] || E.panels.some(p => (p.tab || E.tab) === tab && eff(p));
