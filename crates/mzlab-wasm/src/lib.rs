@@ -537,6 +537,27 @@ pub fn build_mzidx(
     ))
 }
 
+/// What the index builder and the loading table need of an uploaded mzML, without Python (`mzlab-core::upload`): the scan table as the eight inputs of
+/// `build_mzidx` (levels, polarities, rt, tic, rows, source, run, hr1) and, at the end, the SHA-256 of the file. `read(offset, length)` gives the bytes.
+#[wasm_bindgen]
+pub fn prepare_upload(size: f64, read: Function, name: &str) -> Result<js_sys::Array, JsValue> {
+    let mut r = JsReader { read };
+    let p = mzlab_core::upload::prepare(&mut r, size as u64, name).map_err(|e| error_json(&e))?;
+    let t = &p.table;
+    let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
+    let out = js_sys::Array::new();
+    out.push(&Uint8Array::from(&t.level[..]));
+    out.push(&Uint8Array::from(&t.polarity.iter().map(|&v| v as u8).collect::<Vec<u8>>()[..]));
+    out.push(&f8(&t.rt));
+    out.push(&f8(&t.tic));
+    out.push(&Uint8Array::from(&t.scans_json[..]));
+    out.push(&JsValue::from_str(&t.source_json));
+    out.push(&JsValue::from_str(&t.run_json));
+    out.push(&JsValue::from_bool(t.hr1));
+    out.push(&JsValue::from_str(&p.sha256));
+    Ok(out)
+}
+
 /// Fields per peak written by `detect_peaks`: apex, lo, hi, area, height, snr, scans, gaussian, asymmetry (NaN = not measurable), noise score.
 pub const PEAK_FIELDS: usize = 10;
 
