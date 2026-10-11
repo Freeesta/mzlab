@@ -129,6 +129,15 @@ def noti_rossi() -> dict[str, str]:
     return out
 
 
+def teoria(results) -> None:
+    """Teoria chapters: structure, accessibility, markers, noindex; with MZLAB_DATI also forbidden names and copying (tools/controlla_teoria.py)."""
+    t0 = time.time()
+    p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_teoria.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    out = (p.stdout or "") + (p.stderr or "")
+    (LOG / "teoria.log").write_text(out, encoding="utf-8")
+    results.append(("Teoria (capitoli)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
 def js_syntax(results) -> None:
     web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
@@ -262,7 +271,7 @@ AREE = [
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
     ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("mzlab/web/sottrazione.js", {"e2e_sottrazione"}), ("mzlab/differenza.py", {"e2e_sottrazione"}),
-    ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
+    ("tools/controlla_i18n.py", set()), ("tools/controlla_teoria.py", set()), ("tools/nuovo_capitolo.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2", "e2e_mappa_mirino", "e2e_mappa_nav", "e2e_mappa_nav3d", "e2e_mappa_estrai", "e2e_mappa_estrai_hr", "e2e_mappa_correzione"}), ("mzlab/web/pannelli.js", {"e2e_mappa_correzione", "e2e_intestazioni"}), ("mzlab/web/mappa-estrai.js", {"e2e_mappa_estrai", "e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_estrai.py", {"e2e_mappa_estrai"}), ("tests_e2e/e2e_mappa_estrai_hr.py", {"e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_correzione.py", {"e2e_mappa_correzione"}), ("tests_e2e/e2e_mappa3d_errori.py", {"e2e_mappa3d_errori"}), ("mzlab/web/reset.js", {"e2e_reset"}), ("tests_e2e/e2e_reset.py", {"e2e_reset"}), ("mzlab/web/settings.js", {"e2e_reset"}), ("tests_e2e/e2e_mappa_nav.py", {"e2e_mappa_nav"}), ("mzlab/web/mirino.js", {"e2e_mappa", "e2e_mappa_mirino"}), ("tests_e2e/e2e_mappa_mirino.py", {"e2e_mappa_mirino"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d", "e2e_mappa_nav3d", "e2e_mappa3d_errori"}), ("tests_e2e/e2e_mappa_nav3d.py", {"e2e_mappa_nav3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore", "e2e_asse_x"}), ("mzlab/web/spettro.js", {"e2e_asse_x", "e2e_spettro"}), ("tests_e2e/e2e_asse_x.py", {"e2e_asse_x"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
@@ -368,6 +377,7 @@ def main() -> None:
     ap.add_argument("--senza-e2e", action="store_true")
     ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
     ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
+    ap.add_argument("--teoria", action="store_true", help="in più, il controllo dei capitoli della Teoria (tools/controlla_teoria.py; con MZLAB_DATI anche nomi vietati e copia dalle fonti)")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
@@ -388,6 +398,8 @@ def main() -> None:
         js_syntax(results)
         i18n(results)
         codice(results)
+        if a.teoria:
+            teoria(results)
         pytest(results, 1200)
         if not a.rapida:
             prova_hr(results)

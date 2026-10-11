@@ -110,6 +110,8 @@ jobs:
         run: |
           python3 tools/indice.py --controlla
           python3 tools/controlla.py
+      - name: Teoria chapters (no private data)
+        run: python3 tools/controlla_teoria.py
 
   # Types without a build step: tsc only reads the JS files listed in tsconfig.json (each one starts with `// @ts-check`). Not a required check yet.
   tipi:
