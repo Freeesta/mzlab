@@ -8,14 +8,6 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_teoria_cerca.py")][-1]
         steps.append((name, f"FAIL (line {ln}) " + str(e).split("\n")[0][:220]))
-def axe_path():
-    p = os.environ.get("AXE_JS")
-    if p and os.path.exists(p): return p
-    try:
-        import axe_playwright_python
-        q = os.path.join(os.path.dirname(axe_playwright_python.__file__), "axe.min.js")
-        return q if os.path.exists(q) else None
-    except ImportError: return None
 AXE = axe_path()
 r = Run(port=8970, wd="/tmp/wd_cerca")
 try:
