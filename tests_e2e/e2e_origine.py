@@ -22,7 +22,7 @@ try:
         step("no entry point in the interface; the window still opens from code with the ion filled", entry)
         def run():
             pg.fill("#og-par", "364.4"); pg.click("#og-go"); pg.wait_for_selector("#og-tb", timeout=60000); pg.wait_for_timeout(1500)
-            assert pg.locator("#og-out section").count() == 5
+            assert pg.locator("#og-out section:visible").count() == 5
             txt = pg.inner_text("#og-out")
             for w in ["Pearson", "F contro P", "cinetica", "La tua ipotesi"]: assert w.lower() in txt.lower(), w
             for bad in ["è un frammento in sorgente.", "verdetto:", "conclusione:"]: assert bad not in txt
