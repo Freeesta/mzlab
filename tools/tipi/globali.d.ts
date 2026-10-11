@@ -6,7 +6,13 @@ interface Window {
   MZLAB_COMMIT: string;
   MZLAB_PHONE: boolean;
   QQQ_PHONE: boolean;
+  FEATURES: any;
+  MIRINO: any;
+  QUALITA: any;
+  STAT: any;
+  HR: any;
 }
+declare const BANCO: any;
 declare const APP_NAME: string;
 declare const I18N: { t(key: string, params?: Record<string, unknown>): string; [k: string]: any };
 declare function dl(name: string, text: string | Uint8Array, type?: string): void;

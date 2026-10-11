@@ -17,10 +17,17 @@
   },
   "include": [
     "tools/tipi/globali.d.ts",
-    "mzlab/web/ordine.js",
-    "mzlab/web/xlsx.js",
-    "mzlab/web/version.js",
     "mzlab/web/appname.js",
-    "mzlab/web/telefono.js"
+    "mzlab/web/calcola.js",
+    "mzlab/web/cromato.js",
+    "mzlab/web/features.js",
+    "mzlab/web/mirino.js",
+    "mzlab/web/ordine.js",
+    "mzlab/web/perdite.js",
+    "mzlab/web/qualita.js",
+    "mzlab/web/stat.js",
+    "mzlab/web/telefono.js",
+    "mzlab/web/version.js",
+    "mzlab/web/xlsx.js"
   ]
 }

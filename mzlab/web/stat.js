@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // «Statistica» panel of the drawer: sections added by the modules that own them (STAT.add), in the order of the scripts.
 //   { id, title (key of lang/), hr: true when the section exists only in high resolution, visible(), mount(box) }

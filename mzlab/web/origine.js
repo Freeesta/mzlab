@@ -1,5 +1,4 @@
-"use strict";
-// "Da dove viene questo ione?" (Origin of an ion). Classic script, loaded after explore.js.
+// "Da dove viene questo ione?" (Origin of an ion). ES module (loaded after explore.js); only openOrigin goes on window.
 // ONE window (like openXic) that shows the EVIDENCE computed by mzlab/ionfamily.py (/api/origin) and never a verdict:
 //   (a) normalised XICs of the ion, of the candidate precursor and of the co-eluting ions the student picks,
 //   (b) table of the co-eluting ions sorted by correlation, with the difference in apex time and in mass (neutral losses are hints),
@@ -201,3 +200,5 @@ function ogXlsx() {
     { name: I18N.t("og.x.fp"), head: [I18N.t("og.x.pCand"), I18N.t("og.x.fIon"), I18N.t("og.x.fLine")], widths: [16, 16, 16], rows: (pts.p || []).map((v, i) => [v, pts.f[i], (pts.fit || [])[i]]) },
     { name: I18N.t("og.x.kin"), head: [I18N.t("load.table.time"), I18N.t("og.x.candNorm"), I18N.t("og.x.ionNorm"), I18N.t("og.x.ratio2")], widths: [12, 22, 20, 12], rows: (K.times || []).map((t, i) => [t, (K.parent_norm || [])[i], (K.ion_norm || [])[i], (K.ratio || [])[i]]) }]);
 }
+
+window.openOrigin = openOrigin;
