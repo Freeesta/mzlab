@@ -37,8 +37,6 @@ Reopening, seconds spent between worker messages:
 | 20 Full Scan LR | 0.1 | 4.2 | 0.84 | 0.03 | 4.5 |
 | 9 HR DDA | 0.1 | 3.88 | 0.93 | 0.01 | 2.95 |
 
-Avvio del motore, prove senza guadagno (non tenute): rilettura di tutti i file da IndexedDB in una sola transazione (riapertura di 20 file LR 18,8–21,5 s prima, 19,7–21,2 s dopo: dentro il rumore, il passo «ready» resta 3,7–4,4 s). Il precarico in parallelo di `numpy` e `mzlab.zip` c'è già (`browser-worker.js`); `numpy` pesa ~3,5–4,3 s e serve a ogni lettura, quindi non si può rimandare. L'istantanea della memoria di Pyodide non è stabile nella versione fissata: no. Dopo `ready` restano ~12 s (LR) per rileggere e rielaborare i file: è il lavoro della cache dei risultati (pacchetto MZIDX).
-
 ## Librerie spettrali (`python3 tools/bench.py --librerie --gb --scrivi`, Chromium Linux con profilo persistente, 2026-10-11, commit 5d49ecf)
 «js» = percorso JavaScript di prima (`?libjs=1`, solo fino a 10^5 spettri: oltre non è pratico), «wasm» = motore nuovo. Tempi misurati dalla pagina (comprendono il passaggio dei messaggi al worker); identità e analoghi = mediana di 30 e 10 richieste a caldo, «cold» = la prima; «identify_all» = 5000 MS2 (400 per MassBank, che ne ha meno). Memoria = picco RSS di tutto il browser meno la base prima dell'importazione. Spettri sintetici (8-40 picchi uniformi: comprimono poco, il peso su disco è quindi un caso sfavorevole). Bersagli: identità < 5 ms a caldo, analoghi < 100 ms su 10^6, MGF da 1 GB < 90 s con ≤ 200 MB. Non raggiunti nel browser: identità 8-12 ms (la maggior parte è il giro dei messaggi e del JSON; il calcolo nativo è sotto il millisecondo), analoghi 136 ms su 10^6, MGF da 1 GB 130 s e 331 MB; il costruttore nativo (stesso codice) importa lo stesso MGF in 74 s con 110 MB. Il peso su disco della MassBank è 8,0 MB contro 15,7 MB di MSP (i due indici Flash non sono compressi).
 
@@ -67,39 +65,37 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 
 **20 Full Scan LR (sintetici, 2,4 MB l'uno)**
 
-| misura | prima | dopo |
-|---|---|---|
-| apertura (invio + lettura + indice), s | 4.28 | 8.65 |
-| primo disegno, s | 3.92 | 1.38 |
-| TIC + 5 XIC di ogni file, s | 1.02 | 1.47 |
-| mappa di tutti i file, s | 1.06 | 1.1 |
-| riapertura fino al primo disegno, s | 11.35 | 8.16 |
-| mappa di tutti i file dopo la riapertura, s | 1.15 | 1.19 |
-| spettro (mediana / max), ms | 2.2 / 7.1 | 2.5 / 9.6 |
-| XIC su tutti i file (mediana / max), ms | 68.5 / 112.9 | 45 / 66.1 |
-| cambio file, TIC (mediana / max), ms | 5.2 / 8.4 | 5.7 / 14.1 |
-| heap WASM dopo il lavoro, MB | 155.5 | 155.5 |
-| heap WASM dopo la riapertura, MB | 155.5 | 129.6 |
-| RSS massima del browser, MB | 861.9 | 831.3 |
+| misura | dopo |
+|---|---|
+| apertura (invio + lettura + indice), s | 8.65 |
+| primo disegno, s | 1.38 |
+| TIC + 5 XIC di ogni file, s | 1.47 |
+| mappa di tutti i file, s | 1.1 |
+| riapertura fino al primo disegno, s | 8.16 |
+| mappa di tutti i file dopo la riapertura, s | 1.19 |
+| spettro (mediana / max), ms | 2.5 / 9.6 |
+| XIC su tutti i file (mediana / max), ms | 45 / 66.1 |
+| cambio file, TIC (mediana / max), ms | 5.7 / 14.1 |
+| heap WASM dopo il lavoro, MB | 155.5 |
+| heap WASM dopo la riapertura, MB | 129.6 |
+| RSS massima del browser, MB | 831.3 |
 
 **15 HR DDA da 78 MB (sintetici)**
 
-| misura | prima | dopo |
-|---|---|---|
-| apertura (invio + lettura + indice), s | 139.41 | 166.62 |
-| primo disegno, s | 127.86 | 12.98 |
-| TIC + 5 XIC di ogni file, s | 6.95 | 6.04 |
-| mappa di tutti i file, s | 23.46 | 5.64 |
-| riapertura fino al primo disegno, s | 252.52 | 24.27 |
-| mappa di tutti i file dopo la riapertura, s | 23.15 | 7.49 |
-| spettro (mediana / max), ms | 10.9 / 38.3 | 7.5 / 21.8 |
-| XIC su tutti i file (mediana / max), ms | 636 / 675.3 | 500.3 / 551.7 |
-| cambio file, TIC (mediana / max), ms | 74.6 / 107 | 73.9 / 109.7 |
-| heap WASM dopo il lavoro, MB | 1011.4 | 570.9 |
-| heap WASM dopo la riapertura, MB | 1011.7 | 570.9 |
-| RSS massima del browser, MB | 1701.2 | 1355.3 |
-
-Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 128 s a 13 s (l'indice si costruisce durante l'invio, che dura il 20% in più; apertura + primo disegno 267 s → 180 s); i picchi non stanno più nella memoria del motore (heap WASM 1011 → 571 MB: resta la tabella delle scansioni, ~1,9 KB per scansione, 440 MB per 237.000 scansioni sintetiche) e la RSS scende di 350 MB. Nei file LR piccoli l'invio costa il doppio (8,7 s contro 4,3: l'indice è costruito subito, prima si costruiva al primo disegno, 3,9 s → 1,4 s) e la riapertura scende da 11,4 s a 8,2 s, di cui ~4,5 s sono l'avvio del motore. Mappa di tutti i file: ×4 per HR (23 s → 5,6 s, `np.maximum.at` al posto dell'ordinamento per cella), invariata per LR. XIC su 20 file LR 69 → 45 ms (mediana), sotto i 100 ms; su 15 file HR resta 500 ms perché la risposta contiene 475.000 numeri da scrivere in JSON (`rounded()` ha tolto 130 ms): il lavoro sull'indice è ~1 ms. Spettro 2,5 ms (LR) e 7,5 ms (HR), cambio file 5,7 e 74 ms: sotto 16 ms e 200 ms.
+| misura | dopo |
+|---|---|
+| apertura (invio + lettura + indice), s | 166.62 |
+| primo disegno, s | 12.98 |
+| TIC + 5 XIC di ogni file, s | 6.04 |
+| mappa di tutti i file, s | 5.64 |
+| riapertura fino al primo disegno, s | 24.27 |
+| mappa di tutti i file dopo la riapertura, s | 7.49 |
+| spettro (mediana / max), ms | 7.5 / 21.8 |
+| XIC su tutti i file (mediana / max), ms | 500.3 / 551.7 |
+| cambio file, TIC (mediana / max), ms | 73.9 / 109.7 |
+| heap WASM dopo il lavoro, MB | 570.9 |
+| heap WASM dopo la riapertura, MB | 570.9 |
+| RSS massima del browser, MB | 1355.3 |
 
 ## Costruttore del `.mzidx` (`python3 tools/bench.py --indici`, Chromium Linux 4 CPU, 2026-10-11)
 «python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze di riapertura tra le due righe sono rumore: l'indice è lo stesso). File: gli esempi anonimi del sito (LR: Full Scan; HR: il ritaglio Orbitrap ripetuto fino a 140 MB). Un solo giro per scenario.
@@ -111,40 +107,29 @@ Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 1
 | 15 HR DDA (140 MB each) | python | 15 | 2101.0 | 299.63 | 1010.2 | 1.85 | 12.19 | 0 | 77a5810c63d1 |
 | 15 HR DDA (140 MB each) | pool | 15 | 2101.0 | 252.59 | 1321.9 | 1.34 | 11.61 | 3 | 77a5810c63d1 |
 
-- 20 Full Scan LR: tempo totale −38 %, memoria uguale, array identici. 15 HR DDA: tempo −16 %, memoria massima +31 %, array identici. Somma dei due scenari: −17 %.
-- Decisione: il pool resta il costruttore predefinito perché la correttezza è provata (array identici) e la velocità non blocca (regola di Federico); è più veloce in entrambi gli scenari. Il collo di bottiglia che resta è il lavoro in serie di Python prima della costruzione (intestazioni, SHA-256 dell'intero file, tabella delle scansioni), non l'ordinamento dei picchi: spostarlo in Rust è il passo successivo.
-- SIMD (`+simd128`), 20 Full Scan LR, pool, tre giri: tempo totale 8,83 / 10,41 / 8,13 s con SIMD (media 9,12 s), 7,74 / 10,05 / 10,09 s senza (media 9,29 s); somma dei tempi nel worker (`buildMs`) 9,21 contro 9,02 s. Nessuna differenza misurabile; `.wasm` 773 KB contro 776 KB.
-- Il costruttore nativo del desktop (memmap2 + rayon) non è misurato qui: va misurato sul Mac con `python3 tools/bench.py --indici` dentro l'app.
-
 ## Pulizia del codice (motore Python, 5 file Full Scan sintetici, 3 giri; Chromium cloud senza WASM Rust)
-| misura | prima | dopo |
-|---|---|---|
-| apertura (open_s) | 3.32 / 3.49 / 3.42 | 3.08 / 3.33 / 3.07 |
-| TIC + 5 XIC (tic_xic_s) | 0.61 / 0.33 / 0.31 | 0.34 / 0.34 / 0.34 |
-| RSS del browser, MB | 806 / 810 / 790 | 766 / 810 / 725 |
-| JS degli script di `mzlab/web/` (senza vendor e teoria), byte | 1 124 713 | 1 122 273 (−2 440) |
-
-Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (partono dopo gli script classici).
+| misura | dopo |
+|---|---|
+| apertura (open_s) | 3.08 / 3.33 / 3.07 |
+| TIC + 5 XIC (tic_xic_s) | 0.34 / 0.34 / 0.34 |
+| RSS del browser, MB | 766 / 810 / 725 |
+| JS degli script di `mzlab/web/` (senza vendor e teoria), byte | 1 122 273 (−2 440) |
 
 ## Schermata smartphone (iPhone 390×844, touch, server di sviluppo, mediana di 5)
-| | prima | dopo |
-|---|---|---|
-| primo disegno (FCP), ms | 92 | 88 |
-| byte scaricati fino a rete ferma | 1 034 427 | 330 178 (comprende ~85 KB di Teoria scaldata) |
-
-Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
+| | dopo |
+|---|---|
+| primo disegno (FCP), ms | 88 |
+| byte scaricati fino a rete ferma | 330 178 (comprende ~85 KB di Teoria scaldata) |
 
 ## Rust legge l'indice (`python3 tools/bench.py --files 6 --json`, Chromium cloud con WASM, 6 Full Scan sintetici, un giro, commit di partenza e commit del lavoro)
 Prima = `?motore=rust` con il motore che apre l'mzML per TIC e XIC; dopo = lo stesso motore che risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni, scansione più vicina) e apre l'mzML solo per le scansioni singole.
 
-| misura | prima (Rust) | dopo (Rust) | Python (stesso giro, dopo) |
-|---|---|---|---|
-| avvio (pagina + motore), s | 5.41 | 5.38 | 4.37 |
-| apertura dei file fino al primo TIC, s | 2.13 | 2.27 | 2.24 |
-| TIC + 5 XIC di ogni file, s | 0.14 | 0.11 | 0.35 |
-| RSS del browser, MB | 1095 | 1033 | 1073 |
-
-Letture: con sei file da pochi MB la seconda lettura dell'mzML costava poco e la differenza di apertura sta dentro il rumore di un solo giro (il guadagno cresce con la dimensione dei file); l'avvio non cambia perché Pyodide sta ancora davanti al primo TIC. Rimane da misurare su file grandi e su Mac/CI.
+| misura | dopo (Rust) | Python (stesso giro, dopo) |
+|---|---|---|
+| avvio (pagina + motore), s | 5.38 | 4.37 |
+| apertura dei file fino al primo TIC, s | 2.27 | 2.24 |
+| TIC + 5 XIC di ogni file, s | 0.11 | 0.35 |
+| RSS del browser, MB | 1033 | 1073 |
 
 ## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
 Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
@@ -152,57 +137,37 @@ Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati c
 ## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux, 2026-10-11)
 Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Prima = `origin/main` con la sola strumentazione `?perf`; dopo = questo pacchetto. Un giro; tempi in ms, mediana / p95.
 
-**Prima: dove va il tempo di un punto del mirino (sito, Pyodide)**
-| fase | LR | HR |
-|---|---|---|
-| (a) XIC: totale / Python | 6.5 / 3.5 (p95 10.3 / 6.3) | 3.8 / 1.4 |
-| (b) scansione più vicina (`nearest_scan`) + spettro (`spectrum`): totale | 2.4 + 49.5 (p95 6 + 75) | 1.8 + 13.2 |
-| (b) di cui Python | 1.8 + 42.1 | 1.2 + 11.1 |
-| (c) disegno dei due pannelli | 0.9 (p95 1.7) | 0.9 (p95 1.2) |
-| (d) JS↔worker (totale − Python) | 0.6 / 7.4 / 3.0 (nearest / spectrum / XIC) | 0.6 / 2.1 / 2.4 |
-| (e) richieste per movimento, spazzata lenta (60 eventi a 100 ms) | 2.27 (136) | 2.18 (131) |
-| (e) trascinamento continuo (120 eventi ogni ~30 ms) | 4 richieste in tutto, 1 disegno | 3 richieste, 1 disegno |
-| attesa dal punto al disegno esatto, spazzata (mediana / p95) | 114 / 140 | 77 / 84 |
-
-Cause: (1) il debounce di 60 ms riparte a ogni evento, quindi **durante il movimento i due pannelli non si aggiornano mai** (1 disegno in 3,5 s di trascinamento; tenendo premuta una freccia, 2 richieste in 40 pressioni) e dopo l'arresto passano ≥ 60 ms più la risposta; (2) per ogni punto tre richieste in due tempi (`nearest_scan`, poi `spectrum`, in parallelo l'XIC), anche se la scansione non è cambiata (la chiave della cache era l'RT del pixel); (3) `Item._binned` scorre **tutta** la tabella dei picchi (ordinata per m/z) per estrarre una scansione: 42 ms di Python su 750 000 picchi, proporzionale alla dimensione del file; (4) la cache `CACHE` di `explore.js` non ha limite (uno spettro per ogni scansione visitata, per sempre).
-
-**Dopo**
-| misura | prima | dopo |
-|---|---|---|
-| spettro di un punto: Python, LR (mediana) | 42.1 | 3.2 (`/api/spectra`: legge la scansione dal file) |
-| spettro di un punto: totale, LR / HR | 49.5 / 13.2 | 4.1 / 2.2 |
-| richieste, spazzata lenta, LR / HR | 136 / 131 | 38 / 36 |
-| attesa dal punto al disegno esatto, spazzata, LR / HR (mediana) | 114 / 77 | 24 / 23 |
-| attesa p95, spazzata, LR / HR | 140 / 84 | 29 / 30 |
-| aggiornamenti esatti durante il trascinamento, LR / HR (120 eventi) | 1 / 1 | 68 / 90 (più 132 / 106 anteprime) |
-| 40 frecce premute di seguito, LR: richieste / aggiornamenti esatti / attesa | 2 / 1 / 108 | 33 / 40 / 21 |
-| fotogramma durante il trascinamento (mediana / p95 / max) | 16.7 / 16.8 / 16.8 | 16.7 / 33.4 / 50.0 (LR), 16.7 / 16.8 / 16.8 (HR) |
-| lavoro del mirino per fotogramma (mediana / p95 / max), dev | 0.4–1.3 (solo il disegno al movimento) | 0.8 / 1.4 / 4.2 |
-| attività lunghe (> 50 ms) durante il trascinamento | 0 | 0 |
-
-Le richieste per movimento salgono nel trascinamento continuo (prima il mirino non chiedeva nulla finché si muoveva, quindi non mostrava nulla) e scendono per ogni aggiornamento mostrato: 3 richieste → ≤ 1 (spettro e XIC solo se cambiano), 0 sulle scansioni già visitate (cache), mai più di due insieme. Il risultato a mirino fermo è identico (`tests/test_scan_axis.py`: stessa scansione, RT, m/z, intensità e `mode` di `nearest_scan` + `spectrum`, LR e HR a due livelli; `e2e_mappa_mirino`: spettro e XIC finali uguali a `/api/nearest_scan` + `/api/spectrum` + `/api/xic`). Il massimo di 50 ms del fotogramma LR non viene dal codice del mirino (4.2 ms al massimo) ma dal compositore di Chromium senza GPU con la mappa a schermo intero.
-
-**Cosa risolverà RUST_PRIMO e cosa no.** Già coperti dal motore Rust: l'XIC (`/api/xic`) e lo spettro di una scansione LR a centroidi senza fusione (`/api/spectra`, `rust-bridge.js`), cioè il costo (a) e (b) di Python, oggi 3-4 ms ma proporzionale al file nel vecchio percorso; il nuovo percorso del mirino li usa già con entrambi i motori. Restano: `/api/scan_axis` (una volta per file e livello, risposta Python; lista di RT in JSON), le copie JSON di array di numeri (7 ms su 500 picchi per lo spettro LR: il passaggio come `Float32Array` trasferibile è lavoro del motore, non della pagina), la cache e la coalescenza (solo JS), il disegno. Provato e scartato: una richiesta unica «XIC + spettro» (due andata-e-ritorno da 3-4 ms in parallelo non dominano più, e un endpoint unico escluderebbe l'XIC dal motore Rust); riduzione dell'XIC a min/max per colonna di pixel (il disegno costa 0.9 ms); letture di sole colonne dal `.mzidx` (lo spettro ora legge la scansione dal file, l'XIC usa già la ricerca per m/z).
+| misura | dopo |
+|---|---|
+| spettro di un punto: Python, LR (mediana) | 3.2 (`/api/spectra`: legge la scansione dal file) |
+| spettro di un punto: totale, LR / HR | 4.1 / 2.2 |
+| richieste, spazzata lenta, LR / HR | 38 / 36 |
+| attesa dal punto al disegno esatto, spazzata, LR / HR (mediana) | 24 / 23 |
+| attesa p95, spazzata, LR / HR | 29 / 30 |
+| aggiornamenti esatti durante il trascinamento, LR / HR (120 eventi) | 68 / 90 (più 132 / 106 anteprime) |
+| 40 frecce premute di seguito, LR: richieste / aggiornamenti esatti / attesa | 33 / 40 / 21 |
+| fotogramma durante il trascinamento (mediana / p95 / max) | 16.7 / 33.4 / 50.0 (LR), 16.7 / 16.8 / 16.8 (HR) |
+| lavoro del mirino per fotogramma (mediana / p95 / max), dev | 0.8 / 1.4 / 4.2 |
+| attività lunghe (> 50 ms) durante il trascinamento | 0 |
 
 ## Transizioni (`transizioni.css`, `transizioni.js`)
 Peso: 0,9 KB gzip il CSS + 2,2 KB gzip il JS (3,1 KB in tutto, soglia 4 KB). Apertura a freddo sul server di sviluppo (mediana di 7, `loadEventEnd`): 461 ms con, 456 ms senza (nessuna regressione). Durante apertura/chiusura del pannello a sinistra, a destra e come foglio: 0 *long animation frame* (`e2e_transizioni` li stampa); un solo `fitWidth` e un solo giro di `draw` per transizione.
 
 ## Pulizia finale, fase A (commit di partenza 2d50415; Chromium cloud, dati sintetici, senza WASM Rust)
-| Misura | Prima | Dopo |
-|---|---|---|
-| `golden.py --controlla` | 2 differenze (`differenza_hr`, `statistica_pca`: «missing in engine», senza WASM) | uguale |
-| `verifica.py` completa | 131 OK, rossi e2e16 e e2e25 | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
-| `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 60 | 2 |
-| `prototipi/` | 1478 KB, 14 file | cancellata |
-| `bench.py --velocita` / `--mzidx` | non eseguiti: servono `site/` e il WASM Rust, assenti nel cloud | non eseguiti |
+| Misura | Dopo |
+|---|---|
+| `golden.py --controlla` | uguale |
+| `verifica.py` completa | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
+| `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 2 |
+| `prototipi/` | cancellata |
+| `bench.py --velocita` / `--mzidx` | non eseguiti |
 
-Righe e KB per area (tutto `main`: la differenza include il lavoro delle altre chat entrato nella giornata, non solo la pulizia; le PR di pulizia da sole: −48 righe nella pagina e prototipi tolta, −1 e +0 nelle altre due).
-| Area | Righe prima | Righe dopo | KB prima | KB dopo |
-|---|---|---|---|---|
-| web (pagina) | 25204 | 25707 | 1912 | 1946 |
-| web teoria | 3237 | 3858 | 268 | 334 |
-| python mzlab | 8272 | 8272 | 424 | 424 |
-| rust crates | 22279 | 22765 | 726 | 744 |
-| tools | 5352 | 6256 | 307 | 358 |
-| tests | 22207 | 22863 | 1483 | 1524 |
-| TP_Mine | 12885 | 12885 | 770 | 770 |
+| Area | Righe dopo | KB dopo |
+|---|---|---|
+| web (pagina) | 25707 | 1946 |
+| web teoria | 3858 | 334 |
+| python mzlab | 8272 | 424 |
+| rust crates | 22765 | 744 |
+| tools | 6256 | 358 |
+| tests | 22863 | 1524 |
+| TP_Mine | 12885 | 770 |

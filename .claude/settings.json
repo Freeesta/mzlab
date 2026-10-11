@@ -14,7 +14,8 @@
       "Read(./.git/**)",
       "Read(./**/__pycache__/**)",
       "Read(./.pytest_cache/**)",
-      "Read(./**/*.egg-info/**)"
+      "Read(./**/*.egg-info/**)",
+      "Read(./docs/agenti/misure-diario.md)"
     ]
   },
   "autoCompactWindow": 350000
