@@ -73,3 +73,149 @@ def blank_filter(matrix, roles: list[str], factor: float = 3.0, stat: str = "max
             for i in range(m.shape[0])]
     return {"kept": [int(i) for i in np.flatnonzero(keep)], "discarded": [int(i) for i in np.flatnonzero(~keep)], "rows": rows,
             "stat": stat, "factor": float(factor), "min_detect": int(min_detect), "n_blank": len(bl), "n_sample": len(sm)}
+
+
+# ------------------------------------------------------------------------------------------------ exploratory PCA
+MIN_SAMPLES = 5                      # below this the PCA is not offered: with fewer samples the axes describe the noise
+SCALINGS = ("pareto", "auto", "none")
+TRANSFORMS = ("log", "none")
+
+
+def impute(x: np.ndarray) -> tuple[np.ndarray, int]:
+    """Replace every missing value (0 = not detected) of a feature by 1/5 of the smallest value that feature has (declared, never silent).
+    x: features x samples. Returns the filled copy and how many values were replaced."""
+    out = x.copy()
+    n = 0
+    for i in range(out.shape[0]):
+        pos = out[i] > 0
+        if pos.all():
+            continue
+        out[i, ~pos] = out[i, pos].min() / 5.0 if pos.any() else 0.0
+        n += int((~pos).sum())
+    return out, n
+
+
+def _scale(z: np.ndarray, scaling: str) -> np.ndarray:
+    """samples x features: centre every feature, then divide by sd (auto), sqrt(sd) (Pareto) or nothing."""
+    z = z - z.mean(axis=0)
+    if scaling == "none":
+        return z
+    sd = z.std(axis=0, ddof=1)
+    sd[sd == 0] = 1.0
+    return z / (sd if scaling == "auto" else np.sqrt(sd))
+
+
+def _svd(xs: np.ndarray, k: int):
+    u, s, vt = np.linalg.svd(xs, full_matrices=False)
+    k = min(k, len(s))
+    # sign convention (the sign of a component is arbitrary): the loading of largest size is positive
+    for j in range(k):
+        if vt[j, np.argmax(np.abs(vt[j]))] < 0:
+            vt[j] = -vt[j]; u[:, j] = -u[:, j]
+    return u[:, :k] * s[:k], vt[:k].T, (s ** 2) / max((s ** 2).sum(), 1e-300), s
+
+
+def _align(load_full: np.ndarray, load_sub: np.ndarray) -> np.ndarray:
+    """Components of a PCA done without one sample, matched to the components of the full PCA by the largest |cosine| (order and sign of
+    the components can change), so that loadings can be compared. Returns the loadings reordered and sign-aligned (features x k)."""
+    k = load_full.shape[1]
+    c = load_full.T @ load_sub                       # k x k' cosines (unit vectors)
+    out = np.zeros_like(load_full)
+    used: set[int] = set()
+    for j in range(k):
+        order = [i for i in np.argsort(-np.abs(c[j])) if i not in used]
+        i = order[0] if order else None
+        if i is None:
+            continue
+        used.add(int(i))
+        out[:, j] = load_sub[:, i] * (1.0 if c[j, i] >= 0 else -1.0)
+    return out
+
+
+def loo_stability(zt: np.ndarray, scaling: str, load_full: np.ndarray, ncomp: int = 2) -> np.ndarray:
+    """Stability of the loadings of every feature: the PCA is repeated leaving out one sample at a time (scaling recomputed each time);
+    rel = (sd of the loading over the repetitions) / (typical loading, 1/sqrt(p)); stability = 1 / (1 + rel) in (0, 1] (1 = the loading never
+    moved; 0.5 = it moves as much as a typical loading). Returns features x ncomp (one column per component). zt: samples x features."""
+    n, p = zt.shape
+    k = min(ncomp, load_full.shape[1])
+    runs = []
+    for i in range(n):
+        sub = np.delete(zt, i, axis=0)
+        _, ld, _, _ = _svd(_scale(sub, scaling), max(k, 1) + 1)
+        runs.append(_align(load_full[:, :k], ld[:, : k + 1] if ld.shape[1] > k else ld))
+    sd = np.std(np.array(runs), axis=0)              # features x k
+    rel = sd / (1.0 / np.sqrt(p))
+    return 1.0 / (1.0 + rel)
+
+
+def ellipse(points: np.ndarray, chi2: float = 5.991) -> dict | None:
+    """95 % covariance ellipse of the points (n x 2) of one group of replicates: centre, semi-axes and angle (radians) of the first axis;
+    None below three points. An indication of the spread of the replicates, not a test."""
+    if len(points) < 3:
+        return None
+    c = points.mean(axis=0)
+    w, v = np.linalg.eigh(np.cov(points.T))
+    w = np.clip(w, 0.0, None)
+    return {"cx": float(c[0]), "cy": float(c[1]), "a": float(np.sqrt(chi2 * w[1])), "b": float(np.sqrt(chi2 * w[0])), "angle": float(np.arctan2(v[1, 1], v[0, 1]))}
+
+
+def pca_analysis(matrix, roles: list[str], groups: list[str] | None = None, factor: float = 3.0, stat: str = "max", min_detect: int = 1,
+                 min_intensity: float = 0.0, min_samples: int = 2, transform: str = "log", scaling: str = "pareto", ncomp: int = 5) -> dict:
+    """Exploratory PCA of a feature table (features x samples, areas). NOT a test: with few or no replicates it is a way to look at the data.
+
+    Order of the work (nothing is hidden: the counts of every step are returned):
+      1. samples = files that are not blanks or dark (needs at least MIN_SAMPLES, else UserError);
+      2. filter of the features: above the blank (blank_filter; skipped, and said so, when there is no blank file), with a maximum
+         area >= min_intensity, present (area >= min_intensity) in at least min_samples samples;
+      3. missing values imputed with 1/5 of the minimum of the feature (counted);
+      4. transform (log2 or none), centring and scaling (Pareto by default; 'auto' divides by sd and inflates the noise with few samples);
+      5. SVD: scores, loadings, variance explained by every component;
+      6. stability of the loadings leaving one sample out at a time; 95 % ellipses of the groups of replicates (>= 3 samples).
+    Returns indices relative to the input: 'features' (kept), 'samples' (used)."""
+    if transform not in TRANSFORMS or scaling not in SCALINGS:
+        raise UserError("err.stat.pca.param", text="unknown transform or scaling")
+    m = _matrix(matrix)
+    sm = [i for i, r in enumerate(roles) if r not in ("blank", "dark")]
+    if len(sm) < MIN_SAMPLES:
+        raise UserError("err.stat.pca.few", {"n": len(sm), "min": MIN_SAMPLES}, f"PCA needs at least {MIN_SAMPLES} samples, there are {len(sm)}")
+    if m.shape[0] == 0:
+        raise UserError("err.stat.pca.nofeatures", text="no feature in the table")
+    steps = [{"step": "table", "n": int(m.shape[0])}]
+    keep = np.ones(m.shape[0], bool)
+    has_blank = any(r == "blank" for r in roles)
+    if has_blank:
+        bf = blank_filter(matrix, roles, factor, stat, min_detect)
+        keep &= np.isin(np.arange(m.shape[0]), bf["kept"])
+    steps.append({"step": "blank", "n": int(keep.sum()), "applied": has_blank})
+    x = m[:, sm]
+    keep &= x.max(axis=1) >= min_intensity
+    steps.append({"step": "intensity", "n": int(keep.sum()), "min": float(min_intensity)})
+    keep &= (x >= max(min_intensity, np.finfo(float).tiny)).sum(axis=1) >= int(min_samples)
+    steps.append({"step": "presence", "n": int(keep.sum()), "min_samples": int(min_samples)})
+    idx = np.flatnonzero(keep)
+    if len(idx) < 2:
+        raise UserError("err.stat.pca.nofeatures", text="fewer than two features survive the filters")
+    filled, n_imp = impute(x[idx])
+    z = np.log2(filled) if transform == "log" else filled
+    zt = z.T                                          # samples x features
+    sd = zt.std(axis=0, ddof=1)
+    live = sd > 0                                     # a constant feature carries nothing
+    idx, zt = idx[live], zt[:, live]
+    if len(idx) < 2:
+        raise UserError("err.stat.pca.nofeatures", text="fewer than two features vary between the samples")
+    xs = _scale(zt, scaling)
+    scores, loadings, expl, _ = _svd(xs, ncomp)
+    stab_pc = loo_stability(zt, scaling, loadings, 2)
+    w = loadings[:, : stab_pc.shape[1]] ** 2                       # a feature counts mostly where its loading is large: weight each component's stability by it
+    stab = np.where(w.sum(axis=1) > 0, (w * stab_pc).sum(axis=1) / np.maximum(w.sum(axis=1), 1e-300), stab_pc.min(axis=1))
+    ell = {}
+    if groups is not None:
+        gs = [groups[i] for i in sm]
+        for g in dict.fromkeys(gs):
+            pts = scores[[j for j, q in enumerate(gs) if q == g]][:, :2]
+            e = ellipse(pts) if scores.shape[1] >= 2 else None
+            if e:
+                ell[g] = e
+    return {"samples": sm, "features": [int(i) for i in idx], "scores": scores.tolist(), "loadings": loadings.tolist(),
+            "explained": expl[: scores.shape[1]].tolist(), "stability": stab.tolist(), "stability_pc": stab_pc.tolist(), "ellipses": ell, "steps": steps,
+            "imputed": n_imp, "transform": transform, "scaling": scaling, "n_samples": len(sm), "n_features": int(len(idx))}

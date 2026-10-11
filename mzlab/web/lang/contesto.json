@@ -385,5 +385,20 @@
   "feat.more": "Nota sotto l'anteprima. {n} = feature non mostrate.",
   "feat.row.aria": "Etichetta accessibile di una riga della tabella. {mz} = m/z, {rt} = RT.",
   "feat.progress": "Avanzamento. {i} = ione corrente, {n} = totale.",
-  "blank.sum": "Riepilogo della sottrazione del bianco. {k} = tenute, {d} = scartate, {stat} = massimo/media, {nb} = numero di bianchi, {thr} = fattore, {min} = rilevazioni minime."
+  "blank.sum": "Riepilogo della sottrazione del bianco. {k} = tenute, {d} = scartate, {stat} = massimo/media, {nb} = numero di bianchi, {thr} = fattore, {min} = rilevazioni minime.",
+  "err.stat.pca.few": "Errore: troppo pochi campioni per la PCA. {min} = minimo, {n} = campioni disponibili.",
+  "pca.off": "Messaggio al posto dei comandi della PCA. {min} = minimo di campioni, {n} = campioni disponibili.",
+  "pca.blank.on": "Riga informativa sul filtro del bianco usato dalla PCA. {f} = fattore, {stat} = massimo/media, {n} = rilevazioni minime.",
+  "pca.steps": "Riepilogo dei filtri: {t} feature nella tabella, {b} sopra il bianco, {i} sopra la soglia d'intensità, {p} presenti in almeno {k} campioni, {u} usate.",
+  "pca.steps.noblank": "Come sopra, senza il passo del bianco.",
+  "pca.imputed": "Dichiarazione dell'imputazione. {n} = valori sostituiti.",
+  "pca.settings": "Riepilogo. {tr} = trasformazione, {sc} = scaling, {ns} = campioni, {nf} = feature.",
+  "pca.expl": "Elenco della varianza spiegata. {list} = «PC1 41,2 %, PC2 …».",
+  "pca.scores.aria": "Etichetta accessibile del grafico dei punteggi. {x}, {y} = varianza spiegata di PC1 e PC2.",
+  "pca.loadings.aria": "Etichetta accessibile del grafico dei loadings. {x}, {y} = varianza spiegata di PC1 e PC2.",
+  "pca.axis": "Titolo di un asse. {pc} = PC1/PC2, {v} = varianza spiegata in percentuale.",
+  "pca.ell": "Descrizione di un'ellisse. {g} = nome del gruppo di repliche.",
+  "pca.col.pc": "Intestazione di colonna. {n} = numero della componente.",
+  "pca.row.aria": "Etichetta accessibile di una riga. {mz} = m/z, {rt} = RT.",
+  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo."
 }
