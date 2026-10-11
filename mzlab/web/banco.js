@@ -17,7 +17,8 @@ const BANCO = (() => {
 #hrbar select{height:30px}#hrbar .act{margin-left:auto;font-size:12px;color:var(--muted)}
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
 #hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:auto!important;min-height:100%;max-height:none;resize:none;margin:0;border:0;border-radius:0}
-#hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
+#hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
+#hri-body .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}#hri-body .row input[type=text],#hri-body .row input:not([type]){min-width:0;padding:2px 6px}#hri-body select{padding:2px 4px;max-width:100%;min-width:0}#hri-body button{padding:2px 8px}#hri-body .muted.sm{font-size:11px;line-height:1.35}
 #hri-body table{border-collapse:collapse;width:100%}#hri-body td,#hri-body th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}#hri-body td.num,#hri-body th.num{text-align:right}
 #hri-body td.v{white-space:normal;word-break:break-all}#hri-body h4{margin:8px 0 2px;font-size:12px}#hri-body .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 #hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
