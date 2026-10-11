@@ -27,6 +27,8 @@ VERSION = 1
 HEADER = struct.Struct("<8sIIQQQQQ8x")          # magic, version, flags, meta_off, meta_len, scans_off, scans_len, total_size  (64 bytes)
 BLOCK = 16384                                   # elements per block (also the spacing of the fence values)
 ALIGN = 64
+REGISTRY: dict = {}                             # file name -> path of its index, when the host has put it somewhere of its own (the browser: OPFS mounted with WORKERFS)
+FLAT = False                                    # the browser: the index of "x.mzML" is "x.mzML.mzidx" in the cache folder (the real path of a mounted file changes at every visit)
 POLS = {None: "all", 0: "all", 1: "+", -1: "-"}
 
 # The ceiling of the blocks kept in memory (all files together). One place; 32 MB on a tablet or a phone (set_cache_limit).
@@ -44,6 +46,7 @@ class BlockCache:
     def __init__(self, limit: int = CACHE_BYTES):
         self.limit = limit
         self.size = 0
+        self.active = None                       # uid of the index of the file the student is looking at: its blocks are the last to go
         self._d: collections.OrderedDict = collections.OrderedDict()
 
     def get(self, key):
@@ -58,8 +61,10 @@ class BlockCache:
         self._d[key] = arr
         self.size += arr.nbytes
         while self.size > self.limit and len(self._d) > 1:
-            _, old = self._d.popitem(last=False)
-            self.size -= old.nbytes
+            victim = next((k for k in self._d if k[0][0][0] != self.active), None)          # the least recently used block of another file, if there is one
+            if victim is None or victim == key:
+                victim = next(k for k in self._d if k != key)
+            self.size -= self._d.pop(victim).nbytes
 
     def drop(self, owner):
         """Forget the blocks of one array owner (when its file is closed)."""
@@ -114,6 +119,12 @@ class LazyArray(np.lib.mixins.NDArrayOperatorsMixin):
     def __array_ufunc__(self, ufunc, method, *inputs, **kw):
         inputs = tuple(np.asarray(x) if isinstance(x, LazyArray) else x for x in inputs)
         return getattr(ufunc, method)(*inputs, **kw)
+
+    def __getattr__(self, name):
+        """Any other ndarray method (min, max, sum, tolist, ...): on the array read whole."""
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(np.asarray(self), name)
 
     def astype(self, dtype, copy=True):
         return np.asarray(self).astype(dtype, copy=False)
@@ -241,6 +252,9 @@ class MzIdx:
         fence = a("fence", s["n_fence"], dt)._read(0, s["n_fence"]) if p else np.zeros(0, dtype=dt)
         rt, tic, ids = (a(x, n, d)._read(0, n) for x, d in (("rt", "<f8"), ("tic", "<f8"), ("scan_ids", "<i8")))
         t = PeakTable(rt=rt, scan_ids=ids, mz=a("mz", p, dt, fence), inten=a("inten", p, dt), pos=a("pos", p, "<i4"), tic=tic)
+        if "sumint" in s["off"]:                                           # the per-scan totals are in the file: the TIC and the base peaks need no pass over the peaks
+            t._sum = a("sumint", n, "<f8")._read(0, n)
+            t._base = (a("bp_mz", n, "<f8")._read(0, n), a("bp_inten", n, "<f8")._read(0, n))
         self._tables[si] = t
         return t
 
@@ -338,6 +352,29 @@ class _Sorter:
             self.spill = None
 
 
+class _Totals:
+    """Per scan, from the peaks in m/z order: their summed intensity (added in table order, as np.bincount over the whole table would) and the highest peak."""
+
+    def __init__(self, n: int):
+        self.n = n
+        self.base, self.acc = np.arange(n), np.zeros(n)
+        self.m, self.y, self.have = np.zeros(n), np.zeros(n), np.zeros(n, dtype=bool)
+
+    def add(self, mz, it, pos):
+        if not len(mz):
+            return
+        self.acc = np.bincount(np.concatenate([self.base, pos]), weights=np.concatenate([self.acc, it]), minlength=self.n)
+        o = np.lexsort((it, pos))
+        ps = pos[o]
+        last = np.r_[np.flatnonzero(ps[1:] != ps[:-1]), len(ps) - 1]
+        sc, cm, cy = ps[last], mz[o][last], it[o][last]
+        better = ~self.have[sc] | (cy >= self.y[sc])
+        self.m[sc[better]], self.y[sc[better]], self.have[sc[better]] = cm[better], cy[better], True
+
+    def result(self):
+        return self.acc, self.m, self.y
+
+
 def selections(run) -> list[tuple]:
     """[(level, polarity key, ids)] for every group of scans a `Run.table(level, polarity)` can be asked for."""
     out = []
@@ -388,7 +425,7 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
             isz = np.dtype(s["dtype"]).itemsize
             nf = -(-npk // BLOCK)
             s["n_scans"], s["n_peaks"], s["n_fence"], s["off"] = n, npk, nf, {}
-            for name, size in (("rt", 8 * n), ("tic", 8 * n), ("scan_ids", 8 * n), ("fence", isz * nf), ("mz", isz * npk), ("inten", isz * npk), ("pos", 4 * npk)):
+            for name, size in (("rt", 8 * n), ("tic", 8 * n), ("scan_ids", 8 * n), ("sumint", 8 * n), ("bp_mz", 8 * n), ("bp_inten", 8 * n), ("fence", isz * nf), ("mz", isz * npk), ("inten", isz * npk), ("pos", 4 * npk)):
                 pos += _pad(pos)
                 s["off"][name] = pos
                 pos += size
@@ -403,7 +440,9 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                 f.seek(s["off"]["scan_ids"]); f.write(np.array(ids, dtype="<i8").tobytes())
                 dt = np.dtype(s["dtype"])
                 done, fence = 0, []
+                tot = _Totals(len(ids))
                 for _b, mz, it, ps in s["sorter"].buckets():
+                    tot.add(mz, it, ps)
                     for g in range(-done % BLOCK, len(mz), BLOCK):      # global indexes that are multiples of BLOCK, inside this bucket
                         fence.append(mz[g])
                     f.seek(s["off"]["mz"] + done * dt.itemsize); f.write(mz.astype(dt, copy=False).tobytes())
@@ -411,6 +450,8 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                     f.seek(s["off"]["pos"] + done * 4); f.write(ps.astype("<i4", copy=False).tobytes())
                     done += len(mz)
                 f.seek(s["off"]["fence"]); f.write(np.array(fence, dtype=dt).tobytes())
+                for name, arr in zip(("sumint", "bp_mz", "bp_inten"), tot.result()):
+                    f.seek(s["off"][name]); f.write(arr.astype("<f8", copy=False).tobytes())
                 s["sorter"].close()
             f.seek(pos)
             scans_off = f.tell()
@@ -459,8 +500,10 @@ def cache_dir() -> str:
 
 
 def index_name(path) -> str:
-    """The file name of the index of an mzML: from its real path, size and modification time."""
+    """The file name of the index of an mzML: from its real path, size and modification time (in the browser: from its name)."""
     import hashlib
+    if FLAT:
+        return os.path.basename(os.fspath(path)) + ".mzidx"
     p = os.path.realpath(path)
     st = os.stat(p)
     return hashlib.sha1(f"{p}|{st.st_size}|{st.st_mtime_ns}".encode("utf-8")).hexdigest()[:24] + ".mzidx"
@@ -475,6 +518,39 @@ def probe(run_or_mm) -> str:
     h.update(bytes(mm[:65536]))
     h.update(bytes(mm[max(n - 65536, 0):n]))
     return h.hexdigest()
+
+
+def index_path_for(path) -> str:
+    """Where the index of this mzML is (or will be built): the registry, else the cache folder."""
+    name = os.path.basename(os.fspath(path))
+    return REGISTRY.get(name) or os.path.join(cache_dir(), index_name(path))
+
+
+def known_sha(path) -> str:
+    """The SHA-256 of an mzML as its index recorded it, when there is a valid index (same size and probe): reading the file again is not needed. "" otherwise."""
+    try:
+        ip = index_path_for(path)
+        if not os.path.exists(ip):
+            return ""
+        ix = open(ip)
+        try:
+            src = ix.source
+            with builtins.open(path, "rb") as fh:
+                fh.seek(0, os.SEEK_END)
+                size = fh.tell()
+                if src.get("size") != size or not src.get("sha256"):
+                    return ""
+                fh.seek(0)
+                head = fh.read(65536)
+                fh.seek(max(size - 65536, 0))
+                tail = fh.read(65536)
+            import hashlib
+            h = hashlib.sha1(str(size).encode()); h.update(head); h.update(tail)
+            return src["sha256"] if h.hexdigest() == src.get("probe") else ""
+        finally:
+            ix.close()
+    except Exception:                                    # noqa: BLE001 -- no usable index: the caller reads the file
+        return ""
 
 
 def trim(folder: str, limit: int = 4 << 30) -> int:

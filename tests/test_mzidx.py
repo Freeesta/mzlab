@@ -91,7 +91,7 @@ def test_reopening_reads_the_scan_table_from_the_index(synth, tmp_path):
     assert b._idx and [s.__dict__ for s in a.scans] == [s.__dict__ for s in b.scans]
     assert b.sha256 == a.sha256 and b.n_chromatograms == a.n_chromatograms and b.hr1 == a.hr1
     assert a.read(3)[0].tolist() == b.read(3)[0].tolist()
-    assert not any(k.startswith("indice") and "mzidx" not in k for k in b.timing)       # the spectra were not walked again
+    assert "costruzione .mzidx" not in b.timing and "indice" in b.timing        # no new index, no walk through the spectra
 
 
 def test_a_replaced_file_is_not_served_from_the_old_index(tmp_path, monkeypatch):
@@ -147,3 +147,46 @@ def test_indexlist_gives_the_same_scans_as_walking_the_file(synth):
         r2._spectrum_offsets = lambda: None
         r2._index()
         assert [s.__dict__ for s in r.scans] == [s.__dict__ for s in r2.scans], f.name
+
+
+def test_the_active_file_keeps_its_blocks(synth, tmp_path):
+    runs = [Run(f, index_path=tmp_path / f"{f.stem}.mzidx") for f in synth[:3]]
+    ts = [r.table(1) for r in runs]
+    runs[0].activate()
+    mzidx.CACHE.clear()
+    mzidx.set_cache_limit(nbytes=4 * mzidx.BLOCK * 8)
+    try:
+        ts[0].mz[0:10]
+        ts[0].mz[5 * mzidx.BLOCK:5 * mzidx.BLOCK + 10] if len(ts[0].mz) > 6 * mzidx.BLOCK else None
+        for t in ts[1:]:
+            for k in range(min(8, len(t.mz) // mzidx.BLOCK + 1)):
+                t.mz[k * mzidx.BLOCK:k * mzidx.BLOCK + 5]
+        assert any(k[0][0][0] == runs[0]._idx.uid for k in mzidx.CACHE._d)           # the others filled the cache, the active file's block is still there
+    finally:
+        mzidx.set_cache_limit()
+        mzidx.CACHE.active = None
+    for r in runs:
+        r.close()
+
+
+def test_known_sha_and_registry(synth, tmp_path, monkeypatch):
+    monkeypatch.setenv("MZLAB_CACHE", str(tmp_path / "cache"))
+    f = synth[0]
+    assert mzidx.known_sha(f) == ""
+    r = Run(f)
+    r.table(1)
+    assert mzidx.known_sha(f) == r.sha256 != ""
+    where = tmp_path / "elsewhere" / "x.mzidx"
+    where.parent.mkdir()
+    import shutil
+    shutil.copy(r.index_path, where)
+    r.close()
+    monkeypatch.setitem(mzidx.REGISTRY, f.name, str(where))
+    monkeypatch.setenv("MZLAB_CACHE", str(tmp_path / "empty"))
+    r2 = Run(f)
+    assert r2._idx and Path(r2.index_path) == where
+    other = tmp_path / "o.mzidx"
+    shutil.copy(where, other)
+    assert r2.use_index(other) and Path(r2.index_path) == other
+    assert np.array_equal(np.asarray(r2.table(1).mz), r2.table_reference(1).mz)
+    r2.close()

@@ -278,15 +278,15 @@ class Run:
             self.n_chromatograms = self._count(b"<chromatogram ", self.scans[-1].end if self.scans else 0)
             self.sha256 = self._compute_sha256()
         else:
-            self.timing["indice (da .mzidx)"] = round(time.perf_counter() - t0, 3)
+            self.timing["indice"] = round(time.perf_counter() - t0, 3)          # the scan table taken from the .mzidx
 
     # ------------------------------------------------------------------ the .mzidx
     def _default_index_path(self) -> Path:
         from . import mzidx
-        return Path(mzidx.cache_dir()) / mzidx.index_name(self.path)
+        return Path(mzidx.index_path_for(self.path))
 
     def _load_index(self) -> bool:
-        """Take the scan table from the index of this file when there is a valid one next to the cache (size and modification time of the mzML must match)."""
+        """Take the scan table from the index of this file when there is a valid one (same size and probe; same modification time too, outside the browser)."""
         from . import mzidx
         try:
             path = self.index_path or self._default_index_path()
@@ -296,7 +296,8 @@ class Run:
         except Exception:                                 # noqa: BLE001 -- a broken or old index is simply not used
             return False
         st, src = self.path.stat(), ix.source
-        if src.get("size") != st.st_size or src.get("probe") != mzidx.probe(self) or (src.get("mtime_ns") and st.st_mtime_ns and src["mtime_ns"] != st.st_mtime_ns and self.index_path is None):
+        by_date = self.index_path is None and not mzidx.FLAT and path.name not in mzidx.REGISTRY.values()
+        if src.get("size") != st.st_size or src.get("probe") != mzidx.probe(self) or (by_date and src.get("mtime_ns") and st.st_mtime_ns and src["mtime_ns"] != st.st_mtime_ns):
             ix.close()
             return False
         self.scans = ix.scans()
@@ -306,12 +307,37 @@ class Run:
         self._idx, self.index_path = ix, path
         return True
 
+    def use_index(self, path) -> bool:
+        """Switch to the index at `path` (the host moved it: the browser puts it in OPFS). The tables are taken again from it; the old one is closed. False if it does not fit this file."""
+        from . import mzidx
+        try:
+            ix = mzidx.open(path)
+            if ix.source.get("size") != self.path.stat().st_size or ix.source.get("probe") != mzidx.probe(self):
+                ix.close()
+                return False
+        except Exception:                                 # noqa: BLE001
+            return False
+        old, self._idx, self.index_path = self._idx, ix, Path(path)
+        self._tables = {k: v for k, v in self._tables.items() if k[0] == "mem"}
+        if old:
+            old.close()
+        return True
+
+    def activate(self):
+        """This is the file the student is looking at: its blocks are the last to leave the cache."""
+        if self._idx:
+            from . import mzidx
+            mzidx.CACHE.active = self._idx.uid
+
     def _ensure_index(self):
         """The open index; built now (next to the others, in the cache folder) when the file has none yet. False when it cannot be written."""
         if self._idx is None:
             from . import mzidx
             try:
                 path = self.index_path or self._default_index_path()
+                if mzidx.REGISTRY.get(self.path.name) == str(path):           # the registered index does not fit this file (it is read-only anyway): build a new one beside the others
+                    mzidx.REGISTRY.pop(self.path.name)
+                    path = self._default_index_path()
                 t0 = time.perf_counter()
                 mzidx.build(self, path)
                 self._idx, self.index_path = mzidx.open(path), path
@@ -647,11 +673,13 @@ class Run:
         key = (level, polarity if polarity in (1, -1) else None)
         if key in self._tables:
             return self._tables[key]
+        t0 = time.perf_counter()
         ix = self._ensure_index()
         t = ix.table(level, polarity) if ix else None
         if t is None:
             return self.table_reference(level, polarity)
         self._tables[key] = t
+        self.timing[f"tabella MS{level}" + (f" ({'pos' if polarity == 1 else 'neg'})" if polarity in (1, -1) else "")] = round(time.perf_counter() - t0, 3)
         return t
 
     def table_reference(self, level: int = 1, polarity: int | None = None) -> PeakTable:

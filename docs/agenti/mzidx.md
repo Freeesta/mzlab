@@ -8,6 +8,9 @@ Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si
          rt        n_scans × f8   minuti
          tic       n_scans × f8   TIC dichiarato dal file
          scan_ids  n_scans × i8   indice della scansione nel file
+         sumint    n_scans × f8   intensità totale di ogni scansione, sommata nell'ordine della tabella (come np.bincount sull'intera tabella)
+         bp_mz     n_scans × f8   m/z del picco più alto di ogni scansione (0 se vuota; a parità, quello più in alto nella tabella)
+         bp_inten  n_scans × f8   la sua intensità
          fence     n_fence × T    primo m/z di ogni blocco di 16384 picchi (n_fence = ceil(n_peaks / 16384))
          mz        n_peaks × T    tutti i picchi, ordinati per m/z (ordinamento stabile: a parità, prima la scansione, poi l'ordine nella scansione)
          inten     n_peaks × T    intensità, nello stesso ordine
@@ -15,7 +18,7 @@ Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si
 scans_off  JSON UTF-8 (separatori compatti): lista di righe, una per scansione, nell'ordine del file, con le colonne di SCAN_COLUMNS:
          start,end (byte dell'mzML),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native
 meta_off   JSON UTF-8: {format:"mzidx", version, block, source:{name,size,mtime_ns,probe,sha256}, run:{nce,hr1,n_chromatograms},
-                        keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,fence,mz,inten,pos}}]}
+                        keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos}}]}
 total      dimensione del file: un file di dimensione diversa (troncato) non si apre
 ```
 - **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
@@ -32,7 +35,7 @@ Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo ver
 ## Lettura
 - `open(path)` → `MzIdx`: `meta`, `scans()` (le `Scan` come le dà il lettore dell'mzML), `table(livello, polarità)` → `PeakTable` i cui `mz`, `inten`, `pos` sono `LazyArray`.
 - `LazyArray`: `a[i:j]` legge la fetta (fino a 2 blocchi dalla cache a blocchi di 16384 elementi, oltre direttamente dal file); `searchsorted` usa `fence` e legge un solo blocco; maschere, operatori e `np.asarray` la leggono intera (temporaneamente).
-- **Cache a blocchi**: LRU condivisa da tutti i file, tetto `CACHE_BYTES` = 64 MB (`CACHE_BYTES_SMALL` = 32 MB su tablet e telefono, `set_cache_limit`). Il tetto sta solo in `mzidx.py`.
+- **Cache a blocchi**: LRU condivisa da tutti i file, tetto `CACHE_BYTES` = 64 MB (`CACHE_BYTES_SMALL` = 32 MB su tablet e telefono, `set_cache_limit`). Il tetto sta solo in `mzidx.py`. I blocchi del file attivo (`Run.activate()`, chiamato da `/api/chrom`) sono gli ultimi a uscire. TIC e picco base di ogni scansione stanno nell'indice (`sumint`, `bp_*`): aprire un file non legge nessun picco.
 - `PeakTable.iter_chunks()`, `sum_by_scan()`, `base_peaks()` percorrono la tabella a pezzi (somme nello stesso ordine di `np.bincount` sull'intera tabella, quindi bit per bit uguali).
 
 ## Dove sta
