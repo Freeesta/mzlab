@@ -73,7 +73,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `perf.js` (151) Performance meter. Off by default and then it costs nothing (the script returns at once).
 - `picchi.js` (557) Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafi — autoEdges:30, showInts:248, drawSpec:312, inRange:367, hidOf:412
 - `profilo.js` (155) Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every  — PROFILO:8
-- `qaqc.js` (246) QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender — QAQC:9, mount:203
+- `qaqc.js` (246) QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender — QAQC:9, mount:203 **[dormiente: QA/QC]**
 - `qualita.js` (40) Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak a
 - `rapporto.js` (110) Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measu — RAPPORTO:7, build:34
 - `riferimento.js` (216) «Difference from the reference» (high resolution only; «Statistica» panel): for every feature of the — RIFERIMENTO:7, run:21, inspect:133
@@ -121,7 +121,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `ionfamily.py` (1768) Ion families: where does this ion come from? Evidence for in-source fragments (ISF) versus real prod — build_rois:130, detect_peaks:374, profile_similarity:625, ion_families:1142, origin_report:1645
 - `peaks.py` (93) Peaks of a mass spectrum with unit resolution: the same rule for profile files and for centroid file — profile_peaks:20
 - `project.py` (68) Guess label, treatment time, type (sample | blank | standard) and concentration from a file name.
-- `qaqc.py` (104) QA/QC measures of a run series (internal standards, blanks, mass accuracy, replicate repeatability, 
+- `qaqc.py` (104) QA/QC measures of a run series (internal standards, blanks, mass accuracy, replicate repeatability,  **[dormiente: QA/QC]**
 - `reader/__init__.py` (1) (__init__)
 - `reader/methodinfo.py` (290) Acquisition parameters stored in Analyst .dam (method) and .wiff (data) files. — _lc:36, _experiments:103, _method:138, check_against:214
 - `reader/mzidx.py` (606) `.mzidx`: the index of one mzML file, written once and read in slices (specification: docs/agenti/mz — BlockCache:44, LazyArray:89, MzIdx:204, _Sorter:284, build:419
@@ -234,6 +234,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `build_site.py` (207) Builds the static site (the whole program running in the browser) into site/. — main:135
 - `chimica_riferimento.py` (50) Reference answers of mzlab/chem (elements, subformulas) for crates/mzlab-core/tests/chimica_parity.r
 - `composizione_riferimento.py` (67) Reference answers of mzlab/chem/composition.py (compose without obs/frags, parse_elements) for crate — main:28
+- `controlla.py` (80) Size limits of the first-party code: files over 500 lines and functions over 80 lines are WARNINGS; 
 - `controlla_i18n.py` (409) Checks the two interface languages (Italian and English) of mzLab. Part of `python3 tools/verifica.p — icu_signature:74, _Static:157, js_strings:206, check_italian:298, run:362
 - `converti.py` (109) Converts the files of the instruments to mzML, the only format the program reads (no reader of propr — converti:53
 - `dati_sintetici.py` (464) Synthetic look-alikes of the lab's "B" series (flufenacet), for tests where the real mzML are not av — hr_dda:275
@@ -245,6 +246,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `genera_glossario.py` (67) Builds mzlab/web/teoria/glossario-dati.js from the glossary chapter (21-glossario.html).
 - `genera_icone.py` (80) Make the logo and every icon from the picture of the m/z logo (tools/logo_sorgente.jpg).
 - `golden.py` (296) Golden data: the results of the Python engine frozen in JSON (tests/golden/), the reference for any 
+- `indice.py` (147) Writes docs/agenti/mappa.md: one line per first-party source file (purpose + where its main function — definizioni:40, render:97
 - `info_riferimento.py` (55) Reference answers of Item.info() (mzlab/explore.py) for crates/mzlab-core/tests/iteminfo_parity.rs.
 - `librerie_pacchetti.py` (250) Builds the public spectral-library packages of the site (never committed): the CI of Pages runs this — run:199
 - `msntree_riferimento.py` (106) Reference answers of mzlab/chem/msntree.py for crates/mzlab-core/tests/msntree_parity.rs. — build:31

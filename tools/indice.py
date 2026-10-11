@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "agenti" / "mappa.md"
 SKIP = ("vendor/", "ei-dati.js", "web/elements.js", "glossario-dati.js", "web/esempi/", "/target/")
+DORMIENTI = {"mzlab/web/qaqc.js", "mzlab/qaqc.py", "tests/test_qaqc.py", "tests_e2e/e2e_qaqc.py"}   # QA/QC: switched off by default, keep it
 GROUPS = [  # (title, path prefix, one line per file?)
     ("Teoria e Pratica (`mzlab/web/teoria/`)", "mzlab/web/teoria/", True),
     ("Pagina principale (`mzlab/web/`)", "mzlab/web/", True),
@@ -115,7 +116,7 @@ def render() -> str:
                 big = sorted(defs, key=lambda d: (-d[2], d[1]))[:5]
                 big = sorted((d for d in big if d[2] >= 30), key=lambda d: d[1])
                 tail = (" — " + ", ".join(f"{d[0]}:{d[1]}" for d in big)) if big else ""
-                out.append(f"- `{f[len(prefix):] if f.startswith(prefix) and prefix != 'crates/mzlab-lib' else f}` ({n}) {scopo(f, t)}{tail}")
+                out.append(f"- `{f[len(prefix):] if f.startswith(prefix) and prefix != 'crates/mzlab-lib' else f}` ({n}) {scopo(f, t)}{tail}" + (" **[dormiente: QA/QC]**" if f in DORMIENTI else ""))
         else:
             dirs: dict[str, list[str]] = {}
             for f in sel:
