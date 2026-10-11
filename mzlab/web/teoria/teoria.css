@@ -340,6 +340,6 @@ html.phone #tbar .tb{min-width:44px}
 html.phone #top #a11y-btn{margin-left:0}
 @media (min-width:981px){#cbar #cb-nav{display:none}}
 @media (max-width:980px){#tbar #tc-prec,#tbar #tc-succ,#tbar #tc-glossario,#tbar #tc-formule,#tbar #tc-esercizi,#tbar .tsep,#tbar #tnav{display:none}}
-@media (max-width:640px){html:not(.phone) #tbar #tc-strumenti{display:none}#tbar .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+@media (max-width:640px){html:not(.phone) #tbar #tc-strumenti{display:none}#top #tabs a{padding:0 6px}#tbar{gap:2px}#tbar .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){#top,#top *{transition:none!important}}
 @media print{#tbar{display:none}}
