@@ -403,5 +403,13 @@
   "pca.ell": "Descrizione di un'ellisse. {g} = nome del gruppo di repliche.",
   "pca.col.pc": "Intestazione di colonna. {n} = numero della componente.",
   "pca.row.aria": "Etichetta accessibile di una riga. {mz} = m/z, {rt} = RT.",
-  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo."
+  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo.",
+  "sub.chip": "{file} = nome del file di riferimento (con «(auto)» se scelto in automatico); {f} = fattore; {norm} = normalizzazione.",
+  "sub.factor.vt": "{f} = fattore moltiplicativo del riferimento (numero con due decimali).",
+  "sub.file.auto": "{file} = nome del file che il programma sceglierebbe in automatico.",
+  "sub.next": "{file} = nome del file di riferimento.",
+  "sub.prev": "{file} = nome del file di riferimento.",
+  "sub.norm.istd.short": "{mz} = m/z dello standard interno scelto dallo studente.",
+  "sub.note": "{file} = file di riferimento; {f} = fattore; {norm} = normalizzazione.",
+  "sub.on": "{file} = file di riferimento; {f} = fattore."
 }
