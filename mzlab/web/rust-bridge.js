@@ -22,6 +22,7 @@ export function createBridge({ workerUrl, notify }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
+      if (m.op === "notice") { notify(m.key); return; }                                                    // e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -101,6 +102,7 @@ export function createBridge({ workerUrl, notify }) {
     return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
   api.crash =() => rpc({ op: "crash" });
+  api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
