@@ -800,7 +800,7 @@ const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(p) {
   const a = p._a; if (!a) return null;
-  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : I18N.t("export.col.intensity");
+  const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
   if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));   // total chromatograms of one run type share the time axis: one RT column

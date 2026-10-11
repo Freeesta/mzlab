@@ -97,6 +97,25 @@ try:
             j = pg.evaluate("(async () => (await (await fetch('api/delay?k=0')).json()).delay)()")
             assert j and abs(j["delay"]) < 0.03 and j["peaks"] >= 1, j
         step("the PDA-mass delay is measured by the server", pdadelay)
+        def kind_press():
+            pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}")
+            pg.evaluate("addPanel('chrom',{tab:'full',kind:'press'})"); pg.wait_for_timeout(1500); ready(pg)
+            P = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='press')"
+            opts = pg.evaluate(f"[...{P}.el.querySelectorAll('select[data-o=kind] option')].map(o=>o.textContent)"); assert "Pressione della pompa" in opts, opts
+            v = pg.evaluate(f"(()=>{{const a={P}._a;return {{n:a.sr.length,unit:a.sr[0].unit,y1:a.sr[0].y[a.sr[0].x.findIndex(t=>t>=1)],lab:{P}.leg.textContent}}}})()")
+            assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 volte" in v["lab"], v
+            e = pg.evaluate(f"(()=>{{const q={P}, o=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic'), r=q.cv.getBoundingClientRect(), s=o.cv.getBoundingClientRect();return [r.left+q._a.X(q._a.x0)-(s.left+o._a.X(o._a.x0)), r.left+q._a.X(q._a.x1)-(s.left+o._a.X(o._a.x1)), q._a.x0-o._a.x0, q._a.x1-o._a.x1]}})()")
+            assert abs(e[0]) <= 1 and abs(e[1]) <= 1, e
+        step("the pressure is in the chromatogram selector, in bar, with the unit note and the shared axis", kind_press)
+        def press_overlay():
+            T2 = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
+            pg.evaluate(f"{T2}.overlay='press'; redrawAll()"); pg.wait_for_timeout(1500); ready(pg)
+            assert pg.evaluate(f"{T2}._a.press") is True
+            pg.evaluate(f"(()=>{{{T2}.cur=1.0;cursorLine({T2})}})()")
+            assert "bar" in pg.evaluate(f"{T2}.ch.getAttribute('aria-valuetext')")
+            labs = None
+            pg.evaluate("{const c=BARRA.commands.find(c=>c.id==='pressure'); window.__v=!!c&&c.visible()}"); assert pg.evaluate("window.__v")
+        step("pressure overlay on the TIC (exclusive with the gradient) and its palette command", press_overlay)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
