@@ -22,10 +22,10 @@ try:
             pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_timeout(200)
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').hidden")
             pg.fill(".pnl.chrom [data-o=mz0]", "150"); pg.press(".pnl.chrom [data-o=mz0]", "Tab"); pg.fill(".pnl.chrom [data-o=mz1]", "300"); pg.press(".pnl.chrom [data-o=mz1]", "Tab"); pg.wait_for_timeout(1500)
-            chips = pg.evaluate(f"[...{CH}.el.querySelectorAll('.chip')].map(c=>c.textContent)"); print(chips); assert chips and "150" in chips[0] and "300" in chips[0], chips
+            on = pg.evaluate(f"[{CH}.el.querySelector('[data-a=cpar]').classList.contains('on'), !!{CH}.el.querySelector('[data-a=rngx]')]"); print(on); assert on == [True, True], "the Range button is accented and has its ×"
             pg.mouse.click(5, 300); pg.wait_for_timeout(200); assert pg.evaluate(f"{CH}.el.querySelector('.cpop').hidden"), "closes on a click outside"
             pg.evaluate(f"(()=>{{const p={CH};p.mz0=p.mz1=null;ctl(p);draw(p)}})()")
-        step("2.1: one-row header, Parametri popover, chip", header)
+        step("2.1: one-row header, Range popover, accented button", header)
         def legend():
             pg.evaluate("E.files.forEach(f=>{f.vis=true});redrawAll()"); pg.wait_for_timeout(1200)
             g = pg.evaluate(f"(()=>{{const p={CH},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.top>=c.top,l.bottom<=c.bottom,l.right<=c.right,[...p.leg.children].filter(x=>!x.classList.contains('cmp-grad')).length]}})()"); print(g)
