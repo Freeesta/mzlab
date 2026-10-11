@@ -78,6 +78,11 @@ def test_noise_is_not_a_feature(det):
     assert np.all(f.npts >= 5) and np.all(f.height >= 2e5)
 
 
+def test_a_table_without_traces_gives_no_features():
+    f = FT.detect(table([], np.random.default_rng(1)))              # a blank with nothing but single-scan noise
+    assert len(f) == 0 and f.mz.shape == (0,)
+
+
 def test_features_are_sorted_and_table_is_dropped(tmp_path):
     from mzlab.reader.mzml import Run
     import msn_synth as S

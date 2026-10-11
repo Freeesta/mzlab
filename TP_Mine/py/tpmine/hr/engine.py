@@ -26,6 +26,7 @@ from . import kinetics as KN
 from . import localize as LZ
 from . import msn
 from . import network as NW
+from . import rtalign as RA
 from . import rules as RU
 from . import similarity as SM
 from . import spectra as SP
@@ -174,6 +175,7 @@ class ExperimentHR:
         t = time.perf_counter()
         types = [("blank" if x["type"] == "blank" else "control" if x["type"] == "control" else "sample") for x in self.lc]
         self.al = FT.align(self.feats)
+        self.rtmap = RA.build(self.al, min_height=self.s["min_height"])
         self.sess_factors = KN.session_factors(self.al.area, self.sessions)
         if self.sess_factors["applied"]:
             self.warnings.append("measurement sessions differ: areas were rescaled to the reference session")
@@ -481,7 +483,7 @@ class ExperimentHR:
         return {"mode": "hr", "parent": {"formula": chem.fmt(self.neutral), "ion": F.fmt(self.ion_vec, self.els), "mz": round(self.parent_mz, 4),
                                          "rt": round(float(self.al.rt[self.parent_group]), 2) if self.parent_group is not None else self.parent_rt_hint, "name": self.parent_name},
                 "files": files, "times": [float(t) for t in self.times], "sessions": {"labels": self.sessions, "factors": self.sess_factors},
-                "saturation": self.saturation, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
+                "saturation": self.saturation, "rt_align": self.rtmap.as_dict([x["label"] for x in self.lc]) if self.rtmap.ok else None, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
                 "mass_network": getattr(self, "mass_net", None), "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
                 "inclusion": [{"mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "rt_from": round(float(np.nanmin(self.al.left[c["id"]])), 2),
                                "rt_to": round(float(np.nanmax(self.al.right[c["id"]])), 2), "formula": c.get("formula"), "score": round(c["priority"]["score"], 1)} for c in incl],

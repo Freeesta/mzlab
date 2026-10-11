@@ -8,6 +8,9 @@
 .tp .flag{color:#9a5b00;font-size:11px}
 .tp .fl-s{color:#b42318;font-weight:600}.tp .fl-u{color:#2b5c8a;font-weight:600}
 .tp{--sim-eq:#0072B2;--sim-sh:#D55E00;--sim-nl:#009E73}
+.tp{--rta-0:#000000;--rta-1:#E69F00;--rta-2:#56B4E9;--rta-3:#009E73;--rta-4:#F0E442;--rta-5:#0072B2;--rta-6:#D55E00;--rta-7:#CC79A7}
+.tp .rta-svg{display:block;width:100%;max-width:640px;height:auto}.tp .rta-svg text{fill:var(--muted);font-size:10px}.tp .rta-svg .ax{stroke:var(--line);stroke-width:1}
+.tp .rta-svg .zero{stroke:var(--muted);stroke-dasharray:2 3}.tp .rta-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:4px}
 .tp .pd-1{--lvc:#009E73}.tp .pd-2{--lvc:#0072B2}.tp .pd-3{--lvc:#E69F00}.tp .pd-4{--lvc:#999999}
 .tp .sim-bar{display:inline-flex;width:64px;height:8px;border-radius:4px;background:var(--soft);overflow:hidden;vertical-align:middle}.tp .sim-bar i{display:block;height:100%}
 .tp .sim3{display:grid;grid-template-columns:150px 1fr 1fr 44px;gap:4px 10px;font-size:12px;align-items:center;margin:6px 0}
@@ -22,6 +25,24 @@
   const predBadge = r => r.pred ? `<span class="lvb pd-${r.pred}" title="prediction level ${r.pred}: ${esc(PD_TEXT[r.pred])}">P${r.pred}</span>` : "";
   const simBar = sim => sim ? `<span class="sim-bar" role="img" aria-label="cosine: equal ${sim.cos[0]}, shifted ${sim.cos[1]}, neutral losses ${sim.cos[2]}" title="cosine: equal ${sim.cos[0]} · shifted ${sim.cos[1]} · common neutral losses ${sim.cos[2]}">${sim.cos.map((v, i) => `<i style="width:${Math.round(100 * v)}%;background:var(${SIM_VAR[i]})"></i>`).join("")}</span>` : "";
   const lvBadge = (r, title) => `<span class="lvb lv-${r.level}" title="${esc(title)}">${r.level}${r.diagnostic ? " ◆" : ""}</span>`;
+
+  // Shift of the apex of the anchor features in every file against the median over the files (piecewise linear between the nodes of the curve).
+  const RTA_DASH = [[], [6, 3], [2, 3], [8, 2, 2, 2]];
+  function rtAlign(a, esc) {
+    if (!a || !a.rt || !a.rt.length) return "";
+    const W = 560, H = 200, L = 46, T = 10, B = 30, Rt = 12, lo = Math.min(...a.rt), hi = Math.max(...a.rt, lo + 1);
+    const ym = Math.max(0.05, ...a.shift.flat().map(Math.abs)), X = v => L + (v - lo) / (hi - lo) * (W - L - Rt), Y = v => T + (1 - (v + ym) / (2 * ym)) * (H - T - B);
+    const line = (k, sh) => `<polyline fill="none" stroke="var(--rta-${k % 8})" stroke-width="1.6" stroke-dasharray="${RTA_DASH[Math.floor(k / 8) % 4].join(" ")}" points="${a.rt.map((r, j) => X(r).toFixed(1) + "," + Y(sh[j]).toFixed(1)).join(" ")}"/>`;
+    const xt = [0, 1, 2, 3, 4].map(i => lo + (hi - lo) * i / 4), yt = [-ym, 0, ym];
+    const svg = `<svg class="rta-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`RT shift of ${a.files.length} files against the median, ${a.anchors} anchor features, largest shift ${ym.toFixed(2)} min`)}">
+      <line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${H - B}" x2="${W - Rt}" y2="${H - B}"/><line class="zero" x1="${L}" y1="${Y(0)}" x2="${W - Rt}" y2="${Y(0)}"/>
+      ${xt.map(v => `<text x="${X(v).toFixed(1)}" y="${H - B + 14}" text-anchor="middle">${v.toFixed(1)}</text>`).join("")}${yt.map(v => `<text x="${L - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${v > 0 ? "+" : ""}${v.toFixed(2)}</text>`).join("")}
+      <text x="${(L + W - Rt) / 2}" y="${H - 4}" text-anchor="middle">RT (min)</text><text transform="rotate(-90)" x="${-(T + H - B) / 2}" y="11" text-anchor="middle">shift (min)</text>
+      ${a.shift.map((sh, k) => line(k, sh)).join("")}</svg>`;
+    const leg = a.files.map((f, k) => `<span><span class="sw" style="border-top-color:var(--rta-${k % 8});border-top-style:${RTA_DASH[Math.floor(k / 8) % 4].length ? "dashed" : "solid"}"></span>${esc(f)}</span>`).join("");
+    return `<details class="card" id="hr-rta"><summary>Retention time alignment (${a.anchors} anchor features)</summary>
+      <div class="mut">Shift of the apex of the anchors (strong, alone in their <i>m/z</i> and RT neighbourhood, present in the files) in each file against the median of the files. No signal is moved: the curve tells where a feature is expected in a file when its area is filled.</div>${svg}<div class="rta-leg">${leg}</div></details>`;
+  }
 
   function render(R, s, h) {
     if (!document.getElementById("tp-hr-css")) { const st = document.createElement("style"); st.id = "tp-hr-css"; st.textContent = CSS; document.head.appendChild(st); }
@@ -46,6 +67,7 @@
       <details class="card"><summary>Applied filters (funnel) and sessions</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("en")} · ${esc(f.text)}</div>`).join("")}
         <div class="mut" style="margin-top:6px">Sessions: ${esc([...new Set(s.sessions.labels)].map(l => l + " (" + s.sessions.labels.filter(x => x === l).length + " files)").join(", "))}${s.sessions.factors.applied ? "; areas rescaled to the reference session" : "; no correction needed"}.</div>
         <div class="mut">Timings (s): ${esc(Object.entries(s.timing).map(([k, v]) => k + " " + v).join(" · "))}</div></details>
+      ${rtAlign(s.rt_align, esc)}
       <div class="card" id="hr-tree"></div>`;
 
     function spark(series) {

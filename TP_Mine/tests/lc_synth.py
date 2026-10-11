@@ -28,19 +28,22 @@ def _g(t, c, s):
     return np.exp(-0.5 * ((t - c) / s) ** 2)
 
 
+ANCHORS = [(211.0970, 1.5), (243.1521, 2.5), (275.2008, 3.2), (307.1455, 6.0), (339.2010, 6.8), (371.1763, 7.5), (403.2264, 8.2), (435.1512, 9.0)]   # strong ions of every file (RT alignment anchors)
 ISF_FRAGMENT = mass_of("C6H8N3O")              # a fragment of the parent that the source also makes (2 % of the parent in every file)
 
 
-def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf: bool = False, weak: float = 1.0) -> list[dict]:
+def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf: bool = False, weak: float = 1.0, drift: dict | None = None, anchors: bool = False) -> list[dict]:
     """Writes one file per time (-1: dark adsorption) and returns [{name, path, time, type}]. weak: factor on the +O product (0.2: its first time stays under the detection height). hidden_isf: a product of the treatment with the mass
     of the parent's fragment, co-eluting with the parent and consumed with it: it never makes a feature of its own (the fragment is there in
-    every file) but the ratio fragment / parent grows with the treatment."""
+    every file) but the ratio fragment / parent grows with the treatment. drift: {time: minutes} added to the RT of every ion of that file. anchors: eight strong
+    ions (ANCHORS) in every file, for the RT alignment."""
     rng = np.random.default_rng(seed)
     out = []
     for t in times:
         k = max(t, 0)
         amp = {PARENT: 6e7 * np.exp(-k / 18.0), HYDROXY: 0.0 if t <= 0 else weak * 4e6 * (1 - np.exp(-k / 30.0)), DEMETHYL: 0.0 if t <= 0 else 3e6 * (k / 8.0) * np.exp(-k / 8.0)}
-        rtc = {PARENT: 5.0, HYDROXY: 4.6, DEMETHYL: 4.2}
+        d = (drift or {}).get(t, 0.0)
+        rtc = {PARENT: 5.0 + d, HYDROXY: 4.6 + d, DEMETHYL: 4.2 + d}
         specs, rts, tic = [], np.arange(0, 10, 0.04), []
         i = 0
         for rt in rts:
@@ -54,7 +57,12 @@ def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf:
                 if y > 3e4:
                     mz.append(ISF_FRAGMENT * (1 + rng.normal(0, 0.3e-6))); it.append(y * rng.uniform(0.95, 1.05))
             for b in BACKGROUND:
-                mz.append(b * (1 + rng.normal(0, 0.3e-6))); it.append(BGH[b] * _g(rt, BGC[b], 0.25) * rng.uniform(0.9, 1.1))
+                mz.append(b * (1 + rng.normal(0, 0.3e-6))); it.append(BGH[b] * _g(rt, BGC[b] + d, 0.25) * rng.uniform(0.9, 1.1))
+            if anchors:
+                for m, r in ANCHORS:
+                    y = 6e6 * _g(rt, r + d, 0.07)
+                    if y > 3e4:
+                        mz.append(m * (1 + rng.normal(0, 0.3e-6))); it.append(y * rng.uniform(0.95, 1.05))
             for _ in range(15):
                 mz.append(float(rng.uniform(100, 400))); it.append(float(rng.uniform(2e4, 8e4)))
             o = np.argsort(mz)
