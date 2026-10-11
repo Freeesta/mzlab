@@ -112,7 +112,7 @@ dialog.m3d[open]{display:flex}dialog.m3d::backdrop{background:rgba(0,0,0,.5)}
 .m3d-side{flex:none;width:320px;height:100%;overflow:auto;border-left:1px solid var(--line);background:var(--bg);padding:8px 10px;font-size:12px;box-sizing:border-box}
 dialog.m3d.hid .m3d-side{display:none}
 .m3d-side details{border-bottom:1px solid var(--line);padding:4px 0}.m3d-side summary{cursor:pointer;font-weight:700;padding:4px 0}
-.m3d-side .rw{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.m3d-side .rw>label{display:inline-flex;gap:4px;align-items:center}
+.m3d-side .rw{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.m3d-side .rw>label{display:inline-flex;gap:4px;align-items:center;white-space:nowrap}
 .m3d-side select{max-width:170px}.m3d-side input.mzf{width:70px}.m3d-side input[type=range]{width:120px}
 .m3d-top{display:flex;gap:6px;align-items:center;justify-content:space-between;margin-bottom:6px}
 .m3d-hist{width:100%;height:46px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:crosshair}
@@ -204,8 +204,8 @@ export function open(p, opener) {
   const matVP = () => m4.mul(m4.persp(FOV, V.W / V.H, 0.02, 60), m4.look(eyeOf(), V.cam.t, [0, 1, 0]));
   let VP = null;
   const project = (x, y, z) => { const m = VP, w = m[3] * x + m[7] * y + m[11] * z + m[15], cx = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w, cy = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w; return [(cx * 0.5 + 0.5) * V.W, (0.5 - cy * 0.5) * V.H, w]; };
-  const resetCam = (az = 35, el = 32) => { const b = box(), r = Math.hypot(b.x, b.z, b.y) / 2; V.cam = { az, el, d: Math.max(1.2, r * 2.3), t: [0, b.y * (V.signed ? 0 : 0.25), 0] }; V.dirty = true; };
-  const setView = n => { if (n === 1) resetCam(0, 89); else if (n === 2) resetCam(0, 0); else if (n === 3) resetCam(90, 0); else resetCam(35, 32); if (n !== 4) { const b = box(); V.cam.d = Math.max(1.2, Math.hypot(b.x, b.z) * 1.25); } V.dirty = true; };
+  const resetCam = (az = 35, el = 32) => { const b = box(), r = Math.hypot(b.x, b.z, b.y) / 2; V.cam = { az, el, d: Math.max(1.5, r * 3.6), t: [0, b.y * (V.signed ? 0 : 0.25), 0] }; V.dirty = true; };
+  const setView = n => { if (n === 1) resetCam(0, 89); else if (n === 2) resetCam(0, 0); else if (n === 3) resetCam(90, 0); else resetCam(35, 32); if (n !== 4) { const b = box(); V.cam.d = Math.max(1.5, Math.hypot(b.x, b.z) * 2.2); } V.dirty = true; };
 
   // ---- data
   const decode = j => ({ ...j, m: b64f(j.data, Float32Array) });
@@ -214,7 +214,7 @@ export function open(p, opener) {
     if (!(rt1 > rt0 && mz1 > mz0 && mz0 > 0)) { msg(T("m3d.err.range")); return; }
     msg(T("m3d.loading"));
     const nrt = Math.min(N, Math.max(2, Math.ceil((rt1 - rt0) / Math.max(scanStep(), 1e-4))));
-    const q = `api/map?k=${V.k}&level=${V.lv}&rt0=${rt0}&rt1=${rt1}&mz0=${mz0}&mz1=${mz1}&nrt=${nrt}&nmz=${N}&mzscale=${hr ? "log" : "lin"}${prefs.bg ? "&bg=1" : ""}` +
+    const q = `api/map?k=${V.k}&level=${V.lv}&rt0=${rt0}&rt1=${rt1}&mz0=${mz0}&mz1=${mz1}&nrt=${nrt}&nmz=${hr ? N : Math.min(N, Math.max(2, Math.ceil(mz1 - mz0)))}&mzscale=${hr ? "log" : "lin"}${prefs.bg ? "&bg=1" : ""}` +
       (V.ref != null ? `&ref=${V.ref}&norm=${V.norm}&rttol=${MAPPA.diffOpt().rttol}` : "&agg=max");
     let j; try { j = decode(await J(q)); } catch (e) { msg(e && e.message ? e.message : T("m3d.err.load")); return; }
     if (gen !== V.gen) return;
@@ -226,7 +226,7 @@ export function open(p, opener) {
     msg("");
     if (P.mode === "sticks" && (!hr || V.signed)) { P.mode = "surf"; Q("mode").value = "surf"; }
     Q("mode").querySelector('[value="sticks"]').disabled = !hr || V.signed;
-    process(); resetCam(V.cam.az, V.cam.el); await loadSticks(gen);
+    process(); resetCam(V.cam.az, V.cam.el); readout(); await loadSticks(gen);
   }
   async function loadSticks(gen) {
     if (P.mode !== "sticks" || !hr || V.signed) return;
