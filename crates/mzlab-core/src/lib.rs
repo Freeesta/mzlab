@@ -9,6 +9,7 @@ pub mod idxread;
 pub mod isoscore;
 pub mod json;
 pub mod mzidx;
+pub mod msntree;
 pub mod mzml;
 pub mod peakq;
 pub mod peaks;
