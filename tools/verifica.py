@@ -123,10 +123,10 @@ def js_syntax(results) -> None:
             errs.append(f"{f.relative_to(ROOT)}: " + (p.stderr.strip().splitlines() or ["?"])[-1])
     html = (web / "index.html").read_text(encoding="utf-8")
     inline = "\n".join(re.findall(r"<script>(.*?)</script>", html, re.S))
-    page = tmp / "page.js"; page.write_text((web / "explore.js").read_text(encoding="utf-8") + "\n" + inline, encoding="utf-8")
+    page = tmp / "page.js"; page.write_text("\n".join((web / n).read_text(encoding="utf-8") for n in CORE_JS) + "\n" + inline, encoding="utf-8")
     p = subprocess.run(["node", "--check", str(page)], capture_output=True, text=True)
     if p.returncode:
-        errs.append("explore.js + script inline di index.html: " + (p.stderr.strip().splitlines() or ["?"])[-1])
+        errs.append("explore.js e compagni + script inline di index.html: " + (p.stderr.strip().splitlines() or ["?"])[-1])
     (LOG / "sintassi_js.log").write_text("\n".join(errs) or "ok", encoding="utf-8")
     results.append(("sintassi JS", "FAIL" if errs else "OK", time.time() - t0, errs[:5]))
 
@@ -221,6 +221,9 @@ def judge(out: str, rc: int) -> list[str]:
     return probs
 
 
+CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js")       # explore.js split by topic, in the order of index.html
+
+
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
@@ -241,6 +244,10 @@ AREE = [
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
+    ("mzlab/web/pannelli.js", {"e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco"}),
+    ("mzlab/web/grafici.js", {"e2e_cromato", "e2e_mappa", "e2e_map3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour"}),
+    ("mzlab/web/picchi.js", {"e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour"}),
+    ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour"}),
     ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/workflow.py", {"e2e_workflow"}), ("mzlab/web/version.js", {"e2e_workflow"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
