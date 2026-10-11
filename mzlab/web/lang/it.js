@@ -1384,6 +1384,8 @@ I18N.add("it", {
   "tbl.add.note.2mminush": "dimero",
   "tbl.diff.title": "Coppie caratteristiche tra addotti",
   "tbl.diff.intro": "Distanze costanti tra picchi allo stesso RT: aiutano a riconoscere gli addotti di uno stesso composto.",
+  "tbl.diff.full": "Tabella completa nella Teoria",
+  "tbl.diff.full.aria": "Tabella completa delle differenze fra addotti, nella Teoria (si apre in una nuova scheda)",
   "tbl.diff.src": "Fonte: Huang N. et al., <i>J. Am. Soc. Mass Spectrom.</i> 10 (1999) 1166&ndash;1173.",
   "tbl.add.col.shift": "scostamento",
   "tbl.add.more": "Altri addotti (meno comuni)",
