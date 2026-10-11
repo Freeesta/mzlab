@@ -66,8 +66,11 @@ export function createBridge({ workerUrl, notify }) {
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") is left to Python
   api.noteExplore = body => {
-    slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq });
-    for (const [k, s] of ((body && body.samples) || []).entries()) {
+    const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
+    if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
+    const first = more ? slots.length : 0;
+    for (const [i, s] of ((body && body.samples) || []).entries()) {
+      const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
       if (!blob || f.includes("#") || api.disabled) { slots[k] = null; continue; }
       slots[k] = { name: base(f), blob, info: null, bad: false };

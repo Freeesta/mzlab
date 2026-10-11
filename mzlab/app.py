@@ -237,7 +237,10 @@ class App:
                             "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit")})
         if not samples:
             raise UserError("err.session.noFiles", text="add at least one file")
-        self.session = Session(samples, self.workdir)
+        if payload.get("append") and self.session:          # one more file in the session that is open (the page opens a list file by file)
+            self.session.add(samples)
+        else:
+            self.session = Session(samples, self.workdir)
 
     def _git_commit(self) -> str:
         cache = self.__dict__.setdefault("_git_commit_val", None)

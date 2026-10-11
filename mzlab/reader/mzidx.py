@@ -392,6 +392,30 @@ def selections(run) -> list[tuple]:
     return out
 
 
+def scans_blob(run) -> bytes:
+    """The scan table of `run` as the compact JSON rows of SCAN_COLUMNS."""
+    rows = [[getattr(sc, c) for c in SCAN_COLUMNS] for sc in run.scans]
+    return json.dumps(rows, separators=(",", ":")).encode("utf-8")
+
+
+def source_and_run(run, sha256: str | None = None) -> tuple[dict, dict]:
+    """The `source` and `run` objects of the metadata."""
+    st = run.path.stat()
+    source = {"name": run.path.name, "size": st.st_size, "mtime_ns": st.st_mtime_ns, "probe": probe(run),
+              "sha256": sha256 if sha256 is not None else getattr(run, "sha256", "")}
+    return source, {"nce": bool(run.nce), "hr1": bool(getattr(run, "hr1", False)), "n_chromatograms": int(run.n_chromatograms)}
+
+
+def builder_inputs(run) -> list:
+    """What the Rust builder needs of a `Run` that has read the headers (crates/mzlab-core/src/mzidx.rs, `ScanTable`):
+    [levels (u1), polarities (i1), rt (<f8), tic (<f8), scan rows (JSON), source (JSON text), run (JSON text), hr1]."""
+    source, run_meta = source_and_run(run)
+    sc = run.scans
+    return [np.array([s.level for s in sc], dtype="u1").tobytes(), np.array([s.polarity for s in sc], dtype="i1").tobytes(),
+            np.array([s.rt for s in sc], dtype="<f8").tobytes(), np.array([s.tic for s in sc], dtype="<f8").tobytes(),
+            scans_blob(run), json.dumps(source, separators=(",", ":")), json.dumps(run_meta, separators=(",", ":")), run_meta["hr1"]]
+
+
 def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None = None) -> str:
     """Write the index of `run` to `out` (atomically: a temporary file next to it, then a rename). Returns the path."""
     out = os.fspath(out)
@@ -462,15 +486,13 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                 s["sorter"].close()
             f.seek(pos)
             scans_off = f.tell()
-            rows = [[getattr(sc, c) for c in SCAN_COLUMNS] for sc in run.scans]
-            blob = json.dumps(rows, separators=(",", ":")).encode("utf-8")
+            blob = scans_blob(run)
             f.write(blob)
             scans_len = len(blob)
-            st = run.path.stat()
+            source, run_meta = source_and_run(run, sha256)
             meta = {"format": "mzidx", "version": VERSION, "block": BLOCK,
-                    "source": {"name": run.path.name, "size": st.st_size, "mtime_ns": st.st_mtime_ns, "probe": probe(run),
-                               "sha256": sha256 if sha256 is not None else getattr(run, "sha256", "")},
-                    "run": {"nce": bool(run.nce), "hr1": hr1, "n_chromatograms": int(run.n_chromatograms)},
+                    "source": source,
+                    "run": run_meta,
                     "keys": keys,
                     "sections": [{k: s[k] for k in ("level", "dtype", "n_scans", "n_peaks", "n_fence", "off")} for s in sections]}
             mblob = json.dumps(meta, separators=(",", ":")).encode("utf-8")
