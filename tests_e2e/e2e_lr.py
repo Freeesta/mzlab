@@ -100,7 +100,7 @@ try:
         def late_python():
             open_files(pg) if not pg.evaluate("typeof S !== 'undefined' && !!S.sess") else None
             before = pg.evaluate(JSON, "api/session")["j"]["session"]
-            r = pg.evaluate(JSON, "api/gradient?k=0")                   # a route only Python knows
+            r = pg.evaluate(JSON, "api/fileinfo?k=0")                   # a route only Python knows (the header of the file)
             assert r["status"] == 200, r
             assert pyodide(reqs), "Pyodide did not start"
             assert pg.evaluate("window.MZLAB_LR_DONE === true")

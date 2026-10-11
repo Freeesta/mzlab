@@ -90,7 +90,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `reset.js` (95) The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the sessi
 - `riferimento.js` (216) «Difference from the reference» (high resolution only; «Statistica» panel): for every feature of the — RIFERIMENTO:7, run:21, inspect:133
 - `rust-bridge.js` (223) Page side of the Rust engine (?motore=rust or localStorage qqq.motore = "rust"): browser.js hands ev — createBridge:10, open:71, hasRef:119
-- `rust-worker.js` (173) Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, — lrOp:69
+- `rust-worker.js` (174) Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, — lrOp:70
 - `scroll.js` (178) Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possibl
 - `settings.js` (159) Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after e — uipOpen:51
 - `sottrazione.js` (127) Reference of the session (a blank or the t0): one gesture, the same difference on traces, spectrum a

@@ -206,3 +206,13 @@ Righe e KB per area (tutto `main`: la differenza include il lavoro delle altre c
 | tools | 5352 | 6256 | 307 | 358 |
 | tests | 22207 | 22863 | 1483 | 1524 |
 | TP_Mine | 12885 | 12885 | 770 | 770 |
+
+## Flusso Rust senza Pyodide (`tests_e2e/e2e_lr.py`, riga «MISURA»)
+Runner GitHub Actions (ubuntu-latest, Chromium), 2 file Full Scan sintetici (`tools/dati_sintetici.py`), un giro. «avvio→pagina pronta» = dall'apertura dell'indirizzo alla schermata di partenza; «apertura» = dal caricamento dei due file al primo TIC disegnato.
+
+| flusso | avvio→pagina pronta (s) | apertura (s) |
+|---|---|---|
+| Rust (predefinito) | 0.46 | 6.0 |
+| classico (`?motore=python`) | 2.47 | 0.67 |
+
+L'avvio è 5 volte più rapido; l'apertura è circa 9 volte più lenta, perché il caricamento aspetta il `.mzidx` (costruito dal pool di worker: con cinque file in parallelo ~13 s sul runner), mentre il percorso classico legge subito l'mzML con Python e costruisce l'indice in secondo piano. Con file veri (centinaia di MB) Python deve leggere tutto il file per il primo TIC; la misura sui file del laboratorio non è stata fatta.
