@@ -22,6 +22,11 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # ei_lista_extra.py and ei_percorso.py live next to this file
+from ei_lista_extra import LIST_EXTRA  # noqa: E402
+from ei_percorso import PATH, SKILL_OF_TYPE, SUBST  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
@@ -363,7 +368,7 @@ LIST = [
         K(217, "C8H14ClN5+.", "isotopo", "Un cloro: M+2 al 32%.", 2),
         K(173, "C5H8ClN5+.", "riarr", "Perdita di propene (M−42) dal gruppo isopropile.")]),
     # ---------------------------------------------------------------- path of simple compounds (see PATH): new entries
-    dict(id="butano", it="butano", en=["BUTANE", "N-BUTANE"], f="C4H10", fam="alcani", lv=1, keys=[
+    dict(id="butano", it="butano", en=["BUTANE", "N-BUTANE"], f="C4H10", fam="alcani", lv=1, play=False, keys=[
         K(58, "C4H10+.", "M", "Lo ione molecolare: massa pari, nessun azoto; debole ma ben visibile."),
         K(43, "C3H7+", "sigma", "Perdita di un metile (M−15): picco base."),
         K(29, "C2H5+", "sigma", "Rottura al centro della catena: due frammenti da due carboni."),
@@ -386,12 +391,12 @@ LIST = [
         K(197, "C14H29+", "sigma", "M−15: perdita di un metile da un punto ramificato (nel lineare M−15 è quasi assente)."),
         K(169, "C12H25+", "sigma", "M−43: perdita di un propile/isopropile alla ramificazione."),
         K(112, "C8H16+.", "riarr", "Ione a elettroni dispari (alchene): lungo la catena ramificata si perdono frammenti interi con due rotture.")]),
-    dict(id="bromometano", it="bromometano", en=["BROMOMETHANE", "METHYL BROMIDE"], f="CH3Br", fam="alogenati", lv=1, keys=[
+    dict(id="bromometano", it="bromometano", en=["BROMOMETHANE", "METHYL BROMIDE"], f="CH3Br", fam="alogenati", lv=1, play=False, keys=[
         K(94, "CH3Br+.", "M", "Lo ione molecolare è il picco base; accanto ha un gemello due unità più pesante."),
         K(96, "CH3Br+.", "isotopo", "M+2 quasi uguale a M: il bromo ha due isotopi (79 e 81) in rapporto circa 1 : 1.", 2),
         K(93, "CH2Br+", "perdita", "M−1: perdita di un H; anche questo picco ha il suo gemello (93/95)."),
         K(79, "Br+", "i", "Scissione induttiva: la carica resta sull'alogeno (coppia 79/81).")]),
-    dict(id="iodometano", it="iodometano", en=["IODOMETHANE", "METHYL IODIDE"], f="CH3I", fam="alogenati", lv=1, keys=[
+    dict(id="iodometano", it="iodometano", en=["IODOMETHANE", "METHYL IODIDE"], f="CH3I", fam="alogenati", lv=1, play=False, keys=[
         K(142, "CH3I+.", "M", "Lo ione molecolare è il picco base; nessun M+2: lo iodio ha un solo isotopo stabile."),
         K(127, "I+", "i", "Scissione induttiva: la carica resta sullo iodio; perdita di un metile (M−15)."),
         K(141, "CH2I+", "perdita", "M−1: perdita di un H.")]),
@@ -453,7 +458,7 @@ LIST = [
         K(177, "C12H17O+", "perdita", "M−15: perdita di un metile, picco base (nell'isomero con il doppio legame fuori anello il picco base è un altro)."),
         K(135, "C10H15+", "perdita", "177 − chetene (C2H2O)."),
         K(43, "C2H3O+", "alpha", "Acetile da scissione α del metilchetone.")]),
-    dict(id="acetammide", it="acetammide", en=["ACETAMIDE"], f="C2H5NO", fam="azotati", lv=3, keys=[
+    dict(id="acetammide", it="acetammide", en=["ACETAMIDE"], f="C2H5NO", fam="azotati", lv=3, play=False, keys=[
         K(59, "C2H5NO+.", "M", "M dispari: un azoto. Picco base."),
         K(44, "CH2NO+", "alpha", "M−15: scissione α con perdita del metile; resta O=C=NH2+."),
         K(43, "C2H3O+", "alpha", "M−16: perdita di NH2•, acetile."),
@@ -463,7 +468,7 @@ LIST = [
         K(43, "C2H3O+", "alpha", "Scissione α con perdita del radicale metilamminico: acetile (picco base)."),
         K(58, "C2H4NO+", "alpha", "M−15: perdita di un metile."),
         K(30, "CH4N+", "riarr", "CH2=NH2+: tipica delle ammine e delle ammidi con un gruppo CH3 sull'azoto.")]),
-    dict(id="benzonitrile", it="benzonitrile", en=["BENZONITRILE"], f="C7H5N", fam="azotati", lv=2, keys=[
+    dict(id="benzonitrile", it="benzonitrile", en=["BENZONITRILE"], f="C7H5N", fam="azotati", lv=2, play=False, keys=[
         K(103, "C7H5N+.", "M", "M dispari (un azoto), picco base: nitrile aromatico (RDB 6)."),
         K(76, "C6H4+.", "perdita", "M−27: perdita di HCN, tipica di nitrili e ammine aromatiche."),
         K(50, "C4H2+.", "perdita", "76 − acetilene."),
@@ -532,35 +537,7 @@ LIST = [
     dict(id="2-metil-1-propanolo", it="2-metil-1-propanolo", en=["2-METHYL-1-PROPANOL", "ISOBUTYL ALCOHOL", "ISOBUTANOL"], f="C4H10O", fam="alcoli", lv=0, play=False, keys=[]),
     dict(id="metil-propil-etere", it="metil propil etere", en=["METHYL PROPYL ETHER", "1-METHOXYPROPANE"], f="C4H10O", fam="eteri", lv=0, play=False, keys=[]),
 ]
-
-
-# Path of simple compounds for the Pratica, per level (1-5) and ordered by difficulty inside the level. The level is about WHAT the
-# student has to read in the spectrum: 1 molecular ion and isotopes, 2 simple cleavages, 3 rearrangements and ring/chain
-# differentiation, 4 aromatics and series, 5 complex diagnosis (several classes together). The ids are the ids of LIST: the
-# progress in localStorage qqq.pratica is keyed by the same ids, so entering the path changes nothing for existing users.
-PATH = {
-    1: ["butano", "pentano", "iodometano", "bromometano", "bromoetano", "1-bromopropano", "clorobenzene", "bromobenzene", "1-clorobutano"],
-    2: ["2-butanone", "3-pentanone", "3-metil-2-butanone", "butanale", "1-butanolo", "2-butanolo", "2-metil-2-butanolo", "3-metil-3-pentanolo",
-        "dietil-etere", "metil-butil-etere", "butilammina", "dietilammina", "sec-butilammina", "isobutilammina", "terz-butilammina", "trietilammina"],
-    3: ["4-metil-2-pentanone", "3-metil-2-pentanone", "2-esanone", "acido-butanoico", "acido-esanoico", "butanoato-di-etile", "esanoato-di-metile",
-        "benzoato-di-metile", "cicloesene", "cicloesanolo", "limonene", "alfa-ionone", "beta-ionone", "acetammide", "n-metilacetammide", "dimetilacetammide"],
-    4: ["toluene", "etilbenzene", "propilbenzene", "butilbenzene", "o-xilene", "naftalene", "anisolo", "benzaldeide", "acetofenone", "benzonitrile",
-        "nitrobenzene", "4-nitrotoluene", "butanenitrile", "dietilsolfuro", "1-butantiolo"],
-    5: ["esadecano", "pentadecano", "farnesano", "diacetone-alcol", "levulinato-di-metile", "acido-levulinico", "vanillina", "4-metossiacetofenone", "4-cloroanilina"],
-}
-# What the task asked for and what was used instead (reported by main(); a candidate without an EI-B record in MassBank is replaced by an
-# equivalent compound of the same class and the replacement is stated).
-SUBST = {
-    "1-bromobutano": ("1-bromopropano", "nessun record EI-B di 1-bromobutano: omologo con un carbonio in meno"),
-    "3-metil-3-esanolo": ("3-metil-3-pentanolo; 2-metil-2-butanolo", "nessun record EI-B: due alcoli terziari della stessa classe"),
-    "esanammide": ("N-metilacetammide", "nessuna ammide alifatica lunga in MassBank: ammide secondaria semplice"),
-    "1-nitropropano": ("4-nitrotoluene (nitrobenzene già presente)", "nessun nitroalcano EI-B oltre il nitrometano già presente"),
-    "2-metilpentadecano": ("2,6,10-trimetildodecano (farnesano); pentadecano", "nessun alcano monoramificato lungo: isoalcano ramificato di pari massa"),
-    "cloroottano": ("4-cloroanilina", "nessun cloroalcano lungo EI-B: composto con cloro e un'altra classe"),
-    "butirronitrile": ("butanenitrile (già presente)", "stesso composto"),
-}
-SKILL_OF_TYPE = {"alpha": "alpha", "i": "induttiva", "sigma": "sigma", "mclafferty": "mclafferty", "rda": "rda", "tropilio": "benzilica", "orto": "orto",
-                 "serie": "serie", "perdita": "perdita", "riarr": "riarr", "isotopo": "isotopi"}
+LIST += LIST_EXTRA
 
 
 def skills_of(item, peaks) -> list:
@@ -749,7 +726,20 @@ def main() -> None:
             "// authors, licence). The whole file is distributed under CC BY-NC-SA 4.0 (non-commercial teaching use), not under the MIT\n"
             "// licence of the program. The 'keys' (teaching notes) are by the mzLab authors, same licence.\n")
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(head + "const EI_DATA = " + json.dumps({"version": 2, "source": "MassBank Europe", "items": items}, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
+    extra_ids = {i["id"] for i in LIST if i.get("extra")}
+    base = [i for i in items if i["id"] not in extra_ids]
+    levels: dict[int, list] = {}
+    for i in items:
+        if i["id"] in extra_ids:
+            levels.setdefault(i.get("path", 4), []).append(i)          # reference spectra without a path level travel with level 4
+    index = {i["id"]: lv for lv, grp in levels.items() for i in grp}       # id -> level file that holds it
+    dump = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+    OUT.write_text(head + "const EI_DATA = " + dump({"version": 3, "source": "MassBank Europe", "items": base, "extra": index}) + ";\n", encoding="utf-8")
+    for old in OUT.parent.glob("ei-dati-l*.js"):
+        old.unlink()
+    for lv, grp in sorted(levels.items()):
+        (OUT.parent / f"ei-dati-l{lv}.js").write_text(head + "EI_DATA.items.push(..." + dump(grp) + ");\n", encoding="utf-8")
+    items = base + [i for g in levels.values() for i in g]
     report(items)
     print(f"{len(items)} composti ({sum(i['play'] for i in items)} giocabili) -> {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} kB)")
 

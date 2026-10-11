@@ -12,7 +12,19 @@ const ocl = async () => OCL || (OCL = await import("../../vendor/openchemlib.js"
 
 const $ = (q, el = document) => el.querySelector(q);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const ITEMS = EI_DATA.items, PLAY = ITEMS.filter(i => i.play);
+const ITEMS = EI_DATA.items;
+let PLAY = ITEMS.filter(i => i.play);
+// The compounds added to a path level live in ei-dati-l<N>.js (EI_DATA.items.push), loaded only when that level or one of its compounds is asked for.
+const levelLoads = {};
+function loadLevel(n) {
+  if (!n || levelLoads[n]) return levelLoads[n] || Promise.resolve();
+  return levelLoads[n] = new Promise(res => {
+    const sc = document.createElement("script"); sc.src = `pratica/ei-dati-l${n}.js`;
+    sc.onload = () => { PLAY = ITEMS.filter(i => i.play); res(); };
+    sc.onerror = () => res();                                   // offline or missing: the compounds of the base file remain
+    document.head.appendChild(sc);
+  });
+}
 const FAMNAME = { alcani: "alcani", alcheni: "alcheni e cicloalcani", aromatici: "aromatici", alcoli: "alcoli", eteri: "eteri", carbonilici: "aldeidi e chetoni",
   acidi: "acidi ed esteri", azotati: "composti azotati", zolfo: "composti dello zolfo", alogenati: "alogenati", fenoli: "fenoli ed eterocicli", ambientali: "contaminanti ambientali" };
 const STEPNAME = { M: "Ione molecolare", formula: "Formula e RDB", ioni: "Ioni chiave", struttura: "Struttura" };
@@ -58,7 +70,9 @@ function pathInfo() {
   const g = PAL.load().items[gameKey()] || {}, all = PLAY.filter(i => i.path === path), ok = all.filter(i => g[i.id] && g[i.id].box >= 1).length;
   el.textContent = `Percorso ${path}: ${ok} di ${all.length} composti risolti`;
 }
-function next(id) {
+async function next(id) {
+  if (id && EI_DATA.extra && EI_DATA.extra[id]) await loadLevel(EI_DATA.extra[id]);
+  if ($("#path").value) await loadLevel(+$("#path").value);
   let it = id && ITEMS.find(i => i.id === id);
   if (!it && S && S.chall) it = S.chall.list[S.chall.k];
   if (!it) {
