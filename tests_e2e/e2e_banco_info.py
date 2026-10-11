@@ -19,7 +19,6 @@ try:
         body = lambda: pg.inner_text("#hri-body")
         def visible():
             assert pg.locator("#stbar [data-cmd=scan], #stbar [data-cmd=form], #stbar [data-cmd=idn]").count() == 3 and not pg.is_visible("#hrinfo"), "closed until a tool is chosen"
-            pg.evaluate("BARRA.setPinned(true)")
             tab("hdr")                                       # an information tool of the toolbar brings the panel up
             assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "hdr"
             assert pg.evaluate("getComputedStyle(document.querySelector('#dfiles')).position") == "sticky", "pinned, the panel stays on screen while the page scrolls"

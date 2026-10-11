@@ -58,8 +58,8 @@ try:
         step("PNG of a plot has a white background", png)
         def restore():
             drawer(pg); pg.wait_for_timeout(500); pg.reload(); pg.wait_for_timeout(4000)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.pinned && BARRA.curTab === 'file'"); pg.click("#sb-pin"); pg.click("#sb-x"); pg.wait_for_timeout(800)
-        step("pinned file list is restored after reload", restore)
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.open && BARRA.curTab === 'file'"); pg.click("#sb-x"); pg.wait_for_timeout(800)
+        step("open file list is restored after reload", restore)
         def periodic():
             pg.click("#np-pt"); pg.wait_for_timeout(500)
             assert pg.locator(".pt-c").count() == 118
