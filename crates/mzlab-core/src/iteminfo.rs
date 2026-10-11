@@ -608,3 +608,56 @@ pub fn item_info<R: ReadAt>(
     o.raw("}");
     Ok(o.0)
 }
+
+/// The `Facts` of a file, read from its mzML: instrument, chromatograms (SRM, PDA, analog traces). `need_mrm` also reads what a file without
+/// scans needs (the polarity of the header and the retention-time range of the SRM chromatograms): it can mean reading a whole small file.
+pub fn facts_from<M: ReadAt>(
+    m: &mut crate::mzmlhead::Mzml<M>,
+    scans_end: u64,
+    n_chromatograms: i64,
+    need_mrm: bool,
+) -> Result<Facts> {
+    use crate::json::round;
+    let chroms = m.chromatograms(scans_end)?;
+    let mut f = Facts {
+        instrument: m.metadata()?.instrument,
+        n_chromatograms,
+        srm: chroms.iter().filter(|c| c.kind == "srm").count(),
+        pda: chroms.iter().any(|c| c.kind == "pda"),
+        ..Default::default()
+    };
+    for c in chroms
+        .iter()
+        .filter(|c| c.kind == "pressure" || c.kind == "analog")
+    {
+        let (t, _) = m.chromatogram(c)?;
+        if let (Some(a), Some(b)) = (t.first(), t.last()) {
+            f.analog.push(Analog {
+                i: c.index as i64,
+                kind: c.kind.clone(),
+                id: c.id.clone(),
+                unit: m.chromatogram_unit(c)?,
+                t0: round(*a, 4),
+                t1: round(*b, 4),
+                n: t.len() as i64,
+            });
+        }
+    }
+    if need_mrm {
+        f.header_polarity = m.header_polarity()?;
+        let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
+        for c in chroms.iter().filter(|c| c.kind == "srm") {
+            let (t, _) = m.chromatogram(c)?;
+            if !t.is_empty() {
+                let (a, b) = (
+                    t.iter().cloned().fold(f64::INFINITY, f64::min),
+                    t.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+                );
+                lo = Some(lo.map_or(a, |x| x.min(a)));
+                hi = Some(hi.map_or(b, |x| x.max(b)));
+            }
+        }
+        f.srm_rt = lo.zip(hi);
+    }
+    Ok(f)
+}
