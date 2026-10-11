@@ -107,7 +107,7 @@ try:
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("""(() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (d, t) { window.__w = this;
               if (d && d.ping && window.__mute) return; return pm.call(this, d, t); }; })()""")
-            pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            pg.goto(URL + "?motore=python"); pg.wait_for_selector("#drop", timeout=120000)      # the health check is of Pyodide
             cdp = ctx.new_cdp_session(pg)
             def reloaded(fire):
                 pg.evaluate("window.__mark = 1; sessionStorage.removeItem('qqq.recovered')")
