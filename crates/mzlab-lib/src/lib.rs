@@ -4,6 +4,7 @@
 pub mod build;
 pub mod clean;
 pub mod codec;
+pub mod decoy;
 pub mod error;
 pub mod format;
 pub mod io;
