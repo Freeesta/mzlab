@@ -71,8 +71,9 @@ try:
                 pg.set_viewport_size({"width": w, "height": 2200}); pg.wait_for_timeout(700)
                 tops = pg.evaluate("[...document.querySelectorAll('.pnl')].filter(p=>p.offsetParent).map(p=>[p.className, Math.round(p.querySelector('.tbs').getBoundingClientRect().height)])")
                 assert all(h <= 30 for _, h in tops), (w, tops)
+            pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(800)      # (narrow: some groups are in the «⋯» menu)
             bars = pg.evaluate("[...document.querySelectorAll('.pnl.chrom .tbg')].map(g=>getComputedStyle(g).borderLeftWidth)"); print("bars:", bars); assert bars[1] != "0px" and bars[-1] != "0px"
-            pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(600); pg.screenshot(path=SH + "182_header.png", clip={"x": 250, "y": 150, "width": 1250, "height": 330})
+            pg.wait_for_timeout(100); pg.screenshot(path=SH + "182_header.png", clip={"x": 250, "y": 150, "width": 1250, "height": 330})
         step("button groups in order, zoom next to reset, one row at 1500/1100/700 px", groups)
         def xlsx():
             xp = pg.locator(".pnl.xic").first

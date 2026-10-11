@@ -150,6 +150,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/explore":
                 app.open_session(body)
                 return _json(app.session_state())
+            if path == "/api/meta":          # metadata of the open files (sample table): type, time, concentration, replicate group
+                return _json(app.set_meta(body))
+            if path == "/api/stat/profile":    # time profile of one ion chosen by the user (values already integrated by the page): order, normalization
+                from .statistica import time_profile
+                return _json(time_profile(body.get("points", []), body.get("metric", "area"), body.get("istd")))
             if path == "/api/remove":
                 app.remove_file(body.get("name", ""))
                 return _json({"files": app.files(), "methods": app.methods()})

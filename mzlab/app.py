@@ -234,13 +234,20 @@ class App:
             t = s_.get("time")
             c = s_.get("conc")
             samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"),
-                            "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit")})
+                            "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit"),
+                            "rep": s_.get("rep")})
         if not samples:
             raise UserError("err.session.noFiles", text="add at least one file")
         if payload.get("append") and self.session:          # one more file in the session that is open (the page opens a list file by file)
             self.session.add(samples)
         else:
             self.session = Session(samples, self.workdir)
+
+    def set_meta(self, payload: dict) -> dict:
+        """Metadata of the open files (type, time in minutes, concentration, replicate group), changed from the sample table."""
+        if not self.session:
+            raise UserError("err.session.none", text="no session open")
+        return {"changed": self.session.set_meta(list(payload.get("files", [])))}
 
     def _git_commit(self) -> str:
         cache = self.__dict__.setdefault("_git_commit_val", None)

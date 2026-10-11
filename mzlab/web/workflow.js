@@ -14,7 +14,7 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
-  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "workflow_applied"];
+  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "workflow_applied"];
   // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
   function splitOps(ops) {
     const keep = [], unknown = [];
@@ -47,6 +47,9 @@ const WORKFLOW = (() => {
         tipo: f.type || "sample",
         etichetta: f.label || "",
         tempo: f.time ?? null,
+        concentrazione: f.conc ?? null,
+        unita_conc: f.cunit ?? null,
+        replica: f.rep || null,
       }));
 
     const soglieLib = window.LIVELLI ? LIVELLI.exportState() : null;       // profile and thresholds of the confidence levels (livelli.js)
@@ -204,6 +207,7 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
+    if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {
       const { keep, unknown } = splitOps(wf.operazioni);

@@ -194,6 +194,10 @@ function legend(p, all, note = "") {
   } else p.leg.innerHTML = all.map(s => `<span class="tg${off(isHid(p, s))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${sw(s.color)}${EH(s.name)}${legPol(E.files[s.k])}</span>`).join("");
   if (!note && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (note) p.leg.insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
+  if (window.CAMPIONI && p.leg.innerHTML) {                  // time gradient: the bar from the first to the last time of the files drawn
+    const fs = (p.type === "xic" ? scanFiles(shownFor(p)) : all.map(s => E.files[s.k])).filter(f => f && f.rank != null);
+    if (fs.length > 1) p.leg.insertAdjacentHTML("beforeend", CAMPIONI.gradientLegend(fs));
+  }
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { t.label = v; draw(p); } });
   p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
   p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
