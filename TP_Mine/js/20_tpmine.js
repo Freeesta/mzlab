@@ -257,7 +257,7 @@
     };
     let pvT = 0, OCLp = null;
     const ocl = () => (OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href));
-    const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: m.getMolecularFormula().formula }; } catch (_) { return null; } };
+    const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: MOLUI.hillOf(m.getMolecularFormula().formula) }; } catch (_) { return null; } };
     const preview = () => {
       clearTimeout(pvT);
       pvT = setTimeout(async () => {
@@ -272,7 +272,7 @@
         try {
           const r = await call("formula_info", q, ad);
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
-          if (r.ok && mol && info && info.formula !== r.formula) $("#tp-warn").textContent = `The formula (${r.formula}) does not match the SMILES (${info.formula}).`;
+          if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
         header(info ? info.formula : (mol || ""), smi);
       }, 350);
@@ -280,13 +280,13 @@
     function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
       if (!t) { el.innerHTML = ""; return; }
-      ocl().then(OCL => { el.innerHTML = `<div class="struct">${OCL.Molecule.fromSmiles(t).toSVG(300, 170)}</div>`; }).catch(() => { el.innerHTML = ""; });
+      ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
     function header(formula, smi) {      // small structure + name + formula next to the title
       const el = $("#tp-hd-struct"); if (!el) return;
       const nm = $("#tp-name").value.trim();
       if (!smi) { el.innerHTML = ""; return; }
-      ocl().then(OCL => { el.innerHTML = OCL.Molecule.fromSmiles(smi).toSVG(120, 48) + `<span>${esc(nm)}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
+      ocl().then(OCL => { el.innerHTML = MOLUI.svg(OCL.Molecule.fromSmiles(smi).toSVG(120, 48)) + `<span>${esc(MOLUI.cap(nm))}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
     }
     $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
 
@@ -323,17 +323,17 @@
     const pick = i => {
       const it = sugItems[i]; if (!it) return;
       if (it.link) { window.open(it.link, "_blank", "noopener"); sugClose(); return; }
-      nameIn.value = it.c.names[0]; $("#tp-mol").value = it.c.formula; $("#tp-smi").value = it.c.smiles; sugClose(); preview(); nameIn.focus();
+      nameIn.value = MOLUI.cap(it.c.names[0]); nameIn.dataset.raw = it.c.names[0]; $("#tp-mol").value = MOLUI.hillOf(it.c.formula); $("#tp-smi").value = it.c.smiles; sugClose(); preview(); nameIn.focus();
     };
     const sugMark = () => { [...sugBox.children].forEach((li, k) => li.setAttribute("aria-selected", k === sugI ? "true" : "false")); if (sugI >= 0) nameIn.setAttribute("aria-activedescendant", "tp-sug-" + sugI); else nameIn.removeAttribute("aria-activedescendant"); };
     const sugShow = () => {
       const w = nameIn.value.trim(); if (w.length < 2) return sugClose();
       sugItems = suggest(w).map(c => ({ c }));
       sugItems.push({ link: "https://pubchem.ncbi.nlm.nih.gov/#query=" + encodeURIComponent(w), word: w });
-      sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(it.c.names[0])}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
+      sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(MOLUI.cap(it.c.names[0]))}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
       sugBox.hidden = false; nameIn.setAttribute("aria-expanded", "true"); sugI = -1; sugMark();
     };
-    nameIn.addEventListener("input", () => { sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
+    nameIn.addEventListener("input", () => { delete nameIn.dataset.raw; sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
     nameIn.addEventListener("keydown", e => {
       if (sugBox.hidden) { if (e.key === "ArrowDown") sugShow(); return; }
       if (e.key === "ArrowDown") { sugI = (sugI + 1) % sugItems.length; sugMark(); e.preventDefault(); }
@@ -378,7 +378,7 @@
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
-        const parent = { name: $("#tp-name").value.trim(), neutral: mol, adduct: $("#tp-add").value };
+        const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
@@ -470,7 +470,7 @@
       const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1, w = 220, h = 54;
       const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
       const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
-      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lvb lv-${r.level}">${r.level}</span>` : ""}</div>
+      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(MOLUI.cap(shortN(r.name, 34)))}</b>${r.level ? `<span class="lvb lv-${r.level}">${r.level}</span>` : ""}</div>
         <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
         <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
@@ -506,7 +506,7 @@
       const s = st.summary, par = s.rows.find(r => r.label === "progenitore"), items = [par, ...s.rows.filter(r => r.kind === "candidate" && good(r)).slice(0, 12)], times = s.times;
       V.innerHTML = `<div class="card"><div class="row"><button id="tp-play">▶ Start the film</button><input type="range" id="tp-sl" min="0" max="${times.length - 1}" value="0" class="grow"><b id="tp-tl">t = ${times[0]} min</b></div>
         <div class="mut">Each bar is the peak area, in % of its maximum: the parent decreases, the transformation products rise (and then, sometimes, fall).</div>
-        <div id="tp-film">${items.map(r => `<div class="frow" data-id="${r.id}"><span class="fl" title="${esc(r.name)}">${esc(shortN(r.name, 30))}</span><span class="ft"><i style="background:${col(r)}"></i></span><span class="fv"></span></div>`).join("")}</div></div>`;
+        <div id="tp-film">${items.map(r => `<div class="frow" data-id="${r.id}"><span class="fl" title="${esc(r.name)}">${esc(MOLUI.cap(shortN(r.name, 30)))}</span><span class="ft"><i style="background:${col(r)}"></i></span><span class="fv"></span></div>`).join("")}</div></div>`;
       const set = i => {
         $("#tp-sl").value = i; $("#tp-tl").textContent = `t = ${times[i]} min`;
         V.querySelectorAll(".frow").forEach(row => { const r = items.find(x => x.id === +row.dataset.id), mx = Math.max(...r.kinetics.map(p => p.area)) || 1, k = r.kinetics.find(p => p.time === times[i]), v = k ? 100 * k.area / mx : 0;
@@ -548,7 +548,7 @@
       const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
       $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
         <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lvb lv-${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
-        <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(r.name)}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
+        <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(MOLUI.cap(r.name))}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
         <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td></tr>`).join("");
       $("#tp-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
     }
@@ -557,7 +557,7 @@
       const bl = d.rows.filter(r => r.type === "blank" || r.type === "control"), drt = par && par.ref_rt && d.ref_rt ? d.ref_rt - par.ref_rt : null;
       const P = [];
       const row = st.summary.rows.find(r => r.id === d.id);
-      P.push(`<b>${esc(d.name)}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
+      P.push(`<b>${esc(MOLUI.cap(d.name))}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
       if (first && mx) P.push(`Appears at ${first.time} min and peaks at ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "it is absent from the blank." : "something shows in the blank: be careful.") : "there is no blank to rule out a contaminant."}`);
       if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
       if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor}): ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
@@ -573,7 +573,7 @@
       let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
       const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;
       const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time);
-      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(d.name)} ${d.level ? `<span class="lvb lv-${d.level}">${d.level}</span>` : ""}</h3>
+      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(MOLUI.cap(d.name))} ${d.level ? `<span class="lvb lv-${d.level}">${d.level}</span>` : ""}</h3>
         <div class="kv"><b>Formula</b><span>${esc(d.formula || "-")} ${d.delta ? `<span class="mut">(${esc(d.delta)})</span>` : ""}</span>
         <b><i>m/z</i></b><span>${d.mz} calculated · ${d.mz_extracted} extracted${d.mz_observed ? ` · ${d.mz_observed.toFixed(2)} observed` : ""}</span>
         <b>RT</b><span>${d.ref_rt ? d.ref_rt.toFixed(2) + " min" : "-"}${drt != null ? ` (${drt >= 0 ? "+" : ""}${drt.toFixed(2)} relative to the parent; more polar TPs elute earlier)` : ""}</span>

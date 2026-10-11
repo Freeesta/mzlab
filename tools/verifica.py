@@ -241,6 +241,7 @@ AREE = [
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
+    ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
