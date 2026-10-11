@@ -7,6 +7,7 @@ pub mod idxread;
 pub mod json;
 pub mod mzidx;
 pub mod mzml;
+pub mod peakq;
 pub mod peaks;
 pub mod raw;
 pub mod rois;

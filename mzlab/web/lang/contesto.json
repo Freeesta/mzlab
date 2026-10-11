@@ -411,5 +411,6 @@
   "sub.prev": "{file} = nome del file di riferimento.",
   "sub.norm.istd.short": "{mz} = m/z dello standard interno scelto dallo studente.",
   "sub.note": "{file} = file di riferimento; {f} = fattore; {norm} = normalizzazione.",
-  "sub.on": "{file} = file di riferimento; {f} = fattore."
+  "sub.on": "{file} = file di riferimento; {f} = fattore.",
+  "int.cmp.aria": "Descrizione accessibile del grafico di confronto. {a} = picchi trovati dalla CWT, {b} = picchi trovati da prominenza + minimo locale."
 }

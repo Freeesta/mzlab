@@ -38,7 +38,7 @@ E2E = ROOT / "tests_e2e"
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_pool": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
+    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_pool": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
@@ -116,7 +116,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -245,13 +245,13 @@ AREE = [
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore", "e2e_asse_x"}), ("mzlab/web/spettro.js", {"e2e_asse_x", "e2e_spettro"}), ("tests_e2e/e2e_asse_x.py", {"e2e_asse_x"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita"}),
-    ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
+    ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust"}), ("mzlab/web/qualita", {"e2e_picchi_qualita"}), ("mzlab/web/peaks-worker", {"e2e_picchi_qualita"}), ("tests_e2e/e2e_picchi_qualita.py", {"e2e_picchi_qualita"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti"}), ("mzlab/web/barra.js", {"e2e_strumenti", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
     ("mzlab/web/grafici.js", {"e2e_sottrazione", "e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour", "e2e_asse_x"}),
-    ("mzlab/web/picchi.js", {"e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
+    ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_tour"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
     ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/workflow.py", {"e2e_workflow"}), ("mzlab/web/version.js", {"e2e_workflow"}),
