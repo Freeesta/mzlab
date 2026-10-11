@@ -70,17 +70,17 @@ try:
             pg.screenshot(path=SH + "65_periodic.png")
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
-            pg.click('#reftabs button[data-t="ad"]'); pg.fill("#ad-in", "C14H13F4N3O2S"); pg.wait_for_timeout(700)
+            pg.evaluate("QQQRef.open('ad')"); pg.fill("#ad-in", "C14H13F4N3O2S"); pg.wait_for_timeout(700)
             t = pg.inner_text("#ad-tbl"); assert "364.0737" in t and "386.0557" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+
             pg.fill("#ad-in", "100"); pg.wait_for_timeout(300); assert "101.0073" in pg.inner_text("#ad-tbl")
             pg.screenshot(path=SH + "66_adducts.png")
-            pg.click('#reftabs button[data-t="ls"]'); pg.wait_for_timeout(200); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("C2H2O") == "42", m
+            pg.evaluate("QQQRef.open('ls')"); pg.wait_for_timeout(200); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("C2H2O") == "42", m
             pg.click("#refx")
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():
             pg.click("#np-pt"); pg.wait_for_timeout(400)
-            assert pg.locator('#reftabs button[data-t="is"]').count() == 0, "no Isotopi tab any more (the profile is drawn from the spectrum)"
+            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Tavola periodica", "no tab bar: only the title"
             # periodic table keeps the same size whatever element is shown
             hs = []
             for el in ["F", "Sn", "C", "Hg"]:

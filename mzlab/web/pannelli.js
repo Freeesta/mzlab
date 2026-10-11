@@ -195,6 +195,7 @@ function addPanel(type, o, after) {
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
   if (type !== "spec" && type !== "map") {
+    p.pdaAlign = !!o.pdaAlign; p.pdaDelay = typeof o.pdaDelay === "number" ? o.pdaDelay : null; p.overlay = o.overlay === "grad" || o.overlay === "press" ? o.overlay : null; p.gdelay = +o.gdelay || 0;           // gradient over the traces (gradiente.js) and its delay at the column, in min
     p.tl = o.tl ?? true;                                                  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find(q => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
     if (mate) p.zoom = [...mate.zoom];
@@ -513,11 +514,17 @@ function ctl(p) {
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = I18N.t("ctl.oneFile");
   const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
   const logChk = chk("log", I18N.t("ctl.log"), ms2c, NOMS2);
+  // low resolution: the gradient delay and the PDA alignment are in this popover (in high resolution they are in «Opzioni di visualizzazione»)
+  const num = (k, v, lo, hi, st) => `<input data-o="${k}" type="number" class="mzf" min="${lo}" max="${hi}" step="${st}" value="${v}" style="width:5em">`;
+  const lrExtra = window.BANCO && BANCO.on() ? "" :
+    (p.overlay === "grad" ? `<label class="muted" title="${I18N.t("disp.gdelay.title")}">${I18N.t("disp.gdelay", { input: num("gdelay", p.gdelay || 0, 0, 10, 0.1) })}</label>` : "") +
+    (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map(x => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map(x => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="${I18N.t("ctl.mz.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(mzd(p)) : ""}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(mzd(p)) : ""}"></label>`;
   const rtbar = p.type === "map" ? "" : `<label class="muted" title="${I18N.t("ctl.rt.title")}"><i>RT</i> ${I18N.t("ctl.range.from")} <input data-o="rt0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[0]) : ""}" placeholder="${I18N.t("ctl.rt.min")}"> ${I18N.t("ctl.range.to")} <input data-o="rt1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[1]) : ""}" placeholder="${I18N.t("ctl.rt.max")}"> min</label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
-  if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda"))) p.kind = "tic";      // options that make no sense for these files are switched off
+  const anKinds = [...new Map(TF.flatMap(x => x.analog || []).map(a => [a.kind === "pressure" ? "press" : "an:" + a.id, a])).entries()];       // [value, trace] of the analog traces of the files of the tab
+  if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda") || (isAnalog(p.kind) && !anKinds.some(([v]) => v === p.kind)))) p.kind = "tic";      // options that make no sense for these files are switched off
   const precs = [...new Set(ms2s.flatMap(x => x.precursors))].sort((a, b) => a - b);
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:11em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "";
     const blanks = TF.filter(x => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
@@ -546,19 +553,19 @@ function ctl(p) {
   if (bkOn) chips.push(I18N.t("ctl.chip.sub", { label: E.files[+p.bk].label })); else if (p.ibk || p._pickIbk) chips.push(I18N.t("ctl.chip.tract")); else if (p.snip) chips.push(I18N.t("ctl.chip.baseline"));
   const parBox = inner => `<span class="cpar"><button class="bt" type="button" data-a="cpar" title="${I18N.t(p.type === "chrom" ? "ctl.cpar.titlePrec" : "ctl.cpar.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button>${chips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.chip.title")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option></select>`}${smBtn()}${view}${corr}${parBox(`${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}</select>`}${smBtn()}${view}${corr}${parBox(`${p.kind === "pda" || isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;      // xed: lower / upper m/z of an ion read in high resolution (ppm window)
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="${I18N.t("ctl.xt.title")}">${p.traces.map((t, i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
     const hrX = !!(window.HR && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));      // high resolution: only the label, m/z and interval are in «Display options» of this chromatogram
     const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
-    c.innerHTML = `${xr}${fsel}${smBtn()}${view}${corr}${parBox(logChk + rtbar)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
+    c.innerHTML = `${xr}${fsel}${smBtn()}${view}${corr}${parBox(logChk + rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
   if (p.type === "mrm") {
     const isMulti = Array.isArray(p.tr) && p.tr.length > 1;
     const qqOpt = isMulti ? `<option value="__quant_qual" selected>${I18N.t("ctl.mrm.quantQual")}</option>` : "";
-    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${qqOpt}${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${smBtn(I18N.t("ctl.mrm.smooth.title"))}${view}${corr}${parBox(logChk + rtbar)}`;
+    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${qqOpt}${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${smBtn(I18N.t("ctl.mrm.smooth.title"))}${view}${corr}${parBox(logChk + rtbar + lrExtra)}`;
   }
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
@@ -590,6 +597,9 @@ function ctl(p) {
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "smooth") x.onclick = () => { p.smooth = !p.smooth; x.classList.toggle("on", p.smooth); x.setAttribute("aria-pressed", String(!!p.smooth)); draw(p); uiSave(); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
+    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((parseFloat(String(x.value).replace(",", ".")) || 0) * 10) / 10)); draw(p); uiSave(); };
+    else if (k === "pdadelay") x.onchange = () => { const n = parseFloat(String(x.value).replace(",", ".")); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
+    else if (k === "pdaAlign") x.onchange = () => { p.pdaAlign = x.checked; draw(p); uiSave(); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
       const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);

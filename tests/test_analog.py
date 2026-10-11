@@ -112,3 +112,21 @@ def test_gradient_route(pressure_app):
     payload = json.dumps({"k": 0, "model": None}).encode()
     dispatch(pressure_app, "POST", "/api/gradient", {}, __import__("io").BytesIO(payload), len(payload))
     assert _get(pressure_app, "/api/gradient", k=0)[1] == {"gradient": None}
+
+
+def test_detector_delay_known():
+    rng = np.random.default_rng(1)
+    g = lambda t, c, s: np.exp(-0.5 * ((t - c) / s) ** 2)
+    ta, tb = np.arange(0, 22, 0.004), np.linspace(0.5, 20, 1111)
+    peaks = [(2.1, 6), (7.07, 3), (13.0, 5), (14.3, 22), (18.3, 4)]
+    for true in (0.0, 0.07, 0.25, -0.1):
+        ya = 2000 + 30 * rng.normal(size=ta.size) + sum(a * 1e3 * g(ta, c, 0.07) for c, a in peaks)
+        yb = 4000 + 60 * rng.normal(size=tb.size) + sum(a * 2e3 * g(tb, c + true, 0.06) for c, a in peaks)
+        r = analog.detector_delay(ta, ya, tb, yb)
+        assert abs(r["delay"] - true) <= 0.002 and r["peaks"] >= 3 and r["corr"] > 0.9, (true, r)
+    assert analog.detector_delay(ta[:10], ya[:10], tb, yb) is None
+
+
+def test_delay_route(pressure_app):
+    code, j = _get(pressure_app, "/api/delay", k=0)
+    assert code == 200 and j["delay"] is not None and abs(j["delay"]["delay"]) < 0.03 and j["delay"]["corr"] > 0.8, j     # the synthetic PDA and TIC peak together
