@@ -7,15 +7,6 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 
-def axe_path():
-    p = os.environ.get("AXE_JS")
-    if p and os.path.exists(p): return p
-    try:
-        import axe_playwright_python
-        q = os.path.join(os.path.dirname(axe_playwright_python.__file__), "axe.min.js")
-        return q if os.path.exists(q) else None
-    except ImportError:
-        return None
 
 r = Run(port=8969, wd="/tmp/wdprtp")
 try:
