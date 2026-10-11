@@ -137,7 +137,7 @@ try:
             a1 = pg.evaluate(f"{P}.ints.map(i=>i.area)"); assert a1 and a1[0] > 0, a1
             pg.evaluate(f"(()=>{{{P}.smooth=true;draw({P})}})()"); pg.wait_for_timeout(600); a2 = pg.evaluate(f"{P}.ints.map(i=>i.area)")
             assert a1 == a2, ("areas depend on smoothing", a1, a2)
-            assert "grezzo" in pg.evaluate(f"document.querySelector('.pnl.mrm [data-o=smooth]').title")
+            assert "grezzo" in pg.evaluate(f"document.querySelector('.pnl.mrm [data-a=smooth]').title")
             pg.evaluate(f"(()=>{{{P}.smooth=false;draw({P})}})()")
         step("B-14 areas do not depend on smoothing", smoothing)
 finally:
