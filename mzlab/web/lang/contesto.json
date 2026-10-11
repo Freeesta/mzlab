@@ -258,6 +258,7 @@
   "cx.applied": "Avviso dopo «Applica»; {f} = formula scritta sullo spettro.",
   "cx.copied": "Avviso dopo il clic su una riga dei risultati; {f} = formula copiata.",
   "cx.remove": "Nome accessibile del pulsante × di una riga degli elementi in uso; {el} = elemento.",
+  "disp.for": "Intestazione del pannello Opzioni di visualizzazione; {type} = tipo di grafico (spettro o cromatogramma).",
   "comp.count": "Conteggio dei candidati nella finestra «Formule compatibili»; {n} = numero.",
   "comp.sc.obs": "Numero di picchi isotopici trovati nello spettro; {n}.",
   "comp.terms": "Termini del punteggio di un candidato (0-1): {m} massa, {i} isotopi, {f} frammenti.",

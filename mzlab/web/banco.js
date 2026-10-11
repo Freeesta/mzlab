@@ -9,7 +9,7 @@ const BANCO = (() => {
   const st = document.createElement("style");
   st.textContent = `.hrw .pnl.act{box-shadow:0 0 0 2px var(--accent)}
 .bfw{display:inline-flex;align-items:center;gap:4px;margin-left:6px}.bfw select{max-width:21em;min-width:9em}.bfw .pin{padding:2px 5px}.bfw .pin.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
-.hrw #g-add,.hrw #ovbtn{display:none}
+.hrw #g-add,.hrw #ovbtn,.hrw .pnl.spec [data-a="par"]{display:none}
 #hrbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0 8px;border-bottom:2px solid var(--line);margin-bottom:8px}
 #hrbar[hidden]{display:none}#hrbar .sepv{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
 #hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
@@ -215,7 +215,6 @@ const BANCO = (() => {
   };
   const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
   const tabOfAct = () => (act() && act().tab) || E.tab;
-  const decOf = () => Math.round(UIP.hrDec || 4);
   function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span>${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
     let cvs; p._exp = true; EXPORTING = true;
@@ -246,7 +245,6 @@ const BANCO = (() => {
     o.el.querySelector(".x").click(); setActive(n); relayout(); fitHost(); uiSave();
   }
   const FN = {
-    dec: v => { UIP.hrDec = Math.min(5, Math.max(3, +v || 4)); try { uipSave(); } catch (e) { /* no storage */ } redrawAll(); },
     prev: () => { const a = walkTarget(false); if (a) stepScan(a, -1); else info(I18N.t("bn.putCursor")); },
     next: () => { const a = walkTarget(false); if (a) stepScan(a, 1); else info(I18N.t("bn.putCursor")); },
     zundo: () => { const a = act(); if (a) undoLast(a); },
@@ -263,7 +261,6 @@ const BANCO = (() => {
     const b = Q("#hrbar"); if (!b) return; const a = act();
     const t = (id, on) => { const x = b.querySelector(`[data-hb="${id}"]`); if (x) x.classList.toggle("on", !!on); };
     t("pin", a && a.pin); t("norm", a && (a.type === "spec" ? specRel(a) : a.norm100)); t("peaks", a && a.imode === "auto");
-    const d = b.querySelector('[data-hb="dec"]'); if (d) d.value = String(decOf());
     renderInfo();
     const l = b.querySelector(".act"); if (l) l.textContent = "";
   }
@@ -283,7 +280,8 @@ const BANCO = (() => {
     ["fil", I18N.t("bn.i9.fil"), svg('<path d="M3.5 2.5h6l3 3v8h-9z"/><path d="M9.5 2.5v3h3"/>')],
     ["cmp", I18N.t("bn.i9.cmp"), svg('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>')],
     ["iso", I18N.t("bn.i9.iso"), svg('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>')],
-    ["idn", I18N.t("bn.i9.idn"), ICON.lib]];
+    ["idn", I18N.t("bn.i9.idn"), ICON.lib],
+    ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')]];
   const IK = "qqq.banco.info";
   const ist = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(IK) || "{}"); } catch (e) { /* none */ } return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
@@ -354,25 +352,46 @@ const BANCO = (() => {
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
     ELEM.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
   }
+  const ISO_AD = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"];
   function tIso(b, p) {
-    const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {};
+    const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {}, cd = iso.cd || {};
     const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
+    const adds = iso.adds && iso.adds.length ? iso.adds : [{ ad: iso.ad || "[M+H]+", c: 100 }];
     b.innerHTML = `<div class="muted">${I18N.t("bn.iso.note")}</div>
-      <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:120px"></label><label>${I18N.t("lib.col.adduct")} ${sel("hri-ad", ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"].map(x => [x, x]), iso.ad || "[M+H]+")}</label></div>
-      <div class="row"><label>${I18N.t("bn.iso.output")} ${sel("hri-st", [["centroidi", I18N.t("bn.iso.centroids")], ["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
-      <div class="row"><label>${I18N.t("bn.iso.resolution")} ${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
+      <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
+      <div id="hri-ads">${adds.map((a, k) => adRow(a.ad, a.c == null ? 100 : a.c, k)).join("")}</div>
+      <div class="row"><button type="button" id="hri-addad">${I18N.t("bn.iso.addAd")}</button></div>
+      <h4>${I18N.t("bn.iso.cd")}</h4>
+      <div class="row"><label title="${I18N.t("bn.iso.cdTitle")}">${I18N.t("bn.iso.z0")} <input id="hri-z0" type="number" min="1" max="60" step="any" value="${cd.z0 ?? ""}" placeholder="1" style="width:52px"></label><label>${I18N.t("bn.iso.hw")} <input id="hri-hw" type="number" min="0" max="60" step="any" value="${cd.hw ?? ""}" placeholder="0" style="width:52px"></label></div>
+      <h4>${I18N.t("bn.iso.output")}</h4>
+      <div class="row"><label>${sel("hri-st", [["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")], ["centroidi", I18N.t("bn.iso.centroids")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
+      <h4>${I18N.t("bn.iso.resolution")}</h4>
+      <div class="row"><label>${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
         <label title="${I18N.t("bn.iso.defTitle")}">${I18N.t("bn.iso.defAs")} ${sel("hri-df", [["fwhm", I18N.t("bn.iso.fwhm")], ["10", I18N.t("bn.iso.v10")], ["5", I18N.t("bn.iso.v5")]], iso.def || "fwhm")}</label></div>
       <div class="row"><button type="button" id="hri-go" class="go" title="${I18N.t("bn.iso.overTitle")}">${I18N.t("bn.iso.over")}</button><button type="button" id="hri-new" title="${I18N.t("bn.iso.newTitle")}">${I18N.t("bn.iso.new")}</button><button type="button" id="hri-rep" title="${I18N.t("bn.iso.repTitle")}">${I18N.t("bn.iso.rep")}</button><button type="button" id="hri-off">${I18N.t("lib.remove")}</button></div>
       <div class="muted sm">${I18N.t("bn.iso.hint")}</div>`;
+    const wire = () => b.querySelectorAll("[data-delad]").forEach(x => { x.onclick = () => { x.closest(".hri-ad").remove(); }; });
+    wire();
+    b.querySelector("#hri-addad").onclick = () => {
+      const rows = b.querySelectorAll(".hri-ad"); if (rows.length >= 4) return;
+      const used = [...rows].map(r => r.querySelector("[data-ad]").value), nx = ISO_AD.find(x => !used.includes(x)) || ISO_AD[0];
+      b.querySelector("#hri-ads").insertAdjacentHTML("beforeend", adRow(nx, 10, rows.length)); wire();
+    };
     const read = async () => {
       const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg(I18N.t("bn.iso.typeFormula")); return null; }
       let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
-      const o = { formula: r.formula, ad: b.querySelector("#hri-ad").value, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
+      const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, parseFloat(w.querySelector("[data-conc]").value.replace(",", ".")) || 0) })).filter(a => a.c > 0);
+      if (!ads.length) { nearMsg(I18N.t("bn.iso.noSeries")); return null; }
+      const o = { formula: r.formula, ad: ads[0].ad, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
+      if (ads.length > 1 || ads[0].c !== 100) o.adds = ads;
+      const z0 = parseFloat(b.querySelector("#hri-z0").value.replace(",", ".")), hw = parseFloat(b.querySelector("#hri-hw").value.replace(",", "."));
+      if (z0 > 0 && (z0 > 1 || hw > 0)) o.cd = { z0, hw: hw > 0 ? hw : 0 };
       const mode = b.querySelector("#hri-rm").value, rv = b.querySelector("#hri-r").value.trim().replace(",", "."), x = parseFloat(rv);
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
       return o;
     };
-    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; const ion = QQQRef.ionCounts(o.formula, o.ad), pat = QQQRef.isoPattern(ion.n, ion.z); s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
+    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
     b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, false); };
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
@@ -388,7 +407,7 @@ const BANCO = (() => {
     b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg(I18N.t("bn.idn.needMs2")); };
     b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg(I18N.t("lib.noMs2")); };
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p) };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
@@ -425,7 +444,7 @@ const BANCO = (() => {
     }
     if (window.BARRA) {
       BARRA.syncMode();
-      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn"].includes(BARRA.curTab));
+      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"].includes(BARRA.curTab));
     } else {
       c.hidden = false;
     }
@@ -439,15 +458,13 @@ const BANCO = (() => {
     if (!b) {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
       host.insertAdjacentElement("afterend", b);
-      b.innerHTML = `<select data-hb="dec" title="${I18N.t("bn.dec.title")}" aria-label="${I18N.t("bn.dec.aria")}">${[3, 4, 5].map(n => `<option value="${n}">${I18N.t("bn.dec.n", { n })}</option>`).join("")}</select><span class="sepv"></span>` +
-        barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev) + barBtn("next", I18N.t("bn.bar.next"), ICON.next) + `<span class="sepv"></span>` +
+      b.innerHTML = barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev) + barBtn("next", I18N.t("bn.bar.next"), ICON.next) + `<span class="sepv"></span>` +
         barBtn("zundo", I18N.t("bn.bar.zundo"), ICON.zundo) + barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall) +
         barBtn("norm", I18N.t("bn.bar.norm"), ICON.norm) + barBtn("pin", I18N.t("bn.bar.pinbtn"), IC_PIN) + `<span class="sepv"></span>` +
         barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell")) + barBtn("type", I18N.t("bn.bar.type"), ICON.type) + barBtn("del", I18N.t("bn.bar.del"), ICON.del) + `<span class="sepv"></span>` +
         barBtn("peaks", I18N.t("bn.bar.peaks"), ICON.peaks) +
         barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib) + barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree) + `<span class="sepv"></span>` +
         barBtn("copy", I18N.t("bn.bar.copy"), ICON.copy) + barBtn("xls", I18N.t("bn.bar.xls"), ICON.xls) + `<span class="act"></span>`;
-      b.querySelector('[data-hb="dec"]').onchange = e => { FN.dec(e.target.value); sync2(); };
       b.querySelectorAll("button[data-hb]").forEach(x => {
         const id = x.dataset.hb;
         x.onclick = e => {
