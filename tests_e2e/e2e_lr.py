@@ -57,7 +57,7 @@ try:
         b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None)
         def context():
             c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000); reqs = []
-            c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
+            c.on("request", lambda r: reqs.append(r.url)); c.add_init_script("window.MZLAB_TRACE = [];"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             return c, pg, reqs
         ctx, pg, reqs = context()
@@ -79,7 +79,11 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
-            pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=180000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
+            pg.reload()
+            try: pg.wait_for_selector(".pnl canvas", timeout=90000)
+            except Exception:
+                print("DIAG", pg.evaluate("[String(window.MZLAB_LR_ERR), !!window.MZLAB_LR, typeof S !== 'undefined' && !!S.sess, JSON.stringify(window.MZLAB_LR_MISS), (window.MZLAB_TRACE || []).slice(-12), typeof E !== 'undefined' && E.files.length, document.body.innerText.slice(0, 300)]")); raise
+            pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)   # the session of the notebook is open again
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
             json_close(st["files"], lr_snap["state"]["files"], path="files")
