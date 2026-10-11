@@ -1,0 +1,11 @@
+{
+  "note": "Hand-computed target-decoy q-values (FDR(s) = #decoy>=s / #target>=s, cumulative minimum from the lowest score). Synthetic numbers.",
+  "cases": [
+    {"name": "two_decoys", "target": [0.9, 0.8, 0.7, 0.6, 0.5], "decoy": [0.75, 0.55],
+     "q": [0.0, 0.0, 0.25, 0.25, 0.4], "n_target_ge": [1, 2, 3, 4, 5], "n_decoy_ge": [0, 0, 1, 1, 2]},
+    {"name": "ties_share_the_value", "target": [0.5, 0.9, 0.7, 0.7, 0.8], "decoy": [0.7, 0.3, 0.75],
+     "q": [0.4, 0.0, 0.4, 0.4, 0.0], "n_target_ge": [5, 1, 4, 4, 2], "n_decoy_ge": [2, 0, 2, 2, 0]},
+    {"name": "no_decoy", "target": [0.3, 0.6], "decoy": [], "q": [0.0, 0.0], "n_target_ge": [2, 1], "n_decoy_ge": [0, 0]},
+    {"name": "all_decoys_above", "target": [0.2, 0.1], "decoy": [0.9, 0.8, 0.7], "q": [1.0, 1.0], "n_target_ge": [1, 2], "n_decoy_ge": [3, 3]}
+  ]
+}
