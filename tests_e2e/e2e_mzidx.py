@@ -21,7 +21,7 @@ FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]
 
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
-URL = f"http://127.0.0.1:{PORT}/"
+URL = f"http://127.0.0.1:{PORT}/?motore=python"          # the classic flow (Pyodide); the Rust flow without Pyodide is e2e_lr
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); pg = ctx.new_page()
@@ -84,7 +84,7 @@ try:
         ctx2 = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); q = ctx2.new_page()
         q.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
         q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
-        q.goto(URL + "?opfs=0"); q.wait_for_selector("#drop", timeout=120000)
+        q.goto(URL + "&opfs=0"); q.wait_for_selector("#drop", timeout=120000)
         def old_way():
             q.set_input_files("#pick", FILES[:2])
             q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000); q.wait_for_timeout(1500)

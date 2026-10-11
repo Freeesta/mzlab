@@ -53,6 +53,7 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
+            pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/teoria opens the standalone Teoria page
             pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
         step("5 clicks on the logo: tab, state saved", turn_on)
         def reload_on():

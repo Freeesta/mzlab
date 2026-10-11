@@ -26,7 +26,9 @@ export function createLr({ rb }) {
   let foreign = false;                   // something in OPFS that only Python reads (a .dam, a file without index): every request goes to Python
   const api = { files, get foreign() { return foreign; }, session: () => ({ samples }), freeze: () => { foreign = true; } };
   const rpc = async (msg) => {
+    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg);
+    if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
     if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
     return r;
   };
@@ -44,6 +46,9 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
+  // «start from scratch» (?riparti=1) when the page could not delete the database itself: files, indexes, notebook
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
+
   // the files of an earlier visit (OPFS): the list, the index of every one, the File for the bridge
   api.boot = async () => {
     const r = await rpc({ op: "lr_boot" });
@@ -53,6 +58,13 @@ export function createLr({ rb }) {
       if (!/\.mzml$/i.test(f.name) || !f.indexed) { foreign = true; continue; }
       try { files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info)); } catch (_) { foreign = true; }
     }
+    if (foreign) return;
+    // App._resume: the files that were open (the list the page keeps in the notebook) open again
+    try {
+      const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
+      const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));
+      if (list.length) await explore({ samples: list });
+    } catch (_) { items = null; samples = []; hr = lr = false; }                    // a broken notebook never stops the program
   };
 
   async function upload(name, blob) {

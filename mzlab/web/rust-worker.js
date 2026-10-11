@@ -16,6 +16,7 @@ const take = len => {
   return new Float64Array(i >= 0 ? pool.splice(i, 1)[0] : new ArrayBuffer(Math.max(need, 64 << 10)), 0, len);
 };
 const ready = init().then(() => { engine = new Engine(); }).then(() => postMessage({ op: "ready" }));
+ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
 function readerFor(blob) {
   const fr = new FileReaderSync();
