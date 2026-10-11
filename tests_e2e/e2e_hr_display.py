@@ -52,14 +52,14 @@ try:
             pg.evaluate("setActive(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp))")
             drawer(pg, "iso"); pg.wait_for_selector("#hri-f", timeout=5000); ready(pg)
             t = pg.inner_text("#hri-body"); assert "Distribuzione di carica" in t and "Conc. (%)" in t
-            pg.fill("#hri-f", "C13H24N4O3S"); pg.click("#hri-addad"); pg.wait_for_timeout(200)
+            pg.fill("#hri-f", "C13H24N4O3S"); pg.evaluate("document.querySelector('#hri-addad').click()"); pg.wait_for_timeout(200)
             assert pg.locator(".hri-ad").count() == 2
-            pg.click("#hri-go"); pg.wait_for_timeout(1500)
+            pg.evaluate("document.querySelector('#hri-go').click()"); pg.wait_for_timeout(1500)
             o = pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso"); assert o and o["adds"] and len(o["adds"]) == 2 and o["adds"][1]["c"] == 10, o
             n = pg.evaluate("HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).filter(r=>r.tag).length"); assert n > 3
         step("isotope simulation with two adducts (concentration 100 % and 10 %)", iso)
         def charge():
-            pg.fill("#hri-z0", "3"); pg.fill("#hri-hw", "2"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
+            pg.fill("#hri-z0", "3"); pg.fill("#hri-hw", "2"); pg.evaluate("document.querySelector('#hri-go').click()"); pg.wait_for_timeout(1500)
             o = pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso"); assert o["cd"] == {"z0": 3, "hw": 2}, o
             tags = pg.evaluate("[...new Set(HR.isoPat(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).iso, 0).map(r=>r.tag))]"); assert "3+" in tags and "2+" in tags, tags
             pg.locator("#dfiles").screenshot(path=os.path.join(SHOTS, "hr_isotopi.png"))

@@ -81,7 +81,7 @@ const BARRA = (() => {
     { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
     { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
     // display options of a chart (right click on a chromatogram or a spectrum): only in the palette, the panel is in the drawer
-    { id: "disp", bar: false, hr: true, group: "graphs", panel: "disp", ic: () => IC('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8M13 12h.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="6" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/>'), run: () => window.DISP && DISP.open() },
+    { id: "disp", bar: false, group: "graphs", panel: "disp", visible: () => inData() && isHrMode(), ic: () => IC('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8M13 12h.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="6" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/>'), run: () => window.DISP && DISP.open() },
     // command palette (also reachable from the 🔍 button and Ctrl/⌘ K)
     { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
