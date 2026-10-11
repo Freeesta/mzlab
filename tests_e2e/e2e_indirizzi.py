@@ -24,11 +24,16 @@ try:
                 except Exception: pass                      # redirects and evicted bodies have none
             q.on("response", add); return c, q
 
+        def shut(c, q):                      # let the requests in flight finish: an aborted one makes the dev server print a traceback
+            try: q.wait_for_load_state("networkidle", timeout=5000)
+            except Exception: pass
+            c.close()
+
         def dati():
             c, q = fresh(); q.goto(U + "#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.is_visible("#start") or q.is_visible("#v-data")
             assert q.locator("#nav button.on").get_attribute("data-v") == "data" and "Analisi" in q.title(), q.title()
-            c.close()
+            shut(c, q)
         step("cold #/dati: data view, title", dati)
 
         def disegno():
@@ -36,7 +41,7 @@ try:
             assert q.locator("#nav button.on").get_attribute("data-v") == "draw"
             q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.title().startswith("Disegno") and q.is_hidden("#v-data"), q.title()
-            c.close()
+            shut(c, q)
         step("cold #/disegno: drawing view at once, title", disegno)
 
         def history():
@@ -46,7 +51,7 @@ try:
             q.go_back(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "draw" and q.is_visible("#v-draw")
             q.go_back(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "data" and "Analisi" in q.title()
             q.go_forward(); q.wait_for_timeout(300); assert q.locator("#nav button.on").get_attribute("data-v") == "draw"
-            c.close()
+            shut(c, q)
         step("Back/Forward walk through Dati, Disegno and Teoria; title follows", history)
 
         def cold_teoria():
@@ -56,14 +61,14 @@ try:
                 heavy = [u for u in q.reqs if any(k in u for k in HEAVY)]
                 assert not heavy, (h, heavy)
                 print(f"MEASURE cold {h}: {q.bytes[0] / 1024:.0f} kB in {len(q.reqs)} requests")
-                c.close()
+                shut(c, q)
         step("#/teoria, #/teoria/5 and #/pratica open the standalone Teoria; no engine, no Dati/Disegno scripts fetched", cold_teoria)
 
         def alias():
             T = U + "static/teoria/index.html"
             for h, end in (("#5", "05-gc.html"), ("#cap-12", "12-dati.html"), ("#A", "00-uso.html"), ("#09-quadrupolo", "09-quadrupolo.html"), ("#p2", "pratica-orale.html")):
-                c, q = fresh(); q.goto(T + h); q.wait_for_url("**/" + end, timeout=10000); c.close()
-            c, q = fresh(); q.goto(T + "#i-capitoli"); q.wait_for_timeout(500); assert q.url.endswith("index.html#i-capitoli"); c.close()
+                c, q = fresh(); q.goto(T + h); q.wait_for_url("**/" + end, timeout=10000); shut(c, q)
+            c, q = fresh(); q.goto(T + "#i-capitoli"); q.wait_for_timeout(500); assert q.url.endswith("index.html#i-capitoli"); shut(c, q)
         step("teoria/#5, #cap-12, #A, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
 
         def toapp():
@@ -72,7 +77,7 @@ try:
             assert q.locator("#nav button.on").get_attribute("data-v") == "data"
             q.click("#nav button[data-v=theory]"); q.wait_for_selector("#tframe"); q.wait_for_timeout(800)
             fr = q.frame_locator("#tframe"); assert fr.locator("#goapp").count() == 0, "no second header inside the program"
-            c.close()
+            shut(c, q)
         step("'Apri il programma' leads to #/dati; inside the program the Teoria has no such link", toapp)
 
         def crawl():
@@ -92,7 +97,7 @@ try:
               return { bad, n: seen.size }
             }""")
             assert not bad["bad"] and bad["n"] > 30, bad
-            c.close()
+            shut(c, q)
         step("crawler: every internal link of the Teoria answers", crawl)
 finally:
     r.close()
