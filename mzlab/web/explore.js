@@ -440,6 +440,126 @@ function reorderFiles(fromK, toK, isBefore) {
 const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { try { return JSON.parse(localStorage.getItem("qqq.flgrp") || "{}") || {}; } catch (_) { return E._flgrp || {}; } }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
+// the rows of the list: a click selects the file, a double click renames it (called by renderFileList)
+function bindFileRows() {
+  // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
+  Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
+    const nm = row.querySelector(".nm"); if (!nm) return;
+    row.onclick = e => {
+      if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
+      const f0 = E.files[+nm.dataset.k];
+      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
+        sibsOf(f0).forEach(f => { f.vis = true; }); E.cur = f0.k; renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+      }
+      E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
+    };
+    nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
+  });
+}
+
+// HTML5 drag and drop of one row of the file list
+function bindDragDrop(el, k) {
+  el.ondragstart = e => {
+    e.dataTransfer.setData("text/plain", String(k));
+    e.dataTransfer.effectAllowed = "move";
+    el.classList.add("fl-dragging");
+  };
+  el.ondragover = e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const rect = el.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) {
+      el.classList.add("drop-before");
+      el.classList.remove("drop-after");
+    } else {
+      el.classList.add("drop-after");
+      el.classList.remove("drop-before");
+    }
+  };
+  el.ondragleave = () => {
+    el.classList.remove("drop-before", "drop-after");
+  };
+  el.ondrop = e => {
+    e.preventDefault();
+    const fromK = +e.dataTransfer.getData("text/plain");
+    const isBefore = el.classList.contains("drop-before");
+    el.classList.remove("drop-before", "drop-after");
+    if (!isNaN(fromK) && fromK !== k) {
+      reorderFiles(fromK, k, isBefore);
+    }
+  };
+  el.ondragend = () => {
+    document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
+  };
+}
+
+// drag and drop (and long press on touch screens) to reorder the files of the list (called by renderFileList)
+function bindFileReorder() {
+  // Reorder files via HTML5 drag & drop and touch long-press
+  let touchTimer = null, touchDragging = null, touchStartX = 0, touchStartY = 0;
+  Q("#flst").querySelectorAll(".fl[data-k]:not(.ghost):not(.pr)").forEach(el => {
+    const k = +el.dataset.k;
+
+    bindDragDrop(el, k);
+
+    el.onpointerdown = e => {
+      if (e.target.closest("input") || e.target.closest(".pr-tog") || e.button !== 0) return;
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      touchTimer = setTimeout(() => {
+        touchDragging = k;
+        el.classList.add("fl-dragging");
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      }, 350);
+    };
+
+    el.onpointermove = e => {
+      if (!touchDragging && touchTimer) {
+        if (Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY) > 8) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+        }
+      }
+      if (touchDragging != null) {
+        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        document.querySelectorAll("#flst .fl").forEach(f => {
+          if (f !== target) f.classList.remove("drop-before", "drop-after");
+        });
+        if (target && target !== el) {
+          const rect = target.getBoundingClientRect();
+          if (e.clientY < rect.top + rect.height / 2) {
+            target.classList.add("drop-before");
+            target.classList.remove("drop-after");
+          } else {
+            target.classList.add("drop-after");
+            target.classList.remove("drop-before");
+          }
+        }
+      }
+    };
+
+    const endTouch = e => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      if (touchDragging != null) {
+        const fromK = touchDragging;
+        touchDragging = null;
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        const isBefore = target?.classList.contains("drop-before");
+        document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
+        if (target && +target.dataset.k !== fromK) {
+          reorderFiles(fromK, +target.dataset.k, isBefore);
+        }
+      }
+    };
+    el.onpointerup = endTouch;
+    el.onpointercancel = endTouch;
+  });
+}
+
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
@@ -524,114 +644,9 @@ function renderFileList() {
     uiSave();
   });
   Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
-  // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
-  Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
-    const nm = row.querySelector(".nm"); if (!nm) return;
-    row.onclick = e => {
-      if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
-      const f0 = E.files[+nm.dataset.k];
-      if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
-        sibsOf(f0).forEach(f => { f.vis = true; }); E.cur = f0.k; renderFileList(); renderNav(); redrawAll(); uiSave(); return;
-      }
-      E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
-    };
-    nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
-  });
+  bindFileRows();
 
-  // Reorder files via HTML5 drag & drop and touch long-press
-  let touchTimer = null, touchDragging = null, touchStartX = 0, touchStartY = 0;
-  Q("#flst").querySelectorAll(".fl[data-k]:not(.ghost):not(.pr)").forEach(el => {
-    const k = +el.dataset.k;
-
-    el.ondragstart = e => {
-      e.dataTransfer.setData("text/plain", String(k));
-      e.dataTransfer.effectAllowed = "move";
-      el.classList.add("fl-dragging");
-    };
-    el.ondragover = e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      const rect = el.getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) {
-        el.classList.add("drop-before");
-        el.classList.remove("drop-after");
-      } else {
-        el.classList.add("drop-after");
-        el.classList.remove("drop-before");
-      }
-    };
-    el.ondragleave = () => {
-      el.classList.remove("drop-before", "drop-after");
-    };
-    el.ondrop = e => {
-      e.preventDefault();
-      const fromK = +e.dataTransfer.getData("text/plain");
-      const isBefore = el.classList.contains("drop-before");
-      el.classList.remove("drop-before", "drop-after");
-      if (!isNaN(fromK) && fromK !== k) {
-        reorderFiles(fromK, k, isBefore);
-      }
-    };
-    el.ondragend = () => {
-      document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
-    };
-
-    el.onpointerdown = e => {
-      if (e.target.closest("input") || e.target.closest(".pr-tog") || e.button !== 0) return;
-      touchStartX = e.clientX;
-      touchStartY = e.clientY;
-      touchTimer = setTimeout(() => {
-        touchDragging = k;
-        el.classList.add("fl-dragging");
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
-      }, 350);
-    };
-
-    el.onpointermove = e => {
-      if (!touchDragging && touchTimer) {
-        if (Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY) > 8) {
-          clearTimeout(touchTimer);
-          touchTimer = null;
-        }
-      }
-      if (touchDragging != null) {
-        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
-        document.querySelectorAll("#flst .fl").forEach(f => {
-          if (f !== target) f.classList.remove("drop-before", "drop-after");
-        });
-        if (target && target !== el) {
-          const rect = target.getBoundingClientRect();
-          if (e.clientY < rect.top + rect.height / 2) {
-            target.classList.add("drop-before");
-            target.classList.remove("drop-after");
-          } else {
-            target.classList.add("drop-after");
-            target.classList.remove("drop-before");
-          }
-        }
-      }
-    };
-
-    const endTouch = e => {
-      if (touchTimer) {
-        clearTimeout(touchTimer);
-        touchTimer = null;
-      }
-      if (touchDragging != null) {
-        const fromK = touchDragging;
-        touchDragging = null;
-        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
-        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
-        const isBefore = target?.classList.contains("drop-before");
-        document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
-        if (target && +target.dataset.k !== fromK) {
-          reorderFiles(fromK, +target.dataset.k, isBefore);
-        }
-      }
-    };
-    el.onpointerup = endTouch;
-    el.onpointercancel = endTouch;
-  });
+  bindFileReorder();
   renderNav();
 }
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session

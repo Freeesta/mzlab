@@ -160,7 +160,7 @@ main{min-width:0;overflow-wrap:break-word}
 
 #info{display:none}
 html.phone #top{transition:transform .2s}html.phone #top.away{transform:translateY(-110%)}
-html.phone #top #info{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border-radius:50%;font:700 16px Georgia,serif;color:var(--accent);margin-left:auto}
+html.phone #top #info{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:50%;font:700 16px Georgia,serif;color:var(--accent);margin-left:auto}
 html.phone #phnote{margin-top:0}
 body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 @media (max-width:600px){main h1{font-size:28px}main .lead{font-size:17px}.eq{font-size:15px;padding:8px 10px}}
@@ -334,3 +334,29 @@ html.vt-no main{animation:vt-fade 120ms ease-out}
 #tabs a:focus-visible,#top #logo:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 #top #logo{display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center}
 @media (max-width:640px){#top .t{display:none}#top{gap:6px;padding:4px 10px}#tabs a{padding:0 9px}}
+
+/* ---- commands of the header (comandi.js: TCMD) ---- */
+#tbar{display:flex;align-items:center;gap:4px;flex:none;position:relative}
+#tbar .tgrp,#tbar .hasmenu{display:inline-flex;gap:4px;position:relative}
+#tbar .tsep{width:1px;align-self:stretch;margin:6px 4px;background:var(--line)}
+#top .tb,#cbar .tb{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;padding:0 10px;font:inherit;font-size:14px;font-weight:600;line-height:1;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;cursor:pointer;text-decoration:none;white-space:nowrap}
+#top .tb:hover,#cbar .tb:hover{border-color:var(--accent)}
+#top .tb:focus-visible,#cbar .tb:focus-visible,#tbar .tmenu button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#top .tb[aria-disabled=true],#cbar .tb[aria-disabled=true]{opacity:.45;cursor:default;border-color:var(--line)}
+#top .tb svg,#cbar .tb svg{flex:none;color:var(--accent)}
+#top .tb[aria-expanded=true]{border-color:var(--accent)}
+#tbar.ico .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#top.cmp .t{display:none}
+#tbar .tmenu{position:absolute;top:calc(100% + 4px);right:0;z-index:60;min-width:200px;display:flex;flex-direction:column;padding:4px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#tbar .tmenu[hidden]{display:none}
+#tbar .tmenu button{min-height:44px;padding:0 12px;font:inherit;font-size:15px;text-align:left;color:var(--ink);background:transparent;border:0;border-radius:6px;cursor:pointer}
+#tbar .tmenu button:hover,#tbar .tmenu button:focus{background:var(--sel)}
+#cbar #cb-nav{display:inline-flex;gap:4px;margin-left:8px}
+#cbar #cb-nav .tb .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html.phone #tbar .tb{min-width:44px}
+html.phone #top #a11y-btn{margin-left:0}
+@media (min-width:981px){#cbar #cb-nav{display:none}}
+@media (max-width:980px){#tbar #tc-prec,#tbar #tc-succ,#tbar #tc-glossario,#tbar #tc-formule,#tbar #tc-esercizi,#tbar .tsep,#tbar #tnav{display:none}}
+@media (max-width:640px){html:not(.phone) #tbar #tc-strumenti{display:none}#top #tabs a{padding:0 6px;min-width:44px;justify-content:center}#tbar{gap:2px}#tbar .l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){#top,#top *{transition:none!important}}
+@media print{#tbar{display:none}}
