@@ -113,6 +113,17 @@ def test_evidence_words_and_network(graph):
     assert not any(w in words for w in ("identified", "confirmed", "is the compound", "proves"))
 
 
+def test_the_label_of_the_link_carries_its_evidence(graph):
+    _, g = graph
+    r = with_graph(g, "const x = gr.byKey.get('POS:1'); return x.edges.map(i => gr.edges[i]).map(e => [e.kind, ID.edgeText(e)])")
+    by = {k: t for k, t in r}
+    na = next(t for k, t in r if "[M+Na]+" in t)
+    assert na.startswith("adduct (evidence: Δm/z 21.9819 = adduct [M+Na]+") and "ΔRT" in na                                # the step is in the table of adducts: a signal, not a decision
+    nh4 = next(t for k, t in r if "[M+NH4]+" in t)
+    assert nh4.startswith("not distinguishable") and "NH3" in nh4                                                         # 17.0265 is an adduct and also the loss of NH3
+    assert any(k == "isotope" and not t.startswith(("adduct", "in-source", "not distinguishable")) for k, t in r)         # an isotope gets no adduct/fragment label
+
+
 def test_polarity_must_be_known():
     r = js("const t = mk(); t.pol = 0; try { await ID.compute(t, async () => ({})); return 'no'; } catch (e) { return e.key; }")
     assert r == "pol"

@@ -16,7 +16,7 @@ import numpy as np
 
 from mzlab.chem import elements as E
 
-from . import iimn
+from . import edge_evidence, iimn
 
 PROTON = E.PROTON
 # ion forms of a neutral M: (name, m/z shift from M, multiplier of M, is the base ion). The shifts are those of `chem.elements` / `iimn`.
@@ -98,7 +98,7 @@ class _DSU:
 
 
 def build(payload: dict) -> dict:
-    """payload: {pol: 1|-1, samples: [names], features: [{k, id, mz, rt, a: [[sample index, area], ...], iin?: {id, ions, neutral}}],
+    """payload: {pol: 1|-1, samples: [names], features: [{k, id, mz, rt, a: [[sample index, area], ...], ms2?: {mz, it}, iin?: {id, ions, neutral}}],
     edges?: [{a, b, type, score, annotation}] (mzMine's FBMN edges, by feature id), opt?: {ppm, abs_da, r_min, apex_scans, cycle_s, min_common}}.
     Returns {identities, edges, stats}; every identity has `members` (keys), `neutral` (main hypothesis) and `alternatives`."""
     opt = {**DEFAULTS, **(payload.get("opt") or {})}
@@ -199,6 +199,14 @@ def build(payload: dict) -> dict:
                        relations=[{k: v for k, v in x.items() if k != "of"} | {"ppm": float((mz[up] - mz[lo] - x["expected"]) / mz[lo] * 1e6)} for x in rels])
             edges.append(ed)
             dsu.union(lo, up)
+
+    # ---- the evidence of every edge: adduct or in-source fragment? (a signal for the chemist, `edge_evidence`)
+    for ed in edges:
+        i, j = index[ed["a"]], index[ed["b"]]
+        lo, up = (i, j) if mz[i] <= mz[j] else (j, i)
+        al, au = edge_evidence.feature_areas(feats[lo], feats[up], S)
+        ed["evidence"] = edge_evidence.edge_evidence(float(mz[lo]), float(mz[up]), pol, ms2_lo=feats[lo].get("ms2"), ms2_up=feats[up].get("ms2"),
+                                                     areas_lo=al, areas_up=au, drt_min=abs(float(rt[up] - rt[lo])))
 
     # ---- connected components → identities
     comp: dict = {}
