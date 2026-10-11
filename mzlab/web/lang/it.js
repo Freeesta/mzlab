@@ -1498,6 +1498,7 @@ I18N.add("it", {
   "lib.indexAll": "Indicizza tutte",
   "lib.index": "Indicizza",
   "lib.pickDir": "Importa una cartella…",
+  "lib.col.dropped": "Scartati",
   "lib.col.state": "Stato",
   "lib.st.pronta": "Pronta",
   "lib.st.da_indicizzare": "Da indicizzare",
