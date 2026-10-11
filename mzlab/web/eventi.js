@@ -320,6 +320,7 @@ function ctxFor(p, e, x, px, py) {
     if (p.iso) items.push({ label: I18N.t("ctx.spec.isoOff"), fn: () => { p.iso = null; draw(p); } });
     if (window.LIB && p.level === 2) items.push("-", LIB.isHr(p) ? { label: I18N.t("ctx.libWhat"), fn: () => LIB.whatIs(p) } : { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });       // «What is it?» only for high resolution
     if (p.level === 2 && window.WORKFLOW) items.push("-", { label: I18N.t("ctx.spec.exportMgf"), fn: () => WORKFLOW.exportSpectrumMgf(p) }, { label: I18N.t("ctx.spec.exportMsp"), fn: () => WORKFLOW.exportSpectrumMsp(p) });
+    if (p.level === 2 && window.FAIR && FAIR.available(p)) items.push({ label: I18N.t("ctx.spec.exportMassbank"), fn: () => FAIR.massbank(p) }, { label: I18N.t("ctx.spec.exportSirius"), fn: () => FAIR.sirius(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
     if (p.link) items.push("-", { label: I18N.t("ctx.spec.freeze"), fn: () => { freezeSpec(p); uiSave(); } });

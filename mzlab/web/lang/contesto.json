@@ -1,4 +1,5 @@
 {
+  "fair.warn.precMismatch": "Avviso nel dialogo del record MassBank; {ppm} = differenza in ppm, già formattata, tra la massa esatta della formula più l'addotto e il precursore dello spettro.",
   "draw.ctx.breakBonds": "Voce del menu del tasto destro su uno o più legami selezionati nel Disegno. {n} = numero di legami selezionati.",
   "draw.ctx.copyFormula": "Voce del menu del tasto destro sull'etichetta sotto una molecola; {formula} = formula con carica (es. C10H14N+).",
   "draw.ctx.copyMass": "Come sopra, per la massa di una molecola neutra; {mass} = valore già formattato.",

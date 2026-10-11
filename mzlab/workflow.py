@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 FORMAT_VERSION = "mzflow/1"
 LEGACY_FORMATS = ("mzworkflow/1",)   # old name, still accepted when opening
 KNOWN_OPS = frozenset({
-    "export_all_ms2_mgf", "export_all_ms2_msp", "export_mgf_spectrum", "export_msp_spectrum",
+    "export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum",
     "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "workflow_applied",
 })
 
