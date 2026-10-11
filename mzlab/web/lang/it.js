@@ -1613,6 +1613,7 @@ I18N.add("it", {
   "mappa.read.scan": "scansione {n}",
   "mappa.read.int": "intensità",
   "mappa.read.locked": "bloccato",
+  "mappa.preview": "anteprima",
   "mappa.side.title": "spettro della scansione",
   "mappa.side.empty": "nessun picco in questo intervallo di m/z",
   "mappa.bot.title": "XIC dell'm/z sotto il mirino",

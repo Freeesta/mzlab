@@ -1613,6 +1613,7 @@ I18N.add("en", {
   "mappa.read.scan": "scan {n}",
   "mappa.read.int": "intensity",
   "mappa.read.locked": "locked",
+  "mappa.preview": "preview",
   "mappa.side.title": "spectrum of the scan",
   "mappa.side.empty": "no peak in this m/z range",
   "mappa.bot.title": "XIC of the m/z under the sight",

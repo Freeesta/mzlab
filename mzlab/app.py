@@ -437,6 +437,9 @@ class App:
             raise UserError("err.scan.none", text="no scan in this file")
         return ans
 
+    def scan_axis(self, k: int, level: int = 1) -> dict:
+        return self._item(k).scan_axis(level)
+
     def filters(self, k: int) -> dict:
         """The scan types of the physical file of item k (what the filter menu of a cell lists), with their counts: see Item.filter_groups."""
         return {"filters": self._item(k).filter_groups()}

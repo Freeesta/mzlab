@@ -761,6 +761,11 @@ class Item:
         s = self.run.scans[ids[idx]]
         return {"rt": float(s.rt), "sid": s.index, "filter": s.filter}
 
+    def scan_axis(self, level: int = 1) -> dict:
+        """RT and index (sid) of every scan of the level, in the order of `scans` (position i = scan i of the chromatogram): the page finds the scan nearest to a point without asking the engine."""
+        t = self._tbl(level)
+        return {"rt": t.rt.tolist(), "sid": t.scan_ids.tolist()}
+
     def spectrum(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None,
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False, filt: str | None = None):
         """Mean spectrum of the scans in [rt0, rt1], peaks merged within bin_da.
