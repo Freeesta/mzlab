@@ -248,7 +248,13 @@ impl Engine {
     }
 
     /// `/api/scaninfo` of scan `sid`: the scan comes from the index, the header from the mzML (`size` bytes, read through `read`). Empty = Python's.
-    pub fn scaninfo(&mut self, slot: u32, sid: u32, size: f64, read: Function) -> Result<String, JsValue> {
+    pub fn scaninfo(
+        &mut self,
+        slot: u32,
+        sid: u32,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
         let _ = size;
         match self.idx.get(&slot) {
             Some(r) if r.has_scans() => r
@@ -256,6 +262,56 @@ impl Engine {
                 .map_err(|e| error_json(&e)),
             _ => Ok(String::new()),
         }
+    }
+
+    /// The entry of the loading table for the file at `slot` (index opened with `open_index`; the mzML is read through `read`): JSON, `App.files()` of Python.
+    pub fn lr_entry(
+        &mut self,
+        slot: u32,
+        name: &str,
+        size: f64,
+        read: Function,
+    ) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        };
+        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size as u64)
+            .map_err(|e| error_json(&e))
+    }
+
+    /// The session items of the file at `slot` for a sample (`{label, type, time, conc, cunit, rep}` as JSON, `{}` = guessed from the name):
+    /// `[{"info": Item.info(), "hr": bool}]`, one item per part of a mixed file.
+    pub fn lr_items(
+        &mut self,
+        slot: u32,
+        name: &str,
+        size: f64,
+        read: Function,
+        sample: &str,
+    ) -> Result<String, JsValue> {
+        use mzlab_core::json::{self, Value};
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        };
+        let v = json::parse(sample.as_bytes()).map_err(|e| error_json(&e))?;
+        let s = |k: &str| v.get(k).and_then(Value::str).map(String::from);
+        let sample = mzlab_core::lr::Sample {
+            label: s("label"),
+            typ: s("type"),
+            time: v.get("time").and_then(Value::f64),
+            conc: v.get("conc").and_then(Value::f64),
+            cunit: s("cunit"),
+            rep: s("rep"),
+        };
+        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, name, &sample)
+            .map_err(|e| error_json(&e))?;
+        let body: Vec<String> = items
+            .iter()
+            .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
+            .collect();
+        Ok(format!("[{}]", body.join(",")))
     }
 
     /// `{"rt": [...], "y": [...]}` of the XIC of one level from the index.
@@ -527,7 +583,13 @@ pub fn peak_quality(rt: &[f64], y: &[f64], lo: u32, hi: u32, out: &mut [f64]) ->
     if out.len() < 3 || lo as usize >= hi as usize || hi as usize >= n {
         return 0;
     }
-    let q = peakq::quality(&rt[..n], &y[..n], lo as usize, hi as usize, peaks::noise_level(&y[..n]));
+    let q = peakq::quality(
+        &rt[..n],
+        &y[..n],
+        lo as usize,
+        hi as usize,
+        peaks::noise_level(&y[..n]),
+    );
     out[..3].copy_from_slice(&[q.gaussian, q.asymmetry.unwrap_or(f64::NAN), q.noise_score]);
     3
 }

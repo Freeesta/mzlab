@@ -10,6 +10,7 @@ pub mod idxread;
 pub mod isoscore;
 pub mod iteminfo;
 pub mod json;
+pub mod lr;
 pub mod mzidx;
 pub mod msntree;
 pub mod mzml;
