@@ -1,8 +1,8 @@
-/* Theme of the Teoria: follows the app («Chiaro», «Scuro», «Come il sistema»). Loaded in the <head> of every page, before anything is drawn.
+/* Theme of the Teoria (the minimal part, data-theme + colour-scheme, also runs inline at the top of every page: tools/tema_testa.py; rule: theme first, synchronous, before any stylesheet): follows the app («Chiaro», «Scuro», «Come il sistema»). Loaded in the <head> of every page, before anything is drawn.
    Inside the app the page asks the parent (same origin) and listens for its messages; opened alone it follows the system. */
 (function () {
   var R = document.documentElement, mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null, pref = "auto";
-  function parentPref() { try { if (parent !== window) return parent.document.documentElement.getAttribute("data-theme") || "auto"; } catch (e) { /* not reachable: system */ } return "auto"; }
+  function parentPref() { try { if (parent !== window) return parent.document.documentElement.getAttribute("data-theme") || "auto"; } catch (e) { /* not reachable: own preference */ } try { var t = JSON.parse(localStorage.getItem("qqq.prefs") || "{}").theme; if (t === "dark" || t === "light") return t; } catch (e) { /* no storage: system */ } return "auto"; }
   function eff(x) { return x === "dark" || (x !== "light" && mq && mq.matches) ? "dark" : "light"; }
   function apply(x) { pref = x; R.setAttribute("data-theme", eff(x)); R.style.colorScheme = eff(x); }
   apply(parentPref());
