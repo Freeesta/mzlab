@@ -46,15 +46,18 @@ def sections(pg):
 r = Run(port=8932, wd="/tmp/wdstat")
 try:
     with sync_playwright() as p:
-        pg = r.page(p)
+        pg = r.page(p, qaqc=True)
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "S_t60.mzML", D / "Blank_1.mzML"], 4)
         def lr_sections():
-            pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
-            assert "Statistica" in pg.inner_text("#stmenu"), "the panel is reached from «Altro» (the toolbar has no room for one more button)"
-            pg.click("#stmenu >> text=Statistica"); pg.wait_for_selector("#sb-panel-stat details.stat-sec")
+            assert pg.locator("#stbar [data-cmd=stat]").count() == 0 and pg.locator("#np-stat").count() == 0, "no button for it"
+            pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert "Statistica" not in pg.inner_text("#stmenu"), "and not in «Altro»"; pg.keyboard.press("Escape")
+            for q in ("statistica", "statistics", "PCA", "bianco", "profilo nel tempo"):
+                pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
+                pg.keyboard.type(q); pg.wait_for_timeout(250); assert "Statistica della serie" in pg.inner_text("#pal-l"), q
+                if q != "profilo nel tempo": pg.keyboard.press("Escape"); pg.wait_for_selector("#paletta", state="hidden")
+            pg.keyboard.press("Enter"); pg.wait_for_selector("#sb-panel-stat details.stat-sec")
             assert sections(pg)[0] == "meta", "metadata first"
-            assert any(c["id"] == "stat" for c in pg.evaluate("BARRA.commands.map(c=>({id:c.id}))")), "and from the palette"
-        step("«Altro» opens the Statistica panel; metadata is the first section", lr_sections)
+        step("Statistica: no button, not in «Altro», found by the search (it/en/PCA/blank/time course) and opened; metadata first", lr_sections)
         def meta_table():
             rows = pg.evaluate("[...document.querySelectorAll('#cmp-tab tbody tr')].map(tr=>[tr.querySelector('[data-m=type]').value, tr.querySelector('[data-m=time]').value])")
             d = dict(zip(pg.evaluate("E.files.map(f=>f.file)"), rows))
@@ -120,7 +123,7 @@ finally:
 r2 = Run(port=8933, wd="/tmp/wdstathr")
 try:
     with sync_playwright() as p:
-        pg = r2.page(p)
+        pg = r2.page(p, qaqc=True)
         load(pg, sorted(HRD.glob("*.mzML")), 4)
         def hr_profile():
             assert pg.evaluate("BANCO.on()"), "high resolution"
@@ -177,7 +180,7 @@ finally:
 r3 = Run(port=8934, wd="/tmp/wdstatpca")
 try:
     with sync_playwright() as p:
-        pg = r3.page(p)
+        pg = r3.page(p, qaqc=True)
         load(pg, sorted(PCD.glob("*.mzML")), 9)
         drawer(pg, "stat"); pg.wait_for_selector("#feat-list")
         def pca_table():
