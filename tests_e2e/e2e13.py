@@ -32,9 +32,10 @@ try:
             t = pg.inner_text("#flist"); assert "MRM" in t and "MS2" in t, t
         step("upload five mzML files and read the experiment type", load)
         def openit():
-            pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000); pg.wait_for_timeout(3000)
+            pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000); pg.wait_for_function("E.files.length >= 5 && E.pending.length === 0", timeout=120000); pg.wait_for_timeout(3000)
             pg.screenshot(path=SH + "130_browser.png")
-            assert pg.evaluate("E.panels[0]._a && E.panels[0]._a.sr.length") >= 3
+            pg.wait_for_function("E.panels[0] && E.panels[0]._a && E.panels[0]._a.sr.length >= 1", timeout=60000)      # the traces arrive when the engine has computed them
+            assert pg.evaluate("E.panels[0]._a && E.panels[0]._a.sr.length") == 1      # at the first load only the first file of each kind is open
         step("open: TIC drawn", openit)
         def xic():
             pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(3000)

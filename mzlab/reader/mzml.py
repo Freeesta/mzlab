@@ -201,6 +201,41 @@ class PeakTable:
     inten: np.ndarray
     pos: np.ndarray                # position (in rt) of the scan each peak belongs to
     tic: np.ndarray = field(default=None)
+    _sum: np.ndarray = field(default=None, repr=False, compare=False)
+    _base: tuple = field(default=None, repr=False, compare=False)
+
+    CHUNK = 1 << 20
+
+    def iter_chunks(self, step: int | None = None):
+        """(mz, inten, pos) of the peaks in runs of `step` peaks, in m/z order: the way to walk a whole table without holding it (a table on a .mzidx is read piece by piece)."""
+        step = step or self.CHUNK
+        for a in range(0, len(self.mz), step):
+            yield self.mz[a:a + step], self.inten[a:a + step], self.pos[a:a + step]
+
+    def sum_by_scan(self) -> np.ndarray:
+        """Summed intensity of every scan, added in the order of the table (so the same as np.bincount over the whole table), computed once."""
+        if self._sum is None:
+            n = len(self.rt)
+            base, acc = np.arange(n), np.zeros(n)
+            for _mz, it, pos in self.iter_chunks():
+                acc = np.bincount(np.concatenate([base, pos]), weights=np.concatenate([acc, it]), minlength=n)   # the running sums first: the additions go on in the same order
+            self._sum = acc
+        return self._sum
+
+    def base_peaks(self) -> tuple:
+        """(m/z, intensity) of the highest peak of every scan (zeros for a scan without peaks); of equal peaks the one highest in the table, computed once."""
+        if self._base is None:
+            n = len(self.rt)
+            m, y, have = np.zeros(n), np.zeros(n), np.zeros(n, dtype=bool)
+            for mz, it, pos in self.iter_chunks():
+                o = np.lexsort((it, pos))
+                ps = pos[o]
+                last = np.r_[np.flatnonzero(ps[1:] != ps[:-1]), len(ps) - 1] if len(ps) else np.zeros(0, dtype=np.int64)
+                sc, cm, cy = ps[last], mz[o][last], it[o][last]
+                better = ~have[sc] | (cy >= y[sc])
+                m[sc[better]], y[sc[better]], have[sc[better]] = cm[better], cy[better], True
+            self._base = (m, y)
+        return self._base
 
     def xic(self, mz: float, tol_da: float) -> np.ndarray:
         """Summed intensity within mz +- tol_da in every scan (zeros where nothing is there)."""
@@ -215,8 +250,8 @@ class PeakTable:
 
 
 class Run:
-    def __init__(self, path, mode="auto"):
-        """mode: "mmap", "file" (plain reads: Blobs mounted in the browser, very large files) or "auto"."""
+    def __init__(self, path, mode="auto", index_path=None):
+        """mode: "mmap", "file" (plain reads: Blobs mounted in the browser, very large files) or "auto". index_path: where the .mzidx of this file is (default: the cache folder)."""
         self.path = Path(path)
         if mode == "auto":
             big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).replace("\\", "/").startswith(str(WORKERFS_ROOT).replace("\\", "/").rstrip("/") + "/")
@@ -233,12 +268,84 @@ class Run:
         self.scans: list[Scan] = []
         self._read_header()
         self.timing: dict = {}                       # seconds spent reading the file ("indice", "tabella MS1"...), shown by the ?perf meter
-        t0 = time.perf_counter()
-        self._index()
-        self.timing["indice"] = round(time.perf_counter() - t0, 3)
-        self.n_chromatograms = self._count(b"<chromatogram ")
         self._tables: dict = {}
-        self.sha256 = self._compute_sha256()
+        self._idx = None                             # the open MzIdx (False: no index could be written, tables are built in memory)
+        self.index_path = Path(index_path) if index_path else None
+        t0 = time.perf_counter()
+        if not self._load_index():
+            self._index()
+            self.timing["indice"] = round(time.perf_counter() - t0, 3)
+            self.n_chromatograms = self._count(b"<chromatogram ", self.scans[-1].end if self.scans else 0)
+            self.sha256 = self._compute_sha256()
+        else:
+            self.timing["indice"] = round(time.perf_counter() - t0, 3)          # the scan table taken from the .mzidx
+        self.release()                                                           # the read-ahead window of a plain-read file (16 MB) is not kept between operations
+
+    # ------------------------------------------------------------------ the .mzidx
+    def _default_index_path(self) -> Path:
+        from . import mzidx
+        return Path(mzidx.index_path_for(self.path))
+
+    def _load_index(self) -> bool:
+        """Take the scan table from the index of this file when there is a valid one (same size and probe; same modification time too, outside the browser)."""
+        from . import mzidx
+        try:
+            path = self.index_path or self._default_index_path()
+            if not path.exists():
+                return False
+            ix = mzidx.open(path)
+        except Exception:                                 # noqa: BLE001 -- a broken or old index is simply not used
+            return False
+        st, src = self.path.stat(), ix.source
+        by_date = self.index_path is None and not mzidx.FLAT and path.name not in mzidx.REGISTRY.values()
+        if src.get("size") != st.st_size or src.get("probe") != mzidx.probe(self) or (by_date and src.get("mtime_ns") and st.st_mtime_ns and src["mtime_ns"] != st.st_mtime_ns):
+            ix.close()
+            return False
+        self.scans = ix.scans()
+        self.nce, self.hr1 = bool(ix.meta["run"]["nce"]), bool(ix.meta["run"]["hr1"])
+        self.n_chromatograms = ix.meta["run"]["n_chromatograms"]
+        self.sha256 = src.get("sha256", "")
+        self._idx, self.index_path = ix, path
+        return True
+
+    def use_index(self, path) -> bool:
+        """Switch to the index at `path` (the host moved it: the browser puts it in OPFS). The tables are taken again from it; the old one is closed. False if it does not fit this file."""
+        from . import mzidx
+        try:
+            ix = mzidx.open(path)
+            if ix.source.get("size") != self.path.stat().st_size or ix.source.get("probe") != mzidx.probe(self):
+                ix.close()
+                return False
+        except Exception:                                 # noqa: BLE001
+            return False
+        old, self._idx, self.index_path = self._idx, ix, Path(path)
+        self._tables = {k: v for k, v in self._tables.items() if k[0] == "mem"}
+        if old:
+            old.close()
+        return True
+
+    def activate(self):
+        """This is the file the student is looking at: its blocks are the last to leave the cache."""
+        if self._idx:
+            from . import mzidx
+            mzidx.CACHE.active = self._idx.uid
+
+    def _ensure_index(self):
+        """The open index; built now (next to the others, in the cache folder) when the file has none yet. False when it cannot be written."""
+        if self._idx is None:
+            from . import mzidx
+            try:
+                path = self.index_path or self._default_index_path()
+                if mzidx.REGISTRY.get(self.path.name) == str(path):           # the registered index does not fit this file (it is read-only anyway): build a new one beside the others
+                    mzidx.REGISTRY.pop(self.path.name)
+                    path = self._default_index_path()
+                t0 = time.perf_counter()
+                mzidx.build(self, path)
+                self._idx, self.index_path = mzidx.open(path), path
+                self.timing["costruzione .mzidx"] = round(time.perf_counter() - t0, 3)
+            except Exception:                              # noqa: BLE001 -- no room or no folder: keep working from memory
+                self._idx = False
+        return self._idx
 
     def _compute_sha256(self) -> str:
         try:
@@ -299,8 +406,8 @@ class Run:
                 last_path[(s.level, _path_key(s.path))] = s.index
         self.hr1 = bool(mass_profile([s for s in self.scans if s.level == 1])["hr"])        # high-resolution survey scans (used to size the peak table)
 
-    def _count(self, pat: bytes) -> int:
-        n, pos = 0, 0
+    def _count(self, pat: bytes, start: int = 0) -> int:
+        n, pos = 0, start
         while True:
             pos = self._mm.find(pat, pos)
             if pos < 0:
@@ -309,6 +416,9 @@ class Run:
 
     def close(self):
         self._mm.close()
+        if self._idx:
+            self._idx.close()
+            self._idx = None
 
     def release(self):
         """Give back the memory of a file read with plain reads (the read-ahead window); the index stays. A mapped file has nothing to give back."""
@@ -316,8 +426,53 @@ class Run:
             self._mm.release()
 
     # ------------------------------------------------------------------ index
-    def _index(self):
-        mm, pos, refs, level_of = self._mm, 0, {}, {}
+    def _spectrum_offsets(self):
+        """Start of every <spectrum> as the indexList of an indexedmzML says, or None (no indexList, or it does not match the file)."""
+        mm, n = self._mm, len(self._mm)
+        tail = mm[max(n - 2048, 0):n]
+        m = re.search(rb"<indexListOffset>\s*(\d+)\s*</indexListOffset>", tail)
+        if not m or int(m.group(1)) >= n:
+            return None
+        blob = mm[int(m.group(1)):n]
+        a = re.search(rb'<index\s+name="spectrum"\s*>', blob)
+        if not a:
+            return None
+        e = blob.find(b"</index>", a.end())
+        offs = [int(x) for x in re.findall(rb"<offset[^>]*>\s*(\d+)\s*</offset>", blob[a.end():e if e > 0 else len(blob)])]
+        if not offs or any(y <= x for x, y in zip(offs, offs[1:])) or mm[offs[0]:offs[0] + 10] != b"<spectrum " or mm[offs[-1]:offs[-1] + 10] != b"<spectrum ":
+            return None
+        return offs
+
+    def _spans(self):
+        """(start, end, header text) of every spectrum. With an indexList only the header of each spectrum is read (up to <binaryDataArrayList), not its data."""
+        mm = self._mm
+        offs = self._spectrum_offsets()
+        if offs is not None:
+            last = mm.find(b"</spectrum>", offs[-1])
+            if last < 0:
+                offs = None
+        if offs is not None:
+            nxt = offs[1:] + [last + len(b"</spectrum>") + 1]
+            for a, limit in zip(offs, nxt):
+                n = 4096
+                while True:
+                    chunk = mm[a:min(a + n, limit)]
+                    c = chunk.find(b"<binaryDataArrayList")
+                    if c >= 0 or a + n >= limit:
+                        break
+                    n *= 4
+                if c < 0:
+                    b = a + len(chunk)
+                    e = chunk.rfind(b"</spectrum>")
+                    b = a + e + len(b"</spectrum>") if e >= 0 else b
+                    c = None
+                else:
+                    tail = mm[max(limit - 64, a):limit]
+                    e = tail.rfind(b"</spectrum>")
+                    b = max(limit - 64, a) + e + len(b"</spectrum>") if e >= 0 else limit
+                yield a, b, chunk[:c if c is not None else len(chunk)].decode("utf-8", "replace")
+            return
+        pos = 0
         while True:
             a = mm.find(b"<spectrum ", pos)
             if a < 0:
@@ -327,7 +482,12 @@ class Run:
                 break
             b += len(b"</spectrum>")
             c = mm.find(b"<binaryDataArrayList", a, b)
-            h = mm[a:(c if c > 0 else b)].decode("utf-8", "replace")
+            yield a, b, mm[a:(c if c > 0 else b)].decode("utf-8", "replace")
+            pos = b
+
+    def _index(self):
+        refs, level_of = {}, {}
+        for a, b, h in self._spans():
             m = re.search(r'\sid="([^"]*)"', h)
             lvl = _cv(h, "MS:1000511")
             pol = 1 if 'accession="MS:1000130"' in h else -1 if 'accession="MS:1000129"' in h else 0
@@ -375,7 +535,6 @@ class Run:
                 path=path, precursors=precs, charge=imm["charge"] if imm else None))
             if m:
                 level_of[m.group(1)] = lvl_i
-            pos = b
         self._link_parents(refs)
 
     # ------------------------------------------------------------------ arrays
@@ -407,7 +566,7 @@ class Run:
         """Header of every <chromatogram>: id, kind (tic/bpc/pda/srm/other), Q1, Q3, collision energy, dwell time."""
         if getattr(self, "_chroms", None) is not None:
             return self._chroms
-        out, mm, pos = [], self._mm, 0
+        out, mm, pos = [], self._mm, (self.scans[-1].end if self.scans else 0)       # the chromatogramList follows the spectrumList
         while True:
             a = mm.find(b"<chromatogram ", pos)
             if a < 0:
@@ -437,6 +596,7 @@ class Run:
             out.append(d)
             pos = b + 1
         self._chroms = out
+        self.release()
         return out
 
     def chromatogram(self, i: int):
@@ -511,8 +671,22 @@ class Run:
         return sorted(groups.values(), key=lambda g: (g["level"], g["polarity"], g["precursor"] or 0))
 
     def table(self, level: int = 1, polarity: int | None = None) -> PeakTable:
-        """Peak table of the scans of one level (and polarity, when the file has both)."""
-        key = (level, polarity)
+        """Peak table of the scans of one level (and polarity, when the file has both): a view on the .mzidx of the file, built on the first call."""
+        key = (level, polarity if polarity in (1, -1) else None)
+        if key in self._tables:
+            return self._tables[key]
+        t0 = time.perf_counter()
+        ix = self._ensure_index()
+        t = ix.table(level, polarity) if ix else None
+        if t is None:
+            return self.table_reference(level, polarity)
+        self._tables[key] = t
+        self.timing[f"tabella MS{level}" + (f" ({'pos' if polarity == 1 else 'neg'})" if polarity in (1, -1) else "")] = round(time.perf_counter() - t0, 3)
+        return t
+
+    def table_reference(self, level: int = 1, polarity: int | None = None) -> PeakTable:
+        """The same table built in memory straight from the mzML (the reference the index is tested against; also the fallback when no index can be written)."""
+        key = ("mem", level, polarity)
         if key in self._tables:
             return self._tables[key]
         t0 = time.perf_counter()

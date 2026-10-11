@@ -25,7 +25,7 @@ try:
         def helpq():
             assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); pg.wait_for_timeout(300)
-            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "programma didattico" in tx and "federico.cristaudo@unito.it" in tx, tx[:200]
+            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "federico.cristaudo@unito.it" in tx, tx[:200]
             tg = r.teoria(pg); assert "Cromatogramma" in tg and "Spettro" in tg and "Full Scan" in tg, tg[:200]      # the old guide is the first chapter of the Teoria
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
@@ -44,11 +44,11 @@ try:
             if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
         step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), pg.wait_for_timeout(800)))
         def fold():
-            w0 = pg.evaluate("E.panels[0].w"); pg.click("#ffold"); pg.wait_for_timeout(600)
-            w1 = pg.evaluate("E.panels[0].w"); assert w1 > w0 + 150 and pg.is_visible("#funfold") and not pg.is_visible("#dfiles"), (w0, w1)
+            w0 = pg.evaluate("E.panels[0].w"); drawer(pg); pg.wait_for_timeout(600)
+            w1 = pg.evaluate("E.panels[0].w"); assert w1 < w0 - 150 and pg.is_visible("#dfiles"), (w0, w1)         # pinned next to the charts: they narrow
             pg.screenshot(path=SH + "61_folded.png")
-            pg.click("#funfold"); pg.wait_for_timeout(600); assert pg.evaluate("E.panels[0].w") == w0 and pg.is_visible("#dfiles")
-        step("file list collapses and the panels widen", fold)
+            pg.click("#sb-x"); pg.wait_for_timeout(600); assert pg.evaluate("E.panels[0].w") == w0 and not pg.is_visible("#dfiles")
+        step("pinned file list narrows the panels, closing it widens them", fold)
         def png():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
             path = "/tmp/wd6_chrom.png"; d.value.save_as(path)
@@ -57,9 +57,9 @@ try:
             assert px == [255, 255, 255, 255], px
         step("PNG of a plot has a white background", png)
         def restore():
-            pg.click("#ffold"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(4000)
-            assert pg.evaluate("E.fold") and not pg.is_visible("#dfiles"); pg.click("#funfold"); pg.wait_for_timeout(800)
-        step("collapsed file list is restored after reload", restore)
+            drawer(pg); pg.wait_for_timeout(500); pg.reload(); pg.wait_for_timeout(4000)
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.pinned && BARRA.curTab === 'file'"); pg.click("#sb-pin"); pg.click("#sb-x"); pg.wait_for_timeout(800)
+        step("pinned file list is restored after reload", restore)
         def periodic():
             pg.click("#np-pt"); pg.wait_for_timeout(500)
             assert pg.locator(".pt-c").count() == 118

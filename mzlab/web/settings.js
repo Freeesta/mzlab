@@ -67,11 +67,15 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
+    ${window.MZLAB_BROWSER ? `<div class="row" id="uip-space-row" hidden><span>${I18N.t("settings.space.label")}</span> <span id="uip-space-val" class="sm" role="status" aria-live="polite"></span> <button id="uip-space" type="button" title="${I18N.t("settings.space.title")}">${I18N.t("settings.space.button")}</button></div>` : ""}
+    ${window.DESKUPD ? DESKUPD.row() : ""}
+    ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
     `;
   document.body.appendChild(d);
+  if (window.DESKUPD) DESKUPD.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
   const a11yCur = QA11Y.read();
@@ -105,6 +109,23 @@ function uipOpen(btn) {
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
+  const uipSpace = d.querySelector("#uip-space");
+  if (uipSpace) {                                                          // the browser version: what the files and indexes take in OPFS, and a button that frees the indexes of removed files
+    const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
+    const paint = (j, note) => {
+      const row = d.querySelector("#uip-space-row"); if (!j || !j.opfs) return;
+      row.hidden = false;
+      d.querySelector("#uip-space-val").textContent = note || I18N.t("settings.space.value", { files: mb(j.files), idx: mb(j.idx) });
+      uipSpace.disabled = !j.idx_removed;
+    };
+    fetch("api/spazio").then(r => r.json()).then(j => paint(j)).catch(() => {});
+    uipSpace.onclick = () => fetch("api/spazio", { method: "POST" }).then(r => r.json()).then(j => paint(j, I18N.t("settings.space.freed"))).catch(() => {});
+  }
+  const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
+  if (uipExt && window.__TAURI__ && __TAURI__.core) {
+    __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});
+    uipExt.onchange = () => __TAURI__.core.invoke("lib_set_external", { on: uipExt.checked }).catch(() => { uipExt.checked = !uipExt.checked; });
+  }
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {
     uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();

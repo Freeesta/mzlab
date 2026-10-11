@@ -5,11 +5,6 @@ const firstTab = () => (TABS.find(([t]) => tabFiles(t).length) || ["full"])[0];
 const pickTab = want => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
-const TABICON = { full: "full", ms2: "prod", mrm: "mrm" }, TABHELP = { full: "modo-full", ms2: "modo-ms2", mrm: "modo-mrm" };
-// short label of the tab (what the experiment is and what it is for), from the text of the three modes
-function modeTip(t) {
-  try { const m = QMODI.M[QMODI.tab2key[t]]; return [m.what, m.use].filter(Boolean).join(". ").replace(/<[^>]+>/g, "").replace(/&gt;/g, ">").replace(/&amp;/g, "&"); } catch (e) { return ""; }
-}
 // the label of a tab: the scheme Q1 -> q2 -> Q3 in big, with the words (texts from modi.js)
 function modeSchema(t) {
   try {
@@ -162,21 +157,6 @@ function defaultLayoutTab(t) {
   }
 }
 
-// First view of the MRM graphs: the peak is ~0.5 min wide in a 20 min run, so the student would zoom every time. All graphs zoom on +-1.5 min around the
-// highest transition of all the visible files, only if that peak is clear (>= 10x the noise); otherwise the whole run stays. "Vista intera" is one click.
-function mrmFocus(ps) {
-  let best = null;
-  for (const q of ps) for (const s of (q._a && q._a.sr) || []) {
-    if (!s.y.length) continue;
-    let mx = -1, at = 0; s.y.forEach((v, i) => { if (v > mx) { mx = v; at = i; } });
-    const ys = Float64Array.from(s.y).sort(), med = ys[ys.length >> 1], dev = Float64Array.from(ys, v => Math.abs(v - med)).sort(), noise = 1.4826 * dev[dev.length >> 1];
-    if (mx >= 10 * Math.max(med + 3 * noise, 1) && (!best || mx > best.mx)) best = { mx, rt: s.x[at] };
-  }
-  if (!best) return;
-  ps.forEach(q => { const a = q._a; if (a && a.full && !q.zoom) { q.zoom = clampView(best.rt - 1.5, best.rt + 1.5, a.full[0], a.full[1]); draw(q); } });
-  uiSave();
-}
-
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
 function addMs2Pair(e, y) {
   const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = ptMs2(e.prec);
@@ -212,7 +192,7 @@ function ms2Switch(prec) {
 function openOverview() {
   const kinds = TABS.filter(([t]) => tabFiles(t).length);
   const key = f => f.type === "sample" ? `0|${(f.time ?? 1e9).toString().padStart(9, "0")}` : f.type === "standard" ? `1|${(f.conc ?? 1e9).toString().padStart(9, "0")}` : "2|";
-  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${f.time} min` : I18N.t("load.type.sample")) : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : I18N.t("load.type.blank");
+  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${fmtTime(f.time)}` : I18N.t("load.type.sample")) : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : I18N.t("load.type.blank");
   const rows = new Map();
   E.files.forEach(f => { const k = key(f) + "|" + lab(f); if (!rows.has(k)) rows.set(k, { lab: lab(f), by: {} }); (rows.get(k).by[f.kind] = rows.get(k).by[f.kind] || []).push(f); });
   const body = [...rows.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => `<tr><td><b>${EH(r.lab)}</b></td>` + kinds.map(([t]) => `<td>${(r.by[t] || []).map(f => `<button class="fc" data-k="${f.k}" title="${I18N.t("tabs.overview.open", { tab: EH(TABS.find(x => x[0] === t)[1]) })}">${EH(f.label)}</button>`).join("") || '<span class="muted">-</span>'}</td>`).join("") + "</tr>").join("");

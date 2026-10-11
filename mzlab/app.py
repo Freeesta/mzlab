@@ -40,6 +40,22 @@ def _method_summary(m: dict | None) -> dict | str:
 MAX_UPLOAD = 4 << 30  # bytes: one mzML upload
 
 
+def rounded(a, nd: int) -> list:
+    """[round(float(v), nd) for v in a], much faster for long traces: rint(v * 10^nd) / 10^nd is the same double as round() except when v * 10^nd lies within rounding error
+    of a half (the few such values go through round() itself)."""
+    a = np.asarray(a, dtype=np.float64)
+    if not len(a):
+        return []
+    sc = 10.0 ** nd
+    s = a * sc
+    if not np.isfinite(s).all() or np.abs(s).max() >= 1e15:
+        return [round(float(v), nd) for v in a]
+    out = (np.rint(s) / sc).tolist()
+    for i in np.flatnonzero(np.abs(s - np.floor(s) - 0.5) < 1e-6 * np.maximum(1.0, np.abs(s))):
+        out[int(i)] = round(float(a[i]), nd)
+    return out
+
+
 class App:
     """The page lets the user drop files and open them for exploration; the work folder keeps the files and the notebook."""
 
@@ -73,11 +89,14 @@ class App:
         key = (str(p), st.st_mtime, st.st_size)
         if key not in cache:
             import hashlib
-            h = hashlib.sha256()
-            with open(p, "rb") as fh:
-                while chunk := fh.read(1 << 20):
-                    h.update(chunk)
-            cache[key] = h.hexdigest()
+            from .reader.mzidx import known_sha
+            cache[key] = known_sha(p) if p.suffix.lower() == ".mzml" else ""          # an index of the file remembers it: no need to read the file again
+            if not cache[key]:
+                h = hashlib.sha256()
+                with open(p, "rb") as fh:
+                    while chunk := fh.read(1 << 20):
+                        h.update(chunk)
+                cache[key] = h.hexdigest()
         return cache[key]
 
     # ------------------------------------------------------------------ files and start
@@ -215,10 +234,20 @@ class App:
             t = s_.get("time")
             c = s_.get("conc")
             samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"),
-                            "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit")})
+                            "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit"),
+                            "rep": s_.get("rep")})
         if not samples:
             raise UserError("err.session.noFiles", text="add at least one file")
-        self.session = Session(samples, self.workdir)
+        if payload.get("append") and self.session:          # one more file in the session that is open (the page opens a list file by file)
+            self.session.add(samples)
+        else:
+            self.session = Session(samples, self.workdir)
+
+    def set_meta(self, payload: dict) -> dict:
+        """Metadata of the open files (type, time in minutes, concentration, replicate group), changed from the sample table."""
+        if not self.session:
+            raise UserError("err.session.none", text="no session open")
+        return {"changed": self.session.set_meta(list(payload.get("files", [])))}
 
     def _git_commit(self) -> str:
         cache = self.__dict__.setdefault("_git_commit_val", None)
@@ -244,7 +273,7 @@ class App:
             if id(it.run) in seen:
                 continue
             seen.add(id(it.run))
-            out.append({"file": Path(it.file).name.partition("#")[0], "mode": it.run.mode, "size": it.path.stat().st_size, "timing": dict(it.run.timing)})
+            out.append({"file": Path(it.file).name.partition("#")[0], "mode": it.run.mode, "size": it.path.stat().st_size, "indexed": bool(it.run._idx), "timing": dict(it.run.timing)})
         return {"files": out}
 
     def _item(self, k: int):
@@ -253,15 +282,49 @@ class App:
         return self.session.items[k]
 
     def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None, filt: str | None = None) -> dict:
-        rt, y = self._item(k).total(kind, level, mz0, mz1, prec, filt)
-        return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
+        item = self._item(k)
+        item.run.activate()
+        rt, y = item.total(kind, level, mz0, mz1, prec, filt)
+        return {"rt": rounded(rt, 4), "y": rounded(y, 1)}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
         out = []
         for k in ks:
             rt, y = self._item(k).xic(mz, tol, level)
-            out.append({"k": k, "rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]})
+            out.append({"k": k, "rt": rounded(rt, 4), "y": rounded(y, 1)})
         return {"mz": mz, "tol": tol, "traces": out}
+
+    def qaqc_ion(self, ks: list[int], roles: list[str], mz: float, rt: float, win: float, tol: float, unit: str = "da",
+                 level: int = 1, thr: float = 3.0, ratio: bool = False) -> dict:
+        """QA/QC measures of ONE ion (an internal standard, a known ion) in every file of `ks`: apex RT, RT shift, area, area
+        relative to the median, observed m/z and error in ppm (the m/z of the apex window, intensity weighted), plus the summary
+        of the series (drift, CV, mass accuracy) and, with `ratio`, the sample / blank area ratio. tol in Da (unit "da") or ppm."""
+        from . import qaqc
+        if len(roles) != len(ks):
+            raise UserError("err.qaqc.roles", text="one role per file is needed")
+        tol_da = tol if unit == "da" else mz * tol * 1e-6
+        rows = []
+        for k in ks:
+            item = self._item(k)
+            item.run.activate()
+            t = item._tbl(level)
+            y = t.xic(mz, tol_da)
+            pk = qaqc.peak_in_window(t.rt, y, rt, win)
+            if not pk:
+                rows.append(None)
+                continue
+            a, b = np.searchsorted(t.mz, mz - tol_da, side="left"), np.searchsorted(t.mz, mz + tol_da, side="right")
+            sel = (t.pos[a:b] >= pk["i0"]) & (t.pos[a:b] <= pk["i1"])
+            w = t.inten[a:b][sel].astype(float)
+            mo = float(np.sum(t.mz[a:b][sel].astype(float) * w) / w.sum()) if w.sum() > 0 else None
+            rows.append({"k": k, "rt": round(pk["apex"], 4), "area": pk["area"], "height": pk["height"],
+                         "mz_obs": None if mo is None else round(mo, 5),
+                         "dppm": None if (mo is None or unit == "da") else round(qaqc.ppm_error(mo, mz), 3)})
+        out = qaqc.summarize(rows, roles, rt)
+        if ratio:
+            out["ratio"] = qaqc.sample_blank_ratios([r["area"] if r else 0.0 for r in rows], roles, thr)
+        out.update({"mz": mz, "rt": rt, "win": win, "tol": tol, "unit": unit, "level": level})
+        return out
 
     def subxic(self, k: int, formula: str, ppm: float = 5.0, min_mz: float = 100.0, z: int = 1) -> dict:
         """XIC that sums every sub-formula of `formula` (high resolution files only) and the measures of each one (chem/subformulas.py)."""
@@ -327,7 +390,18 @@ class App:
             if sp[2]:
                 ms2 = {"x": (sx[0], sx[1]) if sx[2] else None, "p": (sp[0], sp[1])}
                 break
-        return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
+        rep = ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
+        rep["hr"] = any(it.profile(1)["hr"] for _, it in full)            # the page adds the list of proofs of mzFinder only for high-resolution files
+        rep["pol"] = next((int(s.polarity) for _, it in full for s in it.run.scans if s.polarity), 1)
+        if ms2 is not None:                                                # the strongest peaks of the product-ion spectra, for those proofs (tolerance of HR)
+            def strongest(sp):
+                if sp is None:
+                    return None
+                a, y = np.asarray(sp[0], float), np.asarray(sp[1], float)
+                k = np.argsort(-y)[:40]
+                return [a[k].tolist(), y[k].tolist()]
+            rep["ms2_peaks"] = {"x": strongest(ms2["x"]), "p": strongest(ms2["p"])}
+        return rep
 
     @staticmethod
     def _spec_arrays(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
@@ -392,6 +466,9 @@ class App:
         item = self._item(k)
         pt = item.ptol(level, precursor, hr)
         mz, y, n = item.spectrum(rt0, rt1, level, precursor, prec_tol=pt, bin_da=bin_da, bg=bg, hr=hr, filt=filt)
+        if bg is not None:           # a difference is drawn as lines (up and down), never as a profile
+            return {"mode": "centroid", "diff": True, "mz": [round(float(v), 4) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n,
+                    **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
         return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
@@ -465,13 +542,6 @@ class App:
         if len(sids) > 200:
             raise UserError("err.scan.maxAverage", {"n": 200}, "at most 200 scans per average")
         return self._item(k).scan_avg(sids, hr)
-
-    def ionmap(self, k: int, level: int) -> dict:
-        """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""
-        item = self._item(k)
-        grid = self.session.grid(level)
-        m = item.ionmap(level, grid)
-        return {**grid, "level": level, "data": base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")}
 
     def reset(self, fresh: bool = False):
         with self.lock:

@@ -30,12 +30,21 @@ try:
         inv_text = pg.inner_text("#tour-invito")
         assert "Prima volta qui?" in inv_text, inv_text
 
-        # Click "Non ora" -> closes and saves stato "saltato"
+        # bottom-left corner of the window, compact, non-modal dialog
+        bb = pg.locator("#tour-invito").bounding_box()
+        vp = pg.viewport_size
+        assert bb["x"] < 40 and bb["y"] + bb["height"] > vp["height"] - 40, (bb, vp)
+        assert bb["width"] < 330, bb
+        assert pg.get_attribute("#tour-invito", "role") == "dialog"
+        assert pg.get_attribute("#tour-invito", "aria-modal") == "false"
+        assert "Inizia il tour" in inv_text, inv_text
+
+        # Click "Non ora" -> closes; the invitation is recorded as already shown
         pg.click("#tour-inv-no")
         pg.wait_for_timeout(300)
         assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
         st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
-        assert st["stato"] == "saltato", st
+        assert st["stato"] == "invitato", st
 
         # Reload: invitation does not come back
         pg.reload()
@@ -222,6 +231,33 @@ try:
         st = pg.evaluate("JSON.parse(localStorage.getItem('qqq.tour.lr'))")
         assert st["stato"] == "fatto", st
         steps.append(("chapter 2 steps completed with Fine, saves stato fatto", "ok"))
+
+        # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=it"); ready(pg)
+        pg.evaluate("localStorage.setItem('qqq.tour.lr', JSON.stringify({stato:'saltato'}))")
+        SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
+        for cap, n in ((1, 7), (2, 8)):
+            for i in range(n):
+                pg.evaluate(f"TOUR.vai({cap}, {i})"); pg.wait_for_timeout(350)
+                hd = pg.inner_text("#tour-dialog .tour-hd")
+                assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
+                sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
+                assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i == 0), (cap, i)
+                if cap == 2 and i == 5:
+                    bar = pg.evaluate("(()=>{const b=document.querySelector('#stbar').getBoundingClientRect();return [Math.round(b.left),Math.round(b.top)]})()")
+                    assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar
+        pg.click("#tour-btn-skip")
+        # the invitation (bottom left) is not covered by the toolbar or by the drawer
+        pg.evaluate("localStorage.removeItem('qqq.tour.lr')"); pg.reload(); ready(pg); pg.wait_for_selector("#tour-invito", timeout=8000)
+        for vp in ((1280, 800), (1024, 1366), (1500, 1000)):
+            pg.set_viewport_size({"width": vp[0], "height": vp[1]}); pg.wait_for_timeout(300)
+            pg.evaluate("BARRA.setPinned(false);BARRA.setTab('file',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
+            top = pg.evaluate("(()=>{const b=document.querySelector('#tour-inv-si').getBoundingClientRect();const e=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return !!(e&&e.closest('#tour-invito'))})()")
+            assert top, vp
+            bb = pg.locator("#tour-invito").bounding_box(); assert bb["x"] < 40 and bb["y"] + bb["height"] > vp[1] - 40, (vp, bb)
+            pg.evaluate("BARRA.close(false)")
+        pg.set_viewport_size({"width": 1500, "height": 2200})
+        steps.append(("every tour step finds its target visible; the «file» step opens and closes the drawer; the invitation is not covered", "ok"))
 
         # 5. English language: text of step 1 and buttons in English
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")

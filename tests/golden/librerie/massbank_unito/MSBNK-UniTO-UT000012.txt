@@ -1,0 +1,42 @@
+ACCESSION: MSBNK-UniTO-UT000012
+RECORD_TITLE: Carbamazepine; LC-ESI-ITFT; MS2; CID 30 % (nominal); [2M+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000012
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 3 injection(s), 42 scan(s).
+CH$NAME: Carbamazepine
+CH$COMPOUND_CLASS: Non-Natural Product; Antiepileptic
+CH$FORMULA: C15H12N2O
+CH$EXACT_MASS: 236.09496
+CH$SMILES: C1=CC=C2C(=C1)C=CC3=CC=CC=C3N2C(=O)N
+CH$IUPAC: InChI=1S/C15H12N2O/c16-15(18)17-13-7-3-1-5-11(13)9-10-12-6-2-4-8-14(12)17/h1-10H,(H2,16,18)
+CH$LINK: CAS 298-46-4
+CH$LINK: INCHIKEY FFGPTBGBLSHEPO-UHFFFAOYSA-N
+CH$LINK: PUBCHEM CID:2554
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 21.584 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 473.19720
+MS$FOCUSED_ION: PRECURSOR_TYPE [2M+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-000i-0390000000-da7200fda823790964f9
+PK$NUM_PEAK: 3
+PK$PEAK: m/z int. rel.int.
+  173.38393 1515548.9 429
+  237.10154 3528616.2 999
+  238.10491 536538.6 152
+//

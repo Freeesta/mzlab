@@ -47,8 +47,6 @@ const HELP = {
   document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
   addEventListener("scroll", e => { if (!pop.contains(e.target)) close(); }, true);
 })();
-// the "?" buttons are gone (7/10): the short text of each one is now the label of its control (hover ~1.5 s); the only "?" is the general one in the header
-const helpBtn = () => "";
 const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1].replace(/<br>.*/s, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); return t.length > 190 ? t.slice(0, t.lastIndexOf(" ", 187)) + "…" : t; };
 // the general guide, now the first chapter of the Teoria ("Come si usa QqQ lab", teoria/00-uso.html): all the explanations in one place, by topic
 function guideHtml() {

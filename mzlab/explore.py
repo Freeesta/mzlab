@@ -11,11 +11,13 @@ from pathlib import Path
 import numpy as np
 
 from .bigfiles import hr_profile
+from .differenza import subtract_spectrum
 from .i18n import UserError
 from .project import guess_sample
 from .reader.mzml import Run
 from .reader.profile import LOW, mass_profile
 
+MAP_POINTS_MAX = 200_000               # most points the sticks of the 3D viewer can ask for
 HR_CELL = float(np.log1p(3e-6))        # high resolution: centroids closer than 3 ppm are the same peak when scans are averaged
 
 
@@ -42,6 +44,7 @@ class Item:
         # part = {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS2"}: one experiment of a MIXED file (survey + product ions, MRM + EPI, + and - polarity).
         # The parts of a file share one Run (the file is read once); `file` is then "name.mzML#tag", the name of the physical file is `path.name`.
         self.file, self.time, self.type, self.path, self.conc, self.cunit = file, time, typ, path, conc, cunit
+        self.rep: str | None = None           # replicate group typed by the user (None = the automatic one: same type, time and concentration)
         self.part = part
         base = label or Path(path).stem
         self.label = base + (f" · {part['tag']}" if part and not base.endswith(part["tag"]) else "")
@@ -128,7 +131,7 @@ class Item:
         t2 = self._tbl(2) if ms2 else None
         pol = sorted({s.polarity for s in self.sc if s.polarity})
         out = {"file": self.file, "label": self.label, "sha256": getattr(self, "sha256", "") or getattr(r, "sha256", ""),
-                "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
+                "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit, "rep": self.rep,
                 "scans": len(self.sc), "ms1": len(ms1), "ms2": len(ms2),
                 "rt_min": float(min((s.rt for s in self.sc), default=0.0)),
                 "rt_max": float(max((s.rt for s in self.sc), default=0.0)),
@@ -167,11 +170,11 @@ class Item:
                 md = r.__dict__["_md"] = r.metadata()
             return {"prof1": mass_profile(sc1), "prof2": mass_profile(sc2), "instrument": md.get("instrument", ""),
                     "res1": med([s.res for s in sc1 if s.res]), "res2": med([s.res for s in sc2 if s.res]), "nce": bool(r.nce),
-                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2)), "max_level": max((s.level for s in r.scans), default=1),
+                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2)), "infusion": infusion_like(r.scans), "max_level": max((s.level for s in r.scans), default=1),
                     "acq": self._acq(sc1, sc2), "mode1": "profile" if any(s.profile for s in sc1[:50]) else "centroid" if sc1 else None,
                     "mode2": "profile" if any(s.profile for s in sc2[:50]) else "centroid" if sc2 else None}
         except Exception as e:  # noqa: BLE001 -- the fallback is the behaviour of today
-            return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False,
+            return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False, "infusion": False,
                     "hr_err": f"{type(e).__name__}: {e}"[:160]}
 
     @staticmethod
@@ -230,15 +233,7 @@ class Item:
         n = len(ids)
         bpm = np.zeros(n); bpi = np.zeros(n)
         if n and len(t.pos):
-            cache = self.run.__dict__.setdefault("_bpk", {})
-            if level not in cache:                                    # per scan: the highest peak (computed once per level)
-                o = np.lexsort((t.inten, t.pos))
-                ps = t.pos[o]
-                last = np.r_[np.flatnonzero(ps[1:] != ps[:-1]), len(ps) - 1]
-                m = np.zeros(len(t.scan_ids)); y = np.zeros(len(t.scan_ids))
-                m[ps[last]] = t.mz[o][last]; y[ps[last]] = t.inten[o][last]
-                cache[level] = (m, y)
-            m, y = cache[level]
+            m, y = t.base_peaks()                                     # per scan: the highest peak (computed once per table)
             at = {int(i): k for k, i in enumerate(t.scan_ids)}
             sel = np.array([at[int(i)] for i in ids])
             bpm, bpi = m[sel], y[sel]
@@ -299,6 +294,8 @@ class Item:
                        "ce": sorted({x.collision_energy for x in sc2 if x.collision_energy is not None}),
                        "iso": sorted({round((x.iso[1] - x.iso[0]) / 2, 3) for x in sc2 if x.iso})[:4], "res": med([x.res for x in sc2 if x.res]),
                        "inject": med(vals(sc2, "MS:1000927")), "an": self.profile(2)["an"]}
+                lo2 = vals(sc2[:50], "MS:1000501")
+                ms2["window_lo"] = min(lo2) if lo2 else None      # lower limit of the MS2 scan window (ion traps cut the spectrum there)
             return {"ms1": ms1, "ms2": ms2, "instrument": self.hr_info().get("instrument", "")}
         except Exception as e:  # noqa: BLE001 -- the window «Metodo» works without it
             return {"error": f"{type(e).__name__}: {e}"[:120]}
@@ -456,12 +453,10 @@ class Item:
         if len(t.rt) == 0:
             return np.zeros(0), np.zeros(0)
         if mz0 is not None or mz1 is not None:          # only the ions inside [mz0, mz1] (None = open end)
-            keep = np.ones(len(t.mz), dtype=bool)
-            if mz0 is not None:
-                keep &= t.mz >= mz0
-            if mz1 is not None:
-                keep &= t.mz <= mz1
-            pos, inten = t.pos[keep], t.inten[keep]
+            dt = t.mz.dtype.type
+            a = 0 if mz0 is None else int(np.searchsorted(t.mz, dt(mz0), side="left"))
+            b = len(t.mz) if mz1 is None else int(np.searchsorted(t.mz, dt(mz1), side="right"))
+            pos, inten = t.pos[a:max(a, b)], t.inten[a:max(a, b)]
             if kind == "tic":
                 return t.rt, np.bincount(pos, weights=inten, minlength=len(t.rt))
             out = np.zeros(len(t.rt))
@@ -472,30 +467,23 @@ class Item:
                 out[ps[starts]] = np.maximum.reduceat(ys, starts)
             return t.rt, out
         if kind == "tic":
-            return t.rt, np.bincount(t.pos, weights=t.inten, minlength=len(t.rt))
-        key = level
-        if key not in self._bpc:
-            order = np.argsort(t.pos, kind="stable")
-            ps, ys = t.pos[order], t.inten[order]
-            out = np.zeros(len(t.rt))
-            if len(ps):
-                starts = np.flatnonzero(np.r_[True, ps[1:] != ps[:-1]])
-                out[ps[starts]] = np.maximum.reduceat(ys, starts)
-            self._bpc[key] = out
-        return t.rt, self._bpc[key]
+            return t.rt, t.sum_by_scan()
+        return t.rt, t.base_peaks()[1]
 
     def xic(self, mz: float, tol: float, level: int = 1):
         t = self._tbl(level)
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
-    def ionmap(self, level: int, grid: dict) -> np.ndarray:
-        """Mean intensity per scan on a common RT x m/z grid, shape (nrt, nmz), float32.
+    def ionmap(self, level: int, grid: dict, agg: str = "max") -> np.ndarray:
+        """Intensity per cell on a common RT x m/z grid, shape (nrt, nmz), float32.
 
-        The grid (rt0, rt1, nrt, mz0, dmz, nmz) is shared by all files of a session, so maps can be compared
-        or subtracted bin by bin. Intensities are averaged over the scans that fall in the same RT bin.
+        The grid (rt0, rt1, nrt, mz0, dmz, nmz) is shared by all files of a session, so maps can be compared or subtracted bin by bin.
+        agg="max": the most intense peak that falls in the cell (a peak is never diluted by the width of the bin);
+        agg="mean": the mean per scan of the scans that fall in the same RT bin (the difference A - B uses it).
         """
-        key = (level, grid["rt0"], grid["rt1"], grid["nrt"], grid["mz0"], grid["dmz"], grid["nmz"])
+        agg = check_agg(agg)
+        key = (agg, level, grid["rt0"], grid["rt1"], grid["nrt"], grid["mz0"], grid["dmz"], grid["nmz"])
         cache = self.__dict__.setdefault("_maps", {})
         if key in cache:
             return cache[key]
@@ -506,34 +494,89 @@ class Item:
             span = max(grid["rt1"] - grid["rt0"], 1e-9)
             scan_bin = np.clip(np.floor((t.rt - grid["rt0"]) / span * nrt).astype(np.int64), 0, nrt - 1)
             n_scans = np.bincount(scan_bin, minlength=nrt)
-            i = scan_bin[t.pos]
-            j = np.floor((t.mz - grid["mz0"]) / grid["dmz"]).astype(np.int64)
-            ok = (j >= 0) & (j < nmz)
-            acc = np.bincount(i[ok] * nmz + j[ok], weights=t.inten[ok], minlength=nrt * nmz).reshape(nrt, nmz)
-            out = (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
+            size = nrt * nmz
+            if agg == "mean":                                          # the peaks in pieces; the running sums go first so the additions keep their order
+                cells, acc = np.arange(size), np.zeros(size)
+                for mz, inten, pos in t.iter_chunks():
+                    j = np.floor((mz - grid["mz0"]) / grid["dmz"]).astype(np.int64)
+                    ok = (j >= 0) & (j < nmz)
+                    acc = np.bincount(np.concatenate([cells, scan_bin[pos][ok] * nmz + j[ok]]), weights=np.concatenate([acc, inten[ok]]), minlength=size)
+                out = (acc.reshape(-1, nmz) / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
+            else:                                                      # the maximum of the pieces is the maximum
+                flat = np.zeros(size, dtype=np.float32)
+                for mz, inten, pos in t.iter_chunks():
+                    j = np.floor((mz - grid["mz0"]) / grid["dmz"]).astype(np.int64)
+                    ok = (j >= 0) & (j < nmz)
+                    flat = np.maximum(flat, _cells(scan_bin[pos][ok] * nmz + j[ok], inten[ok], size, agg, n_scans, nmz))
+                out = flat.reshape(nrt, nmz)
         cache[key] = out
         return out
 
-    def ionmap_region(self, level: int, rt0: float, rt1: float, nrt: int, mz0: float, mz1: float, nmz: int) -> np.ndarray:
-        """The same mean intensity per scan as ionmap(), on a grid of its own over a region only (the true zoom of the map):
-        shape (nrt, nmz), float32; RT bins of (rt1 - rt0) / nrt, m/z bins of (mz1 - mz0) / nmz."""
+    def ionmap_region(self, level: int, rt0: float, rt1: float, nrt: int, mz0: float, mz1: float, nmz: int, agg: str = "max", log: bool = False) -> np.ndarray:
+        """The same map as ionmap(), on a grid of its own over a region only (the true zoom of the map): shape (nrt, nmz), float32;
+        RT bins of (rt1 - rt0) / nrt; m/z bins of (mz1 - mz0) / nmz, or equal steps of ln(m/z) with log=True (cells of a constant number of ppm)."""
+        agg = check_agg(agg)
         nrt, nmz = max(1, int(nrt)), max(1, int(nmz))
         out = np.zeros((nrt, nmz), dtype=np.float32)
         t = self._tbl(level)
-        if not len(t.rt) or not len(t.mz) or rt1 <= rt0 or mz1 <= mz0:
+        if not len(t.rt) or not len(t.mz) or rt1 <= rt0 or mz1 <= mz0 or (log and mz0 <= 0):
             return out
         a, b = np.searchsorted(t.mz, mz0, side="left"), np.searchsorted(t.mz, mz1, side="left")
         scan_in = (t.rt >= rt0) & (t.rt < rt1)
         scan_bin = np.clip(np.floor((t.rt - rt0) / (rt1 - rt0) * nrt).astype(np.int64), 0, nrt - 1)
-        n_scans = np.bincount(scan_bin[scan_in], minlength=nrt)
         if b > a:
             pos = t.pos[a:b]
             ok = scan_in[pos]
             i = scan_bin[pos[ok]]
-            j = np.clip(np.floor((t.mz[a:b][ok] - mz0) / (mz1 - mz0) * nmz).astype(np.int64), 0, nmz - 1)
-            acc = np.bincount(i * nmz + j, weights=t.inten[a:b][ok], minlength=nrt * nmz).reshape(nrt, nmz)
-            out = (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
+            mz = t.mz[a:b][ok].astype(np.float64)
+            f = np.log(mz / mz0) / np.log(mz1 / mz0) if log else (mz - mz0) / (mz1 - mz0)
+            j = np.clip(np.floor(f * nmz).astype(np.int64), 0, nmz - 1)
+            out = _cells(i * nmz + j, t.inten[a:b][ok], nrt * nmz, agg, np.bincount(scan_bin[scan_in], minlength=nrt), nmz).reshape(nrt, nmz)
         return out
+
+    def map_background(self, level: int, mz0: float, mz1: float, nmz: int, log: bool = False, agg: str = "max") -> np.ndarray:
+        """The constant background of the m/z cells of a region: for each cell the median along the WHOLE run, over the scans (at most 1500
+        groups of consecutive scans), shape (nmz,). An ion present all along the run (solvent, column bleed, plasticisers) is a line of the map;
+        subtracting this takes it away and leaves the peaks."""
+        key = ("bg", agg, level, round(mz0, 4), round(mz1, 4), nmz, log)
+        cache = self.__dict__.setdefault("_maps", {})
+        if key in cache:
+            return cache[key]
+        t = self._tbl(level)
+        out = np.zeros(nmz, dtype=np.float32)
+        if len(t.rt) and len(t.mz) and mz1 > mz0 and not (log and mz0 <= 0):
+            ns = len(t.rt)
+            grp = max(1, int(np.ceil(ns / 1500)))
+            a, b = np.searchsorted(t.mz, mz0, side="left"), np.searchsorted(t.mz, mz1, side="left")
+            mz = t.mz[a:b].astype(np.float64)
+            f = np.log(mz / mz0) / np.log(mz1 / mz0) if log else (mz - mz0) / (mz1 - mz0)
+            j = np.clip(np.floor(f * nmz).astype(np.int64), 0, nmz - 1)
+            ng = (ns + grp - 1) // grp
+            full = _cells((t.pos[a:b] // grp) * nmz + j, t.inten[a:b], ng * nmz, agg, np.bincount(np.arange(ns) // grp, minlength=ng), nmz).reshape(ng, nmz)
+            out = np.median(full, axis=0).astype(np.float32)
+        cache[key] = out
+        return out
+
+    def map_points(self, level: int, rt0: float, rt1: float, mz0: float, mz1: float, cap: int = MAP_POINTS_MAX) -> dict:
+        """The true points (RT, m/z, intensity) of a region for the sticks of the 3D viewer: the most intense ones up to cap.
+        Returns {rt, mz, inten (arrays, most intense first), total (points in the region), n}."""
+        cap = max(1, min(int(cap), MAP_POINTS_MAX))
+        t = self._tbl(level)
+        empty = {"rt": np.zeros(0, np.float32), "mz": np.zeros(0, np.float64), "inten": np.zeros(0, np.float32), "total": 0, "n": 0}
+        if not len(t.rt) or not len(t.mz):
+            return empty
+        a, b = np.searchsorted(t.mz, mz0, side="left"), np.searchsorted(t.mz, mz1, side="right")
+        rt = t.rt[t.pos[a:b]]
+        idx = np.flatnonzero((rt >= rt0) & (rt <= rt1))
+        total = int(len(idx))
+        if not total:
+            return empty
+        y = t.inten[a:b][idx]
+        if total > cap:
+            idx = idx[np.argpartition(-y, cap - 1)[:cap]]
+            y = t.inten[a:b][idx]
+        idx = idx[np.argsort(-y, kind="stable")]
+        return {"rt": rt[idx].astype(np.float32), "mz": t.mz[a:b][idx].astype(np.float64), "inten": t.inten[a:b][idx].astype(np.float32), "total": total, "n": int(len(idx))}
 
     # ------------------------------------------------------------------ marked points of the map (only measures: never a name or a verdict)
     def map_snap(self, level: int, rt: float, mz: float, dmz: float = 1.0, drt: float = 0.2, dbins: int = 1) -> dict | None:
@@ -588,8 +631,8 @@ class Item:
         n = int(ok.sum())
         if n == 0:
             return (*e, 0)
-        m = ok[t.pos]
-        mz, y = t.mz[m], t.inten[m]
+        parts = [(mz[m], y[m]) for mz, y, pos in t.iter_chunks() for m in (ok[pos],)]
+        mz, y = (np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts])) if parts else (np.zeros(0), np.zeros(0))
         if len(mz) == 0:
             return (*e, n)
         if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly (read from the file: the peak table of a high-resolution file is float32)
@@ -723,24 +766,59 @@ class Item:
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False, filt: str | None = None):
         """Mean spectrum of the scans in [rt0, rt1], peaks merged within bin_da.
 
-        bg = {"item": Item, "rt0": .., "rt1": .., "factor": 1.0} subtracts a background spectrum
-        (another time window, or the blank file) bin by bin and clips at zero, like Xcalibur's
-        "subtract spectrum". Both spectra are mean intensity per scan, so windows of different length are comparable.
+        bg = {"item": Item, "rt0": .., "rt1": .., "factor": 1.0, "tol": 5.0 (ppm, high resolution), "clip": True} subtracts a reference spectrum
+        (another time window, or the blank file, see differenza.subtract_spectrum): the same nominal mass in low resolution, +-tol ppm in high;
+        what is only in the reference stays negative unless clip. Both spectra are mean intensity per scan, so windows of different length are comparable.
         """
         u, smz, sy, n = self._binned(rt0, rt1, level, precursor, prec_tol, bin_da, hr, raw1=bg is None, filt=filt)
         if bg is not None and len(u):
-            bu, _, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da, hr)
+            bu, bmz, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da, hr)
             if bn and len(bu):
-                idx = np.searchsorted(bu, u)
-                idx[idx >= len(bu)] = len(bu) - 1
-                hit = bu[idx] == u
-                sy = np.maximum(sy - np.where(hit, by[idx], 0.0) * float(bg.get("factor", 1.0)), 0.0)
-                keep = sy > 0
-                smz, sy = smz[keep], sy[keep]
+                smz, sy = subtract_spectrum(smz, sy, bmz, by, float(bg.get("factor", 1.0)), unit=not self.hr_on(level, hr),
+                                            tol=float(bg.get("tol", 5.0)), clip=bool(bg.get("clip", True)))
         if min_rel > 0 and len(sy):
             keep = sy >= min_rel * sy.max()
             smz, sy = smz[keep], sy[keep]
         return smz, sy, n
+
+
+def check_agg(agg: str) -> str:
+    if agg not in ("max", "mean"):
+        raise UserError("err.map.agg", {"agg": str(agg)[:20]}, f"agg must be max or mean, not {agg!r}")
+    return agg
+
+
+def _cells(cell: np.ndarray, w: np.ndarray, size: int, agg: str, n_scans: np.ndarray, nmz: int) -> np.ndarray:
+    """Intensity of every cell of a map from the cell number of each peak: the maximum (agg="max") or the mean per scan of the RT bin ("mean"), flat."""
+    if agg == "mean":
+        acc = np.bincount(cell, weights=w, minlength=size).reshape(-1, nmz)
+        return (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32).ravel()
+    out = np.zeros(size, dtype=np.float32)
+    if len(cell):
+        np.maximum.at(out, cell, w.astype(np.float32, copy=False))          # the maximum is the same in any order (and float32 rounding is monotonic): no sorting needed
+    return out
+
+
+def map_cells(hr: bool, mz0: float, mz1: float, nmz: int, log: bool = False) -> tuple:
+    """The m/z cells of a region of the map: (mz0, mz1, nmz, log).
+    High resolution: never more cells than the instrument tells apart (cells of HR_CELL = 3 ppm), so a wide view is coarse and a zoom reaches the
+    resolution of the instrument; log=True gives cells of equal ppm. Low resolution: when the cells are wider than 0.5 Da they are nominal masses,
+    [n - 0.2; n + 0.8] (as the XIC of the cursor), whole numbers of Da wide."""
+    nmz = max(1, int(nmz))
+    if hr:
+        top = (np.log(mz1 / mz0) / HR_CELL) if log and mz0 > 0 else (mz1 - mz0) / (mz1 * 3e-6)
+        return mz0, mz1, max(1, min(nmz, int(np.ceil(top)))), bool(log and mz0 > 0)
+    if (mz1 - mz0) / nmz >= 0.5:
+        lo, hi = float(np.floor(mz0 + 0.2) - 0.2), float(np.ceil(mz1 + 0.2) - 0.2)
+        w = max(1, int(np.ceil((hi - lo) / nmz)))
+        n = int(np.ceil((hi - lo) / w - 1e-9))
+        return lo, lo + w * n, n, False
+    return mz0, mz1, nmz, False
+
+
+def subtract_constant(m: np.ndarray, bg: np.ndarray) -> np.ndarray:
+    """Takes the constant background (one value per m/z column) away from a map (RT x m/z); what is below it stays 0."""
+    return np.maximum(np.asarray(m, dtype=np.float32) - np.asarray(bg, dtype=np.float32)[None, :], 0).astype(np.float32)
 
 
 def diff_tolerant(a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
@@ -769,6 +847,16 @@ def rt_groups(points: list[dict], tol: float = 0.05) -> list[dict]:
         for p in mem:
             p["dm"] = p["mz"] - top["mz"]
     return out
+
+
+def infusion_like(scans) -> bool:
+    """A direct infusion as far as the scans tell: a single scan, or several scans that all sit at the same retention time."""
+    if not scans:
+        return False
+    if len(scans) == 1:
+        return True
+    rts = [s.rt for s in scans]
+    return max(rts) - min(rts) < 1e-6
 
 
 def file_parts(run) -> list[dict]:
@@ -803,7 +891,25 @@ def mixed_text(run) -> list[dict]:
 class Session:
     def __init__(self, samples: list[dict], root: Path):
         self.items: list[Item] = []
-        has_hr, has_lr = False, False
+        self.root = root
+        self._hr = self._lr = False
+        self.add(samples)
+
+    def add(self, samples: list[dict]) -> None:
+        """Open more files in this session (the same checks as for the first ones). If they cannot be added the session stays as it was."""
+        n_before, hr0, lr0 = len(self.items), self._hr, self._lr
+        try:
+            self._open(samples)
+        except BaseException:
+            for it in self.items[n_before:]:
+                if all(o.run is not it.run for o in self.items[:n_before]):
+                    it.run.close()
+            del self.items[n_before:]
+            self._hr, self._lr = hr0, lr0
+            raise
+
+    def _open(self, samples: list[dict]) -> None:
+        root = self.root
         for s in samples:
             name, _, tag = str(s["file"]).partition("#")      # "x.mzML#MS2" = the MS2 part of a mixed file (as saved in the notebook)
             f = Path(name)
@@ -814,27 +920,50 @@ class Session:
             common = (s.get("label") or label, s["time"] if s.get("time") is not None else t, s.get("type") or typ)
             if not parts:
                 item = Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run)
+                item.rep = s.get("rep") or None
                 self.items.append(item)
                 hr_info = item.hr_info()
             else:
                 for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
                     item = Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run)
+                    item.rep = s.get("rep") or None
                     self.items.append(item)
                     hr_info = item.hr_info()
             if hr_info["prof1"]["hr"] or hr_info["prof2"]["hr"]:
-                has_hr = True
+                self._hr = True
             else:
-                has_lr = True
-        
-        if has_hr and has_lr:
-            raise UserError("err.hr.mix", text="low- and high-resolution files cannot be mixed")
+                self._lr = True
+            if self._hr and self._lr:
+                raise UserError("err.hr.mix", text="low- and high-resolution files cannot be mixed")
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]
 
+    def set_meta(self, entries: list[dict]) -> int:
+        """Change type, time (minutes), concentration, its unit and replicate group of files already open. Each entry names a file
+        ('x.mzML' reaches every part of it) and carries only the fields to change; returns how many items changed."""
+        n = 0
+        for e in entries:
+            name = str(e.get("file", ""))
+            for it in self.items:
+                if name not in (it.file, it.file.partition("#")[0]):
+                    continue
+                if e.get("type") in ("sample", "blank", "standard"):
+                    it.type = e["type"]
+                if "time" in e:
+                    it.time = None if e["time"] in (None, "") else float(e["time"])
+                if "conc" in e:
+                    it.conc = None if e["conc"] in (None, "") else float(e["conc"])
+                if "cunit" in e:
+                    it.cunit = e["cunit"] or None
+                if "rep" in e:
+                    it.rep = str(e["rep"] or "").strip() or None
+                n += 1
+        return n
+
     def grid(self, level: int = 1, rt_bin: float = 0.04, dmz: float = 1.0) -> dict:
         """Common RT x m/z grid for the ion maps of every file that has scans of this level."""
-        rts, mzs = [], []
+        rts, mzs, hr = [], [], False
         for it in self.items:
             sc = [x for x in it.sc if x.level == level]
             if not sc:
@@ -843,12 +972,13 @@ class Session:
             t = it._tbl(level)
             if len(t.mz):
                 mzs += [float(t.mz[0]), float(t.mz[-1])]
+            hr = hr or bool(it.profile(level)["hr"])
         if not rts or not mzs:
             return {"rt0": 0.0, "rt1": 1.0, "nrt": 1, "mz0": 0.0, "dmz": dmz, "nmz": 1}
         rt0, rt1 = float(np.floor(min(rts))), float(np.ceil(max(rts)))
         nrt = int(min(600, max(50, round((rt1 - rt0) / rt_bin))))
-        mz0, mz1 = float(np.floor(min(mzs))), float(np.ceil(max(mzs)))
-        return {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": dmz, "nmz": int(max(1, round((mz1 - mz0) / dmz)))}
+        mz0 = float(np.floor(min(mzs))) - (0.0 if hr else 0.2)         # low resolution: bin n = [n - 0.2; n + 0.8], the nominal mass
+        return {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": dmz, "nmz": int(max(1, np.ceil((max(mzs) - mz0) / dmz + 1e-9)))}
 
 
 def sniff(path: Path) -> dict:

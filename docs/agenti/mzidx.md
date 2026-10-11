@@ -1,0 +1,50 @@
+# `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`)
+Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
+
+## Formato (tutto little-endian, nessuna compressione)
+```
+0      HEADER, 64 byte:  "MZIDX001"(8) | u32 versione=1 | u32 flags=0 | u64 meta_off | u64 meta_len | u64 scans_off | u64 scans_len | u64 total | 8 byte a zero
+64     per ogni sezione, nell'ordine di meta.sections, sette array ciascuno allineato a 64 byte (riempimento a zero):
+         rt        n_scans × f8   minuti
+         tic       n_scans × f8   TIC dichiarato dal file
+         scan_ids  n_scans × i8   indice della scansione nel file
+         sumint    n_scans × f8   intensità totale di ogni scansione, sommata nell'ordine della tabella (come np.bincount sull'intera tabella)
+         bp_mz     n_scans × f8   m/z del picco più alto di ogni scansione (0 se vuota; a parità, quello più in alto nella tabella)
+         bp_inten  n_scans × f8   la sua intensità
+         fence     n_fence × T    primo m/z di ogni blocco di 16384 picchi (n_fence = ceil(n_peaks / 16384))
+         mz        n_peaks × T    tutti i picchi, ordinati per m/z (ordinamento stabile: a parità, prima la scansione, poi l'ordine nella scansione)
+         inten     n_peaks × T    intensità, nello stesso ordine
+         pos       n_peaks × i4   posizione della scansione di appartenenza dentro rt/tic/scan_ids
+scans_off  JSON UTF-8 (separatori compatti): lista di righe, una per scansione, nell'ordine del file, con le colonne di SCAN_COLUMNS:
+         start,end (byte dell'mzML),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native
+meta_off   JSON UTF-8: {format:"mzidx", version, block, source:{name,size,mtime_ns,probe,sha256}, run:{nce,hr1,n_chromatograms},
+                        keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos}}]}
+total      dimensione del file: un file di dimensione diversa (troncato) non si apre
+```
+- **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
+- **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
+- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (la stessa che userà `.mzflow`).
+- **Scrittura atomica**: file temporaneo accanto alla destinazione, poi rinomina; l'intestazione si scrive per ultima.
+
+## Costruzione (`build`)
+1. Le scansioni sono già nella tabella di `Run`: con un `indexList` (indexedmzML) le posizioni degli spettri vengono da lì e si leggono solo le intestazioni (fino a `<binaryDataArrayList`), mai i dati binari; senza `indexList` si percorre il file come prima (`Run._spans`).
+2. Ogni scansione si decodifica una volta (`Run.read`) e i suoi picchi vanno, a gruppi di ~1 M di picchi, in secchi di 1 unità di m/z (0…9999, i valori fuori scala negli estremi); oltre `BUILD_BYTES` (64 MB, divisi per le sezioni) i secchi si scaricano in un file temporaneo. La memoria resta limitata: non si concatena mai tutto il file.
+3. Secchio per secchio, nell'ordine di m/z, si ordina in modo stabile e si scrive nei tre array; il primo m/z di ogni blocco entra in `fence`.
+Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo verifica `tests/test_mzidx.py` su tutti i file di esempio e sui sintetici.
+
+## Lettura
+- `open(path)` → `MzIdx`: `meta`, `scans()` (le `Scan` come le dà il lettore dell'mzML), `table(livello, polarità)` → `PeakTable` i cui `mz`, `inten`, `pos` sono `LazyArray`.
+- `LazyArray`: `a[i:j]` legge la fetta (fino a 2 blocchi dalla cache a blocchi di 16384 elementi, oltre direttamente dal file); `searchsorted` usa `fence` e legge un solo blocco; maschere, operatori e `np.asarray` la leggono intera (temporaneamente).
+- **Cache a blocchi**: LRU condivisa da tutti i file, tetto `CACHE_BYTES` = 64 MB (`CACHE_BYTES_SMALL` = 32 MB su tablet e telefono, `set_cache_limit`). Il tetto sta solo in `mzidx.py`. I blocchi del file attivo (`Run.activate()`, chiamato da `/api/chrom`) sono gli ultimi a uscire. TIC e picco base di ogni scansione stanno nell'indice (`sumint`, `bp_*`): aprire un file non legge nessun picco.
+- `PeakTable.iter_chunks()`, `sum_by_scan()`, `base_peaks()` percorrono la tabella a pezzi (somme nello stesso ordine di `np.bincount` sull'intera tabella, quindi bit per bit uguali).
+
+## Dove sta
+`Run.table` costruisce l'indice alla prima richiesta (TIC dichiarato e scansioni vengono dall'mzML, non serve prima) in `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; `index_name`: SHA-1 di percorso reale, dimensione e data) e lo apre; alla riapertura `Run` prende tabella delle scansioni, impronta e conteggi dall'indice e non percorre gli spettri. Se l'indice non si può scrivere, `Run.table` costruisce la tabella in memoria come prima (`table_reference`). `mzidx.trim(cartella, limite)` cancella i più vecchi.
+
+## Nel sito (`browser-worker.js`, `archivio.js`, `browser.py`)
+- **Archivio**: OPFS, cartelle `mzlab/files/<nome>` (gli mzML) e `mzlab/idx/<nome>.mzidx`. Solo il worker del motore tocca OPFS; ogni handle di scrittura si apre per una scrittura e si chiude subito; la lettura è un `File` (`getFile`) montato con WORKERFS (`/big/N/data`, `/idx/N/data`) e collegato nella cartella di lavoro. Senza OPFS (`FileSystemFileHandle.createSyncAccessHandle` assente, o `?opfs=0` per i test) tutto resta come prima: memoria del motore e IndexedDB.
+- **Caricamento**: la pagina manda ogni `.mzML` come Blob (più file insieme, in parallelo); il worker lo scrive in OPFS, lo monta e lo collega in `/work/pendente` (non ancora nell'elenco dei file). Il lettore Python ha già letto le intestazioni: `browser.index_inputs` ne ricava ciò che serve al costruttore (livello, polarità, RT, TIC, righe JSON, `source`, `run`, `hr1`; `mzidx.builder_inputs`). Il **pool di worker Rust** (predefinito; `rust.md` e `misure.md`; `idxpool.js`, `idx-worker.js`, `mzlab-wasm::build_mzidx`) il `.mzidx` lo costruiscono i worker; nell'app desktop lo costruisce il lato nativo (`idxbuild.rs`, `rust.md`) leggendo il file a fette e lo scrive in OPFS come `<nome>.mzidx.part`; poi `ARCH.promote` gli dà il nome definitivo (mai un file a metà con il nome vero), lo monta e `adopt_index` lo registra. Solo allora il file passa in `/work/sessione` e la risposta dell'upload (elenco con tipo letto dal contenuto) parte: la tabella di carico si riempie man mano che gli indici sono pronti. Se il pool non può (niente `.wasm`, niente SIMD, errore) o con `?pool=0`, lo costruisce Python: `browser.build_index` in `/idxtmp` (memoria di Pyodide, liberata a fine costruzione), copiato in OPFS a pezzi, montato e adottato. Le richieste si servono una alla volta (`chain`, `inChain`), quindi la sostituzione non avviene a metà di una risposta. `Run.table` che costruisce l'indice per conto suo (un file senza indice) segue la stessa strada alla richiesta successiva. `window.MZLAB_IDX` elenca, per ogni file, quale motore ha costruito l'indice (`engine`, `why` se è Python, `ms`, `passes`).
+- **Riapertura**: all'avvio ogni file di OPFS è montato e collegato, ogni indice è registrato (`mzidx.REGISTRY`, nome del file → percorso montato); `Run` lo riconosce da dimensione e impronta (`probe`) e prende scansioni, `sha256` e conteggi dall'indice: nessuna lettura degli spettri, nessun limite di 300 MB. Anche `App.file_sha256` si fida dell'indice (`known_sha`). Un file con lo stesso nome ma altro contenuto fa scartare l'indice (si ricostruisce).
+- **Migrazione**: i file di una visita precedente in IndexedDB (`files`) passano in OPFS alla prima apertura e si cancellano da IndexedDB solo a scrittura riuscita; quelli che non passano restano come prima. I nomi `qqq_lab`, `qqq.*` non cambiano.
+- **Spazio**: l'ingranaggio (solo nel sito) mostra quanto occupano file e indici e «Libera» cancella gli indici dei file tolti (sempre per primi, anche da soli quando la quota supera l'80%); un indice cancellato si ricostruisce da solo. `navigator.storage.persist()` si chiede al primo salvataggio, senza messaggi se rifiutato. «Nuova sessione» e «Ricomincia da capo» svuotano OPFS.
+- **Memoria**: il tetto dei blocchi (`CACHE_BYTES` 64 MB, 32 MB su iPad/telefono: `browser.configure`) vale per tutti i file insieme; il file attivo (`/api/chrom`) è l'ultimo a perdere i blocchi; tabella delle scansioni, `rt`, `tic` e i totali di ogni file restano in memoria, i picchi no.

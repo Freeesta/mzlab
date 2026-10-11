@@ -102,9 +102,35 @@ const HR = (() => {
     for (let i = 0; i <= n; i++) { const m = a + (b - a) * i / n; let v = 0; for (const r of pat) { const d = (m - r.mz) / sg(r.mz); if (Math.abs(d) < 6) v += r.rel * Math.exp(-0.5 * d * d); } x.push(m); y.push(v); }
     const mx = Math.max(...y) || 1; return { x, y: y.map(v => 100 * v / mx) };
   }
+  // ions of a simulation: one per adduct (with its concentration, %), or, with a charge distribution {z0, hw}, one per charge state (protonated / deprotonated)
+  // weighted by 2^(-4 ((z - z0) / hw)^2) (hw = full width at half height, in charge units); the isotope calculation itself is the one of isoFine
+  function isoSeries(iso) {
+    const adds = iso.adds && iso.adds.length ? iso.adds : [{ ad: iso.ad, c: 100 }], cd = iso.cd, out = [];
+    adds.forEach(a => {
+      const base = QQQRef.ionCounts(iso.formula, a.ad), w0 = (a.c == null ? 100 : a.c) / 100;
+      if (cd && (cd.z0 > 1 || cd.hw > 0)) {
+        const sg = base.z < 0 ? -1 : 1, M0 = QQQRef.ionCounts(iso.formula, sg > 0 ? "[M]+" : "[M]-"), hw = cd.hw || 0;
+        for (let z = Math.max(1, Math.floor(cd.z0 - 1.5 * hw)); z <= Math.max(1, Math.ceil(cd.z0 + 1.5 * hw)); z++) {
+          const w = hw > 0 ? Math.pow(2, -4 * ((z - cd.z0) / hw) ** 2) : (z === Math.round(cd.z0) ? 1 : 0), n = { ...M0.n };
+          n.H = (n.H || 0) + sg * z; if (w < 0.02 || n.H < 0) continue;
+          out.push({ ion: { n, z: sg * z }, w: w * w0, tag: `${z}${sg > 0 ? "+" : "−"}` });
+        }
+      } else out.push({ ion: base, w: w0, tag: a.ad });
+    });
+    if (!out.length) throw new Error(I18N.t("bn.iso.noSeries"));
+    return out;
+  }
+  // the combined pattern of the simulation, 100 = its most intense peak; every peak knows the first peak (m0) of its own ion, and a tag when there are several ions
+  function isoPat(iso, fw) {
+    const parts = isoSeries(iso), out = [];
+    parts.forEach(sr => { let pt = isoFine(sr.ion.n, sr.ion.z); if (fw) pt = mergeBy(pt, fw); const m0 = pt[0].mz; pt.forEach(r => out.push({ ...r, rel: r.rel * sr.w, m0, tag: parts.length > 1 ? sr.tag : "" })); });
+    out.sort((a, b) => a.mz - b.mz);
+    const mx = Math.max(...out.map(r => r.rel)) || 1;
+    return out.map(r => ({ ...r, rel: 100 * r.rel / mx }));
+  }
   // the simulation in place of the spectrum («Sostituisci»): centroids (and the Gaussian line when the style is «profilo»), height of the observed top
   function isoAsSpectrum(p, f, dObs) {
-    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), fw = fwhmFn(p.iso, f, p.level), pat = fw ? mergeBy(isoFine(ion.n, ion.z), fw) : isoFine(ion.n, ion.z);
+    const fw = fwhmFn(p.iso, f, p.level), pat = isoPat(p.iso, fw);
     const top = Math.max(0, ...(dObs && dObs.y ? dObs.y : [0])) || 1e6, o = { mz: pat.map(r => r.mz), y: pat.map(r => top * r.rel / 100), mode: "centroid" };
     if (p.iso.style === "profilo" && fw) { const c = isoCurve(pat, fw, p.iso.pts || 10); o.pmz = c.x; o.py = c.y.map(v => top * v / 100); o.mode = "profile"; }
     return o;
@@ -112,11 +138,11 @@ const HR = (() => {
   // the theoretical pattern on a spectrum (red circles): each circle sits on the observed centroid within the tolerance of the profile (and says the
   // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
   function drawIso(p, g, X, Y, d0, ymax, W, f) {
-    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
-    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = fw ? mergeBy(isoFine(ion.n, ion.z), fw) : isoFine(ion.n, ion.z);          // no width: whole fine structure
+    const tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
+    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = isoPat(p.iso, fw);          // no width: whole fine structure
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
     const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
-    const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9, m0 = pat[0].mz;
+    const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9;
     g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
     if (st === "profilo" && fw) {                                      // Gaussian profile at the resolution of the scan
       const c = isoCurve(pat, fw, p.iso.pts || 10); g.beginPath(); let on = false;
@@ -127,7 +153,7 @@ const HR = (() => {
       if (st === "barre") { g.lineWidth = 3; g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.lineWidth = 1.5; }
       else if (st === "centroidi") { g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]); g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke(); }
       if (r.rel >= 1) {
-        const off = Math.round(r.mz - m0), t = (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · " + I18N.t("hr.iso.notFound"));
+        const off = Math.round(r.mz - r.m0), t = (r.tag ? r.tag + " " : "") + (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · " + I18N.t("hr.iso.notFound"));
         g.font = fpx(10); g.textAlign = "left"; g.fillText(t, px + 5, py - 4);
       }
     }
@@ -139,7 +165,7 @@ const HR = (() => {
   // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
   // the unit window of today (xicWin, explore.js) for the others. A classic trace {mz, w} is an explicit window in Da (all files alike).
   const xicFiles = tab => scanFiles(tabFiles(tab || E.tab));
-  const ionText = (mz, f) => { const q = prof(f, f.lv); return `m/z ${(+mz).toFixed(q.dec)} \u00b1 ${+q.tol.toFixed(1)} ppm`; };
+  const ionText = (mz, f, t) => { const q = prof(f, f.lv); return `m/z ${(+mz).toFixed(q.dec)} \u00b1 ` + (t && t.wda != null ? `${+t.wda.toFixed(5)} Da` : `${+(t && t.ppm != null ? t.ppm : q.tol).toFixed(1)} ppm`); };
   // the trace for an ion if a high-resolution file is among the files the XIC is for; otherwise null (the caller makes the classic unit-window trace)
   function ionTrace(mz, o = {}) {
     const fs = xicFiles(o.tab), hf = fs.find(f => isHr(f, f.lv));
@@ -149,8 +175,9 @@ const HR = (() => {
   // [centre, half width] in Da of trace t for file f
   function xicArgs(f, t, p) {
     if (!t.ion) return [t.mz, t.w ?? p.tol];
+    if (t.wda != null) return [t.mz, t.wda];                                  // interval chosen in Da in «Display options»
     const q = prof(f, f.lv);
-    if (q.hr) return [t.mz, t.mz * q.tol * 1e-6];
+    if (q.hr) return [t.mz, t.mz * (t.ppm ?? q.tol) * 1e-6];
     const [a, b] = xicWin(t.mz, t.obs);
     return [rh((a + b) / 2, 2), rh((b - a) / 2, 2)];
   }
@@ -158,8 +185,8 @@ const HR = (() => {
   function xicEdges(t, p) {
     const f = xicFiles(p.tab).find(x => isHr(x, x.lv)), q = f && prof(f, f.lv);
     if (!t.ion || !q) return null;
-    const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
+    const d = q.dec, w = t.wda != null ? t.wda : t.mz * (t.ppm ?? q.tol) * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { isoSeries, isoPat, mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;

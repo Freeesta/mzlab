@@ -29,8 +29,10 @@ try:
         pg.goto(url); pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         def header():
             h = pg.inner_text("header")
-            for w in ("Periodic table", "Adducts", "m/z calculator", "Neutral losses", "Lists"): assert w in h, (w, h)
-            assert pg.get_attribute("#np-pc", "title").startswith("Opens PubChem"), pg.get_attribute("#np-pc", "title")
+            for w in ("Calculator", "Losses", "Adducts", "Lists", "Table", "More"): assert w in h, (w, h)
+            assert pg.get_attribute("#np-ad", "aria-label") == "ESI adducts" and pg.get_attribute("#np-pt", "aria-label") == "Periodic table"
+            pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert pg.get_attribute("#np-pc", "title").startswith("Opens PubChem"), pg.get_attribute("#np-pc", "title")
+            pg.keyboard.press("Escape")
             assert pg.get_attribute("header .hq", "title") == "About mzLab", pg.get_attribute("header .hq", "title")
         step("header in English", header)
         def start():
@@ -48,7 +50,7 @@ try:
             shutil.rmtree("/tmp/s_ingl_b", ignore_errors=True)
             files = synth.make_series("/tmp/s_ingl_b", [0, 15, 60]); stage(pg, files)
             t = pg.inner_text("#flist")
-            for w in ("Experiment", "Type", "Time (min)", "Size", "sample", "blank"): assert w in t, (w, t)
+            for w in ("Experiment", "Type", "Time", "Size", "sample", "blank"): assert w in t, (w, t)
             assert re.search(r"\d+ files?", t), t
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("file table in English", upload)

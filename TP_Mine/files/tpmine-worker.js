@@ -16,7 +16,7 @@ onmessage = async ev => {
       py.FS.mkdirTree("/tp_data");
       py.runPython("import sys\nsys.path[:0] = ['/qqq', '/tpm']\nimport tpmine.api");
       api = py.pyimport("tpmine.api");
-      api._progress = (text, frac) => postMessage({ type: "progress", text, frac });
+      api._progress = (text, frac, phase, payload) => postMessage({ type: "progress", text, frac, phase, payload: payload ? JSON.parse(payload) : null });
       postMessage({ type: "ready" });
     } else if (m.type === "put") {
       const dst = "/tp_data/" + m.name;

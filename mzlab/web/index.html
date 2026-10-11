@@ -3,7 +3,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} · Analisi MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
@@ -14,6 +14,8 @@
 @font-face{font-family:"OpenDyslexic";src:url(static/teoria/fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
 :root[data-a11y-font=atkinson] body,:root[data-a11y-font=atkinson] button,:root[data-a11y-font=atkinson] input,:root[data-a11y-font=atkinson] select,:root[data-a11y-font=atkinson] textarea{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
 :root[data-a11y-font=dyslexic] body,:root[data-a11y-font=dyslexic] button,:root[data-a11y-font=dyslexic] input,:root[data-a11y-font=dyslexic] select,:root[data-a11y-font=dyslexic] textarea{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
+:root{--lv1:#0072B2;--lv2a:#009E73;--lv2b:#56B4E9;--lv3:#E69F00;--lv4:#CC79A7;--lv5:#999999;--lv0:#BBBBBB}
+.lvb{display:inline-block;border:2px solid var(--lvc,var(--line));border-radius:4px;padding:0 6px;font-weight:700;font-size:12px;color:var(--ink);background:color-mix(in srgb,var(--lvc,var(--line)) 18%,var(--panel));white-space:nowrap}.lv-1{--lvc:var(--lv1)}.lv-2a{--lvc:var(--lv2a)}.lv-2b{--lvc:var(--lv2b)}.lv-3{--lvc:var(--lv3)}.lv-4{--lvc:var(--lv4)}.lv-5{--lvc:var(--lv5)}.lv-0{--lvc:var(--lv0)}
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8;--soft:#f0f3f6}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}}
 :root[data-theme=dark]{color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}
@@ -30,14 +32,14 @@ canvas{animation:none!important;transition:none!important}
 sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;font-family:inherit;font-weight:inherit}
 sub{bottom:-0.22em}
 sup{top:-0.45em}
-html{scroll-padding-top:calc(var(--hh,40px) + 6px)}header{position:sticky;top:0;z-index:6000;display:flex;gap:10px;align-items:center;padding:4px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;transition:box-shadow .15s}header.scrolled{box-shadow:0 2px 8px rgba(60,45,10,.18)}
+html{scroll-padding-top:calc(var(--hh,40px) + 6px)}header{position:sticky;top:0;z-index:6000;display:flex;gap:10px;align-items:center;padding:4px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:nowrap;transition:box-shadow .15s}header.scrolled{box-shadow:0 2px 8px rgba(60,45,10,.18)}
 header b{font-size:14px}header .ib{display:inline-flex;align-items:center;gap:5px}header .ib .ic{display:inline-flex;color:var(--accent)}header .sb{display:none}@media (max-width:1400px){header{gap:5px}header .lb{display:none}header .sb{display:inline}header button{padding-left:6px;padding-right:6px}}header .logo{height:22px;width:auto;display:block}.sp{flex:1}
 button,select,input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:3px 9px}button{cursor:pointer}#ex-jpg:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}button:hover{border-color:var(--accent)}
 main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:10px 14px}
 @media (max-width:900px){main{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:10px}
 .card h3{margin:0 0 6px;font-size:13px}.muted{color:var(--muted)}
-input.guess{background:rgba(255,214,0,.30)}.guess{background:rgba(255,214,0,.30)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
+input[aria-invalid="true"]{outline:2px solid var(--bad)}input.guess{background:rgba(255,214,0,.30)}.guess{background:rgba(255,214,0,.30)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
 td{padding:3px 6px;border-bottom:1px solid var(--line);vertical-align:middle}tr.row{cursor:pointer}tr.row:hover{background:var(--sel)}tr.sel{background:var(--sel)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 canvas{display:block;width:100%}
@@ -81,36 +83,79 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
 :root{--sb-w:260px}
-#v-data{display:grid;grid-template-columns:var(--sb-col-w,var(--sb-w,260px)) minmax(0,1fr);gap:8px;padding:4px 6px 10px 6px;align-items:start}
-#v-data.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-col-w,var(--sb-w,260px))}
+/* Dati view: the side panel is a drawer over the charts (closed until a tool is chosen); "pinned" puts it in the grid next to them */
+#v-data{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:4px 6px 10px 6px;align-items:start}
+#v-data.sb-pin{grid-template-columns:var(--sb-w) minmax(0,1fr)}
+#v-data.sb-pin.sb-right{grid-template-columns:minmax(0,1fr) var(--sb-w)}
 #v-data.sb-right #dfiles{order:2}
 #v-data.sb-right #v-workspace{order:1}
-#v-data.sb-right #sidebar-tablist{order:2;border-left:none;border-right:1px solid var(--line);border-radius:0 8px 8px 0}
-#v-data.sb-right #sb-pane{order:1;border-radius:8px 0 0 8px}
 #v-data.sb-right #sidebar-resize-handle{left:-3px;right:auto}
-#v-data.fold{grid-template-columns:1fr!important}
-#v-data.fold #dfiles{display:none!important}
-#dfiles{position:sticky;top:calc(var(--hh,40px) + 4px);height:calc(100vh - var(--hh,40px) - 16px);max-height:calc(100vh - var(--hh,40px) - 16px);display:flex;flex-direction:row;align-items:stretch;z-index:40;box-sizing:border-box}
-#sidebar-tablist{flex:0 0 38px;width:38px;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;border:1px solid var(--line);border-right:none;background:var(--bg);border-radius:8px 0 0 8px;overflow-y:auto;overflow-x:hidden;box-sizing:border-box}
-#sidebar-tablist button{width:32px;height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid transparent;border-radius:6px;background:transparent;padding:2px;cursor:pointer;color:var(--muted);font-size:8.5px;line-height:1;text-align:center;box-sizing:border-box}
-#sidebar-tablist button svg{width:16px;height:16px;flex:none}
-#sidebar-tablist button span{max-width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px}
-#sidebar-tablist button:hover{background:var(--soft);color:var(--ink)}
-#sidebar-tablist button.on{background:var(--sel);color:var(--accent);border-color:var(--accent);font-weight:600}
-#sidebar-tablist .sb-sep{width:24px;height:1px;background:var(--line);margin:4px auto;flex:none}
-#hri-tabs{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%}
-#sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:0 8px 8px 0;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
-@media (max-width:900px){
-#v-data{grid-template-columns:minmax(0,1fr)}
-#dfiles{position:relative;height:auto;max-height:none}
-}
+#dfiles{position:fixed;top:var(--hh,40px);bottom:0;left:0;width:min(var(--sb-w),90vw);display:none;flex-direction:column;align-items:stretch;z-index:5000;box-sizing:border-box;padding:4px 0 6px 6px}
+#v-data.sb-right #dfiles{left:auto;right:0;padding:4px 6px 6px 0}
+#v-data.sb-open #dfiles{display:flex;animation:sb-in-l .18s ease}
+#v-data.sb-right.sb-open #dfiles{animation-name:sb-in-r}
+@keyframes sb-in-l{from{transform:translateX(-30%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes sb-in-r{from{transform:translateX(30%);opacity:.3}to{transform:none;opacity:1}}
+#v-data.sb-open:not(.sb-pin) #sb-pane{box-shadow:0 8px 28px rgba(0,0,0,.28)}
+#v-data.sb-pin #dfiles{position:sticky;top:calc(var(--hh,40px) + 4px);bottom:auto;left:auto;right:auto;width:auto;height:calc(100vh - var(--hh,40px) - 16px);max-height:calc(100vh - var(--hh,40px) - 16px);padding:0;transform:none;animation:none!important;z-index:40}
+#v-data.sb-right.sb-pin #dfiles{right:auto;padding:0}
+@media (prefers-reduced-motion:reduce){#v-data.sb-open #dfiles{animation:none}}
+#v-data.sb-instant #dfiles{animation:none!important}
+#sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
+#sb-pane:focus{outline:none}#sb-pane:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#sb-grip{display:inline-flex;color:var(--muted);cursor:grab;padding:2px 2px 2px 0}
+#sb-header{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#sb-header button,#sb-header input{cursor:pointer;touch-action:manipulation}
+body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!important}
+.sb-dz{position:fixed;top:var(--hh,40px);bottom:0;width:50vw;z-index:5200;display:flex;align-items:center;justify-content:center;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font-weight:700;pointer-events:none;box-sizing:border-box}
+.sb-dz.l{left:0}.sb-dz.r{right:0}
+.sb-dz.hot{background:color-mix(in srgb,var(--accent) 26%,transparent);border-style:solid}
+.sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
+@media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
+/* toolbar of the header */
+@media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
+#stbar{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
+#stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
+#stbar .tb:hover{background:var(--soft)}
+#stbar .tb .ti{display:inline-flex;color:var(--accent)}
+#stbar .tb .tl{display:none}
+#stbar.tb-lab .tb .tl{display:inline}
+#stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+#stbar .tb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#stbar .tb-split{display:inline-flex;flex:none}
+#stbar .tb-split .tb-main{border-top-right-radius:0;border-bottom-right-radius:0}
+#stbar .tb-split .tb-car{border-top-left-radius:0;border-bottom-left-radius:0;padding:4px 3px;margin-left:-1px}
+#stbar .tb-sep{width:1px;align-self:stretch;margin:4px 3px;background:var(--line);flex:none}
+#stbar [hidden]{display:none!important}
+#paletta{position:fixed;inset:0;z-index:7200;display:flex;align-items:flex-start;justify-content:center;padding-top:14vh;background:rgba(0,0,0,.35)}
+#paletta[hidden]{display:none}
+#paletta .pal-b{width:min(560px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.35);overflow:hidden}
+#paletta input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 14px;font-size:15px;background:var(--panel);color:var(--ink);outline:none;box-sizing:border-box}
+#paletta input:focus-visible{box-shadow:inset 0 -2px 0 var(--accent)}
+#pal-l{list-style:none;margin:0;padding:4px;max-height:min(50vh,360px);overflow-y:auto}
+#pal-l li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;cursor:pointer;min-height:34px}
+#pal-l li[aria-selected=true]{background:var(--sel);outline:1px solid var(--accent)}
+#pal-l .pal-i{display:inline-flex;color:var(--accent);flex:none}#pal-l .pal-t{flex:1;min-width:0}#pal-l .pal-g{font-size:11px;color:var(--muted);flex:none}
+#pal-l li.pal-e{cursor:default;color:var(--muted)}
+#paletta .pal-f{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.pal-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (pointer:coarse){#pal-l li{min-height:44px}}
+#stmenu{position:fixed;z-index:7100;min-width:190px;max-width:min(340px,calc(100vw - 16px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:4px;display:flex;flex-direction:column;gap:1px}
+#stmenu button{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;padding:6px 10px;border-radius:5px;color:var(--ink);cursor:pointer;font-size:13px;white-space:normal;min-height:30px}
+#stmenu button:hover,#stmenu button:focus-visible{background:var(--sel);outline:none}
+#stmenu button .mi{display:inline-flex;color:var(--accent);flex:none;width:16px}
+#stmenu button[aria-checked=true]{font-weight:700}
+#stmenu button[aria-checked=true]::after{content:"";margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+#stmenu .mh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:6px 10px 2px}
+#stmenu hr{border:0;border-top:1px solid var(--line);margin:3px 0}
+@media (pointer:coarse){#stbar .tb{min-height:40px;min-width:40px;justify-content:center}#stmenu button{min-height:40px}#sb-header button{min-width:40px;min-height:40px}}
 #sb-header{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--line);flex:none;margin:0}
 #sb-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-dock-btn{background:transparent;border:0;padding:2px 4px;cursor:pointer;color:var(--muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
 .sb-dock-btn:hover{color:var(--ink);background:var(--soft)}
 #sb-panels{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:4px 6px}
 #sb-panels [role="tabpanel"][hidden]{display:none!important}
-#sidebar-resize-handle{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize;z-index:60}
+#sidebar-resize-handle{position:absolute;right:-3px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:60;touch-action:none}
 #sidebar-resize-handle:hover,body.sb-resizing #sidebar-resize-handle{background:var(--accent);opacity:0.6}
 body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #calcdlg.sb-docked{position:static!important;width:100%!important;max-height:none!important;box-shadow:none!important;padding:0!important;border:none!important;background:transparent!important}
@@ -121,6 +166,39 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #sb-panel-adducts input#ad-in{width:100%;max-width:100%;box-sizing:border-box}
 #sb-panel-adducts table,#sb-panel-losses table{width:100%;font-size:11px}
 #sb-panel-lists{padding:2px}
+#sb-panel-qaqc{padding:2px;font-size:12px}
+#sb-panel-qaqc summary{cursor:pointer;font-weight:600;margin:6px 0}
+#sb-panel-qaqc .qq-tab{width:100%;font-size:11px;border-collapse:collapse}
+#sb-panel-qaqc .qq-tab th,#sb-panel-qaqc .qq-tab td{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left}
+#sb-panel-qaqc .qq-tab td.num{text-align:right;font-variant-numeric:tabular-nums}
+#sb-panel-qaqc .qq-scroll{overflow-x:auto}
+#sb-panel-qaqc .qq-form{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:flex-end;margin:4px 0}
+#sb-panel-qaqc .qq-form label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
+#sb-panel-qaqc .qq-form input{max-width:100%;box-sizing:border-box}
+#sb-panel-qaqc .qq-ion{border:1px solid var(--line);border-radius:6px;padding:6px;margin:6px 0}
+#sb-panel-qaqc .qq-h{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+#sb-panel-qaqc .qq-h button{margin-left:auto}
+#sb-panel-qaqc .qq-chart{width:100%;height:auto;display:block}
+#sb-panel-qaqc .qq-sum{margin:4px 0;padding-left:16px}
+#sb-panel-qaqc .qq-n{display:inline-block;min-width:1.4em;color:var(--muted)}
+#sb-panel-qaqc .bad{color:var(--bad)}
+#sb-panel-stat{padding:2px;font-size:12px}
+#sb-panel-stat summary{cursor:pointer;font-weight:600;margin:6px 0}
+#sb-panel-stat .qq-tab{width:100%;font-size:11px;border-collapse:collapse}
+#sb-panel-stat .qq-tab th,#sb-panel-stat .qq-tab td{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left}
+#sb-panel-stat .qq-tab td.num{text-align:right;font-variant-numeric:tabular-nums}
+#sb-panel-stat .qq-scroll{overflow-x:auto}
+#sb-panel-stat .qq-form{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:flex-end;margin:4px 0}
+#sb-panel-stat .qq-form label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
+#sb-panel-stat .qq-n{display:inline-block;min-width:1.4em;color:var(--muted)}
+#sb-panel-stat .bad{color:var(--bad)}
+#sb-panel-stat input,#sb-panel-stat select{max-width:100%;box-sizing:border-box;font-size:11px}
+#sb-panel-stat .prof-chart{width:100%;height:auto;display:block}
+.cmp-grad{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:6px 0}
+.cmp-grad i{display:block;flex:1;min-width:60px;height:8px;border-radius:4px;border:1px solid var(--line)}
+.liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}
+.liste-panel .seg button{padding:1px 7px;font-size:11px;min-height:0;line-height:1.5;white-space:nowrap}
+#sb-panel-lists .lct td,#sb-panel-lists .lct th{height:22px;padding:1px 6px;font-size:11px;line-height:1.25}#sb-panel-lists .lct th.num{white-space:nowrap}#sb-panel-lists .liste-panel{font-size:12px}#sb-panel-lists .lct td,#sb-panel-lists .lct th{white-space:nowrap}#sb-panel-lists .lct td:nth-child(3){white-space:normal;min-width:150px}
 #sb-panel-file #flst{max-height:none;overflow:visible}
 .grp-files{padding-left:8px}
 .fl{display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line);transition:background .1s}
@@ -131,7 +209,7 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 .fgh{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.sp-pop{position:absolute;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:12px;min-width:230px}.sp-pop label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.sp-pop input[type=number]{width:54px}sup,sub{font-size:.72em;line-height:0;position:relative;vertical-align:baseline}sup{top:-.45em}sub{top:.25em}.pol{display:inline-block;flex:none;font-size:10.5px;line-height:1.5;padding:0 6px;border-radius:9px;background:var(--sel,#e8ecf2);color:var(--muted);margin-left:4px;cursor:help;white-space:nowrap}.pol.pos{background:#e8f0fe;color:#1a56db;border:1px solid rgba(26,86,219,.25);font-weight:600}.pol.neg{background:#fde8e8;color:#c81e1e;border:1px solid rgba(200,30,30,.25);font-weight:600}.pol.both{background:#f3e8ff;color:#6b21a8;border:1px solid rgba(107,33,168,.25);font-weight:600}:root[data-theme=dark] .pol.pos{background:rgba(59,130,246,.2);color:#93c5fd;border-color:rgba(147,197,253,.3)}:root[data-theme=dark] .pol.neg{background:rgba(239,68,68,.2);color:#fca5a5;border-color:rgba(252,165,165,.3)}:root[data-theme=dark] .pol.both{background:rgba(168,85,247,.2);color:#d8b4fe;border-color:rgba(216,180,254,.3)}.fl .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fgh.sub{margin:4px 0 0 14px;font-weight:600;font-size:10.5px}.fgh em{font-style:normal;font-weight:400;margin-left:auto}.fl.cur{background:var(--sel);border-radius:4px}.tag{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:0 6px;color:var(--ink)}.fl i:empty{width:12px;height:12px;border-radius:3px;margin-top:3px;flex:none}.fl small{display:block;color:var(--muted)}.fl .fi{flex:1;min-width:0;display:flex;gap:6px;align-items:baseline;justify-content:space-between}.fl .pn{cursor:pointer}.fl .pn:hover{text-decoration:underline}.fl .fi small{display:inline;white-space:nowrap;flex:none}.fl.pr{border-bottom-style:dotted}.pnl .ctl label.dis{opacity:.45}.pnl .ctl :disabled{opacity:.5;cursor:not-allowed}.parr{position:absolute;left:34px;width:14px;z-index:4999;pointer-events:none;color:var(--accent)}
 .cmp-grid{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.cmp-grid label{display:inline-flex;gap:5px;align-items:center}
 .mwarn{margin:6px 14px;padding:8px 12px;border:1px solid var(--bad);border-left:5px solid var(--bad);border-radius:6px;background:color-mix(in srgb,var(--bad) 9%,var(--panel));font-size:13.5px}.mwarn button{float:right;border:0;background:none;font-size:18px;cursor:pointer;color:var(--ink)}
-#dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.xrow{margin:10px 0}.mzf{width:78px;text-align:center}header .hq:last-child{margin-left:auto}input.mzf::-webkit-inner-spin-button{display:none}.bt.on,.tbg button.on{background:var(--accent);background-clip:border-box;color:#fff;border-color:var(--accent)}   /* each button has its own rounded border, the fill reaches the edge */.bt svg{vertical-align:-2px}.pnl.max{position:fixed!important;left:12px!important;top:calc(var(--hh,46px) + 10px)!important;right:12px!important;bottom:12px!important;width:auto!important;height:auto!important;z-index:9000!important;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:none}.pnl .hd b{cursor:text}.tbs{display:inline-flex;gap:4px;align-items:center;flex:none;margin-left:auto}.pnl.map .ctl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;order:5;flex:1 1 100%;min-width:0}.pnl.chrom .ctl,.pnl.xic .ctl,.pnl.mrm .ctl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;flex:1 1 auto;min-width:0}.pnl .ctl select.ttlsel{font-weight:700;font-size:calc(1em + 1px);border-color:transparent;background:transparent;padding-left:2px}.pnl .ctl select.ttlsel:hover{border-color:var(--line)}.cpar{display:inline-flex;align-items:center;gap:4px;position:static}.cpar .chip{font-size:10.5px;padding:0 7px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;white-space:nowrap}.cpar .chip:hover{border-color:var(--accent)}.cpop{max-width:360px}.cpop[hidden]{display:none}.cpop label,.cpop select{align-self:flex-start}.tbg{display:inline-flex;gap:4px;align-items:center;flex:none}.tbg+.tbg{border-left:1px solid var(--line);padding-left:6px;margin-left:2px}.tbg.mv{border-left:0;padding-left:0}.tbg.mv+.tbg{border-left:1px solid var(--line);padding-left:6px}.xor{text-align:center;color:var(--muted);font-size:12px;margin:-2px 0}.bt:disabled{opacity:.4;cursor:default}
+#dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.pnl .hd .corrb{display:inline-flex;align-items:center;gap:3px}.pnl .hd .corrb.on{border-color:var(--accent);color:var(--accent)}.pnl .hd .xlab{font-size:12.5px;white-space:nowrap}.pnl:not(.map) .hd{flex-wrap:nowrap;min-width:0}.pnl:not(.map) .hd .ttl{flex:0 1 auto;min-width:5ch;max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pnl .hd .hmb{font-weight:700;letter-spacing:1px}.pnl .hmore{position:absolute;right:8px;z-index:40;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:min(94%,560px);overflow:auto;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:default}.pnl .hmore[hidden]{display:none}.pnl .hd-ov{display:none!important}.pnl .hmore .tbg{display:inline-flex;gap:4px}@media (pointer:fine){.pnl .hd select,.pnl .hd input:not([type=checkbox]),.pnl .hd .bt,.pnl .hd .corrb,.pnl .hd .fcount{height:26px;min-height:0;box-sizing:border-box;font-size:11.5px;padding:0 6px}.pnl .hd .bt svg{width:14px;height:14px}.pnl .hd .x{min-height:26px}}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.xrow{margin:10px 0}.mzf{width:78px;text-align:center}header .hq:last-child{margin-left:auto}input.mzf::-webkit-inner-spin-button{display:none}.bt.on,.tbg button.on{background:var(--accent);background-clip:border-box;color:#fff;border-color:var(--accent)}   /* each button has its own rounded border, the fill reaches the edge */.bt svg{vertical-align:-2px}.pnl.max{position:fixed!important;left:12px!important;top:calc(var(--hh,46px) + 10px)!important;right:12px!important;bottom:12px!important;width:auto!important;height:auto!important;z-index:9000!important;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:none}.pnl .hd b{cursor:text}.tbs{display:inline-flex;gap:4px;align-items:center;flex:none;margin-left:auto}.pnl.map .ctl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;order:5;flex:1 1 100%;min-width:0}.pnl.chrom .ctl,.pnl.xic .ctl,.pnl.mrm .ctl{display:flex;flex-wrap:nowrap;gap:4px 6px;align-items:center;flex:1 1 auto;min-width:0}.pnl .ctl select.ttlsel{font-weight:700;font-size:calc(1em + 1px);border-color:transparent;background:transparent;padding-left:2px}.pnl .ctl select.ttlsel:hover{border-color:var(--line)}.cpar{display:inline-flex;align-items:center;gap:4px;position:static}.cpar .chip{font-size:10.5px;padding:0 7px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;white-space:nowrap}.cpar .chip:hover{border-color:var(--accent)}.cpop{max-width:360px}.cpop[hidden]{display:none}.cpop label,.cpop select{align-self:flex-start}.tbg{display:inline-flex;gap:4px;align-items:center;flex:none}.tbg+.tbg{border-left:1px solid var(--line);padding-left:6px;margin-left:2px}.tbg.mv{border-left:0;padding-left:0}.tbg.mv+.tbg{border-left:1px solid var(--line);padding-left:6px}.xor{text-align:center;color:var(--muted);font-size:12px;margin:-2px 0}.bt:disabled{opacity:.4;cursor:default}
 .pnl .rd{position:absolute;right:12px;bottom:4px;z-index:1;color:var(--muted);font-variant-numeric:tabular-nums;pointer-events:none}.pnl .leg{padding-right:190px}#fpop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(30,40,60,.22);padding:6px 8px;max-height:60vh;overflow:auto;min-width:210px}#fpop label{display:flex;gap:6px;align-items:center;padding:2px 0;cursor:default}#fpop i:empty{width:10px;height:10px;border-radius:2px;display:inline-block}#fpop .fn{cursor:pointer}#fpop .fn:hover{text-decoration:underline}#fpop .fpb{display:flex;gap:6px;margin-bottom:2px}.x{border:0;background:none;font-size:16px;color:var(--muted);padding:0 4px}.x:hover{color:var(--bad)}
 .pnl .x{font-size:18px;min-width:28px;min-height:28px;padding:2px 8px;margin-left:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);transition:background .15s,color .15s}.pnl .x:hover{background:var(--soft);color:var(--bad)}
 .pnl .ctl{display:contents}.pnl .ctl label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.pnl .ctl input[type=checkbox]{padding:0;margin:0}.pnl .ctl select{max-width:170px}
@@ -140,10 +218,24 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 .zl.h{height:16px;background:linear-gradient(var(--zc),var(--zc)) top/100% 1px,linear-gradient(var(--zc),var(--zc)) left/1px 9px,linear-gradient(var(--zc),var(--zc)) right/1px 9px,color-mix(in srgb,var(--zc) 15%,transparent);background-repeat:no-repeat}
 .zl::after{content:attr(data-v);position:absolute;white-space:nowrap;font-size:10.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px}.zl[data-v=""]::after{display:none}
 .zl.v::after{left:calc(100% + 8px);top:50%;transform:translateY(-50%)}.zl.h::after{left:calc(100% + 8px);top:-3px}
-.zl.hint{background:color-mix(in srgb,var(--zc) 8%,transparent);border:0;width:auto}.zl.hint.v{width:auto}.lkb{position:absolute;z-index:3;width:14px;height:14px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted)}.lkb.on{background:var(--accent);color:#fff;border-color:var(--accent)}.pnl .vl,.pnl .cl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}#cal-empty{padding:18px 8px;text-align:center}#cal-empty .cal-steps{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;font-size:1.15em}#cal-empty .cal-steps>div{flex:1 1 200px;max-width:280px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px}#cal-empty .cal-steps b:first-child{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--accent);color:#fff;margin-right:6px}.pnl.flash{animation:pflash 1s ease-out}@keyframes pflash{0%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 4px transparent}}.pnl .rd{min-width:17em;text-align:right;white-space:nowrap}.pnl .bt.on svg{color:#fff}
+.zl.hint{background:color-mix(in srgb,var(--zc) 8%,transparent);border:0;width:auto}.zl.hint.v{width:auto}.lkb{position:absolute;z-index:3;width:14px;height:14px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;color:var(--muted)}.lkb.on{background:var(--accent);color:#fff;border-color:var(--accent)}.pnl .vl,.pnl .cl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}
+.clh{position:absolute;z-index:3;width:14px;height:14px;margin:-7px 0 0 -7px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--accent);cursor:ew-resize;touch-action:none;box-shadow:0 0 0 1px var(--accent)}
+.clh::before{content:"";position:absolute;inset:-5px}
+.clh:hover,.clh.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.clh:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.clh[hidden]{display:none}
+@media (pointer:coarse){.clh{width:18px;height:18px;margin:-9px 0 0 -9px}.clh::before{inset:-11px}}
+@media (prefers-reduced-motion:no-preference){.clh{transition:box-shadow .12s}}
+.clh{position:absolute;z-index:3;width:14px;height:14px;margin:-7px 0 0 -7px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--accent);cursor:ew-resize;touch-action:none;box-shadow:0 0 0 1px var(--accent)}
+.clh::before{content:"";position:absolute;inset:-5px}
+.clh:hover,.clh.on{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+.clh:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.clh[hidden]{display:none}
+@media (pointer:coarse){.clh{width:18px;height:18px;margin:-9px 0 0 -9px}.clh::before{inset:-11px}}
+@media (prefers-reduced-motion:no-preference){.clh{transition:box-shadow .12s}}#cal-empty{padding:18px 8px;text-align:center}#cal-empty .cal-steps{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;font-size:1.15em}#cal-empty .cal-steps>div{flex:1 1 200px;max-width:280px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px}#cal-empty .cal-steps b:first-child{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--accent);color:#fff;margin-right:6px}.pnl.flash{animation:pflash 1s ease-out}@keyframes pflash{0%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 4px transparent}}.pnl .rd{min-width:17em;text-align:right;white-space:nowrap}.pnl .bt.on svg{color:#fff}
 .pnl .tip{position:absolute;z-index:3;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 3px 10px rgba(40,30,10,.18);padding:4px 8px;font-size:12px;white-space:nowrap;color:var(--ink)}.tip div{display:flex;gap:5px;align-items:center}.tip i:empty{width:10px;height:3px;display:inline-block}
 .leg .tg{cursor:pointer}.leg .tg.off,.leg .tr.off{opacity:.38;text-decoration:line-through}.cbar{width:90px;height:9px;border-radius:2px;border:1px solid var(--line)}
-.pnl canvas{flex:1 1 0;min-height:60px;width:100%;cursor:crosshair;border-top:1px solid var(--line)}
+.pnl canvas{flex:1 1 0;min-height:110px;width:100%;cursor:crosshair;border-top:1px solid var(--line)}
 .leg{flex:none;max-height:58px;overflow:auto;display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;color:var(--muted)}.leg span{display:inline-flex;gap:4px;align-items:center}.leg i:empty{width:14px;height:3px;display:inline-block}
 .leg .lvl{display:flex;flex-wrap:wrap;gap:10px;flex-basis:100%}.leg .tr b{color:var(--ink);cursor:text}.leg .tr button{border:0;background:none;color:var(--muted);padding:0 2px}
 #ctx{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;min-width:220px}
@@ -179,11 +271,13 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 .ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
 #ldion{width:min(80vw,380px);height:auto;display:block}
-#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
+#ldmsg{font-size:15px;max-width:520px;min-height:44px}
+#ldact{margin-top:12px}#ldact .btn{margin:0 4px}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
 #qtip:has(.qs){max-width:540px;padding:8px 10px}#qtip .qs{white-space:normal}#qtip .qr{display:flex;align-items:stretch;gap:6px;margin:6px 0}#qtip .qb{flex:1 1 0;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:4px 7px;font-size:12px}#qtip .qb b{display:block;font-size:13px}#qtip .qa{align-self:center;font-size:16px}#qtip .qw{font-size:12px}
-.fl:not(.ghost):not(.pr){cursor:pointer}.fl:not(.ghost):not(.pr):not(.cur):hover{background:color-mix(in srgb,var(--sel) 45%,transparent);border-radius:4px}
+.fl.pend{color:var(--muted);cursor:default}.fl.pend i{background:var(--line)}.fl.pend.err,.fl.pend.err small{color:var(--bad)}.fl.pend button{margin-left:auto;padding:0 6px}.pendbar{height:4px;border-radius:2px;background:var(--line);margin:4px 0;overflow:hidden}.pendbar i{display:block;height:100%;background:var(--accent);transition:width .2s}@media (prefers-reduced-motion:reduce){.pendbar i{transition:none}}
+.fl:not(.ghost):not(.pr):not(.pend){cursor:pointer}.fl:not(.ghost):not(.pr):not(.cur):hover{background:color-mix(in srgb,var(--sel) 45%,transparent);border-radius:4px}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{pointer-events:none}.pnl.chrom .leg>*,.pnl.xic .leg>*,.pnl.mrm .leg>*,.pnl.spec .leg2>*{pointer-events:auto}
 .leg .lgl{display:none;flex-wrap:wrap;gap:4px 10px;position:absolute;top:100%;right:0;width:max-content;max-width:min(480px,80vw);max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;pointer-events:auto;box-shadow:0 4px 14px rgba(0,0,0,.15)}.leg .lgc{cursor:default;pointer-events:auto;color:var(--ink)}.leg .lgc:hover+.lgl,.leg .lgl:hover{display:flex}
 .xrw{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;margin:8px 0}.xrw>label{font-weight:600}.xrw .xin{display:flex;gap:6px;align-items:center}.xrw .xin input{flex:1;min-width:0}.xrw .xr-sum{grid-column:2;font-size:11px;color:var(--muted);min-height:1.2em}.xrw .xr-x{padding:0 7px}
@@ -194,14 +288,9 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 /* touch and pen (touch.js): the graphs take the finger, the controls are larger, the keys of the keyboard are on a bar */
 .pnl canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 /* map (mappa.js): grid with the map, the overlay of the sight and the two plots at the margins */
+.pnl.map .leg{max-height:none;padding-right:0;gap:2px 12px}.pnl.map .leg span.mzhelp{display:block;flex-basis:100%;padding-right:260px;font-size:11px}
+.pnl .mzg{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 10px;border-left:1px solid var(--line)}.pnl .mzg:first-child{border-left:0;padding-left:0}.pnl .mzlv{white-space:nowrap}
 .pnl .mzgrid{flex:1 1 0;min-height:60px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.pnl .mzgrid>canvas{grid-area:1/1;width:100%;height:100%;min-height:0}.pnl .mzgrid>canvas.mzov{pointer-events:none;border-top-color:transparent}.pnl .mzgrid.mir{grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:minmax(0,1fr) 140px}.pnl .mzgrid>canvas.mzside{grid-area:1/2;cursor:default}.pnl .mzgrid>canvas.mzbot{grid-area:2/1;cursor:default}.pnl .mzgrid>canvas[hidden]{display:none}.pnl .mzgrid>canvas:focus{outline:none}.pnl .mzgrid>canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.pnl.map.max>.hd{order:-2}.pnl.map.max>.leg{order:-1}.pnl.mzmir .rd{position:static;min-width:0;margin-left:auto;text-align:right}.mzbt button{font-size:12px}.mzdif{display:inline-flex;gap:6px;align-items:center}.pnl .mztab{flex:none;max-height:210px;display:flex;flex-direction:column;border-top:1px solid var(--line);font-size:12px;margin-top:4px}.mzt-bar{display:flex;gap:8px;align-items:center;padding:4px 2px;flex-wrap:wrap}.mzt-bar .sp{flex:1}.mzt-sc{overflow:auto;min-height:0}.mztab table{border-collapse:collapse;width:100%}.mztab th,.mztab td{padding:2px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.mztab th{position:sticky;top:0;background:var(--panel);cursor:pointer;font-weight:600}.mztab tbody tr{cursor:pointer}.mztab tr.on td{background:var(--sel)}.mztab td input{width:12em}
-#tbar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9500;display:flex;gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.28)}
-#tbar button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:54px;padding:6px 8px;border-radius:12px;font-size:11px;color:var(--muted);touch-action:none;-webkit-user-select:none;user-select:none}
-#tbar .tg{min-width:34px;min-height:54px;padding:6px;border-radius:12px;color:var(--muted)}
-#tbar.min{padding:3px;border-radius:50%;gap:0}
-#tbar.min button:not(.tg){display:none}
-#tbar.min .tg{min-width:44px;min-height:44px;border-radius:50%}
-#tbar button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .rzg{display:none}html.touch .rzg{display:block;position:absolute;left:0;right:0;bottom:0;height:18px;z-index:3;touch-action:none;cursor:ns-resize}.rzg i{display:block;width:46px;height:5px;border-radius:3px;background:var(--line);margin:7px auto}
 @media (pointer:coarse){
  button,select,input{font-size:15px}
@@ -209,40 +298,42 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
  .pnl .hd select,.pnl .hd input,#tools button,#tools select,#dtabs button,header button,.seg button,.tbg button{min-height:40px}
  .fl{padding:11px 4px}.lkb{width:32px;height:32px}
 }
+@media (pointer:coarse),(max-width:1100px){body.hrw #flst .fl{padding:3px 4px}body.hrw #flst .fgh{margin:4px 0 1px}body.hrw #flst .fgh[data-gg]:focus-visible{outline:2px solid var(--accent)}}
 
 /* smartphone (telefono.js): only the header with logo, Teoria and info, and the card that sends to the Teoria; nothing else is built or downloaded */
-#phone{max-width:560px;margin:0 auto;padding:22px 16px 40px}
-#phone h1{font-size:24px;margin:6px 0 12px}#phone h2{font-size:18px;margin:18px 0 6px}#phone p{line-height:1.55;margin:0 0 12px}
-#phone .phw{background:#fffbeb;border:1px solid #f3d38a;border-radius:10px;padding:12px 14px}
-#phone .phb{display:block;text-align:center;background:var(--accent);color:#fff;border-radius:10px;padding:14px;font-size:18px;font-weight:650;text-decoration:none;margin:18px 0}
-#phone .phs{font-size:13px;color:var(--muted)}#phone .phs a{color:var(--muted)}
+#phone{max-width:560px;margin:0 auto}#phone h1{font-size:1.5rem;margin:0}#phone h2{font-size:1.125rem;margin:0 0 6px}#phone p{line-height:1.55;margin:0}
+#phone{display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:calc(100dvh - 70px);justify-content:center;padding:24px max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#phone[hidden]{display:none}
+#phone .phw{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--warn);border-radius:10px;padding:14px 16px;font-size:1.0625rem;line-height:1.5}
+#phone .phb,#phone .pho{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:10px;padding:10px 14px;font-size:1.125rem;font-weight:650;text-decoration:none;text-align:center}
+#phone .phb{background:var(--accent);color:var(--bg)}
+#phone .pho{background:none;border:1px solid var(--line);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+#phone .phb:focus-visible,#phone .pho:focus-visible,#phinfo:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #phinfo{display:none}
 html.phone header{flex-wrap:nowrap;transition:transform .2s}html.phone header.away{transform:translateY(-110%)}
 html.phone header>:not(.logo):not(#nav):not(#phinfo){display:none!important}
 html.phone #nav button:not([data-v=theory]){display:none}
-html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
+html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
+html.phone #loading{display:none}
 html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
 </style></head><body>
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
-  <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
-  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button><button id="session-menu-btn" class="ib" hidden data-i18n-title="header.sessionMenu.title" title="Opzioni della sessione e flusso di lavoro" aria-label="Menu sessione" style="padding:0 5px;margin-left:-3px;font-size:11px">&#9662;</button></span>
-  <button id="np-pt" class="ib" data-i18n-title="header.periodic.title" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span><span class="lb" data-i18n="header.periodic.long">Tavola periodica</span><span class="sb" data-i18n="header.periodic.short">Tavola</span></button><button id="np-ad" class="ib" data-i18n-title="header.adducts.title" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span><span data-i18n="header.adducts">Addotti</span></button>
-  <button id="np-calc2" class="ib" data-i18n-title="header.calc.title" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb" data-i18n="header.calc.long">Calcolatrice m/z</span><span class="sb" data-i18n="header.calc.short">Calcolatrice</span></button><button id="np-nl" class="ib" data-i18n-title="header.losses.title" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb" data-i18n="header.losses.long">Perdite neutre</span><span class="sb" data-i18n="header.losses.short">Perdite</span></button><button id="np-liste" class="ib" data-i18n-title="header.lists.title" title="Liste di riferimento e contaminanti noti (Keller, laboratorio e sospetti)"><span class="ic" data-ic="liste"></span><span class="lb" data-i18n="header.lists">Liste</span><span class="sb" data-i18n="header.lists">Liste</span></button>
-  <button id="np-pc" data-i18n-title="header.pubchem.title" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura">PubChem &#8599;</button>
-  <button id="np-bt" data-i18n-title="header.bio.title" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button><button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
+  <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav>
+  <div id="stbar" role="toolbar" data-i18n-aria-label="tb.aria" aria-label="Strumenti"></div>
+  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button></span>
+  <button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
 <div id="phone" hidden>
   <h1 data-i18n="phone.title">Siete su uno smartphone</h1>
-  <p class="phw" data-i18n-html="phone.warn"><b>Il sito non è ottimizzato per gli smartphone.</b> L'analisi dei dati (scheda Dati), il disegno delle molecole (Disegno) e gli esercizi della Pratica hanno bisogno di uno schermo grande: usateli da un computer o da un tablet.</p>
-  <p id="phtheory">Dal telefono potete leggere tutta la <b>Teoria</b>: cromatografia GC e LC, ionizzazione, analizzatori a bassa e alta risoluzione, come si risolve uno spettro EI, il formulario e le domande dell'orale.</p>
-  <a class="phb" href="static/teoria/index.html">Vai alla Teoria</a>
+  <p class="phw" data-i18n="phone.line">Per Dati, Disegno e Pratica serve uno schermo grande.</p>
+  <a class="phb" href="static/teoria/index.html" data-i18n="phone.go">Vai alla Teoria</a>
+  <button class="pho" type="button" id="phopen" data-i18n="phone.open">Apri comunque</button>
   <div id="phmore" hidden><h2 data-i18n="phone.about.title">Che cos'è {APP}</h2><p data-i18n="phone.about.text">Il programma dell'esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a cercare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.</p></div>
-  <p class="phs" data-i18n-html="phone.full"><a href="?telefono=0">Aprire comunque la versione completa</a> (sconsigliato: scarica circa 15 MB e non entra nello schermo).</p>
 </div>
 <div id="err"></div>
 <section id="v-data" hidden>
- <aside id="dfiles"><div id="sidebar-tablist" role="tablist" data-i18n-aria-label="side.tabs.aria" aria-label="Schede della barra laterale"><button type="button" role="tab" id="sb-tab-file" data-t="file" data-i18n-title="side.file" title="File" data-i18n-aria-label="side.file" aria-label="File" aria-selected="true" aria-controls="sb-panel-file" class="on"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h6.5l3.5 3.5v7.5H3z"/><path d="M9.5 2.5V6H13"/></svg><span data-i18n="side.file">File</span></button><button type="button" role="tab" id="sb-tab-calc" data-t="calc" data-i18n-title="side.calc.title" title="Calcolatrice m/z" data-i18n-aria-label="side.calc.title" aria-label="Calcolatrice m/z" aria-selected="false" aria-controls="sb-panel-calc"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2" width="11" height="12" rx="2"/><path d="M5 5h6M5 8h2M9 8h2M5 11h2M9 11h2"/></svg><span data-i18n="side.calc.short">Calc</span></button><button type="button" role="tab" id="sb-tab-losses" data-t="losses" data-i18n-title="side.losses.title" title="Perdite neutre (Δm)" data-i18n-aria-label="side.losses.title" aria-label="Perdite neutre (Δm)" aria-selected="false" aria-controls="sb-panel-losses"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 13.5h7L6 3.5z"/><path d="M11 9.5l3.5 3.5M14.5 9.5l-3.5 3.5"/></svg><span data-i18n="side.losses.short">Perdite</span></button><button type="button" role="tab" id="sb-tab-adducts" data-t="adducts" data-i18n-title="side.adducts.title" title="Addotti ESI" data-i18n-aria-label="side.adducts.title" aria-label="Addotti ESI" aria-selected="false" aria-controls="sb-panel-adducts"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="9" r="4"/><circle cx="10" cy="6" r="3.5"/><path d="M6 7v4M4 9h4"/></svg><span data-i18n="side.adducts.short">Addotti</span></button><button type="button" role="tab" id="sb-tab-lists" data-t="lists" data-i18n-title="lst.title" title="Liste di riferimento e contaminanti" data-i18n-aria-label="lst.title" aria-label="Liste di riferimento e contaminanti" aria-selected="false" aria-controls="sb-panel-lists"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h7"/><circle cx="13" cy="12" r="1.5"/></svg><span data-i18n="header.lists">Liste</span></button><div id="sb-hr-sep" class="sb-sep" role="separator" hidden></div><div id="hri-tabs" role="tablist" data-i18n-aria-label="side.hr.aria" aria-label="Schede Banco HR" hidden></div></div><div id="sb-pane" class="card"><div id="sb-header" class="bar"><b id="sb-title" data-i18n="side.file">File</b><button class="hq" id="sb-help" data-help="" data-i18n-title="common.help" title="Aiuto" style="display:none">?</button><span class="sp"></span><button id="addf" data-i18n-title="side.addf" title="Carica altri file">+</button><button id="sb-side-tog" class="sb-dock-btn" data-i18n-title="side.dockTog.title" title="Sposta la barra a destra o a sinistra" data-i18n-aria-label="side.dockTog.aria" aria-label="Sposta la barra laterale"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5v-7A1.5 1.5 0 0 1 2.5 3z"/><path d="M6 3v10"/><path d="M9 7l2 1.5L9 10"/></svg></button><button id="ffold" data-i18n-title="side.fold" title="Nascondi l'elenco dei file" data-i18n-aria-label="side.fold" aria-label="Nascondi l'elenco dei file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6"/><path d="M6 2.5v11"/><path d="M11.2 6.2 9.4 8l1.8 1.8"/></svg></button></div><div id="sb-panels"><div id="sb-panel-file" role="tabpanel" aria-labelledby="sb-tab-file"><div id="flst"></div><div id="fnote"></div></div><div id="sb-panel-calc" role="tabpanel" aria-labelledby="sb-tab-calc" hidden></div><div id="sb-panel-losses" role="tabpanel" aria-labelledby="sb-tab-losses" hidden></div><div id="sb-panel-adducts" role="tabpanel" aria-labelledby="sb-tab-adducts" hidden></div><div id="sb-panel-lists" role="tabpanel" aria-labelledby="sb-tab-lists" hidden></div><div id="hrinfo" class="card" role="tabpanel" data-i18n-aria-label="side.info.aria" aria-label="Barra informazioni del banco" hidden><div id="hri-ttl"></div><div id="hri-body"></div></div></div><div id="sidebar-resize-handle" class="sb-resizer" data-i18n-title="side.resize" title="Trascina per regolare la larghezza (doppio clic per ripristinare)"></div></div></aside>
+ <aside id="dfiles"><div id="sb-pane" class="card" role="region" tabindex="-1" aria-labelledby="sb-title"><div id="sb-header" class="bar"><span id="sb-grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="3.5" cy="3" r="1.2"/><circle cx="8.5" cy="3" r="1.2"/><circle cx="3.5" cy="8" r="1.2"/><circle cx="8.5" cy="8" r="1.2"/><circle cx="3.5" cy="13" r="1.2"/><circle cx="8.5" cy="13" r="1.2"/></svg></span><b id="sb-title" data-i18n="cmd.file.name">Elenco dei file</b><button class="hq" id="sb-help" data-help="" data-i18n-title="common.help" title="Aiuto" style="display:none">?</button><span class="sp"></span><button id="addf" data-i18n-title="side.addf" title="Carica altri file">+</button><button id="sb-pin" class="sb-dock-btn" type="button" aria-pressed="false" data-i18n-title="side.pin" title="Fissa il pannello accanto ai grafici" data-i18n-aria-label="side.pin" aria-label="Fissa il pannello accanto ai grafici"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.8l4.7 4.7-2 .8-2.4 2.4.1 3-1.2 1.2-3.1-3.1-4.3 4.3M6.7 4.7l-.3-.1-1.5.1L4.1 5.5l6.4 6.4"/></svg></button><button id="sb-x" class="sb-dock-btn" type="button" data-i18n-title="side.close" title="Chiudi il pannello" data-i18n-aria-label="side.close" aria-label="Chiudi il pannello"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div><div id="sb-panels"><div id="sb-panel-file" role="region" aria-labelledby="sb-title"><div id="flst"></div><div id="fnote"></div></div><div id="sb-panel-calc" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-losses" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-adducts" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-lists" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-qaqc" role="region" aria-labelledby="sb-title" hidden></div><div id="sb-panel-stat" role="region" aria-labelledby="sb-title" hidden></div><div id="hrinfo" class="card" role="region" data-i18n-aria-label="side.info.aria" aria-label="Barra informazioni del banco" hidden><div id="hri-ttl"></div><div id="hri-body"></div></div></div><div id="sidebar-resize-handle" class="sb-resizer" data-i18n-title="side.resize" title="Trascina per regolare la larghezza (doppio clic per ripristinare)"></div></div></aside>
  <div id="v-workspace" style="min-width:0">  <div id="dtabs"></div>
-  <div class="bar" id="tools"><button id="funfold" hidden data-i18n-title="side.unfold" title="Mostra l'elenco dei file" data-i18n-aria-label="side.unfold" aria-label="Mostra l'elenco dei file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6"/><path d="M6 2.5v11"/><path d="M9.2 6.2 11 8 9.2 9.8"/></svg></button>
+  <div class="bar" id="tools">
    <span class="tbx" id="g-file"><span id="navfile"><button id="fprev" data-i18n-title="bar.prev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" data-i18n-title="bar.next" title="File successivo (freccia destra)">&#9654;</button></span><span class="seg" id="fmode" data-i18n-title="bar.fmode.title" title="Con «Solo il file selezionato» i grafici mostrano un file alla volta (gli XIC restano, cambia il campione: le frecce ◀ ▶ lo cambiano); con «Tutti i file sovrapposti» i file spuntati nell'elenco sono disegnati insieme."><button data-m="sel" data-i18n="bar.fmode.sel">Solo il selezionato</button><button data-m="all" data-i18n="bar.fmode.all">Tutti sovrapposti</button></span></span>
    <span class="tbx" id="g-add"><button id="np-chrom" data-i18n="bar.addChrom">+ Cromatogramma</button><button id="np-spec" data-i18n="bar.addSpec">+ Spettro</button><button id="np-map" data-i18n-title="bar.addMap.title" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT" data-i18n="bar.addMap">+ Mappa RT-m/z</button><button id="np-xic" data-i18n-title="bar.addXic.title" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-mrm" data-i18n="bar.addMrm">+ Transizioni MRM</button></span>
    <span class="tbx" id="g-tools"><button id="np-tile" data-i18n-title="bar.tile.title" title="Ordina i pannelli: uno sotto l'altro, larghi come la pagina" data-i18n-aria-label="bar.tile.aria" aria-label="Ordina i pannelli"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="12" height="3.2" rx=".8"/><rect x="2" y="6.4" width="12" height="3.2" rx=".8"/><rect x="2" y="10.8" width="12" height="3.2" rx=".8"/></svg></button><button id="np-closeall" data-i18n-title="bar.closeAll.title" title="Chiudi tutti i pannelli aperti" data-i18n-aria-label="bar.closeAll.aria" aria-label="Chiudi tutti i pannelli"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></span>
@@ -286,7 +377,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li data-i18n="bt.step4">Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li data-i18n-html="bt.step5">Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open" data-i18n="bt.reopen">Riapri BioTransformer</button><span class="sp"></span><button id="btx2" data-i18n="common.close">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg"></div><div id="ldsub"></div></div>
+<div id="loading" aria-busy="true"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
 <script>
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
@@ -328,27 +419,23 @@ function ldIon(on, mode) {
     },
     orbi: {
       n: 22, dt: 0.035, w: [1.0, 0.82, 0.68],
-      at(j, t) {
+      at(j, t) {                                                  // harmonic oscillation along z (horizontal) while turning round the spindle
         const a = TAU * 0.55 * this.w[j] * t + j * 1.7, r = TAU * 1.3 * t + j * TAU / 3;
-        return { x: W / 2 + 120 * Math.sin(a), y: H / 2 + 26 * Math.cos(r), z: Math.sin(r) };
+        return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(r), z: Math.sin(r) };
       },
-      draw() {
-        cx.strokeStyle = line; cx.lineWidth = 2;
-        // outer barrel electrode: split into two symmetrical halves
-        const cx0 = W / 2, cy0 = H / 2, gap = 4;
-        cx.beginPath(); cx.arc(cx0 - 15 - gap, cy0, 48, -Math.PI / 2.3, Math.PI / 2.3); cx.stroke();
-        cx.beginPath(); cx.arc(cx0 + 15 + gap, cy0, 48, Math.PI - Math.PI / 2.3, Math.PI + Math.PI / 2.3); cx.stroke();
+      draw() {                                                     // outer electrode: a barrel in two symmetrical halves with a slit in the middle, the ends closing towards the axis
+        cx.strokeStyle = v("--muted") || line; cx.globalAlpha = 0.55; cx.lineWidth = 3; cx.lineJoin = "round";
+        const c = W / 2, m = H / 2, g = 5, Rr = 50, L = 96;
+        for (const d of [-1, 1]) for (const e of [-1, 1]) {
+          cx.beginPath(); cx.moveTo(c + d * g, m + e * Rr);
+          cx.bezierCurveTo(c + d * 56, m + e * (Rr + 1), c + d * L, m + e * 40, c + d * (L + 4), m + e * 10); cx.stroke();
+        }
+        cx.globalAlpha = 1;
       },
-      mid() {
-        cx.fillStyle = line;
-        // central spindle electrode: thick in center, tapering to tips
-        const cx0 = W / 2, cy0 = H / 2;
-        cx.beginPath();
-        cx.moveTo(cx0 - 130, cy0 - 2);
-        cx.quadraticCurveTo(cx0, cy0 - 16, cx0 + 130, cy0 - 2);
-        cx.lineTo(cx0 + 130, cy0 + 2);
-        cx.quadraticCurveTo(cx0, cy0 + 16, cx0 - 130, cy0 + 2);
-        cx.closePath(); cx.fill();
+      mid() {                                                      // central electrode: a short, stout spindle, widest in the middle
+        const c = W / 2, m = H / 2, Lh = 72, th = 17;
+        cx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || line;
+        cx.beginPath(); cx.moveTo(c - Lh, m); cx.quadraticCurveTo(c, m - 2 * th, c + Lh, m); cx.quadraticCurveTo(c, m + 2 * th, c - Lh, m); cx.closePath(); cx.fill();
       },
     },
   };
@@ -374,8 +461,24 @@ function ldIon(on, mode) {
   };
   ldIonRaf = requestAnimationFrame(frame);
 }
+// the ONE status line of the loading screen (#ldmsg): the text of a load in progress (loading(true, msg)) or the phase of the engine start
+// (window.qqPhaseCur, set by browser.js) replaces the funny phrases; the bar under it is determinate only when the percentage is known
+let ldMsg = null;
+function ldRefresh() {
+  const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
+  const el = document.getElementById("ldmsg");
+  if (!el || window.qqFailed) return;
+  if (!cur) { el.setAttribute("aria-live", "off"); if (!ldTimer) return; return ldNext(); }
+  clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
+  el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
+  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
+}
+function ldAction(label, fn) {                                   // a button under the status line (stuck start: «start from scratch»)
+  const a = document.getElementById("ldact"); a.textContent = ""; a.hidden = !label; if (!label) return;
+  const b = document.createElement("button"); b.className = "btn"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
+}
 function ldNext() {
-  if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
+  if (window.qqFailed || ldMsg || window.qqPhaseCur) return;                                    // a failed start keeps its error message on screen
   if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
     ldBag = Array.from({ length: NPHRASES }, (_, i) => i).sort(() => Math.random() - 0.5);
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
@@ -431,36 +534,10 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
   <div id="mlist"></div></div>
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
-<script src="static/icons-modi.js"></script>
-<script src="static/modi.js"></script>
-<script src="static/explore.js"></script>
-<script src="static/hr.js"></script>
-<script src="static/composizione.js"></script>
-<script src="static/dda.js"></script>
-<script src="static/cromato.js"></script>
-<script src="static/calcola.js"></script>
-<script src="static/perdite.js"></script>
-<script src="static/liste.js"></script>
-<script src="static/scroll.js"></script>
-<script src="static/spettro.js"></script>
-<script src="static/mappa.js"></script>
-<script src="static/xlsx.js"></script>
-<script src="static/origine.js"></script>
-<script src="static/elements.js"></script>
-<script src="static/tabs.js"></script>
-<script src="static/banco.js"></script>
-<script src="static/settings.js"></script>
-<script src="static/libreria.js"></script>
-<script src="static/touch.js"></script>
-<script src="static/workflow.js"></script>
-<script>document.getElementById("np-pc").addEventListener("click",()=>window.open("https://pubchem.ncbi.nlm.nih.gov/","_blank","noopener"));</script>
-<script src="static/tables.js"></script>
-<script src="static/barra.js"></script>
-<script src="static/help.js"></script>
-<script src="static/perf.js"></script>
-<script src="static/molui.js"></script>
-<script src="static/tpmine-loader.js"></script>
-<script>
+<script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
+(function(){var L=["icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mappa.js","xlsx.js","origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","rapporto.js","m:workflow.js","m:fair.js","tables.js","barra.js","paletta.js","help.js","m:perf.js","molui.js","tpmine-loader.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
+<script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
 const S={view:"data",sess:null,adding:false};
@@ -482,7 +559,7 @@ function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if($("#session-menu-btn"))$("#session-menu-btn").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};
@@ -518,9 +595,9 @@ function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f
   ST.files=list.map(f=>{const o=old[f.name],conc=o?o.conc:concFrom(f);return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc,use:o?o.use:true,
     gT:o?o.gT:f.time!=null&&f.type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
   sortFiles();renderFiles()}
-// order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards by growing concentration, samples by growing time, then name
+// order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
-function sortFiles(){ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||(a.type==="standard"?(a.conc??1e9)-(b.conc??1e9):(a.time??1e9)-(b.time??1e9))||a.name.localeCompare(b.name))}
+function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.length?`<table><tr><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.content")}</th><th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+ST.methods.map((m,i)=>`<tr><td>${esc(m.name)}</td><td class="muted">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")}</td><td class="num muted">${sz(m.size)}</td><td><button data-mrm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`).join("")+"</table>":"";
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
@@ -529,24 +606,28 @@ const mixedText=m=>m.map(p=>p.name+(p.pol?(p.pol===1?" pos":" neg"):"")+(p.nprec
 const expCell=f=>f.kind&&f.mixed?`<b>${I18N.t("load.exp.mixed")}</b> <span class="muted sm">${esc(mixedText(f.mixed))}</span>`:f.kind?`<b>${expn(f.kind)}</b>${f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""}`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">${I18N.t("load.exp.nameHint",{hint:expn(f.hint),kind:expn(f.kind)})}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
-  const hasCal=F.some(f=>f.use&&isCal(f)),unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
+  const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   const ncol=6+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;
   let last=-1,rows="";
   F.forEach((f,i)=>{const g=EXPORD[f.kind]??3;
     if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??3)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??3)===g).length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
-   `<td class="num"><input type="number" step="any" style="width:80px" data-i="${i}" data-k="time" value="${f.time??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
-   (hasCal?(isCal(f)?`<td class="num"><input type="number" step="any" min="0" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
-   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
-  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time")}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
+   `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
+   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
+   `<td class="num muted">${sz(f.size)}</td><td>${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
+  el.innerHTML=F.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>{
-    x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;f[k]=k==="use"?x.checked:(k==="time"||k==="conc")?(x.value===""?null:+x.value):x.value;
+    x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
+      if(k==="time"||k==="conc"){v=parseDecimal(x.value);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=timeStored(v,tunitGet())}
+      f[k]=k==="use"?x.checked:v;
       if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
       if(k==="type"){if(f.type!=="sample"){f.time=null;f.gT=false}if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
       sortFiles();renderFiles();                              // the table is sorted again when a value is committed (change/blur/Enter), never while typing
       if(keep){const i=F.findIndex(q=>q.name===keep.name),b=el.querySelector(`[data-i="${i}"][data-k="${keep.k}"]`);if(b)b.focus()}};
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
+  el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
+  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
 function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
@@ -575,20 +656,22 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 function ricetta(name){const n=name.toLowerCase();return /\.raw$/.test(n)?"load.recipe.raw":/\.wiff2?$/.test(n)?"load.recipe.wiff":/\.wiff\.scan$/.test(n)?"load.recipe.wiffScan":/\.d$/.test(n)?"load.recipe.d":null}
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  const out=[];for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
-    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)} · ${I18N.t("load.raw.converting")}</span>`;box.appendChild(row);
-    try{out.push(new File([await rb.convertRaw(f)],f.name.replace(/\.raw$/i,".mzML")));row.remove()}
-    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.json?I18N.err(e.json).message:e.message)}</span>`}}
+  const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
+  for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
+    const ui=ConvUI.start(box,++i,n,f.name);
+    try{const name=f.name.replace(/\.raw$/i,".mzML"),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
 async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
   files=files.filter(f=>{const r=ricetta(f.name);if(!r)return true;const n=document.createElement("div");n.className="note recipe";n.innerHTML=`${I18N.t(r,{name:esc(f.name)})} <button type="button" class="sec" data-x="1">${I18N.t("common.close")}</button>`;n.querySelector("button").onclick=()=>n.remove();box.appendChild(n);return false});
-  for(const f of files){const isDam=/\.dam$/i.test(f.name);
+  const one=async f=>{const isDam=/\.dam$/i.test(f.name);
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=I18N.t(isDam?"load.note.movedToDam":"load.note.movedToData",{name:f.name});box.appendChild(n);setTimeout(()=>n.remove(),6000)}
     const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
       if(j.error)throw I18N.err(j);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576){const n=document.createElement("div");n.className="note";n.textContent=I18N.t("load.note.big",{name:f.name});box.appendChild(n);setTimeout(()=>n.remove(),20000)}}
-    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}}}
+    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}};
+  if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f)}   // in the browser the engine builds the indexes of several files at once (pool of workers)
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
@@ -599,8 +682,27 @@ $("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files],"data"));
 ["dragleave","drop"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.remove("over")}));
 $("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files],"dam"));
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());   // a missed drop must not open the file
+// The list is opened file by file: the first one at once (the view opens on it), the others as they are read, in the order of the list. The files still to come
+// are in E.pending (grey rows, aria-busy, not selectable); a file that fails stays there in red with its message and the others go on; a file taken off the list is not read.
+async function exploreList(samples){
+  if(samples.length<2||!(window.QQQ_BROWSER||/[?&]progressivo=1\b/.test(location.search))){await post("api/explore",{samples});return null}
+  await post("api/explore",{samples:[samples[0]]});
+  const tok=E.progTok={};E.pendN=samples.length;
+  E.pending=samples.slice(1).map(s=>({file:s.file,label:s.label||s.file,state:"wait"}));
+  return ()=>openRest(samples.slice(1),tok)}
+async function openRest(rest,tok){
+  let last=0,added=[];
+  const boot=async()=>{last=Date.now();const a=added;added=[];await bootSession();E.pending=E.pending.filter(x=>!a.includes(x));renderFileList()};
+  for(const s of rest){
+    if(E.progTok!==tok)return;
+    const p=E.pending.find(x=>x.file===s.file&&x.state==="wait");if(!p)continue;          // taken off the list: not read
+    try{await post("api/explore",{samples:[s],append:true})}
+    catch(e){p.state="err";p.msg=e.message;renderFileList();continue}
+    added.push(p);if(Date.now()-last>=200)await boot();               // LR: the overlay is redrawn at most every ~200 ms, whatever the number of files that arrived
+  }
+  if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I18N.t("load.reading"));
-  try{await post("api/explore",{samples:ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
+  try{const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));S.adding=false;await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
@@ -640,17 +742,7 @@ async function wipeLocal(){
   document.dispatchEvent(new Event("nbreset"));
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
-  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();await init()}catch(e){fail(e)}};
-function openSessionMenu(ev){ev.preventDefault();
-  menu(ev,[
-    {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
-    "-",
-    {label:I18N.t("workflow.menu.export"),fn:()=>window.WORKFLOW&&WORKFLOW.export()},
-    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()}
-  ])}
-const smb=document.getElementById("session-menu-btn");
-if(smb)smb.onclick=e=>{e.stopPropagation();openSessionMenu(e)};
-$("#newrun").oncontextmenu=e=>openSessionMenu(e);
+  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
@@ -676,14 +768,8 @@ function prefetchIdle(){const go=()=>{const c=navigator.connection||{};if(c.save
   if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
   window.requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
-// on a smartphone (telefono.js) only the card that sends to the Teoria: no session, no engine, no drawing editor
-function phoneMode(){$("#loading").hidden=true;$("#phone").hidden=false;
-  // the Teoria exists only in Italian: in English the card says so and the button opens the Italian version anyway
-  const en=I18N.lang==="en";$("#phtheory").innerHTML=I18N.t(en?"theory.sorry.message":"phone.theory");document.querySelector("#phone .phb").textContent=I18N.t(en?"theory.sorry.openItalian":"phone.go");
-  const hd=document.querySelector("header"),nav=$("#nav");if(!$("#phinfo"))nav.insertAdjacentHTML("afterend",'<button id="phinfo" type="button" aria-label="'+I18N.t("phone.info")+'" title="'+I18N.t("phone.info")+'">i</button>');
-  $("#phinfo").onclick=()=>{$("#phmore").hidden=!$("#phmore").hidden;if(!$("#phmore").hidden)$("#phmore").scrollIntoView({behavior:"smooth",block:"nearest"})};
-  nav.querySelector("[data-v=theory]").onclick=()=>{if(en)$("#phtheory").scrollIntoView({behavior:"smooth",block:"nearest"});else location.href="static/teoria/index.html"};
-  let y0=scrollY;addEventListener("scroll",()=>{const y=scrollY;hd.classList.toggle("away",y>y0&&y>60);y0=y},{passive:true})}   // the header goes away scrolling down, comes back scrolling up
-if(window.QQQ_PHONE)phoneMode();else{const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
+{const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
 </script>
+<script>/* the shell above is data on a smartphone (it needs the scripts that are not fetched there); elsewhere it runs now, as a classic script, sharing the globals */
+if(!window.QQQ_PHONE){var sh=document.createElement("script");sh.textContent=document.getElementById("shell").textContent;document.body.appendChild(sh)}</script>
 </body></html>

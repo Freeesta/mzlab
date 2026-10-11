@@ -49,17 +49,19 @@ def guess_conc(name: str) -> tuple[float, str | None] | None:
 
 
 def guess_sample(name: str) -> tuple[str, float | None, str]:
-    """(label, time in minutes, type) guessed from a file name: 'blank', 'std_5', 't30', '120min', '2h'."""
+    """(label, time in minutes, type) guessed from a file name: 'blank', 'std_5', 't30', '120min', '2h', '1d'."""
     base = _stem(name)
     low = base.lower()
     if re.search(r"(^|[_\-\s])(blank|blk|bianco)([_\-\s\d]|$)", low):
         return base, None, "blank"
     if re.search(_STD, low) or (guess_conc(name) and not re.search(r"(^|[_\-\s])t\d", low)):
         return base, None, "standard"
-    m = re.search(r"(?:^|[_\-\s])t?(\d+(?:[.,]\d+)?)\s*(min|m|h|ore)?(?:[_\-\s]|$)", low)
+    m = re.search(r"(?:^|[_\-\s])t?(\d+(?:[.,]\d+)?)\s*(min|m|h|ore|d|days?|gg|giorni|giorno)?(?:[_\-\s]|$)", low)
     if m:
         v = float(m.group(1).replace(",", "."))
         if m.group(2) in ("h", "ore"):
             v *= 60
+        elif m.group(2) in ("d", "day", "days", "gg", "giorni", "giorno"):
+            v *= 1440
         return base, v, "sample"
     return base, None, "sample"

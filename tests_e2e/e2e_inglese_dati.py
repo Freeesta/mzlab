@@ -35,9 +35,10 @@ try:
         step("first view of Data: no Italian", first_view)
         def sidebar():
             for t in ("calc", "losses", "adducts", "lists"):
-                pg.click(f"#sb-tab-{t}"); pg.wait_for_timeout(500)
+                pg.click(f"#stbar [data-cmd={t}]"); pg.wait_for_timeout(500)
                 it = italian(pg); assert not it, (t, it)
-            pg.click("#sb-tab-file")
+            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300); it = italian(pg); assert not it, ("file", it)
+            pg.click("#sb-x"); pg.wait_for_timeout(300)
         step("sidebar tabs: calculator, losses, adducts, lists", sidebar)
         def periodic():
             pg.click("#np-pt"); pg.wait_for_timeout(600)

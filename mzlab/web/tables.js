@@ -171,14 +171,14 @@
       <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div class="nld-name"><b>${H(I18N.t(l.name))}</b></div><div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div></div>`;
   };
   function lossList() {
-    const hit = new Set(), q = parseFloat(String(NL.q).replace(",", "."));
+    const hit = new Set(), q = numIt(NL.q);
     const vis = LOSSES.filter(l => l.pol === "±" || NL.pols.has(l.pol)).sort((a, b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= NL_TOL()) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
     return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">${I18N.t("tbl.loss.sameNominal", { n: g.n })}${g.n === 80 ? " " + I18N.t("tbl.loss.checkM2") : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
   }
   function lossCombosHtml() {
-    const q = parseFloat(String(NL.q).replace(",", ".")); if (!isFinite(q) || q <= 0) return "";
+    const q = numIt(NL.q); if (!isFinite(q) || q <= 0) return "";
     const c = lossCombos(q, massOf, NL_TOL()), nm = l => `<b>${fl(l.f)}</b>`, nd = NL_DEC();
     const li = [...c.single.map(x => `<li>${nm(x[0])} <span class="muted">(${massOf(x[0].f).toFixed(nd)})</span></li>`), ...c.pairs.map(p => `<li>${nm(p[0])} + ${nm(p[1])} <span class="muted">(${(massOf(p[0].f) + massOf(p[1].f)).toFixed(nd)})</span></li>`), ...c.reps.map(r => `<li>${r.n} &times; ${nm(r.l)} <span class="muted">(${(r.n * massOf(r.l.f)).toFixed(nd)})</span></li>`)];
     return `<div class="nlc"><b>${I18N.t("tbl.loss.possible")}</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">${I18N.t("tbl.loss.none", { tol: hrOn() ? "0.003" : "0.5" })}</div>`}</div>`;
@@ -306,15 +306,6 @@
     }
   }
 
-  Qs("#np-pt").onclick = () => open("pt");
-  Qs("#np-ad").onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts");
-    else open("ad");
-  };
-  Qs("#np-nl").onclick = () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses");
-    else open("ls");
-  };
   window.QQQRef = {
     open, massOf, mono, isoPattern, ionCounts, ADD, adductDiffs: calcAdductDiffs,
     mountLosses, mountAdducts, setLossQuery, periodic, bindPeriodic, adductTab, bindAdducts, lossTab, bindLoss

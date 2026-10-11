@@ -25,6 +25,18 @@ pub struct Spectrum {
     pub precursor: Option<f64>,
     pub mz: Vec<f64>,
     pub intensity: Vec<f32>,
+    /// The intensities with the precision of the file, only when it stores them as 64-bit (`None`: `intensity` as `f64` is exact).
+    pub wide: Option<Vec<f64>>,
+}
+
+impl Spectrum {
+    /// Intensity of peak `i` as the file wrote it.
+    pub fn intensity_f64(&self, i: usize) -> f64 {
+        match &self.wide {
+            Some(w) => w[i],
+            None => self.intensity[i] as f64,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,17 +200,24 @@ struct Chrom {
 }
 
 fn finish_spectrum(s: Spec) -> Result<Spectrum> {
-    let (mut mz, mut it) = (Vec::new(), Vec::new());
+    let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
     for a in &s.arrays {
         match a.kind {
             ArrayKind::Mz => mz = decode_array(a, s.len)?.0,
-            ArrayKind::Intensity => it = decode_array(a, s.len)?.1,
+            ArrayKind::Intensity => {
+                let (w, f) = decode_array(a, s.len)?;
+                it = f;
+                wide = if a.f32 { None } else { Some(w) };
+            }
             _ => {}
         }
     }
     let n = mz.len().min(it.len());
     mz.truncate(n);
     it.truncate(n);
+    if let Some(w) = wide.as_mut() {
+        w.truncate(n);
+    }
     Ok(Spectrum {
         index: s.index,
         id: s.id,
@@ -210,6 +229,7 @@ fn finish_spectrum(s: Spec) -> Result<Spectrum> {
         precursor: s.selected.or(s.target),
         mz,
         intensity: it,
+        wide,
     })
 }
 

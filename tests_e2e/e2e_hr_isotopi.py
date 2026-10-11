@@ -40,7 +40,7 @@ try:
             assert abs(v["w10"] - 1.8227) < 1e-3
         step("Gaussian profile: maximum 100 on the most intense peak", curve)
         def ui():
-            pg.evaluate("document.querySelector('#hri-tabs [data-t=iso]').click()"); pg.wait_for_timeout(500)
+            pg.evaluate("BARRA.setTab('iso')"); pg.wait_for_timeout(500)
             pg.fill("#hri-f", "C13H24N4O3S"); pg.select_option("#hri-st", "profilo"); pg.fill("#hri-r", "60000")
             n0 = pg.evaluate("E.panels.length")
             pg.click("#hri-new"); pg.wait_for_function(f"E.panels.length=={n0}+1", timeout=15000); pg.wait_for_timeout(800)

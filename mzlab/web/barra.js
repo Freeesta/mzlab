@@ -1,220 +1,235 @@
 "use strict";
-// Docking tabbed sidebar in Data view (LR and HR) - Block 1 of PROMPT_BARRA_LATERALE.md.
-// Common tabs: File, Calculator, Neutral losses, Adducts, Lists.
-// Dedicated Periodic Table button opens modal dialog #refdlg.
-// In HR mode: 9 HR info bar tabs after a separator.
-// Pinning (pinned: true -> occupies grid column, shrinks charts; pinned: false -> only rail visible, overlay over charts).
-// Resizable width (min 220, max 560, double click resets to default: 260 for LR, 340 for HR).
-// State persistence in localStorage (qqq.barra.lr and qqq.barra.hr).
+// Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR.
+// One list of commands (CMD): the toolbar, its menus, "Altro" and the command palette are all built from it, so a new
+// button is added in ONE place (id, i18n keys cmd.<id>.lab / .name / .tip, icon, run, visible).
+// Drawer (#dfiles): closed until a tool is chosen; open it floats over the charts (does not narrow them) and closes with Esc,
+// a click outside or the same button; "Pin" puts it in the grid next to the charts. Width is draggable, side is left or right
+// (drag the header to the other half of the window, or Alt+Shift+Left/Right).
+// State: localStorage qqq.barra.lr / qqq.barra.hr ({tab, pinned, open, w, last, side}), side shared in qqq.barra.lato.
 
 const BARRA = (() => {
   const K_LR = "qqq.barra.lr";
   const K_HR = "qqq.barra.hr";
+  const K_SIDE = "qqq.barra.lato";
+  const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
+  const MIN_W = 220, MAX_W = 560;
+  const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
+  const PHONE_W = 600;
+  const LABELS_FROM = 1440;         // labels next to the icons only on wide windows
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
-  let _curTab = "file";
-  let _pinned = true;
+  let _tab = "file";
+  let _open = false;
+  let _pinned = false;
   let _side = "left";
   let _w = 260;
-  let _overlayOpen = false;
+  let _last = { scan: "hdr", form: "cmp" };
+  let _mode = null;
   let _mounted = false;
+  let _opener = null;
+  let _before = null;
+  let _dropped = new Set();
 
+  const Q1 = s => document.querySelector(s);
+  const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   const isHrMode = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
-  const storageKey = () => isHrMode() ? K_HR : K_LR;
-  const defaultW = () => isHrMode() ? 340 : 260;
+  const storageKey = () => (isHrMode() ? K_HR : K_LR);
+  const defaultW = () => (isHrMode() ? 340 : 260);
+  const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
+  const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer:coarse)").matches);
+  const narrow = () => window.innerWidth < NARROW || coarse();          // narrow window or a finger: the panel is only a drawer
+  const effPinned = () => _pinned && !narrow();
+  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc", "stat"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
 
+  // ---------------------------------------------------------------- icons
+  const IC = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
+  const QI = k => (typeof QICON !== "undefined" ? QICON.get(k, 16).replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true" focusable="false"') : "");
+  const ICONS = {
+    file: IC('<path d="M3 2.5h6.5l3.5 3.5v7.5H3z"/><path d="M9.5 2.5V6H13"/>'),
+    hdr: IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3"/>'),
+    lst: IC('<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="1.6" cy="4" r=".6"/><circle cx="1.6" cy="8" r=".6"/><circle cx="1.6" cy="12" r=".6"/>'),
+    fil: IC('<path d="M3.5 2.5h6l3 3v8h-9z"/><path d="M9.5 2.5v3h3"/>'),
+    cmp: IC('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>'),
+    iso: IC('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>'),
+    idn: IC('<path d="M3 2.5h8a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h8"/>'),
+    stat: IC('<path d="M2.5 13.5h11"/><path d="M4 11V8M7 11V4M10 11V6.5M13 11V9" stroke-linecap="round"/>'),
+    qaqc: IC('<path d="M2.5 13.5h11"/><path d="M3.5 10l2.5-3 2.5 2 3-5"/><circle cx="11.5" cy="4" r="1" fill="currentColor"/>'),
+    more: IC('<circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/>'),
+    search: IC('<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/>'),
+    ext: IC('<path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>'),
+    caret: IC('<path d="M4 6l4 4 4-4"/>'),
+    left: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6.5 2.5v11"/>'),
+    right: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/>')
+  };
+
+  // ---------------------------------------------------------------- the list of commands
+  // id: key of cmd.<id>.* in lang/; dom: id given to the toolbar button (kept for tests and scripts); ic: icon; panel: drawer panel the
+  // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists.
+  const CMD = [
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inData(), run: () => toggle("file") },
+    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
+    { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
+    { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
+    { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
+    { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
+    
+    { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
+    // HR only (after a separator): two menus and one direct button
+    { id: "scan", hr: true, items: ["hdr", "lst", "fil"], ic: () => ICONS[_last.scan] },
+    { id: "form", hr: true, items: ["cmp", "iso"], ic: () => ICONS[_last.form] },
+    { id: "idn", hr: true, ic: () => ICONS.idn, panel: "idn", run: () => toggle("idn") },
+    // items of the HR menus (panels of the drawer, bodies in banco.js)
+    { id: "hdr", item: "scan", ic: () => ICONS.hdr, panel: "hdr", run: () => pick("scan", "hdr") },
+    { id: "lst", item: "scan", ic: () => ICONS.lst, panel: "lst", run: () => pick("scan", "lst") },
+    { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") },
+    { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
+    { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
+    // display options of a chart (right click on a chromatogram or a spectrum): only in the palette, the panel is in the drawer
+    { id: "disp", bar: false, group: "graphs", panel: "disp", visible: () => inData() && isHrMode(), ic: () => IC('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8M13 12h.5"/><circle cx="10" cy="4" r="1.5"/><circle cx="6" cy="8" r="1.5"/><circle cx="12" cy="12" r="1.5"/>'), run: () => window.DISP && DISP.open() },
+    // smoothing of the active chromatogram: also a button in its header, here for when the header has put it in the «⋯» menu
+    { id: "smooth", bar: false, group: "graphs", visible: () => inData(), ic: () => IC('<path d="M2 11c2.5 0 3-6 6-6s3.5 6 6 6"/>'),
+      run: () => { const q = E.active; if (q && E.panels.includes(q) && ["chrom", "xic", "mrm"].includes(q.type)) { q.smooth = !q.smooth; ctl(q); draw(q); uiSave(); } else nearMsg(I18N.t("cmd.smooth.none")); } },
+    // command palette (also reachable from the 🔍 button and Ctrl/⌘ K)
+    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
+    // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
+    { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
+    { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
+    { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
+    { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
+    { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
+    { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
+    { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
+    { id: "spec", bar: false, group: "graphs", ic: () => IC('<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>'), visible: () => inData() && shown("#np-spec"), run: () => clickEl("#np-spec") },
+    { id: "map", bar: false, group: "graphs", ic: () => IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.4"/><path d="M2.5 8h11M8 2.5v11"/>'), visible: () => inData() && shown("#np-map"), run: () => clickEl("#np-map") },
+    { id: "xic", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>'), visible: () => inData() && shown("#np-xic"), run: () => clickEl("#np-xic") },
+    { id: "mrm", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12M4 13V9M7 13V4M10 13V7"/>'), visible: () => inData() && shown("#np-mrm"), run: () => clickEl("#np-mrm") },
+    { id: "tile", bar: false, group: "graphs", ic: () => IC('<rect x="2" y="2" width="12" height="3.2" rx=".8"/><rect x="2" y="6.4" width="12" height="3.2" rx=".8"/><rect x="2" y="10.8" width="12" height="3.2" rx=".8"/>'), visible: () => inData(), run: () => clickEl("#np-tile") },
+    { id: "closeall", bar: false, group: "graphs", ic: () => IC('<path d="M4 4l8 8M12 4l-8 8"/>'), visible: () => inData(), run: () => clickEl("#np-closeall") },
+    { id: "sideL", bar: false, group: "panel", ic: () => ICONS.left, visible: () => inData(), run: () => setSide("left") },
+    { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
+    { id: "pin", bar: false, group: "panel", ic: () => ICONS.file, visible: () => inData() && !narrow(), run: () => { if (!_open) show(_tab); togglePin(); } },
+    // external links, rare: in "Altro"
+    { id: "stat", dom: "np-stat", more: true, ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
+    { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
+    { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
+  ];
+  const byId = id => CMD.find(c => c.id === id);
+  const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
+  const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
+  const visible = c => (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
+  const lab = c => t(`cmd.${c.id}.lab`);
+  const name = c => t(`cmd.${c.id}.name`);
+  const tip = c => t(`cmd.${c.id}.tip`);
+
+  // ---------------------------------------------------------------- state
   function loadState() {
     let s = {};
-    try {
-      s = JSON.parse(localStorage.getItem(storageKey()) || "{}");
-    } catch (_) {}
-    _w = typeof s.w === "number" && s.w >= 220 && s.w <= 560 ? s.w : defaultW();
-    _pinned = true;
-    _side = s.side === "right" ? "right" : "left";
-    _curTab = s.tab || (isHrMode() ? "hdr" : "file");
+    try { s = JSON.parse(localStorage.getItem(storageKey()) || "{}") || {}; } catch (_) { s = {}; }
+    _w = typeof s.w === "number" && s.w >= MIN_W && s.w <= MAX_W ? s.w : defaultW();
+    _pinned = !!s.pinned;
+    _tab = validTab(s.tab) ? s.tab : "file";
+    _open = !!(s.open && _pinned && !narrow());
+    if (s.last && typeof s.last === "object") {
+      if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
+      if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
+    }
+    let side = null;
+    try { side = localStorage.getItem(K_SIDE); } catch (_) { /* none */ }
+    _side = side === "right" || side === "left" ? side : s.side === "right" ? "right" : "left";
   }
 
   function saveState() {
     try {
-      const data = {
-        tab: _curTab,
-        side: _side,
-        pinned: _pinned,
-        w: _w
-      };
-      localStorage.setItem(storageKey(), JSON.stringify(data));
-    } catch (_) {}
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, side: _side, pinned: _pinned, open: _open && _pinned, w: _w, last: _last }));
+      localStorage.setItem(K_SIDE, _side);
+    } catch (_) { /* no storage */ }
   }
 
-  function isDataView() {
-    return typeof S !== "undefined" && S.view === "data" && S.sess && !S.adding && window.innerWidth >= 900;
-  }
-
-  // Set the grid column width and CSS variable
+  // ---------------------------------------------------------------- layout of the drawer
   function applyWidth() {
-    const aside = document.querySelector("#dfiles");
-    if (aside) {
-      aside.style.setProperty("--sb-w", _w + "px");
-    }
     document.documentElement.style.setProperty("--sb-w", _w + "px");
-    const vdata = document.querySelector("#v-data");
-    if (vdata) {
-      vdata.style.setProperty("--sb-col-w", _w + "px");
+  }
+
+  function refit() {
+    if (typeof fitWidth === "function" && typeof redrawAll === "function") {
+      requestAnimationFrame(() => { fitWidth(); redrawAll(); });
     }
   }
 
-  // Apply dock side (left / right)
-  function applySide(triggerResize = false) {
-    const vdata = document.querySelector("#v-data");
-    if (vdata) {
-      vdata.classList.toggle("sb-right", _side === "right");
-    }
-    const togBtn = document.querySelector("#sb-side-tog");
-    if (togBtn && typeof I18N !== "undefined") {
-      togBtn.title = I18N.t("side.dockTog.title");
-      togBtn.setAttribute("aria-label", I18N.t("side.dockTog.aria"));
-    }
-    if (triggerResize && typeof fitWidth === "function" && typeof redrawAll === "function") {
-      fitWidth();
-      redrawAll();
-    }
-  }
-
-  function toggleSide() {
-    _side = _side === "left" ? "right" : "left";
-    applySide(true);
-    saveState();
-  }
-
-  function setSide(side) {
-    if (side !== "left" && side !== "right") return;
-    if (_side === side) return;
-    _side = side;
-    applySide(true);
-    saveState();
-  }
-
-  // Update pinning visual & grid state
-  function applyPin(triggerResize = false) {
-    const vdata = document.querySelector("#v-data");
-    if (vdata) {
-      vdata.classList.remove("sb-unpinned");
-      vdata.classList.remove("sb-overlay-open");
+  function applyLayout(refitCharts) {
+    const v = Q1("#v-data"), aside = Q1("#dfiles");
+    if (!v || !aside) return;
+    const shown = _open && inData();
+    const pin = shown && effPinned();
+    const was = v.classList.contains("sb-pin");
+    v.classList.toggle("sb-right", _side === "right");
+    v.classList.toggle("sb-open", shown);
+    v.classList.toggle("sb-pin", pin);
+    aside.toggleAttribute("inert", !shown);
+    aside.setAttribute("aria-hidden", shown ? "false" : "true");
+    const pb = Q1("#sb-pin");
+    if (pb) {
+      pb.hidden = narrow();
+      pb.setAttribute("aria-pressed", _pinned ? "true" : "false");
+      pb.classList.toggle("on", _pinned);
+      const k = _pinned ? "side.unpin" : "side.pin";
+      pb.title = t(k); pb.setAttribute("aria-label", t(k));
     }
     applyWidth();
-    applySide(false);
-    if (triggerResize && typeof fitWidth === "function" && typeof redrawAll === "function") {
-      fitWidth();
-      redrawAll();
+    if (refitCharts || was !== pin) refit();
+  }
+
+  function setPanelVisible(id) {
+    const map = { file: "#sb-panel-file", calc: "#sb-panel-calc", losses: "#sb-panel-losses", adducts: "#sb-panel-adducts", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
+    Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
+    const hr = Q1("#hrinfo");
+    if (hr) hr.hidden = true;
+    if (map[id]) {
+      const p = Q1(map[id]);
+      if (p) p.hidden = false;
+    } else if (HR_PANELS.includes(id) && hr) {
+      hr.hidden = false;
     }
   }
 
-  function getTabTitle(tabId) {
-    if (typeof I18N !== "undefined") {
-      if (["file", "calc", "losses", "adducts", "lists"].includes(tabId)) {
-        return I18N.t(`sidebar.tab.${tabId}`);
-      }
-      if (["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(tabId)) {
-        return I18N.t(`sidebar.sec.${tabId}`);
-      }
-    }
-    return tabId;
-  }
-
-
-  // Switch tab
-  function setTab(tabId, opt = {}) {
-    if (tabId === "ptable") {
-      // Periodic table is too wide for sidebar, open modal dialog #refdlg
-      if (window.QQQRef && typeof QQQRef.open === "function") QQQRef.open("pt");
-      return;
-    }
-
-    _curTab = tabId;
-    if (!_pinned) {
-      _overlayOpen = true;
-    }
-
-    // Update tab rail buttons
-    document.querySelectorAll("#sidebar-tablist button[role='tab']").forEach(btn => {
-      const isSel = btn.dataset.t === tabId;
-      btn.classList.toggle("on", isSel);
-      btn.setAttribute("aria-selected", isSel ? "true" : "false");
-    });
-
-    // Update title
-    const ttlEl = document.querySelector("#sb-title");
-    if (ttlEl) {
-      ttlEl.textContent = getTabTitle(tabId);
-    }
-
-    // Toggle help button for tools
-    const sbHelp = document.querySelector("#sb-help");
+  function renderPane(id, opt = {}) {
+    const c = byId(id);
+    const ttl = Q1("#sb-title");
+    if (ttl && c) ttl.textContent = name(c);
+    const sbHelp = Q1("#sb-help");
     if (sbHelp) {
       const helpKeys = { losses: "losses", adducts: "adducts", lists: "liste" };
-      if (helpKeys[tabId]) {
-        sbHelp.style.display = "";
-        sbHelp.dataset.help = helpKeys[tabId];
-      } else {
-        sbHelp.style.display = "none";
-        sbHelp.dataset.help = "";
+      sbHelp.style.display = helpKeys[id] ? "" : "none";
+      sbHelp.dataset.help = helpKeys[id] || "";
+    }
+    const addf = Q1("#addf");
+    if (addf) addf.style.display = id === "file" ? "" : "none";
+    setPanelVisible(id);
+    if (HR_PANELS.includes(id)) {
+      if (typeof BANCO !== "undefined") {
+        if (typeof BANCO.infoBar === "function") BANCO.infoBar();
+        if (typeof BANCO.setInfoTab === "function") BANCO.setInfoTab(id);
+        setPanelVisible(id);
+        if (typeof BANCO.renderInfo === "function") BANCO.renderInfo();
       }
+      return;
     }
-
-    // Toggle actions (e.g. + button for file)
-    const addf = document.querySelector("#addf");
-    if (addf) {
-      addf.style.display = tabId === "file" ? "" : "none";
-    }
-
-    // Show panel
-    const panels = {
-      file: document.querySelector("#sb-panel-file"),
-      calc: document.querySelector("#sb-panel-calc"),
-      losses: document.querySelector("#sb-panel-losses"),
-      adducts: document.querySelector("#sb-panel-adducts"),
-      lists: document.querySelector("#sb-panel-lists"),
-      hr: document.querySelector("#hrinfo")
-    };
-
-    const isHrTab = ["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(tabId);
-
-    // Hide all panels
-    Object.values(panels).forEach(p => { if (p) p.hidden = true; });
-
-    if (isHrTab) {
-      if (panels.hr) {
-        panels.hr.hidden = false;
-        if (typeof BANCO !== "undefined") {
-          if (typeof BANCO.setInfoTab === "function") BANCO.setInfoTab(tabId);
-          if (typeof BANCO.renderInfo === "function") BANCO.renderInfo();
-        }
-      }
-    } else if (panels[tabId]) {
-      panels[tabId].hidden = false;
-    }
-
-    // Tab-specific mounts / updates
-    if (tabId === "calc") {
+    if (id === "calc") {
       dockCalc(true);
       setTimeout(() => {
-        const inp = document.querySelector("#calcin");
-        if (inp) inp.focus();
+        const inp = Q1("#calcin");
+        if (inp && _open && _tab === "calc") inp.focus();
         if (typeof calcRun === "function") calcRun();
       }, 30);
-    } else if (tabId === "losses") {
-      ensureLossesMounted(opt);
-    } else if (tabId === "adducts") {
-      ensureAdductsMounted();
-    } else if (tabId === "lists") {
-      ensureListsMounted(opt);
-    }
-
-    applyPin();
-    saveState();
+    } else if (id === "losses") ensureLossesMounted(opt);
+    else if (id === "adducts") ensureAdductsMounted();
+    else if (id === "lists") ensureListsMounted(opt);
+    else if (id === "stat") { const pnl = Q1("#sb-panel-stat"); if (pnl && window.STAT) STAT.mount(pnl); }
+    else if (id === "qaqc") { const pnl = Q1("#sb-panel-qaqc"); if (pnl && window.QAQC) QAQC.mount(pnl); }      // painted again at every opening: the files may have changed
   }
 
   function ensureLossesMounted(opt = {}) {
-    const pnl = document.querySelector("#sb-panel-losses");
+    const pnl = Q1("#sb-panel-losses");
     if (!pnl) return;
     if (!pnl.dataset.mounted) {
       if (window.QQQRef && typeof QQQRef.mountLosses === "function") {
@@ -227,18 +242,16 @@ const BARRA = (() => {
   }
 
   function ensureAdductsMounted() {
-    const pnl = document.querySelector("#sb-panel-adducts");
-    if (!pnl) return;
-    if (!pnl.dataset.mounted) {
-      if (window.QQQRef && typeof QQQRef.mountAdducts === "function") {
-        QQQRef.mountAdducts(pnl);
-        pnl.dataset.mounted = "1";
-      }
+    const pnl = Q1("#sb-panel-adducts");
+    if (!pnl || pnl.dataset.mounted) return;
+    if (window.QQQRef && typeof QQQRef.mountAdducts === "function") {
+      QQQRef.mountAdducts(pnl);
+      pnl.dataset.mounted = "1";
     }
   }
 
   function ensureListsMounted(opt = {}) {
-    const pnl = document.querySelector("#sb-panel-lists");
+    const pnl = Q1("#sb-panel-lists");
     if (!pnl) return;
     // mounted again at every opening (as the old window was): a list added meanwhile shows up
     if (window.LISTE && typeof LISTE.mount === "function") {
@@ -247,261 +260,616 @@ const BARRA = (() => {
     }
   }
 
-  function togglePin() {
-    _pinned = !_pinned;
-    if (_pinned) {
-      _overlayOpen = false;
-    } else {
-      _overlayOpen = true;
-    }
-    applyPin(true);
-    saveState();
-  }
-
-  function setPinned(p) {
-    if (_pinned === p) return;
-    _pinned = p;
-    if (_pinned) _overlayOpen = false;
-    applyPin(true);
-    saveState();
-  }
-
-  function closeOverlay() {
-    if (!_pinned && _overlayOpen) {
-      _overlayOpen = false;
-      const vdata = document.querySelector("#v-data");
-      if (vdata) vdata.classList.remove("sb-overlay-open");
-      document.querySelectorAll("#sidebar-tablist button[role='tab']").forEach(btn => {
-        btn.classList.remove("on");
-        btn.setAttribute("aria-selected", "false");
-      });
-    }
-  }
-
-  function setWidth(w) {
-    _w = Math.max(220, Math.min(560, Math.round(w)));
-    applyWidth();
-    saveState();
-  }
-
   // Dock or undock #calcdlg
   function dockCalc(inSidebar) {
-    const dlg = document.querySelector("#calcdlg");
-    const pnl = document.querySelector("#sb-panel-calc");
+    const dlg = Q1("#calcdlg");
+    const pnl = Q1("#sb-panel-calc");
     if (!dlg || !pnl) return;
     if (inSidebar) {
-      if (dlg.parentElement !== pnl) {
-        pnl.appendChild(dlg);
-      }
+      if (dlg.parentElement !== pnl) pnl.appendChild(dlg);
       dlg.classList.add("sb-docked");
       dlg.hidden = false;
     } else {
-      if (dlg.parentElement !== document.body) {
-        document.body.appendChild(dlg);
-      }
+      if (dlg.parentElement !== document.body) document.body.appendChild(dlg);
       dlg.classList.remove("sb-docked");
       dlg.hidden = true;                      // outside the Dati view it is a window the student opens with its button
     }
   }
 
-  // Drag resizer
-  function bindResizer() {
-    const handle = document.querySelector("#sidebar-resize-handle");
-    if (!handle) return;
+  // ---------------------------------------------------------------- open / close
+  function openerFor(id) {
+    const c = byId(id);
+    if (!c) return null;
+    const root = Q1("#stbar");
+    if (!root) return null;
+    const own = c.item ? byId(c.item) : c;
+    const el = root.querySelector(`[data-cmd="${own.id}"]`);
+    if (el && el.offsetParent !== null) return el.classList.contains("tb-split") ? el.querySelector(".tb-main") : el;
+    return root.querySelector('[data-cmd="more"]');
+  }
 
-    let dragging = false;
+  function show(id, opt = {}) {
+    if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
+    if (!inData() || !validTab(id)) return false;
+    const wasOpen = _open;
+    if (opt.instant) {            // no slide (the tour measures the pane at once)
+      const v = Q1("#v-data");
+      if (v) { v.classList.add("sb-instant"); setTimeout(() => v.classList.remove("sb-instant"), 450); }
+    }
+    _tab = id;
+    _open = true;
+    if (!_opener || !wasOpen) _opener = opt.opener || openerFor(id);
+    renderPane(id, opt);
+    applyLayout();
+    updateButtons();
+    saveState();
+    if (!opt.noFocus) {
+      setTimeout(() => {
+        const aside = Q1("#dfiles");
+        if (_open && aside && !aside.contains(document.activeElement)) {
+          const pane = Q1("#sb-pane");
+          if (pane) pane.focus({ preventScroll: true });
+        }
+      }, 90);
+    }
+    return true;
+  }
 
-    const onPointerMove = e => {
-      if (!dragging) return;
-      const aside = document.querySelector("#dfiles");
-      if (!aside) return;
-      const rect = aside.getBoundingClientRect();
-      let newW;
-      if (_side === "right") {
-        newW = Math.max(220, Math.min(560, Math.round(rect.right - e.clientX)));
+  function toggle(id) {
+    if (_open && _tab === id) close(true);
+    else show(id);
+  }
+
+  function close(restoreFocus) {
+    if (!_open) return;
+    _open = false;
+    applyLayout();
+    updateButtons();
+    saveState();
+    const o = _opener;
+    _opener = null;
+    if (restoreFocus && o && document.contains(o) && o.offsetParent !== null) o.focus({ preventScroll: true });
+    else if (restoreFocus) {
+      const rov = Q1("#stbar .tb[tabindex='0']");
+      if (rov) rov.focus({ preventScroll: true });
+    }
+  }
+
+  function pick(group, id) {
+    _last[group] = id;
+    const ok = show(id);
+    if (ok) buildBar();
+    return ok;
+  }
+
+  function setPinned(p) {
+    _pinned = !!p;
+    applyLayout(true);
+    saveState();
+  }
+  function togglePin() { setPinned(!_pinned); }
+
+  function setWidth(w) {
+    _w = Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
+    applyWidth();
+    saveState();
+  }
+
+  function setSide(side, opt = {}) {
+    if (side !== "left" && side !== "right") return;
+    const changed = _side !== side;
+    _side = side;
+    applyLayout(changed);
+    saveState();
+    if (changed && opt.announce !== false) announce(t(side === "left" ? "side.movedLeft" : "side.movedRight"));
+  }
+  function toggleSide() { setSide(_side === "left" ? "right" : "left"); }
+
+  function announce(msg) {
+    let a = Q1("#sb-live");
+    if (!a) {
+      a = document.createElement("div");
+      a.id = "sb-live";
+      a.setAttribute("role", "status");
+      a.setAttribute("aria-live", "polite");
+      a.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap";
+      document.body.appendChild(a);
+    }
+    a.textContent = "";
+    setTimeout(() => { a.textContent = msg; }, 30);
+  }
+
+  // ---------------------------------------------------------------- toolbar
+  function btnHtml(c, extra = "") {
+    const dom = c.dom ? ` id="${c.dom}"` : "";
+    return `<button type="button" class="tb ${extra}"${dom} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
+  }
+  const EHs = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+  function splitHtml(c) {
+    const last = byId(_last[c.id]);
+    const full = `${name(c)}: ${name(last)}`;
+    return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
+      `<button type="button" class="tb tb-main" data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
+      `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
+  }
+
+  function buildBar() {
+    const bar = Q1("#stbar");
+    if (!bar) return;
+    const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
+    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end");
+    const hr = CMD.filter(c => c.hr);
+    let h = common.map(c => btnHtml(c)).join("");
+    h += `<span class="tb-sep" role="separator" data-hrgrp="1"></span>`;
+    h += hr.map(c => (c.items ? splitHtml(c) : btnHtml(c, "hrb"))).join("");
+    h += `<span class="tb-sep" role="separator" data-sep2="1"></span>`;
+    h += `<button type="button" class="tb" id="tb-more" data-cmd="more" aria-haspopup="menu" aria-expanded="false" title="${EHs(t("cmd.more.name"))}" aria-label="${EHs(t("cmd.more.name"))}"><span class="ti">${ICONS.more}</span><span class="tl">${EHs(t("cmd.more.lab"))}</span></button>`;
+    h += CMD.filter(c => c.bar === "end").map(c => btnHtml(c)).join("");
+    bar.innerHTML = h;
+    bar.querySelectorAll("button[data-cmd]").forEach(b => {
+      const c = byId(b.dataset.cmd);
+      b.onclick = () => { if (b.dataset.cmd === "more") openMoreMenu(b); else if (c && c.run) c.run(null, b); };
+    });
+    bar.querySelectorAll("[data-cmd-main]").forEach(b => {
+      b.onclick = () => { _opener = null; const c = byId(_last[b.dataset.cmdMain]); toggleItem(c); };
+    });
+    bar.querySelectorAll("[data-cmd-car]").forEach(b => { b.onclick = () => openGroupMenu(b); });
+    bar.querySelectorAll(".tb").forEach(b => { b.tabIndex = -1; });
+    syncVisibility();
+    updateButtons();
+    fit();
+    const target = hadFocus && (bar.querySelector(`[data-cmd="${hadFocus}"]`) || bar.querySelector(`[data-cmd-main="${hadFocus}"]`) || bar.querySelector(`[data-cmd-car="${hadFocus}"]`));
+    if (target) { setRover(target); target.focus({ preventScroll: true }); }
+    else setRover(firstItem());
+  }
+
+  function toggleItem(c) {
+    if (!c) return;
+    if (_open && _tab === c.id) close(true);
+    else c.run();
+  }
+
+  function syncVisibility() {
+    const bar = Q1("#stbar");
+    if (!bar) return;
+    CMD.forEach(c => {
+      if (c.item || c.more || c.bar === false) return;
+      const el = bar.querySelector(`[data-cmd="${c.id}"]`);
+      if (el) el.hidden = !visible(c) || _dropped.has(c.id);
+    });
+    const hrOn = isHrMode() && inData();
+    bar.querySelector('[data-hrgrp]').hidden = !hrOn;
+    const more = bar.querySelector("#tb-more");
+    if (more) more.hidden = false;
+    const s2 = bar.querySelector("[data-sep2]");
+    if (s2) s2.hidden = false;
+  }
+
+  function updateButtons() {
+    const bar = Q1("#stbar");
+    if (!bar) return;
+    const open = _open && inData();
+    bar.querySelectorAll("button[data-cmd]").forEach(b => {
+      const c = byId(b.dataset.cmd);
+      if (!c || !c.panel) return;
+      const on = open && _tab === c.panel;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    bar.querySelectorAll("[data-cmd-main]").forEach(b => {
+      const c = byId(b.dataset.cmdMain);
+      const on = open && c.items.includes(_tab);
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      const last = byId(_last[c.id]);
+      const full = `${name(c)}: ${name(last)}`;
+      b.title = full; b.setAttribute("aria-label", full);
+      const ti = b.querySelector(".ti");
+      if (ti) ti.innerHTML = last.ic();
+    });
+  }
+
+  // priority overflow: labels only when wide; then the least used groups move into "Altro"; never a second row
+  function fit() {
+    const bar = Q1("#stbar");
+    if (!bar || !bar.offsetParent) return;
+    _dropped = new Set();
+    syncVisibility();
+    const avail = () => bar.clientWidth;
+    const need = () => {
+      const kids = [...bar.children].filter(e => !e.hidden);
+      return kids.reduce((s, e) => s + e.getBoundingClientRect().width, 0) + Math.max(0, kids.length - 1) * 3;
+    };
+    bar.classList.toggle("tb-lab", window.innerWidth >= LABELS_FROM);
+    if (bar.classList.contains("tb-lab") && need() > avail()) bar.classList.remove("tb-lab");
+    let i = 0;
+    const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File goes into "Altro"
+    while ((phone || need() > avail()) && i < DROP_ORDER.length) {
+      const id = DROP_ORDER[i++];
+      const c = byId(id);
+      if (!c || !visible(c)) continue;
+      _dropped.add(id);
+      syncVisibility();
+    }
+    if (phone) { _dropped.add("calc"); syncVisibility(); }
+    const more = bar.querySelector("#tb-more");
+    if (more) more.dataset.dropped = [..._dropped].join(",");
+    const rov = bar.querySelector(".tb[tabindex='0']");
+    if (!rov || rov.hidden || rov.offsetParent === null) setRover(firstItem());
+  }
+
+  // roving tabindex
+  function items() { return [...document.querySelectorAll("#stbar .tb")].filter(b => !b.hidden && b.offsetParent !== null); }
+  function firstItem() { return items()[0] || null; }
+  function setRover(el) {
+    document.querySelectorAll("#stbar .tb").forEach(b => { b.tabIndex = b === el ? 0 : -1; });
+  }
+  function focusToolbar() {
+    const bar = Q1("#stbar");
+    if (!bar || bar.offsetParent === null) return false;
+    _before = document.activeElement && !bar.contains(document.activeElement) ? document.activeElement : _before;
+    const el = bar.querySelector(".tb[tabindex='0']:not([hidden])") || firstItem();
+    if (!el) return false;
+    setRover(el);
+    el.focus();
+    return true;
+  }
+  // back to where the focus was before the bar (the body cannot take focus: then the bar just lets go of it)
+  function leaveToolbar() {
+    if (_before && _before !== document.body && document.contains(_before)) _before.focus();
+    else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+  function onBarKey(e) {
+    const bar = Q1("#stbar");
+    if (!bar || !bar.contains(e.target)) return;
+    const its = items();
+    const i = its.indexOf(e.target.closest(".tb"));
+    if (i < 0) return;
+    let j = null;
+    if (e.key === "ArrowRight") j = (i + 1) % its.length;
+    else if (e.key === "ArrowLeft") j = (i - 1 + its.length) % its.length;
+    else if (e.key === "Home") j = 0;
+    else if (e.key === "End") j = its.length - 1;
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const b = its[i];
+      if (b.hasAttribute("aria-haspopup")) { e.preventDefault(); b.click(); }
+      else if (b.dataset.cmdMain) { e.preventDefault(); const car = bar.querySelector(`[data-cmd-car="${b.dataset.cmdMain}"]`); if (car) car.click(); }
+      return;
+    } else if (e.key === "Escape") {
+      e.preventDefault(); leaveToolbar();
+      return;
+    }
+    if (j == null) return;
+    e.preventDefault();
+    setRover(its[j]);
+    its[j].focus();
+  }
+
+  // ---------------------------------------------------------------- menus (groups, "Altro")
+  function closeMenu(restore) {
+    const m = Q1("#stmenu");
+    if (!m) return;
+    const a = m._anchor;
+    m.remove();
+    if (a) a.setAttribute("aria-expanded", "false");
+    if (restore && a && document.contains(a)) a.focus({ preventScroll: true });
+  }
+
+  function openMenu(anchor, rows) {
+    closeMenu(false);
+    const m = document.createElement("div");
+    m.id = "stmenu";
+    m.setAttribute("role", "menu");
+    m.setAttribute("aria-label", anchor.getAttribute("aria-label") || "");
+    m._anchor = anchor;
+    rows.forEach(r => {
+      if (r.sep) { const hr = document.createElement("hr"); hr.setAttribute("role", "separator"); m.appendChild(hr); return; }
+      if (r.head) { const h = document.createElement("div"); h.className = "mh"; h.setAttribute("role", "presentation"); h.textContent = r.head; m.appendChild(h); return; }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", r.checked != null ? "menuitemradio" : "menuitem");
+      if (r.checked != null) b.setAttribute("aria-checked", r.checked ? "true" : "false");
+      if (r.dom) b.id = r.dom;
+      b.tabIndex = -1;
+      b.innerHTML = `<span class="mi">${r.ic || ""}</span><span>${EHs(r.label)}</span>`;
+      if (r.title) b.title = r.title;
+      b.onclick = () => { closeMenu(false); r.fn(); };
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    anchor.setAttribute("aria-expanded", "true");
+    const ar = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    m.style.top = Math.min(Math.round(ar.bottom + 4), Math.max(8, innerHeight - mh - 8)) + "px";
+    m.style.left = Math.max(8, Math.min(innerWidth - mw - 8, ar.right - mw > 8 && ar.left + mw > innerWidth - 8 ? ar.right - mw : ar.left)) + "px";
+    const btns = [...m.querySelectorAll("button")];
+    (m.querySelector("[aria-checked=true]") || btns[0]).focus();
+    m.addEventListener("keydown", e => {
+      const k = btns.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); btns[(k + 1) % btns.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); btns[(k - 1 + btns.length) % btns.length].focus(); }
+      else if (e.key === "Home") { e.preventDefault(); btns[0].focus(); }
+      else if (e.key === "End") { e.preventDefault(); btns[btns.length - 1].focus(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+      else if (e.key === "Tab") { closeMenu(false); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); const a = m._anchor; closeMenu(true); onBarKey({ target: a, key: e.key, preventDefault() {} }); }
+    });
+  }
+
+  function groupRows(c) {
+    return c.items.map(id => {
+      const it = byId(id);
+      return { label: name(it), ic: it.ic(), checked: _last[c.id] === id, dom: null, fn: () => it.run() };
+    });
+  }
+  function openGroupMenu(anchor) {
+    if (Q1("#stmenu") && Q1("#stmenu")._anchor === anchor) return closeMenu(true);
+    const c = byId(anchor.dataset.cmdCar);
+    openMenu(anchor, groupRows(c));
+  }
+  function openMoreMenu(anchor) {
+    if (Q1("#stmenu") && Q1("#stmenu")._anchor === anchor) return closeMenu(true);
+    const rows = [];
+    const gone = [...CMD.filter(c => !c.item && !c.more && !c.hr), ...CMD.filter(c => c.hr)].filter(c => _dropped.has(c.id));
+    gone.forEach(c => {
+      if (c.items) {
+        rows.push({ head: name(c) });
+        c.items.forEach(id => { const it = byId(id); rows.push({ label: name(it), ic: it.ic(), fn: () => { _opener = anchor; it.run(); } }); });
       } else {
-        newW = Math.max(220, Math.min(560, Math.round(e.clientX - rect.left)));
+        rows.push({ label: name(c), ic: c.ic(), fn: () => { _opener = anchor; if (c.run) c.run(); } });
       }
-      _w = newW;
+    });
+    if (gone.length) rows.push({ sep: true });
+    CMD.filter(c => c.more).forEach(c => rows.push({ label: name(c), ic: c.ic(), dom: c.dom, title: tip(c), fn: () => c.run() }));
+    openMenu(anchor, rows);
+  }
+
+  // ---------------------------------------------------------------- resizer (width of the drawer)
+  function bindResizer() {
+    const handle = Q1("#sidebar-resize-handle");
+    if (!handle) return;
+    let dragging = false;
+    const onMove = e => {
+      if (!dragging) return;
+      const pane = Q1("#sb-pane");
+      if (!pane) return;
+      const rect = pane.getBoundingClientRect();
+      _w = Math.max(MIN_W, Math.min(MAX_W, Math.round(_side === "right" ? rect.right - e.clientX : e.clientX - rect.left)));
       applyWidth();
     };
-
-    const onPointerUp = e => {
+    const onUp = e => {
       if (!dragging) return;
       dragging = false;
       document.body.classList.remove("sb-resizing");
-      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) { /* gone */ }
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
       saveState();
-      if (_pinned && typeof fitWidth === "function" && typeof redrawAll === "function") {
-        fitWidth();
-        redrawAll();
-      }
+      if (effPinned()) refit();
     };
-
     handle.onpointerdown = e => {
       if (e.button !== 0) return;
       dragging = true;
       document.body.classList.add("sb-resizing");
-      try { handle.setPointerCapture(e.pointerId); } catch (_) {}
-      window.addEventListener("pointermove", onPointerMove);
-      window.addEventListener("pointerup", onPointerUp);
+      try { handle.setPointerCapture(e.pointerId); } catch (_) { /* none */ }
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
       e.preventDefault();
     };
-
     handle.ondblclick = () => {
       _w = defaultW();
       applyWidth();
       saveState();
-      if (_pinned && typeof fitWidth === "function" && typeof redrawAll === "function") {
-        fitWidth();
-        redrawAll();
-      }
+      if (effPinned()) refit();
     };
   }
 
-  // Setup click outside & Esc
+  // ---------------------------------------------------------------- side: drag the header to the other half of the window
+  function bindSideDrag() {
+    const head = Q1("#sb-header");
+    if (!head) return;
+    let st = null;
+    const zones = () => {
+      let l = Q1(".sb-dz.l"), r = Q1(".sb-dz.r"), pv = Q1(".sb-dz-prev");
+      if (!l) {
+        l = document.createElement("div"); l.className = "sb-dz l"; l.textContent = t("side.dropLeft");
+        r = document.createElement("div"); r.className = "sb-dz r"; r.textContent = t("side.dropRight");
+        pv = document.createElement("div"); pv.className = "sb-dz-prev";
+        [l, r, pv].forEach(z => { z.setAttribute("aria-hidden", "true"); document.body.appendChild(z); });
+      }
+      return { l, r, pv };
+    };
+    const hot = x => {
+      const z = zones(), side = x < innerWidth / 2 ? "left" : "right";
+      z.l.classList.toggle("hot", side === "left");
+      z.r.classList.toggle("hot", side === "right");
+      const w = Math.min(_w, innerWidth * 0.9);
+      z.pv.style.width = w + "px";
+      z.pv.style.left = side === "left" ? "0" : "auto";
+      z.pv.style.right = side === "right" ? "0" : "auto";
+      return side;
+    };
+    const end = () => {
+      document.body.classList.remove("sb-dragging");
+      document.querySelectorAll(".sb-dz,.sb-dz-prev").forEach(z => z.remove());
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      if (st && st.timer) clearTimeout(st.timer);
+      st = null;
+    };
+    const begin = () => {
+      st.active = true;
+      document.body.classList.add("sb-dragging");
+      try { head.setPointerCapture(st.id); } catch (_) { /* gone */ }
+      hot(st.x);
+    };
+    const move = e => {
+      if (!st || e.pointerId !== st.id) return;
+      st.x = e.clientX;
+      if (!st.active) {
+        const d = Math.hypot(e.clientX - st.x0, e.clientY - st.y0);
+        if (st.touch) { if (d > 10) end(); return; }       // a finger that moves before the long press is a scroll
+        if (d < 6) return;
+        begin();
+      }
+      e.preventDefault();
+      hot(e.clientX);
+    };
+    const up = e => {
+      if (!st || e.pointerId !== st.id) return;
+      const was = st.active, side = was ? (e.clientX < innerWidth / 2 ? "left" : "right") : null;
+      end();
+      if (was && side) setSide(side);
+    };
+    const cancel = () => end();
+    head.addEventListener("pointerdown", e => {
+      if (e.button !== 0 || e.target.closest("button,input,a,select")) return;
+      st = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, active: false, touch: e.pointerType === "touch" || e.pointerType === "pen" };
+      window.addEventListener("pointermove", move, { passive: false });
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", cancel);
+      if (st.touch) st.timer = setTimeout(() => { if (st) { begin(); if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) { /* none */ } } } }, 380);
+    });
+    head.addEventListener("contextmenu", e => { if (st && st.touch) e.preventDefault(); });
+  }
+
+  // ---------------------------------------------------------------- global events
   function bindGlobalEvents() {
     document.addEventListener("keydown", e => {
-      if (e.key !== "Escape") return;
-      // If calculator input is focused and has text, let explore.js handle clearing it
-      const calcin = document.querySelector("#calcin");
-      if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) {
+      // toolbar from the keyboard: F6 or Alt+0 (Esc goes back where the focus was)
+      if (e.key === "F6" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const bar = Q1("#stbar");
+        if (bar && bar.contains(document.activeElement)) {
+          const pane = Q1("#sb-pane");
+          if (_open && pane && !e.shiftKey) { e.preventDefault(); pane.focus(); return; }
+          e.preventDefault(); leaveToolbar(); return;
+        }
+        if (focusToolbar()) e.preventDefault();
         return;
       }
-      if (!_pinned && _overlayOpen) {
-        closeOverlay();
+      if ((e.code === "Digit0" || e.key === "0") && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        if (focusToolbar()) e.preventDefault();
+        return;
       }
-    });
+      // side of the drawer from the keyboard
+      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && inData()) {
+        e.preventDefault(); e.stopPropagation();
+        setSide(e.key === "ArrowLeft" ? "left" : "right");
+        return;
+      }
+      if (e.key !== "Escape" || e.defaultPrevented || e._ctxWas) return;
+      if (Q1("#stmenu") || (window.PALETTE && PALETTE.isOpen)) return;
+      const calcin = Q1("#calcin");
+      if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) return;      // Esc first clears the field
+      if (document.querySelector("dialog[open]") || Q1("#helppop:not([hidden])") || Q1("#uipset") || (Q1("#ctx") && !Q1("#ctx").hidden)) return;
+      if (_open && !effPinned() && inData()) { e.preventDefault(); close(true); }
+    }, true);
+
+    document.addEventListener("keydown", onBarKey);
 
     document.addEventListener("pointerdown", e => {
-      if (_pinned || !_overlayOpen) return;
-      const aside = document.querySelector("#dfiles");
-      const ctx = document.querySelector("#ctx");
-      const dlg = e.target.closest && e.target.closest("dialog");
-      if (aside && !aside.contains(e.target) && (!ctx || !ctx.contains(e.target)) && !dlg) {
-        closeOverlay();
-      }
-    });
+      const m = Q1("#stmenu");
+      if (m && !m.contains(e.target) && !(m._anchor && m._anchor.contains(e.target))) closeMenu(false);
+      if (!_open || effPinned()) return;
+      const aside = Q1("#dfiles"), bar = Q1("#stbar");
+      const tg = e.target;
+      if (!tg.closest) return;
+      if ((aside && aside.contains(tg)) || (bar && bar.contains(tg)) || tg.closest("#stmenu,#ctx,dialog,[role=dialog],#helppop,#qtip,#tour-dialog,#tour-invito,.sb-dz,#paletta")) return;
+      close(false);
+    }, true);
 
     window.addEventListener("resize", () => {
-      if (window.innerWidth < 900 && _pinned) {
-        setPinned(false);
-      }
+      if (_open && _pinned && narrow()) { _open = false; saveState(); updateButtons(); }       // a window too narrow for the pinned panel: it closes, the charts get the page back
+      applyLayout();
+      fit();
+    });
+    document.addEventListener("tpview", () => {
+      if (!inData()) { _open = false; }
+      syncMode();
+      applyLayout();
+      syncVisibility();
+      updateButtons();
+      fit();
     });
   }
 
-  // Synchronize HR mode
-  function syncHR() {
-    const isHr = isHrMode();
-    const sep = document.querySelector("#sb-hr-sep");
-    const hrTabs = document.querySelector("#hri-tabs");
-    if (sep) sep.hidden = !isHr;
-    if (hrTabs) hrTabs.hidden = !isHr;
-
-    // Load HR-specific or LR-specific preferences
+  // LR / HR: the tools of the HR world appear when a high-resolution file is open
+  function syncMode() {
+    const m = isHrMode() ? "hr" : "lr";
+    if (m === _mode) { syncVisibility(); return; }
+    const prevOpen = _open;
+    _mode = m;
     loadState();
-    applyPin();
+    if (!inData()) _open = false;
+    applyWidth();
+    syncVisibility();
+    if (_open && validTab(_tab)) renderPane(_tab);
+    else if (prevOpen && !_open) { /* the other world remembers its own state */ }
+    applyLayout(true);
+    updateButtons();
+    fit();
   }
 
-  // Initialize sidebar
   function init() {
     if (_mounted) return;
     _mounted = true;
-
+    _mode = isHrMode() ? "hr" : "lr";
     loadState();
-
-    // Bind tablist buttons
-    document.querySelectorAll("#sidebar-tablist button[role='tab'], #sidebar-tablist button.sb-act-btn").forEach(btn => {
-      btn.onclick = () => {
-        const t = btn.dataset.t;
-        if (t === "ptable") {
-          setTab("ptable");
-          return;
-        }
-        if (!_pinned && _overlayOpen && _curTab === t) {
-          closeOverlay();
-        } else {
-          setTab(t);
-        }
-      };
-    });
-
-    // Sidebar dock side toggle button (left / right)
-    const sideTogBtn = document.querySelector("#sb-side-tog");
-    if (sideTogBtn) {
-      sideTogBtn.onclick = toggleSide;
-    }
-
-    // Drag header to drop on workspace / other side
-    const sbHeader = document.querySelector("#sb-header");
-    if (sbHeader) {
-      sbHeader.setAttribute("draggable", "true");
-      sbHeader.ondragstart = e => {
-        e.dataTransfer.setData("text/plain", "sidebar");
-        e.dataTransfer.effectAllowed = "move";
-      };
-    }
-    const ws = document.querySelector("#v-workspace");
-    if (ws) {
-      ws.ondragover = e => {
-        if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("text/plain")) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-        }
-      };
-      ws.ondrop = e => {
-        const d = e.dataTransfer.getData("text/plain");
-        if (d === "sidebar") {
-          e.preventDefault();
-          toggleSide();
-        }
-      };
-    }
-
-    // Fold/hide button
-    const foldBtn = document.querySelector("#ffold");
-    if (foldBtn) {
-      foldBtn.onclick = () => {
-        if (!_pinned && _overlayOpen) {
-          closeOverlay();
-        } else if (typeof setFold === "function") {
-          setFold(true);
-          if (typeof uiSave === "function") uiSave();
-        }
-      };
-    }
-
+    window.CMD = CMD;
+    buildBar();
+    const x = Q1("#sb-x");
+    if (x) x.onclick = () => close(true);
+    const pin = Q1("#sb-pin");
+    if (pin) pin.onclick = () => togglePin();
+    const add = Q1("#addf");
+    if (add) add.addEventListener("click", () => { _open = false; });
     bindResizer();
+    bindSideDrag();
     bindGlobalEvents();
-
-    // Dock calculator into sidebar
     dockCalc(true);
-
-    // Initial tab & side
-    setTab(_curTab);
-    applyPin();
-    applySide(false);
+    if (typeof ResizeObserver !== "undefined") {
+      const bar = Q1("#stbar");
+      if (bar) new ResizeObserver(() => fit()).observe(bar);
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    if (_open && inData() && validTab(_tab)) renderPane(_tab);
+    applyLayout();
+    updateButtons();
   }
 
   return {
     init,
-    setTab,
-    togglePin,
+    commands: CMD,
+    setTab: show,
+    show,
+    toggle,
+    close,
+    closeOverlay: () => close(false),
     setPinned,
-    toggleSide,
+    togglePin,
     setSide,
+    toggleSide,
     setWidth,
-    closeOverlay,
     dockCalc,
-    syncHR,
-    isDataView,
-    get curTab() { return _curTab; },
-    get pinned() { return _pinned; },
+    syncMode,
+    syncHR: syncMode,
+    fit,
+    focusToolbar,
+    isDataView: inData,
+    isOpen: id => _open && inData() && (id == null || _tab === id),
+    get curTab() { return _tab; },
+    get pinned() { return effPinned(); },
     get side() { return _side; },
     get width() { return _w; },
-    get overlayOpen() { return _overlayOpen; }
+    get open() { return _open && inData(); },
+    get overlayOpen() { return _open && inData() && !effPinned(); },
+    get pinnedWidth() { return _open && inData() && effPinned() ? _w : 0; },
+    byId,
+    name,
+    lab,
+    visible,
+    kw: c => t(`cmd.${c.id}.kw`)
   };
 })();
 

@@ -92,6 +92,9 @@ def ready(pg, timeout=90000, settle=400):
         if q >= settle: return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
+def drawer(pg, tab="file", pin=True):
+    """Open a tool of the toolbar drawer (the file list by default). Pinned, so that a click on the charts does not close it."""
+    pg.evaluate(f"(()=>{{BARRA.setPinned({'true' if pin else 'false'});BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
     if pg.is_visible(sel): pg.click(sel)
@@ -165,7 +168,7 @@ class Run:
         if not tour:
             pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
-        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
+        pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
         pg.goto(f"http://127.0.0.1:{s.port}/")

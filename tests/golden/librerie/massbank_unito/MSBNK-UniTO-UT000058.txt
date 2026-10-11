@@ -1,0 +1,49 @@
+ACCESSION: MSBNK-UniTO-UT000058
+RECORD_TITLE: Trimethoprim; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000058
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 1 injection(s), 9 scan(s).
+CH$NAME: Trimethoprim
+CH$COMPOUND_CLASS: Non-Natural Product; Antibiotic (diaminopyrimidine)
+CH$FORMULA: C14H18N4O3
+CH$EXACT_MASS: 290.13789
+CH$SMILES: COC1=CC(=CC(=C1OC)OC)CC2=CN=C(N=C2N)N
+CH$IUPAC: InChI=1S/C14H18N4O3/c1-19-10-5-8(6-11(20-2)12(10)21-3)4-9-7-17-14(16)18-13(9)15/h5-7H,4H2,1-3H3,(H4,15,16,17,18)
+CH$LINK: CAS 738-70-5
+CH$LINK: INCHIKEY IEDVJHCEMCRBQM-UHFFFAOYSA-N
+CH$LINK: PUBCHEM CID:5578
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 10.383 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 291.14517
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-00ec-0390000000-2857d10c6b576e3e3b2c
+PK$NUM_PEAK: 10
+PK$PEAK: m/z int. rel.int.
+  123.06627 1400390.0 599
+  173.38339 1620676.9 693
+  230.11560 1924406.3 823
+  231.11894 423583.8 181
+  258.11046 821323.8 351
+  261.09756 815542.1 349
+  275.11308 531894.3 228
+  276.12090 401062.3 172
+  291.14439 2335283.8 999
+  292.14771 594687.9 254
+//

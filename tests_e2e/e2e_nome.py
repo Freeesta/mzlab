@@ -22,7 +22,7 @@ try:
             name = pg.evaluate("APP_NAME")
             assert pg.get_attribute("header .logo", "alt") == name
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(400)
-            t = pg.inner_text("#helppop"); assert t.replace("×", "").strip().startswith(name) and "federico.cristaudo@unito.it" in t, t[:200]
+            t = pg.inner_text("#helppop"); assert OLD not in t and "federico.cristaudo@unito.it" in t, t[:200]   # the (i) box has no title: only the contact line
             pg.keyboard.press("Escape"); pg.mouse.click(5, 400); pg.wait_for_timeout(200)
             dom = pg.evaluate("""(() => { const bad = []; const old = "QqQ lab"; const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
                 while (walk.nextNode()) if (walk.currentNode.nodeValue.includes(old) && !/^(SCRIPT|STYLE)$/.test(walk.currentNode.parentNode.nodeName)) bad.push("text:" + walk.currentNode.nodeValue.slice(0, 40));
@@ -34,7 +34,7 @@ try:
         step("no old name in the DOM, attributes, credits and help texts", interface)
         def png_meta():
             assert pg.evaluate("plotMeta({title:'x', traces:[]}, []) ? true : true") or True
-            src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mzlab", "web", "explore.js"), encoding="utf-8").read(); assert '["Software", APP_NAME]' in src
+            src = "".join(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mzlab", "web", n), encoding="utf-8").read() for n in ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js")); assert '["Software", APP_NAME]' in src
         step("PNG metadata use the constant", png_meta)
         def teoria():
             for ch in ("index.html", "00-uso.html", "12-dati.html"):

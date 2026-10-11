@@ -3,8 +3,12 @@
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
 pub mod engine;
+pub mod idxbuild;
+pub mod librerie;
 pub mod mapped;
 pub mod protocol;
+pub mod scarica;
+pub mod update;
 
 pub use engine::State;
-pub use protocol::{handle, Response};
+pub use protocol::{handle, handle_body, Response};

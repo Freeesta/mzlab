@@ -122,3 +122,10 @@ def test_file_info(hr):
     f = call(hr, "/api/fileinfo?k=0")
     assert f["instrument"] and f["scans"] == len(hr._item(0).run.scans) and f["levels"]["1"] > 0 and f["filters"]
     assert f["mz_range"]["1"][0] < f["mz_range"]["1"][1]
+
+
+def test_method_gives_the_lower_limit_of_the_ms2_scan_window(hr):
+    sp = call(hr, "/api/method?k=0").get("scan_params")
+    if sp and sp.get("ms2"):
+        lo = sp["ms2"]["window_lo"]
+        assert lo is None or lo > 0

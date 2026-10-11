@@ -66,7 +66,7 @@ class MsnTree:
 
 
 def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, frag_ppm: float = 5.0, frag_abs: float = 0.002,
-               calibrate: str = "auto", progress=None) -> MsnTree:
+               calibrate: str = "auto", progress=None, on_node=None) -> MsnTree:
     """MSn tree of the ion `ion` (ion formula, dict or string, e.g. the [M+H]+ of the parent) from the levels >= 2 of `run`.
 
     smiles (optional, the neutral parent): adds the atom sets of every node and peak, constrained by the tree."""
@@ -103,7 +103,7 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
     for i, k in enumerate(keys):
         cons[k] = consensus(run, groups[k])
         if progress:
-            progress(f"Albero MSn: nodo {i + 1}/{len(keys)}", (i + 1) / len(keys))
+            progress(f"MSn tree: node {i + 1}/{len(keys)}", (i + 1) / len(keys))
     tree.timing["consensus"] = round(time.perf_counter() - t1, 3)
 
     # ---- calibration: unique formula assignments of the strong peaks of all nodes -----------------------------------------------
@@ -128,6 +128,13 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
                        "formula": F.fmt(top, els), "ppm": (root["prec_mz"] - ion_mz) / ion_mz * 1e6, "ghost": False, "parent": None,
                        "peaks": [], "via": 0, "atom_candidates": None})
     tree.by_id["MS1"] = tree.nodes[0]
+    shown = 0                                  # nodes already reported to on_node (a node is final once its iteration is over)
+
+    def report():
+        nonlocal shown
+        while on_node and shown < len(tree.nodes):
+            on_node(tree.nodes[shown])
+            shown += 1
 
     def find_parent(k):
         """Node of path[:-1]: the same CE if it exists, else the one with the most scans; if the generation is not in the file, the nearest ancestor."""
@@ -144,6 +151,7 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
     for k in keys:
         if k == ():
             continue
+        report()
         pk, depth = find_parent(k)
         par = info.get(pk)
         nominal = k[-1][0]
@@ -194,6 +202,7 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
         node["base_peak_removed"] = base_removed
         info[k] = {"key": k, "formula": fvec, "prec_mz": prec, "mz": mz, "rel": rel,
                    "peak_vecs": np.array([sp.G[int(sp.candidates(float(mz[j]), frag_ppm, frag_abs, within=fvec)[0])] for j in kidx]) if len(kidx) else np.zeros((0, len(els)), np.int64)}
+    report()
     tree.timing["tree"] = round(time.perf_counter() - t0, 3)
 
     # ---- atom sets ----------------------------------------------------------------------------------------------------------------

@@ -33,12 +33,14 @@ try:
         step("normalisation off without a reference file", norm)
         def toggle():
             on = lambda: pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.classList.contains('on')+':'+b.dataset.v)")
-            assert on() == ["true:2d", "false:3d"], on()
+            assert on() == ["false:3d"], on()                                    # a single «Open in 3D» button, no more 2D/3D switch
             pg.locator("[data-o=view][data-v='3d']").first.click(); pg.wait_for_timeout(1500)
-            assert on() == ["false:2d", "true:3d"], on()
-        step("2D/3D alternating switch", toggle)
+            pg.wait_for_function("document.querySelector('dialog.m3d[open]')", timeout=30000)      # the 3D viewer, a modal over the page
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
+            assert pg.evaluate("!document.querySelector('dialog.m3d')")
+        step("«Open in 3D» button opens the viewer, Esc closes it", toggle)
         def adding():
-            pg.click("#addf"); pg.wait_for_timeout(600)
+            drawer(pg); pg.click("#addf"); pg.wait_for_timeout(600)
             assert pg.is_visible("#loaded") and "B_FullMass-t0" in pg.inner_text("#loaded")
             pg.click("#backdata"); pg.wait_for_timeout(600)
             assert pg.is_visible("#v-data")

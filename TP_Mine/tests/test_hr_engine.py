@@ -48,7 +48,7 @@ def test_ranking_finds_the_products(exp):
 
 def test_rows_have_the_requested_fields(exp):
     x = next(x for x in exp.result["rows"] if x["formula"] == "C8H11N4O3")
-    assert x["level"] in (5, 4, 3, "2b") and x["class"] and x["tmax"] is not None and abs(x["ppm"]) < 3
+    assert x["level"] in (5, 4, 3) and x["class"] and x["tmax"] is not None and abs(x["ppm"]) < 3
     assert set(x["components"]) == {"ms2", "loc", "kin", "form", "int"} and x["delta"] == "+O"
     y = next(x for x in exp.result["rows"] if x["formula"] == "C7H9N4O2")
     assert y["tmax"] < x["tmax"] and "early" in y["class"]
@@ -159,6 +159,32 @@ def test_a_weak_product_at_the_first_time_gets_its_area_filled(tmp_path):
     ref = [i for i, f in enumerate(filled.result["files"]) if f["time"] <= 0]
     assert all(b["series"][i] == a["series"][i] for i in ref)
     assert not any(set(x["filled"]) & set(ref) for x in filled.result["rows"])
+
+
+# ---------------------------------------------------------------------------------------------------------------------- RT alignment
+DRIFT = {-1: 0.0, 0: 0.06, 5: -0.04, 10: 0.0, 20: 0.05, 40: -0.03}
+
+
+def test_the_series_reports_the_rt_drift_it_found(tmp_path):
+    import numpy as np
+    files = LS.write_series(tmp_path, drift=DRIFT, anchors=True)
+    msn = MS.write_msn(tmp_path / "cafe_msn.mzML", MS.caffeine_nodes())
+    files.append({"name": "cafe_msn.mzML", "path": str(msn), "time": None, "type": "sample"})
+    e = EN.ExperimentHR(files, {"smiles": SMILES})
+    r = e.run()
+    a = r["rt_align"]
+    assert a and a["anchors"] >= 8 and len(a["files"]) == 6 and len(a["shift"]) == 6 and len(a["rt"]) >= 1
+    json.dumps(r)
+    truth = np.array([DRIFT[f["time"]] for f in r["files"]])
+    truth = truth - np.median(truth)                                      # the shift is against the median of the files
+    for rt in (2.0, 5.0, 8.0):
+        got = np.array([e.rtmap.at(k, rt) for k in range(6)])
+        assert np.abs(got - truth).max() <= 0.02, (rt, got.round(3), truth.round(3))
+    assert e.timing["filtri"] >= 0
+
+
+def test_a_series_without_anchors_has_no_map(exp):
+    assert exp.result["rt_align"] is None                                  # the background ions of the synthetic series are weak: nothing to anchor on
 
 
 def test_trace_area_needs_a_real_trace():

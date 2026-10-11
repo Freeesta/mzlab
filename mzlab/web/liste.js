@@ -385,6 +385,12 @@ const LISTE = (() => {
     };
   }
 
+  // m => true when the m/z matches a Keller 2008 entry; null while the lists load. Independent of the global contaminant switch: it serves "remove contaminants" of a spectrum.
+  function keller(polarity, ppm) {
+    const idx = ST.idx || ensure(); if (!idx) return null;
+    return m => find(idx, polarity, m, ppm).some(x => x.list === "keller");
+  }
+
   // Peak tables (HR): compatible entries of an m/z, split into shown and hidden-by-exclusion; null if the switch is off
   function compat(mz, polarity, ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return null;
@@ -427,7 +433,7 @@ const LISTE = (() => {
             <td><input data-i="${i}" data-c="note" value="${EHt(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
           document.querySelectorAll("#bigbody [data-c]").forEach(inp => inp.onchange = () => {
             const r = labRows(), x = r[+inp.dataset.i]; if (!x) return;
-            const c = inp.dataset.c; x[c] = c === "mz" ? parseFloat(String(inp.value).replace(",", ".")) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);
+            const c = inp.dataset.c; x[c] = c === "mz" ? numIt(inp.value) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);
           });
           document.querySelectorAll("#bigbody [data-del]").forEach(b => b.onclick = () => { const r = labRows(); r.splice(+b.dataset.del, 1); saveRows(r); draw(); });
           const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: I18N.t("lst.lab.newName") }); draw(); };
@@ -526,29 +532,26 @@ const LISTE = (() => {
     };
 
     container.innerHTML = `
-      <div class="liste-panel" style="display:flex;flex-direction:column;gap:10px;padding:8px 12px;height:100%;box-sizing:border-box;overflow:auto">
-        <div class="liste-bar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <label style="display:inline-flex;align-items:center;gap:4px">
-            <span><i>m/z</i></span>
-            <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" style="width:110px;padding:3px 6px">
-          </label>
-          <span class="seg" id="lst-mode-seg" title="${I18N.t("lst.modeTitle")}">
-            <button type="button" data-m="da" class="${state.mode === "da" ? "on" : ""}">${I18N.t("lst.mode.nominal")}</button>
-            <button type="button" data-m="ppm" class="${state.mode === "ppm" ? "on" : ""}">${I18N.t("lst.mode.hr")}</button>
-          </span>
-          <label style="display:inline-flex;align-items:center;gap:4px" id="lst-tol-wrap">
-            <span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span>
-            <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" style="width:64px;padding:3px 6px">
-          </label>
-          <label style="display:inline-flex;align-items:center;gap:4px">
-            <span>${I18N.t("lst.search")}</span>
-            <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}" style="width:150px;padding:3px 6px">
-          </label>
-          <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
-            <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
-            <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
-            <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">${I18N.t("lst.all")}</button>
-          </span>
+      <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
+        <div class="liste-bar">
+          <div class="lb-row">
+            <label><span><i>m/z</i></span> <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" aria-label="m/z"></label>
+            <label id="lst-tol-wrap"><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
+          </div>
+          <div class="lb-row">
+            <label class="lb-grow"><span>${I18N.t("lst.search")}</span> <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}"></label>
+          </div>
+          <div class="lb-row">
+            <span class="seg" id="lst-mode-seg" title="${I18N.t("lst.modeTitle")}">
+              <button type="button" data-m="da" class="${state.mode === "da" ? "on" : ""}">${I18N.t("lst.mode.nominal")}</button>
+              <button type="button" data-m="ppm" class="${state.mode === "ppm" ? "on" : ""}">${I18N.t("lst.mode.hr")}</button>
+            </span>
+            <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
+              <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
+              <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
+              <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">${I18N.t("lst.all")}</button>
+            </span>
+          </div>
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
@@ -637,11 +640,11 @@ const LISTE = (() => {
         return;
       }
 
-      const qMz = parseFloat(String(state.mz).replace(",", "."));
+      const qMz = numIt(state.mz);
       const hasMz = isFinite(qMz) && qMz > 0;
       const qTxt = state.text.trim().toLowerCase();
       const isNom = state.mode === "da";
-      const tolVal = parseFloat(String(state.tol).replace(",", ".")) || (isNom ? 0.5 : 5);
+      const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
 
       let items = [];
       if (hasMz) {
@@ -733,23 +736,14 @@ const LISTE = (() => {
     return { render, state };
   }
 
-  // Opens the reference list panel: switches tab in sidebar if available, or opens modal dialog #listedlg
+  // Opens the reference lists: the Liste panel of the drawer in the Dati view, the modal dialog #listedlg elsewhere
   function open(opt = {}) {
     ensure();
     if (window.BARRA && BARRA.isDataView()) {
       BARRA.setTab("lists", opt);
       return;
     }
-    // 1. Check if sidebar tab for lists exists in DOM (e.g. from Binario A or sidebar)
-    const asideTabBtn = document.querySelector("#tab-btn-liste, [data-tab='liste'], #sb-tab-lists");
-    const asidePanel = document.querySelector("#aside-panel-liste, [data-panel='liste'], #sb-panel-lists");
-    if (asideTabBtn && asidePanel) {
-      if (typeof asideTabBtn.click === "function") asideTabBtn.click();
-      mount(asidePanel, opt);
-      return;
-    }
-
-    // 2. Otherwise open in a dedicated modal dialog
+    // outside the Dati view the lists open in a dedicated modal dialog
     let dlg = document.querySelector("#listedlg");
     if (!dlg) {
       dlg = document.createElement("dialog");
@@ -782,7 +776,7 @@ const LISTE = (() => {
     addUserListFromCsv,
     deleteUserList,
     toggleListActive,
-    forSpec,
+    forSpec, keller,
     textFor,
     compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,
@@ -798,18 +792,6 @@ const LISTE = (() => {
     openSearch: open
   };
 })();
-
-if (typeof document !== "undefined") {
-  const bindListeBtn = () => {
-    const b = document.querySelector("#np-liste");
-    if (b) b.onclick = () => {
-      if (window.BARRA && BARRA.isDataView()) BARRA.setTab("lists");
-      else LISTE.open();
-    };
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindListeBtn);
-  else bindListeBtn();
-}
 
 if (typeof module !== "undefined") module.exports = LISTE;
 if (typeof window !== "undefined") window.LISTE = LISTE;

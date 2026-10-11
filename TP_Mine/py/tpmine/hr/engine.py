@@ -26,12 +26,14 @@ from . import kinetics as KN
 from . import localize as LZ
 from . import msn
 from . import network as NW
+from . import rtalign as RA
+from . import rules as RU
 from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True}
-NO_PROGRESS = lambda text, frac=None: None      # noqa: E731
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True, "fill_rt_tol": 0.04}
+NO_PROGRESS = lambda text, frac=None, phase=None, payload=None: None      # noqa: E731
 
 
 def classify(run: Run) -> str:
@@ -68,6 +70,9 @@ class ExperimentHR:
         self.ion_vec = F.vec(self.ion, self.els)
         self.parent_mz = float(F.ion_mass(self.ion_vec, self.els))
         self.parent_name = parent.get("name") or ""
+        extra = self.s.get("extra_transformations") or []               # the user's list of transformations (name, delta, comment)
+        self.table = NW.transformation_table(self.els, extra)
+        self.lit = RU.literature(extra, self.els)
         # --- files
         self.files = []
         for d in files:
@@ -116,10 +121,12 @@ class ExperimentHR:
         if self.msn_file is None:
             self.warnings.append("no MSn file of the standard: no fragment tree, no localisation")
             return
-        self.progress("MSn tree of the parent...", 0.03)
+        self.progress("MSn tree of the parent...", 0.03, "tree")
         r = Run(self.msn_file["path"])
         t = time.perf_counter()
-        self.tree = msn.build_tree(r, self.ion, self.smiles)
+        self.tree = msn.build_tree(r, self.ion, self.smiles, on_node=lambda n: self.progress(
+            "MSn tree of the parent...", 0.03, "tree", {"kind": "node", "id": n["id"], "parent": n["parent"], "level": n["level"],
+                                                         "mz": None if n["prec_mz"] is None else round(n["prec_mz"], 4), "formula": n["formula"], "ghost": bool(n["ghost"])}))
         r.close()
         self.timing["albero"] = round(time.perf_counter() - t, 2)
         self.library = iimn.build_library(self.tree) if self.tree.subs is not None else None
@@ -138,10 +145,11 @@ class ExperimentHR:
         t0 = time.perf_counter()
         for step, k in enumerate(order):
             x = self.lc[k]
-            self.progress(f"Cerco le feature: {x['label']}", 0.05 + 0.45 * step / n)
+            self.progress(f"Looking for features: {x['label']}", 0.05 + 0.45 * step / n, "features")
             r = Run(x["path"])
             tab = r.table(1, self.s["polarity"])
             self.feats[k] = FT.detect(tab, floor=self.s["floor"], min_height=self.s["min_height"])
+            self.progress(f"Looking for features: {x['label']}", 0.05 + 0.45 * (step + 1) / n, "features", {"kind": "features", "file": x["label"], "n": int(len(self.feats[k]))})
             self.ms2idx[k] = SP.index_ms2(r, x["path"])
             self.stamps[k] = KN.run_start(x["path"])
             if self.parent_rt_hint is None:
@@ -163,10 +171,11 @@ class ExperimentHR:
         return (x["time"] is not None and x["time"] <= 0) or x["type"] in ("blank", "control")
 
     def _filters(self):
-        self.progress("Allineo e filtro...", 0.52)
+        self.progress("Aligning and filtering...", 0.52, "align")
         t = time.perf_counter()
         types = [("blank" if x["type"] == "blank" else "control" if x["type"] == "control" else "sample") for x in self.lc]
         self.al = FT.align(self.feats)
+        self.rtmap = RA.build(self.al, min_height=self.s["min_height"])
         self.sess_factors = KN.session_factors(self.al.area, self.sessions)
         if self.sess_factors["applied"]:
             self.warnings.append("measurement sessions differ: areas were rescaled to the reference session")
@@ -186,13 +195,14 @@ class ExperimentHR:
             self.isf_hidden = FL.isf_hidden(self.isf_measures, self.times, types, self.isf_masses, self.sessions)
 
     def _fill_gaps(self):
-        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor (a weak product at
-        the first times falls under `min_height` and would look like a late one). The files are read again, one at a time; `self.filled` marks the cells."""
+        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor where the RT map of
+        the series expects it (a weak product at the first times falls under `min_height` and would look like a late one). The files are read
+        again, one at a time; `self.filled` marks the cells: they are never a found peak and every output says so."""
         self.filled = np.zeros(self.al.area.shape, bool)
         if not self.s["fill_gaps"] or len(self.funnel.idx) == 0:
             return
         t0 = time.perf_counter()
-        self.progress("Filling gaps...", 0.55)
+        self.progress("Filling gaps...", 0.55, "align")
         getters = self._runs()
         last = []
 
@@ -204,7 +214,8 @@ class ExperimentHR:
             r = getters[k]()
             last.append(r)
             return r.table(1, self.s["polarity"])
-        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"])
+        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"],
+                                   rt_tol=self.s["fill_rt_tol"] if self.rtmap.ok else 0.1, rtmap=self.rtmap)
         self._close_runs()
         gc.collect()
         self.timing["riempimento"] = round(time.perf_counter() - t0, 2)
@@ -252,11 +263,11 @@ class ExperimentHR:
 
     def _assemble(self):
         t0 = time.perf_counter()
-        self.progress("Assemblo i candidati...", 0.58)
+        self.progress("Assembling the candidates...", 0.58, "candidates")
         al, idx = self.al, self.funnel.idx
         self.getters = self._runs()
         space, _ = FL.tp_space(self.ion)
-        table = NW.transformation_table(self.els)
+        table = self.table
         pv = self.ion_vec
         amax = al.area[idx][:, self.tr_c].max(1) if len(idx) else np.zeros(0)
         lg = np.log10(np.maximum(amax, 1))
@@ -307,6 +318,10 @@ class ExperimentHR:
             for j, kk in enumerate(pos):
                 cands[kk]["ms2"].update(modcos=float(sc[j]), n_matched=int(nm[j]), entropy=float(se[j]), n_matched_entropy=int(ne[j]))
             self._pad = (M, W, P, pos)
+            self._specs = {-1: (pspec, self.parent_mz)}
+            for j, kk in enumerate(pos):                 # the three components of the similarity with the parent (shifted fragments)
+                self._specs[cands[kk]["id"]] = (specs[j], precs[j])
+                cands[kk]["ms2"]["sim"] = SM.pair_components(pspec, self.parent_mz, specs[j], precs[j])
         # localisation of the candidates that have MS2 and a formula
         if self.library is not None and self.tree is not None and self.tree.subs is not None:
             groups = LZ.default_groups(self.tree.subs.mol)
@@ -359,11 +374,15 @@ class ExperimentHR:
     # ------------------------------------------------------------------ network, scoring, ranking
     def _network(self):
         t0 = time.perf_counter()
-        self.progress("IIMN families of the best candidates...", 0.7)
+        self.progress("IIMN families of the best candidates...", 0.7, "families")
         cands = self.cands
         w = self.s["weights"]
         for k, c in enumerate(cands):
             c["priority"] = NW.priority(c, self.lgn[k], w)
+        for k in sorted((k for k, c in enumerate(cands) if not c.get("hidden")), key=lambda k: -cands[k]["priority"]["score"])[:40]:
+            c = cands[k]                      # live feed: the best candidates with the provisional score (before the IIMN families)
+            self.progress("IIMN families of the best candidates...", 0.7, "families", {"kind": "candidate", "id": c["id"], "name": c.get("derivation") or c.get("formula") or f"m/z {c['mz']:.4f}",
+                                                                                      "mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "score": c["priority"]["score"]})
         self._iimn_top()
         for k, c in enumerate(cands):
             c["priority"] = NW.priority(c, self.lgn[k], w)
@@ -376,7 +395,7 @@ class ExperimentHR:
             if c.get("hidden"):
                 c["isf_coincident"] = True
         # predecessors among the best candidates
-        self.progress("Product network...", 0.85)
+        self.progress("Product network...", 0.85, "network")
         top = [k for k in sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["score"])[:300] if cands[k].get("formula")]
         sub = [cands[k] for k in top]
         cos = {}
@@ -391,7 +410,7 @@ class ExperimentHR:
                 for a, b, s, n in zip(ia.tolist(), ib.tolist(), sc.tolist(), nm.tolist()):
                     cos[(members[a], members[b])] = cos[(members[b], members[a])] = (float(s), int(n))
         pf = F.fmt(self.ion_vec, self.els)
-        preds = NW.predecessors(sub, self.els, pf, NW.transformation_table(self.els), cos=cos, step=self._step())
+        preds = NW.predecessors(sub, self.els, pf, self.table, cos=cos, step=self._step())
         by = {p["id"]: p for p in preds}
         prt = float(self.al.rt[self.parent_group]) if self.parent_group is not None else self.parent_rt_hint
         tk = {c["id"]: (c.get("kinetics") or {}).get("tmax") for c in cands}
@@ -402,6 +421,20 @@ class ExperimentHR:
                 c["predecessor_kinetics"] = tk.get(p["predecessor"])
             loc = c.get("localization") or {}
             c["confidence"] = NW.confidence(c, parent_rt=prt, groups_of_region=loc.get("n_groups"))
+            c["prediction"] = RU.prediction(c, self.table, self.ion_vec, self.els, self.smiles, self.lit)
+        specs = getattr(self, "_specs", {})
+        ident = lambda k: -1 if k < 0 else sub[k]["id"]
+        memo: dict = {}
+
+        def sim(a: int, b: int):             # a, b: positions in `sub`, -1 = the parent
+            ia, ib = ident(a), ident(b)
+            if ia not in specs or ib not in specs:
+                return None
+            if (ia, ib) not in memo:
+                (sa, pa), (sb, pb) = specs[ia], specs[ib]
+                memo[(ia, ib)] = SM.pair_components(sa, pa, sb, pb)
+            return memo[(ia, ib)]
+        self.mass_net = NW.mass_network(sub, self.els, pf, self.table, preds=preds, sim=sim, parent_smiles=self.smiles, lit=self.lit, step=self._step())
         self.ranked = NW.rank(cands)
         self._close_runs()
         self.timing["rete"] = round(time.perf_counter() - t0, 2)
@@ -438,8 +471,8 @@ class ExperimentHR:
                 "n_formulas": c.get("n_formulas"), "delta": c.get("delta"), "derivation": c.get("derivation"), "area_max": c["area_max"],
                 "tmax": kin.get("tmax"), "class": kin.get("class_text"), "onset": kin.get("onset"),
                 "score": round(c["priority"]["score"], 1), "components": {k: round(c["priority"]["components"][k], 3) for k in NW.WEIGHTS},
-                "level": c["confidence"]["level"], "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
-                "n_matched": ms2.get("n_matched", 0), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
+                "level": c["confidence"]["level"], "diagnostic": bool(c["confidence"].get("diagnostic")), "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
+                "n_matched": ms2.get("n_matched", 0), "sim": _sim_row(ms2.get("sim")), "pred": (c.get("prediction") or {}).get("level"), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
                 "predecessor": (c.get("predecessor") or {}).get("predecessor"), "transformation": (c.get("predecessor") or {}).get("transformation"),
                 "flags": flags, "filled": [int(k) for k in np.flatnonzero(self.filled[c["id"]])] if not c.get("hidden") and self.filled[c["id"]].any() else [], "series": [round(float(v)) for v in c["areas"]]}
 
@@ -452,8 +485,8 @@ class ExperimentHR:
         return {"mode": "hr", "parent": {"formula": chem.fmt(self.neutral), "ion": F.fmt(self.ion_vec, self.els), "mz": round(self.parent_mz, 4),
                                          "rt": round(float(self.al.rt[self.parent_group]), 2) if self.parent_group is not None else self.parent_rt_hint, "name": self.parent_name},
                 "files": files, "times": [float(t) for t in self.times], "sessions": {"labels": self.sessions, "factors": self.sess_factors},
-                "saturation": self.saturation, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
-                "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
+                "saturation": self.saturation, "rt_align": self.rtmap.as_dict([x["label"] for x in self.lc]) if self.rtmap.ok else None, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
+                "mass_network": getattr(self, "mass_net", None), "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
                 "inclusion": [{"mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "rt_from": round(float(np.nanmin(self.al.left[c["id"]])), 2),
                                "rt_to": round(float(np.nanmax(self.al.right[c["id"]])), 2), "formula": c.get("formula"), "score": round(c["priority"]["score"], 1)} for c in incl],
                 "timing": self.timing, "warnings": self.warnings, "settings": self.s, "weights": self.s["weights"]}
@@ -479,7 +512,8 @@ class ExperimentHR:
         out = {"id": cid, "row": self._row(c), "criteria": c["confidence"]["criteria"], "level_text": c["confidence"]["text"], "components": c["priority"]["components"],
                "times": [float(t) for t in self.times], "areas": [float(a) for a in c["areas"]], "sessions": self.sessions, "kinetics": {k: v for k, v in kin.items() if k != "profile"},
                "iimn": {k: v for k, v in (c.get("iimn") or {}).items() if k != "evidence"} if c.get("iimn") else None,
-               "evidence_family": (c.get("iimn") or {}).get("evidence", []), "predecessor": c.get("predecessor"), "isotopes": c.get("isotopes")}
+               "evidence_family": (c.get("iimn") or {}).get("evidence", []), "predecessor": c.get("predecessor"), "isotopes": c.get("isotopes"),
+               "prediction": c.get("prediction"), "similarity": (c.get("ms2") or {}).get("sim")}
         if c["id"] in self._cons and self.parent_ms2 is not None:
             m2 = self._cons[c["id"]]
             loc = c.get("localization") or {}
@@ -503,6 +537,13 @@ class ExperimentHR:
         for r in rows:
             lines.append(f"{r['mz']},1,{r['rt_from']},{r['rt_to']},\"{(r['formula'] or '')} priority {r['score']}\"")
         return "\n".join(lines)
+
+
+def _sim_row(sim: dict | None) -> dict | None:
+    """Compact form of the three components for the table: [equal, shifted, loss] of the cosine, of the entropy and the matched peaks."""
+    if not sim:
+        return None
+    return {"cos": [round(sim["cos"][k], 3) for k in SM.TYPES], "ent": [round(sim["ent"][k], 3) for k in SM.TYPES], "n": [sim["n"][k] for k in SM.TYPES]}
 
 
 def _is_formula(text: str) -> bool:

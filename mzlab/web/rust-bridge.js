@@ -5,6 +5,8 @@
 // Supervisor: if the worker dies (a trap, a lost memory, a script error) it is terminated, a new one is started, the files of the session
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches Rust off for the rest of the session
 // (everything goes to Pyodide, `error.engineFallback`).
+import { simdSupported } from "./idxpool.js";
+
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -12,6 +14,7 @@ export function createBridge({ workerUrl, notify }) {
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0 };
   const api = { enabled: true, disabled: false, stats };
+  if (!simdSupported() && !(typeof window !== "undefined" && window.MZLAB_DESKTOP)) api.disabled = true;      // the .wasm is built with SIMD (simd128): a browser without it stays on Python, same results (the desktop engine is native)
   const base = n => String(n || "").split(/[\\/]/).pop();
 
   function spawn() {
@@ -19,6 +22,7 @@ export function createBridge({ workerUrl, notify }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
+      if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
       pending.delete(m.id);
@@ -28,11 +32,11 @@ export function createBridge({ workerUrl, notify }) {
     worker = w;
   }
   function recycle(buf) { if (worker) worker.postMessage({ op: "recycle", bufs: [buf] }, [buf]); }
-  function rpc(msg) {
+  function rpc(msg, onp) {
     return new Promise(res => {
       if (!worker || api.disabled) return res({ dead: true });
       const id = ++seq;
-      pending.set(id, { res, worker });
+      pending.set(id, { res, worker, onp });
       worker.postMessage({ ...msg, id });
     });
   }
@@ -59,14 +63,17 @@ export function createBridge({ workerUrl, notify }) {
     });
   }
 
-  api.start = () => { if (!worker) spawn(); };
+  api.start = () => { if (!worker && !api.disabled) spawn(); };
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") is left to Python
   api.noteExplore = body => {
-    slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq });
-    for (const [k, s] of ((body && body.samples) || []).entries()) {
+    const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
+    if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
+    const first = more ? slots.length : 0;
+    for (const [i, s] of ((body && body.samples) || []).entries()) {
+      const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
       if (!blob || f.includes("#") || api.disabled) { slots[k] = null; continue; }
       slots[k] = { name: base(f), blob, info: null, bad: false };
@@ -74,14 +81,14 @@ export function createBridge({ workerUrl, notify }) {
     }
   };
   // Thermo .raw -> Blob of mzML, made in the worker; rejects with an Error whose `json` is { error, error_key, params } like the API errors
-  api.convertRaw = async file => {
-    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file });
+  api.convertRaw = async (file, onProgress) => {
+    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file }, onProgress);
     if (r.dead || r.error) {
       let e = { error_key: "err.file.raw", params: { detail: "" } };
       try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
       throw Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
     }
-    return new Blob(r.parts, { type: "application/xml" });
+    return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
   api.crash =() => rpc({ op: "crash" });
 

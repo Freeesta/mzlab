@@ -235,12 +235,14 @@ const DDA = (() => {
         let l = near.get(jj); if (!l) near.set(jj, l = []); l.push(i);
       }
     }
+    p._a.markN = kids.length + near.size;
+    const all = markOn(p), seen = k => all || p._mk === k;           // the triangles of the peak under the pointer only, unless the switch is on
     g.save(); g.fillStyle = ac; g.font = fpx(9.5); g.textAlign = "center";
     const muted = css("--muted"), q2n = HR.prof(E.files[s2.k], 2);
     near.forEach((idxs, jj) => {
       const px = X(d0.mz[jj]), py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(d0.y[jj], p._a.ymax)), p._a.H - M.b)) - 4;
       idxs.sort((u, v) => Math.abs(D.rt[u] - rt0) - Math.abs(D.rt[v] - rt0));
-      g.save(); g.strokeStyle = muted; g.lineWidth = 1.4; g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.stroke(); g.restore();
+      if (seen("n" + idxs[0])) { g.save(); g.strokeStyle = muted; g.lineWidth = 1.4; g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.stroke(); g.restore(); }
       const tip = `<b>${I18N.t("dda.near.title")}</b><div class="sm">${I18N.t("dda.near.line", { n: idxs.length, min: NEAR_MIN, prec: (D.prec[idxs[0]]).toFixed(q2n.dec) })}</div><div class="sm">${I18N.t("dda.near.hint")}</div>`;
       p._a.lbls.push({ nb: idxs, ion: D.prec[idxs[0]], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
     });
@@ -248,9 +250,8 @@ const DDA = (() => {
       const m = D.tgt[j] ?? D.prec[j]; if (m == null || m < p._a.x0 || m > p._a.x1) return;
       const px = X(m); let y0 = 0; d0.mz.forEach((v, i) => { if (Math.abs(v - m) <= tol(m) && d0.y[i] > y0) y0 = d0.y[i]; });
       const py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(y0, p._a.ymax)), p._a.H - M.b)) - 4;                // above the peak, at the top edge when the peak is cut
-      g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.fill();
-      g.fillText(String(n + 1), px, py - MARK - 6);
       const chosen = j === here;
+      if (seen(j) || chosen) { g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.fill(); g.fillText(String(n + 1), px, py - MARK - 6); }
       if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
       const dec = q2.dec, tip = `<b>${I18N.t("dda.kid.title", { i: n + 1, n: kids.length })}</b><div class="sm">${I18N.t("dda.kid.prec", { prec: (D.prec[j] ?? m).toFixed(dec) })}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + fmt1(D.ce[j]) : "CE " + fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">${I18N.t("dda.kid.hint")}</div>`;
       p._a.flags.push({ j, px, py });
@@ -314,6 +315,16 @@ const DDA = (() => {
       draw(x); uiSave(); return true;
     } catch (e) { return fail("follow", e); }
   }
+  // MS2 scans of the shown Full Scan whose precursor is the peak m (within the tolerance of the Banco), closest first: [{ j, prec }]
+  function ms2For(p, m) {
+    try {
+      if (p.duo == null || !p._a || m == null) return [];
+      const f = E.files[p.k], D = ready(f.k), d0 = p._a.data[0].d; if (!D || d0.sid == null) return [];
+      const tol = tolOf(f, m);
+      return (D.byParent.get(d0.sid) || []).map(j => ({ j, prec: D.tgt[j] ?? D.prec[j] })).filter(q => q.prec != null && Math.abs(q.prec - m) <= tol).sort((a, b) => Math.abs(a.prec - m) - Math.abs(b.prec - m));
+    } catch (e) { return []; }
+  }
+  const openMs2 = (p, j) => selectMs2(byId(p.duo), ready(E.files[p.k].k).sid[j]);
   function menu(p, px, py, m) {
     try {
       if (p.duo == null || !p._a) return [];
@@ -399,6 +410,6 @@ const DDA = (() => {
   st.textContent = ".pnl.jt{border-bottom-left-radius:0;border-bottom-right-radius:0}.pnl.jb{border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent}";
   document.head.appendChild(st);
 
-  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
+  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;

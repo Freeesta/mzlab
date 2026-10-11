@@ -57,7 +57,8 @@ try:
             shut(pg, "#refx")
         step("4.6: +/- toggle filter", polarity)
         def a2():
-            pg.click("#np-nl"); pg.wait_for_timeout(300)
+            if not pg.is_visible("#sb-panel-losses"): pg.click("#np-nl")
+            pg.wait_for_timeout(300)
             assert [b.strip() for b in pg.locator("#nl-pol button").all_inner_texts()] == ["ESI+", "ESI−"]
             assert pg.locator("#nl-list .nlpp").count() == 0, "polarity column removed"
             # Turn on both + and -

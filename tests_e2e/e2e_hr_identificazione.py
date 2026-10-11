@@ -15,10 +15,12 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def verdicts():
-            v = pg.evaluate("""[LIB.verdict({ent:.9,shared:8,dprec:2},'ppm').k, LIB.verdict({ent:.9,shared:8,dprec:9},'ppm').k, LIB.verdict({ent:.65,shared:3,dprec:1},'ppm').k, LIB.verdict({ent:.3,shared:9,dprec:1},'ppm').k, LIB.verdict(null,'ppm').k,
-                LIB.groupVerdict({n:1,best:{name:'x',ent:.9,shared:8,dprec:1}}).t, LIB.groupVerdict({n:3,best:{name:'x',ent:.9,shared:8,dprec:1}}).k]""")
-            assert v == ["forte", "possibile", "possibile", "no", "no", "Corrispondenza possibile (1 scansione)", "forte"], v
-        step("verdict: strong / possible / none, thresholds, a single scan is capped at possible", verdicts)
+            v = pg.evaluate("""[LIB.assess([{name:'x',ent:.9,shared:8,dprec:2}],{nScans:3}).proposed, LIB.assess([{name:'x',ent:.9,shared:8,dprec:9}],{nScans:3}).proposed, LIB.assess([{name:'x',ent:.65,shared:3,dprec:1}],{nScans:3}).proposed,
+                LIB.assess([{name:'x',ent:.3,shared:9,dprec:1}],{nScans:3}).proposed, LIB.assess([],{}).proposed,
+                LIB.groupAssess({n:1,best:{name:'x',ent:.9,shared:8,dprec:1}}).proposed, LIB.groupAssess({n:3,best:{name:'x',ent:.9,shared:8,dprec:1}}).proposed,
+                LIB.groupAssess({n:3,best:{name:'x',ik:'AAAAAAAAAAAAAA-A',ent:.9,shared:8,dprec:1,alt:{name:'y',ik:'BBBBBBBBBBBBBB-A',ent:.88,shared:8,dprec:1}}}).proposed]""")
+            assert v == ["2a", "3", "3", "5", "5", "3", "2a", "3"], v
+        step("levels: library match 2a, thresholds, a single scan or a close competitor gives 3, nothing 5", verdicts)
         def grouping():
             g = pg.evaluate("""LIB.groupRows([{prec:300.0000,rt:1.00,ent:.5,name:'a'},{prec:300.0010,rt:1.10,ent:.9,name:'a'},{prec:300.0020,rt:3.00,ent:.4,name:'a'},{prec:400,rt:1.0,ent:null,name:''}]).map(x=>[x.n,Math.round(x.rt*100)/100,x.best.ent])""")
             assert g == [[2, 1.1, 0.9], [1, 1.0, None], [1, 3.0, 0.4]] or sorted(map(tuple, g)) == sorted([(2, 1.1, 0.9), (1, 1.0, None), (1, 3.0, 0.4)]), g
@@ -35,9 +37,9 @@ try:
         def identify():
             pg.evaluate(f"LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-body table", timeout=60000)
             t = pg.inner_text("#li-body"); print(t[:300])
-            assert "Voce di prova" in t and "Corrispondenza" in t, t
+            assert "Voce di prova" in t and pg.locator("#li-body .lvb").count() >= 1, t
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
-            assert pg.is_visible("#libid") and "livello 2a" in pg.inner_text("#libid")
+            assert pg.is_visible("#libid") and "Livello proposto" in pg.inner_text("#libid")
             with pg.expect_download() as dl: pg.click("#li-xlsx")
             assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
             pg.evaluate("document.querySelector('#libid').close()")

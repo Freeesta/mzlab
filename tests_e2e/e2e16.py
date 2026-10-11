@@ -18,7 +18,8 @@ try:
                 pg.mouse.dblclick(c["px"], c["py"]); pg.wait_for_timeout(1200)
             n1 = pg.evaluate("E.panels.filter(p=>p.type==='spec').length"); assert n1 == n0 + 2, (n0, n1)
             t = [x.strip().replace("fermo a ", "") for x in pg.locator(".pnl.spec .rtl").all_inner_texts()]       # the frozen ones say "fermo a RT ..."
-            assert any(x.startswith("RT 10.0") for x in t) and any(x.startswith("RT 14.2") or x.startswith("RT 14.3") for x in t), t
+            rts = [float(x.split()[1]) for x in t if x.startswith("RT ")]       # the pixel under the click gives 10.0 ± 0.03 min, whatever the width of the page
+            assert any(abs(v - 10.0) < 0.1 for v in rts) and any(abs(v - 14.3) < 0.1 for v in rts), t
             hd = pg.evaluate("[...document.querySelectorAll('.pnl.spec')].pop().querySelector('.hd').innerText"); assert "Spettro di massa" in hd and "RT" in hd, hd
         step("each double click opens a new spectrum, RT next to the title", dbl)
         pg.screenshot(path=SH + "161_dbl.png")

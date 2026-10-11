@@ -365,6 +365,62 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dic
     return {"n_ms1": len(rts_ms1), "n_ms2": n_ms2, "parent_mz": mz_par}
 
 
+def hr_series(path: Path, rng, features: list[tuple], rt_end: float = 12.0, cyc: float = 0.04) -> None:
+    """Orbitrap-like Full Scan file (MS1 only, centroids, ~100 noise peaks per scan) whose ions are given by the caller.
+    features: (m/z, RT, sigma in min, amplitude); an amplitude of 0 leaves the ion out. Used by the tests of the series statistics."""
+    pre, specs, rts, tic = "controllerType=0 controllerNumber=1 scan=", [], [], []
+    filt = "FTMS + p ESI Full ms [100.0000-900.0000]"
+    for i, rt in enumerate(np.arange(0.5, rt_end, cyc)):
+        mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(np.log(3e3), 0.5, 100))
+        for m, c, sg, a in features:
+            v = a * float(_g(rt, c, sg)) * rng.normal(1, 0.02) if a > 0 else 0.0
+            if v >= 1e3:
+                mz.append(m * (1 + rng.normal(0, 0.8e-6))); it.append(v)
+        o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
+        n, b = len(mz), int(np.argmax(it))
+        specs.append(f'<spectrum index="{i}" id="{pre}{i + 1}" defaultArrayLength="{n}">' + _cvp("MS:1000579", "MS1 spectrum") + _cvp("MS:1000511", "ms level", 1)
+                     + _cvp("MS:1000130", "positive scan") + _cvp("MS:1000127", "centroid spectrum")
+                     + _cvp("MS:1000504", "base peak m/z", f"{mz[b]:.6f}", _U_MZ) + _cvp("MS:1000505", "base peak intensity", f"{it[b]:.6g}")
+                     + _cvp("MS:1000285", "total ion current", f"{float(np.sum(it)):.6g}")
+                     + f'<scanList count="1">{_cvp("MS:1000795", "no combination")}<scan>'
+                     + _cvp("MS:1000016", "scan start time", f"{rt:.6f}", ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"')
+                     + _cvp("MS:1000800", "mass resolving power", 60000) + _cvp("MS:1000512", "filter string", filt)
+                     + '<scanWindowList count="1"><scanWindow>' + _cvp("MS:1000501", "scan window lower limit", 100.0, _U_MZ)
+                     + _cvp("MS:1000500", "scan window upper limit", 900.0, _U_MZ) + '</scanWindow></scanWindowList></scan></scanList>'
+                     + '<binaryDataArrayList count="2">' + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
+        rts.append(rt); tic.append(float(it.sum()))
+    chroms = [_chrom(0, "TIC", np.array(rts), np.array(tic))]
+    Path(path).write_text(_hr_head("exploris", False, Path(path).stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
+                          + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
+
+
+def subtraction_series(out: Path, blank: bool = True, seed: int = 41) -> list[Path]:
+    """Files SUB_t0, SUB_t10, SUB_t20 (+ SUB_blank) to try the subtraction of a reference: a parent at m/z 253.3 (RT 5.2) that decays, a product at 301.3
+    (RT 6.4) that appears, a background line at 150.2 (RT 3.0) in every file, an RT drift of 0.05 min in t10 and t20 and a gain of 1.3 in t20 (the TIC
+    grows without the sample changing). Every number is invented."""
+    out = Path(out); out.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    rts = np.arange(0.5, 10.0, 0.05)
+    plan = {"t0": (8e5, 0.0, 0.0, 1.0), "t10": (4e5, 3e5, 0.05, 1.0), "t20": (2e5, 6e5, 0.05, 1.3), "blank": (0.0, 0.0, 0.0, 1.0)}
+    paths = []
+    for name, (par, prod, drift, gain) in plan.items():
+        if name == "blank" and not blank:
+            continue
+        specs, tic = [], []
+        for i, rt in enumerate(rts):
+            mz = list(rng.uniform(100, 400, 20)); it = list(rng.lognormal(np.log(3e3), 0.8, 20))
+            for m, c, a in ((253.3, 5.2 + drift, par), (301.3, 6.4 + drift, prod), (150.2, 3.0, 2e5)):
+                v = a * float(_g(rt, c, 0.08, 1e6)) * rng.normal(1, 0.01)
+                if v > 100:
+                    mz.append(m + rng.normal(0, 0.02)); it.append(v)
+            o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o] * gain
+            specs.append(_spec(i, float(rt), mz, it)); tic.append(it.sum())
+        p = out / f"SUB_{name}.mzML"
+        _write(p, specs, [_chrom(0, "TIC", rts, tic)])
+        paths.append(p)
+    return paths
+
+
 def make(out: Path) -> Path:
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)
@@ -384,6 +440,7 @@ def make(out: Path) -> Path:
         full_scan_profile(out / f"P_FullMass-t{t}.mzML", t, rng3)
     rng4 = np.random.default_rng(31)                  # high-resolution DDA files, written last: nothing else changes
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
+    subtraction_series(out)                           # written last: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 
