@@ -89,7 +89,7 @@ export function createLr({ rb }) {
     }
     if (body.append && items) { items = items.concat(add); samples = samples.concat(rows); } else { items = add; samples = rows; }
     hr = h; lr = l;
-    rb.noteExplore(body);
+    rb.noteExplore({ samples: items.map(it => ({ file: it.file })) });            // one slot per ITEM (a mixed file has several), in the order of the session
     return json(session());
   }
 

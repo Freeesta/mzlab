@@ -150,15 +150,18 @@
     const id = ++seq;
     const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
-    if (post !== null && r.status === 200) rustSession(rb, url, post);
+    if (post !== null && r.status === 200) rustSession(rb, url, post, r.text);
     if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
   };
   const r_ok_post = url => /^(\.\/)?api\/(explore|remove|new)\b/.test(url);
-  const rustSession = (rb, url, text) => {                                  // keeps the Rust engine's files in step with the session of Python
+  const rustSession = (rb, url, text, answer) => {                                  // keeps the Rust engine's files in step with the session of Python
     try {
       const j = text ? JSON.parse(text) : {};
-      if (/api\/explore/.test(url)) rb.noteExplore(j);
+      if (/api\/explore/.test(url)) {                                    // one slot per ITEM of the session (a mixed file makes several), not per file of the request
+        let s = null; try { s = JSON.parse(answer).session; } catch (_) { /* the answer is not the session */ }
+        rb.noteExplore(Array.isArray(s) ? { samples: s.map(it => ({ file: it.file })) } : j);
+      }
       else if (/api\/remove/.test(url)) { rb.noteRemove(j.name); rb.noteExplore(null); }
       else rb.noteNew();
     } catch (_) { /* optional */ }
