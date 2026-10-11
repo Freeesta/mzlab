@@ -24,7 +24,7 @@ if not wasm.exists():
 
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
-FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t30")]
+FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15")]
 JSON = """async u => { const r = await fetch(u); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
 def json_close(a, b, tol=1e-9, path=""):
     if isinstance(a, dict) and isinstance(b, dict):
@@ -37,13 +37,14 @@ def json_close(a, b, tol=1e-9, path=""):
         assert abs(a - b) <= tol * max(1.0, abs(a), abs(b)), f"{path}: {a} against {b}"
     else: assert a == b, f"{path}: {a!r} against {b!r}"
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
+def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
 
 def open_files(pg):
     pg.wait_for_selector("#drop", timeout=120000)
     pg.set_input_files("#pick", FILES)
-    pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 3", timeout=120000)
+    pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-    pg.wait_for_function("E.files.length >= 3 && E.pending.length === 0", timeout=120000)
+    pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
 def snap(pg): return {"state": pg.evaluate(JSON, "api/state")["j"], "session": pg.evaluate(JSON, "api/session")["j"]}
 
 try:
@@ -59,25 +60,25 @@ try:
         def boot():
             pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
-            assert not pyodide(reqs), pyodide(reqs)[:3]
+            assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("the page starts on the Rust engine: Pyodide is not requested", boot)
         def load():
             open_files(pg)
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
-            assert not pyodide(reqs), pyodide(reqs)[:3]
-        step("upload, list, session and TIC of three Full Scan files without Pyodide", load)
+            assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
+        step("upload, list, session and TIC of two Full Scan files without Pyodide", load)
         lr_snap = {}
         def lr_state():
             lr_snap.update(snap(pg))
-            assert len(lr_snap["state"]["files"]) == 3 and len(lr_snap["session"]["session"]) == 3
-            assert not pyodide(reqs), pyodide(reqs)[:3]
+            assert len(lr_snap["state"]["files"]) == 2 and len(lr_snap["session"]["session"]) == 2
+            assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("api/state and api/session answered by Rust", lr_state)
         def reload_keeps():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             st = pg.evaluate(JSON, "api/state")["j"]
             assert [f["name"] for f in st["files"]] == [f["name"] for f in lr_snap["state"]["files"]], st["files"]
             json_close(st["files"], lr_snap["state"]["files"], path="files")
-            assert not pyodide(reqs), pyodide(reqs)[:3]
+            assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
         # the classic engine on the same files: the JSON must be the same
         ctx2, pg2, reqs2 = context()

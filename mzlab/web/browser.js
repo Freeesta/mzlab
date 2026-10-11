@@ -101,7 +101,7 @@
     const b = await rustReady;
     if (!b || b.disabled) return startPython();
     try { lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b }); await lr.boot(); window.MZLAB_LR = lr; }
-    catch (e) { console.debug("[mzLab] flow without Pyodide not available", e); lr = null; return startPython(); }
+    catch (e) { console.debug("[mzLab] flow without Pyodide not available", e); window.MZLAB_LR_ERR = String(e && e.message || e); lr = null; return startPython(); }
   };
   const needPython = () => pyP || (pyP = (async () => {
     notice("lr.python.loading");
@@ -134,6 +134,7 @@
       }
       const a = lr && await lr.handle(method, url, init);
       if (a) return new Response(a.text, { status: a.status, headers: { "Content-Type": "application/json", "X-Engine": "rust" } });
+      (window.MZLAB_LR_MISS = window.MZLAB_LR_MISS || []).push(method + " " + url);             // what sent the engine to Python (tests)
       await needPython();
     }
     if (rb && method === "GET" && RUST_ROUTES.test(url)) {
