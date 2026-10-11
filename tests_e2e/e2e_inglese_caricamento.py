@@ -57,10 +57,10 @@ try:
         def errors():
             open("/tmp/x_ingl_b.txt", "w").write("x")
             pg.set_input_files("#pick", "/tmp/x_ingl_b.txt"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#up"); assert "File type not accepted" in t, t
+            t = pg.inner_text("#unopen"); assert "format not recognised" in t and "x_ingl_b.txt" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
             pg.set_input_files("#pick", "/tmp/y_ingl_b.raw"); pg.wait_for_timeout(500)
-            t = pg.inner_text("#up"); assert "is a Thermo .raw file: the program reads only .mzML" in t and "Close" in t, t
+            t = pg.inner_text("#unopen"); assert "This .raw file can't be opened in the browser" in t and "Close" in t and "How to convert" in t, t
             open("/tmp/z_ingl_b.mzML", "w").write("not xml")
             pg.set_input_files("#pick", "/tmp/z_ingl_b.mzML"); pg.wait_for_timeout(800)
             assert not italian_on_screen(pg), italian_on_screen(pg)
