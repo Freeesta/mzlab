@@ -9,7 +9,7 @@ on:
     inputs:
       solo:
         description: "e2e to run (comma separated)"
-        default: "e2e_rust,e2e_lr,e2e_pool,e2e_mzidx,e2e_progressivo"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_picchi_qualita,e2e_pool,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita"
 
 permissions:
   contents: read
@@ -53,7 +53,9 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm --config 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
       - name: e2e on the built site
-        run: python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e_rust,e2e_lr,e2e_pool,e2e_mzidx,e2e_progressivo' }}"
+        run: |
+          ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
+          python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_picchi_qualita,e2e_pool,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita' }}"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

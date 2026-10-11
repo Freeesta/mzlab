@@ -72,7 +72,8 @@
   const rustOn = (() => {
     const m = /[?&]motore=(\w+)/.exec(location.search);
     if (m) return m[1] === "rust";
-    try { return localStorage.getItem("qqq.motore") === "rust"; } catch (_) { return false; }
+    try { const v = localStorage.getItem("qqq.motore"); if (v) return v === "rust"; } catch (_) { /* default */ }
+    return true;                                                         // Rust is the default engine; ?motore=python (or qqq.motore = "python") goes back to Python
   })();
   const notice = key => {                                                    // a short message under the header (a polite live region)
     const show = () => {
@@ -94,7 +95,8 @@
   const lrOn = rustOn && modern && !window.QQQ_PHONE && (() => {
     const m = /[?&]lr=(\w+)/.exec(location.search);
     if (m) return m[1] === "1";
-    try { return localStorage.getItem("qqq.lr") === "1"; } catch (_) { return false; }
+    try { const v = localStorage.getItem("qqq.lr"); if (v) return v === "1"; } catch (_) { /* default */ }
+    return true;                                                         // on by default with the Rust engine; ?lr=0 (or qqq.lr = "0") starts Pyodide first
   })();
   let lr = null, pyP = null;
   const lrInit = async () => {
