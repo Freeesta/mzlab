@@ -1,5 +1,5 @@
-/* «Lettura facilitata» of Teoria and Pratica: the «Aa» button opens a side panel (fonts, spacing, backgrounds, reading ruler, concentration mode,
-   reduced motion, reading aloud, numbers). Choices live in localStorage «qqq.a11y» (JSON of codes, written through QA11Y of tema.js, which also
+/* Settings of Teoria and Pratica (the gear opens a side panel): theme, easy reading (fonts, spacing, backgrounds, reading ruler, concentration mode,
+   reduced motion, reading aloud, numbers) and progress (forget the Pratica, forget where the reading was). Nothing of the data view lives here. Choices live in localStorage «qqq.a11y» (JSON of codes, written through QA11Y of tema.js, which also
    puts them on <html> as data-a11y-* before the page is drawn; the rules are in teoria.css). Loaded by teoria.js; no library. */
 (function () {
   "use strict";
@@ -18,23 +18,26 @@
     motion: [["auto", "Automatico (come il sistema)"], ["always", "Sempre ridotte"]],
     rate: [["0.8", "0,8"], ["1", "1"], ["1.2", "1,2"]],
   };
+  OPT.tema = [["auto", "Come il sistema"], ["light", "Chiaro"], ["dark", "Scuro"]];
+  const tema = () => (window.QTEMA ? QTEMA.get() : "auto");
   const radios = (name, cur) => OPT[name].map(([v, t]) => `<label><input type="radio" name="a11y-${name}" value="${v}"${(cur || "") === v ? " checked" : ""}> <span>${t}</span></label>`).join("");
   const check = (key, text, hint) => `<label><input type="checkbox" data-k="${key}"${S[key] ? " checked" : ""}> <span>${text}</span></label>${hint ? `<div class="hint">${hint}</div>` : ""}`;
 
   const btn = document.createElement("button");
-  btn.id = "a11y-btn"; btn.type = "button"; btn.textContent = "Aa"; btn.title = "Lettura facilitata";
-  btn.setAttribute("aria-label", "Lettura facilitata"); btn.setAttribute("aria-haspopup", "dialog"); btn.setAttribute("aria-expanded", "false");
+  btn.id = "a11y-btn"; btn.type = "button"; btn.textContent = "Aa"; btn.title = "Impostazioni";
+  btn.setAttribute("aria-label", "Impostazioni"); btn.setAttribute("aria-haspopup", "dialog"); btn.setAttribute("aria-expanded", "false");
   const top = $("#top"), tbar = $("#tbar");
   if (tbar && !embedded) {   // standalone page: the gear closes the bar of comandi.js
-    btn.className = "tb"; btn.innerHTML = window.TCMD.icona("impostazioni") + '<span class="l">Impostazioni</span>'; btn.title = "Lettura facilitata";
-    btn.setAttribute("aria-label", "Impostazioni: lettura facilitata");
+    btn.className = "tb"; btn.innerHTML = window.TCMD.icona("impostazioni") + '<span class="l">Impostazioni</span>'; btn.title = "Impostazioni";
+    btn.setAttribute("aria-label", "Impostazioni");
     tbar.appendChild(btn);
   } else if (top && !embedded) top.appendChild(btn); else { btn.classList.add("float"); document.body.appendChild(btn); }
 
   const panel = document.createElement("div");
-  panel.id = "a11y-panel"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Lettura facilitata");
-  panel.innerHTML = `<button type="button" class="x" aria-label="Chiudi">&times;</button><h2>Lettura facilitata</h2>
+  panel.id = "a11y-panel"; panel.hidden = true; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Impostazioni");
+  panel.innerHTML = `<button type="button" class="x" aria-label="Chiudi">&times;</button><h2>Impostazioni</h2>
     <div class="hint">Per ingrandire il testo usa ⌘+ / Ctrl+ (zoom del browser). Le scelte restano su questo computer.</div>
+    <fieldset><legend>Tema</legend>${radios("tema", tema())}</fieldset>
     <fieldset><legend>Carattere</legend>${radios("font", S.font)}</fieldset>
     <fieldset><legend>Spaziatura</legend>${check("space", "Spaziatura ampia", "Righe e lettere più distanziate, testo a sinistra, righe di al massimo 65 caratteri.")}${check("nums", "Numeri più leggibili", "Cifre di larghezza uguale e più spazio nelle equazioni.")}</fieldset>
     <fieldset><legend>Sfondo</legend>${radios("bg", S.bg)}</fieldset>
@@ -43,7 +46,10 @@
     ${speech ? `<fieldset id="a11y-tts"><legend>Lettura ad alta voce</legend><div class="hint">▶ accanto ai titoli legge la sezione.</div>
       <div class="row"><button type="button" id="a11y-sel">Leggi la selezione</button><button type="button" id="a11y-stop">Stop</button></div>
       <div class="hint">Velocità</div>${OPT.rate.map(([v, t]) => `<label><input type="radio" name="a11y-rate" value="${v}"${(S.rate || "1") === v ? " checked" : ""}> <span>${t}×</span></label>`).join("")}</fieldset>` : ""}
-    <div class="row"><button type="button" id="a11y-reset">Ripristina</button></div>`;
+    <div class="row"><button type="button" id="a11y-reset">Ripristina</button></div>
+    <fieldset id="a11y-prog-set"><legend>Avanzamento</legend><div class="hint">Resta su questo computer; non si può annullare.</div>
+      <div class="row"><button type="button" id="a11y-forget-pratica">Azzera la Pratica</button><button type="button" id="a11y-forget-pos">Dimentica dove ero</button></div>
+      <div id="a11y-ask" role="alert" hidden><span></span> <button type="button" data-yes>Sì</button> <button type="button" data-no>Annulla</button></div></fieldset>`;
   document.body.appendChild(panel);
 
   let lastFocus = null;
@@ -72,10 +78,21 @@
     else if (t.name === "a11y-bg") S.bg = t.value;
     else if (t.name === "a11y-motion") S.motion = t.value;
     else if (t.name === "a11y-rate") S.rate = t.value;
+    else if (t.name === "a11y-tema") { if (window.QTEMA) QTEMA.set(t.value); return; }
     save(); sync();
     if (t.name === "a11y-bg") dispatchEvent(new Event("resize"));   // the figures draw again with the new colours
   });
   $("#a11y-reset", panel).onclick = () => { S = {}; stop(); save(); sync(); dispatchEvent(new Event("resize")); };
+  // «Avanzamento»: a short confirmation inside the panel before anything is forgotten
+  const ask = $("#a11y-ask", panel);
+  function confirmThen(text, fn, from) {
+    $("span", ask).textContent = text; ask.hidden = false; ask._from = from; $("[data-yes]", ask).focus();
+    $("[data-yes]", ask).onclick = () => { ask.hidden = true; fn(); from.focus(); };
+    $("[data-no]", ask).onclick = () => { ask.hidden = true; from.focus(); };
+  }
+  const forget = key => { try { localStorage.removeItem(key); } catch (_) { /* not stored */ } };
+  $("#a11y-forget-pratica", panel).onclick = e => confirmThen("Azzerare tutto il progresso della Pratica?", () => { forget("qqq.pratica"); if (/pratica/.test(location.pathname)) location.reload(); }, e.currentTarget);
+  $("#a11y-forget-pos", panel).onclick = e => confirmThen("Dimenticare il punto in cui eri arrivato in ogni capitolo?", () => forget("qqq.teoria.pos"), e.currentTarget);
   function sync() {   // panel controls follow S (after Reset or the F key)
     panel.querySelectorAll("input[type=checkbox]").forEach(c => { c.checked = !!S[c.dataset.k]; });
     [["font", S.font || ""], ["bg", S.bg || ""], ["motion", S.motion || "auto"], ["rate", S.rate || "1"]].forEach(([n, v]) => panel.querySelectorAll(`input[name=a11y-${n}]`).forEach(r => { r.checked = r.value === v; }));

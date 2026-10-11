@@ -29,6 +29,8 @@ function uipSave() {
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
+// the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
+window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.theme = t; uipSave(); uipApply(); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);

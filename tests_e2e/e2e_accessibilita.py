@@ -25,7 +25,7 @@ try:
             q.goto(base + name); q.wait_for_timeout(900); return q
         def attr(q, n): return q.evaluate(f"document.documentElement.getAttribute('data-a11y-{n}')")
         def panel():
-            q = fresh(); assert q.get_attribute("#a11y-btn", "aria-label") == "Impostazioni: lettura facilitata"
+            q = fresh(); assert q.get_attribute("#a11y-btn", "aria-label") == "Impostazioni"
             assert q.is_hidden("#a11y-panel"); q.click("#a11y-btn"); assert q.is_visible("#a11y-panel")
             assert q.get_attribute("#a11y-panel", "role") == "dialog"
             q.screenshot(path=SH + "a11y_pannello.png")
