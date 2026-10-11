@@ -33,6 +33,7 @@ fn spectrum(r: SpectrumRecord) -> Spectrum {
         precursor,
         mz: r.mz,
         intensity: r.intensity,
+        wide: None,
     }
 }
 
