@@ -540,7 +540,7 @@ export function open(p, opener) {
     if (hit && !V.lock) setCur(hit.i, hit.j);
     MAPPA.showMenu(ad3(hit), { preventDefault() {}, clientX: at.cx, clientY: at.cy, kbd: !!at.kbd, lp: !!at.lp });
   }
-  const navBar = MAPPA.barFor(() => ad3(null)); main.appendChild(navBar);
+  const navBar = MAPPA.barFor(() => ad3(null), "3d"); main.appendChild(navBar);
   dlg.addEventListener("keydown", e => { const c = ctxEl(); if (e.key === "Escape" && c && !c.hidden && dlg.contains(c)) { e.preventDefault(); e.stopPropagation(); c.hidden = true; glc.focus({ preventScroll: true }); } }, true);     // Esc closes the menu first, not the viewer
   dlg.addEventListener("cancel", e => { const c = ctxEl(); if (c && !c.hidden && dlg.contains(c)) { e.preventDefault(); c.hidden = true; } });
 
