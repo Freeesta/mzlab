@@ -165,6 +165,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 actual_hashes = {f["name"]: f.get("sha256", "") for f in app.files()}
                 mismatches = verify_file_hashes(body, actual_hashes) if ok else []
                 return _json({"valid": ok, "message": msg, "mismatches": mismatches})
+            if path == "/api/qaqc/features":      # sample / blank ratio of every feature of an untargeted table: values, no list of products
+                from .qaqc import feature_ratios
+                return _json({"rows": feature_ratios(body.get("features", []), body.get("blanks", []), body.get("samples", []), float(body.get("thr", 3)))})
             if path == "/api/export/mgf":
                 from .workflow import format_mgf
                 text = format_mgf(body.get("spectra", []), lr=bool(body.get("lr")))
@@ -191,6 +194,13 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
                                    float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None,
                                    float(q["prec"]) if q.get("prec") else None, q.get("filt") or None))
+        if path == "/api/qaqc":          # QA/QC measures of one ion over the series (standards, blanks, mass accuracy, sample / blank): numbers only
+            try:
+                return _json(app.qaqc_ion([int(x) for x in q["k"].split(",") if x], [x for x in q.get("roles", "").split(",")],
+                                          float(q["mz"]), float(q["rt"]), float(q.get("win", 0.5)), float(q.get("tol", 0.5)), q.get("unit", "da"),
+                                          int(q.get("level", 1)), float(q.get("thr", 3)), q.get("ratio") == "1"))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         if path == "/api/filters":       # the scan types of a file (scan filters) with their counts: what the filter menu of a cell lists
             return _json(app.filters(int(q["k"])))
         if path == "/api/scaninfo":      # every name / value pair of the header of a scan, as the file has it
