@@ -5,26 +5,28 @@
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Pratica</div>
 <h1>Dallo spettro alla struttura</h1>
-<p class="lead">Uno spettro EI vero, un composto da scoprire. Si segue il procedimento del capitolo 15: ione molecolare, formula, ioni chiave, struttura. Nei livelli bassi ogni passo è guidato e corretto subito; in Modalità orale si scrive il ragionamento come all'esame e la correzione arriva alla fine.</p>
+<p class="lead">Uno spettro EI vero, un composto da scoprire. Si segue il procedimento del capitolo 15: ione molecolare, formula, ioni chiave, struttura. Nei livelli bassi ogni passo è guidato e corretto subito; in Modalità orale si scrive il ragionamento come all'esame e la correzione arriva alla fine. Il «Percorso» propone composti semplici in ordine di difficoltà (dall'ione molecolare alla diagnosi di casi misti); la modalità «Difficile» parte dal solo spettro, senza formula né classe: il programma segnala solo ciò che non torna e dà aiuti a tre livelli, mai la risposta prima della consegna.</p>
 <noscript><p class="box warn">Serve JavaScript.</p></noscript>
 <div id="nofile" class="box warn" hidden><b>Aprite la Pratica dal programma o dal sito</b><p>Il gioco usa l'editor di strutture e la chimica del programma, che il browser non carica da un file aperto con doppio clic. Aprite il sito (o il programma), scheda Teoria, menu «Pratica».</p></div>
 
 <div class="gbar noprint" id="bar">
-<label>Livello <select id="lv">
+<label id="lvl">Livello <select id="lv">
 <option value="1">1 · Guidato</option><option value="2">2 · Con aiuto</option><option value="3" selected>3 · Da solo</option><option value="4">4 · Esperto</option><option value="orale">Modalità orale</option></select></label>
-<label>Famiglia <select id="fam"><option value="">tutte, mescolate</option></select></label>
+<label id="faml">Famiglia <select id="fam"><option value="">tutte, mescolate</option></select></label>
+<label>Percorso <select id="path"><option value="">libero (come prima)</option><option value="1">1 · Ione molecolare e isotopi</option><option value="2">2 · Scissioni semplici</option><option value="3">3 · Riarrangiamenti e cicli</option><option value="4">4 · Aromatici e serie</option><option value="5">5 · Diagnosi complessa</option></select></label>
+<label id="model">Modalità <select id="mode"><option value="guidata" selected>Guidata (come prima)</option><option value="difficile">Difficile: solo lo spettro</option></select></label>
 <label id="fmtl" hidden>Spettro <select id="fmt"><option value="img" selected>solo il grafico (come all'orale)</option><option value="tab">grafico e tabella dei picchi</option></select></label>
 <button id="new">Nuovo problema</button>
-<span id="chall"></span>
+<span id="chall"></span><span id="pathinfo" class="pill" aria-live="polite"></span>
 <span class="pts" id="pts"></span>
 </div>
 
 <div id="game"></div>
 <details class="q noprint"><summary>Come funziona il punteggio</summary>
-<p>Ogni problema parte da 100 punti. Un suggerimento costa 5, 10 o 20 punti (il terzo dà la risposta del passo), la massa esatta 20, una risposta sbagliata 5. Il risultato aggiorna il livello delle competenze (pagina «Pratica») e decide la difficoltà dei problemi successivi; i problemi andati male tornano dopo qualche giorno. In Modalità orale il punteggio viene dalla formula e dalla struttura (controllate dal programma) e dalla vostra autovalutazione sul ragionamento.</p></details>
+<p>Ogni problema parte da 100 punti. Un suggerimento costa 5, 10 o 20 punti (il terzo dà la risposta del passo), la massa esatta 20, una risposta sbagliata 5. Il risultato aggiorna il livello delle competenze (pagina «Pratica») e decide la difficoltà dei problemi successivi; i problemi andati male tornano dopo qualche giorno. In Modalità orale il punteggio viene dalla formula e dalla struttura (controllate dal programma) e dalla vostra autovalutazione sul ragionamento. In modalità Difficile gli aiuti costano 5, 10 e 20 punti e il punteggio, calcolato alla consegna, pesa ione molecolare, formula, meccanismi annotati e struttura; i progressi sono registrati a parte («ei-difficile»), le competenze sono le stesse.</p></details>
 <p class="note">Gli spettri vengono da MassBank Europe (licenza CC BY-NC-SA): la fonte di ogni spettro è indicata sotto il grafico.</p>
 </main></div>
-<script src="../appname.js"></script><script src="../molui.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="pratica/ei-dati.js"></script><script src="ei-spettri.js"></script><script src="pratica/motore.js"></script>
+<script src="../appname.js"></script><script src="../molui.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="pratica/ei-dati.js"></script><script src="pratica/ei-aiuti.js"></script><script src="ei-spettri.js"></script><script src="pratica/motore.js"></script>
 <script type="module" src="pratica/gioco-ei.js"></script>
 <script>if (location.protocol === "file:") document.getElementById("nofile").hidden = false;</script>
 </body></html>
