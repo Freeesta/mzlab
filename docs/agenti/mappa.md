@@ -15,13 +15,17 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `sim-chrom.js` (176) QqQ lab - Teoria: chromatography figures (chapters 3, 4, 5). — gauss:10
 - `sim-ei.js` (113) QqQ lab - Teoria: electron ionization and chemical ionization (chapter 7). — lambda:12
 - `sim-esi.js` (110) QqQ lab - Teoria: electrospray figures. — qR:12
-- `sim-frag.js` (77) QqQ lab - Teoria: fragmentation chemistry.
+- `sim-frag.js` (84) QqQ lab - Teoria: fragmentation chemistry. — SIMFRAG:6, rrk:10, perdite:44
 - `sim-hr.js` (175) QqQ lab - Teoria: resolution and high-resolution analyzers (chapters 11 and 13). — ppm:16
 - `sim-misc.js` (174) QqQ lab - Teoria: small interactive figures (kinetics, isotope patterns, mean free path). — col:6
 - `sim-qqq.js` (187) QqQ lab - Teoria: triple quadrupole figures.
 - `sim-quad.js` (284) QqQ lab - Teoria: quadrupole mass filter. — QUAD:7, VOf:46
+- `strumenti/frammenta.js` (22) mzLab - Teoria: «Frammenta» (chapter 14). The two calculators of the chapter in a side panel: compet
+- `strumenti/massa.js` (56) mzLab - Teoria: «Massa e addotti» (chapters 6 and 13). From a formula: nominal and monoisotopic mass — calcola:11
+- `strumenti/pannello.js` (83) mzLab - Teoria: didactic tools in a side panel (TEORIA.strumenti.massa(), .tavola(), .frammenta()). 
+- `strumenti/tavola.js` (29) mzLab - Teoria: «Tavola periodica con isotopi» (chapters 11, 13, 22). The table is the one of the pr
 - `tema.js` (62) Theme of the Teoria (the minimal part, data-theme + colour-scheme, also runs inline at the top of ev — a11yApply:12
-- `teoria.js` (364) QqQ lab - Teoria: shared layout (header, chapter list, on-page TOC, prev/next) and tiny plotting hel — TP:51, layout:77, axes:239, markTerms:312
+- `teoria.js` (365) QqQ lab - Teoria: shared layout (header, chapter list, on-page TOC, prev/next) and tiny plotting hel — TP:51, layout:77, axes:239, markTerms:312
 
 ## Pagina principale (`mzlab/web/`)
 - `aggiorna.js` (85) Desktop app only (window.MZLAB_DESKTOP, set by desktop-shim.js): update of the web part. The native 
@@ -52,8 +56,8 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `icons-modi.js` (38) Icons of the three acquisition modes: the triple quadrupole itself, Q1 - Q2 - Q3, with what each sta — QICON:8
 - `idx-worker.js` (32) Short-lived worker of the index pool: builds the .mzidx of ONE mzML with the Rust builder (mzlab-was
 - `idxpool.js` (81) Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). U — createPool:16, run:27
-- `lang/en.js` (3120) (en)
-- `lang/it.js` (3120) (it)
+- `lang/en.js` (3121) (en)
+- `lang/it.js` (3121) (it)
 - `libreria-cartella.js` (194) The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of  — CARTELLA:15, nativeDir:123
 - `libreria-scarica.js` (87) Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page  — SCARICA:8, downloadPackage:47
 - `libreria-worker.js` (657) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, runAll:608
@@ -92,8 +96,9 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `stat.js` (20) «Statistica» panel of the drawer: sections added by the modules that own them (STAT.add), in the ord
 - `sw.js` (29) Service worker of the browser version (added to the site root by tools/build_site.py; the local prog
 - `tabella.js` (143) Feature table of the series (high resolution only; «Statistica» panel): the matrix features x files  — TABELLA:8
-- `tables.js` (306) Reference tables (header buttons "Tavola periodica" and "Addotti"): periodic table with isotopes, ES — bindPeriodic:51
+- `tables.js` (268) Reference tables (header buttons "Tavola periodica" and "Addotti"): periodic table with isotopes, ES — sub:16
 - `tabs.js` (206) Sub-tabs of the Dati view: Full Scan, MS2 (Product Ion) and MRM never share a graph. Classic script, — defaultLayoutTab:120
+- `tavola-periodica.js` (62) Periodic table with isotopes and abundances: ONE place for the markup, the layout and the behaviour,
 - `tdati-pannelli.js` (72) The panels of the Dati view (chromatograms, XIC, MRM, spectra, maps) give their data to TDATI (tdati
 - `tdati.js` (113) The data of a chart as a real HTML table (<table>, headers with scope), for readers who cannot use a
 - `telefono-scheda.js` (31) The smartphone card (index.html, #phone). Loaded only on a phone (telefono.js sets window.QQQ_PHONE)
@@ -280,9 +285,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `tema_testa.py` (57) The theme snippet that opens the <head> of every page of the site (app and Teoria): inline, synchron
 - `upload_riferimento.py` (35) Reference answers of mzidx.builder_inputs (the scan-table arrays, `source` and `run` of the metadata
 - `validate_ionfamily.py` (133) Validation of mzlab.ionfamily on the real flufenacet series (B_FullMass-t*.mzML), with the best trut — main:41
-- `verifica.py` (445) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:332, main:373
-- `verifica.py` (445) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:332, main:373
-- `verifica.py` (445) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:332, main:373
+- `verifica.py` (446) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:333, main:374
 
 ## mzFinder (`TP_Mine/`)
 - `TP_Mine/files/` — 1 file, 41 righe: tpmine-worker
@@ -292,5 +295,5 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `TP_Mine/tests/` — 27 file, 3744 righe: lc_synth, legacy_discover, lr_synth, msn_synth, test_composti, test_diretta, test_engine, test_fragtree, test_hr_edge_evidence, test_hr_engine, test_hr_features, test_hr_filters, test_hr_identity, test_hr_identity_real, test_hr_iimn, test_hr_kinetics, test_hr_localize, test_hr_msn, test_hr_network, test_hr_real, test_hr_rtalign, test_hr_similarity, test_hr_spectra, test_hr_tp_ms2, test_isf, test_mappa, test_motore_lr
 
 ## Test (`tests/`, `tests_e2e/`)
-- `tests/` — 79 file, 7993 righe: conftest, node_i18n, test_adducts, test_analog, test_anteprima, test_browser_index, test_calcola, test_campioni, test_composition, test_contaminanti, test_contaminanti_privato, test_contaminants_en, test_controlla_teoria, test_conversione, test_converti, test_cromato, test_differenza, test_ei_dati, test_esempi_anonimi, test_esercizi_lcms, test_explore_parts, test_fair, test_filebuf, test_filtri, test_formula_case, test_golden, test_hr_identificazione, test_hr_reader, test_hr_spectra, test_hr_synth, test_i18n, test_idxpool, test_indice_teoria, test_ionfamily, test_isoscore, test_libreria, test_libreria_cartella, test_libreria_scarica, test_librerie_pacchetti, test_librerie_rust, test_liste, test_livelli, test_lr_version, test_manifest_sito, test_map_extent, test_map_features, test_mappa, test_metodo_incoerente, test_metodo_nome, test_molui, test_msn_reader, test_msntree, test_mzidx, test_nuovo_capitolo, test_ordine, test_peaks, test_perdite, test_pipeline, test_pratica, test_profile …
-- `tests_e2e/` — 162 file, 15270 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
+- `tests/` — 80 file, 8028 righe: conftest, node_i18n, test_adducts, test_analog, test_anteprima, test_browser_index, test_calcola, test_campioni, test_composition, test_contaminanti, test_contaminanti_privato, test_contaminants_en, test_controlla_teoria, test_conversione, test_converti, test_cromato, test_differenza, test_ei_dati, test_esempi_anonimi, test_esercizi_lcms, test_explore_parts, test_fair, test_filebuf, test_filtri, test_formula_case, test_golden, test_hr_identificazione, test_hr_reader, test_hr_spectra, test_hr_synth, test_i18n, test_idxpool, test_indice_teoria, test_ionfamily, test_isoscore, test_libreria, test_libreria_cartella, test_libreria_scarica, test_librerie_pacchetti, test_librerie_rust, test_liste, test_livelli, test_lr_version, test_manifest_sito, test_map_extent, test_map_features, test_mappa, test_metodo_incoerente, test_metodo_nome, test_molui, test_msn_reader, test_msntree, test_mzidx, test_nuovo_capitolo, test_ordine, test_peaks, test_perdite, test_pipeline, test_pratica, test_profile …
+- `tests_e2e/` — 163 file, 15402 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
