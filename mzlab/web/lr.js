@@ -26,7 +26,9 @@ export function createLr({ rb }) {
   let foreign = false;                   // something in OPFS that only Python reads (a .dam, a file without index): every request goes to Python
   const api = { files, get foreign() { return foreign; }, session: () => ({ samples }), freeze: () => { foreign = true; } };
   const rpc = async (msg) => {
+    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg);
+    if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
     if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
     return r;
   };

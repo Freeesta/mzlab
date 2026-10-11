@@ -131,6 +131,12 @@
     const url = typeof input === "string" ? input : input.url;
     if (typeof url !== "string" || !/^(\.\/)?api\//.test(url)) return realFetch(input, init);
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
+    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;
+    if (tr) tr.push("fetch> " + url.slice(0, 80));
+    try { return await fetchApi(url, init); }
+    finally { if (tr) tr.push(`fetch< ${url.slice(0, 80)} ${Math.round(performance.now() - t0)}ms`); }
+  };
+  const fetchApi = async (url, init) => {
     await ready;
     const method = (init.method || "GET").toUpperCase();
     const rb = await rustReady;
