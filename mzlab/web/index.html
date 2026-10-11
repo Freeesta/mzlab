@@ -565,7 +565,7 @@ function dprNow(){const s=(window.visualViewport&&visualViewport.scale)||1;retur
  const arm=()=>{try{matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener("change",()=>{redo();arm()},{once:true})}catch(_){}};arm();   // browser zoom (Ctrl/Cmd +)
  addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,60)});
  if(window.visualViewport)visualViewport.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,150)})}   // pinch: after a short pause
-function setup(c){const z=typeof fz==="function"?fz():1;M.l=Math.round(66*z);M.t=Math.round(14*z);M.b=Math.round(40*z);const r=c.getBoundingClientRect(),d=dprNow();c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
+function setup(c){const z=typeof fz==="function"?fz():1;M.l=Math.max(Math.round(66*z),window.MARG_L||0);M.r=Math.max(14,window.MARG_R||0);M.t=Math.round(14*z);M.b=Math.round(40*z);const r=c.getBoundingClientRect(),d=dprNow();c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
 function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles

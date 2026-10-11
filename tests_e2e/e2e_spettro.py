@@ -92,7 +92,7 @@ try:
         def linked():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(1500)
             ids = pg.evaluate("E.panels.filter(p=>p.tab==='full'&&(p.type==='chrom'||p.type==='xic')).map(p=>p.id)")
-            for i in ids: pg.evaluate(f"toggleTl(E.panels.find(p=>p.id=={i}))")
+            for i in ids: pg.evaluate(f"(()=>{{const q=E.panels.find(p=>p.id=={i});if(!q.tl)toggleTl(q)}})()")       # linked by default
             pg.evaluate(f"zoomTo({CH}, 13.5, 15.5)"); pg.wait_for_timeout(900)
             zs = pg.evaluate("E.panels.filter(p=>p.tab==='full'&&p.type==='xic').map(p=>p.zoom)"); assert zs and abs(zs[0][0] - 13.5) < 1e-6 and abs(zs[0][1] - 15.5) < 1e-6, zs
             pg.evaluate(f"(()=>{{const p={CH};p.zoom=null;draw(p)}})()"); pg.wait_for_timeout(700)
