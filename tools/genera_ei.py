@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 CACHE = ROOT / ".verifica" / "cache_massbank"
 API = "https://massbank.eu/MassBank-api/records"
+OK_LICENSES = {"CC BY-NC-SA", "CC BY-NC", "CC BY-SA", "CC BY", "CC0"}   # a record under any other licence is never used
 MIN_REL = 2          # peaks kept in the file: >= 0.2 % of the base peak (relative intensities in per mille, base = 999)
 
 
@@ -361,18 +362,222 @@ LIST = [
         K(200, "C7H11ClN5+", "alpha", "Scissione α nel gruppo isopropilamminico: perdita di un metile (picco base)."),
         K(217, "C8H14ClN5+.", "isotopo", "Un cloro: M+2 al 32%.", 2),
         K(173, "C5H8ClN5+.", "riarr", "Perdita di propene (M−42) dal gruppo isopropile.")]),
+    # ---------------------------------------------------------------- path of simple compounds (see PATH): new entries
+    dict(id="butano", it="butano", en=["BUTANE", "N-BUTANE"], f="C4H10", fam="alcani", lv=1, keys=[
+        K(58, "C4H10+.", "M", "Lo ione molecolare: massa pari, nessun azoto; debole ma ben visibile."),
+        K(43, "C3H7+", "sigma", "Perdita di un metile (M−15): picco base."),
+        K(29, "C2H5+", "sigma", "Rottura al centro della catena: due frammenti da due carboni."),
+        K(41, "C3H5+", "serie", "Il catione propile perde H2: serie di ioni a intervalli di 14 e di 2."),
+        K(28, "C2H4+.", "riarr", "Ione a elettroni dispari a massa pari: due rotture, perdita di etano (M−30).")]),
+    dict(id="pentano", it="pentano", en=["PENTANE", "N-PENTANE"], f="C5H12", fam="alcani", lv=1, keys=[
+        K(72, "C5H12+.", "M", "Lo ione molecolare, debole (circa un settimo del picco base)."),
+        K(57, "C4H9+", "sigma", "M−15: perdita di un metile."),
+        K(43, "C3H7+", "sigma", "Perdita di un etile (M−29): picco base."),
+        K(41, "C3H5+", "serie", "Catione allile, 43 − H2.")]),
+    dict(id="pentadecano", it="pentadecano", en=["PENTADECANE", "N-PENTADECANE"], f="C15H32", fam="alcani", lv=2, keys=[
+        K(212, "C15H32+.", "M", "M debole ma presente: il gruppo più alto della «staccionata»."),
+        K(57, "C4H9+", "serie", "Picco base della serie alchilica CnH2n+1+."),
+        K(43, "C3H7+", "serie", "Secondo massimo della serie, intervalli di 14 (CH2)."),
+        K(71, "C5H11+", "serie", "La serie scende con regolarità: nessuno ione preferito."),
+        K(85, "C6H13+", "serie", "Ancora il passo di 14: catena non ramificata.")]),
+    dict(id="farnesano", it="2,6,10-trimetildodecano (farnesano)", en=["2,6,10-TRIMETHYLDODECANE", "FARNESANE"], f="C15H32", fam="alcani", lv=4, keys=[
+        K(212, "C15H32+.", "M", "M debolissimo: le ramificazioni indeboliscono lo ione molecolare."),
+        K(57, "C4H9+", "sigma", "Picco base, come negli alcani lineari: da solo non distingue."),
+        K(197, "C14H29+", "sigma", "M−15: perdita di un metile da un punto ramificato (nel lineare M−15 è quasi assente)."),
+        K(169, "C12H25+", "sigma", "M−43: perdita di un propile/isopropile alla ramificazione."),
+        K(112, "C8H16+.", "riarr", "Ione a elettroni dispari (alchene): lungo la catena ramificata si perdono frammenti interi con due rotture.")]),
+    dict(id="bromometano", it="bromometano", en=["BROMOMETHANE", "METHYL BROMIDE"], f="CH3Br", fam="alogenati", lv=1, keys=[
+        K(94, "CH3Br+.", "M", "Lo ione molecolare è il picco base; accanto ha un gemello due unità più pesante."),
+        K(96, "CH3Br+.", "isotopo", "M+2 quasi uguale a M: il bromo ha due isotopi (79 e 81) in rapporto circa 1 : 1.", 2),
+        K(93, "CH2Br+", "perdita", "M−1: perdita di un H; anche questo picco ha il suo gemello (93/95)."),
+        K(79, "Br+", "i", "Scissione induttiva: la carica resta sull'alogeno (coppia 79/81).")]),
+    dict(id="iodometano", it="iodometano", en=["IODOMETHANE", "METHYL IODIDE"], f="CH3I", fam="alogenati", lv=1, keys=[
+        K(142, "CH3I+.", "M", "Lo ione molecolare è il picco base; nessun M+2: lo iodio ha un solo isotopo stabile."),
+        K(127, "I+", "i", "Scissione induttiva: la carica resta sullo iodio; perdita di un metile (M−15)."),
+        K(141, "CH2I+", "perdita", "M−1: perdita di un H.")]),
+    dict(id="bromoetano", it="bromoetano", en=["BROMOETHANE", "ETHYL BROMIDE"], f="C2H5Br", fam="alogenati", lv=1, keys=[
+        K(108, "C2H5Br+.", "M", "Lo ione molecolare, intenso."),
+        K(110, "C2H5Br+.", "isotopo", "M+2 quasi uguale a M: un bromo.", 2),
+        K(29, "C2H5+", "i", "Scissione induttiva: il bromo se ne va con la coppia di elettroni, resta il catione etile (picco base)."),
+        K(27, "C2H3+", "perdita", "Il catione etile perde H2 (29 − 2).")]),
+    dict(id="1-bromopropano", it="1-bromopropano", en=["1-BROMOPROPANE", "PROPYL BROMIDE", "N-PROPYL BROMIDE"], f="C3H7Br", fam="alogenati", lv=1, keys=[
+        K(122, "C3H7Br+.", "M", "Lo ione molecolare, con la coppia M/M+2 del bromo."),
+        K(124, "C3H7Br+.", "isotopo", "Coppia M/M+2 ≈ 1 : 1: un bromo.", 2),
+        K(43, "C3H7+", "i", "Scissione induttiva: perdita di Br• (M−79), catione propile (picco base)."),
+        K(41, "C3H5+", "serie", "Catione allile: 43 − H2.")]),
+    dict(id="2-metil-2-butanolo", it="2-metil-2-butanolo", en=["2-METHYL-2-BUTANOL", "TERT-AMYL ALCOHOL", "TERT-PENTYL ALCOHOL"], f="C5H12O", fam="alcoli", lv=2, keys=[
+        K(88, "C5H12O+.", "M", "Negli alcoli terziari lo ione molecolare è debolissimo o assente."),
+        K(59, "C3H7O+", "alpha", "Scissione α con perdita di un etile, il radicale più grande (picco base)."),
+        K(73, "C4H9O+", "alpha", "Scissione α con perdita di un metile (M−15)."),
+        K(55, "C4H7+", "perdita", "Perdita di acqua dallo ione 73 (73 − 18)."),
+        K(31, "CH3O+", "riarr", "Ione ossonio più piccolo, da un riarrangiamento dello ione 59.")]),
+    dict(id="3-metil-3-pentanolo", it="3-metil-3-pentanolo", en=["3-METHYL-3-PENTANOL"], f="C6H14O", fam="alcoli", lv=3, keys=[
+        K(102, "C6H14O+.", "M", "Lo ione molecolare di un alcol terziario: debolissimo o assente."),
+        K(73, "C4H9O+", "alpha", "Scissione α con perdita di un etile (M−29): picco base."),
+        K(87, "C5H11O+", "alpha", "Scissione α con perdita di un metile (M−15)."),
+        K(55, "C4H7+", "perdita", "Perdita di acqua dallo ione 73.")]),
+    dict(id="metil-butil-etere", it="metil butil etere", en=["BUTYL METHYL ETHER", "METHYL BUTYL ETHER", "1-METHOXYBUTANE", "METHYL N-BUTYL ETHER"], f="C5H12O", fam="eteri", lv=2, keys=[
+        K(88, "C5H12O+.", "M", "Lo ione molecolare, debole (circa il 3% del picco base)."),
+        K(45, "C2H5O+", "alpha", "Scissione α dal lato del butile: perdita di un propile (picco base)."),
+        K(56, "C4H8+.", "perdita", "M−32: perdita di metanolo, ione a elettroni dispari.")]),
+    dict(id="2-butanone", it="2-butanone", en=["2-BUTANONE", "METHYL ETHYL KETONE", "BUTAN-2-ONE"], f="C4H8O", fam="carbonilici", lv=2, keys=[
+        K(72, "C4H8O+.", "M", "Lo ione molecolare. Non c'è il picco di McLafferty: nessun idrogeno in γ."),
+        K(43, "C2H3O+", "alpha", "Scissione α con perdita dell'etile, il radicale più grande: acetile (picco base)."),
+        K(57, "C3H5O+", "alpha", "Scissione α dall'altra parte: perdita del metile (M−15)."),
+        K(29, "C2H5+", "i", "Scissione induttiva: la carica va sul gruppo etile.")]),
+    dict(id="3-metil-2-pentanone", it="3-metil-2-pentanone", en=["3-METHYL-2-PENTANONE", "3-METHYLPENTAN-2-ONE"], f="C6H12O", fam="carbonilici", lv=3, keys=[
+        K(100, "C6H12O+.", "M", "Lo ione molecolare."),
+        K(43, "C2H3O+", "alpha", "Scissione α con perdita del radicale più grande: acetile (picco base)."),
+        K(72, "C4H8O+.", "mclafferty", "McLafferty con perdita di etene: ione enolico a elettroni dispari."),
+        K(57, "C4H9+", "i", "Scissione induttiva: la carica sul catione sec-butile.")]),
+    dict(id="4-metil-2-pentanone", it="4-metil-2-pentanone", en=["4-METHYL-2-PENTANONE", "METHYL ISOBUTYL KETONE", "4-METHYLPENTAN-2-ONE"], f="C6H12O", fam="carbonilici", lv=3, keys=[
+        K(100, "C6H12O+.", "M", "Lo ione molecolare."),
+        K(43, "C2H3O+", "alpha", "Scissione α con perdita dell'isobutile: acetile (picco base)."),
+        K(58, "C3H6O+.", "mclafferty", "McLafferty con perdita di propene: ione enolico a elettroni dispari."),
+        K(85, "C5H9O+", "alpha", "Scissione α con perdita del metile (M−15)."),
+        K(57, "C4H9+", "i", "Scissione induttiva: catione isobutile/terz-butile.")]),
+    dict(id="butanoato-di-etile", it="butanoato di etile", en=["ETHYL BUTANOATE", "ETHYL BUTYRATE"], f="C6H12O2", fam="acidi", lv=3, keys=[
+        K(116, "C6H12O2+.", "M", "Lo ione molecolare, debole."),
+        K(71, "C4H7O+", "alpha", "M−45: perdita dell'etossile, catione acilio (picco base)."),
+        K(88, "C4H8O2+.", "mclafferty", "McLafferty sul lato dell'acido, con perdita di etene."),
+        K(43, "C3H7+", "i", "Catione propile."),
+        K(60, "C2H4O2+.", "riarr", "Dallo ione 88 per una seconda perdita di etene (88 − 28).")]),
+    dict(id="alfa-ionone", it="α-ionone", en=["ALPHA-IONONE", "A-IONONE", "(E)-ALPHA-IONONE", "TRANS-ALPHA-IONONE"], f="C13H20O", fam="carbonilici", lv=4, keys=[
+        K(192, "C13H20O+.", "M", "Lo ione molecolare, RDB 4 (anello, due doppi legami, C=O)."),
+        K(136, "C9H12O+.", "rda", "Retro-Diels-Alder dell'anello cicloesenico: perdita di un'olefina da quattro carboni (M−56)."),
+        K(121, "C8H9O+", "perdita", "136 − CH3."),
+        K(93, "C7H9+", "perdita", "121 − CO."),
+        K(43, "C2H3O+", "alpha", "Acetile da scissione α del metilchetone.")]),
+    dict(id="beta-ionone", it="β-ionone", en=["BETA-IONONE", "B-IONONE", "(E)-BETA-IONONE", "TRANS-BETA-IONONE"], f="C13H20O", fam="carbonilici", lv=4, keys=[
+        K(192, "C13H20O+.", "M", "Lo ione molecolare, isomero dell'α-ionone."),
+        K(177, "C12H17O+", "perdita", "M−15: perdita di un metile, picco base (nell'isomero con il doppio legame fuori anello il picco base è un altro)."),
+        K(135, "C10H15+", "perdita", "177 − chetene (C2H2O)."),
+        K(43, "C2H3O+", "alpha", "Acetile da scissione α del metilchetone.")]),
+    dict(id="acetammide", it="acetammide", en=["ACETAMIDE"], f="C2H5NO", fam="azotati", lv=3, keys=[
+        K(59, "C2H5NO+.", "M", "M dispari: un azoto. Picco base."),
+        K(44, "CH2NO+", "alpha", "M−15: scissione α con perdita del metile; resta O=C=NH2+."),
+        K(43, "C2H3O+", "alpha", "M−16: perdita di NH2•, acetile."),
+        K(41, "C2H3N+.", "perdita", "M−18: perdita di acqua, ione nitrilico a elettroni dispari.")]),
+    dict(id="n-metilacetammide", it="N-metilacetammide", en=["N-METHYLACETAMIDE"], f="C3H7NO", fam="azotati", lv=3, keys=[
+        K(73, "C3H7NO+.", "M", "M dispari: un azoto."),
+        K(43, "C2H3O+", "alpha", "Scissione α con perdita del radicale metilamminico: acetile (picco base)."),
+        K(58, "C2H4NO+", "alpha", "M−15: perdita di un metile."),
+        K(30, "CH4N+", "riarr", "CH2=NH2+: tipica delle ammine e delle ammidi con un gruppo CH3 sull'azoto.")]),
+    dict(id="benzonitrile", it="benzonitrile", en=["BENZONITRILE"], f="C7H5N", fam="azotati", lv=2, keys=[
+        K(103, "C7H5N+.", "M", "M dispari (un azoto), picco base: nitrile aromatico (RDB 6)."),
+        K(76, "C6H4+.", "perdita", "M−27: perdita di HCN, tipica di nitrili e ammine aromatiche."),
+        K(50, "C4H2+.", "perdita", "76 − acetilene."),
+        K(51, "C4H3+", "serie", "Serie aromatica 50-52, 63-65, 74-78.")]),
+    dict(id="4-nitrotoluene", it="4-nitrotoluene", en=["4-NITROTOLUENE", "P-NITROTOLUENE"], f="C7H7NO2", fam="azotati", lv=3, keys=[
+        K(137, "C7H7NO2+.", "M", "M dispari: un azoto; intenso per l'anello."),
+        K(91, "C7H7+", "tropilio", "M−46: perdita di NO2 e tropilio (picco base)."),
+        K(107, "C7H7O+", "perdita", "M−30: perdita di NO dopo isomerizzazione nitro → nitrito."),
+        K(65, "C5H5+", "perdita", "Il tropilio perde acetilene (91 − 26).")]),
+    dict(id="diacetone-alcol", it="4-idrossi-4-metil-2-pentanone", en=["DIACETONE ALCOHOL", "4-HYDROXY-4-METHYL-2-PENTANONE"], f="C6H12O2", fam="carbonilici", lv=4, keys=[
+        K(43, "C2H3O+", "alpha", "Acetile da scissione α del chetone (picco base)."),
+        K(59, "C3H7O+", "alpha", "Scissione α sull'alcol terziario con perdita del resto chetonico: (CH3)2C=OH+."),
+        K(101, "C5H9O2+", "alpha", "M−15: perdita di un metile dall'alcol terziario."),
+        K(58, "C3H6O+.", "riarr", "Ione a elettroni dispari: una molecola di acetone ionizzata, da un riarrangiamento di tipo retro-aldolico."),
+        K(98, "C6H10O+.", "perdita", "M−18: perdita di acqua.")]),
+    dict(id="levulinato-di-metile", it="levulinato di metile", en=["METHYL LEVULINATE"], f="C6H10O3", fam="acidi", lv=4, keys=[
+        K(43, "C2H3O+", "alpha", "Acetile da scissione α del metilchetone (picco base)."),
+        K(99, "C5H7O2+", "alpha", "M−31: perdita del metossile dall'estere."),
+        K(115, "C5H7O3+", "alpha", "M−15: perdita del metile del chetone."),
+        K(59, "C2H3O2+", "alpha", "Gruppo metossicarbonile COOCH3+.")]),
+    dict(id="acido-levulinico", it="acido levulinico", en=["LEVULINIC ACID", "4-OXOPENTANOIC ACID"], f="C5H8O3", fam="acidi", lv=4, keys=[
+        K(116, "C5H8O3+.", "M", "Lo ione molecolare, debolissimo."),
+        K(43, "C2H3O+", "alpha", "Acetile da scissione α del metilchetone (picco base)."),
+        K(45, "CHO2+", "alpha", "COOH+ dal gruppo carbossilico."),
+        K(56, "C3H4O+.", "perdita", "M−60: ione a elettroni dispari, perdita di una molecola neutra con due rotture."),
+        K(99, "C5H7O2+", "perdita", "M−17: perdita di OH.")]),
+    dict(id="vanillina", it="vanillina", en=["VANILLIN"], f="C8H8O3", fam="fenoli", lv=4, keys=[
+        K(152, "C8H8O3+.", "M", "M intenso: anello aromatico con tre sostituenti."),
+        K(151, "C8H7O3+", "alpha", "M−1: perdita dell'H aldeidico."),
+        K(123, "C7H7O2+", "perdita", "M−29: perdita di CHO."),
+        K(109, "C6H5O2+", "perdita", "M−43: perdita di CH3 e CO in successione."),
+        K(81, "C5H5O+", "perdita", "109 − CO.")]),
+    dict(id="4-metossiacetofenone", it="4-metossiacetofenone", en=["4-METHOXYACETOPHENONE", "4'-METHOXYACETOPHENONE", "P-METHOXYACETOPHENONE"], f="C9H10O2", fam="carbonilici", lv=4, keys=[
+        K(150, "C9H10O2+.", "M", "Lo ione molecolare."),
+        K(135, "C8H7O2+", "alpha", "Scissione α: perdita del metile dell'acetile, catione acilio sostituito (picco base)."),
+        K(107, "C7H7O+", "perdita", "135 − CO."),
+        K(92, "C6H4O+.", "perdita", "107 − CH3•: ione a elettroni dispari."),
+        K(77, "C6H5+", "perdita", "Fenile.")]),
+    dict(id="4-cloroanilina", it="4-cloroanilina", en=["4-CHLOROANILINE", "P-CHLOROANILINE"], f="C6H6ClN", fam="azotati", lv=4, keys=[
+        K(127, "C6H6ClN+.", "M", "M dispari: un azoto; picco base."),
+        K(129, "C6H6ClN+.", "isotopo", "M+2 circa un terzo di M: un cloro.", 2),
+        K(92, "C6H6N+", "i", "M−35: perdita di Cl•."),
+        K(100, "C5H5Cl+.", "perdita", "M−27: perdita di HCN dall'anello."),
+        K(65, "C5H5+", "perdita", "92 − HCN.")]),
+    dict(id="cicloesanolo", it="cicloesanolo", en=["CYCLOHEXANOL"], f="C6H12O", fam="alcoli", lv=3, keys=[
+        K(100, "C6H12O+.", "M", "Lo ione molecolare è debole: gli alcoli ciclici si aprono con facilità."),
+        K(57, "C3H5O+", "alpha", "Scissione α con apertura dell'anello e seconda rottura: lo ione tipico degli alcoli ciclici (picco base)."),
+        K(82, "C6H10+.", "perdita", "M−18: perdita di acqua, ione a elettroni dispari."),
+        K(67, "C5H7+", "perdita", "82 − CH3.")]),
+    dict(id="acido-butanoico", it="acido butanoico", en=["BUTANOIC ACID", "BUTYRIC ACID", "N-BUTYRIC ACID"], f="C4H8O2", fam="acidi", lv=2, keys=[
+        K(88, "C4H8O2+.", "M", "Lo ione molecolare, debole."),
+        K(60, "C2H4O2+.", "mclafferty", "McLafferty degli acidi: m/z 60 (elettroni dispari), picco base."),
+        K(73, "C3H5O2+", "sigma", "M−15: rottura dell'estremità della catena."),
+        K(45, "CHO2+", "alpha", "COOH+.")]),
+    dict(id="o-xilene", it="o-xilene", en=["ORTHO XYLENE", "ORTHO-XYLENE", "O-XYLENE", "1,2-DIMETHYLBENZENE"], f="C8H10", fam="aromatici", lv=2, keys=[
+        K(106, "C8H10+.", "M", "Lo ione molecolare, intenso."),
+        K(91, "C7H7+", "tropilio", "M−15: perdita di un metile e tropilio (picco base)."),
+        K(105, "C8H9+", "perdita", "M−1: perdita di un H."),
+        K(65, "C5H5+", "perdita", "Il tropilio perde acetilene (91 − 26).")]),
     # ---------------------------------------------------------------- reference spectra only (isomers of the problems)
         dict(id="2-pentanone", it="2-pentanone", en=["2-PENTANONE", "METHYL PROPYL KETONE"], f="C5H10O", fam="carbonilici", lv=0, play=False, keys=[]),
     dict(id="3-esanone", it="3-esanone", en=["3-HEXANONE", "ETHYL PROPYL KETONE"], f="C6H12O", fam="carbonilici", lv=0, play=False, keys=[]),
     dict(id="esanale", it="esanale", en=["HEXANAL", "CAPROALDEHYDE", "HEXALDEHYDE"], f="C6H12O", fam="carbonilici", lv=0, play=False, keys=[]),
-    dict(id="cicloesanolo", it="cicloesanolo", en=["CYCLOHEXANOL"], f="C6H12O", fam="alcoli", lv=0, play=False, keys=[]),
-    dict(id="o-xilene", it="o-xilene", en=["ORTHO XYLENE", "ORTHO-XYLENE", "O-XYLENE", "1,2-DIMETHYLBENZENE"], f="C8H10", fam="aromatici", lv=0, play=False, keys=[]),
     dict(id="p-xilene", it="p-xilene", en=["PARA XYLENE", "PARA-XYLENE", "P-XYLENE", "1,4-DIMETHYLBENZENE"], f="C8H10", fam="aromatici", lv=0, play=False, keys=[]),
-    dict(id="acido-butanoico", it="acido butanoico", en=["BUTANOIC ACID", "BUTYRIC ACID", "N-BUTYRIC ACID"], f="C4H8O2", fam="acidi", lv=0, play=False, keys=[]),
     dict(id="propanoato-di-metile", it="propanoato di metile", en=["METHYL PROPANOATE", "METHYL PROPIONATE"], f="C4H8O2", fam="acidi", lv=0, play=False, keys=[]),
     dict(id="2-metil-1-propanolo", it="2-metil-1-propanolo", en=["2-METHYL-1-PROPANOL", "ISOBUTYL ALCOHOL", "ISOBUTANOL"], f="C4H10O", fam="alcoli", lv=0, play=False, keys=[]),
     dict(id="metil-propil-etere", it="metil propil etere", en=["METHYL PROPYL ETHER", "1-METHOXYPROPANE"], f="C4H10O", fam="eteri", lv=0, play=False, keys=[]),
 ]
+
+
+# Path of simple compounds for the Pratica, per level (1-5) and ordered by difficulty inside the level. The level is about WHAT the
+# student has to read in the spectrum: 1 molecular ion and isotopes, 2 simple cleavages, 3 rearrangements and ring/chain
+# differentiation, 4 aromatics and series, 5 complex diagnosis (several classes together). The ids are the ids of LIST: the
+# progress in localStorage qqq.pratica is keyed by the same ids, so entering the path changes nothing for existing users.
+PATH = {
+    1: ["butano", "pentano", "iodometano", "bromometano", "bromoetano", "1-bromopropano", "clorobenzene", "bromobenzene", "1-clorobutano"],
+    2: ["2-butanone", "3-pentanone", "3-metil-2-butanone", "butanale", "1-butanolo", "2-butanolo", "2-metil-2-butanolo", "3-metil-3-pentanolo",
+        "dietil-etere", "metil-butil-etere", "butilammina", "dietilammina", "sec-butilammina", "isobutilammina", "terz-butilammina", "trietilammina"],
+    3: ["4-metil-2-pentanone", "3-metil-2-pentanone", "2-esanone", "acido-butanoico", "acido-esanoico", "butanoato-di-etile", "esanoato-di-metile",
+        "benzoato-di-metile", "cicloesene", "cicloesanolo", "limonene", "alfa-ionone", "beta-ionone", "acetammide", "n-metilacetammide", "dimetilacetammide"],
+    4: ["toluene", "etilbenzene", "propilbenzene", "butilbenzene", "o-xilene", "naftalene", "anisolo", "benzaldeide", "acetofenone", "benzonitrile",
+        "nitrobenzene", "4-nitrotoluene", "butanenitrile", "dietilsolfuro", "1-butantiolo"],
+    5: ["esadecano", "pentadecano", "farnesano", "diacetone-alcol", "levulinato-di-metile", "acido-levulinico", "vanillina", "4-metossiacetofenone", "4-cloroanilina"],
+}
+# What the task asked for and what was used instead (reported by main(); a candidate without an EI-B record in MassBank is replaced by an
+# equivalent compound of the same class and the replacement is stated).
+SUBST = {
+    "1-bromobutano": ("1-bromopropano", "nessun record EI-B di 1-bromobutano: omologo con un carbonio in meno"),
+    "3-metil-3-esanolo": ("3-metil-3-pentanolo; 2-metil-2-butanolo", "nessun record EI-B: due alcoli terziari della stessa classe"),
+    "esanammide": ("N-metilacetammide", "nessuna ammide alifatica lunga in MassBank: ammide secondaria semplice"),
+    "1-nitropropano": ("4-nitrotoluene (nitrobenzene già presente)", "nessun nitroalcano EI-B oltre il nitrometano già presente"),
+    "2-metilpentadecano": ("2,6,10-trimetildodecano (farnesano); pentadecano", "nessun alcano monoramificato lungo: isoalcano ramificato di pari massa"),
+    "cloroottano": ("4-cloroanilina", "nessun cloroalcano lungo EI-B: composto con cloro e un'altra classe"),
+    "butirronitrile": ("butanenitrile (già presente)", "stesso composto"),
+}
+SKILL_OF_TYPE = {"alpha": "alpha", "i": "induttiva", "sigma": "sigma", "mclafferty": "mclafferty", "rda": "rda", "tropilio": "benzilica", "orto": "orto",
+                 "serie": "serie", "perdita": "perdita", "riarr": "riarr", "isotopo": "isotopi"}
+
+
+def skills_of(item, peaks) -> list:
+    """Skill tags derived from the (test-validated) keys and the formula: they are the vocabulary of the hints of the Pratica."""
+    f = canon(item["f"])
+    tags = {"M"}
+    tags |= {SKILL_OF_TYPE[k["type"]] for k in item["keys"] if k["type"] in SKILL_OF_TYPE}
+    if any(e in f for e in ("Cl", "Br", "S")):
+        tags.add("isotopi")
+    if "N" in f:
+        tags.add("azoto")
+    rdb = f.get("C", 0) - (f.get("H", 0) + f.get("Cl", 0) + f.get("Br", 0) + f.get("I", 0) + f.get("F", 0)) / 2 + f.get("N", 0) / 2 + 1
+    if rdb >= 4:
+        tags.add("rdb")
+    if not any(m == round(mass_of(item["f"])) and v >= MIN_REL for m, v in peaks):
+        tags.add("m-assente")
+    return sorted(tags)
 
 
 def fetch(url: str):
@@ -434,7 +639,7 @@ def records_for(item) -> list:
                     continue
             except Exception:
                 continue
-            if not r.get("license") or "TMS" in r.get("title", "") or "DERIVATIVE" in r.get("title", "").upper():
+            if r.get("license") not in OK_LICENSES or "TMS" in r.get("title", "") or "DERIVATIVE" in r.get("title", "").upper():
                 continue
             from mzlab.chem.elements import mass, parse_formula
             if max(p["mz"] for p in r["peak"]["peak"]["values"]) > round(mass(parse_formula(item["f"]))) + 12:
@@ -500,16 +705,39 @@ def build(item) -> dict | None:
         "id": item["id"], "name": item["it"], "name_en": item["en"][0].capitalize(), "formula": item["f"],
         "M": round(mass(parse_formula(item["f"]))), "smiles": r["compound"].get("smiles", ""), "inchikey": link.get("INCHIKEY", ""),
         "family": item["fam"], "level": item["lv"], "play": item.get("play", True), "keys": item["keys"], "iso": iso,
+        **PATHINFO.get(item["id"], {}),
         "peaks": [[m, round(v)] for m, v in sorted(s.items()) if v >= MIN_REL],
         "src": {"accession": r["accession"], "authors": ", ".join(a["name"].strip() for a in r.get("authors", []))[:160],
                 "license": r.get("license", ""), "instrument": r["acquisition"].get("instrument", ""),
                 "n_spectra": len(recs), "cos_mean": round(cos[best], 3)},
     }
+    out["skills"] = skills_of(item, out["peaks"])
     print(f"  {item['id']}: {len(recs)} spettri, scelto {r['accession']} (coseno medio {cos[best]:.2f}), {len(out['peaks'])} picchi, {r.get('license')}")
     return out
 
 
+def report(items) -> None:
+    """«trovato / non trovato / sostituito» for every compound of the path and every candidate that has no EI-B record."""
+    by = {i["id"]: i for i in items}
+    rows = ["| livello | composto | stato | accessione MassBank | licenza | spettri |", "|---|---|---|---|---|---|"]
+    for lv, ids in PATH.items():
+        for i in ids:
+            b = by.get(i)
+            rows.append(f"| {lv} | {i} | " + (f"trovato | {b['src']['accession']} | {b['src']['license']} | {b['src']['n_spectra']} |" if b else "NON TROVATO | – | – | 0 |"))
+    for want, (used, why) in SUBST.items():
+        rows.append(f"| – | {want} | sostituito con {used} | – | – | {why} |")
+    txt = "\n".join(rows)
+    (ROOT / ".verifica").mkdir(exist_ok=True)
+    (ROOT / ".verifica" / "rapporto_ei.md").write_text(txt + "\n", encoding="utf-8")
+    print(txt)
+
+
+PATHINFO = {i: {"path": lv, "order": k} for lv, ids in PATH.items() for k, i in enumerate(ids)}
+
+
 def main() -> None:
+    assert len(PATHINFO) == sum(len(v) for v in PATH.values()), "a compound is twice in PATH"
+    assert set(PATHINFO) <= {i["id"] for i in LIST}, sorted(set(PATHINFO) - {i["id"] for i in LIST})
     items = []
     for it in LIST:
         b = build(dict(it))
@@ -521,7 +749,8 @@ def main() -> None:
             "// authors, licence). The whole file is distributed under CC BY-NC-SA 4.0 (non-commercial teaching use), not under the MIT\n"
             "// licence of the program. The 'keys' (teaching notes) are by the mzLab authors, same licence.\n")
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(head + "const EI_DATA = " + json.dumps({"version": 1, "source": "MassBank Europe", "items": items}, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
+    OUT.write_text(head + "const EI_DATA = " + json.dumps({"version": 2, "source": "MassBank Europe", "items": items}, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
+    report(items)
     print(f"{len(items)} composti ({sum(i['play'] for i in items)} giocabili) -> {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} kB)")
 
 
