@@ -2300,6 +2300,7 @@ I18N.add("en", {
   "cmd.maphelp.kw": "help gestures shortcuts keys map",
   "cmd.mapxic.menu": "XIC",
   "cmd.mapspec.menu": "Spectrum",
+  "cmd.mapspec.menuAvg": "Average spectrum",
   "mapex.intro": "Shows the m/z × RT box that XIC and spectrum come from: drag it or resize it and see what changes.",
   "ctl.map.scale.gamma": "gamma",
   "ctl.map.colors": "Colors…",

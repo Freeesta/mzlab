@@ -208,7 +208,7 @@ export function open(p, opener) {
   try {
     PR = { surf: prog(gl, SURF_VS, SURF_FS), floor: prog(gl, FLOOR_VS, FLOOR_FS), stick: prog(gl, STICK_VS, STICK_FS), row: prog(gl, ROW_VS, ROW_FS), line: prog(gl, LINE_VS, LINE_FS) };
   } catch (e) { const d = diagnose(gl, { opts: cx.opts }); dlg.remove(); throw new Fail("shader", String(e && e.message || e), d); }
-  glc.addEventListener("webglcontextlost", e => { e.preventDefault(); V.lost = true; msg(T("m3d.err.lost")); console.warn("mzLab 3D: context lost", diagnose(gl, { opts: cx.opts })); });
+  glc.addEventListener("webglcontextlost", e => { e.preventDefault(); if (!alive) return; V.lost = true; msg(T("m3d.err.lost")); console.warn("mzLab 3D: context lost", diagnose(gl, { opts: cx.opts })); });
   const tex = {}; const vao = gl.createVertexArray();
   const mkTex = (id, w, h, fmt, type, data, filter) => {
     if (!tex[id]) tex[id] = gl.createTexture();

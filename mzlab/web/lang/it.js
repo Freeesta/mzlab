@@ -2300,6 +2300,7 @@ I18N.add("it", {
   "cmd.maphelp.kw": "aiuto gesti scorciatoie tasti mappa",
   "cmd.mapxic.menu": "XIC",
   "cmd.mapspec.menu": "Spettro",
+  "cmd.mapspec.menuAvg": "Spettro medio",
   "mapex.intro": "Mostra il riquadro m/z × RT da cui nascono XIC e spettro: trascinalo o ridimensionalo e guarda cosa cambia.",
   "ctl.map.scale.gamma": "gamma",
   "ctl.map.colors": "Colori…",

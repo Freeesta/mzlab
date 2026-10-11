@@ -588,7 +588,7 @@ window.MAPPA = (() => {
   function extract(ad, what) {
     const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
     if (what !== "spec") xicDirect(q.mz, ad.p);
-    if (what !== "xic") spectrumAt(ad.p, q.rt, ad.k);
+    if (what !== "xic") { const p = ad.p; if (ad.kind === "2d" && p.sel && p.sel[1] > p.sel[0]) newSpec(p, p.sel[0], p.sel[1], p._a.f.k); else spectrumAt(p, q.rt, ad.k); }
     if (ad.after) ad.after();
   }
   const CMDS = [
@@ -619,7 +619,7 @@ window.MAPPA = (() => {
       if (last && c.g !== last) items.push("-");
       last = c.g;
       const on = c.on ? c.on(ad) : null, dis = c.ok && !c.ok(ad);
-      const lab = c.short ? T(`cmd.${c.id}.menu`) : nameOf(c, ad);
+      const lab = c.id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : c.short ? T(`cmd.${c.id}.menu`) : nameOf(c, ad);       // with an RT stretch selected (Alt + drag) the spectrum is the average over it
       items.push({ label: lab, icon: SV(c.id === "maplock" && on ? ICO.unlock : ICO[c.ic]), aria: nameOf(c, ad), tip: T(`cmd.${c.id}.tip`), check: on, dim: dis, fn: () => runCmd(c.id, ad) });
     }
     return items;
