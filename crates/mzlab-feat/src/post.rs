@@ -136,7 +136,7 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
     }
     cols!(
         mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group, charge,
-        shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
+        shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win, family_id, role, alt
     );
     for &i in &idx {
         let r = &f[i as usize];
@@ -169,6 +169,9 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
         out.ms2_n.push(0);
         out.purity.push(-1.0);
         out.area_win.push(0.0);
+        out.family_id.push(0);
+        out.role.push(0);
+        out.alt.push(0);
     }
     Ok(out)
 }

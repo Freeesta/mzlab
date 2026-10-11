@@ -153,6 +153,76 @@ def un_file_identita(out: Path, golden: Path | None) -> int:
     return len(f)
 
 
+def un_file_famiglie(out: Path, golden: Path | None) -> int:
+    """`famiglie_coppie.json` and `famiglie_identita.json` (two windows of retention time of SIN_t10min, see tools/feat_famiglie.py)."""
+    import feat_famiglie as ff
+    from valida import sintetici_identita as si
+    d = out / "identita"
+    si.genera(7, "piccolo", d)
+    ix = out / "identita.mzidx"
+    run = Run(d / "SIN_t10min.mzML", index_path=ix)
+    mzidx.build(run, ix)
+    t = run.table(1, 1)
+    f = features.detect(t)
+    srt = np.asarray(f.scan_rt)
+    f.scan_lo, f.scan_hi = np.searchsorted(srt, f.left), np.searchsorted(srt, f.right)
+    area_win = area_finestra(t, f)
+    gid, ch, iso = isotopi_riferimento(f.mz, f.rt, area_win)
+    scans, pur = ms2_riferimento(run, t, f)
+    keep = [i for i in range(len(f)) if 0.9 <= f.rt[i] <= 1.15 or 3.1 <= f.rt[i] <= 3.7]
+    new = {g: k for k, g in enumerate(keep)}
+    rows = {"mz": [float(f.mz[i]) for i in keep], "rt": [float(np.float32(f.rt[i])) for i in keep], "apex": [int(f.apex[i]) for i in keep],
+            "fwhm": [(int(f.scan_hi[i]) - int(f.scan_lo[i]) + 1) / 2 for i in keep], "height": [float(np.float32(f.height[i])) for i in keep],
+            "isotope": [bool(iso[i]) for i in keep], "iso_group": [new.get(gid[i] - 1, -1) + 1 if gid[i] else 0 for i in keep],
+            "excluded": [bool(f.background[i] or f.artefact[i]) for i in keep], "dt": float(f.dt), "ms2_n": [len(scans[i]) for i in keep]}
+    spectra = {}
+    for k, i in enumerate(keep):
+        if scans[i]:
+            g = scans[i][int(np.argmax(pur[i]))]
+            m, y = run.read(g)
+            order = np.argsort(-y, kind="stable")[:40] if len(y) > 40 else np.arange(len(y))
+            order = np.sort(order)
+            spectra[k] = {"mz": m[order].tolist(), "it": y[order].tolist()}
+    traces = trazas(t, rows, ff, len(srt))
+    want = ff.riferimento_famiglie(rows, {k: v for k, v in traces.items()}, spectra)
+    doc = {"name": "famiglie_identita", "params": ff.PARAMS, "rows": rows, "traces": {str(k): v for k, v in traces.items()},
+           "spectra": {str(k): v for k, v in spectra.items()}, "want": want}
+    txt = json.dumps(doc, separators=(",", ":"))
+    pair = json.dumps(ff.coppie_json(), separators=(",", ":"))
+    (out / "famiglie_identita.json").write_text(txt, encoding="utf-8")
+    (out / "famiglie_coppie.json").write_text(pair, encoding="utf-8")
+    if golden is not None:
+        golden.mkdir(parents=True, exist_ok=True)
+        (golden / "famiglie_identita.json").write_text(txt, encoding="utf-8")
+        (golden / "famiglie_coppie.json").write_text(pair, encoding="utf-8")
+    run.close()
+    return len(keep)
+
+
+def trazas(t, rows: dict, ff, nscan: int) -> dict:
+    """Trace (first scan, values) of every row in a candidate pair, from the peak table (summed within 6 ppm), the window of `family/traces.rs`."""
+    n = len(rows["mz"])
+    ids = set()
+    for j in range(n):
+        for i in range(j):
+            if ff_candidate(rows, ff, i, j):
+                ids.update((i, j))
+    out = {}
+    for k in sorted(ids):
+        half = min(max(int(np.ceil(rows["fwhm"][k])) + 3, 5), 40)
+        w0, w1 = max(rows["apex"][k] - half, 0), min(rows["apex"][k] + half, nscan - 1)
+        y = t.xic(rows["mz"][k], rows["mz"][k] * ff.PARAMS["trace_ppm"] * 1e-6)
+        out[k] = [w0, [float(v) for v in y[w0:w1 + 1]]]
+    return out
+
+
+def ff_candidate(rows: dict, ff, i: int, j: int) -> bool:
+    """Is (i, j) worth a trace: not an isotopologue or lobe, co-eluting by the loose gate (the reference applies the exact one)."""
+    if rows["excluded"][i] or rows["excluded"][j] or rows["isotope"][i] or rows["isotope"][j]:
+        return False
+    return abs(rows["rt"][i] - rows["rt"][j]) <= 0.3
+
+
 def piani() -> dict[str, tuple[int, list[tuple], float]]:
     """name -> (seed, ions (m/z, RT, sigma, amplitude), RT end)."""
     rng = np.random.default_rng(11)
@@ -195,6 +265,9 @@ def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
     golden = AQUI.parent / "tests" / "golden" / "feat" if "--golden" in argv else None
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "famiglie":
+        print("famiglie", un_file_famiglie(out, golden))
+        return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
         print("identita", un_file_identita(out, golden))
         return 0
