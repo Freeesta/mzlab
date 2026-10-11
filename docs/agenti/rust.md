@@ -53,7 +53,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 | GET `chrom` (`kind=pda`, MRM, `ref=`) | cromatogrammi dell'mzML; altro cromatogramma | Python (Rust: `mzml.rs` ha già i cromatogrammi) |
 | GET `xic` | indice: finestra di picchi per m/z | **Rust** (con `ref=` Python) |
 | GET `filters`, `scanlist`, `nearest_scan` | tabella delle scansioni e array per scansione dell'indice | **Rust** |
-| GET `scaninfo` | intestazione della scansione dall'mzML (`start`..`end`, prima di `<binaryDataArrayList`) | Python; Rust: fetta dell'mzML |
+| GET `scaninfo` | intestazione della scansione dall'mzML (`start`..`end`, prima di `<binaryDataArrayList`) | **Rust** (`scaninfo.rs`: riga dell'indice + fetta dell'mzML letta dal Blob; `Engine.scaninfo`, operazione `scaninfo` del worker; errori e MRM a Python) |
 | GET `fileinfo` | testa dell'mzML (strumento, software, file sorgente) e primo/ultimo m/z dell'indice | Python; Rust: testa dell'mzML + indice |
 | GET `spectrum`, `spectra`, `scanbin` | fette dell'mzML per le scansioni della finestra, binning, picchi di un profilo, tolleranze HR da `mass_profile` | `spectra` Rust per i file a risoluzione unitaria con soli centroidi (decodifica la fetta di tutto l'mzML aperto), il resto Python; da portare: decodifica della fetta, `mass_profile`, `profile_peaks` |
 | GET `dda`, `scan`, `scanavg` | fette e tabella delle scansioni (HR) | Python (mondo HR) |

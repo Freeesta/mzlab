@@ -101,6 +101,7 @@ fn rust_routes_match_python() {
         let idx = Index::open(std::fs::File::open(&idx_path).unwrap(), size)
             .unwrap_or_else(|e| panic!("{stem}: {e}"));
         let mut routes = Routes::new(idx);
+        let mut mzml = std::fs::File::open(line).unwrap();
         let rows: Vec<Value> =
             serde_json::from_slice(&std::fs::read(out.join(format!("{stem}.rotte.json"))).unwrap())
                 .unwrap();
@@ -113,7 +114,10 @@ fn rust_routes_match_python() {
                 .map(|(k, v)| format!("{k}={}", enc(v.as_str().unwrap())))
                 .collect::<Vec<_>>()
                 .join("&");
-            let got = if path == "/api/xic" {
+            let got = if path == "/api/scaninfo" {
+                let sid = q["sid"].as_str().unwrap().parse().unwrap();
+                Some(routes.scaninfo(sid, &mut mzml).unwrap_or_else(|e| panic!("{what}: {e}")))
+            } else if path == "/api/xic" {
                 let f = |k: &str| q[k].as_str().unwrap().parse::<f64>().unwrap();
                 Some(routes.xic(f("mz"), f("tol"), f("level") as u8).unwrap())
             } else {
