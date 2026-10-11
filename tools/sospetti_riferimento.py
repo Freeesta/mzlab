@@ -9,9 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT / "tests"))
 import genera_sospetti as gs  # noqa: E402
-from test_sospetti import make_sources  # noqa: E402
+from sospetti_prova import make_sources  # noqa: E402
 
 
 def main(out: Path) -> None:
