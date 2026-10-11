@@ -12,7 +12,7 @@ def step(name, fn):
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:300])); errs.append(name)
 
 LIST = """async (kind) => { const out = []; try { const r = await navigator.storage.getDirectory(); const d = await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle(kind);
-  for await (const [n, h] of d.entries()) out.push([n, (await h.getFile()).size]); } catch (e) {} return out; }"""
+  for await (const [n, h] of d.entries()) { if (n.endsWith('.part')) continue; try { out.push([n, (await h.getFile()).size]); } catch (e) { /* being written */ } } } catch (e) {} return out; }"""
 IDBCOUNT = """() => new Promise(res => { const r = indexedDB.open('qqq_lab'); r.onsuccess = () => { const db = r.result;
   if (!db.objectStoreNames.contains('files')) return res(-1); const q = db.transaction('files').objectStore('files').count(); q.onsuccess = () => { db.close(); res(q.result); }; }; r.onerror = () => res(-2); })"""
 NOTEBOOK = """() => new Promise(res => { const r = indexedDB.open('qqq_lab'); r.onsuccess = () => { const db = r.result; const q = db.transaction('kv').objectStore('kv').get('notebook');
