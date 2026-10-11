@@ -310,10 +310,6 @@ html.lbon{overflow:hidden}
 /* a grey fixed in the dynamic tables of modi.js (shared with the program): readable on the dark background too */
 :root[data-theme=dark] [style*="#687080"]{color:var(--muted)!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) [style*="#687080"]{color:var(--muted)!important}}
-/* standalone Teoria: link back to the program */
-#top a.btn#goapp{font-size:14px;white-space:nowrap}
-@media (max-width:480px){#top .t small{display:none}#top{flex-wrap:wrap}}
-
 /* between chapters: View Transitions across documents (Chrome/Edge/Safari; elsewhere ignored). Header and index stay still, the page content fades in
    (the old page stays underneath, so there is no dip). No flash: <html> already has the theme background in both documents (tema_testa.py). */
 @view-transition{navigation:auto}
@@ -331,3 +327,10 @@ html.vt-no main{animation:vt-fade 120ms ease-out}
 @media (prefers-reduced-motion:reduce){@view-transition{navigation:none}html.vt-no main{animation:none}}
 :root[data-a11y-reduce]::view-transition-group(*),:root[data-a11y-reduce]::view-transition-old(*),:root[data-a11y-reduce]::view-transition-new(*){animation:none!important}
 :root[data-a11y-reduce].vt-no main{animation:none!important}
+/* standalone Teoria: the tabs of the program (Dati · Disegno · Teoria), same look as #nav of the program, never hidden; the title gives way first */
+#tabs{display:flex;gap:2px}
+#tabs a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap}
+#tabs a:hover{color:var(--ink)}#tabs a.on{color:var(--ink);border-bottom-color:var(--accent)}
+#tabs a:focus-visible,#top #logo:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+#top #logo{display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center}
+@media (max-width:640px){#top .t{display:none}#top{gap:6px;padding:4px 10px}#tabs a{padding:0 9px}}
