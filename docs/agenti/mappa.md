@@ -34,7 +34,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `appname.js` (10) The visible name of the program: the ONLY place where it is written (chosen 7/10/2026; package and i
 - `archivio.js` (87) Archive of the browser version: the files the student opened and their .mzidx indexes live in OPFS (
 - `banco.js` (486) Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Cl — BANCO:8, subXic:127, decorate:175, tIso:358, bar:455
-- `barra.js` (1040) Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR. — BARRA:11, QI:53, bindSideDrag:751, bindGlobalEvents:821, init:958
+- `barra.js` (1053) Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR. — BARRA:11, QI:53, bindSideDrag:764, bindGlobalEvents:834, init:971
 - `bianco.js` (76) Blank subtraction of the feature table (high resolution only; «Statistica» panel): threshold = blank — BIANCO:6
 - `browser-worker.js` (341) Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab pa — start:118, buildFor:238, python:241, answer:272
 - `browser.js` (174) Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are — json:124
@@ -109,6 +109,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `touch.js` (180) Touch and pen (iPad + Apple Pencil, Android tablets). Classic script, loaded after explore.js, scrol — TOUCH:14, engine:34
 - `tour.js` (719) Guided tour of the Dati view (low-resolution only). — computePosition:5, TOUR:47, ensureStyles:168, renderStep:377, onKeyDown:505
 - `tpmine-loader.js` (132) Loader of mzFinder (internal name "TP Mine"): the tools that give answers, only for the course owner
+- `transizioni.js` (75) Smooth layout changes without redrawing the plots on every frame: FLIP with transform only (Web Anim
 - `version.js` (5) Program version and git commit hash (updated during build_site.py).
 - `visualizza.js` (107) «Opzioni di visualizzazione» of the high-resolution world: right click on a chromatogram or a spectr — DISP:8
 - `workflow.js` (393) Reproducibility (.mzflow) and MGF / MSP spectral export. — WORKFLOW:14, buildWorkflow:40, applyWorkflow:147, exportQueriesMsp:355
@@ -289,7 +290,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `tema_testa.py` (57) The theme snippet that opens the <head> of every page of the site (app and Teoria): inline, synchron
 - `upload_riferimento.py` (35) Reference answers of mzidx.builder_inputs (the scan-table arrays, `source` and `run` of the metadata
 - `validate_ionfamily.py` (133) Validation of mzlab.ionfamily on the real flufenacet series (B_FullMass-t*.mzML), with the best trut — main:41
-- `verifica.py` (446) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:333, main:374
+- `verifica.py` (447) One command that checks the whole program and prints a SHORT summary (made to save the reader's time — e2e:334, main:375
 
 ## mzFinder (`TP_Mine/`)
 - `TP_Mine/files/` — 1 file, 41 righe: tpmine-worker
@@ -300,4 +301,4 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 
 ## Test (`tests/`, `tests_e2e/`)
 - `tests/` — 80 file, 8047 righe: conftest, node_i18n, test_adducts, test_analog, test_anteprima, test_browser_index, test_calcola, test_campioni, test_composition, test_contaminanti, test_contaminanti_privato, test_contaminants_en, test_controlla_teoria, test_conversione, test_converti, test_cromato, test_differenza, test_ei_dati, test_esempi_anonimi, test_esercizi_lcms, test_explore_parts, test_fair, test_filebuf, test_filtri, test_formula_case, test_golden, test_hr_identificazione, test_hr_reader, test_hr_spectra, test_hr_synth, test_i18n, test_idxpool, test_indice_teoria, test_ionfamily, test_isoscore, test_libreria, test_libreria_cartella, test_libreria_scarica, test_librerie_pacchetti, test_librerie_rust, test_liste, test_livelli, test_lr_version, test_manifest_sito, test_map_extent, test_map_features, test_mappa, test_metodo_incoerente, test_metodo_nome, test_molui, test_msn_reader, test_msntree, test_mzidx, test_nuovo_capitolo, test_ordine, test_peaks, test_perdite, test_pipeline, test_pratica, test_profile …
-- `tests_e2e/` — 164 file, 15567 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
+- `tests_e2e/` — 165 file, 15653 righe: e2e10, e2e12, e2e13, e2e14, e2e15, e2e16, e2e17, e2e18, e2e19, e2e20, e2e21, e2e22, e2e23, e2e24, e2e25, e2e26, e2e27, e2e28, e2e3, e2e4, e2e5, e2e6, e2e7, e2e8, e2e9, e2e_accessibilita, e2e_asse_x, e2e_assi, e2e_avvio, e2e_axe_grafici, e2e_banco_barra, e2e_banco_celle, e2e_banco_info, e2e_barra, e2e_barra_hint, e2e_blocco1, e2e_blocco2, e2e_blocco3, e2e_calc, e2e_cassetto, e2e_contaminanti, e2e_conversione, e2e_converti, e2e_cromato, e2e_cursore, e2e_dam_incoerente, e2e_decimali, e2e_differenza_hr, e2e_esempi, e2e_fair, e2e_fisso, e2e_gradiente, e2e_header, e2e_hr_base, e2e_hr_composizione, e2e_hr_dda, e2e_hr_dda2, e2e_hr_display, e2e_hr_formule, e2e_hr_identificazione …
