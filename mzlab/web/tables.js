@@ -108,7 +108,7 @@
     return `<div class="ad-diffs"><h4>${I18N.t("tbl.diff.title")}</h4>
       <div class="muted sm">${I18N.t("tbl.diff.intro")}</div>
       <table class="adt"><tbody>${rows}</tbody></table>
-      <div class="muted ad-src">${I18N.t("tbl.diff.src")}</div></div>`;
+      <div class="muted ad-src">${I18N.t("tbl.diff.src")} <a href="static/teoria/06-esi.html#addotti-differenze" target="_blank" rel="noopener" aria-label="${I18N.t("tbl.diff.full.aria")}">${I18N.t("tbl.diff.full")}</a></div></div>`;
   }
 
   // One table: a thin group header per polarity; every adduct = one data row + one note row (colspan) under it
