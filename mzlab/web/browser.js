@@ -85,7 +85,7 @@
         .catch(e => { console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
   window.MZLAB_RUST_READY = rustReady;                                       // the page waits for it to decide whether a Thermo .raw can be read
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|filters|scanlist|nearest_scan)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });

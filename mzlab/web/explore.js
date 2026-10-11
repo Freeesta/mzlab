@@ -208,6 +208,7 @@ function uiSave(now = false) {
     NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null, rep: f.rep || undefined }));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
+      ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
@@ -215,7 +216,7 @@ function uiSave(now = false) {
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
         dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, norm: p.norm, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -240,7 +241,7 @@ const FT = ft => ft ? `&filt=${encodeURIComponent(ft)}` : "";
 const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt)));
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");     // + "&hr=0" when high resolution is switched off (hr.js)
-const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "") + MERGE()));
+const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
 const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
 // polarity of the files (read from the mzML): a small sign next to the name, the default adduct of a graph follows ITS files
@@ -297,6 +298,7 @@ async function bootSession0() {
   const idx = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (E.panels.length && oldNames.length) {                // caricamento successivo: i pannelli restano
     E.panels.forEach(p => { if (p.k != null) p.k = idx(oldNames[p.k]); if (p.ref !== "" && p.ref != null) p.ref = idx(oldNames[+p.ref]); });
+    if (S.ref.k !== "auto") S.ref.k = idx(oldNames[S.ref.k]);
     E.cur = Math.min(E.cur, E.files.length - 1);
     renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
@@ -340,6 +342,7 @@ function restoreUi() {
   u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; E.tab = pickTab(u.tab);
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
+  if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
   const made = u.panels.map(sp => addPanel(sp.type, {
     ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" ? "w" : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
   }));
@@ -408,6 +411,7 @@ function reorderFiles(fromK, toK, isBefore) {
   });
 
   if (oldKToNewK.has(E.cur)) E.cur = oldKToNewK.get(E.cur);
+  if (S.ref.k !== "auto") S.ref.k = oldKToNewK.has(S.ref.k) ? oldKToNewK.get(S.ref.k) : "auto";
   if (E.curBy) {
     for (const t in E.curBy) {
       if (oldKToNewK.has(E.curBy[t])) E.curBy[t] = oldKToNewK.get(E.curBy[t]);
@@ -819,7 +823,10 @@ function plotSheets(p) {
   if (p.r0 != null && p.r1 != null) metaRows.push([{ v: I18N.t("export.meta.rtRange"), b: true }, `${p.r0.toFixed(2)} - ${p.r1.toFixed(2)}`]);
   if (a.x0 != null && a.x1 != null) metaRows.push([{ v: I18N.t("export.meta.axis"), b: true }, `${a.x0.toFixed(2)} - ${a.x1.toFixed(2)}`]);
   if (p.ibk) metaRows.push([{ v: I18N.t("export.meta.ibk"), b: true }, ibkText(p.ibk)]);
+  const subT = window.SUBREF ? SUBREF.text(p) : "";
+  if (subT) metaRows.push([{ v: I18N.t("export.meta.sub"), b: true }, subT]);
   out.push({ name: I18N.t("export.sheet.meta"), rows: metaRows, widths: [24, 60] });
+  if (subT) out.push({ name: I18N.t("export.sheet.notes"), rows: [[{ v: I18N.t("export.meta.sub"), b: true }, subT], [I18N.t("export.note.sub")]], widths: [28, 60] });
   if (p.ibk) out.push({ name: I18N.t("export.sheet.notes"), rows: [[{ v: I18N.t("export.meta.ibkApplied"), b: true }, ibkText(p.ibk)], [I18N.t("export.note.ibk")]], widths: [28, 60] });
   return out;
 }

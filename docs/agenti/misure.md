@@ -134,6 +134,18 @@ Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (
 
 Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
 
+## Rust legge l'indice (`python3 tools/bench.py --files 6 --json`, Chromium cloud con WASM, 6 Full Scan sintetici, un giro, commit di partenza e commit del lavoro)
+Prima = `?motore=rust` con il motore che apre l'mzML per TIC e XIC; dopo = lo stesso motore che risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni, scansione più vicina) e apre l'mzML solo per le scansioni singole.
+
+| misura | prima (Rust) | dopo (Rust) | Python (stesso giro, dopo) |
+|---|---|---|---|
+| avvio (pagina + motore), s | 5.41 | 5.38 | 4.37 |
+| apertura dei file fino al primo TIC, s | 2.13 | 2.27 | 2.24 |
+| TIC + 5 XIC di ogni file, s | 0.14 | 0.11 | 0.35 |
+| RSS del browser, MB | 1095 | 1033 | 1073 |
+
+Letture: con sei file da pochi MB la seconda lettura dell'mzML costava poco e la differenza di apertura sta dentro il rumore di un solo giro (il guadagno cresce con la dimensione dei file); l'avvio non cambia perché Pyodide sta ancora davanti al primo TIC. Rimane da misurare su file grandi e su Mac/CI.
+
 ## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
 Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
 

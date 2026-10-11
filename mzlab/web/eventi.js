@@ -159,6 +159,10 @@ function attach(p) {
   // Ctrl/Cmd + rotella (o pizzico sul trackpad): zoom attorno al cursore. La rotella da sola continua a far scorrere la pagina.
   cv.addEventListener("wheel", e => {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
+    if (!(e.ctrlKey || e.metaKey) && p._a && p.zoom && p.type !== "map" && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {      // trackpad: two fingers sideways pan the zoomed x axis (vertical scroll still moves the page)
+      e.preventDefault(); const a = p._a, span = a.x1 - a.x0, dx = e.deltaX / (a.W - M.l - M.r) * span;
+      p.zoom = clampView(a.x0 + dx, a.x1 + dx, a.full[0], a.full[1]); drawSoon(p); return;
+    }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
     e.preventDefault();
     const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));

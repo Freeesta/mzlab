@@ -4,7 +4,13 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 use js_sys::{Function, Uint8Array};
+<<<<<<< HEAD
 use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
+=======
+use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::routes::{Query, Routes};
+use mzlab_core::{analysis, mzidx, mzml, raw};
+>>>>>>> origin/main
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
@@ -153,6 +159,33 @@ fn r4(v: f64) -> f64 {
 #[derive(Default)]
 pub struct Engine {
     runs: HashMap<u32, mzml::Run>,
+    /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
+    idx: HashMap<u32, Routes<JsReader>>,
+}
+
+/// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
+struct JsReader {
+    read: Function,
+}
+
+impl ReadAt for JsReader {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let bad = || mzlab_core::Error::new("error.badIndex");
+        let v = self
+            .read
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| bad())?;
+        let a: Uint8Array = v.dyn_into().map_err(|_| bad())?;
+        if a.length() as usize != buf.len() {
+            return Err(bad());
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
 }
 
 #[wasm_bindgen]
@@ -191,10 +224,48 @@ impl Engine {
 
     pub fn close(&mut self, slot: u32) {
         self.runs.remove(&slot);
+        self.idx.remove(&slot);
     }
 
     pub fn close_all(&mut self) {
         self.runs.clear();
+        self.idx.clear();
+    }
+
+    /// Opens the `.mzidx` of a file (`size` bytes, read through `read(offset, length)`). Returns `{"scans": n, "hr1": bool}`.
+    pub fn open_index(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
+        self.idx.remove(&slot);
+        let idx = Index::open(JsReader { read }, size as u64).map_err(|e| error_json(&e))?;
+        let out = format!("{{\"scans\":{},\"hr1\":{}}}", idx.scans.len(), idx.hr1());
+        self.idx.insert(slot, Routes::new(idx));
+        Ok(out)
+    }
+
+    /// The answer of an `api/...` route that only needs the index, as JSON text; an empty string = not answered here (Python's).
+    pub fn route(&mut self, slot: u32, path: &str, query: &str) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Ok(String::new());
+        };
+        r.handle(path, &Query::parse(query))
+            .map(|a| a.unwrap_or_default())
+            .map_err(|e| error_json(&e))
+    }
+
+    /// `{"rt": [...], "y": [...]}` of the XIC of one level from the index.
+    pub fn index_xic(
+        &mut self,
+        slot: u32,
+        level: u8,
+        mz: f64,
+        tol: f64,
+    ) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Ok(String::new());
+        };
+        if !r.has_scans() {
+            return Ok(String::new());
+        }
+        r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
     /// Converts a Thermo `.raw` of `size` bytes (read through `read(offset, length)`) to mzML, sent to `sink(Uint8Array)` piece by piece.
