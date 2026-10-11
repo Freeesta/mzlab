@@ -320,7 +320,7 @@ async function drawSpec(p, snapped) {
   else if (p.r0 == null) return say(I18N.t("spec.pickRange"));
   const sref = window.SUBREF ? SUBREF.eff(p) : null;          // the reference of the session (or the file chosen in «fondo»): same window of time, factor of the session
   const bgOf = f => p.bg === "w" ? (p.bw0 != null && p.bw1 != null && p.bw1 > p.bw0 ? [f.k, p.bw0, p.bw1] : null)
-    : (sref && sref.k !== f.k ? [sref.k, p.r0, p.r1, sref.factor, 1] : null);
+    : (sref && sref.k !== f.k ? [sref.k, p.r0, p.r1, sref.factor, sref.clip ? 1 : 0] : null);
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
   const one = !isDda && files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
@@ -338,7 +338,7 @@ async function drawSpec(p, snapped) {
       reqs.push({ f, prec: p.prec, multi: false });
     }
   });
-  const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel ? relScale(d) : d }))));
+  const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel && !d.diff ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   if (p.iso && p.iso.only && hrp && window.QQQRef) data.forEach(x => { try { x.d = HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } });      // «Sostituisci»: the simulation takes the place of the spectrum
   p._nCont = 0;
@@ -360,6 +360,7 @@ async function drawSpec(p, snapped) {
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
   const { g, W, H: HF } = setup(p.cv);
   const H = HF;
+  const isDiff = data.some(x => x.d.diff), relY = rel && !isDiff;            // a difference from the reference: bars up (higher in the sample) and down (higher in the reference)
   const lineOf = x => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)
   const inRange = (lo, hi) => Math.max(1e-9, ...data.flatMap(x => { let m = 0; const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y]; y.forEach((v, i) => { if (mz[i] >= lo && mz[i] <= hi && v > m) m = v; }); return [m]; }));
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
@@ -370,13 +371,26 @@ async function drawSpec(p, snapped) {
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
   const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;
-  let ymin = 0;
+  let ymin = 0, negMax = 0;
+  if (isDiff) { data.forEach(x => x.d.y.forEach((v, i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }
+  const yfull0 = ymin;
   if (p.zoomY) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }   // zoom of the intensity axis (drag on the numbers at the left of the axis, or box)
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? I18N.t("axis.relPct") : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: relY ? I18N.t("axis.relPct") : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
-  p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [0, yfull], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
+  p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [yfull0, yfull], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
   p._a.hrp = hrp; p._a.dec = DECP;
+  if (isDiff) {                                            // the words of the sign on the plot (never only the colour)
+    g.save(); g.font = fpx(12, "bold "); g.textAlign = "left";
+    g.fillStyle = css("--diff-pos"); g.fillText("▲ " + I18N.t("spec.diff.upAxis"), M.l + 8, M.t + 14);
+    if (ymin < 0) { g.fillStyle = css("--diff-neg"); g.fillText("▼ " + I18N.t("spec.diff.downAxis"), M.l + 8, H - M.b - 8); }
+    g.restore();
+  }
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
+    if (isDiff) {                                          // a difference: the nearest line, up or down, as it is
+      let b = null;
+      data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] === 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; }));
+      return b && { m: b.m, y: b.y, y0: b.y, f: b.f, multi: b.multi, prec: b.prec };
+    }
     if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
       let b = null;
       data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; }));
@@ -397,7 +411,7 @@ async function drawSpec(p, snapped) {
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
-    return { px: X(b.m), html: I18N.t("tip.peak", { mz: b.m.toFixed(hrp ? DECP : 2), y: rel ? b.y.toFixed(1) + " %" : fmt(b.y), abs: rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : "" }) + `${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (${I18N.t("ctl.prec.one", { v: b.prec })})` : ""}</div>` : ""}${rf}${cont ? cont.tip(b.m) : ""}` };
+    return { px: X(b.m), html: I18N.t("tip.peak", { mz: b.m.toFixed(hrp ? DECP : 2), y: relY ? b.y.toFixed(1) + " %" : isDiff ? (b.y < 0 ? "−" : "+") + fmt(Math.abs(b.y)) + " " + I18N.t(b.y < 0 ? "spec.diff.down" : "spec.diff.up") : fmt(b.y), abs: rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : "" }) + `${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (${I18N.t("ctl.prec.one", { v: b.prec })})` : ""}</div>` : ""}${rf}${cont ? cont.tip(b.m) : ""}` };
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
@@ -416,6 +430,9 @@ async function drawSpec(p, snapped) {
       flush(curX);
       g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = color; g.fill(); g.restore(); }
       g.beginPath();
+    } else if (x.d.diff) {                                             // difference: orange up (higher in the sample), blue down (higher in the reference)
+      [[1, css("--diff-pos")], [-1, css("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke(); });
+      g.strokeStyle = css("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
     } else { const hid = cont ? hidOf(x) : null, dim = []; x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; if (hid && hid(j)) { dim.push(j); return; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
       if (dim.length) { g.save(); g.strokeStyle = css("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
@@ -423,16 +440,16 @@ async function drawSpec(p, snapped) {
   });
   g.restore();
   const d0 = data[0].d, pk = [];
-  const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
+  const top0 = Math.max(...d0.y.map(Math.abs), 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
   const hid0 = cont ? hidOf(data[0]) : null;
-  d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); });
-  pk.sort((a, b) => b[1] - a[1]); const used = [];
+  d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); });
+  pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find(z => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
-    g.fillText(t, px, Y(y) - 4 - up);
+    g.fillText(t, px, y < 0 ? Y(y) + 15 : Y(y) - 4 - up);
     if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = css("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
-    lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
+    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
