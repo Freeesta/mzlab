@@ -48,7 +48,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `draw.js` (756) "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed. — start:13, hideMacro:63, showInfo1:335, ketWithLabels:485, exportOffset:524
 - `elementare.js` (153) «Composizione elementare» in the style of Xcalibur: the compact panel of the drawer (Formule ▾ → Com — ELEM:6, panel:89
 - `eventi.js` (662) Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split f — attach:3, axisHint:91, ctxFor:287, inLbl:290, calcRun:585
-- `explore.js` (837) (explore) — isDark:34, bootSession0:274, renderFileList:443, gh:476, menu:753
+- `explore.js` (852) (explore) — isDark:34, bindFileReorder:497, renderFileList:563, gh:596, menu:768
 - `fair.js` (179) Open data: files for MassBank (record, text format 2.x) and SIRIUS 6 (.ms) from ONE high-resolution  — FAIR:6, openDialog:125
 - `features.js` (19) Central switches of dormant features: the code stays, the interface does not show it. A switch is tu
 - `gradiente.js` (225) LC gradient (%B) of a file: read from the .dam by the server, or typed / pasted / imported by the st — bind:59
@@ -65,13 +65,13 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `libreria-scarica.js` (87) Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page  — SCARICA:8, downloadPackage:47
 - `libreria-worker.js` (673) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, indexCmd:635
 - `libreria.js` (570) Part D: compare a MS2 spectrum with the spectral libraries (MSP, MGF) the user has loaded. Classic s — LIB:5, mirror:249, searchFrom:333, whatIs:403, identifyAll:511
-- `liste.js` (813) Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists — LISTE:6, csvParse:142, userList:207, mount:528, open:755
+- `liste.js` (818) Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists — LISTE:6, userList:207, panelHtml:529, mount:584, open:760
 - `livelli-1.js` (105) Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of 
 - `livelli.js` (107) The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by  — LIVELLI:6, assess:58
 - `lr.js` (178) The flow of the low-resolution files WITHOUT Pyodide (opt-in: ?lr=1 or localStorage qqq.lr = "1", wi — createLr:21, fresh:136
 - `mappa-estrai.js` (263) «How an XIC and a spectrum are extracted» on the RT x m/z map (module, loaded the first time the vie — found:220
 - `mappa.js` (866) RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, full s — key:361, tableNow:489, touchInit:731
-- `mappa3d.js` (637) RT x m/z map in 3D: a full-screen viewer (modal dialog) written by hand in WebGL2, no libraries. Ope — b64f:28, prog:91, open:143, frame:356, overlay:405
+- `mappa3d.js` (644) RT x m/z map in 3D: a full-screen viewer (modal dialog) written by hand in WebGL2, no libraries. Ope — b64f:28, prog:91, open:195, frame:373, overlay:422
 - `mirino.js` (70) Sight of the RT x m/z map, the parts that do not touch the page (classic script, loaded before mappa
 - `modi.js` (45) The three acquisition modes explained once (used by the "?" next to each Dati tab and by the Teoria  — QMODI:5
 - `molui.js` (104) Shared chemistry presentation helpers: formula composition (order-free comparison, Hill order), them
