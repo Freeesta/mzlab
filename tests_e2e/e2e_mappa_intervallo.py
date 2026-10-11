@@ -23,8 +23,8 @@ def write(path, t0, t1):
 D = HERE / "shots" / "intervallo_tmp"; D.mkdir(parents=True, exist_ok=True)
 write(D / "late-t0.mzML", 0.5, 20.0); write(D / "zero-t0.mzML", 0.0, 20.0)
 r = Run(port=8901, wd="/tmp/wd_intervallo")
-def opened(pg, f, hr=False):
-    pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+def opened(pg, f, hr=False, run=None):
+    pg.goto(f"http://127.0.0.1:{(run or r).port}/"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [str(f)]); pg.wait_for_timeout(800); pg.click("#opbtn"); ready(pg)
     if hr: pg.wait_for_timeout(1500); pg.evaluate("document.querySelector('.fl')?.click()"); ready(pg); pg.wait_for_timeout(800)
     pg.evaluate("reveal(addPanel('map',{k:E.files[0].k}))"); ready(pg); pg.wait_for_timeout(800)
@@ -71,18 +71,18 @@ try:
             assert rt and 0.3 < rt[0] <= 0.55 and 19.9 <= rt[1] < 20.4, rt                      # the 3D viewer opens on the same part
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
         step("3D map opens on the same RT range", d3)
-        pg2 = page(); opened(pg2, D / "zero-t0.mzML")
+        r2 = Run(port=8902, wd="/tmp/wd_intervallo2"); pg2 = page(); opened(pg2, D / "zero-t0.mzML", run=r2)
         def zero():
             v = view(pg2); assert abs(v["x"][0]) < 1e-9 and 19.9 < v["x"][1] <= 21.01, v        # data from 0: the view starts at 0 as today
         step("data from 0 min: the view starts at 0", zero)
         pg3 = page(); r_hr = synth("intervallo"); hr = hr_variants(r_hr / "HR_DDA-Exploris-t30.mzML", r_hr)[0]
-        opened(pg3, hr, True)
+        r3 = Run(port=8903, wd="/tmp/wd_intervallo3"); opened(pg3, hr, True, run=r3)
         def hrcase():
             v = view(pg3); g = v["g"]
             assert g["rt"][0] <= v["x"][0] and v["x"][1] <= g["rt"][1] + 1e-9 and v["x"][0] < v["x"][1], v
             assert v["full"] == v["x"] and v["fy"] == v["y"] and v["y"][0] >= g["mz"][0] - 1e-9 and v["y"][1] <= g["mz"][1] + 1e-9, v
         step("HR: the view is inside the grid and equals the limits of the data", hrcase)
-        b.close()
+        b.close(); r2.close(); r3.close()
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
