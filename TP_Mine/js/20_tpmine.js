@@ -166,6 +166,7 @@
   <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
+ <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
@@ -361,6 +362,7 @@
 
     // ---- run
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
+    $("#tp-unt").onclick = () => { if (window.UNTUI) window.UNTUI.open(); };
     $("#tp-go").onclick = async () => {
       const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");

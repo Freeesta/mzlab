@@ -58,3 +58,6 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 | sint_1000000.msp | native | 1000000 | 510.5 | 568.0 | 30.2 | 50 |
 | massbank_eu_qft_pos.msp | native | 17002 | 16.5 | 8.4 | 0.5 | 9 |
 | sint_1gb.mgf | native | 2310000 | 1037.2 | 1314.1 | 74.4 | 110 |
+
+## Match di tabelle di feature (`UNT_BENCH=1 python3 tests_e2e/e2e_untarget.py`, Chromium Linux, motore WebAssembly, 2026-10-11)
+5000 feature con MS2 (12 picchi) cercate in una libreria sintetica di 20 000 voci, polarità positiva, 10 ppm sul precursore: lettura della tabella e dell'MGF 0,1 s, ricerca e livelli 0,7 s (soglia 15 s, un solo giro). Con una libreria di 10^6 voci il costo è quello di «Identifica tutte le MS2» sopra (5000 richieste in circa 20 s). La lettura di un `merged_pos.csv` vero da 58 MB (249 colonne) non è misurata qui: si fa solo con `MZLAB_UNTARGET`.
