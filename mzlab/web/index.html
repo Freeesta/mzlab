@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="it"><head><meta charset="utf-8"><script src="static/telefono.js"></script>
+<script>/* #/teoria[/x] and #/pratica open the Teoria as its own light page: no engine, no Dati/Disegno scripts are fetched */(function(){var m=/^#\/(teoria|pratica)(?:\/([\w-]+))?$/.exec(location.hash);if(m)location.replace("static/teoria/"+(m[1]==="pratica"?"pratica.html":"index.html"+(m[2]?"#"+m[2]:"")))})()</script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -533,7 +534,10 @@ L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'ty
 <script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
-const S={view:"data",sess:null,adding:false};
+// addresses of the views: #/dati, #/disegno (and #/teoria, which the head script above sends to the standalone Teoria on a cold start)
+const VIEW_HASH={data:"dati",draw:"disegno",theory:"teoria"},HASH_VIEW={dati:"data",disegno:"draw",teoria:"theory"};
+const hashView=()=>{const m=/^#\/(\w+)/.exec(location.hash);return m&&HASH_VIEW[m[1]]||null};
+const S={view:hashView()||"data",sess:null,adding:false};
 const fmt=v=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -565,13 +569,19 @@ function applyView(){const v=S.view,d=v==="data";
   const sorry=v==="theory"&&I18N.lang==="en"&&!S.theoryIt;$("#theory-sorry").hidden=!sorry;$("#tframe").hidden=sorry;
   if(v==="theory"&&!sorry&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||"mzLab"}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||"mzLab"));   // one title per view (WCAG 2.4.2)
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
-function setView(v){S.view=v;applyView();if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
+function setView(v,fromHistory){S.view=v;applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);   // Back and Forward walk through the views
+  if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+// Back/Forward and typed addresses: the view follows the hash (a cold #/teoria never gets here: the head script leaves the page)
+addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
+// a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
+if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
 $("#theory-it").onclick=()=>{S.theoryIt=true;applyView()};
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open

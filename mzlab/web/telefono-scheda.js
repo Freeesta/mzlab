@@ -22,7 +22,7 @@
   const conn = navigator.connection;
   if (conn && conn.saveData) return;
   const warm = () => {
-    for (const u of ["static/teoria/index.html", "static/teoria/teoria.css", "static/teoria/tema.js", "static/teoria/teoria.js", "static/favicon-32.png"]) {
+    for (const u of ["static/teoria/index.html", "static/teoria/teoria.css", "static/teoria/tema.js", "static/teoria/teoria.js", "static/teoria/lettura.js", "static/teoria/01-tp.html", "static/favicon-32.png"]) {
       try { fetch(u, { priority: "low" }).then(r => r.arrayBuffer()).catch(() => {}); } catch (_) { /* prefetch is optional */ }
     }
   };
