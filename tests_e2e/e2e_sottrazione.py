@@ -76,6 +76,23 @@ try:
             for t in ("spec", "map"):
                 assert pg.evaluate(f"!!E.panels.find(q=>q.type==='{t}').el.querySelector('.subchip')"), t
         step("the spectrum and the map follow the same reference", spec_map)
+        def map_words():
+            M = "E.panels.find(q=>q.type==='map')"
+            leg = pg.evaluate(f"{M}.leg.textContent")
+            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "arancio" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
+            assert pg.evaluate(f"!!{M}._a.ref") and "SUB_t0" in pg.evaluate(f"{M}.leg.textContent"), "the map starts as a difference from the reference of the session"
+            for k in ("ctl.map.diff.title", "help.pnlMap.body"): assert "rosso" not in pg.evaluate(f"I18N.t('{k}')"), k
+        step("map difference: legend in words (▲ sample, ▼ reference), orange not red", map_words)
+        def map_menu_and_explain():
+            M = "E.panels.find(q=>q.type==='map')"; pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
+            c = pg.evaluate(f"(()=>{{const r={M}.cv.getBoundingClientRect(); return [r.left+r.width*.4, r.top+r.height*.5]}})()")
+            n0 = pg.evaluate("E.panels.filter(q=>q.type==='xic').length")
+            pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_timeout(300); pg.click("#ctx [role^=menuitem]:has-text('Estrai l\\'XIC qui')"); pg.wait_for_timeout(500)
+            assert pg.evaluate("E.panels.filter(q=>q.type==='xic').length") == n0 + 1, "the menu extracts from the difference map"
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.click(f".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
+            assert pg.evaluate("MAPEX.numbers(" + M + ").height") is not None
+            pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(300)
+        step("the difference map works with the new menu and with «How it is extracted»", map_menu_and_explain)
         def mirror():
             q = "E.panels.find(q=>q.type==='spec')"
             pg.evaluate(f"E.browse=true; E.cur=1; renderNav(); renderFileList(); (()=>{{const p={q}; p.k=1; p.r0=5.1; p.r1=5.4; p.si=null; ctl(p); draw(p)}})()"); ready(pg); pg.wait_for_timeout(800)
@@ -84,9 +101,9 @@ try:
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
             hov = pg.evaluate(f"(()=>{{const p={q}, a=p._a; const j=a.data[0].d.y.indexOf(Math.min(...a.data[0].d.y)); const h=a.hov(a.X(a.data[0].d.mz[j])); return h&&h.html}})()")
             assert hov and "cala" in hov and "−" in hov, hov                 # the sign and the word in the tooltip, not only the colour
-            sel = pg.evaluate(f"{q}.el.querySelector('[data-o=bg]').selectedOptions[0].textContent")
+            sel = pg.evaluate(f"{q}.el.querySelector('[data-o=corr]').getAttribute('aria-label')")
             assert "SUB_t0" in sel, sel                                      # the «fondo» menu starts from the reference of the session
-        step("the spectrum is a mirror: up higher in the sample, down higher in the reference, sign in words, menu starts from the session", mirror)
+        step("the spectrum is a mirror: up higher in the sample, down higher in the reference, sign in words, «Correzione» starts from the session", mirror)
         def spec_clip():
             pg.evaluate("S.ref.clip=true; SUBREF.refresh(E.tab,true)"); ready(pg); pg.wait_for_timeout(600)
             assert pg.evaluate("Math.min(...E.panels.find(q=>q.type==='spec')._a.data[0].d.y)") >= 0

@@ -883,13 +883,16 @@ def subtract_constant(m: np.ndarray, bg: np.ndarray) -> np.ndarray:
     return np.maximum(np.asarray(m, dtype=np.float32) - np.asarray(bg, dtype=np.float32)[None, :], 0).astype(np.float32)
 
 
-def diff_tolerant(a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+def diff_tolerant(a: np.ndarray, b: np.ndarray, w: int, wm: int = 0) -> np.ndarray:
     """A - B with a tolerance in RT: B is replaced by its local maximum over +-w RT bins (axis 0), so a small drift of the retention time
-    and the lines of the background (present in both) cancel instead of leaving a red/blue pair. w = 0: the plain difference."""
+    and the lines of the background (present in both) cancel instead of leaving an orange/blue pair. w = 0: the plain difference.
+    wm = tolerance in m/z, in cells of the m/z axis (axis 1): used in high resolution, where the cells are of equal ppm (log axis) and
+    wm cells = +-ppm; in low resolution the axis is the nominal mass and wm stays 0."""
     a, b = np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)
-    if w > 0 and b.shape[0] > 1:
-        p = np.pad(b, ((w, w), (0, 0)), mode="edge")
-        b = np.lib.stride_tricks.sliding_window_view(p, 2 * w + 1, axis=0).max(axis=-1)
+    for axis, width in ((0, w), (1, wm)):
+        if width > 0 and b.shape[axis] > 1:
+            pad = [(0, 0), (0, 0)]; pad[axis] = (width, width)
+            b = np.lib.stride_tricks.sliding_window_view(np.pad(b, pad, mode="edge"), 2 * width + 1, axis=axis).max(axis=-1)
     return (a - b).astype(np.float32)
 
 
