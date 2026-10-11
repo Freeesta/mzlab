@@ -25,6 +25,12 @@ ADDUCT_FROM_H = {
     "[M+NH4]+": E.MASS["N"] + 4 * H - E.ELECTRON - PROTON,
     "[M+H+ACN]+": E.mass({"C": 2, "H": 3, "N": 1}),
 }
+# the same, relative to [M-H]- (negative mode)
+ADDUCT_FROM_DEPROT = {
+    "[M+FA-H]-": E.mass({"C": 1, "H": 2, "O": 2}),
+    "[M+Cl]-": E.MASS["Cl"] + E.ELECTRON + PROTON,
+    "[M+Na-2H]-": E.MASS["Na"] - E.ELECTRON - PROTON,
+}
 ISOTOPES = {"13C": 1.003355, "34S/13C2": 1.99580, "13C2": 2.00671}                  # distance above the monoisotopic ion
 # losses in the source, besides ionfamily.NEUTRAL_LOSSES: the alkene losses typical of tert-butyl, isopropyl and morpholine-like groups
 EXTRA_LOSSES = ["C4H8", "C3H6", "C2H4", "C4H9N", "C4H8O"]
@@ -105,12 +111,13 @@ def window_profiles(table, rt_lo: float, rt_hi: float, floor: float = 2e4, min_p
 
 
 # ---------------------------------------------------------------------------------------------------------------------- relations
-def relations(delta: float, mz_ref: float, ppm: float = 5.0, abs_da: float = 0.002) -> list[dict]:
+def relations(delta: float, mz_ref: float, ppm: float = 5.0, abs_da: float = 0.002, adducts: dict | None = None) -> list[dict]:
     """What `delta` (= m/z of Y minus m/z of X) can be. Each hypothesis has a role (adduct, isotope, loss) and `of`: the ion it derives from, "x"
-    (Y is the adduct / isotopologue / in-source fragment of X) or "y" (X is that of Y). Several hypotheses can fit: all are returned."""
+    (Y is the adduct / isotopologue / in-source fragment of X) or "y" (X is that of Y). Several hypotheses can fit: all are returned.
+    `adducts`: the adduct table relative to the base ion ([M+H]+ by default; `ADDUCT_FROM_DEPROT` for [M-H]-)."""
     tol = max(mz_ref * ppm * 1e-6, abs_da)
     out = []
-    for name, d in ADDUCT_FROM_H.items():
+    for name, d in (ADDUCT_FROM_H if adducts is None else adducts).items():
         if abs(delta - d) <= tol:
             out.append({"role": "adduct", "name": name, "of": "x", "delta": d})            # Y is the adduct of X (X = [M+H]+)
         if abs(delta + d) <= tol:
@@ -128,10 +135,10 @@ def relations(delta: float, mz_ref: float, ppm: float = 5.0, abs_da: float = 0.0
     return out
 
 
-def dimer_of(mz_x: float, mz_y: float, ppm: float = 5.0, abs_da: float = 0.002) -> bool:
-    """Is Y the [2M+H]+ dimer of X = [M+H]+ ?  2 (X - proton) + proton."""
+def dimer_of(mz_x: float, mz_y: float, ppm: float = 5.0, abs_da: float = 0.002, sign: int = 1) -> bool:
+    """Is Y the [2M+H]+ dimer of X = [M+H]+ ?  2 (X - proton) + proton. `sign` -1: [2M-H]- of [M-H]-."""
     tol = max(mz_y * ppm * 1e-6, abs_da)
-    return abs(mz_y - (2 * (mz_x - PROTON) + PROTON)) <= tol
+    return abs(mz_y - (2 * (mz_x - sign * PROTON) + sign * PROTON)) <= tol
 
 
 def family(win: Window, mz: float, apex_rt: float, r_min: float = 0.85, apex_scans: int = 2, ppm: float = 5.0, parent_mz: float | None = None,
