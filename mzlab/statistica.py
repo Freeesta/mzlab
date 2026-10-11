@@ -211,6 +211,39 @@ def reference_difference(table, roles: list[str], times: list, groups: list | No
                        "floor": float(floor), "noise_factor": NOISE_FACTOR, "rho_min": float(rho_min), "drop": float(drop)}}
 
 
+def identity_links(mz: list[float], rt: list[float], ppm: float = 5.0, rt_tol: float = 0.1) -> list[list[dict]]:
+    """For every feature, the other features of the table it could share an identity with, to SHOW them beside the numbers (nothing is hidden or merged):
+    {'kind': 'adduct', 'other': j, 'as': name, 'other_as': name} when the m/z difference is that of two adducts of the same neutral (positive mode:
+    [M+H]+ / [M+NH4]+ / [M+Na]+ / [M+K]+ / [M+H+ACN]+) and the RT is within `rt_tol` minutes; {'kind': 'isf', 'other': j, 'loss': formula} when this feature
+    lies a common neutral loss below a co-eluting one, so it could be an in-source fragment of it. A coincidence of masses is a hint, never an identity."""
+    from .ionfamily import ADDUCTS, NEUTRAL_LOSSES, _mass
+    mzs, rts = np.asarray(mz, float), np.asarray(rt, float)
+    n = len(mzs)
+    out: list[list[dict]] = [[] for _ in range(n)]
+    if n < 2:
+        return out
+    singles = [(name, shift) for name, shift, mult in ADDUCTS if mult == 1]
+    pairs = [(a, b, sb - sa) for i, (a, sa) in enumerate(singles) for b, sb in singles[i + 1:] if sb != sa]
+    losses = [(f, _mass(f)) for f in NEUTRAL_LOSSES]
+    order = np.argsort(mzs, kind="stable")
+    sm = mzs[order]
+    for i in range(n):
+        for lo_name, hi_name, d in pairs:                     # i is the lighter ion of the pair: another feature is d heavier
+            tgt = mzs[i] + d
+            lo, hi = np.searchsorted(sm, tgt * (1 - ppm * 1e-6), "left"), np.searchsorted(sm, tgt * (1 + ppm * 1e-6), "right")
+            for j in order[lo:hi]:
+                if j != i and abs(rts[j] - rts[i]) <= rt_tol:
+                    out[i].append({"kind": "adduct", "other": int(j), "as": lo_name, "other_as": hi_name})
+                    out[int(j)].append({"kind": "adduct", "other": int(i), "as": hi_name, "other_as": lo_name})
+        for f, ml in losses:                                  # i is a fragment: another feature is `ml` heavier
+            tgt = mzs[i] + ml
+            lo, hi = np.searchsorted(sm, tgt * (1 - ppm * 1e-6), "left"), np.searchsorted(sm, tgt * (1 + ppm * 1e-6), "right")
+            for j in order[lo:hi]:
+                if j != i and abs(rts[j] - rts[i]) <= rt_tol:
+                    out[i].append({"kind": "isf", "other": int(j), "loss": f})
+    return out
+
+
 # ------------------------------------------------------------------------------------------------ exploratory PCA
 MIN_SAMPLES = 5                      # below this the PCA is not offered: with fewer samples the axes describe the noise
 SCALINGS = ("pareto", "auto", "none")
