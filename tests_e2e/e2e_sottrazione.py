@@ -78,7 +78,7 @@ try:
         step("the spectrum and the map follow the same reference", spec_map)
         def mirror():
             q = "E.panels.find(q=>q.type==='spec')"
-            pg.evaluate(f"draw({q})"); ready(pg); pg.wait_for_timeout(600)
+            pg.evaluate("E.browse=true; E.cur=1; renderNav(); renderFileList(); redrawAll()"); ready(pg); pg.wait_for_timeout(800)
             d = pg.evaluate(f"(()=>{{const a={q}._a; return [a.data[0].d.diff, Math.min(...a.data[0].d.y), Math.max(...a.data[0].d.y), a.ymin]}})()")
             assert d[0] is True and d[1] < 0 and d[3] < 0, d              # the parent has fallen: a bar down, the axis goes below zero
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
