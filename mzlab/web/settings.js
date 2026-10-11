@@ -68,9 +68,8 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
-    ${window.MZLAB_BROWSER ? `<div class="row" id="uip-space-row" hidden><span>${I18N.t("settings.space.label")}</span> <span id="uip-space-val" class="sm" role="status" aria-live="polite"></span> <button id="uip-space" type="button" title="${I18N.t("settings.space.title")}">${I18N.t("settings.space.button")}</button></div>` : ""}
+    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div></div>
     ${window.DESKUPD ? DESKUPD.row() : ""}
-    <div class="uip-reset" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0" title="${I18N.t("settings.reset.title")}"><span>${I18N.t("settings.reset.label")}</span> <button id="uip-reset" type="button">${I18N.t("settings.reset.button")}</button></div>
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
@@ -102,7 +101,6 @@ function uipOpen(btn) {
   };
   const uipEtich = d.querySelector("#uip-etich");
   if (uipEtich) { uipEtich.value = window.BARRA ? BARRA.labels : "auto"; uipEtich.onchange = e => { if (window.BARRA) BARRA.setLabels(e.target.value); }; }
-  d.querySelector("#uip-reset").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask(); };
   const uipTour = d.querySelector("#uip-tour");
   if (uipTour) uipTour.onclick = () => {
     d.remove();
@@ -114,17 +112,20 @@ function uipOpen(btn) {
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
-  const uipSpace = d.querySelector("#uip-space");
-  if (uipSpace) {                                                          // the browser version: what the files and indexes take in OPFS, and a button that frees the indexes of removed files
+  {                                                                        // «Archivio nel browser»: what is kept here (files and indexes in OPFS), the one-line truth, and the two ways to remove it
     const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
-    const paint = (j, note) => {
-      const row = d.querySelector("#uip-space-row"); if (!j || !j.opfs) return;
-      row.hidden = false;
-      d.querySelector("#uip-space-val").textContent = note || I18N.t("settings.space.value", { files: mb(j.files), idx: mb(j.idx) });
-      uipSpace.disabled = !j.idx_removed;
+    const val = d.querySelector("#uip-space-val"), rm = d.querySelector("#uip-arch-rm");
+    const paint = async j => {
+      const n = typeof E !== "undefined" && E.files ? E.files.filter(f => !f.gone).length : 0, size = j && j.opfs ? (j.files || 0) + (j.idx || 0) : 0;
+      let line;
+      if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
+      else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
+      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || est.usage / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
+      val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : "";
     };
-    fetch("api/spazio").then(r => r.json()).then(j => paint(j)).catch(() => {});
-    uipSpace.onclick = () => fetch("api/spazio", { method: "POST" }).then(r => r.json()).then(j => paint(j, I18N.t("settings.space.freed"))).catch(() => {});
+    paint(null); if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {});
+    rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
+    d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
   }
   const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {
