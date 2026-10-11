@@ -203,17 +203,61 @@ async function buildIndex(name) {
   try { if (br.build_index(name)) await settle(); } catch (_) { /* optional */ }
 }
 
-// ---- the indexes of the uploaded files are built by the pool of Rust workers (idxpool.js, idx-worker.js); Python builds them when the pool cannot (?pool=0 forces Python)
+// ---- the indexes of the uploaded files: Python builds them, unless the pool of Rust workers is on (idxpool.js, idx-worker.js: ?pool=N|auto, ?motore=rust, localStorage qqq.pool; browser.js decides); it falls back to Python when it cannot
+const DESK = Q.get("desk") === "1";                // the desktop app: the native builder (mzlab://idx/..., crates/mzlab-desktop/src/idxbuild.rs) builds the indexes
+const NATIVE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
+const packInputs = inputs => {                      // the body of idx/build: eight items, each with its length (u32 LE)
+  const enc = new TextEncoder(), items = inputs.map((x, i) => i === 5 || i === 6 ? enc.encode(x) : i === 7 ? new Uint8Array([x ? 1 : 0]) : x);
+  const out = new Uint8Array(items.reduce((a, b) => a + 4 + b.length, 0));
+  let at = 0;
+  for (const b of items) { new DataView(out.buffer).setUint32(at, b.length, true); out.set(b, at + 4); at += 4 + b.length; }
+  return out;
+};
 const POOLQ = Q.get("pool");
-const pool = OPFS && POOLQ !== "0" ? createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), size: /^\d+$/.test(POOLQ || "") ? +POOLQ : poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ type: "notice", key }) }) : null;
+const pool = OPFS && POOLQ && POOLQ !== "0" ? createPool({ needSimd: true, workerUrl: new URL("./idx-worker.js", import.meta.url), size: /^\d+$/.test(POOLQ || "") ? +POOLQ : poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ type: "notice", key }) }) : null;
 const inChain = fn => { const p = chain.then(fn); chain = p.catch(() => {}); return p; };      // one thing at a time with the requests
+// The index of the picked file `nid` through the native builder of the desktop app: the key of the cache is size + name; an index already in the cache folder
+// is copied without being built again (Python discards it when the file is not the same: size and probe). Resolves to the milliseconds spent, or 0.
+async function nativeIndex(base, file, nid) {
+  const key = `${file.size}_${base}`, q = encodeURIComponent(key), t0 = performance.now();
+  let size = 0;
+  try { const r = await fetch(`${NATIVE}idx/stat?name=${q}`); if (r.status === 200) size = (await r.json()).size; } catch (_) { /* no cache */ }
+  if (!size) {
+    const inputs = await inChain(() => { const r = br.index_inputs(base); if (!r) return null; const a = r.toJs(); r.destroy(); return a; });
+    if (!inputs) return 0;
+    const r = await fetch(`${NATIVE}idx/build?id=${nid}&name=${q}`, { method: "POST", body: packInputs(inputs) });
+    if (r.status !== 200) throw new Error(await r.text());
+    size = (await r.json()).size;
+  }
+  const part = base + ".mzidx.part";
+  await ARCH.putChunks("idx", part, size, async (off, len) => {
+    const r = await fetch(`${NATIVE}idx/read?name=${q}&off=${off}&len=${len}`);
+    if (r.status !== 200) throw new Error(await r.text());
+    return new Uint8Array(await r.arrayBuffer());
+  });
+  const f = await ARCH.promote("idx", part, base + ".mzidx");
+  const adopted = await inChain(async () => {
+    if (await lowSpace()) await freeSpace();
+    const a = br.adopt_index(base, mountBlob(f, "idx/" + base, "/idx"));
+    if (!a) unmount("idx/" + base);
+    return a;
+  });
+  if (!adopted) { await ARCH.remove("idx", base + ".mzidx"); fetch(`${NATIVE}idx/remove?name=${q}`).catch(() => {}); return 0; }
+  return Math.max(1, Math.round(performance.now() - t0));
+}
 // The index of an uploaded file: the pool of Rust workers builds it (the Python reader has already read the headers: index_inputs), Python when the pool cannot.
 // Resolves when the index is in place (adopted, mounted) or nothing more will be done.
-function buildFor(base, file, wait = false) {
+function buildFor(base, file, nid = null) {
   const t0 = performance.now();
-  const note = (engine, why, passes) => postMessage({ type: "idx", name: base, engine, why, passes, ms: Math.round(performance.now() - t0) });
+  const note = (engine, why, passes, buildMs) => postMessage({ type: "idx", name: base, engine, why, passes, buildMs, ms: Math.round(performance.now() - t0) });
   const python = async why => { await inChain(() => buildIndex(base)); note("python", why); };
   return (async () => {
+    if (DESK && nid != null) {                                          // desktop: the native builder, the index comes back in pieces into OPFS
+      try {
+        const ok = await nativeIndex(base, file, nid);
+        if (ok) return note("native", null, null, ok);
+      } catch (e) { console.debug("[mzLab] native index not used", base, e); }
+    }
     if (!pool || pool.unavailable()) return python("off");
     const inputs = await inChain(() => { const r = br.index_inputs(base); if (!r) return null; const a = r.toJs(); r.destroy(); return a; });
     if (!inputs) return python("inputs");                            // already indexed, or the headers cannot be read: Python decides
@@ -228,7 +272,7 @@ function buildFor(base, file, wait = false) {
         return adopted;
       });
       if (!ok) { await ARCH.remove("idx", base + ".mzidx"); return python("adopt"); }
-      note("rust", null, res.stats && res.stats.passes);
+      note("rust", null, res.stats && res.stats.passes, res.ms);
     } catch (e) { console.debug("[mzLab] index of the pool not used", base, e); await python(String(e && e.message || e)); }
   })().catch(e => console.debug("[mzLab] index", base, e));
   return p;
@@ -261,10 +305,11 @@ async function answer({ id, method, url, body, blob }) {
         }
       }
       const target = mountBlob(file, "files/" + base);
-      if (pool && OPFS && file !== blob) {                                              // the index first (pool), then the file is read: its answer comes when both are done, the requests in between are served
+      const nid = (/id=(\d+)/.exec(blob.type || "") || [])[1];
+      if ((pool || DESK) && OPFS && file !== blob) {                                              // the index first (pool), then the file is read: its answer comes when both are done, the requests in between are served
         later = (async () => {
           await inChain(() => { const x = linkBig(name, target, false); x.destroy(); });
-          await buildFor(base, file);
+          await buildFor(base, file, nid == null ? null : +nid);
           const r2 = await inChain(() => { const x = linkBig(name, target); const y = x.toJs(); x.destroy(); return y; });
           return r2;
         })();

@@ -52,6 +52,12 @@ const TP = (() => {
   const $ = (q, el = document) => el.querySelector(q);
   const here = location.pathname.split("/").pop() || "index.html";
   const idx = Math.max(0, CHAPTERS.findIndex(c => c[0] === here));
+  // teoria/#5, teoria/#cap-5, teoria/#A, teoria/#09-quadrupolo: the index page forwards to that chapter (one address per chapter without rewriting URLs)
+  if (here === "index.html") {
+    const k = location.hash.slice(1).toLowerCase().replace(/^cap-?/, "");
+    const hit = k && CHAPTERS.find(c => c[0] !== "index.html" && (c[1].toLowerCase() === k || c[0].replace(".html", "") === k));
+    if (hit) location.replace(hit[0]);
+  }
   const embedded = window.self !== window.top;
   // smartphone: same rule as ../telefono.js (which the program loads before everything; the Teoria pages do not load it)
   const PHONE = typeof QQQ_PHONE === "boolean" ? QQQ_PHONE : (() => {
@@ -75,7 +81,7 @@ const TP = (() => {
     // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
     if (embedded) document.body.classList.add("emb");
     top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" : `<a href="index.html" aria-label="Teoria: introduzione"><img src="../logo-64.png" alt="" width="28" height="28"></a>
-      <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
+      <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>` + (location.protocol === "file:" ? "" : `<a class="btn" id="goapp" href="../../#/dati">Apri il programma</a>`));
     document.body.prepend(top);
     const side = $("#side"); side.setAttribute("aria-label", "Indice dei capitoli e della pagina");
     // «Salta al contenuto»: first thing reached with Tab, visible only on focus
@@ -344,6 +350,7 @@ const TP = (() => {
 
   // «Lettura facilitata»: tema.js has already put the choices on <html>; the panel and the reading tools come from a11y.js
   function loadA11y() { const s = document.createElement("script"); s.src = "a11y.js"; document.head.appendChild(s); }
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); });
+  function loadLettura() { const s = document.createElement("script"); s.src = "lettura.js"; document.head.appendChild(s); }   // menu sheet, reading position, figure viewer
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); loadLettura(); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();

@@ -8,7 +8,7 @@ from lib import ROOT, mz, free_port
 wasm = ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js"
 if not wasm.exists():
     if shutil.which("cargo") and shutil.which("wasm-bindgen"):
-        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"], cwd=ROOT, check=True)
+        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "--config", 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'], cwd=ROOT, check=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(wasm.parent), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm"], cwd=ROOT, check=True)
     else:
         print("  ", ("wasm", "FAIL site/static/wasm missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
@@ -56,7 +56,7 @@ try:
             pg, idx, ans, perf = session(b, "?pool=0")
             out["py"] = (idx, ans)
             assert all(i["engine"] == "python" for i in idx), idx
-        step("?pool=0: Python builds them as before", python)
+        step("?pool=0: Python builds them (the reference)", python)
         def same():
             assert out["pool"][1] == out["py"][1], "chrom/xic differ between the Rust and the Python index"
         step("the charts from the Rust index are identical to those from the Python one", same)
@@ -69,6 +69,9 @@ try:
             pg, idx, ans, perf = session(b, "?pool=1")
             assert all(i["engine"] == "rust" for i in idx) and ans == out["py"][1]
         step("a pool of one worker gives the same result", one)
+        def by_default():
+            assert all(i["engine"] == "rust" for i in out["pool"][0]), out["pool"][0]
+        step("by default the pool builds the indexes", by_default)
         b.close()
 finally:
     srv.terminate()

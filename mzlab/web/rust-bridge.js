@@ -5,6 +5,8 @@
 // Supervisor: if the worker dies (a trap, a lost memory, a script error) it is terminated, a new one is started, the files of the session
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches Rust off for the rest of the session
 // (everything goes to Pyodide, `error.engineFallback`).
+import { simdSupported } from "./idxpool.js";
+
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -12,6 +14,7 @@ export function createBridge({ workerUrl, notify }) {
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0 };
   const api = { enabled: true, disabled: false, stats };
+  if (!simdSupported() && !(typeof window !== "undefined" && window.MZLAB_DESKTOP)) api.disabled = true;      // the .wasm is built with SIMD (simd128): a browser without it stays on Python, same results (the desktop engine is native)
   const base = n => String(n || "").split(/[\\/]/).pop();
 
   function spawn() {
@@ -60,7 +63,7 @@ export function createBridge({ workerUrl, notify }) {
     });
   }
 
-  api.start = () => { if (!worker) spawn(); };
+  api.start = () => { if (!worker && !api.disabled) spawn(); };
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };

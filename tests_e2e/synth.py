@@ -31,3 +31,10 @@ def make_series(folder, times, blank=True, std=True):
     if blank: p = folder / "blank.mzML"; write_full(p, None, blank=True); out.append(str(p))
     if std: p = folder / "std_5ppm.mzML"; write_full(p, None, std=True); out.append(str(p))
     return out
+
+
+def make_subtraction(folder, blank=True):
+    """SUB_t0, SUB_t10, SUB_t20 (+ SUB_blank): parent that decays, product that appears, background line, RT drift, gain 1.3 (tools/dati_sintetici.py)."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+    import dati_sintetici
+    return [str(p) for p in dati_sintetici.subtraction_series(folder, blank)]

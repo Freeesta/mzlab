@@ -42,3 +42,45 @@ def test_profile_route():
     body = json.dumps({"points": pts(), "metric": "area"}).encode()
     code, _, out, _ = dispatch(None, "POST", "/api/stat/profile", {}, io.BytesIO(body), len(body))
     assert code == 200 and json.loads(out)["series"] == [0, 2]
+
+
+# ---------------------------------------------------------------------------------------------------- blank subtraction
+ROLES = ["blank", "blank", "sample", "sample", "sample", "dark"]
+M = [
+    [100, 300, 0, 0, 0, 5000],           # 0 blank only; the dark file is neither blank nor sample
+    [10, 20, 500, 800, 900, 0],          # 1 clearly above the blank
+    [0, 0, 50, 0, 0, 0],                 # 2 absent from the blank, one detection
+    [100, 100, 250, 290, 310, 0],        # 3 max blank 100 -> threshold 300 (x3): only one sample above
+    [None, 0, 1, 2, 3, 0],               # 4 missing values count as 0
+]
+
+
+def test_blank_filter_known_values():
+    r = st.blank_filter(M, ROLES, factor=3, stat="max", min_detect=1)
+    assert r["kept"] == [1, 2, 3, 4] and r["discarded"] == [0]               # only the feature of the blank (the dark file is ignored) goes
+    assert [(x["blank"], x["threshold"], x["n_above"]) for x in r["rows"]] == [(300.0, 900.0, 0), (20.0, 60.0, 3), (0.0, 0.0, 1), (100.0, 300.0, 1), (0.0, 0.0, 3)]
+    assert r["rows"][1]["max_sample"] == 900.0 and r["n_blank"] == 2 and r["n_sample"] == 3
+
+
+def test_blank_filter_minimum_of_detections_and_mean_level():
+    assert st.blank_filter(M, ROLES, 3, "max", 2)["kept"] == [1, 4]           # two detections are needed: features 2 and 3 have one
+    r = st.blank_filter(M, ROLES, 3, "mean", 1)
+    assert r["rows"][0]["blank"] == 200.0 and r["rows"][1]["threshold"] == pytest.approx(45.0)
+    assert st.blank_filter(M, ROLES, 1, "max", 3)["kept"] == [1, 3, 4]        # factor 1: feature 3 (blank 100) is above in all three samples
+
+
+def test_blank_filter_needs_a_blank_and_a_sample():
+    with pytest.raises(UserError):
+        st.blank_filter(M, ["sample"] * 6)
+    with pytest.raises(UserError):
+        st.blank_filter(M, ["blank"] * 6)
+    with pytest.raises(UserError):
+        st.blank_filter(M, ROLES, factor=-1)
+    with pytest.raises(UserError):
+        st.blank_filter(M, ROLES, stat="median")
+
+
+def test_blank_route():
+    body = json.dumps({"matrix": M, "roles": ROLES, "factor": 3, "stat": "max", "min_detect": 2}).encode()
+    code, _, out, _ = dispatch(None, "POST", "/api/stat/blank", {}, io.BytesIO(body), len(body))
+    assert code == 200 and json.loads(out)["kept"] == [1, 4]

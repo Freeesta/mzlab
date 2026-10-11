@@ -18,9 +18,10 @@ onmessage = async ev => {
     const read = (off, len) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
     const write = (off, data) => { ah.write(data, { at: off }); };
     const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
+    const t0 = performance.now();
     const stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
     ah.flush(); ah.close(); ah = null;
-    postMessage({ op: "done", stats: JSON.parse(stats) });
+    postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
   } catch (e) {
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
     const text = typeof e === "string" ? e : String(e && e.message || e);
