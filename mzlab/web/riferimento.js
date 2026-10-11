@@ -149,6 +149,13 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
         for (let n = 0; n < 12; n++) {                                                  // the spectrum draws after the scans are read: wait for it
           const q = DDA.ms2For(s1, mz)[0];
           if (q) { DDA.openMs2(s1, q.j); break; }
+          const D = DDA.ready(f.k), s2 = E.panels.find(q => q.id === s1.duo && q.el);      // the instrument fragments the ion in other cycles: the MS2 scan closest in time
+          if (D && s2 && D.sid) {
+            const tol = Math.max(0.02, mz * ((window.UIP && UIP.hrPpm) || 5) * 1e-6);
+            let best = -1;
+            for (let i = 0; i < D.sid.length; i++) if (D.prec[i] != null && Math.abs(D.prec[i] - mz) <= tol && (best < 0 || Math.abs(D.rt[i] - apex) < Math.abs(D.rt[best] - apex))) best = i;
+            if (best >= 0) { DDA.selectMs2(s2, D.sid[best]); break; }
+          }
           await new Promise(r => setTimeout(r, 400));
         }
       }
