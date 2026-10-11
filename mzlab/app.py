@@ -349,12 +349,16 @@ class App:
         names = [x["name"].lower() for x in m["lab"]]
         hit = [i for i, n in enumerate(names) if pick and pick in n] or [i for i, n in enumerate(names) if m.get("kind") == "ms2" and "ms2" in n]
         m["lab_pick"] = hit[-1] if hit else (len(names) - 1 if names else None)
+        stem = self._item(k).path.stem.lower()
+        same = [i for i, x in enumerate(m["lab"]) if Path(x["name"]).stem.lower() == stem]   # the method with the same base name as the data file wins over every guess
         # several .dam loaded: preselect the one that agrees best with this file (fewest differences), name as tie-break
         if len(m["lab"]) > 1:
             diffs = [sum(r["status"] == "diff" for r in x["check"]) for x in m["lab"]]
             best = min(diffs)
             if diffs[m["lab_pick"]] > best:
                 m["lab_pick"] = [i for i, d in enumerate(diffs) if d == best][-1]
+        if same:
+            m["lab_pick"] = same[-1]
         return m
 
     def method_warnings(self) -> dict:

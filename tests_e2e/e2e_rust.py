@@ -28,6 +28,11 @@ def close(a, b, tol, rel=0.0):
     assert len(a) == len(b), (len(a), len(b))
     bad = [(i, x, y) for i, (x, y) in enumerate(zip(a, b)) if abs(x - y) > max(tol, rel * abs(y))]
     assert not bad, f"{len(bad)} values differ, first {bad[:3]}"
+def json_close(a, b, tol=1e-9):
+    if isinstance(a, dict) and isinstance(b, dict): return a.keys() == b.keys() and all(json_close(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list): return len(a) == len(b) and all(json_close(x, y) for x, y in zip(a, b))
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool): return abs(a - b) <= tol * max(1.0, abs(a), abs(b))
+    return a == b
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1500, "height": 1800}); pg = ctx.new_page()
@@ -45,6 +50,11 @@ try:
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
             pg.wait_for_function("E.files.length >= 4 && E.pending.length === 0", timeout=120000)          # the list is opened file by file: wait for the last one
         step("open the files: the TIC panels are drawn by Rust", load)
+        def one_reader():
+            # a file has one reader: the TIC panels came from the .mzidx, no mzML was read by the Rust engine
+            opened = pg.evaluate("window.MZLAB_RUST.stats.mzmlOf || []")
+            assert all("MRM" in n for n in opened), opened                  # only the MRM file (no scans, no index of the peaks) is read as an mzML
+        step("the TIC came from the index: no mzML read (but the MRM file)", one_reader)
         def tic_xic():
             n = pg.evaluate("E.files.length"); assert n >= 4, n
             seen = set()
@@ -69,9 +79,27 @@ try:
                 assert (a["i"], a["sid"], a["mode"]) == (c["i"], c["sid"], c["mode"]), (a["i"], c["i"])
                 close([a["rt"]], [c["rt"]], 2e-4); close(a["mz"], c["mz"], 1.1e-3); close(a["y"], c["y"], 0.11, 1e-6)
         step("single scans: same peaks as Python", scans)
+        def index_routes():
+            # the routes the .mzidx answers (no mzML is read): same JSON as Python, on every file that has scans (the MRM file is Python's)
+            n = pg.evaluate("E.files.length"); rust_n = 0
+            for k in range(n):
+                f = pg.evaluate(GET, f"api/filters?k={k}")
+                urls = [f"api/chrom?k={k}&kind=bpc&level=1", f"api/chrom?k={k}&kind=tic&level=1&mz0=150&mz1=400", f"api/chrom?k={k}&kind=bpc&level=1&mz0=200",
+                        f"api/filters?k={k}", f"api/scanlist?k={k}&level=1", f"api/scanlist?k={k}&level=2", f"api/nearest_scan?k={k}&rt=4.2&level=1", f"api/nearest_scan?k={k}&rt=9&level=2"]
+                for url in urls:
+                    pg.evaluate("window.MZLAB_RUST.enabled = true"); r = pg.evaluate(GET, url)
+                    pg.evaluate("window.MZLAB_RUST.enabled = false"); py = pg.evaluate(GET, url)
+                    pg.evaluate("window.MZLAB_RUST.enabled = true")
+                    if r["eng"] == "rust":
+                        rust_n += 1
+                        assert json_close(r["j"], py["j"]), (url, str(r["j"])[:200], str(py["j"])[:200])
+                    else:
+                        assert py["eng"] is None
+            assert rust_n >= 8, rust_n
+        step("index routes (chrom with m/z window and bpc, filters, scanlist, nearest_scan): same JSON as Python", index_routes)
         def other_routes():
             r = pg.evaluate(GET, "api/spectra?k=0&i0=0&i1=2&level=1&filt=x"); assert r["eng"] is None       # a filter is left to Python
-            r = pg.evaluate(GET, "api/chrom?k=0&kind=bpc&level=1"); assert r["eng"] is None
+            r = pg.evaluate(GET, "api/chrom?k=0&kind=pda&level=1"); assert r["eng"] is None
         step("what Rust cannot answer exactly goes to Python", other_routes)
         def thermo_raw():
             import os

@@ -103,6 +103,8 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
   const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(12);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
+  let needL = 0; for (const [, lab] of yt) needL = Math.max(needL, g.measureText(lab).width);
+  g.canvas._needL = Math.ceil(needL + 6 + 4 + 14 * fz());                  // room for the numbers (right aligned at M.l - 6) and the title; the panels of a view take the widest
   g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
   g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
   g.fillStyle = css("--ink"); g.font = fpx(12);
@@ -126,10 +128,27 @@ function drawAnn(p, g, a, px, py, W, gap) {
   g.restore();
   (p._a.lbls = p._a.lbls || []).push({ x: bx, y: by, w, h, ann: a, tip: `<b>${EH(a.text)}</b><div class="sm">${I18N.t("draw.ann.tip")}</div>` });
 }
+// ---- the stacked chromatograms of a view: same time range, same left and right edge of the plot (the y axes stay independent)
+const isLine = q => q.type === "chrom" || q.type === "xic" || q.type === "mrm";
+const linked = p => tabPanels(p.tab).filter(q => isLine(q) && q.tl && q.el && !q._exp);
+function unionTime(p, lo, hi) {
+  linked(p).forEach(q => { if (q !== p && q._own) { lo = Math.min(lo, q._own[0]); hi = Math.max(hi, q._own[1]); } });
+  return [lo, hi];
+}
+function syncView(p) {
+  if (!isLine(p) || !p._a) return;
+  p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
+  const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
+  const L = Math.max(Math.round(66 * z), ...all.map(q => q._needL || 0)), R = Math.max(14, ...all.map(q => q._needR || 0));
+  const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
+  window.MARG_L = L; window.MARG_R = R;
+  all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
+  if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
+}
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
-  try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -222,6 +241,9 @@ async function drawLines(p) {
   }
   let lo = Infinity, hi = -Infinity;
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
+  p._own = [lo, hi];
+  if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own
+  p._u = [lo, hi];
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
