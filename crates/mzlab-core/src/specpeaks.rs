@@ -52,7 +52,7 @@ pub fn profile_peaks(mz: &[f64], y: &[f64], min_rel: f64) -> (Vec<f64>, Vec<f64>
         })
         .collect();
     let nom: Vec<i64> = mz.iter().map(|&m| nominal(m)).collect();
-    let (starts, _g) = groups(&nom);
+    let (starts, g) = groups(&nom);
     let ng = starts.len();
     let top: Vec<f64> = (0..n)
         .map(|i| {
