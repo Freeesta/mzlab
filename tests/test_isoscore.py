@@ -103,3 +103,17 @@ def test_api_passes_peaks_and_weights():
     assert code == 200 and j["results"][0]["formula"] == TRUE and j["results"][0]["score"]["iso"] > 0.5
     code, _, body, _ = dispatch(None, "GET", "/api/composition", {**q, "obs": "abc"})
     assert code == 400
+
+
+def test_normalisation_modes_and_thresholds():
+    """Another normalisation mode scales the observed intensities differently; a perfect pattern scores about the same in every mode; thresholds are passed on."""
+    c = parse_formula("C13H25N4O3S")
+    pat = [p for p in merge_res(fine_pattern(c, 1), 70000.0) if p["rel"] >= 1.0]
+    obs = [(p["mz"], p["rel"] * 1e4) for p in pat]
+    base = isotope_score(c, 1, obs)["score"]
+    for mode in ("mono", "max", "sum"):
+        assert abs(isotope_score(c, 1, obs, norm=mode)["score"] - base) < 0.02, mode
+    bent = [(m, i * (3.0 if k == 0 else 1.0)) for k, (m, i) in enumerate(obs)]               # a monoisotopic peak 3x too high
+    assert isotope_score(c, 1, bent, norm="mono")["score"] < isotope_score(c, 1, bent, norm="sum")["score"] + 0.5
+    few = isotope_score(c, 1, obs, min_rel=50.0)
+    assert len(few["peaks"]) < len(isotope_score(c, 1, obs, min_rel=0.1)["peaks"])

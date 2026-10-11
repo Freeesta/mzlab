@@ -287,7 +287,10 @@ function ctxFor(p, e, x, px, py) {
         items.push(mi({ label: I18N.t("ctx.spec.addLab"), fn: () => LISTE.askAdd(m, pol) }));
       }
     }
-    if (a.hrp && window.COMP) items.push(mi({ label: I18N.t("ctx.spec.formulas", { mz: lab }), fn: () => COMP.open({ mz: m, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
+    if (a.hrp && window.ELEM) {
+      items.push(mi({ label: I18N.t("ctx.spec.generate", { mz: lab }), fn: () => ELEM.generate({ mz: m, sp: p, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
+      if (p.fm && p.fm.length) items.push({ label: I18N.t("cx.clear"), fn: () => { p.fm = []; draw(p); } });
+    }
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = I18N.t("ctx.spec.overlay.tip");
     const ov = q => ({ label: I18N.t("ctx.spec.overlay", { name: xicName(q), n: q.num || "?" }), tip: TIPX, fn: () => xicDirect(m, p, q) });
     if (xs.length > 3) items.push(mi({ label: I18N.t("ctx.spec.overlayMany"), tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));

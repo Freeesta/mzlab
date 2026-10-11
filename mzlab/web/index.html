@@ -182,6 +182,9 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #sb-panel-qaqc .qq-sum{margin:4px 0;padding-left:16px}
 #sb-panel-qaqc .qq-n{display:inline-block;min-width:1.4em;color:var(--muted)}
 #sb-panel-qaqc .bad{color:var(--bad)}
+.liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}
+.liste-panel .seg button{padding:1px 7px;font-size:11px;min-height:0;line-height:1.5;white-space:nowrap}
+#sb-panel-lists .lct td,#sb-panel-lists .lct th{height:22px;padding:1px 6px;font-size:11px;line-height:1.25}#sb-panel-lists .lct th.num{white-space:nowrap}#sb-panel-lists .liste-panel{font-size:12px}#sb-panel-lists .lct td,#sb-panel-lists .lct th{white-space:nowrap}#sb-panel-lists .lct td:nth-child(3){white-space:normal;min-width:150px}
 #sb-panel-file #flst{max-height:none;overflow:visible}
 .grp-files{padding-left:8px}
 .fl{display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line);transition:background .1s}
@@ -516,6 +519,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/eventi.js"></script>
 <script src="static/hr.js"></script>
 <script src="static/composizione.js"></script>
+<script src="static/elementare.js"></script>
 <script src="static/dda.js"></script>
 <script src="static/cromato.js"></script>
 <script src="static/calcola.js"></script>
