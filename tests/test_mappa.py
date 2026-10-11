@@ -52,6 +52,18 @@ def test_difference_with_itself_is_zero_and_tolerates_drift():
     assert diff_tolerant(a, b, 2)[5, 1] == 50.0
 
 
+def test_difference_tolerates_ppm_drift_in_mz_only_when_asked():
+    """High resolution: B is also widened along the m/z axis (cells of equal ppm), so a peak that moved by one cell in the reference cancels; wm = 0 (low resolution) leaves it."""
+    import numpy as np
+    from mzlab.explore import diff_tolerant
+    a, b = np.zeros((10, 12), np.float32), np.zeros((10, 12), np.float32)
+    a[4, 5], b[4, 6] = 100.0, 100.0                                                       # same ion, one m/z cell higher in the reference
+    assert diff_tolerant(a, b, 0, 0)[4, 5] == 100.0 and diff_tolerant(a, b, 0, 1)[4, 5] == 0.0
+    a[4, 9] = 40.0                                                                        # a real increase far away stays
+    assert diff_tolerant(a, b, 0, 1)[4, 9] == 40.0
+    assert (diff_tolerant(a, b, 2, 0) == diff_tolerant(a, b, 2)).all()                     # default: low resolution unchanged
+
+
 def test_snap_to_the_local_maximum(tmp_path):
     """A click near a peak goes to its apex (scan with the highest intensity within +-0.2 min and +-1 bin), with the m/z of the file."""
     scans = [_scan_xml(i, 1.0 + 0.05 * i, [150.25, 160.4], [h, 10.0]) for i, h in enumerate([10.0, 40.0, 90.0, 60.0, 20.0])]
