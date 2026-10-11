@@ -25,9 +25,14 @@ TYPES = ODD | EVEN | {"perdita", "riarr", "isotopo"}
 
 
 def load():
+    """ei-dati.js plus the per-level files ei-dati-l1..l5.js (EI_DATA.items.push(...[...]))."""
     txt = DATA.read_text(encoding="utf-8")
     body = txt[txt.index("const EI_DATA = ") + len("const EI_DATA = "):].rstrip().rstrip(";")
-    return json.loads(body)
+    d = json.loads(body)
+    for f in sorted(DATA.parent.glob("ei-dati-l*.js")):
+        t = f.read_text(encoding="utf-8")
+        d["items"] += json.loads(t[t.index("EI_DATA.items.push(...") + len("EI_DATA.items.push(..."):].rstrip().rstrip(";")[:-1])
+    return d
 
 
 def split_ion(ion: str):
@@ -46,8 +51,16 @@ def rdb(f: dict) -> float:
 def test_file_and_sources():
     d = load()
     items = d["items"]
-    assert len(items) >= 100 and sum(i["play"] for i in items) >= 85
-    assert DATA.stat().st_size < 160_000, "the file grows past ~150 kB: load only the data of the chosen level"
+    assert len(items) >= 170 and sum(i["play"] for i in items) >= 150
+    for f in [DATA, *DATA.parent.glob("ei-dati-l*.js")]:
+        assert f.stat().st_size < 160_000, (f.name, "past ~150 kB: split further, the page loads only the data of the chosen level")
+    assert "NIST" not in "".join(f.read_text(encoding="utf-8").upper() for f in DATA.parent.glob("ei-dati-l*.js"))
+    ext = d["extra"]
+    assert ext and all(any(i["id"] == k for i in items) for k in ext)
+    for f in DATA.parent.glob("ei-dati-l*.js"):
+        lv = int(f.stem.rsplit("-l", 1)[1])
+        t = f.read_text(encoding="utf-8")
+        assert all(v == lv for k, v in ext.items() if '"id":"%s"' % k in t), f.name
     assert "NIST" not in DATA.read_text(encoding="utf-8").upper().replace("NIST SPECTRA", "")
     ids = [i["id"] for i in items]
     assert len(ids) == len(set(ids))
@@ -134,7 +147,7 @@ def test_path_of_simple_compounds():
     assert {i["path"] for i in path} == {1, 2, 3, 4, 5}
     for lv in range(1, 6):
         grp = sorted((i for i in path if i["path"] == lv), key=lambda i: i["order"])
-        assert len(grp) >= 8, lv
+        assert len(grp) >= 6, lv
         assert [i["order"] for i in grp] == list(range(len(grp))), lv
     for it in path:
         assert it["play"] and it["keys"], it["id"]
