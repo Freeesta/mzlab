@@ -28,21 +28,36 @@ try:
         rts = pg.evaluate(f"{CH}._a.sr[0].x")
         def dot_loc(): 
             b = pg.locator(".pnl.chrom .clh:visible").first.bounding_box(); return b["x"] + b["width"] / 2, b["y"] + b["height"] / 2, b
+        def tap(rt):
+            T("touchStart", [(X(rt), Ymid())]); T("touchEnd", []); pg.wait_for_timeout(700); ready(pg)
         def appear():
             assert pg.locator("#tbar").count() == 0
-            x, y = X(rts[len(rts) // 2]), Ymid(); pg.mouse.click(x, y); ready(pg)
+            tap(rts[len(rts) // 2])
             h = pg.locator(".pnl.chrom .clh:visible").first
             assert h.get_attribute("role") == "slider" and h.get_attribute("aria-label") and h.get_attribute("aria-valuenow")
             bx, by, bb = dot_loc(); assert bb["width"] >= 14 and abs(bx - X(pg.evaluate(f"{CH}.cur"))) < 2
-        step("a click shows the line with its dot (slider, aria-label)", appear)
-        def mouse_drag():
-            c0 = pg.evaluate(f"{CH}.cur"); bx, by, _ = dot_loc(); tx = X(c0 + 3)
-            pg.mouse.move(bx, by); pg.mouse.down()
-            for k in range(1, 9): pg.mouse.move(bx + (tx - bx) * k / 8, by); pg.wait_for_timeout(20)
+        step("a touch shows the line with its dot (slider, aria-label)", appear)
+        def mouse_no_dot():
+            c0 = pg.evaluate(f"{CH}.cur"); pg.mouse.move(300, 300); pg.mouse.move(X(rts[len(rts) // 4]), Ymid()); pg.wait_for_timeout(200)
+            assert pg.locator(".pnl.chrom .clh:visible").count() == 0, "with the mouse there is no dot"
+            pg.mouse.click(X(rts[len(rts) // 4]), Ymid()); ready(pg)
+            c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - rts[len(rts) // 4]) < 0.5 and abs(c1 - c0) > 1, (c0, c1)
+            x = X(c1); pg.mouse.move(x, Ymid()); pg.mouse.down()
+            for k in range(1, 9): pg.mouse.move(x + (X(c1 + 3) - x) * k / 8, Ymid()); pg.wait_for_timeout(20)
             pg.mouse.up(); ready(pg)
-            c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - (c0 + 3)) < 0.4, (c0, c1)
-        step("the mouse drags the dot", mouse_drag)
+            c2 = pg.evaluate(f"{CH}.cur"); assert abs(c2 - (c1 + 3)) < 0.4, (c1, c2)
+        step("mouse: no dot; click and drag move the line itself", mouse_no_dot)
+        def trackpad():
+            pg.evaluate(f"zoomTo({CH}, 8, 16)"); ready(pg); pg.wait_for_timeout(400)
+            x, y = X(12), Ymid(); pg.mouse.move(x, y)
+            pg.mouse.wheel(120, 0); pg.wait_for_timeout(500)
+            z = pg.evaluate(f"{CH}.zoom"); assert z[0] > 8.05 and abs((z[1] - z[0]) - 8) < 1e-6, z
+            pg.keyboard.down("Control"); pg.mouse.wheel(0, -200); pg.keyboard.up("Control"); pg.wait_for_timeout(500)
+            z2 = pg.evaluate(f"{CH}.zoom"); assert (z2[1] - z2[0]) < 8 - 0.1, z2
+            pg.evaluate(f"{CH}.zoom = null; draw({CH})"); ready(pg)
+        step("trackpad: two fingers sideways pan, pinch / Ctrl+wheel zoom", trackpad)
         def touch_drag():
+            tap(rts[len(rts) // 2])
             c0 = pg.evaluate(f"{CH}.cur"); bx, by, _ = dot_loc(); tx = X(c0 - 2)
             T("touchStart", [(bx, by)]); pg.wait_for_timeout(60)
             for k in range(1, 9): T("touchMove", [(bx + (tx - bx) * k / 8, by)]); pg.wait_for_timeout(30)
@@ -50,7 +65,7 @@ try:
             c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - (c0 - 2)) < 0.4, (c0, c1)
         step("a finger drags the dot (iPad viewport)", touch_drag)
         def tap_else():
-            c0 = pg.evaluate(f"{CH}.cur"); tgt = rts[len(rts) // 5]; T("touchStart", [(X(tgt), Ymid())]); T("touchEnd", []); pg.wait_for_timeout(900); ready(pg)
+            c0 = pg.evaluate(f"{CH}.cur"); tgt = rts[len(rts) // 5]; tap(tgt); pg.wait_for_timeout(200)
             c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - tgt) < 0.5 and abs(c1 - c0) > 1, (c0, c1, tgt)
         step("a tap elsewhere places the cursor as always", tap_else)
         def keys():

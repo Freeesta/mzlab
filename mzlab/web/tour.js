@@ -112,7 +112,7 @@ const TOUR = (() => {
     },
     {
       id: "tasti",
-      target: () => document.querySelector(".pnl.chrom .clh:not([hidden])") || document.querySelector(".pnl.chrom canvas")
+      target: () => [...document.querySelectorAll(".pnl.chrom .clh")].find(el => el.offsetParent) || document.querySelector(".pnl.chrom canvas")
     },
     {
       id: "navfile",
@@ -406,7 +406,7 @@ const TOUR = (() => {
     const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : "tour.cap2");
     const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
     const titleText = I18N.t(`tour.${step.id}.titolo`);
-    const bodyText = I18N.t(`tour.${step.id}.testo`);
+    const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
     const provaText = step.prova ? I18N.t(`tour.${step.id}.prova`) : "";
 
     const dlg = getDialogEl();

@@ -475,6 +475,16 @@ class Item:
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
+    def data_extent(self, level: int) -> dict:
+        """Where the level has data: RT of the first and the last scan that holds peaks, m/z of the lowest and the highest peak (null when empty).
+        The map shows this part, not the declared run or the rounded grid."""
+        t = self._tbl(level)
+        if not len(t.rt) or not len(t.mz):
+            return {"rt": None, "mz": None}
+        on = np.flatnonzero(t.sum_by_scan() > 0)
+        rt = [float(t.rt[on[0]]), float(t.rt[on[-1]])] if len(on) else None
+        return {"rt": rt, "mz": [float(t.mz[0]), float(t.mz[-1])] if rt else None}
+
     def ionmap(self, level: int, grid: dict, agg: str = "max") -> np.ndarray:
         """Intensity per cell on a common RT x m/z grid, shape (nrt, nmz), float32.
 
@@ -761,6 +771,11 @@ class Item:
         idx = np.argmin(np.abs(rts - rt))
         s = self.run.scans[ids[idx]]
         return {"rt": float(s.rt), "sid": s.index, "filter": s.filter}
+
+    def scan_axis(self, level: int = 1) -> dict:
+        """RT and index (sid) of every scan of the level, in the order of `scans` (position i = scan i of the chromatogram): the page finds the scan nearest to a point without asking the engine."""
+        t = self._tbl(level)
+        return {"rt": t.rt.tolist(), "sid": t.scan_ids.tolist()}
 
     def spectrum(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None,
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False, filt: str | None = None):

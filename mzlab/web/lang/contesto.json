@@ -392,6 +392,9 @@
   "ref.ident.isf": "Nota in una cella: la riga potrebbe essere un frammento in sorgente di un'altra riga. {loss} = formula della perdita neutra, {other} = ID dell'altra riga.",
   "ref.row.aria": "Etichetta per lettori di schermo di una riga della tabella. {id} = ID della feature, {mz} = m/z, {rt} = tempo di ritenzione in minuti.",
   "ref.sum": "Riepilogo della differenza dal riferimento. {k} = tenute, {d} = scartate, {thr} = fattore della soglia, {min} = file trattati minimi sopra la soglia.",
+  "load.method.drop": "Testo del campo unico per caricare il metodo strumentale; {formats} = elenco dei formati letti oggi, es. «.dam SCIEX».",
+  "load.method.chip": "Etichetta del metodo caricato (chip con ×); {name} = nome del file.",
+  "load.method.remove": "Nome accessibile del pulsante × del chip del metodo; {name} = nome del file.",
   "err.stat.pca.few": "Errore: troppo pochi campioni per la PCA. {min} = minimo, {n} = campioni disponibili.",
   "pca.off": "Messaggio al posto dei comandi della PCA. {min} = minimo di campioni, {n} = campioni disponibili.",
   "pca.blank.on": "Riga informativa sul filtro del bianco usato dalla PCA. {f} = fattore, {stat} = massimo/media, {n} = rilevazioni minime.",
@@ -406,5 +409,13 @@
   "pca.ell": "Descrizione di un'ellisse. {g} = nome del gruppo di repliche.",
   "pca.col.pc": "Intestazione di colonna. {n} = numero della componente.",
   "pca.row.aria": "Etichetta accessibile di una riga. {mz} = m/z, {rt} = RT.",
-  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo."
+  "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo.",
+  "sub.chip": "{file} = nome del file di riferimento (con «(auto)» se scelto in automatico); {f} = fattore; {norm} = normalizzazione.",
+  "sub.factor.vt": "{f} = fattore moltiplicativo del riferimento (numero con due decimali).",
+  "sub.file.auto": "{file} = nome del file che il programma sceglierebbe in automatico.",
+  "sub.next": "{file} = nome del file di riferimento.",
+  "sub.prev": "{file} = nome del file di riferimento.",
+  "sub.norm.istd.short": "{mz} = m/z dello standard interno scelto dallo studente.",
+  "sub.note": "{file} = file di riferimento; {f} = fattore; {norm} = normalizzazione.",
+  "sub.on": "{file} = file di riferimento; {f} = fattore."
 }

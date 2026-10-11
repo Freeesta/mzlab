@@ -12,7 +12,7 @@ export function createBridge({ workerUrl, notify }) {
   let slots = [];                          // k -> { name, blob, info, bad, opening }
   let worker = null, seq = 0, restarts = [];
   const pending = new Map();               // id -> { res, worker }
-  const stats = { rust: 0, python: 0, restarts: 0 };
+  const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
   const api = { enabled: true, disabled: false, stats };
   if (!simdSupported() && !(typeof window !== "undefined" && window.MZLAB_DESKTOP)) api.disabled = true;      // the .wasm is built with SIMD (simd128): a browser without it stays on Python, same results (the desktop engine is native)
   const base = n => String(n || "").split(/[\\/]/).pop();
@@ -48,10 +48,14 @@ export function createBridge({ workerUrl, notify }) {
     restarts = restarts.filter(t => now - t < 60000); restarts.push(now); stats.restarts++;
     if (restarts.length > 1) { api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify("error.engineFallback"); return; }
     spawn();
-    slots.forEach((s, k) => { if (s) { s.bad = false; s.opening = open(k, s); } });       // the files come back from the session
+    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
     notify("error.engineRestarted");
   }
-  function open(k, s) {
+  // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
+  // only for what needs the spectra (single scans), the first time they are asked, or at once when the file has no index (no OPFS).
+  function openMzml(k, s) {
+    stats.mzml++; (stats.mzmlOf = stats.mzmlOf || []).push(s.name);
+    if (!s.blob) { s.bad = true; return Promise.resolve(); }
     return rpc({ op: "open", slot: k, blob: s.blob }).then(r => {
       if (r.dead || r.error) {
         s.bad = true;
@@ -62,7 +66,13 @@ export function createBridge({ workerUrl, notify }) {
       s.info = JSON.parse(r.info);
     });
   }
-
+  const needMzml = (k, s) => s.mzml || (s.mzml = s.info ? Promise.resolve() : openMzml(k, s));
+  function open(k, s) {
+    return rpc({ op: "idxopen", slot: k, name: s.name }).then(r => {
+      s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
+      if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
+    });
+  }
   api.start = () => { if (!worker && !api.disabled) spawn(); };
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); };
@@ -75,8 +85,8 @@ export function createBridge({ workerUrl, notify }) {
     for (const [i, s] of ((body && body.samples) || []).entries()) {
       const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
-      if (!blob || f.includes("#") || api.disabled) { slots[k] = null; continue; }
-      slots[k] = { name: base(f), blob, info: null, bad: false };
+      if (f.includes("#") || api.disabled) { slots[k] = null; continue; }
+      slots[k] = { name: base(f), blob: blob || null, info: null, bad: false, idx: false, mzml: null };
       slots[k].opening = open(k, slots[k]);
     }
   };
@@ -103,24 +113,57 @@ export function createBridge({ workerUrl, notify }) {
     return out;
   };
 
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan)$/;
+  const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
   api.handle = async (method, url) => {
     if (!api.enabled || api.disabled || method !== "GET" || !worker) return null;
     const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;
     const level = num(q, "level", 1), px = Math.max(0, num(q, "px", 0) | 0);
+    const t0 = performance.now();
+    const k0 = num(q, "k", -1);
+    // routes the index answers by itself
+    if (INDEX_ROUTES.test(path) && !hasRef(q)) {
+      const s = slots[k0];
+      if (!s) return null;
+      await s.opening;
+      if (!s.idx || s.bad) return null;
+      const r = await rpc({ op: "route", slot: k0, path, query: u.search });
+      if (r.dead || r.error || !r.info) return null;
+      stats.rust++;
+      return { status: 200, text: r.info, ms: performance.now() - t0 };
+    }
+    if (path === "/api/xic" && !hasRef(q)) {
+      const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
+      if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {
+        await Promise.all(ks.map(k => slots[k].opening));
+        if (ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) {
+          const parts = [];
+          for (const k of ks) {
+            const r = await rpc({ op: "idxxic", slot: k, level, mz, tol });
+            if (r.dead || r.error || !r.info) return null;
+            parts.push(`{"k":${k},${r.info.slice(1)}`);
+          }
+          stats.rust++;
+          return { status: 200, text: `{"mz":${JSON.stringify(mz)},"tol":${JSON.stringify(tol)},"traces":[${parts.join(",")}]}`, ms: performance.now() - t0 };
+        }
+      }
+    }
+    // the rest needs the spectra of the mzML (or the file has no index): TIC and XIC of a file without index, single scans
     let ks;
     if (path === "/api/chrom") {
       if ((q.get("kind") || "tic") !== "tic" || !empty(q, "mz0", "mz1", "prec", "filt")) return null;
-      ks = [num(q, "k", -1)];
+      ks = [k0];
     } else if (path === "/api/xic") ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
     else if (path === "/api/spectra") {
       if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "1") return null;
-      ks = [num(q, "k", -1)];
+      ks = [k0];
     } else return null;
     if (!ks.length || ks.some(k => !Number.isInteger(k) || !slots[k])) return null;
     await Promise.all(ks.map(k => slots[k].opening));
+    if (ks.some(k => slots[k].idx && !slots[k].idx.scans)) return null;             // an MRM file has no scans: Python's
+    await Promise.all(ks.map(k => needMzml(k, slots[k])));
     if (ks.some(k => !slots[k] || slots[k].bad || !slots[k].info || !slots[k].info.spectra)) return null;
-    const t0 = performance.now();
     let body;
     if (path === "/api/chrom") {
       const t = await trace(ks[0], "tic", level, {}, px); if (!t) return null; body = t;

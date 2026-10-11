@@ -134,5 +134,52 @@ Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (
 
 Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
 
+## Rust legge l'indice (`python3 tools/bench.py --files 6 --json`, Chromium cloud con WASM, 6 Full Scan sintetici, un giro, commit di partenza e commit del lavoro)
+Prima = `?motore=rust` con il motore che apre l'mzML per TIC e XIC; dopo = lo stesso motore che risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni, scansione più vicina) e apre l'mzML solo per le scansioni singole.
+
+| misura | prima (Rust) | dopo (Rust) | Python (stesso giro, dopo) |
+|---|---|---|---|
+| avvio (pagina + motore), s | 5.41 | 5.38 | 4.37 |
+| apertura dei file fino al primo TIC, s | 2.13 | 2.27 | 2.24 |
+| TIC + 5 XIC di ogni file, s | 0.14 | 0.11 | 0.35 |
+| RSS del browser, MB | 1095 | 1033 | 1073 |
+
+Letture: con sei file da pochi MB la seconda lettura dell'mzML costava poco e la differenza di apertura sta dentro il rumore di un solo giro (il guadagno cresce con la dimensione dei file); l'avvio non cambia perché Pyodide sta ancora davanti al primo TIC. Rimane da misurare su file grandi e su Mac/CI.
+
 ## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
 Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
+
+## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux, 2026-10-11)
+Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Prima = `origin/main` con la sola strumentazione `?perf`; dopo = questo pacchetto. Un giro; tempi in ms, mediana / p95.
+
+**Prima: dove va il tempo di un punto del mirino (sito, Pyodide)**
+| fase | LR | HR |
+|---|---|---|
+| (a) XIC: totale / Python | 6.5 / 3.5 (p95 10.3 / 6.3) | 3.8 / 1.4 |
+| (b) scansione più vicina (`nearest_scan`) + spettro (`spectrum`): totale | 2.4 + 49.5 (p95 6 + 75) | 1.8 + 13.2 |
+| (b) di cui Python | 1.8 + 42.1 | 1.2 + 11.1 |
+| (c) disegno dei due pannelli | 0.9 (p95 1.7) | 0.9 (p95 1.2) |
+| (d) JS↔worker (totale − Python) | 0.6 / 7.4 / 3.0 (nearest / spectrum / XIC) | 0.6 / 2.1 / 2.4 |
+| (e) richieste per movimento, spazzata lenta (60 eventi a 100 ms) | 2.27 (136) | 2.18 (131) |
+| (e) trascinamento continuo (120 eventi ogni ~30 ms) | 4 richieste in tutto, 1 disegno | 3 richieste, 1 disegno |
+| attesa dal punto al disegno esatto, spazzata (mediana / p95) | 114 / 140 | 77 / 84 |
+
+Cause: (1) il debounce di 60 ms riparte a ogni evento, quindi **durante il movimento i due pannelli non si aggiornano mai** (1 disegno in 3,5 s di trascinamento; tenendo premuta una freccia, 2 richieste in 40 pressioni) e dopo l'arresto passano ≥ 60 ms più la risposta; (2) per ogni punto tre richieste in due tempi (`nearest_scan`, poi `spectrum`, in parallelo l'XIC), anche se la scansione non è cambiata (la chiave della cache era l'RT del pixel); (3) `Item._binned` scorre **tutta** la tabella dei picchi (ordinata per m/z) per estrarre una scansione: 42 ms di Python su 750 000 picchi, proporzionale alla dimensione del file; (4) la cache `CACHE` di `explore.js` non ha limite (uno spettro per ogni scansione visitata, per sempre).
+
+**Dopo**
+| misura | prima | dopo |
+|---|---|---|
+| spettro di un punto: Python, LR (mediana) | 42.1 | 3.2 (`/api/spectra`: legge la scansione dal file) |
+| spettro di un punto: totale, LR / HR | 49.5 / 13.2 | 4.1 / 2.2 |
+| richieste, spazzata lenta, LR / HR | 136 / 131 | 38 / 36 |
+| attesa dal punto al disegno esatto, spazzata, LR / HR (mediana) | 114 / 77 | 24 / 23 |
+| attesa p95, spazzata, LR / HR | 140 / 84 | 29 / 30 |
+| aggiornamenti esatti durante il trascinamento, LR / HR (120 eventi) | 1 / 1 | 68 / 90 (più 132 / 106 anteprime) |
+| 40 frecce premute di seguito, LR: richieste / aggiornamenti esatti / attesa | 2 / 1 / 108 | 33 / 40 / 21 |
+| fotogramma durante il trascinamento (mediana / p95 / max) | 16.7 / 16.8 / 16.8 | 16.7 / 33.4 / 50.0 (LR), 16.7 / 16.8 / 16.8 (HR) |
+| lavoro del mirino per fotogramma (mediana / p95 / max), dev | 0.4–1.3 (solo il disegno al movimento) | 0.8 / 1.4 / 4.2 |
+| attività lunghe (> 50 ms) durante il trascinamento | 0 | 0 |
+
+Le richieste per movimento salgono nel trascinamento continuo (prima il mirino non chiedeva nulla finché si muoveva, quindi non mostrava nulla) e scendono per ogni aggiornamento mostrato: 3 richieste → ≤ 1 (spettro e XIC solo se cambiano), 0 sulle scansioni già visitate (cache), mai più di due insieme. Il risultato a mirino fermo è identico (`tests/test_scan_axis.py`: stessa scansione, RT, m/z, intensità e `mode` di `nearest_scan` + `spectrum`, LR e HR a due livelli; `e2e_mappa_mirino`: spettro e XIC finali uguali a `/api/nearest_scan` + `/api/spectrum` + `/api/xic`). Il massimo di 50 ms del fotogramma LR non viene dal codice del mirino (4.2 ms al massimo) ma dal compositore di Chromium senza GPU con la mappa a schermo intero.
+
+**Cosa risolverà RUST_PRIMO e cosa no.** Già coperti dal motore Rust: l'XIC (`/api/xic`) e lo spettro di una scansione LR a centroidi senza fusione (`/api/spectra`, `rust-bridge.js`), cioè il costo (a) e (b) di Python, oggi 3-4 ms ma proporzionale al file nel vecchio percorso; il nuovo percorso del mirino li usa già con entrambi i motori. Restano: `/api/scan_axis` (una volta per file e livello, risposta Python; lista di RT in JSON), le copie JSON di array di numeri (7 ms su 500 picchi per lo spettro LR: il passaggio come `Float32Array` trasferibile è lavoro del motore, non della pagina), la cache e la coalescenza (solo JS), il disegno. Provato e scartato: una richiesta unica «XIC + spettro» (due andata-e-ritorno da 3-4 ms in parallelo non dominano più, e un endpoint unico escluderebbe l'XIC dal motore Rust); riduzione dell'XIC a min/max per colonna di pixel (il disegno costa 0.9 ms); letture di sole colonne dal `.mzidx` (lo spettro ora legge la scansione dal file, l'XIC usa già la ricerca per m/z).

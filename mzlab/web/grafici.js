@@ -25,6 +25,7 @@ async function blankTrace(p, s) {
 // Not a blank-file subtraction: one number (or a straight line), not a profile in time. The level is computed on each trace (each file) on its own.
 const ibkRange = (a, d = 1) => `${+a[0].toFixed(d)}-${+a[1].toFixed(d)} min`;
 const ibkRanges = ib => ib.mode === "line" && ib.b ? I18N.t("ibk.and", { a: ibkRange(ib.a), b: ibkRange(ib.b) }) : ibkRange(ib.a);
+const corrText = p => { const r = window.SUBREF ? SUBREF.text(p) : ""; return r ? (p.ibk ? ibkText(p.ibk) + " · " : "") + r : ibkText(p.ibk); };
 const ibkStat = ib => I18N.t(`ibk.${ib.mode}`);
 const ibkText = ib => !ib ? I18N.t("ibk.no") : I18N.t("ibk.yes", { ranges: ibkRanges(ib), stat: ibkStat(ib), clip: ib.clip ? I18N.t("ibk.clip") : "" });
 function ibkFn(s, ib) {
@@ -35,21 +36,43 @@ function ibkFn(s, ib) {
   }
   const L = stat(ib.a, ib.mode === "median"); return { f: () => L, lvl: L };
 }
+// ---- reference of the session (sottrazione.js): the difference sample minus reference is computed by the API (mzlab/differenza.py), trace by trace
+async function diffTrace(p, s, o) {
+  const f = E.files[s.k]; if (!f) return null;
+  if (p.type === "xic") {
+    const tr = p.traces.find(t => t.id === s.tid) || {}, a = tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [s.mz, tr.w ?? p.tol];
+    const j = await memo(`dx${s.k}|${a[0]}|${a[1]}|${f.lv}${SUBREF.qs(o)}`, () => J(`api/xic?k=${s.k}&mz=${a[0]}&tol=${a[1]}&level=${f.lv}${SUBREF.qs(o)}`));
+    return j.traces[0];
+  }
+  if (p.type === "chrom") {
+    const pda = p.kind === "pda", lv = p.flv ?? f.lv, prec = !pda && f.kind === "ms2" ? p.prec : null;
+    return memo(`dc${s.k}|${p.kind}|${lv}|${pda ? "" : p.mz0 ?? ""}|${pda ? "" : p.mz1 ?? ""}|${prec ?? ""}|${p.filt ?? ""}${SUBREF.qs(o)}`,
+      () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (!pda && p.mz0 != null ? `&mz0=${p.mz0}` : "") + (!pda && p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
+  }
+  const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
+  const t = j.files[0].transitions.find(q => `${q.q1}>${q.q3}` === s.ion);
+  return t && !t.nodiff ? t : null;
+}
 async function corrected(p, all) {
-  const hasBk = p.bk !== "" && p.bk != null && E.files[+p.bk];
-  if (!hasBk && !p.snip && !p.ibk) return all;
-  const out = [];
+  const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null;
+  const hasBk = p.bk !== "" && p.bk != null && E.files[+p.bk] && !so;
+  if (!so && !hasBk && !p.snip && !p.ibk) return all;
+  const out = [], others = so ? all.some(s => s.k !== so.k) : true;
   for (const s of all) {
-    if (hasBk && s.k === +p.bk) continue;                   // the blank itself is the thing being subtracted
-    let y = s.y.slice(), note = [], ibl = null;
-    if (p.ibk) { ibl = ibkFn(s, p.ibk); y = y.map((v, i) => { const r = v - ibl.f(s.x[i]); return p.ibk.clip ? Math.max(0, r) : r; }); note.push(I18N.t("corr.note.ibk")); }
-    if (hasBk) { const b = await blankTrace(p, s); if (b) { y = y.map((v, i) => Math.max(0, v - interp(b.x, b.y, s.x[i]))); note.push(I18N.t("corr.note.blank")); } }
-    if (p.snip && s.x.length > 5) {
-      const dts = s.x.slice(1).map((v, i) => v - s.x[i]).sort((a, b) => a - b), dt = dts[dts.length >> 1] || 0.01;
+    if ((hasBk || (so && others)) && s.k === (so ? so.k : +p.bk)) continue;       // the reference itself is the thing being subtracted (alone, it stays on the graph)
+    let y = s.y.slice(), x = s.x, note = [], ibl = null;
+    if (so && s.k !== so.k) {
+      const d = await diffTrace(p, s, so);
+      if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); }
+    }
+    if (p.ibk) { ibl = ibkFn({ x, y }, p.ibk); y = y.map((v, i) => { const r = v - ibl.f(x[i]); return p.ibk.clip ? Math.max(0, r) : r; }); note.push(I18N.t("corr.note.ibk")); }
+    if (hasBk) { const b = await blankTrace(p, s); if (b) { y = y.map((v, i) => Math.max(0, v - interp(b.x, b.y, x[i]))); note.push(I18N.t("corr.note.blank")); } }
+    if (p.snip && x.length > 5) {
+      const dts = x.slice(1).map((v, i) => v - x[i]).sort((a, b) => a - b), dt = dts[dts.length >> 1] || 0.01;
       const w = Math.max(2, Math.round((p.snipw || 1) / dt / 2)), bl = snipBaseline(y, w);
       y = y.map((v, i) => Math.max(0, v - bl[i])); note.push(I18N.t("corr.note.baseline"));
     }
-    out.push({ ...s, y, corr: note.join(" "), ibl });
+    out.push({ ...s, x, y, corr: note.join(" "), ibl });
   }
   return out;
 }
@@ -103,6 +126,8 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
   const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(12);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
+  let needL = 0; for (const [, lab] of yt) needL = Math.max(needL, g.measureText(lab).width);
+  g.canvas._needL = Math.ceil(needL + 6 + 4 + 14 * fz());                  // room for the numbers (right aligned at M.l - 6) and the title; the panels of a view take the widest
   g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
   g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
   g.fillStyle = css("--ink"); g.font = fpx(12);
@@ -126,10 +151,27 @@ function drawAnn(p, g, a, px, py, W, gap) {
   g.restore();
   (p._a.lbls = p._a.lbls || []).push({ x: bx, y: by, w, h, ann: a, tip: `<b>${EH(a.text)}</b><div class="sm">${I18N.t("draw.ann.tip")}</div>` });
 }
+// ---- the stacked chromatograms of a view: same time range, same left and right edge of the plot (the y axes stay independent)
+const isLine = q => q.type === "chrom" || q.type === "xic" || q.type === "mrm";
+const linked = p => tabPanels(p.tab).filter(q => isLine(q) && q.tl && q.el && !q._exp);
+function unionTime(p, lo, hi) {
+  linked(p).forEach(q => { if (q !== p && q._own) { lo = Math.min(lo, q._own[0]); hi = Math.max(hi, q._own[1]); } });
+  return [lo, hi];
+}
+function syncView(p) {
+  if (!isLine(p) || !p._a) return;
+  p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
+  const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
+  const L = Math.max(Math.round(66 * z), ...all.map(q => q._needL || 0)), R = Math.max(14, ...all.map(q => q._needR || 0));
+  const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
+  window.MARG_L = L; window.MARG_R = R;
+  all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
+  if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
+}
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
-  try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -203,6 +245,7 @@ function legend(p, all, note = "") {
   p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
   legCollapse(p);
   ibkChip(p);
+  if (window.SUBREF) SUBREF.chip(p);
 }
 // with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it
 function legCollapse(p) {
@@ -222,10 +265,14 @@ async function drawLines(p) {
   }
   let lo = Infinity, hi = -Infinity;
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
+  p._own = [lo, hi];
+  if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own
+  p._u = [lo, hi];
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
-    let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m;
+    let m = 1e-9, neg = 0; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
   // rows of the stacked view: one per trace, or (stacked graphs of the bench) one per graph with the files overlaid in it
@@ -254,6 +301,7 @@ async function drawLines(p) {
   const { X, Y } = axes(g, W, H, x0, x1v, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, nl: rowMax, nrow, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
+  if (ymin < 0 && !stk && !logy) { g.save(); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke(); g.restore(); }      // the zero line: what is below it is lower than the reference
   if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
@@ -313,7 +361,7 @@ async function drawLines(p) {
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     if (it.noise && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(it.noise[0]), M.l), xb = Math.min(X(it.noise[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: ibkText(p.ibk) });
+    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: corrText(p) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
@@ -437,18 +485,28 @@ function mapImage(p, A, B, scale, norm = "abs") {
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
+// The whole view of the map: the union of the stretches with data of the files shown (first to last scan with peaks; lowest to highest m/z) with a small
+// margin, inside the grid. A file without the extent (an older answer) or without data keeps the whole grid. Nothing is extrapolated.
+function mapView(A, B, rt0, rt1, mz0, mz1) {
+  const ex = [A, B].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
+  if (!ex.length) return { rt: [rt0, rt1], mz: [mz0, mz1] };
+  const lo = (i, k) => Math.min(...ex.map(e => e[k][i])), hi = (i, k) => Math.max(...ex.map(e => e[k][i]));
+  const a = lo(0, "rt"), b = hi(1, "rt"), c = lo(0, "mz"), d = hi(1, "mz"), pr = Math.max((b - a) * 0.01, 1e-3), pm = Math.max((d - c) * 0.01, 0.5);
+  return { rt: [Math.max(rt0, a - pr), Math.min(rt1, b + pr)], mz: [Math.max(mz0, c - pm), Math.min(mz1, d + pm)] };
+}
 async function drawMap(p) {
   const { g, W, H } = setup(p.cv);
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
   const sf = scanFiles(tabFiles(p.tab)); if (!sf.length) return say(I18N.t("map.noScans"));
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
   if (!f || f.kind === "mrm") f = sf[0];
-  const lv = f.lv, rf = p.ref !== "" && p.ref != null && E.files[+p.ref] && E.files[+p.ref].kind !== "mrm" && E.files[+p.ref].lv === lv && +p.ref !== f.k ? E.files[+p.ref] : null;
+  const lv = f.lv, se = window.SUBREF ? SUBREF.eff(p) : null, rf = se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
   const A = { ...(await getMap(f.k, lv, mapBg())), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg())), k: rf.k } : null;
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const im = mapImage(p, A, B, p.scale, p.norm || "abs");
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
-  const x0 = p.zoom ? p.zoom[0] : rt0, x1 = p.zoom ? p.zoom[1] : rt1, y0 = p.zoomY ? p.zoomY[0] : mzA, y1 = p.zoomY ? p.zoomY[1] : mzB;
+  const ext = mapView(A, B, rt0, rt1, mzA, mzB);                     // the whole view is where the files have data (no empty bands at the sides)
+  const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = I18N.t(`map.sc.${p.scale}`);
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
@@ -459,7 +517,8 @@ async function drawMap(p) {
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.16)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), ph); }
   if (p.cur != null && !p._exp) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
   const mzAt = py => y1 - (py - M.t) / ph * (y1 - y0);
-  p._a = { x0, x1, y0, y1, X, Y: Yv, W, H, full: [rt0, rt1], fullY: [mzA, mzB], f, mzAt, map: true, dmz: A.dmz, ref: rf,
+  p._a = { x0, x1, y0, y1, X, Y: Yv, W, H, full: ext.rt, fullY: ext.mz, grid: { rt: [rt0, rt1], mz: [mzA, mzB] }, f, mzAt, map: true, dmz: A.dmz, ref: rf,
+    mat: B ? null : { v: im.v, nrt: A.nrt, nmz: A.nmz, rt0, rt1, mz0: A.mz0, dmz: A.dmz },          // the matrix of the sight's preview (mappa.js)
     mapv: (rt, mz) => { const i = Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt), j = Math.floor((mz - A.mz0) / A.dmz); return i >= 0 && i < A.nrt && j >= 0 && j < A.nmz ? im.v[i * A.nmz + j] : null; } };
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
@@ -469,6 +528,7 @@ async function drawMap(p) {
   };
   const rng = B ? [`+${fmt(im.ref)}`, `−${fmt(im.ref)}`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm mzhelp">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
+  if (window.SUBREF && B) SUBREF.chip(p);
   if (window.MAPPA) MAPPA.after(p);
 }
 
