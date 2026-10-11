@@ -2,7 +2,7 @@
    Classic script on top of teoria.js (TP), motore.js (PAL) and esercizi-lcms.js (LCMS). Data are CONSTRUCTED for teaching (generic scaffolds).
    The program never gives the answer before an attempt: aids (3 levels) narrow the reasoning, the coherence check gives numbers. */
 "use strict";
-const GIOCHI_LC = (() => {
+const LCUI = (() => {
   const { fx, sgn, sub, SHIFT, ADDUCT_LABEL } = LCMS;
   const last = {};                                          // last exercise of each game (read by the tests)
   const num = v => { const x = parseFloat(String(v).replace(",", ".")); return Number.isFinite(x) ? x : null; };
@@ -20,7 +20,6 @@ const GIOCHI_LC = (() => {
   const fbSet = (el, ok, html) => { el.className = "fb " + (ok ? "ok" : "no"); el.innerHTML = html; };
   const lock = st => { st.querySelectorAll("button,input,select").forEach(b => { b.disabled = true; }); };
   const open = st => { st.classList.remove("off"); st.removeAttribute("inert"); const c = st.querySelector("button,input,select"); if (c) c.focus(); };   // the answered step is disabled: focus moves on
-  const off = st => { st.classList.add("off"); st.setAttribute("inert", ""); };
 
   /** aids button: reveals the next of 3 levels (cumulative) in a live region */
   function aids(box, help) {
@@ -35,7 +34,11 @@ const GIOCHI_LC = (() => {
     return box;
   }
   const ds = '<p class="note">Dati costruiti a scopo didattico: formule inventate, non misure.</p>';
+  return { fx, sgn, sub, SHIFT, ADDUCT_LABEL, last, num, LV, LVE, frame, seed, fbSet, lock, open, aids, ds };
+})();
 
+const LCDM = (() => {
+  const { fx, sgn, sub, num, LV, last, frame, seed, fbSet, lock, open, aids, ds } = LCUI;
   // =========================================================== H1: delta m of the transformation product
   function dm(root) {
     const fr = frame(root, LV, next);
@@ -84,6 +87,11 @@ const GIOCHI_LC = (() => {
     next(); fr.pts("lc-dm");
   }
 
+  return dm;
+})();
+
+const LCESI = (() => {
+  const { fx, SHIFT, ADDUCT_LABEL, num, LVE, frame, seed, fbSet, lock, aids, ds, last } = LCUI;
   // =========================================================== H2: ESI+ and ESI-
   function esi(root) {
     const fr = frame(root, LVE, next);
@@ -141,5 +149,7 @@ const GIOCHI_LC = (() => {
     }
     next(); fr.pts("lc-esi");
   }
-  return { dm, esi, last };
+  return esi;
 })();
+
+const GIOCHI_LC = { dm: LCDM, esi: LCESI, last: LCUI.last };
