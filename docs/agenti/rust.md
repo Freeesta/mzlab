@@ -15,6 +15,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 
 ## Compilare e provare
 - `cargo test` (nativo), `cargo build --release --target wasm32-unknown-unknown -p mzlab-wasm`, `cargo tree --target wasm32-unknown-unknown -p mzlab-wasm`. `cargo fmt --check` e `cargo clippy` avvisano soltanto.
+- `sito-rust.yml` (PR che toccano `crates/`, `mzlab/`, `tools/build_site.py` o i test e2e; anche a mano con `solo`): costruisce il sito e il `.wasm` come `pages.yml` e lancia `e2e_rust`, `e2e_pool`, `e2e_mzidx`, `e2e_progressivo`; non obbligatorio. È il banco di prova del motore Rust quando il container di sessione non può costruire il `.wasm`.
 - `rust.yml` gira solo su modifiche a `crates/**`, `Cargo.*`, toolchain e config; non è un controllo obbligatorio di «main protetto».
 - Parità: `crates/mzlab-core/tests/golden.rs` confronta il lettore con `tests/golden/` (prima gli indici dei bordi, poi le tolleranze); i file sintetici li scrive `python3 tools/golden.py --sintetici DIR` (senza python3 e numpy il test si salta, con `MZLAB_GOLDEN_STRICT=1` fallisce). Se un'area esce dalla tolleranza è logica diversa: si corregge la logica. Carico di un file: `cargo run --release --example carico -- FILE.mzML`.
 - Dati d'oro: `python3 tools/golden.py --controlla` (aree 1e-4, m/z 1e-6, entropia 1e-9, indici dei bordi identici); `--crea` solo se il riferimento Python cambia di proposito.
