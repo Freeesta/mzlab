@@ -8,6 +8,7 @@ pub mod ms2;
 pub mod pipeline;
 mod post;
 pub mod quality;
+pub mod resolve;
 pub mod suspects;
 mod sweep;
 pub mod table;
