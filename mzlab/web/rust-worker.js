@@ -3,6 +3,7 @@
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
 import init, { Engine, prepare_upload, formula_mz } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
+import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
 
 let engine = null;
@@ -42,14 +43,7 @@ async function lrOpen(name) {                                             // ope
   return true;
 }
 // IndexedDB of the page ("qqq_lab", the same one as browser-worker.js): the notebook and, without OPFS, the files
-const IDB = "qqq_lab";
-let dbP = null;
-const idb = () => dbP || (dbP = new Promise((res, rej) => {
-  const r = indexedDB.open(IDB, 2);
-  r.onupgradeneeded = () => { const db = r.result; for (const s of ["files", "kv"]) if (!db.objectStoreNames.contains(s)) db.createObjectStore(s); if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" }); };
-  r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbP = null; }; res(db); };
-  r.onerror = () => rej(r.error);
-}).catch(e => { dbP = null; throw e; }));
+const idb = lab();
 const tx = async (store, mode, fn) => {
   const db = await idb();
   return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });

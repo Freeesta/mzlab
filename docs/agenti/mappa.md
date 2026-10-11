@@ -39,7 +39,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `banco.js` (486) Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Cl — BANCO:8, subXic:127, decorate:175, tIso:358, bar:455
 - `barra.js` (1053) Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR. — BARRA:11, QI:53, bindSideDrag:764, bindGlobalEvents:834, init:971
 - `bianco.js` (76) Blank subtraction of the feature table (high resolution only; «Statistica» panel): threshold = blank — BIANCO:6
-- `browser-worker.js` (353) Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab pa — start:130, buildFor:250, python:253, answer:284
+- `browser-worker.js` (341) Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab pa — start:118, buildFor:238, python:241, answer:272
 - `browser.js` (174) Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are — json:124
 - `calcola.js` (52) Arithmetic of the header calculator (block 4.2): pure functions, also run by node in tests/test_calc — calcEval:11
 - `campioni.js` (202) Sample metadata («Statistica» panel, first section): one row per file with the fields of the mzmine  — CAMPIONI:8, mount:152
@@ -67,7 +67,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `libreria-scarica.js` (87) Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page  — SCARICA:8, downloadPackage:47
 - `libreria-worker.js` (673) Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's pr — topPeaks:28, unpackIndex:228, indexCmd:635
 - `libreria.js` (570) Part D: compare a MS2 spectrum with the spectral libraries (MSP, MGF) the user has loaded. Classic s — LIB:5, mirror:249, searchFrom:333, whatIs:403, identifyAll:511
-- `liste.js` (817) Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists — LISTE:6, csvParse:142, userList:207, mount:532, open:759
+- `liste.js` (813) Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists — LISTE:6, csvParse:142, userList:207, mount:528, open:755
 - `livelli-1.js` (105) Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of 
 - `livelli.js` (107) The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by  — LIVELLI:6, assess:58
 - `lr.js` (178) The flow of the low-resolution files WITHOUT Pyodide (opt-in: ?lr=1 or localStorage qqq.lr = "1", wi — createLr:21, fresh:136
@@ -88,12 +88,13 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `picchi.js` (557) Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafi — autoEdges:30, showInts:248, drawSpec:312, inRange:367, hidOf:412
 - `profilo.js` (156) Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every  — PROFILO:8
 - `qaqc.js` (246) QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender — QAQC:9, mount:203 **[dormiente: QA/QC]**
+- `qqq-db.js` (23) The IndexedDB of the page ("qqq_lab": the name is kept, renaming it would lose the users' data): its
 - `qualita.js` (40) Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak a
 - `rapporto.js` (114) Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measu — RAPPORTO:7, build:35, html:71
 - `reset.js` (95) The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the sessi
 - `riferimento.js` (216) «Difference from the reference» (high resolution only; «Statistica» panel): for every feature of the — RIFERIMENTO:7, run:21, inspect:133
 - `rust-bridge.js` (223) Page side of the Rust engine (?motore=rust or localStorage qqq.motore = "rust"): browser.js hands ev — createBridge:10, open:71, hasRef:119
-- `rust-worker.js` (173) Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, — lrOp:69
+- `rust-worker.js` (167) Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, — lrOp:63
 - `scroll.js` (178) Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possibl
 - `settings.js` (159) Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after e — uipOpen:51
 - `sottrazione.js` (127) Reference of the session (a blank or the t0): one gesture, the same difference on traces, spectrum a

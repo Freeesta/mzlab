@@ -1,6 +1,7 @@
 // Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab package as the local program.
 import { loadPyodide } from "./pyodide/pyodide.mjs";
 import * as ARCH from "./archivio.js";
+import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
 
 // a step of the start: a catalog key (shown by the loading screen in the language of the page) and the percentage when known
@@ -12,20 +13,7 @@ const FRESH = Q.get("riparti") === "1"; // «start from scratch»: the saved fil
 const OPFS = ARCH.available() && Q.get("opfs") !== "0";   // files and indexes in OPFS (?opfs=0 on the page keeps the old way: memory + IndexedDB, for the tests)
 
 // ---- the browser's own storage (IndexedDB): files and notebook survive a reload, like the work folder of the local program
-const DB = "qqq_lab"; // kept from the old name: renaming it would lose the users' data
-let dbP = null;      // one connection for the whole life of the worker; it closes itself when another tab needs to upgrade the database
-const idb = () => dbP || (dbP = new Promise((res, rej) => {
-  const r = indexedDB.open(DB, 2);
-  r.onupgradeneeded = () => {
-    const db = r.result;
-    if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
-    if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
-    if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
-  };
-  r.onblocked = () => postMessage({ type: "blocked" });     // another tab holds an older connection: the upgrade waits until it is closed
-  r.onsuccess = () => { const db = r.result; db.onversionchange = () => { db.close(); dbP = null; }; res(db); };
-  r.onerror = () => rej(r.error);
-}).catch(e => { dbP = null; throw e; }));
+const idb = lab(() => postMessage({ type: "blocked" }));      // one connection for the whole life of the worker
 const tx = async (store, mode, fn) => {
   const db = await idb();
   return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });
