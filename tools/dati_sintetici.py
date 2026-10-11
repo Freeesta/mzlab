@@ -54,10 +54,22 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False) 
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
 
-def _chrom(i, cid, t, y, extra="") -> str:
+def _chrom(i, cid, t, y, extra="", yunit="") -> str:
     return (f'<chromatogram index="{i}" id="{cid}" defaultArrayLength="{len(t)}">{extra}<binaryDataArrayList count="2">'
             + _arr("MS:1000595", "time array", t, ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"')
-            + _arr("MS:1000515", "intensity array", y) + "</binaryDataArrayList></chromatogram>")
+            + _arr("MS:1000515", "intensity array", y, f' unitName="{yunit}"' if yunit else "") + "</binaryDataArrayList></chromatogram>")
+
+
+def pressure_trace(rt_end: float = 15.0, n: int = 6000):
+    """Pump pressure like a Thermo file converted with msconvert: declared in pascal, values ten times too high (278 bar at 1 min really shows 2.78e8)."""
+    t = np.linspace(0, rt_end, n)
+    bar = 270 + 8 * t + 20 * np.sin(t * 3)
+    return t, bar * 1e5 * 10
+
+
+def _pressure_chrom(i: int) -> str:
+    t, y = pressure_trace()
+    return _chrom(i, "Pump Pressure 1", t, y, '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>', "pascal")
 
 
 def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
@@ -84,7 +96,7 @@ def _pda(rng, total, rt_end=22.0):
     return t, y
 
 
-def full_scan(path: Path, t: float, rng, neg: bool = False) -> None:
+def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False) -> None:
     k = 0.035
     P = 2.0e7 * np.exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
@@ -109,7 +121,7 @@ def full_scan(path: Path, t: float, rng, neg: bool = False) -> None:
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
     tp, yp = _pda(rng, np.exp(-k * t))
-    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)])
+    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
 
 
 def ms2(path: Path, rng, t: float = 15) -> None:

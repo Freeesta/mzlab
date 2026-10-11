@@ -582,8 +582,10 @@ class Run:
                 d["kind"] = "tic"
             elif cid == "BPC":
                 d["kind"] = "bpc"
-            elif cid == "TWC":                  # total wavelength chromatogram = PDA/DAD signal summed over wavelengths
+            elif cid == "TWC" or 'accession="MS:1000812"' in h or 'accession="MS:1000813"' in h:       # total wavelength chromatogram = PDA/DAD signal summed over wavelengths
                 d["kind"] = "pda"
+            elif 'accession="MS:1003019"' in h or cid.startswith("Pump Pressure"):                      # pump pressure (Thermo files converted with msconvert)
+                d["kind"] = "pressure"
             elif cid.startswith("SRM"):
                 d["kind"] = "srm"
                 for key, rx in (("q1", r"Q1=([0-9.]+)"), ("q3", r"Q3=([0-9.]+)"), ("ce", r"ce=([0-9.]+)")):
@@ -593,6 +595,10 @@ class Run:
                 d["name"] = m.group(1).strip() if m else ""
                 dw = re.search(r'name="?MS_dwell_time"?\s+value="([^"]*)"', h)
                 d["dwell"] = _float(dw.group(1)) if dw else None
+            elif not any(f'accession="{a}"' in h for a in ("MS:1000235", "MS:1000627", "MS:1000628", "MS:1001473", "MS:1001472")):
+                d["kind"] = "analog"             # any other detector or device trace (flow, temperature...): it has no mass-spectrometer term
+            n = re.search(r'defaultArrayLength="(\d+)"', h)
+            d["n"] = int(n.group(1)) if n else None
             out.append(d)
             pos = b + 1
         self._chroms = out
@@ -619,6 +625,18 @@ class Run:
         if 'unitName="second"' in chunk[:chunk.find(b"<binaryDataArrayList")].decode("utf-8", "replace") or b'name="time array" value="" unitCvRef="UO" unitAccession="UO:0000010"' in chunk:
             t = t / 60.0
         return t[:n], y[:n]
+
+    def chromatogram_unit(self, i: int) -> str:
+        """The unit written on the intensity array of chromatogram i (unitName), or ''."""
+        d = self.chromatograms()[i]
+        chunk = bytes(self._mm[d["start"]:d["end"]])
+        for blk in re.finditer(rb"<binaryDataArray .*?</binaryDataArray>", chunk, re.S):
+            t = blk.group(0)
+            head = t[:t.find(b"<binary>")].decode("utf-8", "replace")
+            m = re.search(r'unitName="([^"]*)"', head)
+            if "MS:1000595" not in head and m:
+                return m.group(1)
+        return ""
 
     def metadata(self) -> dict:
         """Instrument, software and source file names from the mzML header."""

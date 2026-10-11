@@ -44,7 +44,11 @@ pub enum ChromKind {
     Tic,
     Bpc,
     Pda,
+    /// Pump pressure (MS:1003019, or an id that starts with "Pump Pressure").
+    Pressure,
     Srm,
+    /// Any other detector or device trace: it carries no mass-spectrometer term.
+    Analog,
     Other,
 }
 
@@ -55,6 +59,8 @@ pub struct Chromatogram {
     pub kind: ChromKind,
     pub q1: Option<f64>,
     pub q3: Option<f64>,
+    /// `unitName` of the intensity array ("" when it has none).
+    pub unit: String,
     /// Minutes.
     pub time: Vec<f64>,
     pub intensity: Vec<f64>,
@@ -197,6 +203,11 @@ struct Chrom {
     id: String,
     len: usize,
     arrays: Vec<Array>,
+    unit: String,
+    /// Accessions seen in the header of the chromatogram: they decide its kind like in `mzlab/reader/mzml.py`.
+    pda: bool,
+    pressure: bool,
+    ms_term: bool,
 }
 
 fn finish_spectrum(s: Spec) -> Result<Spectrum> {
@@ -265,7 +276,10 @@ fn finish_chromatogram(c: Chrom) -> Result<Chromatogram> {
         "TIC" => ChromKind::Tic,
         "BPC" => ChromKind::Bpc,
         "TWC" => ChromKind::Pda,
+        _ if c.pda => ChromKind::Pda,
+        s if c.pressure || s.starts_with("Pump Pressure") => ChromKind::Pressure,
         s if s.starts_with("SRM") => ChromKind::Srm,
+        _ if !c.ms_term => ChromKind::Analog,
         _ => ChromKind::Other,
     };
     let (q1, q3) = if kind == ChromKind::Srm {
@@ -279,6 +293,7 @@ fn finish_chromatogram(c: Chrom) -> Result<Chromatogram> {
         kind,
         q1,
         q3,
+        unit: c.unit,
         time: t,
         intensity: y,
     })
@@ -339,6 +354,10 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                 .and_then(|v| v.parse().ok())
                                 .unwrap_or(0),
                             arrays: Vec::new(),
+                            unit: String::new(),
+                            pda: false,
+                            pressure: false,
+                            ms_term: false,
                         });
                         scope = Scope::Chromatogram;
                     }
@@ -364,10 +383,23 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                         let unit = get(&a, "unitName").unwrap_or("");
                         let unit_acc = get(&a, "unitAccession").unwrap_or("");
                         let seconds = unit.starts_with("second") || unit_acc == "UO:0000010";
+                        if let (Scope::Chromatogram, Some(c)) = (scope, chrom.as_mut()) {
+                            match acc {
+                                "MS:1000812" | "MS:1000813" => c.pda = true,
+                                "MS:1003019" => c.pressure = true,
+                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473" | "MS:1001472" => c.ms_term = true,
+                                _ => {}
+                            }
+                        }
                         if let Some(arr) = array.as_mut() {
                             match acc {
                                 "MS:1000514" => arr.kind = ArrayKind::Mz,
-                                "MS:1000515" => arr.kind = ArrayKind::Intensity,
+                                "MS:1000515" => {
+                                    arr.kind = ArrayKind::Intensity;
+                                    if let (false, Some(c)) = (unit.is_empty(), chrom.as_mut()) {
+                                        c.unit = unit.to_string();
+                                    }
+                                }
                                 "MS:1000595" => {
                                     arr.kind = ArrayKind::Time;
                                     arr.seconds = seconds;
