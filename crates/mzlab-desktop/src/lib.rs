@@ -6,6 +6,7 @@ pub mod engine;
 pub mod librerie;
 pub mod mapped;
 pub mod protocol;
+pub mod scarica;
 pub mod update;
 
 pub use engine::State;

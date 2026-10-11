@@ -38,7 +38,7 @@ E2E = ROOT / "tests_e2e"
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_rust": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
+    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_rust": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
@@ -234,7 +234,7 @@ AREE = [
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
     ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2", "e2e_hr_nearest", "e2e_hr_vista"}), ("mzlab/web/banco.js", {"e2e_hr_vista", "e2e_banco_barra", "e2e_banco_celle"}), ("mzlab/chem/subformulas.py", {"e2e_hr_vista"}),
     ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
-    ("mzlab/web/libreria", {"e2e_libreria", "e2e_hr_identificazione", "e2e_libreria_wasm", "e2e_libreria_cartella"}), ("mzlab/web/livelli", {"e2e_libreria", "e2e_hr_identificazione", "e2e_ricerca_ms2"}), ("mzlab/web/touch.js", {"e2e_tocco", "e2e_tocco_disegno"}), ("mzlab/web/perf.js", {"e2e_perf"}),
+    ("mzlab/web/libreria", {"e2e_libreria", "e2e_hr_identificazione", "e2e_libreria_wasm", "e2e_libreria_cartella", "e2e_libreria_scarica"}), ("mzlab/web/livelli", {"e2e_libreria", "e2e_hr_identificazione", "e2e_ricerca_ms2"}), ("mzlab/web/touch.js", {"e2e_tocco", "e2e_tocco_disegno"}), ("mzlab/web/perf.js", {"e2e_perf"}),
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
     ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),

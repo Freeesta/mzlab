@@ -107,9 +107,8 @@ impl Folder {
     /// The path of `name` or `.mzlab/name` inside the folder, never outside it.
     pub fn resolve(&self, rel: &str) -> Result<PathBuf> {
         let parts: Vec<&str> = rel.split('/').collect();
-        let plain = |p: &&str| {
-            !p.is_empty() && *p != "." && *p != ".." && !p.contains(['\\', ':', '\0'])
-        };
+        let plain =
+            |p: &&str| !p.is_empty() && *p != "." && *p != ".." && !p.contains(['\\', ':', '\0']);
         let ok = match parts.len() {
             1 => plain(&parts[0]),
             2 => parts[0] == META && plain(&parts[1]),
@@ -212,14 +211,20 @@ impl Folder {
         let done = off + data.len() as u64 >= total;
         if done {
             fs::rename(&part, &path).map_err(|e| io(&e))?;
-            self.maps.lock().unwrap_or_else(|e| e.into_inner()).remove(&path);
+            self.maps
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .remove(&path);
         }
         Ok(done)
     }
 
     pub fn remove(&self, rel: &str) -> Result<()> {
         let p = self.resolve(rel)?;
-        self.maps.lock().unwrap_or_else(|e| e.into_inner()).remove(&p);
+        self.maps
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&p);
         match fs::remove_file(&p) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),

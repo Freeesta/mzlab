@@ -233,7 +233,7 @@ function unpackIndex(buf) {
 
 // ---------------------------------------------------------------- storage: OPFS, or IndexedDB where it is not there
 if (typeof self !== "undefined" && typeof self.postMessage === "function" && typeof importScripts === "function") {
-  importScripts("libreria-cartella.js");           // the folder of the libraries (CARTELLA)
+  importScripts("libreria-cartella.js", "libreria-scarica.js");           // the folder of the libraries (CARTELLA) and the download of the packages (SCARICA)
   const hasOpfs = () => !!(self.navigator && navigator.storage && navigator.storage.getDirectory);
   let opfsOk = null;
   const root = () => navigator.storage.getDirectory();
@@ -450,7 +450,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   }
 
   // ---------------------------------------------------------------- the folder of the libraries (libreria-cartella.js)
-  const FOLD = { dir: null, mode: null, map: new Map(), infos: [], cat: null, tried: false };
+  const FOLD = { dir: null, mode: null, map: new Map(), infos: [], cat: null, tried: false, catTried: false };
   async function setFolder(m) {                     // {mode: "opfs" | "fs" (handle) | "native" (base of the mzlab:// protocol)}
     FOLD.tried = true; FOLD.map = new Map(); FOLD.infos = []; FOLD.dir = null; FOLD.mode = null;
     for (const [id, e] of [...WLIBS]) if (CARTELLA.isFolderId(id)) { try { e.lib.free(); } catch (e2) { /* gone */ } WLIBS.delete(id); }
@@ -463,6 +463,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   async function foldRefresh() {                    // the inventory of the folder (a SHA-256 only for the files that changed)
     if (!FOLD.tried) await setFolder({ mode: "opfs" });
     if (!FOLD.dir) return { voci: [] };
+    if (!FOLD.cat && !FOLD.catTried) { FOLD.catTried = true; try { FOLD.cat = SCARICA.parseCatalog(await (await FOLD.dir.file(CARTELLA.META + "/catalogo.json")).text()); } catch (e) { /* no catalog seen yet */ } }   // the one the user fetched last time: «update available» without a network call
     const s = await CARTELLA.scan(FOLD.dir, FOLD.cat);
     FOLD.map = new Map(s.voci.map(v => [v.id, v]));
     FOLD.infos = s.voci.filter(v => (v.stato === "pronta" || v.stato === "aggiornamento") && v.info).map(v => ({ ...v.info, id: v.id, name: CARTELLA.stem(v.nome), file: v.nome, size: v.tipo === "pacchetto" ? v.size : (v.info.bytes || 0),
@@ -487,6 +488,45 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       await foldRefresh();
       return info;
     } finally { if (opfs) { try { await (await root()).removeEntry(id + ".mzlib"); } catch (e) { /* not there */ } } }
+  }
+  // the catalog of the packages: from the site (only when the user asks) or handed over by the app; kept in the folder for the states of the next visit
+  async function catalogCmd(m) {
+    if (!FOLD.dir) throw Object.assign(new Error("no folder"), { key: "lib.dl.err.io", params: { detail: "folder" } });
+    if (!(m.cached && FOLD.cat)) {
+      let text;
+      if (m.cat) text = JSON.stringify(m.cat);
+      else {
+        let res; try { res = await fetch("librerie/catalogo.json", { cache: "no-store" }); } catch (e) { throw Object.assign(new Error("offline"), { key: "lib.dl.err.offline", params: { detail: String(e && e.message || e) } }); }
+        if (res.status === 404) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
+        if (!res.ok) throw Object.assign(new Error("http"), { key: "lib.dl.err.http", params: { status: res.status } });
+        text = await res.text();
+      }
+      FOLD.cat = SCARICA.parseCatalog(text); FOLD.catTried = true;
+      try { await FOLD.dir.write(CARTELLA.META + "/catalogo.json", text); } catch (e) { /* the states of the next visit only */ }
+    }
+    const s = await foldRefresh();
+    return { cat: FOLD.cat, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
+  }
+  const DL = { abort: null };
+  async function downloadCmd(m, reqId) {            // the packages the user ticked, one after the other; a failure of one does not stop the others (a cancel does)
+    if (!FOLD.dir || !FOLD.cat) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
+    DL.abort = new AbortController(); const done = [], failed = [], base = new URL("librerie/", self.location.href).href;
+    try {
+      for (const id of m.ids) {
+        const pkg = FOLD.cat.librerie.find(p => p.id === id);
+        if (!pkg) { failed.push({ id, key: "lib.dl.err.catalog", params: { detail: id } }); continue; }
+        try {
+          await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: DL.abort.signal, onProgress: p => postMessage({ type: "progress", reqId, ...p }),
+            beforeReplace: async () => { const w = WLIBS.get(CARTELLA.idOf(id + ".mzlib")); if (w) { try { w.lib.free(); } catch (e) { /* gone */ } WLIBS.delete(CARTELLA.idOf(id + ".mzlib")); rebalance(); } } });
+          done.push(id);
+        } catch (e) {
+          failed.push({ id, key: e.key || "lib.dl.err.io", params: e.params || { detail: String(e && e.message || e) } });
+          if (e.key === "lib.dl.err.cancelled") break;
+        }
+      }
+    } finally { DL.abort = null; }
+    const s = await foldRefresh();
+    return { done, failed, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
   async function foldRemove(id) {                   // a source stays in the folder (only its index goes); a package or an imported index is removed
     const v = FOLD.map.get(id); if (!v) return; const M = CARTELLA.META;
@@ -595,6 +635,9 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       else if (m.cmd === "engine") r = { wasm: !!(await wasm()) };
       else if (m.cmd === "crash") { const w = await wasm(); if (w) w.crash(); r = {}; }
       else if (m.cmd === "folder") { await FOLD.pending; r = {}; }
+      else if (m.cmd === "catalog") r = await catalogCmd(m);
+      else if (m.cmd === "download") r = await downloadCmd(m, reqId);
+      else if (m.cmd === "cancel") { if (DL.abort) DL.abort.abort(); r = {}; }
       else if (m.cmd === "list") { await migrateAll(); let voci = []; if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e) { r = { folderError: String(e && e.name || e) }; } } r = { ...r, libs: [...(await listLibraries()), ...FOLD.infos], voci, folder: { mode: FOLD.mode, name: foldName() }, opfs: await probeOpfs() }; }
       else if (m.cmd === "add") r = { info: await addLibrary(m.file, reqId) };
       else if (m.cmd === "index") { const w = await wasm(); if (!w || !FOLD.dir) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" }); r = { info: await foldAdd(w, await FOLD.dir.file(m.name), reqId) }; }
