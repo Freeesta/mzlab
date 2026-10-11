@@ -41,6 +41,8 @@ struct Inner {
 #[derive(Default)]
 pub struct State {
     inner: Mutex<Inner>,
+    /// the folder of the spectral libraries (`librerie.rs`)
+    pub libs: crate::librerie::Folder,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
