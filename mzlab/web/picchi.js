@@ -225,7 +225,19 @@ function showInts() {
 }
 
 // ------------------------------------------------------------------ spettri
-async function drawSpec(p) {
+// The window of a spectrum holds no scan of the kind shown (DDA, MS1/MS2 filters): the window moves to the nearest scan of that kind (on a tie the earlier one)
+// and the cursor of the chromatogram it follows snaps to it. False only when the file has no such scan at all.
+async function snapNearest(p, f) {
+  try {
+    const pr = p.prec != null && p.prec !== "" ? `&precursor=${p.prec}` : "", ft = p.filt ? `&filter=${encodeURIComponent(p.filt)}` : "";
+    const n = await J(`api/nearest_scan?k=${f.k}&rt=${(p.r0 + p.r1) / 2}&level=${p.level || 1}${pr}${ft}`);
+    if (!n || n.rt == null) return false;
+    p.r0 = n.rt - NEAR; p.r1 = n.rt + NEAR;
+    const c = E.panels.find(q => q.id === p.link); if (c) { c.cur = n.rt; cursorLine(c); }
+    return true;
+  } catch (e) { return false; }
+}
+async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
   const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
@@ -259,7 +271,10 @@ async function drawSpec(p) {
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   if (p.iso && p.iso.only && hrp && window.QQQRef) data.forEach(x => { try { x.d = HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } });      // «Sostituisci»: the simulation takes the place of the spectrum
   const mzs = data.flatMap(x => x.d.mz);
-  if (!mzs.length) return say(I18N.t("spec.noScan"));
+  if (!mzs.length) {
+    if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
+    return say(I18N.t("spec.noScan"));
+  }
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
   const { g, W, H: HF } = setup(p.cv);
   const H = HF;
