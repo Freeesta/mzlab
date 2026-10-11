@@ -6,7 +6,7 @@
   function eff(x) { return x === "dark" || (x !== "light" && mq && mq.matches) ? "dark" : "light"; }
   function apply(x) { pref = x; R.setAttribute("data-theme", eff(x)); R.style.colorScheme = eff(x); }
   apply(parentPref());
-  // «Lettura facilitata»: the choices (localStorage «qqq.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in a11y.js
+  // «Lettura facilitata»: the choices (localStorage «qqq.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in impostazioni.js
   var A11Y_KEYS = { font: ["atkinson", "dyslexic"], bg: ["cream", "blue", "hc"], motion: ["auto", "always"] };
   function a11yRead() { var o = {}; try { o = JSON.parse(localStorage.getItem("qqq.a11y") || "{}") || {}; } catch (e) { /* no storage: defaults */ } return o; }
   function a11yApply(o) {
@@ -16,6 +16,16 @@
     var rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     set("reduce", o.motion === "always" || (rm && o.motion !== "never"));
   }
+  // «Tema» of the settings panel: the same preference as the app (localStorage «qqq.prefs», key theme). Inside the app the app applies it (and tells this page); alone, this page does
+  function setTheme(x) {
+    if (["auto", "light", "dark"].indexOf(x) < 0) return;
+    try { if (parent !== window && parent.uipSetTheme) { parent.uipSetTheme(x); return; } } catch (e) { /* not reachable: own preference */ }
+    try { var o = JSON.parse(localStorage.getItem("qqq.prefs") || "{}") || {}; o.theme = x; localStorage.setItem("qqq.prefs", JSON.stringify(o)); } catch (e) { /* not stored */ }
+    var before = R.getAttribute("data-theme"); apply(x);
+    if (before !== R.getAttribute("data-theme")) { try { sessionStorage.setItem("qqq.teoria.y", String(scrollY)); } catch (y) { /* nothing to keep */ } location.reload(); }
+  }
+  function themePref() { try { var t = JSON.parse(localStorage.getItem("qqq.prefs") || "{}").theme; if (t === "light" || t === "dark") return t; } catch (e) { /* none */ } return "auto"; }
+  window.QTEMA = { set: setTheme, get: themePref };
   window.QA11Y = { read: a11yRead, apply: a11yApply, write: function (o) { try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* not stored */ } a11yApply(o); } };
   a11yApply(a11yRead());
   // chapter-to-chapter fade (teoria.css): without cross-document view transitions (or inside the app's iframe) the page gets a short CSS fade instead

@@ -113,6 +113,8 @@ try:
             for n, (rt, mz) in enumerate([(14.33, 194.5), (14.33, 152.4), (18.5, 365.2)], 1):
                 xy = pg.evaluate(f"(()=>{{const a={M}._a,c={M}.cv.getBoundingClientRect();return [c.left+a.X({rt}),c.top+a.Y({mz})]}})()")
                 pg.mouse.click(*xy); pg.wait_for_function(f"MAPPA.pts({M}).length==={n}", timeout=10000)
+                pg.wait_for_function(f"!!(MAPPA.st({M}).rows && MAPPA.st({M}).rows.length==={n})", timeout=15000)      # the table (it grows the panel and moves the map) is drawn before the next click is aimed
+                pg.wait_for_timeout(300)
             pg.wait_for_function(f"!!(MAPPA.st({M}).rows && MAPPA.st({M}).rows.length===3 && MAPPA.st({M}).rows[2].g!=null)", timeout=15000)
             pg.fill(".pnl.map [data-t=grp]", "0,1"); pg.dispatch_event(".pnl.map [data-t=grp]", "change")          # the group window is editable: the two apexes (14.30 and 14.35) fall in the same group
             pg.wait_for_function(f"MAPPA.st({M}).rows.length===3 && MAPPA.st({M}).rows[0].g===MAPPA.st({M}).rows[1].g", timeout=15000)
