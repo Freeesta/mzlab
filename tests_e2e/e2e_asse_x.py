@@ -15,7 +15,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("openXic(null,{mz:364.37,obs:true})"); ready(pg); pg.wait_for_timeout(800)
+        pg.evaluate("openXic(null,{mz:364.37,obs:true})"); pg.click("#xic-go"); ready(pg); pg.wait_for_timeout(1200)
         edges = lambda: pg.evaluate(f"{LINES}.map(p=>{{const r=p.cv.getBoundingClientRect(),a=p._a;return [r.left+a.X(a.x0),r.left+a.X(a.x1),a.x0,a.x1,p.type]}})")
         def same(tag):
             e = edges(); assert len(e) >= 2, e
