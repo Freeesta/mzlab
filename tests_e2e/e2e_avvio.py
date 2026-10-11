@@ -79,6 +79,29 @@ try:
             assert seen, "status line never had text"
             pg.wait_for_selector("#drop", timeout=120000); pg.close()
         step("one status line (role=status) and no bar on the loading screen", status_while_loading)
+        def resume_after_freeze():
+            holder.evaluate(GONE)
+            pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
+            # a Worker whose engine "answers badly" to the health check once __dead is set (what a Python left without GIL does after a freeze or discard)
+            pg.add_init_script("""(() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (d, t) {
+              if (d && d.ping && window.__dead) { const w = this; setTimeout(() => w.onmessage({ data: { type: "pong", ok: false } }), 10); return; } return pm.call(this, d, t); }; })()""")
+            pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+            pg.evaluate("window.__mark = 1")
+            pg.evaluate("window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })); document.dispatchEvent(new Event('resume')); window.MZLAB_ENGINE_CHECK()")
+            pg.wait_for_timeout(1500)
+            assert pg.evaluate("window.__mark") == 1, "healthy engine: the page must not reload"
+            r = pg.evaluate("fetch('api/ping').then(x => x.status)"); assert r == 200, r
+            pg.evaluate("window.__dead = true; sessionStorage.removeItem('qqq.recovered')")
+            with pg.expect_navigation(timeout=60000): pg.evaluate("window.MZLAB_ENGINE_CHECK()")
+            pg.wait_for_selector("#drop", timeout=120000)
+            assert pg.evaluate("window.__mark") is None and not pg.evaluate("window.qqFailed"), "page reloaded, no error"
+            assert "NoGil" not in pg.inner_text("body")
+            # second time within a minute: no reload loop, a short message in the language of the page
+            pg.evaluate("window.__dead = true; window.__mark = 2; window.MZLAB_ENGINE_CHECK()")
+            pg.wait_for_selector("#rust-note", timeout=10000)
+            assert pg.evaluate("window.__mark") == 2 and "ricarica" in pg.inner_text("#rust-note"), pg.inner_text("#rust-note")
+            pg.close()
+        step("tab back after freeze/discard: engine checked, one reload, no NoGilError, no loop", resume_after_freeze)
         b.close()
 finally:
     srv.terminate()

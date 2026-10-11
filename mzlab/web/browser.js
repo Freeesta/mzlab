@@ -60,6 +60,7 @@
       if (m.type === "blocked") { window.qqPhaseCur = { key: "load.blocked", pct: null }; if (window.ldRefresh && window.I18N) ldRefresh(); return; }   // replaced by the next step once the other tab lets go
       if (m.type === "ready") { isReady = true; window.qqStep = ""; phase(null); perfMark("motore pronto"); try { const u = new URL(location.href); if (u.searchParams.has("riparti")) { u.searchParams.delete("riparti"); history.replaceState(null, "", u.href); } } catch (_) { /* optional */ } return res(); }
       if (m.type === "fatal") { failed = m.text; if (m.key === "load.err.resumeTimeout") fail(m.key, null, true); else fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
+      if (m.type === "pong") { const q = [...pending.keys()].filter(k => String(k).startsWith("ping")); q.forEach(k => { const f = pending.get(k); pending.delete(k); f(m); }); return; }
       if (m.type === "notice") return notice(m.key);                                                                   // e.g. error.memoryBudget: the index of this file is built by Python
       if (m.type === "idx") { (window.MZLAB_IDX = window.MZLAB_IDX || []).push(m); return; }                          // which engine built the index of a file (tests, ?perf)
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
@@ -67,6 +68,28 @@
     worker.onerror = e => { failed = e.message || "worker error"; fail("load.err.worker", { text: failed }); rej(new Error(failed)); };
   });
   };
+  // A tab that comes back after a freeze or a discard may hold a Python that is no longer usable (NoGilError). The engine is checked when the page
+  // is shown again; if it does not answer well, or a request comes back as "dead", the page reloads itself ONCE (the files and the notebook reopen from the
+  // browser's storage) instead of showing the error. If it happens again within a minute, a message in the language of the page is shown.
+  const recover = () => {
+    let last = 0; try { last = +sessionStorage.getItem("qqq.recovered") || 0; } catch (_) { /* optional */ }
+    if (Date.now() - last < 60000 || window.MZLAB_NO_RECOVER) { notice("load.err.engineLost"); return false; }
+    try { sessionStorage.setItem("qqq.recovered", String(Date.now())); } catch (_) { /* optional */ }
+    window.MZLAB_RECOVERING = true;
+    try { if (worker) worker.terminate(); } catch (_) { /* gone */ }
+    location.reload();
+    return true;
+  };
+  const check = () => {
+    if (!isReady || !worker || window.MZLAB_RECOVERING) return;
+    const id = "ping" + (++seq);
+    pending.set(id, m => { if (!m.ok) recover(); });
+    worker.postMessage({ ping: id });
+  };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+  window.addEventListener("pageshow", e => { if (e.persisted) check(); });
+  document.addEventListener("resume", check);
+  window.MZLAB_ENGINE_CHECK = check;                                          // tests
   let ready = null;                    // the engine is up: Pyodide, or (flow without Pyodide) the Rust engine
 
   // Rust engine (?motore=rust, or localStorage qqq.motore = "rust"; ?motore=python forces it off): TIC, XIC and single scans are answered by
@@ -152,6 +175,7 @@
     const id = ++seq;
     const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
+    if (r.dead && recover()) return new Promise(() => {});                    // the page is reloading
     if (post !== null && r.status === 200) rustSession(rb, url, post, r.text);
     if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter

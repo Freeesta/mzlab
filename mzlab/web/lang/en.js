@@ -304,6 +304,7 @@ I18N.add("en", {
   "load.err.oldBrowser": "this browser is too old: use a recent version of Chrome, Edge, Firefox or Safari.",
   "load.err.engineStart": "Cannot start the calculation engine: {text}",
   "load.err.worker": "Error: {text}",
+  "load.err.engineLost": "The calculation engine stopped: reload the page.",
   "load.phrase.1": "Ignoring the warnings",
   "load.phrase.2": "Dodging the phthalates",
   "load.phrase.3": "Secretly mining crypto",
