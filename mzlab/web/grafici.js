@@ -63,7 +63,7 @@ async function corrected(p, all) {
     let y = s.y.slice(), x = s.x, note = [], ibl = null;
     if (so && s.k !== so.k) {
       const d = await diffTrace(p, s, so);
-      if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t("corr.note.sub")); }
+      if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); }
     }
     if (p.ibk) { ibl = ibkFn({ x, y }, p.ibk); y = y.map((v, i) => { const r = v - ibl.f(x[i]); return p.ibk.clip ? Math.max(0, r) : r; }); note.push(I18N.t("corr.note.ibk")); }
     if (hasBk) { const b = await blankTrace(p, s); if (b) { y = y.map((v, i) => Math.max(0, v - interp(b.x, b.y, x[i]))); note.push(I18N.t("corr.note.blank")); } }
