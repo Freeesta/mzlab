@@ -196,6 +196,12 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/explore":
                 app.open_session(body)
                 return _json(app.session_state())
+            if path == "/api/gradient":      # the gradient the student typed, pasted or imported for a file (or null to remove it)
+                return _json({"gradient": app.set_gradient(body)})
+            if path == "/api/gradient_parse":  # the text of a Chromeleon script or a CSV -> the gradient model (nothing is stored)
+                from .analog import course_gradient, parse_chromeleon, parse_gradient_csv
+                fmt = body.get("fmt")
+                return _json({"gradient": course_gradient() if fmt == "course" else (parse_chromeleon if fmt == "chromeleon" else parse_gradient_csv)(body.get("text", ""))})
             if path == "/api/meta":          # metadata of the open files (sample table): type, time, concentration, replicate group
                 return _json(app.set_meta(body))
             if path == "/api/stat/profile":    # time profile of one ion chosen by the user (values already integrated by the page): order, normalization
@@ -204,6 +210,14 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/stat/blank":      # blank subtraction of a feature table: threshold = blank x factor; two lists (kept, discarded)
                 from .statistica import blank_filter
                 return _json(blank_filter(body.get("matrix", []), body.get("roles", []), float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1))))
+            if path == "/api/stat/reference":  # difference of every feature from the reference (time <= 0, blank, dark or chosen): numbers and two lists
+                from .statistica import FLOOR, identity_links, reference_difference
+                out = reference_difference(body.get("matrix", []), body.get("roles", []), body.get("times", []), body.get("groups"), body.get("reference"),
+                                           float(body.get("factor", 3)), body.get("stat", "max"), int(body.get("min_detect", 1)),
+                                           None if body.get("pseudo") is None else float(body["pseudo"]), float(body.get("floor", FLOOR)))
+                if body.get("mz") and len(body["mz"]) == len(body.get("rt", [])):        # shown beside the numbers, never merged: adducts and in-source fragments of other rows
+                    out["identity"] = identity_links(body["mz"], body["rt"])
+                return _json(out)
             if path == "/api/stat/pca":        # exploratory PCA of a feature table (filters, imputation, scaling, loadings stability): a view, not a test
                 from .statistica import pca_analysis
                 return _json(pca_analysis(body.get("matrix", []), body.get("roles", []), body.get("groups"), float(body.get("factor", 3)), body.get("stat", "max"),
@@ -224,9 +238,6 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 actual_hashes = {f["name"]: f.get("sha256", "") for f in app.files()}
                 mismatches = verify_file_hashes(body, actual_hashes) if ok else []
                 return _json({"valid": ok, "message": msg, "mismatches": mismatches, "unknown_ops": unknown_operations(body) if ok else []})
-            if path == "/api/qaqc/features":      # sample / blank ratio of every feature of an untargeted table: values, no list of products
-                from .qaqc import feature_ratios
-                return _json({"rows": feature_ratios(body.get("features", []), body.get("blanks", []), body.get("samples", []), float(body.get("thr", 3)))})
             if path == "/api/export/mgf":
                 from .workflow import format_mgf
                 text = format_mgf(body.get("spectra", []), lr=bool(body.get("lr")))
@@ -246,6 +257,10 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 _diff_opts(q)                # a wrong reference setting is the user's: a JSON error with a key, not a server fault
             except ValueError as e:
                 return _fail(e)
+        if path == "/api/analog":        # one analog trace (pressure, flow...): minutes, values reduced to min/max per interval, unit to show, unit note
+            return _json(app.analog(int(q["k"]), int(q["i"]), int(q.get("n", 2000))))
+        if path == "/api/gradient":
+            return _json({"gradient": app.gradient(int(q["k"]))})
         if path == "/api/state":
             return _json(app.state())
         if path == "/api/notebook":

@@ -472,6 +472,7 @@ function plotMeta(p) {
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
   if (p.ibk) d.push(I18N.t("export.desc.ibk", { text: ibkText(p.ibk) }));
+  if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
   return [["Title", ptitle(p.title) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
@@ -568,12 +569,12 @@ function ctl(p) {
         `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select><span data-mzslot="diff"></span>`);
   }
   if (p.type === "spec") {
-    const f = TF, hasMs2 = f.some(x => x.ms2);
+    const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     c.innerHTML = `<select data-o="k"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="${I18N.t("ctl.spec.bg.title")}">` +
-      `<option value="">${I18N.t("ctl.spec.bg.none")}</option><option value="w" ${p.bg === "w" ? "selected" : ""}>${I18N.t("ctl.spec.bg.window")}</option><optgroup label="${I18N.t("ctl.spec.bg.other")}">${(() => { const bl = f.filter(x => x.kind !== "mrm"); return bl.length ? bl.map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("") : `<option disabled>${I18N.t("ctl.spec.bg.noOther")}</option>`; })()}</optgroup></select>` +
+      `<option value="${sref0 ? "x" : ""}" ${p.bg === "x" || (!sref0 && !p.bg) ? "selected" : ""}>${I18N.t("ctl.spec.bg.none")}</option><option value="w" ${p.bg === "w" ? "selected" : ""}>${I18N.t("ctl.spec.bg.window")}</option><optgroup label="${I18N.t("ctl.spec.bg.other")}">${(() => { const bl = f.filter(x => x.kind !== "mrm"); return bl.length ? bl.map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) || (sref0 && sref0.k === x.k && p.bg !== "x" && p.bg !== "w") ? "selected" : ""}>${EH(x.label)}</option>`).join("") : `<option disabled>${I18N.t("ctl.spec.bg.noOther")}</option>`; })()}</optgroup></select>` +
       (p.bg === "w" ? `<label class="muted">${I18N.t("ctl.range.from")} <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> ${I18N.t("ctl.range.to")} <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
       (p.level === 2 ? `<select data-o="prec" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
   }
@@ -616,7 +617,7 @@ function ctl(p) {
       } else {
         p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       }
-      if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" ? "w" : +x.value;
+      if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
       if (["level", "all", "snip", "bg", "kind", "mz0", "mz1"].includes(k)) ctl(p);
       draw(p);

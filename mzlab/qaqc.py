@@ -101,22 +101,3 @@ def sample_blank_ratios(areas: list[float | None], roles: list[str], threshold: 
         ratio = float("inf") if ref == 0 else a / ref
         rows.append({"ratio": None if ratio == float("inf") else ratio, "absent_in_blank": ratio == float("inf"), "at_least": ratio >= threshold})
     return {"blank_area": ref, "threshold": threshold, "rows": rows}
-
-
-def feature_ratios(features: list[dict], blanks: list[str], samples: list[str], threshold: float = 3.0) -> list[dict]:
-    """Sample / blank ratio of every feature of an untargeted table ({'key', 'mz', 'rt', 'areas': {file: area}}): the highest
-    area of the `samples` over the mean area of the `blanks` (0 where a file has no area). Values for every feature; the
-    caller shows them with the chosen threshold, never as a list of products."""
-    out = []
-    for f in features:
-        a = f.get("areas") or {}
-        bl = [float(a.get(b, 0) or 0) for b in blanks]
-        sm = [float(a.get(s, 0) or 0) for s in samples]
-        ref = float(np.mean(bl)) if bl else None
-        top = max(sm) if sm else 0.0
-        ratio = None if ref is None else (float("inf") if ref == 0 and top > 0 else (0.0 if ref == 0 else top / ref))
-        inf = ratio == float("inf")
-        out.append({"key": f.get("key"), "mz": f.get("mz"), "rt": f.get("rt"), "blank_area": ref, "sample_area": top,
-                    "ratio": None if (ratio is None or inf) else ratio, "absent_in_blank": inf,
-                    "at_least": None if ratio is None else ratio >= threshold})
-    return out

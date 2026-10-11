@@ -14,7 +14,7 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
-  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_pca", "workflow_applied"];
+  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "workflow_applied"];
   // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
   function splitOps(ops) {
     const keep = [], unknown = [];
@@ -65,6 +65,7 @@ const WORKFLOW = (() => {
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
       qaqc: window.QAQC ? QAQC.exportState() : null,
+      gradienti: window.GRADIENTE ? GRADIENTE.exportState() : null,       // only what the student entered (the gradient of a .dam or .raw is not stored)
     };
 
     const panels = (typeof E !== "undefined" && E.panels ? E.panels : []).map(p => ({
@@ -207,6 +208,7 @@ const WORKFLOW = (() => {
       LISTE.exclImport(p.contaminanti_esclusi);
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
+    if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
     if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
     if (wf.operazioni && typeof NB !== "undefined") {
