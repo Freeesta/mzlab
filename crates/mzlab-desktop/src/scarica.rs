@@ -195,7 +195,7 @@ fn piece_ok(folder: &Folder, rel: &str, p: &Piece) -> bool {
     match folder.stat(rel) {
         Ok(e) if e.size == p.dimensione => folder
             .read(rel, 0, p.dimensione)
-            .map_or(false, |b| sha256_hex(&b) == p.sha256),
+            .is_ok_and(|b| sha256_hex(&b) == p.sha256),
         _ => false,
     }
 }
@@ -452,8 +452,8 @@ pub fn download_external(
     }
     drop(out);
     let sha = format!("{:x}", h.finalize());
-    if ext.sha256.as_ref().map_or(false, |want| *want != sha)
-        || ext.dimensione.map_or(false, |d| d != got)
+    if ext.sha256.as_ref().is_some_and(|want| *want != sha)
+        || ext.dimensione.is_some_and(|d| d != got)
     {
         let _ = fs::remove_file(&part);
         return Err(DlError::new("lib.dl.err.hash", name));
