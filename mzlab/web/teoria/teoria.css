@@ -59,6 +59,8 @@ main table{border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:14.5
 main th,main td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
 main th{background:var(--code);font-weight:650}
 main td.n,main th.n{text-align:right;font-variant-numeric:tabular-nums}
+main caption{caption-side:top;text-align:left;font-size:14px;color:var(--muted);padding:0 0 6px}
+main tbody th[scope=row]{background:transparent;font-weight:600}
 
 /* boxes */
 .box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel);border-radius:6px;padding:10px 14px;margin:14px 0}
