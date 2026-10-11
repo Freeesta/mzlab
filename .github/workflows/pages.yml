@@ -57,6 +57,21 @@ jobs:
           else
             echo "::warning::wasm-opt could not be installed: the libraries .wasm is not optimised ($(stat -c %s "$bg") bytes)"
           fi
+      - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
+        id: libcache
+        uses: actions/cache/restore@v4
+        with:
+          path: site/static/librerie
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+      - name: Build the packages and the catalog (a network failure only warns, the site is published without packages)
+        if: steps.libcache.outputs.cache-hit != 'true'
+        run: python tools/librerie_pacchetti.py --out site/static/librerie
+      - name: Save the packages in the cache
+        if: steps.libcache.outputs.cache-hit != 'true' && hashFiles('site/static/librerie/catalogo.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: site/static/librerie
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -193,6 +193,20 @@ def transitions(ids_json: str) -> str:
     return _out(_ex.transitions(json.loads(ids_json)))
 
 
+def identity_graph(payload_json: str) -> str:
+    """Identities of an untargeted feature table (hr/identity.py): graph of co-eluting, correlated, mass-explained features with the evidence of
+    every edge, and the neutral-mass hypotheses of every connected component. Stateless (the table comes in the payload)."""
+    from .hr import identity
+    return _out(identity.build(json.loads(payload_json)))
+
+
+def polarity_pairs(payload_json: str) -> str:
+    """Pairs of features of the positive and negative tables with the same neutral mass under the usual adduct pairs: {pos: [{k, mz, rt}], neg: [...], ppm, rt_min}."""
+    from .hr import identity
+    d = json.loads(payload_json)
+    return _out(identity.polarity_pairs(d["pos"], d["neg"], float(d.get("ppm", 5.0)), float(d.get("rt_min", 0.15))))
+
+
 def isf_classify(mzs_json: str, formula_p: str = "") -> str:
     """In-source-fragment classification (tpmine.isf) of candidate ions against the parent of the running experiment: uses the full-scan
     samples (not blanks), the parent m/z of the experiment and the ions given. Returns JSON {items, doubtful, families, model, note}

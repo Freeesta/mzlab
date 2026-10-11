@@ -355,7 +355,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const l = cands.filter(Boolean).sort((a, b) => b.ent - a.ent); if (!l.length) return null;
     const k = ikBlock(l[0]), a = l.find(x => ikBlock(x) !== k); return { ...l[0], alt: a ? lightOf(a) : null };
   }
-  const rowOf = (Q, best) => ({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", ik: best ? best.ik || "" : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null, nlib: best ? best.nlib : null, alt: best ? best.alt || null : null });
+  const rowOf = (Q, best) => ({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", ik: best ? best.ik || "" : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null, nlib: best ? best.nlib : null, alt: best ? best.alt || null : null,
+    accession: best ? best.accession || "" : "", authors: best ? best.authors || "" : "", license: best ? best.license || "" : "", smiles: best ? best.smiles || "" : "", ce: best ? best.ce || "" : "", inst: best ? best.inst || "" : "", type: best ? best.type || "" : "" });      // record, authors and licence of the best entry: «Identify all» and the untargeted tables cite them
   async function runAllJs(m, reqId) {             // every MS2 of a file: the best result of each (the query list comes from the page)
     const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), libs = []; for (const id of ids) libs.push(await loadLibrary(id));
     const rows = []; let last = 0;

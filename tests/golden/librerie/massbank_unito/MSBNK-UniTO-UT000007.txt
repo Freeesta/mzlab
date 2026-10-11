@@ -1,0 +1,46 @@
+ACCESSION: MSBNK-UniTO-UT000007
+RECORD_TITLE: Amoxicillin; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000007
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 2 injection(s), 31 scan(s).
+CH$NAME: Amoxicillin
+CH$COMPOUND_CLASS: Non-Natural Product; Antibiotic (beta-lactam)
+CH$FORMULA: C16H19N3O5S
+CH$EXACT_MASS: 365.10454
+CH$SMILES: CC1([C@@H](N2[C@H](S1)[C@@H](C2=O)NC(=O)[C@@H](C3=CC=C(C=C3)O)N)C(=O)O)C
+CH$IUPAC: InChI=1S/C16H19N3O5S/c1-16(2)11(15(23)24)19-13(22)10(14(19)25-16)18-12(21)9(17)7-3-5-8(20)6-4-7/h3-6,9-11,14,20H,17H2,1-2H3,(H,18,21)(H,23,24)/t9-,10-,11+,14-/m1/s1
+CH$LINK: CAS 26787-78-0
+CH$LINK: INCHIKEY LSQZJLSUYDQPKJ-NJBDSQKTSA-N
+CH$LINK: PUBCHEM CID:33613
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 3.904 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 366.11182
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-006t-0519000000-6cb8aa5c0dc28230264b
+PK$NUM_PEAK: 7
+PK$PEAK: m/z int. rel.int.
+  173.38407 1509951.3 849
+  219.36136 129205.8 73
+  255.20070 120405.5 68
+  274.96301 119062.8 67
+  342.23340 136650.1 77
+  349.08421 1776243.7 999
+  350.08768 500860.0 282
+//

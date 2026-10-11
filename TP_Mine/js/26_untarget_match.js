@@ -31,7 +31,8 @@
     const ev = (lv.lines || []).concat(lv.decisive ? [lv.decisive] : []);
     if (fu && lv.proposed === "4") ev.push(`${fu.source}: formula ${fu.formula} explains the m/z within 5 ppm`);
     return { key: f.key, lv, level: lv.proposed, decided: null, hasMs2, nScans, best, ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null, dppm: best ? best.dprec : null,
-      name: best ? best.name : "", lib: best ? best.lib : "", ik: best ? best.ik : "", formula: best ? best.formula : fu ? fu.formula : "", alt: best && best.alt ? best.alt.name : "", evidence: ev, external: ext };
+      name: best ? best.name : "", lib: best ? best.lib : "", ik: best ? best.ik : "",
+      accession: best ? best.accession || "" : "", authors: best ? best.authors || "" : "", license: best ? best.license || "" : "", smiles: best ? best.smiles || "" : "", formula: best ? best.formula : fu ? fu.formula : "", alt: best && best.alt ? best.alt.name : "", evidence: ev, external: ext };
   }
   const shown = r => G.LIVELLI.shown(r.lv);
   function decide(r, lv) { const o = G.LIVELLI.decide(r.lv, lv); r.decided = r.lv.decided; return o; }

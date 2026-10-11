@@ -1,0 +1,46 @@
+ACCESSION: MSBNK-UniTO-UT000045
+RECORD_TITLE: Salbutamol; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M-H2O+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000045
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 1 injection(s), 8 scan(s).
+CH$NAME: Salbutamol
+CH$COMPOUND_CLASS: Non-Natural Product; Bronchodilator
+CH$FORMULA: C13H21NO3
+CH$EXACT_MASS: 239.15214
+CH$SMILES: CC(C)(C)NCC(C1=CC(=C(C=C1)O)CO)O
+CH$IUPAC: InChI=1S/C13H21NO3/c1-13(2,3)14-7-12(17)9-4-5-11(16)10(6-9)8-15/h4-6,12,14-17H,7-8H2,1-3H3
+CH$LINK: CAS 18559-94-9
+CH$LINK: INCHIKEY NDAUXUAQIAJITI-UHFFFAOYSA-N
+CH$LINK: PUBCHEM CID:2083
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 3.503 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 222.14886
+MS$FOCUSED_ION: PRECURSOR_TYPE [M-H2O+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-00kb-0900000000-f00c9e7a3ee63022ce27
+PK$NUM_PEAK: 7
+PK$PEAK: m/z int. rel.int.
+  148.07527 11251266.8 999
+  149.07863 1409051.7 125
+  165.05409 277047.6 25
+  166.08579 8962300.0 796
+  167.08913 1379609.7 122
+  173.38421 793386.0 70
+  204.13773 427732.1 38
+//
