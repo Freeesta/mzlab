@@ -10,20 +10,39 @@ use mzlab_core::mzml::{parse, Item};
 fn peak_rss_mb() -> f64 {
     std::fs::read_to_string("/proc/self/status")
         .ok()
-        .and_then(|s| s.lines().find(|l| l.starts_with("VmHWM:")).map(|l| l.to_string()))
-        .and_then(|l| l.split_whitespace().nth(1).and_then(|v| v.parse::<f64>().ok()))
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("VmHWM:"))
+                .map(|l| l.to_string())
+        })
+        .and_then(|l| {
+            l.split_whitespace()
+                .nth(1)
+                .and_then(|v| v.parse::<f64>().ok())
+        })
         .map(|kb| kb / 1024.0)
         .unwrap_or(f64::NAN)
 }
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let path = args.next().expect("usage: mzidx FILE.mzML [OUT.mzidx] [BUDGET_MB]");
+    let path = args
+        .next()
+        .expect("usage: mzidx FILE.mzML [OUT.mzidx] [BUDGET_MB]");
     let out_path = args.next().unwrap_or_else(|| format!("{path}.mzidx"));
-    let budget = args.next().and_then(|v| v.parse::<usize>().ok()).unwrap_or(64) << 20;
+    let budget = args
+        .next()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(64)
+        << 20;
 
     let t0 = Instant::now();
-    let mut table = ScanTable { scans_json: b"[]".to_vec(), source_json: "{}".into(), run_json: "{}".into(), ..Default::default() };
+    let mut table = ScanTable {
+        scans_json: b"[]".to_vec(),
+        source_json: "{}".into(),
+        run_json: "{}".into(),
+        ..Default::default()
+    };
     parse(File::open(&path).expect("file"), |item| {
         if let Item::Spectrum(s) = item {
             table.level.push(s.level);

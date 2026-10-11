@@ -24,7 +24,7 @@ pub trait Output {
 }
 
 fn io_error(e: std::io::Error) -> Error {
-    Error::new("err.file.io").with("detail", e)
+    Error::new("err.file.index").with("detail", e)
 }
 
 impl<W: Write + Seek> Output for W {
@@ -232,7 +232,11 @@ impl<T: Num> Sec<T> {
         }
         for chunk in peaks.chunks(CHUNK) {
             let at = self.done;
-            for (field, base, width) in [(0, off.mz, T::SIZE), (1, off.inten, T::SIZE), (2, off.pos, 4)] {
+            for (field, base, width) in [
+                (0, off.mz, T::SIZE),
+                (1, off.inten, T::SIZE),
+                (2, off.pos, 4),
+            ] {
                 self.bytes.clear();
                 reserve(&mut self.bytes, chunk.len() * width)?;
                 for p in chunk {
@@ -349,7 +353,11 @@ impl<T: Num> Sect for Sec<T> {
             v.put(&mut b);
         }
         out.write_at(off.fence, &b)?;
-        for (at, arr) in [(off.sumint, &self.totals.acc), (off.bp_mz, &self.totals.bpm), (off.bp_inten, &self.totals.bpy)] {
+        for (at, arr) in [
+            (off.sumint, &self.totals.acc),
+            (off.bp_mz, &self.totals.bpm),
+            (off.bp_inten, &self.totals.bpy),
+        ] {
             let mut bytes = Vec::with_capacity(arr.len() * 8);
             for v in arr.iter() {
                 bytes.extend_from_slice(&v.to_le_bytes());
@@ -380,7 +388,12 @@ fn f64_bytes(v: &[f64]) -> Vec<u8> {
 pub type Pass<'a> = dyn FnMut(&mut dyn FnMut(Spectrum)) -> Result<()> + 'a;
 
 /// Builds the index. `pass` decodes the whole stream once per call (it must start from the beginning every time).
-pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: usize) -> Result<Stats> {
+pub fn build(
+    table: &ScanTable,
+    pass: &mut Pass,
+    out: &mut dyn Output,
+    budget: usize,
+) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
@@ -394,7 +407,10 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
     for &level in &levels {
         for (pol, name) in [(None, "all"), (Some(1i8), "+"), (Some(-1i8), "-")] {
             let ids: Vec<usize> = (0..n_scans)
-                .filter(|&i| table.level[i] == level && pol.map_or(true, |p| table.polarity[i] == p || table.polarity[i] == 0))
+                .filter(|&i| {
+                    table.level[i] == level
+                        && pol.is_none_or(|p| table.polarity[i] == p || table.polarity[i] == 0)
+                })
                 .collect();
             let si = match infos.iter().position(|s| s.level == level && s.ids == ids) {
                 Some(si) => si,
@@ -440,7 +456,8 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
                 return;
             }
             if seen >= n_scans {
-                failure = Some(Error::new("err.file.index").with("detail", "more spectra than scans"));
+                failure =
+                    Some(Error::new("err.file.index").with("detail", "more spectra than scans"));
                 return;
             }
             for &(si, pos) in &member[seen] {
@@ -462,7 +479,9 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
         return Err(e);
     }
     if seen != n_scans {
-        return Err(Error::new("err.file.index").with("detail", format!("{seen} spectra, {n_scans} scans")));
+        return Err(
+            Error::new("err.file.index").with("detail", format!("{seen} spectra, {n_scans} scans"))
+        );
     }
 
     // -- layout (as the Python builder)
@@ -497,7 +516,11 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
     for s in &infos {
         let rt: Vec<f64> = s.ids.iter().map(|&i| table.rt[i]).collect();
         let tic: Vec<f64> = s.ids.iter().map(|&i| table.tic[i]).collect();
-        let ids: Vec<u8> = s.ids.iter().flat_map(|&i| (i as i64).to_le_bytes()).collect();
+        let ids: Vec<u8> = s
+            .ids
+            .iter()
+            .flat_map(|&i| (i as i64).to_le_bytes())
+            .collect();
         out.write_at(s.off.rt, &f64_bytes(&rt))?;
         out.write_at(s.off.tic, &f64_bytes(&tic))?;
         out.write_at(s.off.scan_ids, &ids)?;
@@ -510,7 +533,9 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
             sec.forget();
         }
     } else {
-        let costs: Vec<usize> = (0..NB).map(|b| secs.iter().map(|s| s.cost(b)).sum()).collect();
+        let costs: Vec<usize> = (0..NB)
+            .map(|b| secs.iter().map(|s| s.cost(b)).sum())
+            .collect();
         let cost = |b: usize| costs[b];
         let mut lo = 0usize;
         while lo < NB {
@@ -596,7 +621,13 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
     head.extend_from_slice(b"MZIDX001");
     head.extend_from_slice(&1u32.to_le_bytes());
     head.extend_from_slice(&0u32.to_le_bytes());
-    for v in [meta_off, meta.len() as u64, scans_off, table.scans_json.len() as u64, total] {
+    for v in [
+        meta_off,
+        meta.len() as u64,
+        scans_off,
+        table.scans_json.len() as u64,
+        total,
+    ] {
         head.extend_from_slice(&v.to_le_bytes());
     }
     head.resize(HEADER, 0);
@@ -611,7 +642,12 @@ pub fn build(table: &ScanTable, pass: &mut Pass, out: &mut dyn Output, budget: u
 }
 
 /// Builds from an mzML read through `Read + Seek` (the file is read again from its start for every pass).
-pub fn build_mzml<R: std::io::Read + Seek>(table: &ScanTable, mut src: R, out: &mut dyn Output, budget: usize) -> Result<Stats> {
+pub fn build_mzml<R: std::io::Read + Seek>(
+    table: &ScanTable,
+    mut src: R,
+    out: &mut dyn Output,
+    budget: usize,
+) -> Result<Stats> {
     build(
         table,
         &mut |on| {
@@ -628,7 +664,12 @@ pub fn build_mzml<R: std::io::Read + Seek>(table: &ScanTable, mut src: R, out: &
 }
 
 /// The same for a Thermo `.raw` file.
-pub fn build_raw<R: std::io::Read + Seek>(table: &ScanTable, mut src: R, out: &mut dyn Output, budget: usize) -> Result<Stats> {
+pub fn build_raw<R: std::io::Read + Seek>(
+    table: &ScanTable,
+    mut src: R,
+    out: &mut dyn Output,
+    budget: usize,
+) -> Result<Stats> {
     build(
         table,
         &mut |on| {
@@ -641,7 +682,11 @@ pub fn build_raw<R: std::io::Read + Seek>(table: &ScanTable, mut src: R, out: &m
 }
 
 /// Convenience for tests and small files: the whole index in memory.
-pub fn build_mzml_to_vec(table: &ScanTable, mzml: &[u8], budget: usize) -> Result<(Vec<u8>, Stats)> {
+pub fn build_mzml_to_vec(
+    table: &ScanTable,
+    mzml: &[u8],
+    budget: usize,
+) -> Result<(Vec<u8>, Stats)> {
     let mut out = Cursor::new(Vec::new());
     let st = build_mzml(table, Cursor::new(mzml), &mut out, budget)?;
     Ok((out.into_inner(), st))

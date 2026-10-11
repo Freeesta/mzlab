@@ -30,11 +30,20 @@ fn u64_at(b: &[u8], at: usize) -> usize {
 
 /// The caller's side: everything the Python reader knew, taken from the reference file.
 fn table_of(reference: &[u8]) -> ScanTable {
-    let (meta_off, meta_len, scans_off, scans_len) = (u64_at(reference, 16), u64_at(reference, 24), u64_at(reference, 32), u64_at(reference, 40));
+    let (meta_off, meta_len, scans_off, scans_len) = (
+        u64_at(reference, 16),
+        u64_at(reference, 24),
+        u64_at(reference, 32),
+        u64_at(reference, 40),
+    );
     let meta: Meta = serde_json::from_slice(&reference[meta_off..meta_off + meta_len]).unwrap();
     let scans = &reference[scans_off..scans_off + scans_len];
     let rows: Vec<Vec<serde_json::Value>> = serde_json::from_slice(scans).unwrap();
-    let col = |c: usize| rows.iter().map(|r| r[c].as_f64().unwrap()).collect::<Vec<f64>>();
+    let col = |c: usize| {
+        rows.iter()
+            .map(|r| r[c].as_f64().unwrap())
+            .collect::<Vec<f64>>()
+    };
     ScanTable {
         level: col(2).iter().map(|&v| v as u8).collect(),
         polarity: col(4).iter().map(|&v| v as i8).collect(),
@@ -51,7 +60,8 @@ fn compare(name: &str, mzml: &Path, idx: &Path) {
     let reference = std::fs::read(idx).unwrap();
     let data = std::fs::read(mzml).unwrap();
     let table = table_of(&reference);
-    let (got, st) = build_mzml_to_vec(&table, &data, 64 << 20).unwrap_or_else(|e| panic!("{name}: {e}"));
+    let (got, st) =
+        build_mzml_to_vec(&table, &data, 64 << 20).unwrap_or_else(|e| panic!("{name}: {e}"));
     assert!(st.passes <= 2, "{name}: {} passes", st.passes);
     same(name, 64 << 20, &got, &reference);
     // a budget of a fifth of the peaks: several rounds, each decoding the file again
@@ -60,7 +70,11 @@ fn compare(name: &str, mzml: &Path, idx: &Path) {
         match build_mzml_to_vec(&table, &data, budget) {
             Ok((got, st)) => {
                 if st.peaks > 2000 {
-                    assert!(st.passes >= 3, "{name}: {} passes with a budget of {budget}", st.passes);
+                    assert!(
+                        st.passes >= 3,
+                        "{name}: {} passes with a budget of {budget}",
+                        st.passes
+                    );
                 }
                 return same(name, budget, &got, &reference);
             }
@@ -73,7 +87,12 @@ fn compare(name: &str, mzml: &Path, idx: &Path) {
 fn same(name: &str, budget: usize, got: &[u8], reference: &[u8]) {
     if got != reference {
         let at = got.iter().zip(reference).position(|(a, b)| a != b);
-        panic!("{name} (budget {budget}): {} bytes against {}, first difference at {:?}", got.len(), reference.len(), at);
+        panic!(
+            "{name} (budget {budget}): {} bytes against {}, first difference at {:?}",
+            got.len(),
+            reference.len(),
+            at
+        );
     }
 }
 
@@ -81,9 +100,15 @@ fn same(name: &str, budget: usize, got: &[u8], reference: &[u8]) {
 fn rust_index_is_identical_to_the_python_one() {
     let out = std::env::temp_dir().join(format!("mzlab-idx-{}", std::process::id()));
     let mut cmd = Command::new("python3");
-    cmd.current_dir(root()).arg("tools/mzidx_riferimento.py").arg(&out);
+    cmd.current_dir(root())
+        .arg("tools/mzidx_riferimento.py")
+        .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
-        let mut v: Vec<_> = rd.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "mzML")).collect();
+        let mut v: Vec<_> = rd
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "mzML"))
+            .collect();
         v.sort();
         cmd.args(v);
     }
