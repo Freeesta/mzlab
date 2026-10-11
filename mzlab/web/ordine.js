@@ -37,6 +37,12 @@ function fileComparator(list, conc = concMgL) {
 // a sorted copy (stable; the input is not changed)
 function orderFiles(list) { const c = fileComparator(list); return list.map((f, i) => [f, i]).sort((x, y) => c(x[0], y[0]) || x[1] - y[1]).map(x => x[0]); }
 
+// group of a high-resolution file in the file list (one place): a single scan or constant RT -> infusion; MS1 + the MS2 it triggered in the same
+// file (both parts of the file) -> dda; only scans with a precursor -> ms2; otherwise (no MS2, scans without precursor) -> full
+function hrGroup(f) { return f.infusion ? "infusion" : f.dda ? "dda" : f.kind === "ms2" ? "ms2" : "full"; }
+// the physical file of an entry of the session ("x.mzML#MS2" is a part of "x.mzML")
+const fileBase = name => String(name).split("#")[0];
+
 // time in minutes <-> value shown in a unit
 const timeShown = (min, unit) => min == null ? null : +(min / (TIME_UNITS[unit] || 1)).toPrecision(6);
 const timeStored = (val, unit) => val == null ? null : +(val * (TIME_UNITS[unit] || 1)).toPrecision(12);
@@ -62,4 +68,4 @@ function tunitSet(u) {
 const tunitLabel = u => typeof I18N !== "undefined" ? { min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
 const fmtTime = min => min == null ? "" : timeShown(min, tunitGet()) + " " + tunitLabel(tunitGet());
 
-if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime };
+if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, hrGroup, fileBase, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime };
