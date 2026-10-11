@@ -112,7 +112,7 @@ const TOUR = (() => {
     },
     {
       id: "tasti",
-      target: () => document.querySelector(".pnl.chrom canvas")
+      target: () => document.querySelector(".pnl.chrom .clh:not([hidden])") || document.querySelector(".pnl.chrom canvas")
     },
     {
       id: "navfile",

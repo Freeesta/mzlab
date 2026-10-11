@@ -95,10 +95,15 @@ function toggleLock(p) {
 
 // ---- cheap redraws
 function drawSoon(p) { if (p._ds) return; p._ds = requestAnimationFrame(() => { p._ds = 0; draw(p); }); }   // several requests in a frame = one drawing
-function cursorLine(p) {                                           // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas
-  const c = p.cl, a = p._a; if (!c) return;
-  if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; return; }
+function cursorLine(p) {                                           // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
+  const c = p.cl, a = p._a, h = p.ch; if (!c) return;
+  if (!a || !a.X || p.type === "spec" || p.type === "map" || p.cur == null || p.cur < a.x0 || p.cur > a.x1) { c.hidden = true; if (h) h.hidden = true; return; }
   c.hidden = false; c.style.left = p.cv.offsetLeft + a.X(p.cur) + "px"; c.style.top = p.cv.offsetTop + M.t + "px"; c.style.height = a.H - M.t - M.b + "px";
+  if (!h) return;
+  h.hidden = !!p._exp; h.style.left = c.style.left; h.style.top = p.cv.offsetTop + M.t + "px";
+  const t = I18N.t("cursor.handle"); h.setAttribute("aria-label", t); h.title = t;
+  if (a.full) { h.setAttribute("aria-valuemin", a.full[0].toFixed(2)); h.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
+  h.setAttribute("aria-valuenow", p.cur.toFixed(2)); h.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: p.cur.toFixed(2) }));
 }
 
 // ---- keys: ← → one scan (Maiusc: five), held = ~15 scans/s, Space = play/pause, Esc = stop, ? = list of the shortcuts
