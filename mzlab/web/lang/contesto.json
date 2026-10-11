@@ -321,6 +321,7 @@
   "update.available": "Messaggio dell'aggiornamento dell'app desktop; {files} = numero di file cambiati da scaricare, {size} = megabyte già formattati.",
   "update.newapp": "L'aggiornamento della parte web richiede un'app desktop più recente; {min} = versione minima (es. 0.2.0). Dopo la frase compare il link alla pagina degli installatori.",
   "update.progress": "Avanzamento dello scaricamento dell'aggiornamento; {done} = file scaricati, {total} = file da scaricare, {size} = megabyte scaricati finora.",
+  "workflow.warn.unknownOps": "Avviso all'apertura di un file .mzflow con operazioni sconosciute (ignorate); {ops} = nomi delle operazioni.",
   "workflow.warn.shaMismatch": "Avviso quando l'impronta SHA-256 differisce da quella del flusso; {file} = nome file, {actual} = impronta calcolata, {expected} = impronta attesa.",
   "lv.sentence": "Frase del livello di confidenza ({lv} = 1, 2a, 2b, 3, 4, 5 o 0; {name} = nome del livello).",
   "lv.dec.1": "Frase decisiva del livello 1; {name} = nome dello standard.",

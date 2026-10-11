@@ -1,4 +1,4 @@
-"""Tests for mzworkflow creation/validation and MGF/MSP export and parsing."""
+"""Tests for mzflow creation/validation and MGF/MSP export and parsing."""
 import json
 from mzlab.workflow import (
     create_workflow,
@@ -9,6 +9,7 @@ from mzlab.workflow import (
     format_msp,
     parse_msp,
     FORMAT_VERSION,
+    unknown_operations,
 )
 
 
@@ -227,3 +228,19 @@ def test_api_workflow_and_export(tmp_path):
     assert code == 200
     assert "PRECURSORMZ: 100.0" in body.decode("utf-8")
 
+
+
+def test_mzflow_format_and_legacy_name():
+    assert FORMAT_VERSION == "mzflow/1"
+    wf = create_workflow([], {"ppm": 5})
+    assert wf["formato"] == "mzflow/1"
+    assert validate_workflow(wf)[0] is True
+    old = dict(wf, formato="mzworkflow/1")      # old files are still read
+    assert validate_workflow(old)[0] is True
+    assert validate_workflow(dict(wf, formato="altro/1"))[0] is False
+
+
+def test_unknown_operations_are_reported_not_fatal():
+    wf = create_workflow([], {}, operations=[{"op": "export_report"}, {"op": "futura_op"}, {"op": "futura_op"}])
+    assert validate_workflow(wf)[0] is True
+    assert unknown_operations(wf) == ["futura_op"]

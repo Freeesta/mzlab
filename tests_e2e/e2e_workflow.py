@@ -1,4 +1,4 @@
-"""Test e2e for reproducibility (.mzworkflow) and MGF / MSP spectral export."""
+"""Test e2e for reproducibility (.mzflow) and MGF / MSP spectral export."""
 import json
 import os
 import sys
@@ -35,7 +35,7 @@ try:
             if (typeof uipSave === 'function') uipSave();
         }""")
 
-        # 4. Esportazione .mzworkflow e verifica contenuto
+        # 4. Esportazione .mzflow e verifica contenuto
         with pg.expect_download() as d_info:
             pg.evaluate("() => WORKFLOW.export()")
         download = d_info.value
@@ -43,7 +43,7 @@ try:
         with open(wf_path, "r", encoding="utf-8") as fh:
             wf_data = json.load(fh)
 
-        assert wf_data.get("formato") == "mzworkflow/1", f"Formato errato: {wf_data.get('formato')}"
+        assert wf_data.get("formato") == "mzflow/1", f"Formato errato: {wf_data.get('formato')}"
         assert wf_data["parametri"]["ppm"] == 8, f"PPM non esportato: {wf_data['parametri']}"
         assert wf_data["parametri"]["dec"] == 5, f"Dec non esportato: {wf_data['parametri']}"
         assert wf_data["parametri"]["tema"] == "dark", f"Tema non esportato: {wf_data['parametri']}"
@@ -51,7 +51,7 @@ try:
         assert wf_data["file"][0]["sha256"] == sha
         assert "programma" in wf_data and "versione" in wf_data["programma"]
         assert len(wf_data.get("operazioni", [])) >= 1
-        steps.append(("esportazione .mzworkflow con sha256 e parametri", "ok"))
+        steps.append(("esportazione .mzflow con sha256 e parametri", "ok"))
 
         # 5. Ripristino parametri e riapplicazione del flusso di lavoro
         pg.evaluate("""() => {
@@ -63,12 +63,12 @@ try:
         assert pg.evaluate("() => UIP.hrPpm") == 5
 
         # Riapertura ed applicazione del workflow esportato
-        applied = pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'test.mzworkflow')", wf_data)
+        applied = pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'test.mzflow')", wf_data)
         assert applied is True
         assert pg.evaluate("() => UIP.hrPpm") == 8
         assert pg.evaluate("() => UIP.hrDec") == 5
         assert pg.evaluate("() => UIP.theme") == "dark"
-        steps.append(("riapertura .mzworkflow e ripristino parametri", "ok"))
+        steps.append(("riapertura .mzflow e ripristino parametri", "ok"))
 
         # 6. Test formattazione MGF e MSP in LR (senza annotazioni/nomi - Principio 1)
         mgf_out = pg.evaluate("""() => {
@@ -113,12 +113,17 @@ try:
         assert "Num Peaks: 2" in msp_out
         steps.append(("formattazione MGF e MSP conforme al Principio 1 (LR)", "ok"))
 
-        # 7. Menu della sessione accessibile da pulsante ▾ e tasto destro
-        assert pg.is_visible("#session-menu-btn"), "Pulsante menu sessione visibile"
-        pg.click("#session-menu-btn")
-        pg.wait_for_timeout(300)
-        # Il menu a comparsa contiene le voci di esportazione e apertura
-        steps.append(("menu della sessione con esporta e apri flusso", "ok"))
+        # 7. Nessun ingresso nell'interfaccia (la funzione resta nel codice); il vecchio nome si legge ancora
+        assert pg.query_selector("#session-menu-btn") is None, "la freccina del menu sessione non c'e piu"
+        old = dict(wf_data, formato="mzworkflow/1")
+        assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'vecchio.mzworkflow')", old) is True
+        steps.append(("lettura del vecchio formato mzworkflow/1", "ok"))
+        # 8. Operazioni sconosciute: ignorate (con avviso), il resto si applica
+        fut = dict(wf_data, operazioni=[{"op": "export_report", "t": "x"}, {"op": "operazione_futura", "t": "y"}])
+        assert pg.evaluate("(wf) => WORKFLOW.applyWorkflow(wf, 'f.mzflow')", fut) is True
+        ops = pg.evaluate("() => NB.ops.map(o => o.op)")
+        assert "operazione_futura" not in ops and "export_report" in ops, ops
+        steps.append(("operazioni sconosciute ignorate con avviso", "ok"))
 
         print("OK: tutti i controlli superati")
         for desc, res in steps:
