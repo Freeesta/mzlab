@@ -1,6 +1,6 @@
 //! The native builder of the desktop writes, from a memory map, the same `.mzidx` as the Python builder (`tools/mzidx_riferimento.py`), through the
 //! routes `idx/build`, `idx/read`, `idx/remove`; several files are built at once on the thread pool; bad names and bad tables are refused.
-//! Without python3 and numpy the parity test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! Without python3 and numpy the parity test is skipped (`MZLAB_IDX_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -78,7 +78,7 @@ fn reference() -> Option<(PathBuf, Vec<String>)> {
                 .collect(),
         )),
         other => {
-            if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
+            if std::env::var("MZLAB_IDX_STRICT").is_ok() {
                 panic!("the reference builder did not run: {other:?}");
             }
             eprintln!("python3/numpy not available: test skipped");
