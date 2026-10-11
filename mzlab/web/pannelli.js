@@ -190,7 +190,7 @@ function addPanel(type, o, after) {
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
   if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
-  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", norm: o.norm || "abs", zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
+  if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
@@ -506,13 +506,13 @@ const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.
   tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>') };
   // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
 function corrWidget(p, o) {
-  const T0 = p.tab || E.tab, fileOpts = o.files.length > 1 ? o.files : [], cfile = o.cur[0] === "f";
+  const T0 = p.tab || E.tab, fileOpts = o.files.length > (o.min ?? 1) ? o.files : [], cfile = o.cur[0] === "f";
   const refK = S.ref.k !== "auto" && fileOpts.some(x => x.k === S.ref.k) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;      // default file: the reference of the session
   const subK = cfile ? +o.cur.slice(1) : fileOpts.some(x => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
   const items = [["", "none", I18N.t("corr.none"), I18N.t("corr.none.desc")],
-    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? I18N.t("corr.file.desc") : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : ""],
+    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? o.fileDesc || I18N.t("corr.file.desc") : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
-    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), I18N.t("corr.snip.desc")]] : [])];
+    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])];
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
   const tip = I18N.t("corr.button.title") + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
   const sel = fileOpts.length > 1 ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
@@ -585,12 +585,18 @@ function ctl(p) {
     c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${qqOpt}${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${view}${corr}${parBox(rtbar + lrExtra)}`;
   }
   if (p.type === "map") {
-    const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
+    const sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     const G = (lab, inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;
+    const cur = E.files[fol ? E.cur : p.k] || {}, mc = MAPPA.corrState(p), others = sf.filter(x => x.k !== cur.k), isF = mc.now[0] === "f";      // a file minus itself is not offered
+    const mCorr = corrWidget(p, { files: others, min: 0, cur: mc.now === "auto" ? "snip" : mc.now, snip: true, dis: "", tractDesc: I18N.t("corr.tract.mapdesc"), snipDesc: I18N.t("corr.auto.mapdesc"), fileDesc: I18N.t("corr.file.mapdesc") });
+    const mChips = [];                                                   // next to «Options»: the correction and what is not at its default value
+    if (isF) mChips.push(I18N.t("corr.file.short", { label: (E.files[+mc.now.slice(1)] || {}).label || "" })); else if (mc.now === "tract") mChips.push(I18N.t("corr.tract")); else if (mc.now === "auto") mChips.push(I18N.t("corr.snip"));
+    mChips.push(...MAPPA.optChips(p));
+    const mPar = inner => `<span class="cpar"><button class="bt cparl" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.cpar.titleMap")}" aria-label="${I18N.t("ctl.cpar.map")}">${I18N.t("ctl.cpar.map.lab")} &#9662;</button>${mChips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.cpar.titleMap")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${fol ? ` disabled title="${I18N.t("ctl.map.follow")}"` : ` title="${I18N.t("ctl.map.file")}"`}>${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
-      G(I18N.t("ctl.map.grp.col"), `<select data-o="scale" title="${I18N.t("ctl.map.scale.title")}">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select><span data-mzslot="col"></span>`) +
-      G(I18N.t("ctl.map.grp.diff"), `<label class="muted" title="${I18N.t("ctl.map.diff.title")}">${I18N.t("ctl.map.diff", { select: `<select data-o="ref"${off(sf.length <= 1, I18N.t("ctl.map.diff.need"))}><option value="">${I18N.t("ctl.map.diff.none")}</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select>` })}</label>` +
-        `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select><span data-mzslot="diff"></span>`);
+      mCorr +
+      mPar(`<label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}</select></label><span data-mzslot="col"></span>` +
+        `<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>`);
   }
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
@@ -708,7 +714,7 @@ function fitHd(p) {
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
   } finally { p._fitBusy = false; }
 }
-function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); }
+function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }       // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
 function hdMorePlace(p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
 function hdMoreInit(p) {
   const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;

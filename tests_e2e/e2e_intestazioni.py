@@ -16,7 +16,7 @@ D = synth("intestazioni")
 r = Run(port=8958, wd="/tmp/wd_intestazioni")
 
 # every panel header: one row, every control inside it, no scrolling content, a chart at least 100 px high
-CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent && p.type !== 'map').map(p => {
+CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {
   const hd = p.el.querySelector('.hd'), hr = hd.getBoundingClientRect();
   const items = [...hd.querySelectorAll(':scope > *, .ctl > *, .tbs > *')].filter(e => e.offsetParent && !e.closest('.hmore') && !e.classList.contains('rd') && !e.classList.contains('hmore') && e.getBoundingClientRect().width);
   const mid = items.map(e => { const q = e.getBoundingClientRect(); return q.top + q.height / 2; });
@@ -35,6 +35,7 @@ def check(q, tag):
 def setup(q):
     ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
     q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); q.wait_for_timeout(1500)
+    q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); q.wait_for_timeout(1500)
 
 try:
     with sync_playwright() as p:

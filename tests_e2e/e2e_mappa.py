@@ -95,7 +95,8 @@ try:
             assert not pg.evaluate(f"{M}.el.classList.contains('max')") and not pg.evaluate(f"{M}.el.classList.contains('mzmir')")
         step("F again: back in the page, sight off", leave)
         def diff():
-            pg.evaluate(f"(()=>{{const q={M};q.k=E.files[1].k;q.ref=E.files[0].k;ctl(q);draw(q)}})()")
+            pg.evaluate(f"(()=>{{const q={M};q.k=E.files[1].k;q.corr='file';q.ref=E.files[0].k;ctl(q);draw(q)}})()")
+            pg.click(".pnl.map [data-a=cpar]")                                                      # «Options»: the rare controls live in the popover
             pg.wait_for_function(f"!!({M}._img && {M}._img.b && {M}._img.key.includes('rttol'))", timeout=20000)     # A - B from the server, with the tolerance in RT
             assert pg.evaluate("[...LUT_DIV.slice(0,3)]") == [213, 94, 0] and pg.evaluate("[...LUT_DIV.slice(1020,1023)]") == [0, 114, 178]   # vermilion <-> blue
             pg.select_option(".pnl.map [data-mz=show]", "up")
@@ -104,6 +105,7 @@ try:
             pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.select_option(".pnl.map [data-mz=show]", "all"); pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
+            pg.click(".pnl.map [data-a=cpar]"); pg.wait_for_timeout(200)                                   # close «Options»: the popover would cover the map
         step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, show increases only, noise threshold", diff)
         def points():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
@@ -143,7 +145,11 @@ try:
         step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
         def panel2d():
             pg.evaluate("localStorage.removeItem('qqq.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); pg.wait_for_timeout(800)
-            assert pg.locator(".pnl.map .mzg").count() >= 4, "groups of controls: file, colors, difference, tools"
+            pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); pg.wait_for_timeout(300)
+            hh = pg.evaluate("(()=>{const h=" + M + ".el.querySelector('.hd').getBoundingClientRect(); return h.height})()"); assert hh < 60, hh                  # one low row
+            assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw").count() == 1
+            assert pg.locator(".pnl.map .mzg").count() >= 2 and pg.locator(".pnl.map .mzleg, .pnl.map .leg .mzhelp").count() == 0, "no fixed guide text under the map"
+            pg.click(".pnl.map [data-a=cpar]")
             assert pg.locator(".pnl.map [data-o=view][data-v='3d']").count() == 1 and pg.locator(".pnl.map .seg [data-o=view]").count() == 0   # a single «Open in 3D» button
             assert pg.locator(".pnl.map [data-mz=pal]").input_value() == "viridis"
             v0 = pg.evaluate(M + "._img.v.length"); img0 = pg.evaluate(M + "._img.key")
@@ -151,10 +157,10 @@ try:
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
-            pg.check(".pnl.map [data-mz=bg]"); pg.wait_for_timeout(1500)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).bg") is True and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
-            pg.uncheck(".pnl.map [data-mz=bg]"); pg.wait_for_timeout(800)
-        step("2D panel: groups, one «Open in 3D» button, palette, constant background, colour bar with values", panel2d)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); pg.wait_for_timeout(1500)
+            assert pg.evaluate(M + ".corr") == "auto" and pg.evaluate(M + "._img.key.includes('true') || " + M + "._img.key.includes('bg=1')") and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c='']"); pg.wait_for_timeout(800)
+        step("2D panel: groups, one «3D» button, palette, constant background, colour bar with values", panel2d)
         def height():
             h = pg.evaluate("(()=>{const q=" + M + ";return q.h})()")
             assert h >= 360 or h >= 300, h

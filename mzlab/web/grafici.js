@@ -192,6 +192,7 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
+  if (p.type === "map") return MAPPA.setCorr(p, v);
   if (p.type === "spec") {                         // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
     p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);
     ctl(p); draw(p); uiSave(); return;
@@ -471,9 +472,9 @@ const MAP_PAL = {
 const LUTS_SEQ = {};
 const lutSeq = name => LUTS_SEQ[name] || (LUTS_SEQ[name] = lut(MAP_PAL[name].map((c, i, a) => [i / (a.length - 1), c])));
 const mapPal = () => window.MAPPA && MAPPA.prefs.pal === "cividis" ? "cividis" : "viridis";
-const mapBg = () => !!(window.MAPPA && MAPPA.prefs.bg);                  // «remove the constant background»
+const mapBg = p => window.MAPPA ? MAPPA.corrQ(p) : "";                    // the request suffix of the background correction of the panel ("", "&bg=1" or a stretch)
 const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : `linear-gradient(90deg,${MAP_PAL[name].map(c => `rgb(${c})`).join(",")})`;
-const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg ? 1 : 0}`, () => J(`api/map?k=${k}&level=${lv}${bg ? "&bg=1" : ""}`).then(j => {
+const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(`api/map?k=${k}&level=${lv}${bg}`).then(j => {
   const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return { ...j, m: new Float32Array(u.buffer) };
 }));
@@ -486,7 +487,7 @@ function mapNorm(m, norm) {
 }
 function mapImage(p, A, B, scale, norm = "abs") {
   const dop = window.MAPPA ? MAPPA.diffOpt(!!B) : { show: "all", thr: B ? 0.02 : 0.004, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
-  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${pal}|${mapBg()}|${JSON.stringify(dop)}`;
+  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
   if (B && B.d) v.set(B.d);                                              // the difference computed by the server (numpy, with the tolerance in RT)
@@ -515,13 +516,14 @@ function mapView(A, B, rt0, rt1, mz0, mz1) {
   return { rt: [Math.max(rt0, a - pr), Math.min(rt1, b + pr)], mz: [Math.max(mz0, c - pm), Math.min(mz1, d + pm)] };
 }
 async function drawMap(p) {
+  if (window.MAPPA) { MAPPA.corrInit(p); MAPPA.corrPick(p); }                // an old panel gets its «Correzione»; a stretch chosen with Alt + drag becomes the background
   const { g, W, H } = setup(p.cv);
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
   const sf = scanFiles(tabFiles(p.tab)); if (!sf.length) return say(I18N.t("map.noScans"));
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
   if (!f || f.kind === "mrm") f = sf[0];
   const lv = f.lv, se = window.SUBREF ? SUBREF.eff(p) : null, rf = se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
-  const A = { ...(await getMap(f.k, lv, mapBg())), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg())), k: rf.k } : null;
+  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null;
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const im = mapImage(p, A, B, p.scale, p.norm || "abs");
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
@@ -547,7 +549,7 @@ async function drawMap(p) {
     return { px, rt, html: I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
   const rng = B ? [`▲ +${fmt(im.ref)}`, `▼ −${fmt(im.ref)}`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
-  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm mzhelp">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
+  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span>`;
   if (window.SUBREF && B) SUBREF.chip(p);
   if (window.MAPPA) MAPPA.after(p);
 }

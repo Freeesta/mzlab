@@ -127,6 +127,7 @@ export function open(p, opener) {
   if (!gl0) { if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); return; }
   if (!document.getElementById("m3d-css")) { const s = document.createElement("style"); s.id = "m3d-css"; s.textContent = CSS; document.head.appendChild(s); }
   const prefs = MAPPA.prefs, P = Object.assign({}, DEF, prefs[PREF_KEY] || {});
+  prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
   const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
   const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
   const V = {                                               // the state of the viewer
