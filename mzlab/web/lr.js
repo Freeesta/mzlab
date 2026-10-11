@@ -44,6 +44,9 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
+  // «start from scratch» (?riparti=1) when the page could not delete the database itself: files, indexes, notebook
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
+
   // the files of an earlier visit (OPFS): the list, the index of every one, the File for the bridge
   api.boot = async () => {
     const r = await rpc({ op: "lr_boot" });

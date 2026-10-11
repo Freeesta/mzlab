@@ -102,7 +102,12 @@
   const lrInit = async () => {
     const b = await rustReady;
     if (!b || b.disabled) return startPython();
-    try { lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b }); await lr.boot(); window.MZLAB_LR = lr; }
+    try {
+      lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
+      const u = new URL(location.href);
+      if (u.searchParams.get("riparti") === "1") { await lr.reset(); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+      await lr.boot(); window.MZLAB_LR = lr;
+    }
     catch (e) { console.debug("[mzLab] flow without Pyodide not available", e); window.MZLAB_LR_ERR = String(e && e.message || e); lr = null; return startPython(); }
   };
   const needPython = () => pyP || (pyP = (async () => {
