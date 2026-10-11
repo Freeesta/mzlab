@@ -28,7 +28,8 @@ _tried: set = set()
 
 
 def start() -> None:
-    global app
+    global app, PENDING
+    PENDING = WORK.parent / "pendente"          # next to the work folder (the tests move both)
     WORK.mkdir(parents=True, exist_ok=True)
     PENDING.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("MZLAB_CACHE", INDEX_TMP)
