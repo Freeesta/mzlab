@@ -6,6 +6,12 @@ Writes in OUT/ the synthetic mzML files of `tools/dati_sintetici.py` (Orbitrap-l
 m/z, side lobes, continuous background), their `.mzidx` built by the Python builder and `detect_<name>.json`: the features of
 `features.detect` with the first and last scan of every trace. With --golden the JSON files go to tests/golden/feat/ as well.
 No compound names: every ion is a number.
+
+    python3 tools/feat_riferimento.py OUT --solo identita [--golden]
+
+writes only `iso_ms2_identita.json`: on one file of the synthetic identity series (isotopologues, co-isolated MS2) the features of `features.detect` with
+the in-file isotope groups (`isotopi_riferimento`, the rules of crates/mzlab-feat/src/isotopes.rs) and the MS2 scans linked to every peak with the purity
+of the precursor (`ms2_riferimento`, crates/mzlab-feat/src/ms2.rs), written in plain loops: the Rust crate must answer with the same indices.
 """
 import json
 import sys
@@ -21,6 +27,130 @@ import dati_sintetici as ds  # noqa: E402
 from mzlab.reader import mzidx  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
 from tpmine.hr import features  # noqa: E402
+from mzlab.chem import isoscore  # noqa: E402
+
+D13C, DPIU2 = 1.003355, (2.00671, 1.995796, 1.99705, 1.997954)
+PROTONE, AVERAGINE, BIN_MASSA = 1.007276, 111.1254, 25.0
+
+
+def _attesi(massa: float, cache: dict) -> tuple[float, float]:
+    """(M+1/M, M+2/M) of an averagine of the neutral mass, one value per bin of 25 Da."""
+    b = int(max(massa, 0.0) / BIN_MASSA)
+    if b not in cache:
+        u = (b + 0.5) * BIN_MASSA / AVERAGINE
+        n = lambda x: max(int(np.floor(x * u + 0.5)), 0)      # noqa: E731  (round half up, like f64::round on positives)
+        pat = isoscore.fine_pattern({"C": max(n(4.9384), 1), "H": n(7.7583), "N": n(1.3577), "O": n(1.4773), "S": n(0.0417)}, 1, 0.001)
+        nom = [0.0, 0.0, 0.0]
+        for q in pat:
+            k = int(np.floor(q["mz"] - pat[0]["mz"] + 0.5))
+            if k < 3:
+                nom[k] += q["rel"]
+        cache[b] = (nom[1] / nom[0], nom[2] / nom[0]) if nom[0] > 0 else (0.0, 0.0)
+    return cache[b]
+
+
+def isotopi_riferimento(mz, rt, area, rt_tol: float = 0.05, tol_ppm: float = 5.0, zmax: int = 3) -> tuple[list[int], list[int], list[int]]:
+    """(iso_group, charge, isotopologue) per feature, features sorted by m/z; plain loops over the same rules as crates/mzlab-feat/src/isotopes.rs."""
+    n, cache = len(mz), {}
+    rt32 = np.asarray(rt, dtype=np.float32)
+    gid, ch, iso = [0] * n, [0] * n, [0] * n
+    passi = [(1, D13C)] + [(2, d) for d in DPIU2]
+    for j in range(n):
+        best = None
+        for z in range(1, zmax + 1):
+            for k, d in passi:
+                want = mz[j] - d / z
+                tol = mz[j] * tol_ppm * 1e-6 + 3e-4
+                a, b = np.searchsorted(mz, want - tol, "left"), np.searchsorted(mz, want + tol, "right")
+                for i in range(a, min(b, j)):
+                    if abs(float(rt32[i] - rt32[j])) > rt_tol or (ch[i] != 0 and ch[i] != z):
+                        continue
+                    r = area[j] / max(area[i], 1e-300)
+                    e1, e2 = _attesi((mz[i] - PROTONE) * z, cache)
+                    if not ((r >= 0.25 * e1 - 0.005 and r <= 2.5 * e1 + 0.05) if k == 1 else (r >= 0.2 * e2 and r <= 1.2)):
+                        continue
+                    err = abs((mz[i] + d / z - mz[j]) / mz[j]) * 1e6
+                    if best is None or err < best[0] or (err == best[0] and z < best[1]):
+                        best = (err, z, i)
+        if best is None:
+            continue
+        _, z, i = best
+        g = gid[i] if gid[i] else i + 1
+        gid[i] = gid[j] = g
+        ch[i] = ch[j] = z
+        iso[j] = 1
+    return gid, ch, iso
+
+
+def area_finestra(t, f, mezza: float = 0.05, tol_ppm: float = 6.0) -> np.ndarray:
+    """`area_win`: raw trace (peaks within 6 ppm, no floor) within 0.05 min of the apex scan, counts x seconds (the isotope ratios use it)."""
+    rt = np.asarray(t.rt)
+    out = np.zeros(len(f))
+    for i in range(len(f)):
+        y = t.xic(float(f.mz[i]), float(f.mz[i]) * tol_ppm * 1e-6)
+        out[i] = float(y[np.abs(rt - rt[f.apex[i]]) <= mezza].sum()) * f.dt
+    return out
+
+
+def ms2_riferimento(run, t, f, mezza: float = 0.6, tol_ppm: float = 6.0) -> tuple[list[list[int]], list[list[float]]]:
+    """For every feature the MS2 scans (file indices) whose MS1 parent lies between the edges and whose isolation window holds its m/z, with the purity."""
+    pos_of = {int(g): k for k, g in enumerate(t.scan_ids)}
+    cand = []
+    for g, sc in enumerate(run.scans):
+        pp = pos_of.get(sc.parent) if sc.parent is not None else None
+        if sc.level != 2 or sc.polarity < 0 or pp is None:
+            continue
+        if sc.iso is not None:
+            cand.append((g, pp, sc.iso[0], sc.iso[1]))
+        elif sc.precursor:
+            cand.append((g, pp, sc.precursor - mezza, sc.precursor + mezza))
+    mz32, it, pos = np.asarray(t.mz), np.asarray(t.inten, dtype=float), np.asarray(t.pos)
+    janela = {}
+    for g, pp, lo, hi in cand:
+        a, b = np.searchsorted(mz32, np.float32(lo), "left"), np.searchsorted(mz32, np.float32(hi), "right")
+        sel = pos[a:b] == pp
+        janela[g] = (mz32[a:b][sel].astype(float), it[a:b][sel])
+    scans, pur = [], []
+    for i in range(len(f)):
+        s_i, p_i = [], []
+        for g, pp, lo, hi in sorted(cand):
+            if f.scan_lo[i] <= pp <= f.scan_hi[i] and lo <= f.mz[i] <= hi:
+                wm, wi = janela[g]
+                own = float(wi[np.abs(wm - f.mz[i]) <= f.mz[i] * tol_ppm * 1e-6].sum())
+                if own > 0 and wi.sum() > 0:
+                    s_i.append(g)
+                    p_i.append(own / float(wi.sum()))
+        scans.append(s_i)
+        pur.append(p_i)
+    return scans, pur
+
+
+def un_file_identita(out: Path, golden: Path | None) -> int:
+    """`iso_ms2_identita.json`: SIN_t10min of the identity series (seed 7, small profile) with the references of isotopes and MS2."""
+    from valida import sintetici_identita as si
+    d = out / "identita"
+    si.genera(7, "piccolo", d)
+    mz = d / "SIN_t10min.mzML"
+    ix = out / "identita.mzidx"
+    run = Run(mz, index_path=ix)
+    mzidx.build(run, ix)
+    t = run.table(1, 1)
+    f = features.detect(t)
+    srt = np.asarray(f.scan_rt)
+    lo, hi = np.searchsorted(srt, f.left), np.searchsorted(srt, f.right)
+    f.scan_lo, f.scan_hi = lo, hi
+    area_win = area_finestra(t, f)
+    gid, ch, iso = isotopi_riferimento(f.mz, f.rt, area_win)
+    scans, pur = ms2_riferimento(run, t, f)
+    doc = {"name": "identita", "n": len(f), "mz": f.mz.tolist(), "apex": f.apex.tolist(), "scan_lo": lo.tolist(), "scan_hi": hi.tolist(), "area_win": area_win.tolist(), "iso_group": gid,
+           "charge": ch, "isotope": iso, "ms2_scans": scans, "ms2_purity": pur}
+    txt = json.dumps(doc, separators=(",", ":"))
+    (out / "iso_ms2_identita.json").write_text(txt, encoding="utf-8")
+    if golden is not None:
+        golden.mkdir(parents=True, exist_ok=True)
+        (golden / "iso_ms2_identita.json").write_text(txt, encoding="utf-8")
+    run.close()
+    return len(f)
 
 
 def piani() -> dict[str, tuple[int, list[tuple], float]]:
@@ -65,6 +195,9 @@ def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
     golden = AQUI.parent / "tests" / "golden" / "feat" if "--golden" in argv else None
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
+        print("identita", un_file_identita(out, golden))
+        return 0
     for nome, (seed, ioni, fine) in piani().items():
         print(nome, un_file(out, nome, seed, ioni, fine, golden))
     return 0
