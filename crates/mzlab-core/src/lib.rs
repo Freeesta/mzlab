@@ -10,6 +10,7 @@ pub mod mzml;
 pub mod peaks;
 pub mod raw;
 pub mod routes;
+pub mod scantable;
 
 pub use error::{Error, Result};
 
