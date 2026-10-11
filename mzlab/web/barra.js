@@ -46,7 +46,7 @@ const BARRA = (() => {
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _w));
-  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "qaqc", "stat"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -79,7 +79,7 @@ const BARRA = (() => {
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
     { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
-    { id: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
+    { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
@@ -134,7 +134,7 @@ const BARRA = (() => {
   const byId = id => CMD.find(c => c.id === id);
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
-  const visible = c => (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
+  const visible = c => (!c.feature || !!FEATURES[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
   const lab = c => t(`cmd.${c.id}.lab`);
   const name = c => t(`cmd.${c.id}.name`);
   const tip = c => t(`cmd.${c.id}.tip`);
@@ -438,7 +438,7 @@ const BARRA = (() => {
     const bar = Q1("#stbar");
     if (!bar) return;
     const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
-    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end");
+    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || FEATURES[c.feature]));
     const hr = CMD.filter(c => c.hr);
     let h = common.map(c => btnHtml(c)).join("");
     h += `<span class="tb-sep" role="separator" data-hrgrp="1"></span>`;

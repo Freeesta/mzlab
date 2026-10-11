@@ -46,7 +46,7 @@ def sections(pg):
 r = Run(port=8932, wd="/tmp/wdstat")
 try:
     with sync_playwright() as p:
-        pg = r.page(p)
+        pg = r.page(p, qaqc=True)
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "S_t60.mzML", D / "Blank_1.mzML"], 4)
         def lr_sections():
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
@@ -120,7 +120,7 @@ finally:
 r2 = Run(port=8933, wd="/tmp/wdstathr")
 try:
     with sync_playwright() as p:
-        pg = r2.page(p)
+        pg = r2.page(p, qaqc=True)
         load(pg, sorted(HRD.glob("*.mzML")), 4)
         def hr_profile():
             assert pg.evaluate("BANCO.on()"), "high resolution"
@@ -177,7 +177,7 @@ finally:
 r3 = Run(port=8934, wd="/tmp/wdstatpca")
 try:
     with sync_playwright() as p:
-        pg = r3.page(p)
+        pg = r3.page(p, qaqc=True)
         load(pg, sorted(PCD.glob("*.mzML")), 9)
         drawer(pg, "stat"); pg.wait_for_selector("#feat-list")
         def pca_table():
