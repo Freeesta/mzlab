@@ -159,6 +159,40 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             },
             _ => bad(),
         },
+        "idx/build" => match (u("id"), q.get("name")) {
+            (Some(id), Some(name)) => match state.build_index(id, &decode(name), body) {
+                Ok(s) => json(200, s),
+                Err(e) => error(&e),
+            },
+            _ => bad(),
+        },
+        "idx/read" => match (q.get("name"), n("off"), n("len")) {
+            (Some(name), Some(off), Some(len)) => match state.indexer().and_then(|b| b.read(&decode(name), off, len)) {
+                Ok(body) => Response {
+                    status: 200,
+                    content_type: "application/octet-stream",
+                    body,
+                },
+                Err(e) => error(&e),
+            },
+            _ => bad(),
+        },
+        "idx/stat" => match q.get("name") {
+            Some(name) => match state.indexer().ok().and_then(|b| b.size(&decode(name))) {
+                Some(size) => json(200, format!("{{\"size\":{size}}}")),
+                None => json(404, "{}".into()),
+            },
+            None => bad(),
+        },
+        "idx/remove" => match q.get("name") {
+            Some(name) => {
+                if let Ok(b) = state.indexer() {
+                    b.remove(&decode(name));
+                }
+                json(200, "{}".into())
+            }
+            None => bad(),
+        },
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
         _ => json(404, "{}".into()),
     }

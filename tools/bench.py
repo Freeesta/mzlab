@@ -431,7 +431,7 @@ def scenario_indici(name: str, files: list[str], port: int, site: Path, construc
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
     n = len(files)
-    q = "?motore=python&pool=0" if constructor == "python" else "?motore=python"
+    q = "?motore=python" if constructor == "python" else "?motore=python&pool=auto"
     out: dict = {"scenario": name, "constructor": constructor, "files": n, "file_mb": round(sum(os.path.getsize(f) for f in files) / 2**20, 1)}
     try:
         with sync_playwright() as p:
@@ -449,6 +449,7 @@ def scenario_indici(name: str, files: list[str], port: int, site: Path, construc
             idx = pg.evaluate("window.MZLAB_IDX || []")
             out["engines"] = ",".join(sorted({f"{i['engine']}" for i in idx})) or "python"
             out["rust_passes_max"] = max([i.get("passes") or 0 for i in idx] or [0])
+            out["rust_build_s"] = round(sum(i.get("buildMs") or 0 for i in idx) / 1000, 2)
             t2 = time.perf_counter()
             pg.click("#opbtn")
             pg.wait_for_selector(".pnl.chrom canvas", timeout=1200000)
@@ -515,7 +516,7 @@ def main_indici(tmp: Path, site: Path, hr_copies: int, hr_files: int, only: str 
             port += 1
             rows.append(scenario_indici(name, fl, port, site, c))
             print(rows[-1], flush=True)
-    keys = ["scenario", "constructor", "engines", "files", "file_mb", "build_total_s", "rss_peak_build_mb", "first_draw_s", "reopen_first_draw_s", "rss_peak_reopen_mb", "rust_passes_max", "digest"]
+    keys = ["scenario", "constructor", "engines", "files", "file_mb", "build_total_s", "rss_peak_build_mb", "first_draw_s", "reopen_first_draw_s", "rss_peak_reopen_mb", "rust_passes_max", "rust_build_s", "digest"]
     lines = [f"Files: {origin}.", ""] + table(keys, rows)
     for name in sets:
         a = next((r for r in rows if r["scenario"] == name and r["constructor"] == "python"), None)
@@ -756,7 +757,7 @@ def main() -> None:
             md = ROOT / "docs" / "agenti" / "misure.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
             sec = [f"## Costruttore del `.mzidx` (`python3 tools/bench.py --indici --scrivi`, Chromium Linux {os.cpu_count()} CPU, {time.strftime('%Y-%m-%d')}, commit {commit})",
-                   "«python» = `?pool=0` (costruttore Python in Pyodide), «pool» = worker Rust. Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); "
+                   "«python» = costruttore Python in Pyodide (predefinito), «pool» = worker Rust (`?pool=auto`). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); "
                    "memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo."] + lines
             txt = md.read_text(encoding="utf-8")
             head, sep, rest = txt.partition("\n## Costruttore del `.mzidx`")

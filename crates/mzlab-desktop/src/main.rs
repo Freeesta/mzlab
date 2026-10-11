@@ -359,6 +359,10 @@ fn main() {
             lib_cancel
         ])
         .setup(|app| {
+            // the indexes (.mzidx) built natively live in the cache folder of the app, where the system may clear them (they are rebuilt)
+            if let Ok(cache) = app.path().app_cache_dir() {
+                let _ = app.state::<Arc<State>>().set_index_folder(cache.join("mzidx"));
+            }
             if let Some(dir) = data_dir(app.handle())
                 .ok()
                 .and_then(|d| librerie::read_config(&d).cartella)
