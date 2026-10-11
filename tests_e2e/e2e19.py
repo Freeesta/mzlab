@@ -26,7 +26,8 @@ try:
             h = pg.evaluate("""()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='chrom');const c=p.el.querySelector('.ctl');
               const d=[...c.querySelectorAll(':disabled')].map(x=>x.dataset.o||x.tagName);
               return {d, kinds:[...c.querySelectorAll('option')].map(o=>o.textContent).join('|'), tips:[...c.querySelectorAll('[title]')].filter(x=>x.disabled||x.closest('label.dis')).length}}""")
-            assert "mz0" in h["d"] and "corr" in h["d"] and "log" in h["d"], h
+            assert "mz0" in h["d"] and "corr" in h["d"], h
+            assert pg.evaluate("E.panels.find(q=>q.tab==='ms2'&&q.type==='chrom').el.querySelector('[data-a=log]').disabled"), "log is grey on the precursor chromatogram"
             assert "TIC" not in h["kinds"] and "BPC" not in h["kinds"], h
             assert h["tips"] >= 2, h
             pg.screenshot(path=SH + "19_ms2.png")
