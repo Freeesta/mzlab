@@ -68,6 +68,7 @@ function uipOpen(btn) {
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     ${window.DESKUPD ? DESKUPD.row() : ""}
+    ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
@@ -107,6 +108,11 @@ function uipOpen(btn) {
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
+  const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
+  if (uipExt && window.__TAURI__ && __TAURI__.core) {
+    __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});
+    uipExt.onchange = () => __TAURI__.core.invoke("lib_set_external", { on: uipExt.checked }).catch(() => { uipExt.checked = !uipExt.checked; });
+  }
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {
     uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();

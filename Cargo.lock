@@ -1863,6 +1863,7 @@ version = "0.1.0"
 dependencies = [
  "memmap2",
  "mzlab-core",
+ "mzlab-lib",
  "serde",
  "serde_json",
  "sha2",

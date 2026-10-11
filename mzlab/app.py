@@ -332,7 +332,18 @@ class App:
             if sp[2]:
                 ms2 = {"x": (sx[0], sx[1]) if sx[2] else None, "p": (sp[0], sp[1])}
                 break
-        return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
+        rep = ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
+        rep["hr"] = any(it.profile(1)["hr"] for _, it in full)            # the page adds the list of proofs of mzFinder only for high-resolution files
+        rep["pol"] = next((int(s.polarity) for _, it in full for s in it.run.scans if s.polarity), 1)
+        if ms2 is not None:                                                # the strongest peaks of the product-ion spectra, for those proofs (tolerance of HR)
+            def strongest(sp):
+                if sp is None:
+                    return None
+                a, y = np.asarray(sp[0], float), np.asarray(sp[1], float)
+                k = np.argsort(-y)[:40]
+                return [a[k].tolist(), y[k].tolist()]
+            rep["ms2_peaks"] = {"x": strongest(ms2["x"]), "p": strongest(ms2["p"])}
+        return rep
 
     @staticmethod
     def _spec_arrays(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:

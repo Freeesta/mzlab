@@ -19,6 +19,9 @@ from mzlab import ionfamily
 K = 32                      # peaks kept per spectrum
 TOL_HR = 0.005              # Da, high resolution (0.5 at unit resolution)
 PAD = -1e9
+TYPES = ("equal", "shifted", "loss")
+LOSS_MAX = 65.0             # Da: a shifted pair whose fragment lies at most this far (and at most LOSS_FRACTION of the precursor) below the precursor is a neutral loss
+LOSS_FRACTION = 0.35
 
 
 def prepare(mz, inten, precursor: float, k: int = K, min_rel: float = 0.01, mz_cut: float = 1.5):
@@ -106,6 +109,48 @@ def entropy_one_against_all(M, W, P, ref: int, others=None, tol: float = TOL_HR,
     others = np.array([i for i in range(len(M)) if i != ref]) if others is None else np.asarray(others, int)
     sc, nm = entropy_similarity(M, W, P, np.full(len(others), ref), others, tol, hybrid, batch)
     return others, sc, nm
+
+
+def _typed_matching(mz_a, w_a, mz_b, w_b, delta: float, prec_a: float, tol: float, loss_max: float, weight):
+    """One-to-one matching (heaviest first) of the peaks of A with those of B at the same m/z or shifted by `delta`; `weight(wa, wb)` is the
+    contribution of a pair. Returns a list of (i, j, type, contribution); type 'equal' (same m/z), 'shifted' (moved with the precursor: contains the
+    modification) or 'loss' (moved with the precursor and lost from the precursor in A by at most min(`loss_max`, 35 % of the precursor): a neutral loss both spectra share)."""
+    diff = mz_b[None, :] - mz_a[:, None]
+    eq = np.abs(diff) <= tol
+    ok = eq | (np.abs(diff - delta) <= tol)
+    wt = np.where(ok, weight(w_a[:, None], w_b[None, :]), 0.0)
+    ia, ib = np.nonzero(wt > 0)
+    pick = ionfamily._greedy_pairs(ia, ib, wt[ia, ib], len(mz_a), len(mz_b))
+    out = []
+    for k in pick.tolist():
+        i, j = int(ia[k]), int(ib[k])
+        kind = "equal" if eq[i, j] else ("loss" if prec_a - mz_a[i] <= min(loss_max, LOSS_FRACTION * prec_a) else "shifted")
+        out.append((i, j, kind, float(wt[i, j])))
+    return out
+
+
+def pair_components(spec_a, prec_a: float, spec_b, prec_b: float, tol: float = TOL_HR, loss_max: float = LOSS_MAX) -> dict:
+    """Similarity of the MS2 of a parent (A) and of a product (B) in three components shown apart (Schollée et al., JASMS 2017: fragments that moved
+    with the mass difference). `spec_*` = (mz, weights) from `prepare`. The peaks are paired once, as in the modified cosine, and every pair has a
+    type: equal fragments (the modification is outside them), shifted fragments (they carry it) and common neutral losses (shifted pairs whose loss
+    from the precursor is small, see `_typed_matching`). For each type the share of the modified cosine and of the spectral entropy similarity (hybrid, same
+    typing); the three shares add up to the totals. Returns {delta, cos{equal, shifted, loss, total}, ent{...}, n{...}, pairs[{a, b, type, w}]},
+    pairs of the cosine matching, for the mirror."""
+    (ma, wa), (mb, wb) = (np.asarray(spec_a[0], float), np.asarray(spec_a[1], float)), (np.asarray(spec_b[0], float), np.asarray(spec_b[1], float))
+    delta = float(prec_b - prec_a)
+    res = {"delta": delta, "cos": dict.fromkeys(TYPES, 0.0), "ent": dict.fromkeys(TYPES, 0.0), "n": dict.fromkeys(TYPES, 0), "pairs": []}
+    if len(ma) and len(mb):
+        for i, j, kind, v in _typed_matching(ma, wa, mb, wb, delta, prec_a, tol, loss_max, lambda x, y: x * y):
+            res["cos"][kind] += v
+            res["n"][kind] += 1
+            res["pairs"].append({"a": float(ma[i]), "b": float(mb[j]), "type": kind, "w": v})
+        qa, qb = entropy_weights(wa[None, :])[0], entropy_weights(wb[None, :])[0]
+        ent = lambda x, y: np.where((x > 0) & (y > 0), _xlogx(x + y) - _xlogx(x) - _xlogx(y), 0.0) / (2 * np.log(2))
+        for _, _, kind, v in _typed_matching(ma, qa, mb, qb, delta, prec_a, tol, loss_max, ent):
+            res["ent"][kind] += v
+    for key in ("cos", "ent"):
+        res[key]["total"] = min(1.0, sum(res[key][k] for k in TYPES))
+    return res
 
 
 def plain_cosine(M, W, ia, ib, tol: float = TOL_HR, batch: int = 1000):

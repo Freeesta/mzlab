@@ -123,6 +123,19 @@ async function ogDrawXics() {
   chips.innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${EH(s.name)}</span>`).join("");
 }
 
+// High-resolution files only, and only with mzFinder on: its list of proofs (adduct step, co-elution, fragment in the MS2 of the parent, ratio across samples).
+// A list of measurements, never a label (mzFinder is English-only, so these texts are not in the catalogs).
+async function ogEvidence(R, box) {
+  if (!R.hr || !window.TPCALL || !box) return;
+  try {
+    const ev = await window.TPCALL("origin_evidence", { report: Object.fromEntries(["mz", "parent_mz", "profile", "ratio", "ratio_constancy", "kinetics", "ms2_peaks"].map(k => [k, R[k]])), pol: R.pol || 1 });
+    if (R !== OG.res || !ev || !ev.length) return;
+    const mark = { evidence: "+", against: "-", hint: "~", info: "·" };
+    box.innerHTML = `<h4>Proofs (mzFinder)</h4><p class="why">What the data say about the link between the two ions, one proof per line (+ supports, - against, ~ only a hint). They are measurements for you to weigh, not a conclusion.</p><ul>${ev.map(e => `<li><b aria-hidden="true">${mark[e.strength] || "·"}</b> ${EH(e.text)}</li>`).join("")}</ul>`;
+    box.hidden = false;
+  } catch (_) { /* mzFinder not ready: the report stays as it is */ }
+}
+
 function ogRender() {
   const R = OG.res, d = document.getElementById("ogdlg"), out = d.querySelector("#og-out"), P = R.profile || {}, F = R.ratio || {}, K = R.kinetics || {}, C = R.ratio_constancy || {};
   const warn = [...new Set([...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])].map(ogMsg))];
@@ -153,6 +166,7 @@ function ogRender() {
 <div class="kv"><span>${I18N.t("og.kv.decay")} <b>${ogN(K.parent_decay && K.parent_decay.k, 4)}</b> /min</span><span>${I18N.t("og.kv.half")} <b>${ogN(K.parent_decay && K.parent_decay.half_life, 1)}</b> min</span><span>${I18N.t("og.kv.spearman")} <b>${ogN(K.spearman_parent, 2)}</b></span></div>
 <div class="kv"><span>${I18N.t("og.kv.mTracks")} AICc <b>${ogN(K.models && K.models.tracks_parent && K.models.tracks_parent.aicc, 1)}</b></span><span>${I18N.t("og.kv.mDecay")} <b>${ogN(K.models && K.models.decay && K.models.decay.aicc, 1)}</b></span><span>${I18N.t("og.kv.mForm")} <b>${ogN(K.models && K.models.formation_decay && K.models.formation_decay.aicc, 1)}</b></span></div>
 <p class="why">${I18N.t("og.s4.why2")}</p></div></div></section>
+<section id="og-ev" hidden></section>
 <section><h4>${I18N.t("og.s5.title")}</h4>
 <p class="why">${I18N.t("og.s5.why")}</p>
 <textarea id="og-hyp" placeholder="${I18N.t("og.hyp.ph")}"></textarea>
@@ -166,6 +180,7 @@ function ogRender() {
   const ta = d.querySelector("#og-hyp"); ta.value = NB.origin[key] || "";
   ta.oninput = () => { NB.origin[key] = ta.value; nbSave(); };
   d.querySelector("#og-xlsx").onclick = () => ogXlsx();
+  ogEvidence(R, d.querySelector("#og-ev"));
   requestAnimationFrame(() => {
     ogDrawXics();
     const pts = F.points || {}, p = pts.p || [], f = pts.f || [], fit = pts.fit || [];

@@ -233,6 +233,7 @@ function unpackIndex(buf) {
 
 // ---------------------------------------------------------------- storage: OPFS, or IndexedDB where it is not there
 if (typeof self !== "undefined" && typeof self.postMessage === "function" && typeof importScripts === "function") {
+  importScripts("libreria-cartella.js", "libreria-scarica.js");           // the folder of the libraries (CARTELLA) and the download of the packages (SCARICA)
   const hasOpfs = () => !!(self.navigator && navigator.storage && navigator.storage.getDirectory);
   let opfsOk = null;
   const root = () => navigator.storage.getDirectory();
@@ -390,6 +391,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   const WLIBS = new Map();                      // id -> { lib (wasm Lib), info }
   function rebalance() { if (!W || !WLIBS.size) return; const per = W.total_cache_budget(smallDevice()) / WLIBS.size; for (const e of WLIBS.values()) e.lib.set_cache_budget(per); }
   async function mzlibBlob(id) {
+    if (CARTELLA.isFolderId(id)) { const v = FOLD.map.get(id); if (!v) throw Object.assign(new Error("library not found"), { key: "lib.err.notFound" }); return FOLD.dir.file(CARTELLA.blobPath(v)); }
     if (await probeOpfs()) return readFile(id + ".mzlib");
     const r = await idbDo("readonly", s => s.get(id));
     if (!r || !r.mzlib) throw Object.assign(new Error("library not found"), { key: "lib.err.notFound" });
@@ -398,7 +400,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   async function wlib(id) {
     const have = WLIBS.get(id); if (have) return have.lib;
     const w = await wasm(); if (!w) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" });
-    const blob = await mzlibBlob(id), lib = w.Lib.open(blobReader(blob), blob.size, w.total_cache_budget(smallDevice()) / (WLIBS.size + 1));
+    const blob = await mzlibBlob(id), lib = w.Lib.open(CARTELLA.isFolderId(id) ? FOLD.dir.reader(blob) : blobReader(blob), blob.size, w.total_cache_budget(smallDevice()) / (WLIBS.size + 1));
     WLIBS.set(id, { lib }); rebalance();
     return lib;
   }
@@ -418,7 +420,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     if (opfsOk) await writeSmall(id + ".info.json", JSON.stringify(info));
     else await idbDo("readwrite", s => s.put({ info, mzlib: out.blob() }, id));
   }
-  async function addLibraryWasm(w, file, reqId) {
+  // reads `file` (a File, or a file of the native folder) into a .mzlib: scratch space and output in OPFS, or in memory where the browser has no synchronous handles
+  async function runImport(w, file, reqId, onChunk) {
     const head = new Uint8Array(await file.slice(0, 8192).arrayBuffer()), id = "lib" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), opfs = await probeOpfs();
     const scratch = opfs ? await openSyncFile(id + ".tmp") : memFile(), out = opfs ? await openSyncFile(id + ".mzlib") : memFile();
     let imp = null;
@@ -427,23 +430,114 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       const rd = file.stream().getReader(); let read = 0, last = 0;
       for (;;) {
         const { done, value } = await rd.read(); if (done) break;
-        read += value.length; imp.push(value);
+        read += value.length; imp.push(value); if (onChunk) onChunk(value);
         if (Date.now() - last > 150) { last = Date.now(); postMessage({ type: "progress", reqId, read, total: file.size, n: imp.count() }); }
       }
       const r = JSON.parse(imp.finish(out.write)); imp.free(); imp = null;
       await scratch.close(true); await out.close(false);
-      const info = { id, name: file.name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt)$/i, ""), file: file.name, size: file.size, n: r.n, pos: r.pos, neg: r.neg, dropped: r.dropped, noPrec: r.noPrec, noPeaks: r.noPeaks, broken: r.broken, peaks: r.peaks, date: Date.now(), store: "mzlib", bytes: r.bytes };
-      await saveMzlib(id, info, out);
-      return info;
+      return { r, id, out, opfs };
     } catch (e) {
       try { if (imp) imp.free(); } catch (e2) { /* gone */ }
       await scratch.close(true); await out.close(true);
       throw e;
     }
   }
+  const infoOfImport = (id, file, r) => ({ id, name: file.name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt)$/i, ""), file: file.name, size: file.size, n: r.n, pos: r.pos, neg: r.neg, dropped: r.dropped, noPrec: r.noPrec, noPeaks: r.noPeaks, broken: r.broken, peaks: r.peaks, date: Date.now(), store: "mzlib", bytes: r.bytes });
+  async function addLibraryWasm(w, file, reqId) {
+    const { r, id, out } = await runImport(w, file, reqId), info = infoOfImport(id, file, r);
+    await saveMzlib(id, info, out);
+    return info;
+  }
+
+  // ---------------------------------------------------------------- the folder of the libraries (libreria-cartella.js)
+  const FOLD = { dir: null, mode: null, map: new Map(), infos: [], cat: null, tried: false, catTried: false };
+  async function setFolder(m) {                     // {mode: "opfs" | "fs" (handle) | "native" (base of the mzlab:// protocol)}
+    FOLD.tried = true; FOLD.map = new Map(); FOLD.infos = []; FOLD.dir = null; FOLD.mode = null;
+    for (const [id, e] of [...WLIBS]) if (CARTELLA.isFolderId(id)) { try { e.lib.free(); } catch (e2) { /* gone */ } WLIBS.delete(id); }
+    if (m.mode === "native") { FOLD.dir = CARTELLA.nativeDir(m.base); try { FOLD.dir.name = (await (await fetch(m.base + "lib/dir")).json()).dir; } catch (e) { /* the name is only shown */ } }
+    else if (m.mode === "fs" && m.handle) FOLD.dir = CARTELLA.handleDir(m.handle, "fs");
+    else if (hasOpfs() && (await probeOpfs())) FOLD.dir = CARTELLA.handleDir(await (await root()).getDirectoryHandle("librerie", { create: true }), "opfs");
+    FOLD.mode = FOLD.dir && FOLD.dir.kind;
+    if (m.cat) FOLD.cat = m.cat;
+  }
+  async function foldRefresh() {                    // the inventory of the folder (a SHA-256 only for the files that changed)
+    if (!FOLD.tried) await setFolder({ mode: "opfs" });
+    if (!FOLD.dir) return { voci: [] };
+    if (!FOLD.cat && !FOLD.catTried) { FOLD.catTried = true; try { FOLD.cat = SCARICA.parseCatalog(await (await FOLD.dir.file(CARTELLA.META + "/catalogo.json")).text()); } catch (e) { /* no catalog seen yet */ } }   // the one the user fetched last time: «update available» without a network call
+    const s = await CARTELLA.scan(FOLD.dir, FOLD.cat);
+    FOLD.map = new Map(s.voci.map(v => [v.id, v]));
+    FOLD.infos = s.voci.filter(v => (v.stato === "pronta" || v.stato === "aggiornamento") && v.info).map(v => ({ ...v.info, id: v.id, name: CARTELLA.stem(v.nome), file: v.nome, size: v.tipo === "pacchetto" ? v.size : (v.info.bytes || 0),
+      date: v.info.date || v.mtime, store: "mzlib", cartella: true, tipo: v.tipo, stato: v.stato })).sort((a, b) => a.date - b.date || a.name.localeCompare(b.name));
+    return s;
+  }
+  async function everyLibrary() {
+    const legacy = await listLibraries();
+    if (!FOLD.tried || !FOLD.map.size) { try { await foldRefresh(); } catch (e) { /* a folder that cannot be read has no libraries */ } }
+    return [...legacy, ...FOLD.infos];
+  }
+  const foldName = () => (FOLD.dir ? FOLD.dir.name || "" : "");
+  async function foldAdd(w, file, reqId) {          // index a file (of the folder or imported) into `.mzlab/` of the folder: the index first, the meta file last (it marks the entry as done)
+    const key = file.name, sha = new CARTELLA.Sha256(), M = CARTELLA.META;
+    if (/\.mzlib$/i.test(key)) { await FOLD.dir.write(key, file); await foldRefresh(); return { id: CARTELLA.idOf(key), name: CARTELLA.stem(key), n: 0, dropped: 0 }; }
+    const { r, id, out, opfs } = await runImport(w, file, reqId, v => sha.update(v));
+    const blob = opfs ? await readFile(id + ".mzlib") : out.blob();
+    try {
+      await FOLD.dir.write(M + "/" + key + ".mzlib.tmp", blob); await FOLD.dir.replace(M + "/" + key + ".mzlib.tmp", M + "/" + key + ".mzlib");
+      const info = infoOfImport(CARTELLA.idOf(key), file, r);
+      await FOLD.dir.write(M + "/" + key + ".idx.json", JSON.stringify(CARTELLA.metaOf(key, file.size, file.lastModified || 0, sha.hex(), info, blob.size)));
+      await foldRefresh();
+      return info;
+    } finally { if (opfs) { try { await (await root()).removeEntry(id + ".mzlib"); } catch (e) { /* not there */ } } }
+  }
+  // the catalog of the packages: from the site (only when the user asks) or handed over by the app; kept in the folder for the states of the next visit
+  async function catalogCmd(m) {
+    if (!FOLD.dir) throw Object.assign(new Error("no folder"), { key: "lib.dl.err.io", params: { detail: "folder" } });
+    if (!(m.cached && FOLD.cat)) {
+      let text;
+      if (m.cat) text = JSON.stringify(m.cat);
+      else {
+        let res; try { res = await fetch("librerie/catalogo.json", { cache: "no-store" }); } catch (e) { throw Object.assign(new Error("offline"), { key: "lib.dl.err.offline", params: { detail: String(e && e.message || e) } }); }
+        if (res.status === 404) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
+        if (!res.ok) throw Object.assign(new Error("http"), { key: "lib.dl.err.http", params: { status: res.status } });
+        text = await res.text();
+      }
+      FOLD.cat = SCARICA.parseCatalog(text); FOLD.catTried = true;
+      try { await FOLD.dir.write(CARTELLA.META + "/catalogo.json", text); } catch (e) { /* the states of the next visit only */ }
+    }
+    const s = await foldRefresh();
+    return { cat: FOLD.cat, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
+  }
+  const DL = { abort: null };
+  async function downloadCmd(m, reqId) {            // the packages the user ticked, one after the other; a failure of one does not stop the others (a cancel does)
+    if (!FOLD.dir || !FOLD.cat) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
+    DL.abort = new AbortController(); const done = [], failed = [], base = new URL("librerie/", self.location.href).href;
+    try {
+      for (const id of m.ids) {
+        const pkg = FOLD.cat.librerie.find(p => p.id === id);
+        if (!pkg) { failed.push({ id, key: "lib.dl.err.catalog", params: { detail: id } }); continue; }
+        try {
+          await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: DL.abort.signal, onProgress: p => postMessage({ type: "progress", reqId, ...p }),
+            beforeReplace: async () => { const w = WLIBS.get(CARTELLA.idOf(id + ".mzlib")); if (w) { try { w.lib.free(); } catch (e) { /* gone */ } WLIBS.delete(CARTELLA.idOf(id + ".mzlib")); rebalance(); } } });
+          done.push(id);
+        } catch (e) {
+          failed.push({ id, key: e.key || "lib.dl.err.io", params: e.params || { detail: String(e && e.message || e) } });
+          if (e.key === "lib.dl.err.cancelled") break;
+        }
+      }
+    } finally { DL.abort = null; }
+    const s = await foldRefresh();
+    return { done, failed, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
+  }
+  async function foldRemove(id) {                   // a source stays in the folder (only its index goes); a package or an imported index is removed
+    const v = FOLD.map.get(id); if (!v) return; const M = CARTELLA.META;
+    if (v.tipo === "pacchetto") { await FOLD.dir.remove(v.nome); await FOLD.dir.remove(M + "/" + v.nome + ".pkg.json"); }
+    else { await FOLD.dir.remove(M + "/" + v.nome + ".idx.json"); await FOLD.dir.remove(M + "/" + v.nome + ".mzlib"); }
+    const w = WLIBS.get(id); if (w) { try { w.lib.free(); } catch (e) { /* gone */ } WLIBS.delete(id); rebalance(); }
+    await foldRefresh();
+  }
   async function addLibrary(file, reqId) {
     const w = await wasm();
-    if (w) return addLibraryWasm(w, file, reqId);
+    if (w) { if (!FOLD.tried) await setFolder({ mode: "opfs" }); if (FOLD.dir) return foldAdd(w, file, reqId); return addLibraryWasm(w, file, reqId); }
     return addLibraryJs(file, reqId);
   }
   // an old MZL1 archive (top 100 peaks as Float32 pairs) becomes a .mzlib once; then the old files go
@@ -480,7 +574,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     r.pairs = (r.pairs || []).map(p => [at(p[0]), p[1]]).filter(p => p[0] >= 0);
   }
   async function selection(m) {
-    const infos = await listLibraries(), byId = new Map(infos.map(i => [i.id, i])), ids = m.ids && m.ids.length ? m.ids : infos.map(i => i.id);
+    const infos = await everyLibrary(), byId = new Map(infos.map(i => [i.id, i])), ids = m.ids && m.ids.length ? m.ids : infos.map(i => i.id);
     return { ids, wIds: ids.filter(id => isW(byId.get(id))), jIds: ids.filter(id => !isW(byId.get(id))), byId };
   }
   async function runSearch(m) {
@@ -535,12 +629,19 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const m = e.data, reqId = m.reqId;
     try {
       let r;
+      if (m.cmd === "folder") { FOLD.tried = true; FOLD.pending = (FOLD.pending || Promise.resolve()).then(() => setFolder(m)); }      // in order, and set at once: the messages that follow wait for it
+      else if (m.cmd !== "config" && FOLD.pending) await FOLD.pending;
       if (m.cmd === "config") { forceJs = !!m.forceJs; allowWasm = !!m.wasm; r = {}; }
       else if (m.cmd === "engine") r = { wasm: !!(await wasm()) };
       else if (m.cmd === "crash") { const w = await wasm(); if (w) w.crash(); r = {}; }
-      else if (m.cmd === "list") { await migrateAll(); r = { libs: await listLibraries(), opfs: await probeOpfs() }; }
+      else if (m.cmd === "folder") { await FOLD.pending; r = {}; }
+      else if (m.cmd === "catalog") r = await catalogCmd(m);
+      else if (m.cmd === "download") r = await downloadCmd(m, reqId);
+      else if (m.cmd === "cancel") { if (DL.abort) DL.abort.abort(); r = {}; }
+      else if (m.cmd === "list") { await migrateAll(); let voci = []; if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e) { r = { folderError: String(e && e.name || e) }; } } r = { ...r, libs: [...(await listLibraries()), ...FOLD.infos], voci, folder: { mode: FOLD.mode, name: foldName() }, opfs: await probeOpfs() }; }
       else if (m.cmd === "add") r = { info: await addLibrary(m.file, reqId) };
-      else if (m.cmd === "remove") { await removeLibrary(m.id); r = {}; }
+      else if (m.cmd === "index") { const w = await wasm(); if (!w || !FOLD.dir) throw Object.assign(new Error("the fast engine is not available"), { key: "lib.err.needWasm" }); r = { info: await foldAdd(w, await FOLD.dir.file(m.name), reqId) }; }
+      else if (m.cmd === "remove") { if (CARTELLA.isFolderId(m.id)) await foldRemove(m.id); else await removeLibrary(m.id); r = {}; }
       else if (m.cmd === "search") r = await runSearch(m);
       else if (m.cmd === "searchAll") r = await runAll(m, reqId);
       else if (m.cmd === "analogs") r = await runAnalogs(m);

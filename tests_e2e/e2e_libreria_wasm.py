@@ -28,7 +28,7 @@ if not wasm.exists():
     else:
         print("  ", ("wasm", "FAIL site/static/wasm-lib missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 # the page of the site is a copy: make sure it is the current worker
-for f in ("libreria-worker.js", "libreria.js"):
+for f in ("libreria-worker.js", "libreria.js", "libreria-cartella.js"):
     shutil.copyfile(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 def rec(name, prec, peaks, extra="Ion_mode: Positive\nPrecursor_type: [M+H]+\nCollision_energy: 30\nInstrument_type: QTRAP\n"):
@@ -41,7 +41,7 @@ QPEAKS = [list(p) for p in PEAKS]
 APEAKS = [[m + 16 if m > 120 else m, i] for m, i in PEAKS]          # the analogue plus 16 Da on the last peaks
 ADD = """async ([name, text]) => { const r = await LIB.call("add", { file: new File([text], name, { type: "text/plain" }) }); return r.info; }"""
 SEARCH = """async ([peaks, prec, pol]) => { const r = await LIB.call("search", { peaks, prec, pol, tol: { v: 10, unit: "ppm" }, frag: 0.01 }); return { names: r.results.map(x => x.name), ent: r.results.map(x => x.ent), cos: r.results.map(x => x.cos), shared: r.results.map(x => x.shared), lic: r.results.map(x => x.lib), q: r.query.mz.length }; }"""
-FILES = """async () => { const d = await navigator.storage.getDirectory(), out = []; for await (const [n] of d.entries()) out.push(n); return out.sort(); }"""
+FILES = """async () => { const out = []; const walk = async (d, pre) => { for await (const [n, h] of d.entries()) { out.push(pre + n); if (h.kind === "directory") await walk(h, pre + n + "/"); } }; await walk(await navigator.storage.getDirectory(), ""); return out.sort(); }"""
 
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
@@ -61,8 +61,8 @@ try:
         def imp():
             info = pg.evaluate(ADD, ["prova.msp", MSP])
             assert info["store"] == "mzlib" and info["n"] == 5 and info["dropped"] == 1 and info["noPrec"] == 1 and info["pos"] == 4 and info["neg"] == 1, info
-            f = pg.evaluate(FILES); assert any(x.endswith(".mzlib") for x in f) and not any((x.endswith(".tmp") and x != "probe.tmp") or x.endswith(".idx") for x in f), f
-        step("import: a .mzlib in OPFS, no temporary file, one record discarded", imp)
+            f = pg.evaluate(FILES); assert any(x.endswith(".mzlib") for x in f) and not any((x.endswith(".tmp") and x != "probe.tmp") or x.endswith(".idx") for x in f) and any(x.startswith("librerie/.mzlab/prova.msp.") for x in f), f
+        step("import: an index in `.mzlab/` of the OPFS folder, no temporary file, one record discarded", imp)
         def search():
             r = pg.evaluate(SEARCH, [QPEAKS, 300.1, 1])
             assert r["names"][0] == "Match" and "Negativo" not in r["names"] and "Lontano" not in r["names"] and {"Spostato", "Parziale"} <= set(r["names"]), r

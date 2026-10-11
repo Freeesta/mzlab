@@ -17,7 +17,8 @@ const LIB = (() => {
       pend.delete(m.reqId); if (m.type === "error") { const er = I18N.err(m); er.fatal = !!m.fatal; r.no(er); } else r.ok(m);
     };
     me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); er.fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
-    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!window.MZLAB_BROWSER });      // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js)
+    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });      // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js) and in the app
+    me.postMessage({ cmd: "folder", reqId: 0, ...folderMsg });                         // the folder of the libraries (chosen before the first call: call1 waits for folderStart)
     return me;
   }
   function restart() {
@@ -26,7 +27,8 @@ const LIB = (() => {
     const now = Date.now(); restarts = restarts.filter(t => now - t < 60000); restarts.push(now);
     if (restarts.length > 1) { forceJs = true; say("lib.err.fallback"); } else say("lib.err.restarted");
   }
-  const call1 = (cmd, payload = {}, prog) => new Promise((ok, no) => { const reqId = ++seq; pend.set(reqId, { ok, no, prog }); try { w().postMessage({ cmd, reqId, ...payload }); } catch (e) { pend.delete(reqId); no(e); } });
+  const call1 = async (cmd, payload = {}, prog) => { await folderStart(); return call2(cmd, payload, prog); };
+  const call2 = (cmd, payload = {}, prog) => new Promise((ok, no) => { const reqId = ++seq; pend.set(reqId, { ok, no, prog }); try { w().postMessage({ cmd, reqId, ...payload }); } catch (e) { pend.delete(reqId); no(e); } });
   const call = async (cmd, payload = {}, prog) => {
     try { return await call1(cmd, payload, prog); }
     catch (e) { if (!(e && e.fatal)) throw e; restart(); return call1(cmd, payload, prog); }
@@ -38,57 +40,183 @@ const LIB = (() => {
   const dlgCss = `<style>#libdlg,#libres{max-width:min(1100px,96vw);width:min(1100px,96vw)}#libdlg{width:min(720px,96vw)}#libdlg .drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;margin:8px 0}#libdlg .drop.over{border-color:var(--accent);background:var(--sel)}
     #libdlg table,#libres table{border-collapse:collapse;width:100%}#libdlg td,#libdlg th,#libres td,#libres th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}#libres td.num,#libres th.num,#libdlg td.num,#libdlg th.num{text-align:right;font-variant-numeric:tabular-nums}
     #libres tr.row{cursor:pointer}#libres tr.row.sel{background:var(--sel)}#libres tr.row:hover{background:var(--sel)}#libres .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}#libres .qbar input{width:90px}#libres canvas{width:100%;height:300px;display:block;border:1px solid var(--line);border-radius:6px;margin-top:8px}
-    #libres .tbl{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px}#libdlg .err{color:var(--bad)}#libdlg progress{width:100%}</style>`;
+    #libres .tbl{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px}#libdlg .err{color:var(--bad)}#libdlg progress{width:100%}#libdlg .sbadge{border:1px solid currentColor;border-radius:10px;padding:1px 8px;font-size:11px;white-space:nowrap}#libdlg .st-ok{color:var(--ok)}#libdlg .st-warn{color:var(--warn)}#libdlg .st-bad{color:var(--bad)}#libdlg fieldset{border:1px solid var(--line);border-radius:8px;margin:8px 0}</style>`;
   const ensureCss = () => { if (!document.getElementById("libcss")) { const s = document.createElement("div"); s.id = "libcss"; s.innerHTML = dlgCss; document.head.appendChild(s.firstChild); } };
 
+  // ------------------------------------------------------------ the folder of the libraries (libreria-cartella.js in the worker)
+  // desktop: the native folder (the app keeps the path); Chrome / Edge: a folder chosen once (the handle lives in IndexedDB, the permission is asked at the first click of the visit);
+  // anywhere else, and by default: the private file system of the browser (OPFS, `librerie/`), where the files are imported once.
+  const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
+  const T = () => (window.__TAURI__ && window.__TAURI__.core) || null;
+  const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* no storage */ } } };
+  const dirDb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libdir", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+  const dirGet = async () => { try { const db = await dirDb(); return await new Promise(ok => { const r = db.transaction("h").objectStore("h").get("dir"); r.onsuccess = () => { db.close(); ok(r.result || null); }; r.onerror = () => { db.close(); ok(null); }; }); } catch (e) { return null; } };
+  const dirPut = async h => { try { const db = await dirDb(); await new Promise(ok => { const t = db.transaction("h", "readwrite"); if (h) t.objectStore("h").put(h, "dir"); else t.objectStore("h").delete("dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); } catch (e) { /* no storage */ } };
+  let folderMsg = { mode: "opfs" }, folderInit = null, waiting = null;     // what the worker is told; `waiting` = a remembered folder that needs a click to be allowed again
+  const folderInfo = { mode: "opfs", name: "", needsGrant: false };
+  function folderStart() {
+    if (!folderInit) folderInit = (async () => {
+      if (window.MZLAB_DESKTOP) { folderMsg = { mode: "native", base: BASE }; folderInfo.mode = "native"; return; }
+      if (window.showDirectoryPicker && LS.get("qqq.lib.cartella") === "fs") {
+        const h = await dirGet();
+        if (h) {
+          let perm = "prompt"; try { perm = await h.queryPermission({ mode: "readwrite" }); } catch (e) { /* old handle */ }
+          folderInfo.name = h.name;
+          if (perm === "granted") { folderMsg = { mode: "fs", handle: h }; folderInfo.mode = "fs"; }
+          else { waiting = h; folderInfo.needsGrant = true; document.addEventListener("pointerdown", grantOnce, { capture: true, once: true }); document.addEventListener("keydown", grantOnce, { capture: true, once: true }); }
+        }
+      }
+    })();
+    return folderInit;
+  }
+  async function grantOnce() {
+    const h = waiting; if (!h) return;
+    try { if ((await h.requestPermission({ mode: "readwrite" })) === "granted") { waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderMsg = { mode: "fs", handle: h }; await pushFolder(); changed(); } } catch (e) { /* refused: the browser folder stays */ }
+  }
+  const pushFolder = () => call1("folder", folderMsg);
+  const listeners = []; const changed = () => listeners.forEach(f => { try { f(); } catch (e) { /* a window that is gone */ } });
+  async function chooseFolder() {
+    if (T()) { const r = await T().invoke("lib_choose_dir"); if (r) { folderMsg = { mode: "native", base: BASE }; await pushFolder(); } return; }
+    const h = await window.showDirectoryPicker({ id: "mzlab-libs", mode: "readwrite" });
+    await dirPut(h); LS.set("qqq.lib.cartella", "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
+  }
+  async function useBrowserFolder() { await dirPut(null); LS.set("qqq.lib.cartella", null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
+
   // ------------------------------------------------------------ the «Librerie» window
+  const STATES = { pronta: "ok", da_indicizzare: "warn", aggiornamento: "warn", danneggiata: "bad" };
+  const stLabel = st => ({ pronta: I18N.t("lib.st.pronta"), da_indicizzare: I18N.t("lib.st.da_indicizzare"), aggiornamento: I18N.t("lib.st.aggiornamento"), danneggiata: I18N.t("lib.st.danneggiata") })[st] || st;
   async function open() {
-    ensureCss();
+    ensureCss(); await folderStart();
     let d = document.getElementById("libdlg");
     if (!d) {
       d = document.createElement("dialog"); d.id = "libdlg"; document.body.appendChild(d);
       d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.title")}</h3><button class="x" id="lib-x" title="${I18N.t("common.close")}">&times;</button></div>
         <p class="sm muted" style="margin:6px 0">${I18N.t("lib.intro")}</p>
-        <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.lib,.mzvault,.txt" multiple hidden>
-          ${window.showDirectoryPicker ? `<div class="sm" style="margin-top:8px"><button id="lib-dir">${I18N.t("lib.dir")}</button> <button id="lib-dir-new">${I18N.t("lib.dirNew")}</button></div>` : ""}</div>
+        <fieldset class="lib-folder" aria-label="${I18N.t("lib.folder")}"><legend class="sm">${I18N.t("lib.folder")}</legend>
+          <div class="sm" id="lib-fwhere"></div>
+          <div class="sm" style="margin-top:6px"><button id="lib-fchoose" hidden></button> <button id="lib-fgrant" hidden>${I18N.t("lib.folder.grant")}</button> <button id="lib-fbrowser" hidden>${I18N.t("lib.folder.browser")}</button> <button id="lib-fscan">${I18N.t("lib.folder.scan")}</button> <button id="lib-fall" hidden>${I18N.t("lib.indexAll")}</button></div>
+          <div class="sm muted" id="lib-fnote" style="margin-top:4px"></div></fieldset>
+        <fieldset class="lib-avail" aria-label="${I18N.t("lib.avail")}"><legend class="sm">${I18N.t("lib.avail")}</legend>
+          <div class="sm muted">${I18N.t("lib.avail.intro")}</div>
+          <div class="sm" style="margin-top:6px"><button id="lib-avail-load">${I18N.t("lib.avail.load")}</button> <button id="lib-avail-go" hidden>${I18N.t("lib.avail.go")}</button> <button id="lib-avail-cancel" hidden>${I18N.t("lib.avail.cancel")}</button></div>
+          <div id="lib-avail-list" aria-live="polite"></div><div id="lib-avail-st" class="sm" aria-live="polite"></div></fieldset>
+        <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button> <button id="lib-pickdir">${I18N.t("lib.pickDir")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.json,.jsonl,.ndjson,.txt,.mzlib" multiple hidden><input type="file" id="lib-dirin" webkitdirectory multiple hidden></div>
         <div id="lib-st"></div><div id="lib-list"></div><div class="sm muted" id="lib-space" style="margin-top:6px"></div>`;
       d.querySelector("#lib-x").onclick = () => d.close();
-      const input = d.querySelector("#lib-file"), drop = d.querySelector("#lib-drop");
+      const input = d.querySelector("#lib-file"), dirin = d.querySelector("#lib-dirin"), drop = d.querySelector("#lib-drop");
       d.querySelector("#lib-pick").onclick = () => input.click();
-      const bd = d.querySelector("#lib-dir"); if (bd) { bd.onclick = () => reloadFolder(false); d.querySelector("#lib-dir-new").onclick = () => reloadFolder(true); }
+      d.querySelector("#lib-pickdir").onclick = () => dirin.click();
+      d.querySelector("#lib-fchoose").onclick = async () => { try { await chooseFolder(); } catch (e) { if (e && e.name !== "AbortError") d.querySelector("#lib-st").innerHTML = `<div class="err">${EHt(e.message)}</div>`; } refresh(); };
+      d.querySelector("#lib-fgrant").onclick = async () => { await grantOnce(); refresh(); };
+      d.querySelector("#lib-fbrowser").onclick = async () => { await useBrowserFolder(); refresh(); };
+      d.querySelector("#lib-fscan").onclick = () => refresh();
+      d.querySelector("#lib-fall").onclick = () => indexAll();
+      d.querySelector("#lib-avail-load").onclick = () => loadCatalog();
+      d.querySelector("#lib-avail-go").onclick = () => downloadTicked();
+      d.querySelector("#lib-avail-cancel").onclick = () => { if (T()) T().invoke("lib_cancel"); else call("cancel"); };
       input.onchange = () => { addFiles([...input.files]); input.value = ""; };
+      dirin.onchange = () => { addFiles([...dirin.files].filter(f => /\.(msp|mgf|json|jsonl|ndjson|mzlib)$/i.test(f.name))); dirin.value = ""; };
       drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
       drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
+      listeners.push(() => { if (d.open) refresh(); });
     }
     if (!d.open) d.showModal();
     refresh();
   }
+  let toIndex = [];
   async function refresh() {
     const d = document.getElementById("libdlg"); if (!d) return;
     const box = d.querySelector("#lib-list");
     try {
-      const r = await call("list"), L = r.libs;
-      box.innerHTML = L.length ? `<table><tr><th>${I18N.t("lib.col.library")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.col.polarity")}</th><th class="num">${I18N.t("lib.col.dropped")}</th><th>${I18N.t("lib.col.loaded")}</th><th></th></tr>${L.map(l => `<tr><td title="${EHt(l.file)}">${EHt(l.name)}</td><td class="num">${fmtN(l.n)}</td><td class="num">${l.size ? fmtN(Math.round(l.size / 1e6)) + " MB" : ""}</td><td>ESI+ ${fmtN(l.pos)} · ESI&minus; ${fmtN(l.neg)}${l.n - l.pos - l.neg ? " · ? " + fmtN(l.n - l.pos - l.neg) : ""}</td>
-        <td class="num" title="${I18N.t("lib.droppedTitle", { prec: l.noPrec, peaks: l.noPeaks, broken: l.broken })}">${fmtN(l.dropped)}</td><td>${new Date(l.date).toLocaleDateString(loc())}</td><td><button data-rm="${EHt(l.id)}">${I18N.t("lib.remove")}</button></td></tr>`).join("")}</table>` : `<p class="muted">${I18N.t("lib.none")}</p>`;
+      const r = await call("list"), L = r.libs, V = r.voci || [], inV = new Set(V.map(v => v.id));
+      const f = r.folder || { mode: folderInfo.mode, name: "" };
+      d.querySelector("#lib-fwhere").innerHTML = `<b>${EHt(f.mode === "native" ? I18N.t("lib.folder.native", { name: f.name }) : f.mode === "fs" ? I18N.t("lib.folder.fs", { name: folderInfo.name || f.name }) : I18N.t("lib.folder.opfs"))}</b>${r.folderError ? ` · <span class="err">${EHt(I18N.t("lib.folder.error", { name: r.folderError }))}</span>` : ""}`;
+      const bc = d.querySelector("#lib-fchoose"); bc.hidden = !(T() || window.showDirectoryPicker); bc.textContent = I18N.t(T() ? "lib.folder.change" : "lib.folder.choose");
+      d.querySelector("#lib-fgrant").hidden = !folderInfo.needsGrant; d.querySelector("#lib-fbrowser").hidden = !(window.showDirectoryPicker && !T() && (folderInfo.mode === "fs" || folderInfo.needsGrant));
+      d.querySelector("#lib-fnote").textContent = f.mode === "opfs" ? I18N.t("lib.folder.noteOpfs") : "";
+      toIndex = V.filter(v => v.tipo === "sorgente" && (v.stato === "da_indicizzare" || v.stato === "danneggiata")).map(v => v.nome);
+      d.querySelector("#lib-fall").hidden = toIndex.length < 2;
+      const row = (name, file, n, size, pol, st, extra, rm, idx, title, drop) => `<tr><td title="${EHt(file)}">${EHt(name)}</td><td class="num">${n == null ? "" : fmtN(n)}</td><td class="num">${size ? fmtN(Math.round(size / 1e5) / 10) + " MB" : ""}</td><td>${pol}</td><td class="num" ${title ? `title="${EHt(title)}"` : ""}>${drop == null ? "" : fmtN(drop)}</td><td><span class="sbadge st-${STATES[st] || "ok"}">${EHt(stLabel(st))}</span>${extra || ""}</td><td>${idx}${rm}</td></tr>`;
+      const polOf = i => (i ? `ESI+ ${fmtN(i.pos || 0)} · ESI&minus; ${fmtN(i.neg || 0)}${i.n - (i.pos || 0) - (i.neg || 0) > 0 && (i.pos || i.neg) ? " · ? " + fmtN(i.n - i.pos - i.neg) : ""}` : "");
+      const rows = V.map(v => row(CARTELLA_stem(v.nome), v.nome, v.info && v.info.n, v.size, polOf(v.info), v.stato,
+        v.nuova ? ` <span class="sm">${EHt(I18N.t("lib.st.newer", { v: v.nuova }))}</span>` : "", v.stato === "pronta" || v.stato === "aggiornamento" || v.tipo !== "sorgente" ? `<button data-rm="${EHt(v.id)}">${I18N.t("lib.remove")}</button>` : "",
+        v.tipo === "sorgente" && (v.stato === "da_indicizzare" || v.stato === "danneggiata") ? `<button data-idx="${EHt(v.nome)}">${I18N.t("lib.index")}</button> ` : "", v.stato === "danneggiata" ? I18N.t("lib.st.damagedHint") : "", v.info && v.info.dropped));
+      const legacy = L.filter(l => !inV.has(l.id) && !l.cartella).map(l => row(l.name, l.file, l.n, l.size, polOf(l), "pronta", "", `<button data-rm="${EHt(l.id)}">${I18N.t("lib.remove")}</button>`, "", I18N.t("lib.droppedTitle", { prec: l.noPrec, peaks: l.noPeaks, broken: l.broken }), l.dropped));
+      box.innerHTML = rows.length + legacy.length ? `<table><tr><th>${I18N.t("lib.col.library")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.col.polarity")}</th><th class="num">${I18N.t("lib.col.dropped")}</th><th>${I18N.t("lib.col.state")}</th><th></th></tr>${rows.join("")}${legacy.join("")}</table>` : `<p class="muted">${I18N.t("lib.none")}</p>`;
       box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { b.disabled = true; await call("remove", { id: b.dataset.rm }); refresh(); });
-      if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")); }
+      box.querySelectorAll("[data-idx]").forEach(b => b.onclick = () => indexOne(b.dataset.idx));
+      if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = f.mode === "opfs" || f.mode == null ? I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")) : ""; }
+      if (f.mode === "opfs" && navigator.storage && navigator.storage.persist) { const p = (await navigator.storage.persisted()) || (await navigator.storage.persist()); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
     } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; }
   }
-  // Optional shortcut (Chrome / Edge, File System Access API): the folder is remembered and its MSP / MGF files that are not archived yet are imported again. Never the only way.
-  const dirDb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libdir", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
-  const dirGet = async () => { const db = await dirDb(); return new Promise(ok => { const r = db.transaction("h").objectStore("h").get("dir"); r.onsuccess = () => { db.close(); ok(r.result || null); }; r.onerror = () => { db.close(); ok(null); }; }); };
-  const dirPut = async h => { const db = await dirDb(); return new Promise(ok => { const t = db.transaction("h", "readwrite"); t.objectStore("h").put(h, "dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); };
-  async function reloadFolder(choose) {
+  const CARTELLA_stem = n => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
+  async function indexOne(name) {
     const st = document.querySelector("#libdlg #lib-st");
+    st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.reading")}</div><progress max="1" value="0"></progress>`;
     try {
-      let h = choose ? null : await dirGet();
-      if (h && (await h.requestPermission({ mode: "read" })) !== "granted") h = null;
-      if (!h) { h = await window.showDirectoryPicker({ id: "mzlab-libs", mode: "read" }); await dirPut(h); }
-      const have = new Set((await call("list")).libs.map(l => l.file + "|" + l.size)), todo = [];
-      for await (const [name, fh] of h.entries()) if (fh.kind === "file" && /\.(msp|mgf)$/i.test(name)) { const f = await fh.getFile(); if (!have.has(f.name + "|" + f.size)) todo.push(f); }
-      if (!todo.length) { st.innerHTML = `<div class="sm">${I18N.t("lib.dirNone", { name: EHt(h.name) })}</div>`; return; }
-      await addFiles(todo);
-    } catch (e) { if (e && e.name !== "AbortError") st.innerHTML = `<div class="err">${EHt(e.message)}</div>`; }
+      const r = await call("index", { name }, m => { st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
+      st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}.</div>`;
+    } catch (e) { st.innerHTML = `<div class="err">${EHt(name)}: ${EHt(e.message)}</div>`; }
+    await refresh();
+  }
+  async function indexAll() { for (const n of [...toIndex]) await indexOne(n); }
+
+  // ------------------------------------------------------------ the public packages («Disponibili»): the list comes from the site (or, in the app, from the native side) only when the user asks
+  let avail = null, busy = false;
+  const mb = n => fmtN(Math.round(n / 1e5) / 10);
+  const avLabel = st => ({ new: I18N.t("lib.avail.st.new"), update: I18N.t("lib.avail.st.update"), installed: I18N.t("lib.avail.st.installed"), damaged: I18N.t("lib.avail.st.damaged") })[st] || st;
+  const NATIVE_ERRORS = ["lib.dl.err.host", "lib.dl.err.externalOff"];        // answered by the native side (listed so that tools/controlla_i18n.py sees the keys)
+  const errText = (key, params) => I18N.t(NATIVE_ERRORS.includes(key) || key.startsWith("lib.dl.err.") ? key : "lib.dl.err.io", params || {});
+  async function nativeJson(cmd, args) {                    // the native side answers a JSON text: the result, or {status:"error", error_key, detail}
+    const j = JSON.parse(await T().invoke(cmd, args));
+    if (j.status === "error") throw new Error(errText(j.error_key, { detail: j.detail }));
+    return j;
+  }
+  async function loadCatalog() {
+    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list");
+    box.innerHTML = `<p class="sm muted">${I18N.t("lib.reading")}</p>`;
+    try {
+      avail = T() ? await call("catalog", { cat: (await nativeJson("lib_catalog")).catalog }) : await call("catalog");
+      avail.cfg = T() ? await T().invoke("lib_get_config") : null;
+      renderAvail();
+    } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
+  }
+  function renderAvail() {
+    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
+    const rows = A.cat.librerie.map(p => { const s = st.get(p.id) || "new";
+      return `<tr><td><input type="checkbox" data-dl="${EHt(p.id)}" ${s === "installed" ? "disabled" : ""} aria-label="${EHt(p.nome)}"></td><td>${EHt(p.nome)}</td><td>${EHt(p.versione)}</td><td class="num">${fmtN(p.spettri)}</td><td class="num">${mb(p.dimensione)} MB</td><td title="${EHt(p.licenza)}">${EHt(p.licenza.split(";")[0].split(":")[0])}</td><td><span class="sbadge st-${s === "installed" ? "ok" : s === "damaged" ? "bad" : "warn"}">${EHt(avLabel(s))}</span></td></tr>`; });
+    const ext = A.cfg && A.cfg.external ? A.cat.esterne : [];
+    const xrows = ext.map(e => `<tr><td><input type="checkbox" data-dlx="${EHt(e.id)}" aria-label="${EHt(e.nome)}"></td><td>${EHt(e.nome)}</td><td colspan="2" class="num">${e.dimensione ? mb(e.dimensione) + " MB" : ""}</td><td colspan="2" title="${EHt(e.licenza || "")}">${EHt((e.licenza || "").split(":")[0])}</td><td class="sm">${EHt(e.nota || "")}</td></tr>`);
+    const head = `<tr><th></th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.avail.col.version")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.avail.col.license")}</th><th>${I18N.t("lib.col.state")}</th></tr>`;
+    box.innerHTML = (rows.length ? `<table>${head}${rows.join("")}</table>` : `<p class="muted">${I18N.t("lib.avail.none")}</p>`)
+      + (xrows.length ? `<div class="sm" style="margin-top:6px"><b>${I18N.t("lib.avail.ext")}</b> ${I18N.t("lib.avail.ext.hint")}</div><table>${xrows.join("")}</table>` : "")
+      + (A.cat.librerie.length ? `<details class="sm" style="margin-top:6px"><summary>${I18N.t("lib.avail.attr")}</summary>${A.cat.librerie.map(p => `<p><b>${EHt(p.nome)}</b>: ${EHt(p.attribuzione || "")} ${p.url_sorgente ? `<span class="muted">(${EHt(p.url_sorgente)})</span>` : ""}</p>`).join("")}</details>` : "");
+    d.querySelector("#lib-avail-go").hidden = !(rows.length || xrows.length);
+  }
+  async function downloadTicked() {
+    if (busy) return;
+    const d = document.getElementById("libdlg"), st = d.querySelector("#lib-avail-st"), go = d.querySelector("#lib-avail-go"), cn = d.querySelector("#lib-avail-cancel");
+    const ids = [...d.querySelectorAll("[data-dl]:checked")].map(c => c.dataset.dl), xids = [...d.querySelectorAll("[data-dlx]:checked")].map(c => c.dataset.dlx);
+    if (!ids.length && !xids.length) return;
+    busy = true; go.disabled = true; cn.hidden = false;
+    const name = id => (avail.cat.librerie.find(p => p.id === id) || avail.cat.esterne.find(e => e.id === id) || { nome: id }).nome;
+    const show = m => { st.innerHTML = `<div>${EHt(I18N.t("lib.avail.progress", { name: name(m.id), piece: m.piece || 0, pieces: m.pieces || 0, mb: mb(m.bytes), total: mb(m.total) }))}</div><progress max="${m.total || 1}" value="${m.bytes}"></progress>`; };
+    let off = null; const fails = []; let done = 0;
+    try {
+      if (T() && T().event) off = await T().event.listen("lib-progress", ev => show(ev.payload));
+      if (ids.length) {
+        if (T()) { const r = await nativeJson("lib_download", { ids }); done += r.done.length; (r.failed || []).forEach(f => fails.push(`${name(f.id)}: ${errText(f.error_key, { detail: f.detail })}`)); }
+        else { const r = await call("download", { ids }, show); done += r.done.length; r.failed.forEach(f => fails.push(`${name(f.id)}: ${errText(f.key, f.params)}`)); }
+      }
+      for (const id of xids) {
+        try { await nativeJson("lib_download_external", { id }); done++; const e = avail.cat.esterne.find(x => x.id === id); await refresh(); await indexOne(`${e.id}.${e.formato}`); }
+        catch (e) { fails.push(`${name(id)}: ${e.message}`); }
+      }
+    } catch (e) { fails.push(e.message); }
+    finally { if (off) off(); busy = false; go.disabled = false; cn.hidden = true; }
+    st.innerHTML = (done ? `<div>${EHt(I18N.t("lib.avail.done", { n: done }))}</div>` : "") + fails.map(f => `<div class="err">${EHt(f)}</div>`).join("");
+    try { avail = { ...(await call("catalog", { cached: true })), cfg: avail.cfg }; renderAvail(); } catch (e) { /* the list stays as it was */ }
+    await refresh();
   }
   async function addFiles(files) {
     const d = document.getElementById("libdlg"), st = d.querySelector("#lib-st");
