@@ -1,5 +1,6 @@
 """The public example files stay small and the research compound name never appears in public files."""
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -22,6 +23,11 @@ def _nomi():
     return []
 
 
+def _word(n):
+    """Whole-word, case-insensitive match (`low` is already lowercase): a forbidden name inside a longer common word is not a hit."""
+    return re.compile(rb"(?<![a-z0-9])" + re.escape(n.encode("utf-8")) + rb"(?![a-z0-9])")
+
+
 def test_no_example_file_exceeds_10_mb():
     big = {p.name: p.stat().st_size for p in ESEMPI.iterdir() if p.is_file() and p.stat().st_size > MAX_BYTES}
     assert not big, big
@@ -38,5 +44,5 @@ def test_the_forbidden_names_are_not_in_public_files():
         if not p.is_file() or "/vendor/" in rel or rel.startswith("tests/golden/librerie/massbank_unito/"):      # the libraries may hold any compound (the records of the UniTO standards)
             continue
         low = (rel + "\n").lower().encode("utf-8") + p.read_bytes().lower()
-        hits += [(rel, n) for n in nomi if n.encode("utf-8") in low]
+        hits += [(rel, n) for n in nomi if _word(n).search(low)]
     assert not hits, [h[0] for h in hits]
