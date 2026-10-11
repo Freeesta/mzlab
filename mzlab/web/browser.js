@@ -60,6 +60,7 @@
       if (m.type === "blocked") { window.qqPhaseCur = { key: "load.blocked", pct: null }; if (window.ldRefresh && window.I18N) ldRefresh(); return; }   // replaced by the next step once the other tab lets go
       if (m.type === "ready") { isReady = true; window.qqStep = ""; phase(null); perfMark("motore pronto"); try { const u = new URL(location.href); if (u.searchParams.has("riparti")) { u.searchParams.delete("riparti"); history.replaceState(null, "", u.href); } } catch (_) { /* optional */ } return res(); }
       if (m.type === "fatal") { failed = m.text; if (m.key === "load.err.resumeTimeout") fail(m.key, null, true); else fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
+      if (m.type === "dead") { recover(); return; }                                                                    // Python lost its footing outside a request (background work, a promise)
       if (m.type === "pong") { const q = [...pending.keys()].filter(k => String(k).startsWith("ping")); q.forEach(k => { const f = pending.get(k); pending.delete(k); f(m); }); return; }
       if (m.type === "notice") return notice(m.key);                                                                   // e.g. error.memoryBudget: the index of this file is built by Python
       if (m.type === "idx") { (window.MZLAB_IDX = window.MZLAB_IDX || []).push(m); return; }                          // which engine built the index of a file (tests, ?perf)
@@ -83,9 +84,13 @@
   const check = () => {
     if (!isReady || !worker || window.MZLAB_RECOVERING) return;
     const id = "ping" + (++seq);
-    pending.set(id, m => { if (!m.ok) recover(); });
+    const t = setTimeout(() => { if (pending.delete(id)) recover(); }, 8000);          // a worker that does not even answer a ping is gone
+    pending.set(id, m => { clearTimeout(t); if (!m.ok) recover(); });
     worker.postMessage({ ping: id });
   };
+  const isGil = x => /NoGilError|GIL not held|PyProxy/i.test(String(x && (x.name + " " + x.message) || x));       // the error as the page sees it, from any promise or script
+  window.addEventListener("unhandledrejection", e => { if (isGil(e.reason)) { e.preventDefault(); recover(); } });
+  window.addEventListener("error", e => { if (isGil(e.error || e.message)) { e.preventDefault(); recover(); } });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
   window.addEventListener("pageshow", e => { if (e.persisted) check(); });
   document.addEventListener("resume", check);
@@ -175,7 +180,7 @@
     const id = ++seq;
     const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
-    if (r.dead && recover()) return new Promise(() => {});                    // the page is reloading
+    if (r.dead) { if (recover()) return new Promise(() => {}); r.text = JSON.stringify({ error: "engine stopped", error_key: "load.err.engineLost" }); }   // reloading, or (a second time within a minute) the message in the language of the page
     if (post !== null && r.status === 200) rustSession(rb, url, post, r.text);
     if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
