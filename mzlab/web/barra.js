@@ -11,6 +11,7 @@ const BARRA = (() => {
   const K_LR = "qqq.barra.lr";
   const K_HR = "qqq.barra.hr";
   const K_SIDE = "qqq.barra.lato";
+  const K_HINT = "qqq.barra.hint";   // first-visit hint under the toolbar: shown once per browser
   const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
   const MIN_W = 220, MAX_W = 560;
   const NARROW = 1100;              // below this width the drawer is only a drawer (no pin)
@@ -98,6 +99,7 @@ const BARRA = (() => {
     { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
+    { id: "hint", bar: false, group: "app", ic: () => ICONS.search, visible: () => inData(), run: () => { hintClose(false); hintShow(); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
     { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
@@ -291,6 +293,7 @@ const BARRA = (() => {
   }
 
   function show(id, opt = {}) {
+    hintClose(true);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
     if (!inData() || !validTab(id)) return false;
     const wasOpen = _open;
@@ -813,6 +816,63 @@ const BARRA = (() => {
     fit();
   }
 
+  // First-visit hint anchored under the toolbar. Never together with the tour invitation (it waits until that is answered), closes on Esc, ×, or the first tool opened.
+  let _hintMem = false, _hintTimer = 0;
+  function hintSeen() { try { return !!localStorage.getItem(K_HINT); } catch (_) { return _hintMem; } }
+  function hintMark() { _hintMem = true; try { localStorage.setItem(K_HINT, "1"); } catch (_) { /* none */ } }
+  function hintPlace() {
+    const el = document.getElementById("bar-hint"), bar = Q1("#stbar");
+    if (!el || !bar) return;
+    const r = bar.getBoundingClientRect();
+    el.style.top = Math.round(r.bottom + 8) + "px";
+    el.style.left = Math.max(8, Math.round(r.left)) + "px";
+  }
+  function hintOnKey(e) { if (e.key === "Escape") hintClose(true); }
+  function hintClose(mark) {
+    const el = document.getElementById("bar-hint");
+    if (!el) return;             // not on screen yet: leave the waiting timer of hintMaybe alone (show() runs during the boot too)
+    el.remove();
+    document.removeEventListener("keydown", hintOnKey);
+    window.removeEventListener("resize", hintPlace);
+    if (mark) hintMark();
+  }
+  function hintShow() {
+    if (document.getElementById("bar-hint") || !inData() || window.QQQ_PHONE) return false;
+    const bar = Q1("#stbar");
+    if (!bar || bar.offsetParent === null) return false;
+    const el = document.createElement("div");
+    el.id = "bar-hint";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    const txt = document.createElement("span");
+    txt.textContent = t("hint.testo");
+    const x = document.createElement("button");
+    x.type = "button"; x.textContent = "×";
+    x.setAttribute("aria-label", t("hint.chiudi"));
+    x.onclick = () => hintClose(true);
+    el.append(txt, x);
+    document.body.appendChild(el);
+    hintPlace();
+    document.addEventListener("keydown", hintOnKey);
+    window.addEventListener("resize", hintPlace);
+    return true;
+  }
+  // Called after loading: waits (up to 2 minutes) until the tour invitation or the tour itself are gone, then shows the hint once.
+  function hintMaybe() {
+    if (hintSeen() || window.QQQ_PHONE) return;
+    clearTimeout(_hintTimer);
+    let n = 0;
+    const tick = () => {
+      if (hintSeen() || ++n > 240) return;
+      const busy = document.getElementById("tour-invito") || (window.TOUR && TOUR.active);
+      let tourKnown = false;       // the tour invitation comes a moment after loading: wait for its state, or 10 s when the tour is never offered (HR)
+      try { tourKnown = !!localStorage.getItem("qqq.tour.lr"); } catch (_) { /* none */ }
+      if (!busy && (tourKnown || n > 20) && inData() && hintShow()) return;
+      _hintTimer = setTimeout(tick, 500);
+    };
+    _hintTimer = setTimeout(tick, 600);
+  }
+
   function init() {
     if (_mounted) return;
     _mounted = true;
@@ -842,6 +902,9 @@ const BARRA = (() => {
 
   return {
     init,
+    hintMaybe,
+    hintShow,
+    hintClose,
     commands: CMD,
     setTab: show,
     show,

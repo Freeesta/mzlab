@@ -26,7 +26,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
-        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
         def upload():
             pg.set_input_files("#pick", FILES)
@@ -82,7 +82,7 @@ try:
         # --- an older visit: files in IndexedDB (?opfs=0), then the normal site
         ctx2 = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); q = ctx2.new_page()
         q.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
-        q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+        q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         q.goto(URL + "?opfs=0"); q.wait_for_selector("#drop", timeout=120000)
         def old_way():
             q.set_input_files("#pick", FILES[:2])
