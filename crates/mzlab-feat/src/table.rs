@@ -62,6 +62,17 @@ impl FileFeatures {
         self.mz.is_empty()
     }
 
+    /// Append row `i` of `src` (every column).
+    pub fn push_row(&mut self, src: &FileFeatures, i: usize) {
+        macro_rules! cp {
+            ($($c:ident),*) => { $( self.$c.push(src.$c[i]); )* };
+        }
+        cp!(
+            mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group,
+            charge, shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
+        );
+    }
+
     /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut b = Vec::with_capacity(self.len() * 85 + 16);

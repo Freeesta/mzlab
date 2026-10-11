@@ -15,11 +15,16 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
+/// Without the cut of the maxima: the Python reference does not cut.
 fn run(idx: &Path, p: &Params) -> (FileFeatures, mzlab_feat::ms2::Ms2Links) {
     let f = std::fs::File::open(idx).unwrap();
     let size = f.metadata().unwrap().len();
     let mut ix = Index::open(f, size).unwrap();
-    analyse(&mut ix, p, &Steps::default()).unwrap()
+    let st = Steps {
+        split: false,
+        ..Steps::default()
+    };
+    analyse(&mut ix, p, &st).unwrap()
 }
 
 fn ints(v: &Value) -> Vec<i64> {
@@ -159,5 +164,39 @@ fn isotopes_and_ms2_like_python() {
     );
     assert_eq!(links, links2, "small slabs: links");
     assert_eq!(f.to_bytes(), run(&idx, &p).0.to_bytes(), "second run");
+    check_split(&idx, &p, f.len());
     let _ = std::fs::remove_dir_all(&out);
+}
+
+/// The cut of the maxima (`resolve`): more rows, in pieces of one ion by time, the same table with small slabs and on a second run.
+fn check_split(idx: &Path, p: &Params, unsplit: usize) {
+    let go = |p: &Params| {
+        let f = std::fs::File::open(idx).unwrap();
+        let size = f.metadata().unwrap().len();
+        let mut ix = Index::open(f, size).unwrap();
+        analyse(&mut ix, p, &Steps::default()).unwrap()
+    };
+    let (g, links) = go(p);
+    let cut: Vec<usize> = (0..g.len())
+        .filter(|&i| g.flags[i] & mzlab_feat::table::FLAG_RESOLVED != 0)
+        .collect();
+    assert!(!cut.is_empty() && g.len() > unsplit, "no feature was cut");
+    for &i in &cut {
+        let near =
+            |j: usize| g.mz[j] == g.mz[i] && g.flags[j] & mzlab_feat::table::FLAG_RESOLVED != 0;
+        assert!(
+            (i > 0 && near(i - 1) && g.apex[i - 1] < g.apex[i])
+                || (i + 1 < g.len() && near(i + 1) && g.apex[i + 1] > g.apex[i]),
+            "#{i}: a piece without its neighbour"
+        );
+        assert!(g.scan_lo[i] <= g.apex[i] && g.apex[i] <= g.scan_hi[i]);
+    }
+    assert!(g.mz.windows(2).all(|w| w[0] <= w[1]), "sorted by m/z");
+    let (small, links2) = go(&Params {
+        budget: 1,
+        ..p.clone()
+    });
+    assert_eq!(g.to_bytes(), small.to_bytes(), "split: small slabs");
+    assert_eq!(links, links2, "split: links of small slabs");
+    assert_eq!(g.to_bytes(), go(p).0.to_bytes(), "split: second run");
 }
