@@ -48,7 +48,7 @@ def test_ranking_finds_the_products(exp):
 
 def test_rows_have_the_requested_fields(exp):
     x = next(x for x in exp.result["rows"] if x["formula"] == "C8H11N4O3")
-    assert x["level"] in (5, 4, 3, "2b") and x["class"] and x["tmax"] is not None and abs(x["ppm"]) < 3
+    assert x["level"] in (5, 4, 3) and x["class"] and x["tmax"] is not None and abs(x["ppm"]) < 3
     assert set(x["components"]) == {"ms2", "loc", "kin", "form", "int"} and x["delta"] == "+O"
     y = next(x for x in exp.result["rows"] if x["formula"] == "C7H9N4O2")
     assert y["tmax"] < x["tmax"] and "early" in y["class"]

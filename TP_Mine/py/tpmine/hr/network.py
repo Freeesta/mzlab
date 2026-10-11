@@ -2,7 +2,7 @@
 """Network of the products, priority score and confidence levels (WP11).
 
 Every candidate is a dict filled by the engine (see `CANDIDATE_KEYS`); this module turns it into a ranked, explained result: a score of priority 0-100
-with five visible components, a confidence level (5, 4, 3, 2b: never 2a or 1, which need a standard or a library spectrum) with the criteria that
+with five visible components, a confidence level (5, 4, 3: never 2a or 1, which need a standard or a library spectrum; 2b is the chemist's decision, see `livelli.js`) with the criteria that
 support it, and a predecessor in the network of transformations. Every result is a hypothesis with its evidence, not an identification."""
 from __future__ import annotations
 
@@ -22,14 +22,15 @@ LOC_MARGIN = 0.25                     # log-likelihood margin that counts as a d
 COS_RELATED = 0.6
 COVERAGE_FRACTION = 0.5               # a profile present in this fraction of the treated samples (at least 4) has the full kinetic component
 COVERAGE_FLOOR = 0.4                  # ... and one present in a single sample would keep this fraction of it
-LEVELS = {5: "5", 4: "4", 3: "3", "2b": "2b"}
-LEVEL_ORDER = {"2b": 0, 3: 1, 4: 2, 5: 3, None: 4}
+LEVELS = {5: "5", 4: "4", 3: "3"}
+LEVEL_ORDER = {3: 1, 4: 2, 5: 3, None: 4}
 LEVEL_TEXT = {
     5: "Level 5: mass of interest. Appears with the treatment and passes the filters; nothing more.",
     4: "Level 4: unique formula within 3 ppm, derivable from the parent, consistent isotopes.",
     3: "Level 3: tentative candidate. In addition, the MS2 is linked to that of the parent and the modification is localised at group level.",
-    "2b": "Level 2b: probable hypothesis. In addition, site determined with margin, RT and kinetics consistent with the modification. Without a standard or a library spectrum it goes no further.",
 }
+DIAGNOSTIC_TEXT = ("Proposed level 3, diagnostic evidence: site determined with margin, RT and kinetics consistent with the modification. "
+                   "Level 2b is only written by the chemist's decision, never by the program.")
 CANDIDATE_KEYS = ("id", "mz", "rt", "formula", "n_formulas", "ppm", "area_max", "kinetics", "ms2", "localization", "iimn", "isotopes", "derivation")
 
 # neutral changes besides the user's transformation list (names in Italian): ordered (name, delta as signed formula text)
@@ -211,9 +212,10 @@ def _crit(name, status, text):
 
 def confidence(c: dict, parent_rt: float | None = None, groups_of_region: int | None = None) -> dict:
     """Confidence level and the criteria behind it. Level 5: passes the filters. 4: unique formula within 3 ppm, coherent isotopes, derivable. 3: also an
-    MS2 related to the parent's (modified cosine >= 0.6 or >= 4 pieces of evidence) and a region localised to the level of a group. 2b: also a site
+    MS2 related to the parent's (modified cosine >= 0.6 or >= 4 pieces of evidence) and a region localised to the level of a group. With also a site
     determined with a margin (region within two groups, >= 60 % of the MS2 intensity explained), a retention time coherent with the modification
-    (more polar elutes earlier) and a kinetics coherent with the predecessor. Never 2a or 1."""
+    (more polar elutes earlier) and a kinetics coherent with the predecessor, the proposed level stays 3 and `diagnostic` is true: 2b is written only
+    by the chemist (field «decided level»). Never 2a, 2b or 1."""
     crit = [_crit("appears with the treatment", "pass", "passes the filters (fold, isotopologues, feasible formula, profile)")]
     f_ok = c.get("formula") is not None and c.get("n_formulas", 0) == 1
     crit.append(_crit("unique formula within 3 ppm", "pass" if f_ok else "fail", (f"{c['formula']} ({c.get('ppm', 0):+.1f} ppm)" if c.get("formula") else "no formula") + ("" if f_ok or not c.get("n_formulas") else f"; {c['n_formulas']} possible formulas")))
@@ -243,14 +245,14 @@ def confidence(c: dict, parent_rt: float | None = None, groups_of_region: int | 
     k_ok = "n/a" if pk is None or not kin or not kin.get("ok") else ("pass" if pk <= kin["tmax"] + c.get("time_step", 5.0) else "fail")
     crit.append(_crit("kinetics consistent with the predecessor", k_ok, "no predecessor with kinetics" if k_ok == "n/a" else f"predecessor: maximum at {pk:g} min, this one at {kin['tmax']:g} min"))
     st = {x["name"]: x["status"] for x in crit}
-    level = 5
+    level, diagnostic = 5, False
     if st["unique formula within 3 ppm"] == "pass" and st["consistent isotopes"] != "fail" and st["derivable from the parent"] == "pass":
         level = 4
         if st["MS2 linked to the parent"] == "pass" and st["localised region (group)"] == "pass":
             level = 3
             if st["site determined with margin"] == "pass" and st["RT consistent with the modification"] != "fail" and st["kinetics consistent with the predecessor"] != "fail":
-                level = "2b"
-    return {"level": level, "text": LEVEL_TEXT[level], "criteria": crit}
+                diagnostic = True
+    return {"level": level, "diagnostic": diagnostic, "text": DIAGNOSTIC_TEXT if diagnostic else LEVEL_TEXT[level], "criteria": crit}
 
 
 def _rt_coherent(c: dict, parent_rt: float | None) -> tuple[str, str]:
@@ -309,9 +311,9 @@ def predecessors(cands: list[dict], els: list[str], parent_formula, table, cos=N
 
 def rank(cands: list[dict], by_level: bool = False) -> list[dict]:
     """Candidates ordered by priority score (the score already carries the evidence of the level: MS2, region, kinetics, formula, intensity). With
-    `by_level` ordered by confidence level (2b first) and, within it, by score: measured on the reference series that puts all the level-3 candidates
+    `by_level` ordered by confidence level (level 3 with diagnostic evidence first) and, within it, by score: measured on the reference series that puts all the level-3 candidates
     (an MS2 related to the parent's, many of them not products) above the level-4 products that have no useful MS2 (17 of 20 products in the first 100
     by score, 13 by level). Those explained by a family keep their place by score but stay visible."""
     if by_level:
-        return sorted(cands, key=lambda c: (LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
+        return sorted(cands, key=lambda c: (0 if c["confidence"].get("diagnostic") else LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
     return sorted(cands, key=lambda c: -c["priority"]["score"])

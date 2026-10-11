@@ -201,7 +201,6 @@
   "lib.err.noSpectrum": "{dropped} = numero di spettri scartati.",
   "lib.droppedTitle": "Suggerimento sul numero di spettri scartati di una libreria, per motivo.",
   "lib.readN": "Avanzamento della lettura di una libreria; {n} = spettri già letti.",
-  "lib.thr.body": "Soglie modificabili; i segnaposto sono i campi numerici (HTML).",
   "lib.loadFirst": "«Librerie»: voce dell'ingranaggio (settings.libs.button).",
   "lib.error": "{message} = testo dell'errore.",
   "lib.xlsx.suffix": "Parte finale del nome del file scaricato; solo lettere minuscole senza accento.",
@@ -297,5 +296,13 @@
   "update.available": "Messaggio dell'aggiornamento dell'app desktop; {files} = numero di file cambiati da scaricare, {size} = megabyte già formattati.",
   "update.newapp": "L'aggiornamento della parte web richiede un'app desktop più recente; {min} = versione minima (es. 0.2.0). Dopo la frase compare il link alla pagina degli installatori.",
   "update.progress": "Avanzamento dello scaricamento dell'aggiornamento; {done} = file scaricati, {total} = file da scaricare, {size} = megabyte scaricati finora.",
-  "workflow.warn.shaMismatch": "Avviso quando l'impronta SHA-256 differisce da quella del flusso; {file} = nome file, {actual} = impronta calcolata, {expected} = impronta attesa."
+  "workflow.warn.shaMismatch": "Avviso quando l'impronta SHA-256 differisce da quella del flusso; {file} = nome file, {actual} = impronta calcolata, {expected} = impronta attesa.",
+  "lv.sentence": "Frase del livello di confidenza ({lv} = 1, 2a, 2b, 3, 4, 5 o 0; {name} = nome del livello).",
+  "lv.dec.1": "Frase decisiva del livello 1; {name} = nome dello standard.",
+  "lv.dec.2a": "Frase decisiva del livello 2a; {lib} = nome della libreria (con uno spazio davanti, o vuoto), {name} = nome del candidato.",
+  "lv.dec.3conf": "Frase decisiva: il candidato passa i cancelli della fonte ma non quelli di conferma; {gates} = elenco delle prove non superate.",
+  "lv.dec.3prov": "Frase decisiva del livello 3 provvisorio; {gates} = elenco delle prove non superate.",
+  "lv.dec.3an": "Frase decisiva: solo un analogo; {cos} = coseno modificato, {delta} = differenza di massa con segno.",
+  "lv.dec.none": "Frase decisiva quando nessuna fonte supera i cancelli; {name} = candidato più vicino, {gate} = prova non superata.",
+  "lv.refuse.2b": "Messaggio quando il chimico prova a scrivere 2b dove non si può; {lv} = livello proposto."
 }

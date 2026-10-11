@@ -38,11 +38,7 @@ const WORKFLOW = (() => {
         tempo: f.time ?? null,
       }));
 
-    let soglieLib = { ent: 0.75, shared: 6, ppm: 5, ent2: 0.60 };
-    try {
-      const s = localStorage.getItem("qqq.lib.soglie");
-      if (s) soglieLib = { ...soglieLib, ...JSON.parse(s) };
-    } catch (_) {}
+    const soglieLib = window.LIVELLI ? LIVELLI.exportState() : null;       // profile and thresholds of the confidence levels (livelli.js)
 
     const parameters = {
       ppm: typeof UIP !== "undefined" && UIP.hrPpm != null ? UIP.hrPpm : 5,
@@ -180,11 +176,7 @@ const WORKFLOW = (() => {
       Object.assign(PK, p.picchi);
       if (typeof pkSave === "function") pkSave();
     }
-    if (p.soglie_libreria) {
-      try {
-        localStorage.setItem("qqq.lib.soglie", JSON.stringify(p.soglie_libreria));
-      } catch (_) {}
-    }
+    if (p.soglie_libreria && window.LIVELLI) LIVELLI.importState(p.soglie_libreria);
     if (typeof UIP !== "undefined") {
       if (p.ppm != null) UIP.hrPpm = p.ppm;
       if (p.dec != null) UIP.hrDec = p.dec;

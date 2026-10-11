@@ -355,7 +355,8 @@ impl Lib {
         Ok(json!({"results": hits.iter().map(|h| hit_json(&self.inner, h)).collect::<Vec<_>>(), "query": {"mz": q.spec.mz, "it": q.spec.it}}).to_string())
     }
 
-    /// Best identity only, without peaks (for «Identify all MS2»): JSON object or `null`.
+    /// Best identity only, without peaks (for «Identify all MS2»): JSON object or `null`. `alt` is the best hit of another structure (another first
+    /// InChIKey block, or another name when there is no key): the lead of the best over it is the «distinct» gate of the confidence levels.
     pub fn best(
         &self,
         prec: f64,
@@ -376,13 +377,27 @@ impl Lib {
                 prec_tol: tol_of(tol, ppm),
                 frag_da: frag,
                 pol: pol as i8,
-                top: 1,
+                top: 8,
             },
         )
         .map_err(js_err)?;
+        let light = |h: &Hit| merge(meta_json(&self.inner, h.index), json!({"ent": h.entropy, "cos": h.cosine, "shared": h.shared, "dprec": h.dprec, "prec": h.prec, "nlib": h.spec.mz.len()}));
+        let key = |h: &Hit| {
+            let m = self.inner.meta(h.index).unwrap_or_default();
+            let ik: String = m.inchikey.chars().take(14).collect::<String>().to_uppercase();
+            if ik.is_empty() {
+                format!("n:{}", m.name.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>())
+            } else {
+                ik
+            }
+        };
         Ok(match hits.first() {
             None => "null".into(),
-            Some(h) => merge(meta_json(&self.inner, h.index), json!({"ent": h.entropy, "cos": h.cosine, "shared": h.shared, "dprec": h.dprec, "prec": h.prec})).to_string(),
+            Some(h) => {
+                let k = key(h);
+                let alt = hits.iter().skip(1).find(|x| key(x) != k).map(&light).unwrap_or(Value::Null);
+                merge(light(h), json!({"alt": alt})).to_string()
+            }
         })
     }
 

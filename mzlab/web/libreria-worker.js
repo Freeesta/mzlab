@@ -346,17 +346,24 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     out.sort((a, b) => b.mcos - a.mcos);
     return { results: out.slice(0, m.max || 10), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
   }
+  const ikBlock = r => { const k = String(r.ik || "").slice(0, 14).toUpperCase(); return k || "n:" + String(r.name || "").toLowerCase().replace(/[^a-z0-9]+/g, ""); };       // first InChIKey block (or the name): one structure
+  const lightOf = r => ({ name: r.name, ik: r.ik || "", ent: r.ent, cos: r.cos, shared: r.shared, dprec: r.dprec, lib: r.lib, nlib: r.nlib });
+  function withAlt(cands) {                       // the best candidate and, in `alt`, the best one of ANOTHER structure: the lead is the «distinct» gate of the confidence levels (livelli.js)
+    const l = cands.filter(Boolean).sort((a, b) => b.ent - a.ent); if (!l.length) return null;
+    const k = ikBlock(l[0]), a = l.find(x => ikBlock(x) !== k); return { ...l[0], alt: a ? lightOf(a) : null };
+  }
+  const rowOf = (Q, best) => ({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", ik: best ? best.ik || "" : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null, nlib: best ? best.nlib : null, alt: best ? best.alt || null : null });
   async function runAllJs(m, reqId) {             // every MS2 of a file: the best result of each (the query list comes from the page)
     const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), libs = []; for (const id of ids) libs.push(await loadLibrary(id));
     const rows = []; let last = 0;
     for (let n = 0; n < m.queries.length; n++) {
-      const Q = m.queries[n], q = queryOf(Q.peaks, Q.prec, Q.pol); let best = null;
+      const Q = m.queries[n], q = queryOf(Q.peaks, Q.prec, Q.pol), found = [];
       if (q) for (const lib of libs) {
         const tol = m.tol.unit === "ppm" ? q.prec * m.tol.v * 1e-6 : m.tol.v, lo = lowerBound(lib.idx.prec, q.prec - tol), cache = new Map();
         for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + tol; k++) { const pos = lib.idx.ord[k]; cache.set(pos, await peaksOf(lib, pos)); }
-        for (const r of searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: Q.pol }, pos => cache.get(pos), lib.meta)) if (!best || r.ent > best.ent) best = { ...r, lib: lib.info.name };
+        for (const r of searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: Q.pol }, pos => cache.get(pos), lib.meta)) found.push({ ...r, lib: lib.info.name, nlib: r.mz ? r.mz.length : undefined });
       }
-      rows.push({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null });
+      rows.push(rowOf(Q, withAlt(found)));
       if (Date.now() - last > 200) { last = Date.now(); postMessage({ type: "progress", reqId, read: n + 1, total: m.queries.length }); }
     }
     return { rows };
@@ -507,12 +514,12 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const libs = []; for (const id of wIds) libs.push({ lib: await wlib(id), name: byId.get(id).name });
     const legacy = jIds.length ? (await runAllJs({ ...m, ids: jIds }, reqId)).rows : null, rows = []; let last = 0;
     for (let n = 0; n < m.queries.length; n++) {
-      const Q = m.queries[n], [mz, it] = arrays(Q.peaks); let best = null;
+      const Q = m.queries[n], [mz, it] = arrays(Q.peaks), found = [];
       for (const L of libs) {
         const r = JSON.parse(L.lib.best(Q.prec, Q.pol, mz, it, m.tol.v, ppmOf(m.tol), m.frag));
-        if (r && (!best || r.ent > best.ent)) best = { ...r, lib: L.name };
+        if (r) { found.push({ ...r, lib: L.name }); if (r.alt) found.push({ ...r.alt, lib: L.name }); }
       }
-      let row = { key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null };
+      let row = rowOf(Q, withAlt(found));
       const lr = legacy && legacy[n]; if (lr && lr.ent != null && (row.ent == null || lr.ent > row.ent)) row = lr;
       rows.push(row);
       if (Date.now() - last > 200) { last = Date.now(); postMessage({ type: "progress", reqId, read: n + 1, total: m.queries.length }); }
