@@ -32,7 +32,6 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1400, "height": 900}).new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        logs = []; pg.on("console", lambda m: logs.append(m.type + " " + m.text[:200]))
         pg.on("request", lambda r: reqs.append(r.url))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         def off():
@@ -54,13 +53,11 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
+            pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/teoria opens the standalone Teoria page
             pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
         step("5 clicks on the logo: tab, state saved", turn_on)
         def reload_on():
-            pg.reload()
-            try: pg.wait_for_selector("#drop", timeout=120000)
-            except Exception:
-                print("DIAG", pg.evaluate("[location.href, document.readyState, !!document.getElementById('drop'), typeof S !== 'undefined' && S.view, String(window.MZLAB_LR_ERR), JSON.stringify(window.MZLAB_LR_MISS), !!window.MZLAB_LR, document.body.innerText.slice(0, 400)]"), logs[-15:]); raise
+            pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         step("after a reload it stays on", reload_on)
         def turn_off():
