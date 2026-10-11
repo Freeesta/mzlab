@@ -422,6 +422,8 @@
   "pca.col.pc": "Intestazione di colonna. {n} = numero della componente.",
   "pca.row.aria": "Etichetta accessibile di una riga. {mz} = m/z, {rt} = RT.",
   "pca.sample.tip": "Suggerimento su un punto del grafico. {f} = file, {t} = tempo.",
+  "mapnav.where": "Prima riga del menu del tasto destro della mappa; {at} = coordinate già formattate (RT, m/z, intensità) del punto su cui agiscono i comandi.",
+  "mapnav.where.locked": "Come sopra, quando il mirino è bloccato; {at} = coordinate già formattate del punto bloccato.",
   "sub.chip": "{file} = nome del file di riferimento (con «(auto)» se scelto in automatico); {f} = fattore; {norm} = normalizzazione.",
   "sub.factor.vt": "{f} = fattore moltiplicativo del riferimento (numero con due decimali).",
   "sub.file.auto": "{file} = nome del file che il programma sceglierebbe in automatico.",
