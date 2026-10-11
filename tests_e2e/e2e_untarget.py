@@ -82,6 +82,21 @@ try:
             pg.select_option("#unt-dec", "2b"); pg.wait_for_function("document.querySelector('#unt-decmsg').textContent.length > 0")
             assert pg.evaluate("document.querySelector(\"#unt-t tr.row1[data-k='POS:3'] .lvb\").textContent.trim()") == "5"          # refused: the programme never gives 2b
         step("the chemist's 2b is accepted from 2a and refused from 5", decide)
+        def export():
+            def get(sel):
+                with pg.expect_download() as d: pg.click(sel)
+                path = d.value.path(); return d.value.suggested_filename, Path(path).read_bytes()
+            n, b = get("#unt-x-csv"); t = b.decode("utf-8")
+            assert n.startswith("untargeted_tabella_pos_") and n.endswith(".csv") and t.startswith("\ufeff"), n
+            lines = t.lstrip("\ufeff").split("\r\n")[:-1]; head = lines[0].split(";")
+            assert len(lines) == 7 and head[:3] == ["key", "polarity", "feature_id"] and head[-1] == "S1_pos", (len(lines), head[-3:])
+            r1 = lines[1].split(";"); assert r1[0] == "POS:1" and r1[head.index("level")] == "2b" and r1[head.index("level_proposed")] == "2a" and r1[head.index("level_decided")] == "2b" and len(r1[head.index("table_sha256")]) == 64
+            n, b = get("#unt-x-xlsx"); assert n.endswith(".xlsx") and b[:2] == b"PK" and b"Library records" in b, n
+            n, b = get("#unt-x-mgf"); m = b.decode("utf-8")
+            assert m.startswith("# mzFinder untargeted export") and m.count("BEGIN IONS") == 4 and "LEVEL=2b" in m and "NAME=Alpha" in m and "not stated" in m
+            pg.select_option("#unt-lv", "5"); pg.check("#unt-xf"); n, b = get("#unt-x-csv"); assert len(b.decode("utf-8").lstrip("\ufeff").split("\r\n")[:-1]) == 1 + 3          # only the filtered features
+            pg.uncheck("#unt-xf"); pg.select_option("#unt-lv", "all")
+        step("export: CSV with «;», xlsx and MGF with levels, decided level, licences; only the filtered features", export)
         if os.environ.get("UNT_BENCH"):
             def bench():
                 rnd = random.Random(7); N = 5000
