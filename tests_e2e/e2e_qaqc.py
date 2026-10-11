@@ -34,7 +34,7 @@ def add(pg, mz, rt, kind=None):
 r = Run(port=8931, wd="/tmp/wdqaqc")
 try:
     with sync_playwright() as p:
-        pg = r.page(p)
+        pg = r.page(p, qaqc=True)
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "Blank_1.mzML"], 3)
         def lr_panel():
             pg.evaluate("localStorage.removeItem('qqq.qaqc')"); drawer(pg, "qaqc"); pg.wait_for_selector("#sb-panel-qaqc select[data-role]")
@@ -82,7 +82,7 @@ try:
             assert any(x["ruolo"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
         step("LR: study report (JSON and HTML) with SHA-256, instrument, parameters, QA/QC, NORMAN order", lr_report)
 
-        r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p)
+        r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p, qaqc=True)
         load(pg, [H / ds.HR_NAMES["exploris"], H / ds.HR_NAMES["fusion"]], 4)
         def hr_panel():
             assert pg.evaluate("BANCO.on()")

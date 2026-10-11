@@ -279,7 +279,7 @@ function addPanel(type, o, after) {
         try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; draw(p); }
         cvs.toBlob(async b => {
           let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { }
-          const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          saveBlob(out, plotName(p) + ".png");
         });
       }},
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
@@ -303,6 +303,9 @@ function addPanel(type, o, after) {
   return p;
 }
 const redrawAll = () => tabPanels().forEach(draw);
+// many requests in the same frame (window resize, a burst of answers) become one redraw
+let redrawRaf = 0;
+const redrawSoon = () => { if (!redrawRaf) redrawRaf = requestAnimationFrame(() => { redrawRaf = 0; redrawAll(); }); };
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape" || e._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
@@ -632,8 +635,8 @@ function ctl(p) {
     const k = x.dataset.o;
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
-    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((parseFloat(String(x.value).replace(",", ".")) || 0) * 10) / 10)); draw(p); uiSave(); };
-    else if (k === "pdadelay") x.onchange = () => { const n = parseFloat(String(x.value).replace(",", ".")); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
+    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); draw(p); uiSave(); };
+    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
     else if (k === "pdaAlign") x.onchange = () => { p.pdaAlign = x.checked; draw(p); uiSave(); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
       const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);

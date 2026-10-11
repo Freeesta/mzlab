@@ -7,7 +7,7 @@
 const RIFERIMENTO = (() => {
   const KEY = "qqq.riferimento", MAX_ROWS = 500;
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const SHAPES = ["rises", "rises_falls", "falls", "flat"];
   let st = { factor: 3, stat: "max", min: 1, pseudo: "auto", floor: 1000, sort: "log2fc", dir: -1, show: "kept", shape: "all", ref: null };
   let res = null;                      // {r (server answer), tb (table), names, rows: [{i, f, q, idn, lst}]}

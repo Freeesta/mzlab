@@ -28,7 +28,7 @@ try:
             t = r.teoria(pg)
             assert "Come si usa mzLab" in t and "Aprire i dati" in t and "Backspace" in t and "Ctrl/Cmd + Z" in t and "Crediti e licenze" in t, t[:300]
             q = r.b.new_page(); q.goto(f"http://127.0.0.1:{r.port}/static/teoria/index.html"); q.wait_for_timeout(600)
-            first = q.evaluate("document.querySelector('#side a, nav a').textContent"); assert "Come si usa" in first, first
+            first = q.evaluate("document.querySelector('#side a').textContent"); assert "Come si usa" in first, first
             q.close()
         step("the guide is the first chapter of the Teoria", chapter)
         def correzione():
