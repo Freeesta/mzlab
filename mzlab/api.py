@@ -278,7 +278,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
                                      iso_tol=float(q.get("isotol", 0.2)), obs=_peaks(q.get("obs")), frags=_peaks(q.get("frags")),
                                      r200=float(q.get("r200", 70000)), sigma_ppm=float(q.get("sppm", 3)), sigma_int=float(q.get("sint", 0.10)),
-                                     weights=_weights(q.get("w"))))
+                                     weights=_weights(q.get("w")), iso_min_rel=float(q.get("imin", 1.0)), iso_noise_rel=float(q.get("inoise", 1.0)),
+                                     frag_ppm=float(q["fppm"]) if q.get("fppm") else None, norm=q.get("norm") if q.get("norm") in ("mono", "max", "sum") else "fit"))
             except (ValueError, KeyError, IndexError) as e:
                 return _fail(e)
         if path == "/api/contaminants":   # built-in list of known contaminants, expanded into ions (mzlab.chem.contaminants); matching is done in the browser (web/liste.js)

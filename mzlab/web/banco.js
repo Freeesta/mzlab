@@ -351,9 +351,8 @@ const BANCO = (() => {
   const topMz = p => { const d = p && p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!d || !d.y || !d.y.length) return null; let j = 0; d.y.forEach((v, i) => { if (v > d.y[j]) j = i; }); return d.mz[j]; };
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
   function tCmp(b, p) {
-    const sp = specOf(p), mz = topMz(sp);
-    b.innerHTML = `<div class="muted">${I18N.t("bn.cmp.note")}</div><div class="row"><label>m/z <input id="hri-mz" value="${mz != null ? mz.toFixed(5) : ""}" style="width:96px" inputmode="decimal"></label><button type="button" id="hri-go" class="go">${I18N.t("bn.cmp.go")}</button></div><div class="muted sm">${I18N.t("bn.cmp.hint")}</div>`;
-    b.querySelector("#hri-go").onclick = () => { const v = parseFloat(b.querySelector("#hri-mz").value.replace(",", ".")); if (!(v > 0)) return nearMsg(I18N.t("bn.typeMz")); COMP.open({ mz: v, spec: sp && sp._a && sp._a.data[0] && sp._a.data[0].d, polarity: (cFile(p) || {}).polarity }); };
+    const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
+    ELEM.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
   }
   function tIso(b, p) {
     const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {};

@@ -122,7 +122,8 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             rules: list[str] | None = None, max_results: int = 10, parent: str | dict | None = None, dbeq: dict[str, float] | None = None,
             m1: float | None = None, m2: float | None = None, iso_tol: float = 0.20, obs: list[tuple[float, float]] | None = None,
             frags: list[tuple[float, float]] | None = None, r200: float = 70000.0, sigma_ppm: float = 3.0, sigma_int: float = 0.10,
-            weights: tuple[float, float, float] = (1.0, 2.0, 1.0), pool: int = 100) -> dict:
+            weights: tuple[float, float, float] = (1.0, 2.0, 1.0), pool: int = 100, iso_min_rel: float = 1.0, iso_noise_rel: float = 1.0,
+            frag_ppm: float | None = None, norm: str = "fit") -> dict:
     """Formulas of the ion at `mz`.
 
     elements   {symbol: (min, max)} of the ION formula (default: C, H, N, O, S, P, F, Cl, Br up to sensible limits); isotopes (13C, 15N, 34S, 37Cl, 81Br,
@@ -139,6 +140,8 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                number of peaks explained (fragment constraint). Neither needs a learned model.
     weights    (mass, isotopes, fragments) weights of the combined score the candidates are sorted by when `obs` or `frags` is given (the best `pool`
                by mass error are scored, then sorted); without them the order is the mass error. The terms are always listed, never a verdict.
+    iso_min_rel, iso_noise_rel  % of the base peak below which a theoretical / an observed isotope peak is not required / ignored (isotope_score); frag_ppm
+               tolerance of the fragment match (default: the mass tolerance, at least 5 ppm); norm  how the observed intensities are scaled to the theory (isotope_score).
     Returns {mz, charge, tol, unit, n_candidates, results: [...]}; each result: formula (ion), neutral, mz_calc, delta_mda, delta_ppm, rdb, rules_ok,
     rules_failed, iso {m1, m2, err1, err2, ok, score, peaks, extra, ...}, frag {explained, n_explained, n_peaks}, score {mass, iso, frag, total}.
     """
@@ -251,7 +254,7 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                         "ok": all(e <= iso_tol for e in (e1, e2) if e is not None)})
         if obs:
             from .isoscore import isotope_score
-            sc = isotope_score(counts, z, obs, r200=r200, sigma_ppm=sigma_ppm, sigma_int=sigma_int)
+            sc = isotope_score(counts, z, obs, r200=r200, sigma_ppm=sigma_ppm, sigma_int=sigma_int, min_rel=iso_min_rel, noise_rel=iso_noise_rel, norm=norm)
             iso.update({"score": round(sc["score"], 4), "peaks": sc["peaks"], "extra": sc["extra"], "n_missing": sc["n_missing"], "n_extra": sc["n_extra"]})
         res["iso"] = iso
         if scored:
@@ -265,7 +268,7 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             from .isoscore import combined, fragment_constraint
             out = out[:max(max_results, FRAG_POOL)]
             for res in out:
-                res["frag"] = fragment_constraint(res["formula"], z, frags, ppm=max(tol, 5.0) if unit == "ppm" else 10.0)
+                res["frag"] = fragment_constraint(res["formula"], z, frags, ppm=frag_ppm if frag_ppm else (max(tol, 5.0) if unit == "ppm" else 10.0))
                 fr = res["frag"]["explained"]
                 sc = res["score"]
                 sc["frag"] = None if fr is None else round(fr, 4)

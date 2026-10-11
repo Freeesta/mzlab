@@ -349,7 +349,10 @@ async function drawSpec(p) {
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width, fo = p.fm && p.fm.find(z => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
+    g.fillText(t, px, Y(y) - 4 - up);
+    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = css("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
+    lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
