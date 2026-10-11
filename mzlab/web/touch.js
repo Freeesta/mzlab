@@ -20,6 +20,10 @@ const TOUCH = (() => {
   const mouse = (type, el, x, y, o = {}) => el.dispatchEvent(new (win(el).MouseEvent)(type, { bubbles: true, cancelable: true, view: win(el), clientX: x, clientY: y, button: o.button || 0, buttons: type === "mouseup" ? 0 : o.buttons ?? 1, shiftKey: !!o.shift, ctrlKey: !!o.ctrl, detail: o.detail || 1 }));
   const wheel = (el, x, y, o) => el.dispatchEvent(new (win(el).WheelEvent)("wheel", { bubbles: true, cancelable: true, view: win(el), clientX: x, clientY: y, deltaX: o.dx || 0, deltaY: o.dy || 0, ctrlKey: !!o.ctrl, deltaMode: 0 }));
 
+  // the dot of the cursor line is for fingers and pens only: the last pointer used decides (a laptop with a touch screen shows it after a touch, hides it at the first mouse move)
+  const kind = e => { const t = e.pointerType === "mouse" ? "ptr-mouse" : e.pointerType === "touch" || e.pointerType === "pen" ? "ptr-touch" : null; if (!t) return; const c = document.documentElement.classList; if (!c.contains(t)) { c.add(t); c.remove(t === "ptr-mouse" ? "ptr-touch" : "ptr-mouse"); } };
+  addEventListener("pointerdown", kind, true); addEventListener("pointermove", kind, true);
+
   function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); }
 
   // ============================================================ the engine: one per document (the page, the editor)
