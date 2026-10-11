@@ -2,7 +2,7 @@
 // Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measures; nothing leaves the computer.
 // Sections in the order of the NORMAN guide (Hollender et al., Environ. Sci. Eur. 35:75, 2023) and the BP4NTA Study Reporting Tool:
 //   1 study design (files, SHA-256, type of each file) · 2 acquisition (instrument and method, as the mzML says it)
-//   3 processing (program version and commit, parameters, operations) · 4 QA/QC (measures of qaqc.js) · 5 confidence levels (HR, Schymanski)
+//   3 processing (program version and commit, parameters, operations) · 4 QA/QC (measures of qaqc.js; only with FEATURES.qaqc) · 5 confidence (4 without QA/QC) levels (HR, Schymanski)
 // Numbers and evidence only: the report never says what a compound is.
 const RAPPORTO = (() => {
   const FORMAT = "mzreport/1";
@@ -31,14 +31,15 @@ const RAPPORTO = (() => {
     cv_area: r.cv_area, cv_area_qc: r.cv_area_qc, accuratezza_massa: r.mass_accuracy, righe: r.rows });
 
   // The JSON: from the workflow file (current session, or the one the caller passes) plus the measures
+  const qaFeat = () => !!(window.FEATURES && FEATURES.qaqc);      // QA/QC dormant: no measures, no section 4
   async function build(wf) {
     wf = wf || WORKFLOW.buildWorkflow();
-    if (window.QAQC) { if (!wf.parametri.qaqc) wf.parametri.qaqc = QAQC.exportState(); }
+    if (window.QAQC && qaFeat()) { if (!wf.parametri.qaqc) wf.parametri.qaqc = QAQC.exportState(); }
     const files = (typeof E !== "undefined" ? E.files : []).filter(f => !f.gone);
     const roleOf = n => { const f = files.find(x => x.file === n); return f && window.QAQC ? QAQC.roleOf(f) : "sample"; };
     const hr = isHr();
     const qa = { ioni: [], rapporto_campione_bianco: null, feature_mzfinder: null };
-    if (window.QAQC) {
+    if (window.QAQC && qaFeat()) {
       const r = await QAQC.run();
       qa.ioni = r.ions.filter(o => !o.error).map(o => ({ etichetta: o.ion.label, funzione: o.ion.kind === "known" ? "ione noto" : "standard interno", file: o.files, ruoli: o.roles, ...slim(o.r) }));
       if (QAQC.state.ratio.text) { try { const q = await QAQC.runRatio(); qa.rapporto_campione_bianco = { mz: q.mz, rt: q.rt, soglia: q.thr, area_media_bianchi: q.r.ratio.blank_area, file: q.files, ruoli: q.roles, aree: q.r.rows.map(x => (x ? x.area : 0)), rapporti: q.r.ratio.rows }; } catch (_) { /* ion not found */ } }
@@ -52,7 +53,7 @@ const RAPPORTO = (() => {
       disegno_studio: { file: wf.file.map(f => ({ ...f, ruolo: roleOf(f.nome) })), n_file: wf.file.length, ruoli: Object.fromEntries(["sample", "blank", "qc", "standard", "dark"].map(r => [r, wf.file.filter(f => roleOf(f.nome) === r).length])) },
       acquisizione: acq,
       elaborazione: { parametri: wf.parametri, pannelli: wf.pannelli, operazioni: wf.operazioni },
-      qaqc: qa,
+      qaqc: qaFeat() ? qa : undefined,
       livelli_confidenza: hr ? (wf.candidati || candidates()) : undefined,
     };
   }
@@ -69,27 +70,30 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
 
   function html(rep) {
     const P = rep.programma || {}, D = rep.disegno_studio, A = rep.acquisizione, X = rep.elaborazione, Q = rep.qaqc;
+    const qaOn = !!Q;      // section 4 (QA/QC) exists only when QA/QC is on: the numbering of the next one follows
     let h = `<!doctype html><html lang="${eh(rep.lingua || "it")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
-    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t("rep.note"))}</p>`;
+    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
     h += `<h2>1. ${eh(t("rep.s1"))}</h2><p>${eh(t("rep.s1.sum", { n: D.n_file, s: D.ruoli.sample, b: D.ruoli.blank, q: D.ruoli.qc, st: D.ruoli.standard, d: D.ruoli.dark }))}</p>`;
     h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.file.map(f => [f.nome, roleTxt(f.ruolo), f.dimensione, f.tempo == null ? "–" : String(f.tempo), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));
     h += `<h2>2. ${eh(t("rep.s2"))}</h2><p class="m">${eh(t("rep.s2.note"))}</p>`;
     h += tab([t("qaqc.col.file"), t("rep.instr"), t("rep.analyzers"), t("rep.software"), t("rep.start"), t("rep.scans"), "RT (min)"], A.map(a => [a.nome, a.errore || [a.strumento, a.seriale].filter(Boolean).join(" · "), (a.analizzatori || []).join(", "), (a.software || []).join(", "), a.inizio || "–", a.scansioni == null ? "–" : String(a.scansioni), a.rt && a.rt.length ? a.rt.join(" – ") : "–"]));
     h += `<h2>3. ${eh(t("rep.s3"))}</h2><p>${eh(t("rep.s3.prog", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "" }))}</p><h3>${eh(t("rep.params"))}</h3>${tab([t("rep.param"), t("rep.value")], kv(X.parametri).filter(r => r[0] !== "qaqc"))}`;
     h += `<h3>${eh(t("rep.ops"))}</h3>` + (X.operazioni && X.operazioni.length ? tab([t("rep.when"), t("rep.op"), t("rep.detail")], X.operazioni.map(o => { const { op, t: when, ...rest } = o; return [when || "", op || "", Object.keys(rest).length ? JSON.stringify(rest) : ""]; })) : `<p class="m">–</p>`);
-    h += `<h2>4. ${eh(t("rep.s4"))}</h2><p class="m">${eh(t("rep.s4.note"))}</p>`;
-    if (!Q.ioni.length) h += `<p class="m">${eh(t("rep.s4.none"))}</p>`;
-    Q.ioni.forEach(i => {
-      h += `<h3>${eh(i.etichetta)} — m/z ${num(i.mz, 4)}, RT ${num(i.rt, 2)} (${eh(i.funzione)})</h3>`;
-      h += tab([t("qaqc.col.file"), t("qaqc.col.type"), "RT", "ΔRT", t("qaqc.col.area"), t("qaqc.col.rel"), "Δppm"], i.file.map((f, k) => { const r = i.righe[k]; return [f, roleTxt(i.ruoli[k]), r ? r.rt : "–", r ? r.drt : "–", r ? r.area : "–", r ? r.rel : "–", r && r.dppm != null ? r.dppm : "–"]; }));
-      h += `<p class="m">${eh(t("qaqc.sum.cv", { v: num(i.cv_area, 1) }))}${i.cv_area_qc != null ? " · " + eh(t("qaqc.sum.cvqc", { v: num(i.cv_area_qc, 1) })) : ""} · ${eh(t("qaqc.sum.drift", { v: num(i.deriva_rt_per_file, 4) }))}${i.accuratezza_massa ? " · " + eh(t("qaqc.sum.ppm", { mean: num(i.accuratezza_massa.mean, 2), max: num(i.accuratezza_massa.max_abs, 2), n: i.accuratezza_massa.n })) : ""}</p>`;
-    });
-    const R = Q.rapporto_campione_bianco;
-    if (R) h += `<h3>${eh(t("qaqc.ratio"))}</h3><p class="m">${eh(t("qaqc.ratio.sum", { mz: num(R.mz, 4), thr: R.soglia, blank: num(R.area_media_bianchi, 0) }))}</p>` + tab([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: R.soglia })], R.file.map((f, k) => { const q = R.rapporti[k]; return [f, roleTxt(R.ruoli[k]), R.aree[k], !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : q.ratio, !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")]; }));
-    const F = Q.feature_mzfinder;
-    if (F) { const n = F.righe.filter(x => x.at_least).length; h += `<h3>${eh(t("rep.feat"))}</h3><p class="m">${eh(t("qaqc.feat.sum", { n, tot: F.righe.length, thr: F.soglia, b: F.bianchi.length }))}</p>`; }
+    if (qaOn) {
+      h += `<h2>4. ${eh(t("rep.s4"))}</h2><p class="m">${eh(t("rep.s4.note"))}</p>`;
+      if (!Q.ioni.length) h += `<p class="m">${eh(t("rep.s4.none"))}</p>`;
+      Q.ioni.forEach(i => {
+        h += `<h3>${eh(i.etichetta)} — m/z ${num(i.mz, 4)}, RT ${num(i.rt, 2)} (${eh(i.funzione)})</h3>`;
+        h += tab([t("qaqc.col.file"), t("qaqc.col.type"), "RT", "ΔRT", t("qaqc.col.area"), t("qaqc.col.rel"), "Δppm"], i.file.map((f, k) => { const r = i.righe[k]; return [f, roleTxt(i.ruoli[k]), r ? r.rt : "–", r ? r.drt : "–", r ? r.area : "–", r ? r.rel : "–", r && r.dppm != null ? r.dppm : "–"]; }));
+        h += `<p class="m">${eh(t("qaqc.sum.cv", { v: num(i.cv_area, 1) }))}${i.cv_area_qc != null ? " · " + eh(t("qaqc.sum.cvqc", { v: num(i.cv_area_qc, 1) })) : ""} · ${eh(t("qaqc.sum.drift", { v: num(i.deriva_rt_per_file, 4) }))}${i.accuratezza_massa ? " · " + eh(t("qaqc.sum.ppm", { mean: num(i.accuratezza_massa.mean, 2), max: num(i.accuratezza_massa.max_abs, 2), n: i.accuratezza_massa.n })) : ""}</p>`;
+      });
+      const R = Q.rapporto_campione_bianco;
+      if (R) h += `<h3>${eh(t("qaqc.ratio"))}</h3><p class="m">${eh(t("qaqc.ratio.sum", { mz: num(R.mz, 4), thr: R.soglia, blank: num(R.area_media_bianchi, 0) }))}</p>` + tab([t("qaqc.col.file"), t("qaqc.col.type"), t("qaqc.col.area"), t("qaqc.ratio.col"), t("qaqc.ratio.atleast", { thr: R.soglia })], R.file.map((f, k) => { const q = R.rapporti[k]; return [f, roleTxt(R.ruoli[k]), R.aree[k], !q ? "–" : q.absent_in_blank ? t("qaqc.ratio.absent") : q.ratio, !q ? "–" : t(q.at_least ? "qaqc.yes" : "qaqc.no")]; }));
+      const F = Q.feature_mzfinder;
+      if (F) { const n = F.righe.filter(x => x.at_least).length; h += `<h3>${eh(t("rep.feat"))}</h3><p class="m">${eh(t("qaqc.feat.sum", { n, tot: F.righe.length, thr: F.soglia, b: F.bianchi.length }))}</p>`; }
+    }
     if (rep.livelli_confidenza) {
-      h += `<h2>5. ${eh(t("rep.s5"))}</h2><p class="m">${eh(t("rep.s5.note"))}</p>`;
+      h += `<h2>${qaOn ? 5 : 4}. ${eh(t("rep.s5"))}</h2><p class="m">${eh(t("rep.s5.note"))}</p>`;
       h += rep.livelli_confidenza.length ? tab([t("rep.spectrum"), t("rep.cand"), t("rep.level"), t("rep.proposed"), t("rep.decided"), t("rep.evidence")], rep.livelli_confidenza.map(c => [c.spettro, [c.candidato, c.libreria].filter(Boolean).join(" · "), c.livello, c.proposto, c.deciso || "–", (c.prove || []).join("; ")])) : `<p class="m">${eh(t("rep.s5.none"))}</p>`;
     }
     return h + `</body></html>`;
