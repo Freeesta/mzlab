@@ -11,6 +11,7 @@ pub mod parse;
 pub mod read;
 pub mod scores;
 pub mod search;
+pub mod sortutil;
 pub mod spec;
 pub mod util;
 

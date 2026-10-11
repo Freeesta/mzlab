@@ -41,11 +41,11 @@ jobs:
         run: cargo test --locked --release
       - name: WASM build (release)
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
-      - name: The libraries crate builds for WASM
-        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib
+      - name: The libraries crates build for WASM
+        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm
       - name: No native dependencies in the WASM graph
         run: |
-          for p in mzlab-wasm mzlab-lib; do
+          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm; do
             tree=$(cargo tree --locked -e no-dev --target wasm32-unknown-unknown -p $p)
             if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
               echo "::error::forbidden dependency in the WASM graph of $p"; exit 1

@@ -9,6 +9,7 @@
 //!   and peaks below 1% of the base peak removed, square-root intensities, greedy pairing by decreasing product within an absolute tolerance.
 
 use crate::clean::{entropy_of, weighted};
+use crate::sortutil;
 
 /// A spectrum for scoring.
 #[derive(Debug, Clone, Default)]
@@ -38,7 +39,7 @@ pub fn match_peaks(
             j += 1;
         }
     }
-    c.sort_by(|x, y| y.2.total_cmp(&x.2));
+    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a_mz.len()], vec![false; b_mz.len()]);
     let mut out = Vec::new();
     for (i, j, _) in c {
@@ -151,7 +152,7 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
             }
         }
     }
-    c.sort_by(|x, y| y.2.total_cmp(&x.2));
+    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a.mz.len()], vec![false; b.mz.len()]);
     let mut out = Vec::new();
     for (i, j, _) in c {
@@ -188,10 +189,10 @@ pub fn top32(s: &Spec) -> Spec {
         .filter(|&i| s.mz[i] < s.prec - 1.5 && s.it[i] >= 0.01 * mx && s.it[i] > 0.0)
         .collect();
     if idx.len() > AN_TOP {
-        idx.sort_by(|&a, &b| s.it[b].total_cmp(&s.it[a]));
+        sortutil::sort_by(&mut idx, |&a, &b| s.it[b].total_cmp(&s.it[a]));
         idx.truncate(AN_TOP);
     }
-    idx.sort_unstable();
+    sortutil::sort_by(&mut idx, |a, b| a.cmp(b));
     Spec {
         mz: idx.iter().map(|&i| s.mz[i]).collect(),
         it: idx.iter().map(|&i| s.it[i]).collect(),
@@ -232,7 +233,7 @@ pub fn modified_cosine(q: &Spec, lib: &Spec, tol: f64) -> ModCosine {
             }
         }
     }
-    c.sort_by(|x, y| y.2.total_cmp(&x.2));
+    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a.mz.len()], vec![false; b.mz.len()]);
     let (mut dot, mut shifted) = (0.0, 0usize);
     let mut pairs = Vec::new();
@@ -305,7 +306,7 @@ pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) ->
             }
         }
     }
-    c.sort_by(|x, y| {
+    sortutil::sort_by(&mut c, |x, y| {
         y.2.total_cmp(&x.2)
             .then(x.3.cmp(&y.3))
             .then(y.0.cmp(&x.0))

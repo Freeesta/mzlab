@@ -6,6 +6,7 @@ use crate::error::Result;
 use crate::io::Source;
 use crate::read::Library;
 use crate::scores::{common_losses, modified_cosine, pair_scores, pair_term, ModCosine, Spec};
+use crate::sortutil;
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -115,7 +116,7 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
             });
         }
     }
-    hits.sort_by(|a, b| {
+    sortutil::sort_any_by(&mut hits, |a, b| {
         b.entropy
             .total_cmp(&a.entropy)
             .then(b.cosine.total_cmp(&a.cosine))
@@ -191,7 +192,7 @@ pub fn flash_scores<S: Source>(
             }
         }
     }
-    pairs.sort_unstable_by(|a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
+    sortutil::sort_by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
     pairs.dedup_by(|b, a| (a.0, a.1, a.2) == (b.0, b.1, b.2));
     let mut out: Vec<FlashScore> = Vec::new();
     let mut k = 0;
@@ -204,14 +205,16 @@ pub fn flash_scores<S: Source>(
         let g = &pairs[k..e];
         let clean_group = g.windows(2).all(|w| w[0].1 != w[1].1) && {
             let mut js: Vec<u32> = g.iter().map(|x| x.2).collect();
-            js.sort_unstable();
+            sortutil::sort_by(&mut js, |a, b| a.cmp(b));
             js.windows(2).all(|w| w[0] != w[1])
         };
         let (score, n) = if clean_group {
             (g.iter().map(|x| x.3).sum::<f64>(), g.len())
         } else {
             let mut order: Vec<usize> = (0..g.len()).collect();
-            order.sort_by(|&a, &b| g[b].3.total_cmp(&g[a].3).then(a.cmp(&b)));
+            sortutil::sort_by(&mut order, |&a, &b| {
+                g[b].3.total_cmp(&g[a].3).then(a.cmp(&b))
+            });
             let (mut ui, mut uj) = (Vec::new(), Vec::new());
             let (mut s, mut n) = (0.0, 0);
             for x in order {
@@ -231,7 +234,9 @@ pub fn flash_scores<S: Source>(
         });
         k = e;
     }
-    out.sort_by(|a, b| b.score.total_cmp(&a.score).then(a.index.cmp(&b.index)));
+    sortutil::sort_by(&mut out, |a, b| {
+        b.score.total_cmp(&a.score).then(a.index.cmp(&b.index))
+    });
     Ok(out)
 }
 
@@ -307,7 +312,7 @@ pub fn analogs<S: Source>(lib: &Library<S>, q: &Query, o: &AnalogOpts) -> Result
             spec,
         });
     }
-    out.sort_by(|a, b| {
+    sortutil::sort_any_by(&mut out, |a, b| {
         b.mc.cosine
             .total_cmp(&a.mc.cosine)
             .then(a.index.cmp(&b.index))

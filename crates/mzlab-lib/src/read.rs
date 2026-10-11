@@ -27,7 +27,7 @@ pub fn cache_budget(small_device: bool) -> usize {
 
 /// Largest decoded size accepted for a block of each kind.
 const MAX_TABLE_RAW: u32 = SPEC_REC_LEN as u32 * RECORDS_PER_TABLE_CHUNK;
-const MAX_PEAKS_RAW: u32 = 6 * 4096 * 500;
+const MAX_PEAKS_RAW: u32 = 6 * SPECTRA_PER_PEAK_CHUNK * 500;
 const MAX_META_RAW: u32 = RECORDS_PER_META_CHUNK * 10 * (crate::spec::MAX_FIELD_BYTES as u32 + 4);
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -282,6 +282,23 @@ impl<S: Source> Library<S> {
 
     pub fn n_peaks(&self) -> u64 {
         self.header.n_peaks
+    }
+
+    /// Changes the cache budget (the page splits `cache_budget` among the libraries that are open); the excess is dropped at once.
+    pub fn set_cache_budget(&self, bytes: usize) {
+        let mut c = self.cache.borrow_mut();
+        c.budget = bytes;
+        while c.bytes > c.budget && !c.map.is_empty() {
+            let oldest = *c
+                .map
+                .iter()
+                .min_by_key(|(_, e)| e.1)
+                .map(|(k, _)| k)
+                .expect("not empty");
+            if let Some(e) = c.map.remove(&oldest) {
+                c.bytes -= e.0.len();
+            }
+        }
     }
 
     pub fn cached_bytes(&self) -> usize {

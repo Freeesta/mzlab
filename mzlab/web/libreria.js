@@ -3,19 +3,36 @@
 // The reading, the archive (OPFS) and the search live in libreria-worker.js (no Pyodide); here: the «Librerie» window (gear), the window with the
 // results and the mirror plot (experimental on top, library below). Nothing here touches drawSpec: the mirror is a canvas of its own.
 const LIB = (() => {
-  let worker = null, seq = 0; const pend = new Map();
+  // Supervisor: if the worker dies (a trap of the WebAssembly engine, a lost memory) it is replaced and the request is tried once more; a second death within a
+  // minute sends the page to the JavaScript path for the rest of the session. `?libjs=1` starts there (tests, browsers where the engine does not load).
+  let worker = null, seq = 0, restarts = []; const pend = new Map();
+  let forceJs = false; try { forceJs = new URLSearchParams(location.search).get("libjs") === "1"; } catch (e) { /* no location */ }
+  const say = key => { try { if (typeof toast === "function") toast(I18N.t(key)); } catch (e) { /* no page */ } };
   function w() {
     if (worker) return worker;
-    worker = new Worker("static/libreria-worker.js");
-    worker.onmessage = e => {
+    const me = worker = new Worker("static/libreria-worker.js");
+    me.onmessage = e => {
       const m = e.data, r = pend.get(m.reqId); if (!r) return;
       if (m.type === "progress") { r.prog && r.prog(m); return; }
-      pend.delete(m.reqId); if (m.type === "error") r.no(I18N.err(m)); else r.ok(m);
+      pend.delete(m.reqId); if (m.type === "error") { const er = I18N.err(m); er.fatal = !!m.fatal; r.no(er); } else r.ok(m);
     };
-    worker.onerror = e => { pend.forEach(r => r.no(new Error(I18N.t("lib.err.worker", { message: e.message || "error" })))); pend.clear(); worker = null; };
-    return worker;
+    me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); er.fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
+    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!window.MZLAB_BROWSER });      // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js)
+    return me;
   }
-  const call = (cmd, payload = {}, prog) => new Promise((ok, no) => { const reqId = ++seq; pend.set(reqId, { ok, no, prog }); try { w().postMessage({ cmd, reqId, ...payload }); } catch (e) { pend.delete(reqId); no(e); } });
+  function restart() {
+    if (worker) { try { worker.terminate(); } catch (e) { /* gone */ } worker = null; }
+    const er = new Error("restarted"); pend.forEach(r => r.no(er)); pend.clear();
+    const now = Date.now(); restarts = restarts.filter(t => now - t < 60000); restarts.push(now);
+    if (restarts.length > 1) { forceJs = true; say("lib.err.fallback"); } else say("lib.err.restarted");
+  }
+  const call1 = (cmd, payload = {}, prog) => new Promise((ok, no) => { const reqId = ++seq; pend.set(reqId, { ok, no, prog }); try { w().postMessage({ cmd, reqId, ...payload }); } catch (e) { pend.delete(reqId); no(e); } });
+  const call = async (cmd, payload = {}, prog) => {
+    try { return await call1(cmd, payload, prog); }
+    catch (e) { if (!(e && e.fatal)) throw e; restart(); return call1(cmd, payload, prog); }
+  };
+  // for the tests: which engine answers, and a way to kill it
+  const engine = { info: () => call1("engine"), async crash() { try { await call1("crash"); } catch (e) { if (e && e.fatal) restart(); else throw e; } }, get fallback() { return forceJs; } };
   const EHt = t => (typeof EH === "function" ? EH(t) : String(t));
   const loc = () => (I18N.lang === "it" ? "it-IT" : "en-US"), fmtN = n => Number(n).toLocaleString(loc());
   const dlgCss = `<style>#libdlg,#libres{max-width:min(1100px,96vw);width:min(1100px,96vw)}#libdlg{width:min(720px,96vw)}#libdlg .drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;margin:8px 0}#libdlg .drop.over{border-color:var(--accent);background:var(--sel)}
@@ -312,6 +329,6 @@ const LIB = (() => {
       d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
     } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
   }
-  return { open, searchFrom, call, identifyAll, groupRows, groupVerdict, verdict };
+  return { open, searchFrom, call, identifyAll, groupRows, groupVerdict, verdict, engine };
 })();
 window.LIB = LIB;

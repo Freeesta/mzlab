@@ -7,6 +7,7 @@ use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
+use crate::sortutil;
 use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
 use crate::util::{crc32c, get_varint, le_f64, le_u16, le_u32, put_varint};
 
@@ -36,11 +37,12 @@ pub struct BuildInfo {
     pub neg: u32,
 }
 
+#[derive(Clone, Copy)]
 struct Key {
     prec: f64,
     pol_key: u8,
     orig: u32,
-    off: u64,
+    off: u32,
     len: u32,
 }
 
@@ -113,7 +115,10 @@ impl<T: Scratch> Builder<T> {
             put_varint(&mut rec, f.len() as u64);
             rec.extend_from_slice(f.as_bytes());
         }
-        let off = self.store.len(S_REC);
+        let off = u32::try_from(self.store.len(S_REC)).map_err(|_| Error::too_large("records"))?;
+        self.keys
+            .try_reserve(1)
+            .map_err(|_| Error::memory_budget())?;
         self.store.append(S_REC, &rec)?;
         self.keys.push(Key {
             prec: s.prec,
@@ -131,7 +136,14 @@ impl<T: Scratch> Builder<T> {
             return Err(Error::new("lib.err.noSpectrum").with("dropped", self.emptied));
         }
         self.store.flush_all()?;
-        self.keys.sort_by(|a, b| {
+        {
+            // the merge sort needs a second buffer: make sure it will fit before starting (a refusal, not a dead instance)
+            let mut probe: Vec<Key> = Vec::new();
+            probe
+                .try_reserve_exact(self.keys.len())
+                .map_err(|_| Error::memory_budget())?;
+        }
+        sortutil::sort_by(&mut self.keys, |a, b| {
             a.pol_key
                 .cmp(&b.pol_key)
                 .then(a.prec.total_cmp(&b.prec))
@@ -161,7 +173,7 @@ impl<T: Scratch> Builder<T> {
         for (i, k) in keys.iter().enumerate() {
             let i = i as u32;
             let mut buf = crate::util::zeroed(k.len as usize)?;
-            self.store.read_at(S_REC, k.off, &mut buf)?;
+            self.store.read_at(S_REC, k.off as u64, &mut buf)?;
             // record: prec f64 | pol | licence | flags u16 | orig u32 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
             let n_pk = le_u16(&buf, 16) as usize;
             let peaks_at = 18;
@@ -474,7 +486,7 @@ fn write_index<T: Scratch, K: Sink>(
             es.push((le_u32(c, 0), le_u32(c, 4), le_u16(c, 8)));
         }
         drop(raw);
-        es.sort_unstable();
+        sortutil::sort_by(&mut es, |a, b| a.cmp(b));
         for e in es {
             page.push(e);
             written += 1;

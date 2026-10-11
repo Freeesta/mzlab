@@ -55,10 +55,10 @@ Blocchi da 4096 record da 32 byte, grezzi. Ordine: chiave di polarità (0 negati
 | 28 | u32 | riservato |
 
 ### Picchi (tipo 2)
-Blocchi da 4096 spettri, zstd. Contenuto decompresso di un blocco con P picchi: quattro piani di byte delle differenze di m/z (u32, 1e-5 Da; il primo picco di ogni spettro è assoluto, gli altri sono differenze strettamente positive), poi due piani di byte delle intensità (u16 = intensità pulita / massimo × 65535, almeno 1). Totale 6·P byte. m/z massimo 40 000 Da; errore di quantizzazione ≤ 5·10⁻⁶ Da (0,005 ppm a m/z 1000).
+Blocchi da 512 spettri, zstd. Contenuto decompresso di un blocco con P picchi: quattro piani di byte delle differenze di m/z (u32, 1e-5 Da; il primo picco di ogni spettro è assoluto, gli altri sono differenze strettamente positive), poi due piani di byte delle intensità (u16 = intensità pulita / massimo × 65535, almeno 1). Totale 6·P byte. m/z massimo 40 000 Da; errore di quantizzazione ≤ 5·10⁻⁶ Da (0,005 ppm a m/z 1000).
 
 ### Metadati (tipo 3)
-Blocchi da 1024 spettri, zstd; per ogni spettro, nell'ordine della tabella, 10 testi: ciascuno `varint` lunghezza + byte UTF-8: nome, addotto, energia di collisione, strumento, formula, InChIKey, SMILES, accessione, autori, licenza (testo). Si leggono solo per i candidati mostrati.
+Blocchi da 128 spettri, zstd; per ogni spettro, nell'ordine della tabella, 10 testi: ciascuno `varint` lunghezza + byte UTF-8: nome, addotto, energia di collisione, strumento, formula, InChIKey, SMILES, accessione, autori, licenza (testo). Si leggono solo per i candidati mostrati.
 
 ### Indici Flash (tipi 4 frammenti e 5 perdite neutre)
 Voci da 10 byte: m/z (u32, 1e-5 Da; per le perdite neutre: precursore − m/z), indice dello spettro (u32), intensità pesata d'entropia (u16 = p / `scale` × 65535, almeno 1), ordinate per m/z e poi per spettro. Una voce di perdita neutra con valore < 1e-5 Da non si scrive.
@@ -69,6 +69,9 @@ Directory (allineata a 8): `u64 n_voci`, `u32 n_pagine`, `u32 voci_per_pagina` (
 
 ## Lettore
 `Library::open(source, byte_di_cache)` legge testata, tabella e directory (poche centinaia di KB anche per 10⁶ spettri); blocchi e pagine si decodificano a richiesta in una cache LRU con tetto in byte. Il tetto sta in un solo punto (`read.rs`: `CACHE_BYTES` = 64 MB, `CACHE_BYTES_SMALL` = 32 MB per iPad e telefono, `cache_budget(small)`; test in `tests/format.rs`). API: `rec(i)`, `peaks(i)`/`peaks_q(i)`, `meta(i)`, `ranges(pol, lo, hi)` (intervalli di indici; gli spettri senza polarità si tengono sempre), `for_each_entry(nl, lo, hi, f)` (voci di un indice in una finestra di m/z), `verify()` (ogni CRC, ordine, conteggi: `Ok` solo per un file sano).
+
+## Nel browser (`crates/mzlab-lib-wasm`, `libreria-worker.js`)
+Descritto in `docs/agenti/alta-risoluzione.md` (voce Librerie) e `docs/agenti/rust.md`. Risultati dell'identità per voce: `pos`, `name`, `type`, `ce`, `inst`, `formula`, `ik`, `smiles`, `accession`, `authors`, `license` (testo), `lic` (classe), `prec`, `polarity`, `ent`, `cos` (coseno pesato), `forward`, `reverse`, `shared`, `explained`, `nlShared`, `dprec` (ppm o Da), `pairs` (indici nella richiesta pulita `query` e nella libreria), `mz`, `it`; analoghi: `mcos`, `matched`, `shifted`, `delta`, `coinc`, `hybrid`, `pairs` (con il terzo valore «spostata»), `qa`/`la` (i 32 picchi usati). I testi delle librerie sono dati non fidati: la pagina li mostra solo con `EHt`. Misure e bersagli: `docs/agenti/misure.md`, `python3 tools/bench.py --librerie [--gb]`.
 
 ## Coseno GNPS (regole di Attributio, riscritte)
 Campione contro riferimento, tolleranza ASSOLUTA in Da (0,01 o 0,02): via i picchi ≥ precursore − 0,5 e quelli < 1% del picco base; intensità in radice quadrata; accoppiamento avido per prodotto decrescente, ogni picco una volta (a parità: prima lo stesso m/z, poi gli indici più alti). `cosine` = somma / (norma del campione × norma del riferimento); `reverse` = somma / (norma dei soli picchi del campione accoppiati × norma del riferimento). Coseno modificato (`modified = true`): un picco del riferimento a m/z `m` si accoppia anche a un picco del campione a `m + Δ`, `Δ = precursore(campione) − precursore(riferimento)`; `n_shifted` conta le coppie spostate. Il codice di Attributio non è copiato (licenza «MIT draft»).
