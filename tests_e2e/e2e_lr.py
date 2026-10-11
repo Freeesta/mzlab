@@ -39,12 +39,17 @@ def json_close(a, b, tol=1e-9, path=""):
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
 def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
 
-def open_files(pg):
+TIMES = {}
+def open_files(pg, label=None):
+    t0 = time.time()
     pg.wait_for_selector("#drop", timeout=120000)
+    if label: TIMES[label + " start→page ready"] = round(pg.evaluate("performance.now()") / 1000, 2)
+    t0 = time.time()
     pg.set_input_files("#pick", FILES)
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
     pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
+    if label: TIMES[label + " open"] = round(time.time() - t0, 2)
 def snap(pg): return {"state": pg.evaluate(JSON, "api/state")["j"], "session": pg.evaluate(JSON, "api/session")["j"]}
 
 try:
@@ -63,7 +68,7 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("the page starts on the Rust engine: Pyodide is not requested", boot)
         def load():
-            open_files(pg)
+            open_files(pg, "rust flow")
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("upload, list, session and TIC of two Full Scan files without Pyodide", load)
@@ -84,7 +89,7 @@ try:
         ctx2, pg2, reqs2 = context()
         pg2.goto(f"http://127.0.0.1:{PORT}/?motore=python")
         def classic():
-            open_files(pg2)
+            open_files(pg2, "classic")
             assert pyodide(reqs2), "the counter does not see Pyodide in the classic flow"
             py = snap(pg2)
             json_close(lr_snap["state"]["files"], py["state"]["files"], path="state.files")
@@ -126,6 +131,7 @@ try:
             r = pg4.evaluate(JSON, "api/mrm?k=0"); assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["files"][0]["transitions"], r["eng"]
             assert not pyodide(reqs4), (pyodide(reqs4)[:3], why(pg4))
         step("an MRM file opens without Pyodide: the transitions come from the Rust engine", mrm_alone)
+        print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:
