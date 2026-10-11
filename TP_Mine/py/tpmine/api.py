@@ -133,7 +133,10 @@ def run(files_json: str, parent_json: str, settings_json: str, transf_text: str)
             f["kind"] = _kinds[f["name"]]
         _ex = None
         live = _Emitter(_progress)
-        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=live)
+        settings = json.loads(settings_json) or {}
+        if transf_text.strip():              # the list of transformations of the page (editable): the rules of the network of mass differences
+            settings["extra_transformations"] = chem.parse_transformations(transf_text)
+        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), settings or None, progress=live)
         try:
             return _out(_hr.run())
         finally:

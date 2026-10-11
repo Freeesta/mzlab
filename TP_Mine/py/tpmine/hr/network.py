@@ -14,6 +14,7 @@ import numpy as np
 from tpmine import chem
 
 from . import formula as F
+from . import rules as RU
 
 WEIGHTS = {"ms2": 0.45, "loc": 0.15, "kin": 0.15, "form": 0.10, "int": 0.15}
 PENALTY = 0.3                         # isotope, adduct, in-source fragment or dimer of a stronger ion of the family: shown last, never removed
@@ -36,7 +37,7 @@ CANDIDATE_KEYS = ("id", "mz", "rt", "formula", "n_formulas", "ppm", "area_max", 
 # neutral changes besides the user's transformation list (names in Italian): ordered (name, delta as signed formula text)
 HR_TRANSFORMATIONS = [("hydroxylation", "+O"), ("dehydrogenation", "-H2"), ("oxidation to carbonyl", "+O-H2"), ("loss of C4H8", "-C4H8"),
                       ("loss of C2H2", "-C2H2"), ("loss of CO", "-CO"), ("hydration", "+H2O"),
-                      ("dehydration", "-H2O"), ("demethylation", "-CH2"), ("dihydroxylation", "+O2"), ("trihydroxylation", "+O3")]
+                      ("dehydration", "-H2O"), ("loss of C2H4", "-C2H4"), ("demethylation", "-CH2"), ("dihydroxylation", "+O2"), ("trihydroxylation", "+O3")]
 NATURAL = {"C13": 0.0107, "N15": 0.00364, "S33": 0.0075, "H2": 0.000115, "O17": 0.00038}
 
 
@@ -307,6 +308,62 @@ def predecessors(cands: list[dict], els: list[str], parent_formula, table, cos=N
             res.update(predecessor=best[0], transformation=best[1], cos=best[2], kinetic=best[3])
         out.append(res)
     return out
+
+
+def mass_network(cands: list[dict], els: list[str], parent_formula, table, preds=None, sim=None, parent_smiles=None, lit=None, step: float = 5.0,
+                 max_edges: int = 1500) -> dict:
+    """Network of mass differences among the parent and the candidates: an edge a -> b for every rule of the table whose change of formula takes the
+    formula of a to that of b (one step; the pairs of an exact reverse rule, such as hydration and dehydration, give one edge, in the direction of the
+    kinetics: the earlier maximum is the source). Each edge has the rule, the exact change of m/z, the prediction scope of the rule, the kinetic
+    consistency (maxima of the profiles) and, when `sim(i, j)` (indices in `cands`, -1 = the parent) returns the three components of the similarity of
+    their MS2, the shifted fragments. `preds` (output of `predecessors`) marks the edges of the existing network of the products: kind 'both' (a
+    predecessor that is also a mass difference), 'mass' (only the mass difference), 'network' (a predecessor of two steps or related by MS2).
+    Returns {"nodes": [{id, label, formula, mz, rt, score, level}], "edges": [...], "n_edges": total before the cut}."""
+    n = len(cands)
+    vecs = [F.vec(parent_formula, els)] + [F.vec(c["formula"], els) for c in cands]       # node 0 = the parent
+    ids = ["progenitore"] + [c["id"] for c in cands]
+    by_vec: dict = {}
+    for k, v in enumerate(vecs):
+        by_vec.setdefault(tuple(v.tolist()), []).append(k)
+    tmax = [0.0] + [(c.get("kinetics") or {}).get("tmax") for c in cands]
+    chosen = {(p["predecessor"], p["id"]): p for p in (preds or []) if p.get("predecessor") is not None}
+    best: dict = {}
+    for a in range(n + 1):
+        for name, v in table:
+            for b in by_vec.get(tuple((vecs[a] + v).tolist()), []):
+                if b == a or b == 0:
+                    continue
+                ta, tb = tmax[a], tmax[b]
+                kin = "n/a" if ta is None or tb is None else ("consistent" if ta <= tb + step else "against")
+                rank = (2 if kin == "consistent" else 1 if kin == "n/a" else 0, 1 if a == 0 else 0)
+                key = (min(a, b), max(a, b))
+                if key not in best or rank > best[key][0]:
+                    best[key] = (rank, a, b, name, kin)
+    edges = []
+    for _, a, b, name, kin in best.values():
+        e = {"from": ids[a], "to": ids[b], "rule": name, "kinetic": kin, "dm": round(float(F.ion_mass(vecs[b], els) - F.ion_mass(vecs[a], els)), 5),
+             "scope": RU.step_info(name, table, vecs[0], els, parent_smiles, lit or {})["scope"],
+             "kind": "both" if (ids[a], ids[b]) in chosen else "mass"}
+        sm = sim(a - 1, b - 1) if sim is not None else None
+        if sm:
+            e["shifted"] = {"n": sm["n"]["shifted"] + sm["n"]["loss"], "share": round(sm["cos"]["shifted"] + sm["cos"]["loss"], 3)}
+        edges.append(e)
+    have = {(e["from"], e["to"]) for e in edges}
+    for (p, i), pr in chosen.items():
+        if (p, i) not in have and (i, p) not in have:
+            edges.append({"from": p, "to": i, "rule": pr.get("transformation") or "MS2 related", "kinetic": "consistent", "kind": "network", "scope": None,
+                          "dm": round(float(F.ion_mass(vecs[ids.index(i)], els) - F.ion_mass(vecs[ids.index(p)], els)), 5)})
+    total = len(edges)
+    if total > max_edges:         # the strongest first: predecessors, then edges with shifted fragments, then the rest
+        edges.sort(key=lambda e: (e["kind"] == "mass", -(e.get("shifted") or {}).get("share", 0.0)))
+        edges = edges[:max_edges]
+    used = {e["from"] for e in edges} | {e["to"] for e in edges}
+    nodes = [{"id": "progenitore", "label": "parent", "formula": F.fmt(vecs[0], els), "mz": None, "rt": None, "score": None, "level": None}]
+    for k, c in enumerate(cands, 1):
+        if c["id"] in used:
+            nodes.append({"id": c["id"], "label": c.get("derivation") or c["formula"], "formula": c["formula"], "mz": round(c["mz"], 4), "rt": round(c["rt"], 2),
+                          "score": round(c["priority"]["score"], 1) if c.get("priority") else None, "level": (c.get("confidence") or {}).get("level")})
+    return {"nodes": nodes, "edges": edges, "n_edges": total}
 
 
 def rank(cands: list[dict], by_level: bool = False) -> list[dict]:
