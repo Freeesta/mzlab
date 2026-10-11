@@ -10,9 +10,11 @@ import json
 
 import numpy as np
 
+from .app import rounded
 from .bigfiles import too_big
 from .i18n import UserError
 from .chem.elements import formula_mz
+from .differenza import NORMS, area, norm_factor, subtract_spectrum, subtract_trace
 from .explore import MAP_POINTS_MAX, check_agg, diff_tolerant, map_cells, rt_groups, subtract_constant
 
 
@@ -29,6 +31,48 @@ def _weights(text):
     except ValueError:
         w = []
     return tuple((w + [1.0, 2.0, 1.0][len(w):])[:3])
+
+
+def _diff_opts(q: dict) -> dict | None:
+    """The reference of /api/xic, /api/chrom, /api/mrm and /api/spectrum: ref (file number), factor, norm (none | tic | istd), istd (m/z), rttol, clip. None without ref."""
+    if q.get("ref") in (None, ""):
+        return None
+    norm = q.get("norm") or "none"
+    if norm not in NORMS:
+        raise UserError("err.diff.norm", {"norm": str(norm)[:20]}, f"norm must be one of {', '.join(NORMS)}, not {norm!r}")
+    if norm == "istd" and q.get("istd") in (None, ""):
+        raise UserError("err.diff.istd", {}, "norm=istd needs istd (the m/z of the internal standard)")
+    o = {"ref": int(q["ref"]), "factor": float(q.get("factor", 1.0)), "norm": norm, "istd": float(q["istd"]) if q.get("istd") not in (None, "") else None,
+         "rttol": float(q.get("rttol", 0.1)), "clip": q.get("clip") == "1"}
+    if not (0 <= o["factor"] <= 100 and 0 <= o["rttol"] <= 10):
+        raise UserError("err.diff.range", {}, "factor must be between 0 and 100 and rttol between 0 and 10 minutes")
+    return o
+
+
+def _diff_scale(app, k: int, o: dict, level: int, tol: float) -> float:
+    """factor x normalization of the reference towards file k (total ion current or internal standard area, whole file)."""
+    if o["norm"] == "none":
+        return o["factor"]
+    if o["norm"] == "tic":
+        a, b = (app._item(i).total("tic", level) for i in (k, o["ref"]))
+    else:
+        a, b = (app._item(i).xic(o["istd"], tol, level) for i in (k, o["ref"]))
+    return o["factor"] * norm_factor(o["norm"], area(*a), area(*b))
+
+
+def _mrm_area(transitions: list, o: dict) -> float:
+    """Area to normalize an MRM file by: all its transitions (tic) or the ones whose precursor is the internal standard (istd)."""
+    if o["norm"] == "none":
+        return 0.0
+    sel = [t for t in transitions if o["norm"] == "tic" or abs((t.get("q1") or 0) - o["istd"]) <= 0.5]
+    return sum(area(t["rt"], t["y"]) for t in sel)
+
+
+def _diff_cut(rt, y, rrt, ry, scale: float, o: dict, nd: int = 1):
+    """(rt, y) of the difference rounded for the page; the times outside the range of the reference are left out (no data, not zero)."""
+    d = subtract_trace(rt, y, rrt, ry, scale, o["rttol"], o["clip"])
+    ok = ~np.isnan(d)
+    return rounded(np.asarray(rt)[ok], 4), rounded(d[ok], nd)
 
 
 def _json(obj, code=200):
@@ -187,6 +231,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
         except Exception as e:  # noqa: BLE001
             return _fail(e) if isinstance(e, ValueError) else _json({"error": f"{type(e).__name__}: {e}"}, 400)
     try:
+        if q.get("ref") not in (None, "") and path in ("/api/xic", "/api/chrom", "/api/mrm"):
+            try:
+                _diff_opts(q)                # a wrong reference setting is the user's: a JSON error with a key, not a server fault
+            except ValueError as e:
+                return _fail(e)
         if path == "/api/state":
             return _json(app.state())
         if path == "/api/notebook":
@@ -195,6 +244,15 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.perf())
         if path == "/api/session":
             return _json(app.session_state())
+        if path == "/api/chrom" and q.get("ref") not in (None, ""):
+            o = _diff_opts(q)
+            k, kind, level = int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1))
+            args = (level, float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None, float(q["prec"]) if q.get("prec") else None, q.get("filt") or None)
+            rt, y = app._item(k).total(kind, *args)
+            rr, ry = app._item(o["ref"]).total(kind, *args)
+            sc = _diff_scale(app, k, o, level, float(q.get("tol", 0.35)))
+            rt, y = _diff_cut(rt, y, rr, ry, sc, o)
+            return _json({"rt": rt, "y": y, "ref": o["ref"], "scale": sc})
         if path == "/api/chrom":
             return _json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
                                    float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None,
@@ -223,6 +281,16 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 return _json(app.fileinfo(int(q["k"])))
             except (ValueError, KeyError) as e:
                 return _fail(e)
+        if path == "/api/xic" and q.get("ref") not in (None, ""):
+            o = _diff_opts(q)
+            mz, tol, level = float(q["mz"]), float(q.get("tol", 0.35)), int(q.get("level", 1))
+            rr, ry = app._item(o["ref"]).xic(mz, tol, level)
+            out = []
+            for k in [int(x) for x in q["k"].split(",") if x]:
+                rt, y = app._item(k).xic(mz, tol, level)
+                sc = _diff_scale(app, k, o, level, tol)
+                out.append({"k": k, **dict(zip(("rt", "y"), _diff_cut(rt, y, rr, ry, sc, o))), "scale": sc})
+            return _json({"mz": mz, "tol": tol, "ref": o["ref"], "traces": out})
         if path == "/api/xic":
             return _json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                  float(q.get("tol", 0.35)), int(q.get("level", 1))))
@@ -234,6 +302,24 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
         if path == "/api/origin":        # evidence on where an ion comes from (ionfamily); never a verdict
             return _json(app.origin(int(q.get("k", -1)), float(q["mz"]), float(q["parent"]),
                                     float(q["rt0"]) if q.get("rt0") else None, float(q["rt1"]) if q.get("rt1") else None, q.get("formula")))
+        if path == "/api/mrm" and q.get("ref") not in (None, ""):
+            o = _diff_opts(q)
+            ref_all = app._item(o["ref"]).mrm()
+            ref = {f"{t['q1']}>{t['q3']}": t for t in ref_all}
+            trs_all = {k: app._item(k).mrm() for k in [int(x) for x in q["k"].split(",") if x]}
+            files = []
+            for k in [int(x) for x in q["k"].split(",") if x]:
+                trs = []
+                for t in trs_all[k]:
+                    r = ref.get(f"{t['q1']}>{t['q3']}")
+                    if r is None:         # the reference lacks this transition: nothing to take away
+                        trs.append({**t, "nodiff": True})
+                        continue
+                    sc = o["factor"] * norm_factor(o["norm"], _mrm_area(trs_all[k], o), _mrm_area(ref_all, o))
+                    rt, y = _diff_cut(t["rt"], t["y"], r["rt"], r["y"], sc, o)
+                    trs.append({**t, "rt": rt, "y": y, "scale": sc})
+                files.append({"k": k, "transitions": trs})
+            return _json({"files": files, "ref": o["ref"]})
         if path == "/api/mrm":
             return _json(app.mrm([int(x) for x in q["k"].split(",") if x]))
         if path == "/api/method_warnings":
@@ -250,7 +336,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             pr = q.get("precursor")
             bg = None
             if q.get("bgk") not in (None, ""):
-                bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]), "factor": float(q.get("bgf", 1.0))}
+                bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]), "factor": float(q.get("bgf", 1.0)),
+                      "tol": float(q.get("bgtol", 5.0)), "clip": q.get("bgclip", "1") == "1"}
             return _json(app.spectrum(int(q["k"]), float(q["rt0"]), float(q["rt1"]), int(q.get("level", 1)),
                                       float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
         if path == "/api/spectra":       # single scans i0..i1 (at most 60), for scan-by-scan navigation
