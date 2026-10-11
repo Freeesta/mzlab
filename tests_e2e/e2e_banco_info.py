@@ -48,7 +48,7 @@ try:
             tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t and "Status log" in t, t[:300]
         step("tab 3: file and instrument as the mzML says them", fil)
         def launchers():
-            tab("cmp"); pg.click("#hri-go"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
+            tab("cmp"); pg.wait_for_selector("#cx-mz", timeout=10000); pg.click("#cx-exp"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
             tab("idn"); assert "Identifica tutte" in body()

@@ -31,10 +31,12 @@ try:
             assert pg.evaluate("E.panels.length") == n0
         step("«Cella» adds a chromatogram (active), the bin removes the active cell", add_del)
         def decimals():
-            pg.select_option("#hrbar [data-hb=dec]", "3"); pg.wait_for_timeout(800)
+            assert pg.locator("#hrbar [data-hb=dec]").count() == 0, "the decimals field left the bar"
+            pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'))"); drawer(pg, "disp"); pg.wait_for_selector("#dsp-0", timeout=5000)
+            pg.select_option("#dsp-0", "3"); pg.wait_for_timeout(800)
             assert pg.evaluate("UIP.hrDec") == 3
-            pg.select_option("#hrbar [data-hb=dec]", "4"); pg.wait_for_timeout(500)
-        step("decimals of the m/z from the toolbar", decimals)
+            pg.select_option("#dsp-0", "4"); pg.wait_for_timeout(500)
+        step("decimals of the m/z from the display options", decimals)
         def norm():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))"); pg.click("#hrbar [data-hb=norm]"); pg.wait_for_timeout(1200)
             ym = pg.evaluate("E.panels.find(p=>p.type==='chrom')._a.ymax"); assert abs(ym - 108) < 0.5, ym

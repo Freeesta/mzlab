@@ -115,6 +115,7 @@ const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
 const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
+const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆₇₈₉"[d]);                // formula in plain text for the canvas (subscript digits)
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
 const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;

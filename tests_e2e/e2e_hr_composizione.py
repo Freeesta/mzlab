@@ -44,8 +44,8 @@ try:
             pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             xy = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp}),a=s._a,d=a.data[0].d;let b=0;d.y.forEach((v,i)=>{{if(v>d.y[b])b=i}});const r=s.cv.getBoundingClientRect();return {{x:r.left+a.X(d.mz[b]),y:r.top+a.Y(d.y[b])+6}}}})()")
             pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(400)
-            t = pg.inner_text("#ctx"); assert "Formule compatibili con m/z" in t, t
-        step("right click on a peak of a high-resolution spectrum: «Formule compatibili…»", menu)
+            t = pg.inner_text("#ctx"); assert "Genera formula (m/z" in t, t
+        step("right click on a peak of a high-resolution spectrum: «Genera formula»", menu)
         def score():
             sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             from mzlab.chem.isoscore import fine_pattern, merge_res
