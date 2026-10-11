@@ -86,8 +86,8 @@ try:
             t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("RT ") and "m/z" in t, t
         step("Copy the coordinates", copy)
         def bar():
-            btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
-            assert [b[0] for b in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"], btns
+            btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
+            assert [b[0] for b in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "maphelp"], btns
             assert all(b[1] for b in btns), btns
             zoom_in(); pg.click(".pnl.map [data-nav=mapreset]"); pg.wait_for_timeout(300); assert z() == [None, None]
             pg.click(".pnl.map [data-nav=mapzin]"); pg.wait_for_timeout(300); zz = z(); assert zz[0] and zz[1], zz
@@ -156,8 +156,8 @@ try:
         step("touch: long press opens the menu", longpress)
         def targets():
             assert pg.evaluate("matchMedia('(pointer:coarse)').matches"), "touch context"
-            sizes = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
-            assert len(sizes) == 5 and all(w >= 44 and h >= 44 for w, h in sizes), sizes
+            sizes = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
+            assert len(sizes) == 6 and all(w >= 44 and h >= 44 for w, h in sizes), sizes
         step("touch screen: the buttons of the bar are at least 44 px", targets)
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
