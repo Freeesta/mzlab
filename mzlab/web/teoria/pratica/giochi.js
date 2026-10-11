@@ -179,7 +179,7 @@ const GIOCHI = (() => {
     return out;
   }
   function formula(root) {
-    const fr = frame(root, `<label>Livello <select class="lv"><option value="1">1 · errori in ppm già calcolati</option><option value="2" selected>2 · calcolate voi l'errore</option></select></label>`, next);
+    const fr = frame(root, `<label>Livello <select class="lv"><option value="1">1 · errori in ppm già calcolati</option><option value="2" selected>2 · calcolate voi l'errore</option><option value="3">3 · formula da uno ione non-target</option><option value="4">4 · isotopi fini (S e N)</option></select></label>`, next);
     function gen() {
       for (let k = 0; k < 200; k++) {
         const C = rnd(6, 22), N = Math.random() < 0.3 ? 0 : rnd(1, 4), O = rnd(0, 6), S = Math.random() < 0.15 ? 1 : 0, Cl = Math.random() < 0.2 ? rnd(1, 2) : 0;
@@ -194,6 +194,7 @@ const GIOCHI = (() => {
     }
     function next() {
       const lv = +fr.bar.querySelector(".lv").value;
+      if (lv >= 3) { HRNTUI.render(fr, lv); return; }
       const f = gen(), ionf = { ...f, H: f.H + 1 };
       const M = Object.entries(f).reduce((a, [e, n]) => a + EXM[e] * n, 0), mzT = M + H1;
       const err = (Math.random() * 2 - 1) * 2.5, mz = mzT * (1 + err * 1e-6);
