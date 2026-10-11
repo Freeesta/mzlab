@@ -40,6 +40,22 @@ def _method_summary(m: dict | None) -> dict | str:
 MAX_UPLOAD = 4 << 30  # bytes: one mzML upload
 
 
+def rounded(a, nd: int) -> list:
+    """[round(float(v), nd) for v in a], much faster for long traces: rint(v * 10^nd) / 10^nd is the same double as round() except when v * 10^nd lies within rounding error
+    of a half (the few such values go through round() itself)."""
+    a = np.asarray(a, dtype=np.float64)
+    if not len(a):
+        return []
+    sc = 10.0 ** nd
+    s = a * sc
+    if not np.isfinite(s).all() or np.abs(s).max() >= 1e15:
+        return [round(float(v), nd) for v in a]
+    out = (np.rint(s) / sc).tolist()
+    for i in np.flatnonzero(np.abs(s - np.floor(s) - 0.5) < 1e-6 * np.maximum(1.0, np.abs(s))):
+        out[int(i)] = round(float(a[i]), nd)
+    return out
+
+
 class App:
     """The page lets the user drop files and open them for exploration; the work folder keeps the files and the notebook."""
 
@@ -259,13 +275,13 @@ class App:
         item = self._item(k)
         item.run.activate()
         rt, y = item.total(kind, level, mz0, mz1, prec, filt)
-        return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
+        return {"rt": rounded(rt, 4), "y": rounded(y, 1)}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
         out = []
         for k in ks:
             rt, y = self._item(k).xic(mz, tol, level)
-            out.append({"k": k, "rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]})
+            out.append({"k": k, "rt": rounded(rt, 4), "y": rounded(y, 1)})
         return {"mz": mz, "tol": tol, "traces": out}
 
     def subxic(self, k: int, formula: str, ppm: float = 5.0, min_mz: float = 100.0, z: int = 1) -> dict:

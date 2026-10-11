@@ -211,3 +211,14 @@ def test_maps_spectra_and_totals_equal_the_in_memory_ones(synth, tmp_path):
     assert all(np.array_equal(x, y) for x, y in zip(sa, sb))
     assert a.scan_table(1) == b.scan_table(1)
     a.run.close(); b.run.close()
+
+
+def test_rounded_is_round_for_every_value():
+    from mzlab.app import rounded
+    rng = np.random.default_rng(5)
+    cases = [rng.random(50000) * 1e6, rng.integers(0, 10**7, 50000).astype(float), (rng.random(50000) * 1e6).astype(np.float32), np.round(rng.random(50000) * 100, 3),
+             np.arange(0, 2000) * 0.05, -rng.random(1000) * 50, np.array([0.25, 0.35, 2.5, 0.05, 0.15, 1e-9, 0.0, -0.0, -0.04, 123456.75, 0.45, 0.55, 1.005, np.inf, np.nan])]
+    for a in cases:
+        for nd in (1, 4):
+            ref = [round(float(v), nd) for v in a]
+            assert [repr(x) for x in ref] == [repr(x) for x in rounded(a, nd)]
