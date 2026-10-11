@@ -13,7 +13,7 @@
   // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
   // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database and ?opfs=0 keeps the files in memory and IndexedDB (tests)
   const wurl = new URL("browser-worker.js", SRC);
-  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); }
+  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); if (/^\d+$/.test(q.get("pool") || "")) wurl.searchParams.set("pool", q.get("pool")); }
   try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
@@ -50,6 +50,8 @@
       if (m.type === "blocked") { window.qqPhaseCur = { key: "load.blocked", pct: null }; if (window.ldRefresh && window.I18N) ldRefresh(); return; }   // replaced by the next step once the other tab lets go
       if (m.type === "ready") { isReady = true; window.qqStep = ""; phase(null); perfMark("motore pronto"); try { const u = new URL(location.href); if (u.searchParams.has("riparti")) { u.searchParams.delete("riparti"); history.replaceState(null, "", u.href); } } catch (_) { /* optional */ } return res(); }
       if (m.type === "fatal") { failed = m.text; if (m.key === "load.err.resumeTimeout") fail(m.key, null, true); else fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
+      if (m.type === "notice") return notice(m.key);                                                                   // e.g. error.memoryBudget: the index of this file is built by Python
+      if (m.type === "idx") { (window.MZLAB_IDX = window.MZLAB_IDX || []).push(m); return; }                          // which engine built the index of a file (tests, ?perf)
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };
     worker.onerror = e => { failed = e.message || "worker error"; fail("load.err.worker", { text: failed }); rej(new Error(failed)); };

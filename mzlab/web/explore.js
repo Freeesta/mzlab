@@ -271,13 +271,13 @@ async function bootSession() { await bootSession0(); methodWarn(); window.TOUR &
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
-  if (!j.session) { E.files = []; E.key = ""; return; }
+  if (!j.session) { E.files = []; E.key = ""; E.pending = []; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map(s => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map(f => f.file), oldVis = Object.fromEntries(E.files.map(f => [f.file, f]));
   E.key = key;
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
-  const isFirstLoad = !oldNames.length;
+  const isFirstLoad = !oldNames.length || !!(E.pending && E.pending.some(x => x.state === "wait"));       // while a list is opened file by file the new ones follow the rules of the first load
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
   const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
   E.files = j.session.map((s, k) => {
@@ -474,8 +474,14 @@ function renderFileList() {
     return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
+  // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
+  const pend = E.pending || [], waiting = pend.filter(x => x.state === "wait").length;
+  const pendBar = waiting ? `<div class="pendbar" role="progressbar" aria-label="${EH(I18N.t("files.pendingBar", { done: E.pendN - waiting, n: E.pendN }))}" aria-valuemin="0" aria-valuemax="${E.pendN}" aria-valuenow="${E.pendN - waiting}"><i style="width:${Math.round(100 * (E.pendN - waiting) / E.pendN)}%"></i></div>` : "";
+  const pendRows = pend.map((x, i) => `<div class="fl pend ${x.state === "err" ? "err" : ""}" data-pend="${i}" ${x.state === "wait" ? 'aria-busy="true"' : ""}><input type="checkbox" disabled aria-label="${EH(x.label)}"><i></i><div class="fi"><b class="nm">${EH(x.label)}</b><small>${EH(x.state === "err" ? x.msg : I18N.t("files.pending"))}</small></div><button type="button" class="sec sm" data-pend-rm="${i}" aria-label="${EH(I18N.t("files.pendingRemove", { name: x.label }))}">×</button></div>`).join("");
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
-  Q("#flst").innerHTML = (CONV.size > 1 ? `<div style="margin:4px 0"><button type="button" class="sec sm" data-dl-all="1" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>` : "") + pre + body + others;
+  Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
+  Q("#flst").innerHTML = pendBar + (CONV.size > 1 ? `<div style="margin:4px 0"><button type="button" class="sec sm" data-dl-all="1" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>` : "") + pre + body + others + pendRows;
+  Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("[data-dl-all]").forEach(b => b.onclick = () => CONV.downloadAll());
   Q("#flst").querySelectorAll("[data-dl]").forEach(b => b.onclick = e => { e.stopPropagation(); CONV.download(b.dataset.dl); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));

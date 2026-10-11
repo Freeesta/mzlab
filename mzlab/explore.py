@@ -893,7 +893,25 @@ def mixed_text(run) -> list[dict]:
 class Session:
     def __init__(self, samples: list[dict], root: Path):
         self.items: list[Item] = []
-        has_hr, has_lr = False, False
+        self.root = root
+        self._hr = self._lr = False
+        self.add(samples)
+
+    def add(self, samples: list[dict]) -> None:
+        """Open more files in this session (the same checks as for the first ones). If they cannot be added the session stays as it was."""
+        n_before, hr0, lr0 = len(self.items), self._hr, self._lr
+        try:
+            self._open(samples)
+        except BaseException:
+            for it in self.items[n_before:]:
+                if all(o.run is not it.run for o in self.items[:n_before]):
+                    it.run.close()
+            del self.items[n_before:]
+            self._hr, self._lr = hr0, lr0
+            raise
+
+    def _open(self, samples: list[dict]) -> None:
+        root = self.root
         for s in samples:
             name, _, tag = str(s["file"]).partition("#")      # "x.mzML#MS2" = the MS2 part of a mixed file (as saved in the notebook)
             f = Path(name)
@@ -912,12 +930,11 @@ class Session:
                     self.items.append(item)
                     hr_info = item.hr_info()
             if hr_info["prof1"]["hr"] or hr_info["prof2"]["hr"]:
-                has_hr = True
+                self._hr = True
             else:
-                has_lr = True
-        
-        if has_hr and has_lr:
-            raise UserError("err.hr.mix", text="low- and high-resolution files cannot be mixed")
+                self._lr = True
+            if self._hr and self._lr:
+                raise UserError("err.hr.mix", text="low- and high-resolution files cannot be mixed")
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]

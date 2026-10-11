@@ -1,6 +1,7 @@
 // Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab package as the local program.
 import { loadPyodide } from "./pyodide/pyodide.mjs";
 import * as ARCH from "./archivio.js";
+import { createPool, poolSize } from "./idxpool.js";
 
 // a step of the start: a catalog key (shown by the loading screen in the language of the page) and the percentage when known
 const say = (key, pct = null, params) => postMessage({ type: "step", key, pct, params });
@@ -90,6 +91,7 @@ async function resumeOpfs(tick, names, bigs) {
   }
   const reg = {};
   for (const e of await ARCH.list("idx")) {
+    if (/\.part$/.test(e.name)) { await ARCH.remove("idx", e.name); continue; }       // an index a closed page left half written
     const name = e.name.replace(/\.mzidx$/, "");
     if (!have.has(name)) continue;                    // the index of a file that was taken away stays in the archive until the space is needed
     const f = await ARCH.get("idx", e.name);
@@ -201,13 +203,44 @@ async function buildIndex(name) {
   try { if (br.build_index(name)) await settle(); } catch (_) { /* optional */ }
 }
 
+// ---- the indexes of the uploaded files are built by the pool of Rust workers (idxpool.js, idx-worker.js); Python builds them when the pool cannot (?pool=0 forces Python)
+const POOLQ = Q.get("pool");
+const pool = OPFS && POOLQ !== "0" ? createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), size: /^\d+$/.test(POOLQ || "") ? +POOLQ : poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ type: "notice", key }) }) : null;
+const inChain = fn => { const p = chain.then(fn); chain = p.catch(() => {}); return p; };      // one thing at a time with the requests
+// The index of an uploaded file: the pool of Rust workers builds it (the Python reader has already read the headers: index_inputs), Python when the pool cannot.
+// Resolves when the index is in place (adopted, mounted) or nothing more will be done.
+function buildFor(base, file, wait = false) {
+  const t0 = performance.now();
+  const note = (engine, why, passes) => postMessage({ type: "idx", name: base, engine, why, passes, ms: Math.round(performance.now() - t0) });
+  const python = async why => { await inChain(() => buildIndex(base)); note("python", why); };
+  return (async () => {
+    if (!pool || pool.unavailable()) return python("off");
+    const inputs = await inChain(() => { const r = br.index_inputs(base); if (!r) return null; const a = r.toJs(); r.destroy(); return a; });
+    if (!inputs) return python("inputs");                            // already indexed, or the headers cannot be read: Python decides
+    const part = base + ".mzidx.part", res = await pool.build({ name: base, blob: file, inputs, part });
+    if (!res.ok) { await ARCH.remove("idx", part); if (res.reason !== "cancelled") await python(res.reason + ": " + (res.text || "")); return; }
+    try {
+      const f = await ARCH.promote("idx", part, base + ".mzidx");
+      const ok = await inChain(async () => {
+        if (await lowSpace()) await freeSpace();
+        const adopted = br.adopt_index(base, mountBlob(f, "idx/" + base, "/idx"));
+        if (!adopted) unmount("idx/" + base);
+        return adopted;
+      });
+      if (!ok) { await ARCH.remove("idx", base + ".mzidx"); return python("adopt"); }
+      note("rust", null, res.stats && res.stats.passes);
+    } catch (e) { console.debug("[mzLab] index of the pool not used", base, e); await python(String(e && e.message || e)); }
+  })().catch(e => console.debug("[mzLab] index", base, e));
+  return p;
+}
+
 let chain = Promise.resolve();      // the requests are answered one after the other: an index moved to OPFS is never swapped under a request in the middle
 onmessage = ev => { chain = chain.then(() => answer(ev.data)).catch(e => console.debug("[mzLab]", e)); };
 
 async function answer({ id, method, url, body, blob }) {
   await started;
   if (!handle) return postMessage({ id, status: 500, text: JSON.stringify({ error: "calculation engine not started", error_key: "err.engine.notStarted" }) });
-  let status, text, ctype, uploaded = null;
+  let status, text, ctype, uploaded = null, later = null;
   const t0 = performance.now();
   const u = new URL(url, "http://x/");
   try {
@@ -219,6 +252,7 @@ async function answer({ id, method, url, body, blob }) {
       if (blob.size > MAX) throw Object.assign(new Error("file over 4 GB: too big"), { key: "err.memory.over4gb" });
       let file = blob;
       if (OPFS) {
+        if (pool) pool.cancel(base);
         br.forget_index(base); unmount("idx/" + base); await ARCH.remove("idx", base + ".mzidx");      // a file of the same name, possibly other content: its index goes
         try { file = await ARCH.put("files", base, blob); persistOnce(); }
         catch (e) {                                                                      // no room (a private window has little): the indexes of removed files go, then one more try
@@ -226,8 +260,18 @@ async function answer({ id, method, url, body, blob }) {
           if (file === blob) console.debug("[mzLab] not saved in OPFS, used as it is for this visit", e);                // the Blob itself is mounted: it works until the page is closed, as before
         }
       }
-      const r = linkBig(name, mountBlob(file, "files/" + base));
-      [status, text] = r.toJs(); r.destroy();
+      const target = mountBlob(file, "files/" + base);
+      if (pool && OPFS && file !== blob) {                                              // the index first (pool), then the file is read: its answer comes when both are done, the requests in between are served
+        later = (async () => {
+          await inChain(() => { const x = linkBig(name, target, false); x.destroy(); });
+          await buildFor(base, file);
+          const r2 = await inChain(() => { const x = linkBig(name, target); const y = x.toJs(); x.destroy(); return y; });
+          return r2;
+        })();
+      } else {
+        const r = linkBig(name, target);
+        [status, text] = r.toJs(); r.destroy();
+      }
       if (status === 200 && file === blob && blob.size <= KEEP) { await safe(() => tx("files", "readwrite", s => s.put(blob, base))); persistOnce(); }
       if (status === 200 && OPFS && file !== blob) uploaded = base;
     } else {
@@ -239,9 +283,10 @@ async function answer({ id, method, url, body, blob }) {
     const m = String(e && e.message || e);
     status = 500; text = JSON.stringify(e && e.key ? { error: m, error_key: e.key } : /memory|alloc|RangeError/i.test(m) ? { error: "this file is too big for the memory of the browser", error_key: "err.memory.tooBig" } : { error: m });
   }
+  if (later) { later.then(([st, tx]) => postMessage({ id, status: st, text: tx, ms: performance.now() - t0 }), e => postMessage({ id, status: 500, text: JSON.stringify({ error: String(e && e.message || e) }) })); return; }
   if (text instanceof Uint8Array) postMessage({ id, status, buf: text, ctype, ms: performance.now() - t0 }, [text.buffer]);       // a binary block (api/scanbin): moved, not copied
   else postMessage({ id, status, text, ms: performance.now() - t0 });
-  if (uploaded) await buildIndex(uploaded);              // right after the upload, before the next request: the first chart then finds the index
+  if (uploaded) { const t1 = performance.now(); await buildIndex(uploaded); postMessage({ type: "idx", name: uploaded, engine: "python", why: "off", ms: Math.round(performance.now() - t1) }); }       // right after the upload, before the next request: the first chart then finds the index
   if (method !== "POST" || status !== 200) { if (!uploaded) await settle(); return; }
   // keep the browser's storage in step with the program
   if (u.pathname === "/api/upload") { const n = u.searchParams.get("name"); const base = n && baseName(n); if (base && body && !blob) { await safe(() => tx("files", "readwrite", s => s.put(body.buffer.byteLength ? body.buffer : new ArrayBuffer(0), base))); persistOnce(); } }
@@ -251,6 +296,7 @@ async function answer({ id, method, url, body, blob }) {
       if (n) {
         const base = n.split(/[\\/]/).pop();
         await safe(() => tx("files", "readwrite", s => s.delete(base)));
+        if (pool) pool.cancel(base);
         if (OPFS) { unmount("files/" + base); await ARCH.remove("files", base); }        // its index stays (cache): the space dialog frees it first
       }
     } catch (_) { /* ignore */ }

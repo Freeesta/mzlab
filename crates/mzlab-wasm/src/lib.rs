@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 use js_sys::{Function, Uint8Array};
-use mzlab_core::{analysis, mzml, raw};
+use mzlab_core::{analysis, mzidx, mzml, raw};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
@@ -326,6 +326,70 @@ impl Engine {
         #[cfg(not(target_arch = "wasm32"))]
         panic!("crash hook");
     }
+}
+
+/// Writes to JS at offsets: `write(offset, Uint8Array)` (the worker puts them in a file of OPFS).
+struct JsOutput {
+    write: Function,
+}
+
+impl mzidx::Output for JsOutput {
+    fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
+        self.write
+            .call2(&JsValue::NULL, &(offset as f64).into(), &Uint8Array::from(data))
+            .map(|_| ())
+            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "write"))
+    }
+}
+
+fn f64s(b: &[u8]) -> Vec<f64> {
+    b.chunks_exact(8)
+        .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
+        .collect()
+}
+
+/// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
+/// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory. Returns the statistics as JSON;
+/// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn build_mzidx(
+    size: f64,
+    read: Function,
+    write: Function,
+    levels: &[u8],
+    polarities: &[u8],
+    rt: &[u8],
+    tic: &[u8],
+    scans_json: &[u8],
+    source_json: String,
+    run_json: String,
+    hr1: bool,
+    budget_mb: u32,
+) -> Result<String, JsValue> {
+    let table = mzidx::ScanTable {
+        level: levels.to_vec(),
+        polarity: polarities.iter().map(|&b| b as i8).collect(),
+        rt: f64s(rt),
+        tic: f64s(tic),
+        scans_json: scans_json.to_vec(),
+        source_json,
+        run_json,
+        hr1,
+    };
+    let mut out = JsOutput { write };
+    let st = mzidx::build_mzml(
+        &table,
+        BlockReader::new(read, size as u64),
+        &mut out,
+        (budget_mb as usize) << 20,
+    )
+    .map_err(|e| error_json(&e))?;
+    Ok(format!(
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes
+    ))
 }
 
 fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {

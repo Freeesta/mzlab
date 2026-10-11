@@ -44,6 +44,8 @@
   "settings.space.value": "Riga dell'ingranaggio (solo nel sito); {files} e {idx} = dimensioni già scritte, es. «31.9 MB».",
   "settings.hrPpm": "Riga dell'ingranaggio; {input} = il campo numerico (HTML).",
   "err.http": "Errore di rete senza dettagli; {status} = codice HTTP.",
+  "files.pendingBar": "{done} = file già aperti, {n} = file della lista.",
+  "files.pendingRemove": "{name} = nome del file.",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.notAccepted": "{name} = nome del file.",
   "err.file.notMzml": "{name} = nome del file.",
