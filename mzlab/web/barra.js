@@ -36,7 +36,8 @@ const BARRA = (() => {
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
   const defaultW = () => (isHrMode() ? 340 : 260);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
-  const narrow = () => window.innerWidth < NARROW;
+  const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer:coarse)").matches);
+  const narrow = () => window.innerWidth < NARROW || coarse();          // narrow window or a finger: the panel is only a drawer
   const effPinned = () => _pinned && !narrow();
   const validTab = id => ["file", "calc", "losses", "adducts", "lists"].includes(id) || (HR_PANELS.includes(id) && isHrMode());
 
@@ -79,12 +80,29 @@ const BARRA = (() => {
     { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") },
     { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
     { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
+    // command palette (also reachable from the 🔍 button and Ctrl/⌘ K)
+    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
+    // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
+    { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
+    { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
+    { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
+    { id: "spec", bar: false, group: "graphs", ic: () => IC('<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>'), visible: () => inData() && shown("#np-spec"), run: () => clickEl("#np-spec") },
+    { id: "map", bar: false, group: "graphs", ic: () => IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.4"/><path d="M2.5 8h11M8 2.5v11"/>'), visible: () => inData() && shown("#np-map"), run: () => clickEl("#np-map") },
+    { id: "xic", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>'), visible: () => inData() && shown("#np-xic"), run: () => clickEl("#np-xic") },
+    { id: "mrm", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12M4 13V9M7 13V4M10 13V7"/>'), visible: () => inData() && shown("#np-mrm"), run: () => clickEl("#np-mrm") },
+    { id: "tile", bar: false, group: "graphs", ic: () => IC('<rect x="2" y="2" width="12" height="3.2" rx=".8"/><rect x="2" y="6.4" width="12" height="3.2" rx=".8"/><rect x="2" y="10.8" width="12" height="3.2" rx=".8"/>'), visible: () => inData(), run: () => clickEl("#np-tile") },
+    { id: "closeall", bar: false, group: "graphs", ic: () => IC('<path d="M4 4l8 8M12 4l-8 8"/>'), visible: () => inData(), run: () => clickEl("#np-closeall") },
+    { id: "sideL", bar: false, group: "panel", ic: () => ICONS.left, visible: () => inData(), run: () => setSide("left") },
+    { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
+    { id: "pin", bar: false, group: "panel", ic: () => ICONS.file, visible: () => inData() && !narrow(), run: () => { if (!_open) show(_tab); togglePin(); } },
     // external links, rare: in "Altro"
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
   const byId = id => CMD.find(c => c.id === id);
-  const visible = c => (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData()));
+  const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
+  const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
+  const visible = c => (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
   const lab = c => t(`cmd.${c.id}.lab`);
   const name = c => t(`cmd.${c.id}.name`);
   const tip = c => t(`cmd.${c.id}.tip`);
@@ -96,7 +114,7 @@ const BARRA = (() => {
     _w = typeof s.w === "number" && s.w >= MIN_W && s.w <= MAX_W ? s.w : defaultW();
     _pinned = !!s.pinned;
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = !!(s.open && _pinned);
+    _open = !!(s.open && _pinned && !narrow());
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
@@ -364,14 +382,14 @@ const BARRA = (() => {
     const bar = Q1("#stbar");
     if (!bar) return;
     const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
-    const common = CMD.filter(c => !c.hr && !c.item && !c.more);
+    const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end");
     const hr = CMD.filter(c => c.hr);
     let h = common.map(c => btnHtml(c)).join("");
     h += `<span class="tb-sep" role="separator" data-hrgrp="1"></span>`;
     h += hr.map(c => (c.items ? splitHtml(c) : btnHtml(c, "hrb"))).join("");
     h += `<span class="tb-sep" role="separator" data-sep2="1"></span>`;
     h += `<button type="button" class="tb" id="tb-more" data-cmd="more" aria-haspopup="menu" aria-expanded="false" title="${EHs(t("cmd.more.name"))}" aria-label="${EHs(t("cmd.more.name"))}"><span class="ti">${ICONS.more}</span><span class="tl">${EHs(t("cmd.more.lab"))}</span></button>`;
-    h += (window.PALETTE && PALETTE.buttonHtml) ? PALETTE.buttonHtml() : "";
+    h += CMD.filter(c => c.bar === "end").map(c => btnHtml(c)).join("");
     bar.innerHTML = h;
     bar.querySelectorAll("button[data-cmd]").forEach(b => {
       const c = byId(b.dataset.cmd);
@@ -382,7 +400,6 @@ const BARRA = (() => {
     });
     bar.querySelectorAll("[data-cmd-car]").forEach(b => { b.onclick = () => openGroupMenu(b); });
     bar.querySelectorAll(".tb").forEach(b => { b.tabIndex = -1; });
-    if (window.PALETTE && PALETTE.bindButton) PALETTE.bindButton(bar);
     syncVisibility();
     updateButtons();
     fit();
@@ -401,7 +418,7 @@ const BARRA = (() => {
     const bar = Q1("#stbar");
     if (!bar) return;
     CMD.forEach(c => {
-      if (c.item || c.more) return;
+      if (c.item || c.more || c.bar === false) return;
       const el = bar.querySelector(`[data-cmd="${c.id}"]`);
       if (el) el.hidden = !visible(c) || _dropped.has(c.id);
     });
@@ -482,6 +499,11 @@ const BARRA = (() => {
     el.focus();
     return true;
   }
+  // back to where the focus was before the bar (the body cannot take focus: then the bar just lets go of it)
+  function leaveToolbar() {
+    if (_before && _before !== document.body && document.contains(_before)) _before.focus();
+    else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
   function onBarKey(e) {
     const bar = Q1("#stbar");
     if (!bar || !bar.contains(e.target)) return;
@@ -499,7 +521,7 @@ const BARRA = (() => {
       else if (b.dataset.cmdMain) { e.preventDefault(); const car = bar.querySelector(`[data-cmd-car="${b.dataset.cmdMain}"]`); if (car) car.click(); }
       return;
     } else if (e.key === "Escape") {
-      if (_before && document.contains(_before)) { e.preventDefault(); _before.focus(); }
+      e.preventDefault(); leaveToolbar();
       return;
     }
     if (j == null) return;
@@ -583,8 +605,6 @@ const BARRA = (() => {
     });
     if (gone.length) rows.push({ sep: true });
     CMD.filter(c => c.more).forEach(c => rows.push({ label: name(c), ic: c.ic(), dom: c.dom, title: tip(c), fn: () => c.run() }));
-    const extra = (window.PALETTE && PALETTE.moreRows) ? PALETTE.moreRows() : [];
-    extra.forEach(r => rows.push(r));
     openMenu(anchor, rows);
   }
 
@@ -707,7 +727,7 @@ const BARRA = (() => {
         if (bar && bar.contains(document.activeElement)) {
           const pane = Q1("#sb-pane");
           if (_open && pane && !e.shiftKey) { e.preventDefault(); pane.focus(); return; }
-          if (_before && document.contains(_before)) { e.preventDefault(); _before.focus(); return; }
+          e.preventDefault(); leaveToolbar(); return;
         }
         if (focusToolbar()) e.preventDefault();
         return;
@@ -723,7 +743,7 @@ const BARRA = (() => {
         return;
       }
       if (e.key !== "Escape" || e.defaultPrevented || e._ctxWas) return;
-      if (Q1("#stmenu")) return;
+      if (Q1("#stmenu") || (window.PALETTE && PALETTE.isOpen)) return;
       const calcin = Q1("#calcin");
       if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) return;      // Esc first clears the field
       if (document.querySelector("dialog[open]") || Q1("#helppop:not([hidden])") || Q1("#uipset") || (Q1("#ctx") && !Q1("#ctx").hidden)) return;
@@ -744,6 +764,7 @@ const BARRA = (() => {
     }, true);
 
     window.addEventListener("resize", () => {
+      if (_open && _pinned && narrow()) { _open = false; saveState(); updateButtons(); }       // a window too narrow for the pinned panel: it closes, the charts get the page back
       applyLayout();
       fit();
     });
@@ -831,7 +852,8 @@ const BARRA = (() => {
     byId,
     name,
     lab,
-    visible
+    visible,
+    kw: c => t(`cmd.${c.id}.kw`)
   };
 })();
 
