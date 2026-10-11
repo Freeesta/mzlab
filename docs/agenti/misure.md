@@ -183,3 +183,23 @@ Cause: (1) il debounce di 60 ms riparte a ogni evento, quindi **durante il movim
 Le richieste per movimento salgono nel trascinamento continuo (prima il mirino non chiedeva nulla finché si muoveva, quindi non mostrava nulla) e scendono per ogni aggiornamento mostrato: 3 richieste → ≤ 1 (spettro e XIC solo se cambiano), 0 sulle scansioni già visitate (cache), mai più di due insieme. Il risultato a mirino fermo è identico (`tests/test_scan_axis.py`: stessa scansione, RT, m/z, intensità e `mode` di `nearest_scan` + `spectrum`, LR e HR a due livelli; `e2e_mappa_mirino`: spettro e XIC finali uguali a `/api/nearest_scan` + `/api/spectrum` + `/api/xic`). Il massimo di 50 ms del fotogramma LR non viene dal codice del mirino (4.2 ms al massimo) ma dal compositore di Chromium senza GPU con la mappa a schermo intero.
 
 **Cosa risolverà RUST_PRIMO e cosa no.** Già coperti dal motore Rust: l'XIC (`/api/xic`) e lo spettro di una scansione LR a centroidi senza fusione (`/api/spectra`, `rust-bridge.js`), cioè il costo (a) e (b) di Python, oggi 3-4 ms ma proporzionale al file nel vecchio percorso; il nuovo percorso del mirino li usa già con entrambi i motori. Restano: `/api/scan_axis` (una volta per file e livello, risposta Python; lista di RT in JSON), le copie JSON di array di numeri (7 ms su 500 picchi per lo spettro LR: il passaggio come `Float32Array` trasferibile è lavoro del motore, non della pagina), la cache e la coalescenza (solo JS), il disegno. Provato e scartato: una richiesta unica «XIC + spettro» (due andata-e-ritorno da 3-4 ms in parallelo non dominano più, e un endpoint unico escluderebbe l'XIC dal motore Rust); riduzione dell'XIC a min/max per colonna di pixel (il disegno costa 0.9 ms); letture di sole colonne dal `.mzidx` (lo spettro ora legge la scansione dal file, l'XIC usa già la ricerca per m/z).
+
+## Pulizia finale, fase A (commit di partenza 2d50415; Chromium cloud, dati sintetici, senza WASM Rust)
+| Misura | Prima | Dopo |
+|---|---|---|
+| `golden.py --controlla` | 2 differenze (`differenza_hr`, `statistica_pca`: «missing in engine», senza WASM) | uguale |
+| `verifica.py` completa | 131 OK, rossi e2e16 e e2e25 | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
+| `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 60 | 2 |
+| `prototipi/` | 1478 KB, 14 file | cancellata |
+| `bench.py --velocita` / `--mzidx` | non eseguiti: servono `site/` e il WASM Rust, assenti nel cloud | non eseguiti |
+
+Righe e KB per area (tutto `main`: la differenza include il lavoro delle altre chat entrato nella giornata, non solo la pulizia; le PR di pulizia da sole: −48 righe nella pagina e prototipi tolta, −1 e +0 nelle altre due).
+| Area | Righe prima | Righe dopo | KB prima | KB dopo |
+|---|---|---|---|---|
+| web (pagina) | 25204 | 25707 | 1912 | 1946 |
+| web teoria | 3237 | 3858 | 268 | 334 |
+| python mzlab | 8272 | 8272 | 424 | 424 |
+| rust crates | 22279 | 22765 | 726 | 744 |
+| tools | 5352 | 6256 | 307 | 358 |
+| tests | 22207 | 22863 | 1483 | 1524 |
+| TP_Mine | 12885 | 12885 | 770 | 770 |
