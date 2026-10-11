@@ -122,6 +122,25 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
             role[i] = ROLE_ISOTOPE;
         }
     }
+    pick_parents(f, &deps, &mut parent, &mut role, &mut alt);
+    open_readings(arcs, &mut alt);
+    let family = family_ids(&parent, &role);
+    Assigned {
+        parent,
+        role,
+        alt,
+        family,
+    }
+}
+
+/// Each dependent takes its best parent (not taken, no cycle, not excluded); equal-rank parents of another row set `ALT_PARENT`.
+fn pick_parents(
+    f: &FileFeatures,
+    deps: &[Dep],
+    parent: &mut [u32],
+    role: &mut [u8],
+    alt: &mut [u8],
+) {
     let mut k = 0;
     while k < deps.len() {
         let d = deps[k].dep;
@@ -131,7 +150,7 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
         for (m, c) in deps[k..end].iter().enumerate() {
             if !taken
                 && chosen.is_none()
-                && !reaches(&parent, c.par, d)
+                && !reaches(parent, c.par, d)
                 && !excluded(f, c.par as usize)
                 && role[d as usize] != ROLE_NONE
             {
@@ -146,8 +165,12 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
         }
         k = end;
     }
-    open_readings(arcs, &mut alt);
-    let family = (0..n)
+}
+
+/// Family of every row = row of its root + 1 (0 without role).
+fn family_ids(parent: &[u32], role: &[u8]) -> Vec<u32> {
+    let n = parent.len();
+    (0..n)
         .map(|i| {
             if role[i] == ROLE_NONE {
                 return 0;
@@ -158,13 +181,7 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
             }
             x as u32 + 1
         })
-        .collect();
-    Assigned {
-        parent,
-        role,
-        alt,
-        family,
-    }
+        .collect()
 }
 
 /// `ALT_*` of both ends of every undetermined arc that two readings explain.

@@ -179,6 +179,82 @@ fn table(rows: &Value) -> FileFeatures {
     f
 }
 
+fn check_arcs(fam: &mzlab_feat::family::Families, want: &Value) {
+    let wa = want["arcs"].as_array().unwrap();
+    assert_eq!(fam.arcs.len(), wa.len(), "arcs");
+    for (a, w) in fam.arcs.iter().zip(wa) {
+        let e = mzlab_feat::family::evidence::Edge {
+            kind: a.kind,
+            readings: a.readings.clone(),
+            proofs: a.proofs.clone(),
+        };
+        let what = format!("arc {}-{}", a.lo, a.up);
+        assert_eq!(kind_name(a.kind), w["kind"].as_str().unwrap(), "{what}");
+        assert_eq!(readings_of(&e), names_of(&w["readings"]), "{what}");
+        assert_eq!(
+            proofs_of(&e)
+                .into_iter()
+                .filter(|p| p.0 != "ratio")
+                .collect::<Vec<_>>(),
+            pairs_of(&w["proofs"]),
+            "{what}"
+        );
+    }
+}
+
+fn check_columns(fam: &mzlab_feat::family::Families, want: &Value) {
+    let ints = |k: &str| {
+        want[k]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_i64().unwrap())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        fam.role.iter().map(|&x| x as i64).collect::<Vec<_>>(),
+        ints("role"),
+        "roles"
+    );
+    assert_eq!(
+        fam.alt.iter().map(|&x| x as i64).collect::<Vec<_>>(),
+        ints("alt"),
+        "alternatives open"
+    );
+    assert_eq!(
+        fam.family_id.iter().map(|&x| x as i64).collect::<Vec<_>>(),
+        ints("family"),
+        "families"
+    );
+    assert_eq!(
+        fam.parent
+            .iter()
+            .map(|&x| if x == u32::MAX { -1 } else { x as i64 })
+            .collect::<Vec<_>>(),
+        ints("parent"),
+        "parents"
+    );
+}
+
+fn check_alternatives(fam: &mzlab_feat::family::Families, want: &Value) {
+    let wl = want["alternatives"].as_array().unwrap();
+    assert_eq!(fam.alternatives.len(), wl.len(), "neutral alternatives");
+    for (a, w) in fam.alternatives.iter().zip(wl) {
+        assert_eq!(
+            (a.family as u64, a.row as u64, a.reading as u64),
+            (
+                w[0].as_u64().unwrap(),
+                w[1].as_u64().unwrap(),
+                w[3].as_u64().unwrap()
+            )
+        );
+        assert!(
+            (a.mass - w[2].as_f64().unwrap()).abs() < 1e-9
+                && (a.points as f64 - w[4].as_f64().unwrap()).abs() < 1e-6
+        );
+    }
+}
+
 #[test]
 fn families_like_python() {
     let doc = golden("famiglie_identita.json");
@@ -221,73 +297,9 @@ fn families_like_python() {
         );
     }
     let fam = build_families(&f, &pairs, &spectra, |_, _| Ratio::Unavailable, 1, &p);
-    let wa = want["arcs"].as_array().unwrap();
-    assert_eq!(fam.arcs.len(), wa.len(), "arcs");
-    for (a, w) in fam.arcs.iter().zip(wa) {
-        let e = mzlab_feat::family::evidence::Edge {
-            kind: a.kind,
-            readings: a.readings.clone(),
-            proofs: a.proofs.clone(),
-        };
-        let what = format!("arc {}-{}", a.lo, a.up);
-        assert_eq!(kind_name(a.kind), w["kind"].as_str().unwrap(), "{what}");
-        assert_eq!(readings_of(&e), names_of(&w["readings"]), "{what}");
-        assert_eq!(
-            proofs_of(&e)
-                .into_iter()
-                .filter(|p| p.0 != "ratio")
-                .collect::<Vec<_>>(),
-            pairs_of(&w["proofs"]),
-            "{what}"
-        );
-    }
-    let ints = |k: &str| {
-        want[k]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|x| x.as_i64().unwrap())
-            .collect::<Vec<_>>()
-    };
-    assert_eq!(
-        fam.role.iter().map(|&x| x as i64).collect::<Vec<_>>(),
-        ints("role"),
-        "roles"
-    );
-    assert_eq!(
-        fam.alt.iter().map(|&x| x as i64).collect::<Vec<_>>(),
-        ints("alt"),
-        "alternatives open"
-    );
-    assert_eq!(
-        fam.family_id.iter().map(|&x| x as i64).collect::<Vec<_>>(),
-        ints("family"),
-        "families"
-    );
-    assert_eq!(
-        fam.parent
-            .iter()
-            .map(|&x| if x == u32::MAX { -1 } else { x as i64 })
-            .collect::<Vec<_>>(),
-        ints("parent"),
-        "parents"
-    );
-    let wl = want["alternatives"].as_array().unwrap();
-    assert_eq!(fam.alternatives.len(), wl.len(), "neutral alternatives");
-    for (a, w) in fam.alternatives.iter().zip(wl) {
-        assert_eq!(
-            (a.family as u64, a.row as u64, a.reading as u64),
-            (
-                w[0].as_u64().unwrap(),
-                w[1].as_u64().unwrap(),
-                w[3].as_u64().unwrap()
-            )
-        );
-        assert!(
-            (a.mass - w[2].as_f64().unwrap()).abs() < 1e-9
-                && (a.points as f64 - w[4].as_f64().unwrap()).abs() < 1e-6
-        );
-    }
+    check_arcs(&fam, want);
+    check_columns(&fam, want);
+    check_alternatives(&fam, want);
     assert!(fam.count() < n && fam.arcs.len() >= 5);
 }
 

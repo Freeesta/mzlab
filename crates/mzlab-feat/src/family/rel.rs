@@ -6,48 +6,6 @@
 
 use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};
 
-/// Isotope steps of `iimn.ISOTOPES` (only read by `readings`; the isotopologues of the file come from `isotopes`).
-const ISOTOPES: [(&str, f64); 3] = [("13C", 1.003355), ("34S/13C2", 1.99580), ("13C2", 2.00671)];
-/// `ionfamily.NEUTRAL_LOSSES`, then the alkene losses of `iimn.EXTRA_LOSSES` that are not already there, in the order of `iimn.LOSSES`.
-const LOSSES: [&str; 23] = [
-    "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",
-    "HCl", "HBr", "SO2", "SO3", "H2S", "CH3", "NO2", "C6H6", "C4H8", "C4H9N", "C4H8O",
-];
-
-pub const NH3_NAME: &str = "NH3";
-pub const NH4_NAME: &str = "[M+NH4]+";
-pub const FORMATE_NAMES: [&str; 2] = ["[M+FA-H]-", "HCOOH"];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RKind {
-    Adduct,
-    Isotope,
-    Loss,
-    Dimer,
-}
-
-/// One reading of a step. `step` is the expected signed difference (Y minus X); `ppm` the error of the measured one.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Reading {
-    pub kind: RKind,
-    pub name: String,
-    pub step: f64,
-    pub ppm: f64,
-}
-
-/// Tables of one polarity.
-pub struct Tables {
-    /// +1 or -1: sign of the proton in the base ion.
-    pub pol: i8,
-    adducts: Vec<(String, f64)>,
-    losses: Vec<(String, f64)>,
-    pub proton: f64,
-}
-
-fn neutral(f: &str) -> f64 {
-    mass(&parse_formula(f).expect("fixed formula"))
-}
-
 impl Tables {
     pub fn new(pol: i8) -> Self {
         let m = |e: &str| mass_of(e).expect("fixed element");
@@ -159,31 +117,48 @@ impl Tables {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Isotope steps of `iimn.ISOTOPES` (only read by `readings`; the isotopologues of the file come from `isotopes`).
+const ISOTOPES: [(&str, f64); 3] = [("13C", 1.003355), ("34S/13C2", 1.99580), ("13C2", 2.00671)];
+/// `ionfamily.NEUTRAL_LOSSES`, then the alkene losses of `iimn.EXTRA_LOSSES` that are not already there, in the order of `iimn.LOSSES`.
+const LOSSES: [&str; 23] = [
+    "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",
+    "HCl", "HBr", "SO2", "SO3", "H2S", "CH3", "NO2", "C6H6", "C4H8", "C4H9N", "C4H8O",
+];
 
-    #[test]
-    fn ammonium_step_has_two_readings() {
-        let t = Tables::new(1);
-        let r = t.readings(300.0, 317.02655, 5.0, 0.002);
-        let names: Vec<&str> = r.iter().map(|x| x.name.as_str()).collect();
-        assert_eq!(names, vec![NH4_NAME, "NH3"]);
-        assert!(r[0].ppm.abs() < 0.5);
-    }
+pub const NH3_NAME: &str = "NH3";
+pub const NH4_NAME: &str = "[M+NH4]+";
+pub const FORMATE_NAMES: [&str; 2] = ["[M+FA-H]-", "HCOOH"];
 
-    #[test]
-    fn formate_in_negative_mode_and_loss() {
-        let t = Tables::new(-1);
-        let r = t.readings(200.0, 246.00548, 5.0, 0.002);
-        assert!(r.iter().any(|x| x.name == "[M+FA-H]-") && r.iter().any(|x| x.name == "HCOOH"));
-    }
-
-    #[test]
-    fn dimer_is_found_and_inverted() {
-        let t = Tables::new(1);
-        let y = 2.0 * (250.1234 - t.proton) + t.proton;
-        assert!(t.is_dimer(250.1234, y, 5.0, 0.002));
-        assert!((t.dimer_base(y) - 250.1234).abs() < 1e-9);
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RKind {
+    Adduct,
+    Isotope,
+    Loss,
+    Dimer,
 }
+
+/// One reading of a step. `step` is the expected signed difference (Y minus X); `ppm` the error of the measured one.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reading {
+    pub kind: RKind,
+    pub name: String,
+    pub step: f64,
+    pub ppm: f64,
+}
+
+/// Tables of one polarity.
+pub struct Tables {
+    /// +1 or -1: sign of the proton in the base ion.
+    pub pol: i8,
+    adducts: Vec<(String, f64)>,
+    losses: Vec<(String, f64)>,
+    pub proton: f64,
+}
+
+fn neutral(f: &str) -> f64 {
+    mass(&parse_formula(f).expect("fixed formula"))
+}
+
+#[cfg(test)]
+#[path = "rel_tests.rs"]
+mod tests;

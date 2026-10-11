@@ -7,81 +7,6 @@
 
 use super::rel::{RKind, Reading, Tables};
 
-/// Version of the rules that give the proofs.
-pub const PROOF_VERSION: u32 = 1;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProofKind {
-    /// The step is in a table (information).
-    Step,
-    Coelution,
-    /// The m/z of X among the fragments of the MS2 of Y.
-    FragmentInMs2,
-    /// The ratio Y/X over the samples.
-    Ratio,
-    /// The fragments of X also in Y.
-    Skeleton,
-    /// The typical loss of the adduct in the MS2 of Y.
-    TypicalLoss,
-    NoFragmentation,
-}
-
-/// A piece of evidence: type, measured value, threshold, points (signed weight), sign (+1 supports the reading, -1 opposes it, 0 information
-/// or hint) and source. The version and the parameters belong to the whole set of families (`Families`).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Proof {
-    pub kind: ProofKind,
-    pub value: f32,
-    pub threshold: f32,
-    pub points: f32,
-    pub sign: i8,
-    pub source: &'static str,
-}
-
-const SOURCE: &str = "edge_evidence";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EdgeKind {
-    Adduct,
-    Isf,
-    Undetermined,
-    /// The step is none of the tables.
-    Other,
-}
-
-/// What is known of the ratio Y/X over the samples.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Ratio {
-    Unavailable,
-    /// `n` common samples, coefficient of variation (None: not finite).
-    Over {
-        n: u32,
-        cv: Option<f64>,
-    },
-}
-
-/// Strongest peaks of a spectrum (m/z, intensity), in the order `edge_evidence._spec` keeps them.
-#[derive(Debug, Clone, Default)]
-pub struct Spec {
-    pub mz: Vec<f64>,
-    pub it: Vec<f64>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Rules {
-    pub ppm: f64,
-    pub abs_da: f64,
-    pub coelution_min: f64,
-    pub cv_stable: f64,
-    pub min_samples: u32,
-    pub skeleton_min: f64,
-    pub max_peaks: usize,
-    /// Name of the reading of a loss that is in none of the tables but whose fragment is in the MS2 of the heavier ion.
-    pub unlisted: &'static str,
-    /// Declare a fragment on the proof of the MS2 alone when the ratio is `Unavailable` (one file).
-    pub fragment_without_ratio: bool,
-}
-
 impl Default for Rules {
     fn default() -> Self {
         Rules {
@@ -96,22 +21,6 @@ impl Default for Rules {
             fragment_without_ratio: true,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Edge {
-    pub kind: EdgeKind,
-    pub readings: Vec<Reading>,
-    pub proofs: Vec<Proof>,
-}
-
-pub struct Pair<'a> {
-    pub mz_lo: f64,
-    pub mz_up: f64,
-    pub ms2_lo: Option<&'a Spec>,
-    pub ms2_up: Option<&'a Spec>,
-    pub ratio: Ratio,
-    pub drt_min: Option<f64>,
 }
 
 impl Rules {
@@ -189,6 +98,81 @@ impl Rules {
         }
         (n, sh, (tot > 0.0).then(|| shared / tot))
     }
+}
+
+/// Version of the rules that give the proofs.
+pub const PROOF_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofKind {
+    /// The step is in a table (information).
+    Step,
+    Coelution,
+    /// The m/z of X among the fragments of the MS2 of Y.
+    FragmentInMs2,
+    /// The ratio Y/X over the samples.
+    Ratio,
+    /// The fragments of X also in Y.
+    Skeleton,
+    /// The typical loss of the adduct in the MS2 of Y.
+    TypicalLoss,
+    NoFragmentation,
+}
+
+/// A piece of evidence: type, measured value, threshold, points (signed weight), sign (+1 supports the reading, -1 opposes it, 0 information
+/// or hint) and source. The version and the parameters belong to the whole set of families (`Families`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Proof {
+    pub kind: ProofKind,
+    pub value: f32,
+    pub threshold: f32,
+    pub points: f32,
+    pub sign: i8,
+    pub source: &'static str,
+}
+
+const SOURCE: &str = "edge_evidence";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EdgeKind {
+    Adduct,
+    Isf,
+    Undetermined,
+    /// The step is none of the tables.
+    Other,
+}
+
+/// What is known of the ratio Y/X over the samples.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Ratio {
+    Unavailable,
+    /// `n` common samples, coefficient of variation (None: not finite).
+    Over {
+        n: u32,
+        cv: Option<f64>,
+    },
+}
+
+/// Strongest peaks of a spectrum (m/z, intensity), in the order `edge_evidence._spec` keeps them.
+#[derive(Debug, Clone, Default)]
+pub struct Spec {
+    pub mz: Vec<f64>,
+    pub it: Vec<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Rules {
+    pub ppm: f64,
+    pub abs_da: f64,
+    pub coelution_min: f64,
+    pub cv_stable: f64,
+    pub min_samples: u32,
+    pub skeleton_min: f64,
+    pub max_peaks: usize,
+    /// Name of the reading of a loss that is in none of the tables but whose fragment is in the MS2 of the heavier ion.
+    pub unlisted: &'static str,
+    /// Declare a fragment on the proof of the MS2 alone when the ratio is `Unavailable` (one file).
+    pub fragment_without_ratio: bool,
 }
 
 /// Coefficient of variation (sample deviation over |mean|) of the ratios up/lo over the samples where both are positive, as `ratio_stats`.
@@ -272,9 +256,26 @@ fn adduct_evidence(
     (pos, neg, tl_hit)
 }
 
+#[derive(Debug, Clone)]
+pub struct Edge {
+    pub kind: EdgeKind,
+    pub readings: Vec<Reading>,
+    pub proofs: Vec<Proof>,
+}
+
 /// Port of `edge_evidence.edge_evidence` (without the texts). A step in none of the tables whose lighter ion is a fragment in the MS2 of the
 /// heavier one is read as a loss named `Rules::unlisted`: the neutral loss does not matter when the MS2 shows the fragment.
-pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
+pub struct Pair<'a> {
+    pub mz_lo: f64,
+    pub mz_up: f64,
+    pub ms2_lo: Option<&'a Spec>,
+    pub ms2_up: Option<&'a Spec>,
+    pub ratio: Ratio,
+    pub drt_min: Option<f64>,
+}
+
+/// Readings of the step between the ends, isotopes apart; an unlisted loss when the lighter ion is a fragment in the MS2 of the heavier.
+fn readings_of(t: &Tables, r: &Rules, p: &Pair) -> Vec<Reading> {
     let mut readings: Vec<Reading> = t
         .readings(p.mz_lo, p.mz_up, r.ppm, r.abs_da)
         .into_iter()
@@ -292,6 +293,59 @@ pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
             ppm: 0.0,
         });
     }
+    readings
+}
+
+/// Proofs of an ISF reading (fragment in the MS2 of the heavier ion, ratio); true when it stands.
+fn loss_proofs(r: &Rules, p: &Pair, ev: &mut Vec<Proof>) -> bool {
+    let frag = p.ms2_up.and_then(|s| r.near(s, p.mz_lo, p.mz_up));
+    if p.ms2_up.is_some() {
+        ev.push(proof(
+            ProofKind::FragmentInMs2,
+            frag.unwrap_or(0.0),
+            0.0,
+            2.0,
+            if frag.is_some() { 1 } else { -1 },
+        ));
+    }
+    let ratio_ok = match p.ratio {
+        Ratio::Unavailable => r.fragment_without_ratio,
+        Ratio::Over { cv, .. } => cv.is_some_and(|c| c <= r.cv_stable),
+    };
+    frag.is_some() && ratio_ok
+}
+
+/// Label of an edge from the kinds of reading and the adduct (pos, neg) and ISF proofs.
+fn decide(has_adduct: bool, has_loss: bool, (pos, neg, isf_ok): (bool, bool, bool)) -> EdgeKind {
+    match (has_adduct, has_loss) {
+        (true, false) => {
+            if neg && !pos {
+                EdgeKind::Undetermined
+            } else {
+                EdgeKind::Adduct
+            }
+        }
+        (false, true) => {
+            if isf_ok {
+                EdgeKind::Isf
+            } else {
+                EdgeKind::Undetermined
+            }
+        }
+        _ => {
+            if pos && !isf_ok {
+                EdgeKind::Adduct
+            } else if isf_ok && !pos {
+                EdgeKind::Isf
+            } else {
+                EdgeKind::Undetermined
+            }
+        }
+    }
+}
+
+pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
+    let readings = readings_of(t, r, p);
     let adduct_rels: Vec<&Reading> = readings
         .iter()
         .filter(|x| matches!(x.kind, RKind::Adduct | RKind::Dimer))
@@ -318,24 +372,7 @@ pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
             if ok { 1 } else { -1 },
         ));
     }
-    let mut isf_ok = false;
-    if !loss_rels.is_empty() {
-        let frag = p.ms2_up.and_then(|s| r.near(s, p.mz_lo, p.mz_up));
-        if p.ms2_up.is_some() {
-            ev.push(proof(
-                ProofKind::FragmentInMs2,
-                frag.unwrap_or(0.0),
-                0.0,
-                2.0,
-                if frag.is_some() { 1 } else { -1 },
-            ));
-        }
-        let ratio_ok = match p.ratio {
-            Ratio::Unavailable => r.fragment_without_ratio,
-            Ratio::Over { cv, .. } => cv.is_some_and(|c| c <= r.cv_stable),
-        };
-        isf_ok = frag.is_some() && ratio_ok;
-    }
+    let isf_ok = !loss_rels.is_empty() && loss_proofs(r, p, &mut ev);
     if let Ratio::Over { cv: Some(c), .. } = p.ratio {
         ev.push(proof(
             ProofKind::Ratio,
@@ -345,6 +382,7 @@ pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
             if c <= r.cv_stable { 1 } else { -1 },
         ));
     }
+    let mut isf_ok = isf_ok;
     let (pos, neg, tl_hit) = match adduct_rels.first() {
         Some(a) => adduct_evidence(t, r, p, &a.name, &mut ev),
         None => (false, false, false),
@@ -352,31 +390,11 @@ pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
     if tl_hit && loss_rels.iter().all(|x| x.name == super::rel::NH3_NAME) {
         isf_ok = false;
     }
-    let kind = match (!adduct_rels.is_empty(), !loss_rels.is_empty()) {
-        (true, false) => {
-            if neg && !pos {
-                EdgeKind::Undetermined
-            } else {
-                EdgeKind::Adduct
-            }
-        }
-        (false, true) => {
-            if isf_ok {
-                EdgeKind::Isf
-            } else {
-                EdgeKind::Undetermined
-            }
-        }
-        _ => {
-            if pos && !isf_ok {
-                EdgeKind::Adduct
-            } else if isf_ok && !pos {
-                EdgeKind::Isf
-            } else {
-                EdgeKind::Undetermined
-            }
-        }
-    };
+    let kind = decide(
+        !adduct_rels.is_empty(),
+        !loss_rels.is_empty(),
+        (pos, neg, isf_ok),
+    );
     Edge {
         kind,
         readings,
