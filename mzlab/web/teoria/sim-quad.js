@@ -43,9 +43,8 @@ const QUAD = (() => {
     }
     winCache.set(key, res); return res;
   }
-  const qOf = (mz, V, r0, f) => 4 * E * V / (mz * AMU * r0 * r0 * Math.pow(2 * Math.PI * f, 2));
   const VOf = (mz, q, r0, f) => q * mz * AMU * r0 * r0 * Math.pow(2 * Math.PI * f, 2) / (4 * E);
-  return { rk4, trace, stableX, stableY, stable, window, qOf, VOf, E, AMU };
+  return { rk4, trace, stableX, stableY, stable, window, VOf, E, AMU };
 })();
 
 document.addEventListener("DOMContentLoaded", () => {

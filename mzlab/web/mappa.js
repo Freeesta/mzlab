@@ -7,7 +7,7 @@ window.MAPPA = (() => {
   const PREF_KEY = "qqq.mappa";
   const PREF = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(PREF_KEY) || "{}"); } catch (e) { /* no storage */ } return o; })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
-  const SIDE = 180, BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
@@ -341,7 +341,6 @@ window.MAPPA = (() => {
     draw(p); uiSave();
   }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
-  function lockAt(p, px, py) { const s = st(p), a = p._a; if (!a) return; s.lock = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; overlay(p); margins(p); }
   function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
   // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
   function ctx(p, e, px, py) {
