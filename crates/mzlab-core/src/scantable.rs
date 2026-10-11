@@ -578,8 +578,6 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
             let Some(b) = b else { break };
             last_end = b;
             pos = b;
-            buf.clear();
-            buf_off = pos;
         }
     }
 

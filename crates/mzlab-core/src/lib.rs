@@ -28,6 +28,7 @@ pub mod scantable;
 pub mod specpeaks;
 pub mod spectrum;
 pub mod upload;
+pub mod window;
 pub mod stats;
 pub mod subformulas;
 

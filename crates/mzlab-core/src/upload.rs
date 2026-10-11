@@ -9,6 +9,7 @@ use crate::idxread::ReadAt;
 use crate::json::Out;
 use crate::mzidx::ScanTable;
 use crate::scantable;
+use crate::window::Windowed;
 
 const PROBE: u64 = 65536;
 const STEP: u64 = 1 << 20;
@@ -50,7 +51,7 @@ pub fn fingerprint<R: ReadAt>(r: &mut R, size: u64) -> Result<(String, String)> 
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
-    let t = scantable::read(r, size)?;
+    let t = scantable::read(&mut Windowed::new(r, size), size)?;
     let (sha256, probe) = fingerprint(r, size)?;
     let mut source = Out::default();
     source
