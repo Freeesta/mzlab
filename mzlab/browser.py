@@ -5,6 +5,7 @@ The files the student opens live in the memory of the page (Pyodide's file syste
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from io import BytesIO
 from pathlib import Path
@@ -14,15 +15,81 @@ from .api import dispatch
 from .app import App
 from .bigfiles import too_big
 from .i18n import UserError
+from .reader import mzidx
+from .reader.mzml import Run
 
 WORK = Path("/work/sessione")
 app: App | None = None
 
 
+INDEX_TMP = "/idxtmp"           # where Python writes the indexes it builds; the worker moves them to OPFS (web/browser-worker.js) and they are mounted from there
+_tried: set = set()
+
+
 def start() -> None:
     global app
     WORK.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("MZLAB_CACHE", INDEX_TMP)
+    mzidx.FLAT = True                                    # the index of "x.mzML" is "x.mzML.mzidx": the real path of a mounted file changes at every visit
     app = App(WORK)
+
+
+def configure(small: bool = False) -> None:
+    """The ceiling of the blocks kept in memory: 32 MB on a tablet or a phone, 64 MB elsewhere."""
+    mzidx.set_cache_limit(small=bool(small))
+    mzidx.BATCH_PEAKS, mzidx.BUILD_BYTES = 1 << 18, 32 << 20       # the heap of the engine never shrinks: build the indexes in smaller pieces
+
+
+def build_index(name: str) -> bool:
+    """Build the .mzidx of an uploaded mzML now (in the session when the file is open, otherwise with a Run of its own). True if there is an index afterwards."""
+    p = WORK / app.safe_name(name)
+    try:
+        it = next((i for i in (app.session.items if app.session else []) if i.path.name == p.name), None)
+        run = it.run if it else Run(p)
+        try:
+            return bool(run.scans) and bool(run._ensure_index())
+        finally:
+            if not it:
+                run.close()
+    except Exception:  # noqa: BLE001 -- the index is an optimisation: the tables are then built in memory when asked for
+        return False
+
+
+def new_indexes() -> list:
+    """[[mzML name, path]] of the indexes built in the temporary folder and not yet handed to the worker."""
+    out, folder = [], Path(mzidx.cache_dir())
+    for f in sorted(folder.glob("*.mzidx")):
+        name = f.name[:-len(".mzidx")]
+        if name not in mzidx.REGISTRY and (WORK / name).exists() and f.name not in _tried:
+            _tried.add(f.name)
+            out.append([name, str(f)])
+    return out
+
+
+def adopt_index(name: str, path: str) -> bool:
+    """The worker put the index of `name` in OPFS and mounted it at `path`: the open files switch to it and the temporary copy goes."""
+    ok, seen = True, set()
+    for it in (app.session.items if app.session else []):
+        if it.path.name == name and id(it.run) not in seen:
+            seen.add(id(it.run))
+            ok = it.run.use_index(path) and ok
+    if ok:
+        mzidx.REGISTRY[name] = path
+        (Path(mzidx.cache_dir()) / (name + ".mzidx")).unlink(missing_ok=True)
+    return ok
+
+
+def register_indexes(paths: dict) -> None:
+    """At the start: the indexes found in OPFS and mounted by the worker, {mzML name: path}."""
+    mzidx.FLAT = True
+    mzidx.REGISTRY.update(paths)
+
+
+def forget_index(name: str) -> None:
+    """The file `name` was removed or replaced: its index is not used any more."""
+    mzidx.REGISTRY.pop(name, None)
+    _tried.discard(name + ".mzidx")
+    (Path(mzidx.cache_dir()) / (name + ".mzidx")).unlink(missing_ok=True)
 
 
 def link_big(name: str, target: str):

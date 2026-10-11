@@ -61,3 +61,42 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 
 ## Match di tabelle di feature (`UNT_BENCH=1 python3 tests_e2e/e2e_untarget.py`, Chromium Linux, motore WebAssembly, 2026-10-11)
 5000 feature con MS2 (12 picchi) cercate in una libreria sintetica di 20 000 voci, polarità positiva, 10 ppm sul precursore: lettura della tabella e dell'MGF 0,1 s, ricerca e livelli 0,7 s (soglia 15 s, un solo giro). Con una libreria di 10^6 voci il costo è quello di «Identifica tutte le MS2» sopra (5000 richieste in circa 20 s). La lettura di un `merged_pos.csv` vero da 58 MB (249 colonne) non è misurata qui: si fa solo con `MZLAB_UNTARGET`.
+
+## Indice `.mzidx` (`python3 tools/bench.py --mzidx [--solo lr|hr] [--site DIR]`, motore Python, Chromium Linux con profilo persistente, 2026-10-11)
+«Prima» = il sito costruito dal commit precedente al punto 2 (tabella dei picchi in memoria, file in IndexedDB/WORKERFS), «dopo» = sito con `.mzidx` in OPFS; stessi file, stessa macchina, un giro. File: sintetici (nessun dato del laboratorio nel contenitore): 20 Full Scan LR di 2,4 MB; 15 file HR DDA di 78 MB ottenuti ripetendo 20 volte il file Orbitrap sintetico (`inflate`: ~15.800 scansioni e 2 M di picchi in MS1 ciascuno, più scansioni e meno picchi per MB di un file vero). Apertura = invio dei file, lettura, scrittura in OPFS e costruzione dell'indice di ognuno; primo disegno = clic su «Apri» fino al TIC; riapertura = nuova pagina nello stesso profilo, fino al primo disegno. Tempi di risposta su 3 × N spettri (`api/scanbin`), 5 m/z × 2 giri di XIC su tutti i file insieme, 2N richieste di TIC (cambio file). La mappa è `api/map` di ogni file sulla griglia di sessione.
+
+**20 Full Scan LR (sintetici, 2,4 MB l'uno)**
+
+| misura | prima | dopo |
+|---|---|---|
+| apertura (invio + lettura + indice), s | 4.28 | 8.65 |
+| primo disegno, s | 3.92 | 1.38 |
+| TIC + 5 XIC di ogni file, s | 1.02 | 1.47 |
+| mappa di tutti i file, s | 1.06 | 1.1 |
+| riapertura fino al primo disegno, s | 11.35 | 8.16 |
+| mappa di tutti i file dopo la riapertura, s | 1.15 | 1.19 |
+| spettro (mediana / max), ms | 2.2 / 7.1 | 2.5 / 9.6 |
+| XIC su tutti i file (mediana / max), ms | 68.5 / 112.9 | 45 / 66.1 |
+| cambio file, TIC (mediana / max), ms | 5.2 / 8.4 | 5.7 / 14.1 |
+| heap WASM dopo il lavoro, MB | 155.5 | 155.5 |
+| heap WASM dopo la riapertura, MB | 155.5 | 129.6 |
+| RSS massima del browser, MB | 861.9 | 831.3 |
+
+**15 HR DDA da 78 MB (sintetici)**
+
+| misura | prima | dopo |
+|---|---|---|
+| apertura (invio + lettura + indice), s | 139.41 | 166.62 |
+| primo disegno, s | 127.86 | 12.98 |
+| TIC + 5 XIC di ogni file, s | 6.95 | 6.04 |
+| mappa di tutti i file, s | 23.46 | 5.64 |
+| riapertura fino al primo disegno, s | 252.52 | 24.27 |
+| mappa di tutti i file dopo la riapertura, s | 23.15 | 7.49 |
+| spettro (mediana / max), ms | 10.9 / 38.3 | 7.5 / 21.8 |
+| XIC su tutti i file (mediana / max), ms | 636 / 675.3 | 500.3 / 551.7 |
+| cambio file, TIC (mediana / max), ms | 74.6 / 107 | 73.9 / 109.7 |
+| heap WASM dopo il lavoro, MB | 1011.4 | 570.9 |
+| heap WASM dopo la riapertura, MB | 1011.7 | 570.9 |
+| RSS massima del browser, MB | 1701.2 | 1355.3 |
+
+Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 128 s a 13 s (l'indice si costruisce durante l'invio, che dura il 20% in più; apertura + primo disegno 267 s → 180 s); i picchi non stanno più nella memoria del motore (heap WASM 1011 → 571 MB: resta la tabella delle scansioni, ~1,9 KB per scansione, 440 MB per 237.000 scansioni sintetiche) e la RSS scende di 350 MB. Nei file LR piccoli l'invio costa il doppio (8,7 s contro 4,3: l'indice è costruito subito, prima si costruiva al primo disegno, 3,9 s → 1,4 s) e la riapertura scende da 11,4 s a 8,2 s, di cui ~4,5 s sono l'avvio del motore. Mappa di tutti i file: ×4 per HR (23 s → 5,6 s, `np.maximum.at` al posto dell'ordinamento per cella), invariata per LR. XIC su 20 file LR 69 → 45 ms (mediana), sotto i 100 ms; su 15 file HR resta 500 ms perché la risposta contiene 475.000 numeri da scrivere in JSON (`rounded()` ha tolto 130 ms): il lavoro sull'indice è ~1 ms. Spettro 2,5 ms (LR) e 7,5 ms (HR), cambio file 5,7 e 74 ms: sotto 16 ms e 200 ms.

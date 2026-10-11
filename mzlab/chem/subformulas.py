@@ -14,6 +14,23 @@ ELECTRON = 0.00054858
 MAX_COMBINATIONS = 300_000
 
 
+def submasses(formula: str, z: int = 1, min_mz: float = 0.0) -> np.ndarray:
+    """Sorted m/z of every sub-formula of the ion `formula` (as `subformulas`, without building the names: for the fragment constraint)."""
+    f = parse_formula(formula)
+    z = int(z) or 1
+    els = sorted(f)
+    total = 1
+    for e in els:
+        total *= f[e] + 1
+    if total > MAX_COMBINATIONS:
+        raise UserError("err.subxic.many", {"n": total}, f"{total} sub-formulas: write a smaller formula")
+    mass = np.zeros(1)
+    for e in els:
+        mass = (mass[:, None] + MASS[e] * np.arange(f[e] + 1)[None, :]).ravel()
+    mz = (mass[1:] - z * ELECTRON) / abs(z)                      # index 0 is the empty formula
+    return np.sort(mz[mz >= min_mz])
+
+
 def subformulas(formula: str, z: int = 1, min_mz: float = 0.0) -> tuple[dict, list[tuple[str, float]]]:
     """(parsed formula, [(sub-formula, ion m/z)]) for every sub-formula (each element from 0 to its count, at least one atom) whose ion m/z is
     at least `min_mz`. The formula is read as the formula of the ION: the mass loses (z > 0) or gains (z < 0) |z| electrons. Sorted by m/z."""

@@ -797,10 +797,7 @@ def _cells(cell: np.ndarray, w: np.ndarray, size: int, agg: str, n_scans: np.nda
         return (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32).ravel()
     out = np.zeros(size, dtype=np.float32)
     if len(cell):
-        o = np.argsort(cell, kind="stable")
-        c, v = cell[o], w[o]
-        st = np.flatnonzero(np.r_[True, c[1:] != c[:-1]])
-        out[c[st]] = np.maximum.reduceat(v, st)
+        np.maximum.at(out, cell, w.astype(np.float32, copy=False))          # the maximum is the same in any order (and float32 rounding is monotonic): no sorting needed
     return out
 
 

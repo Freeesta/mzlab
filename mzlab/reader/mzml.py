@@ -279,6 +279,7 @@ class Run:
             self.sha256 = self._compute_sha256()
         else:
             self.timing["indice"] = round(time.perf_counter() - t0, 3)          # the scan table taken from the .mzidx
+        self.release()                                                           # the read-ahead window of a plain-read file (16 MB) is not kept between operations
 
     # ------------------------------------------------------------------ the .mzidx
     def _default_index_path(self) -> Path:
@@ -595,6 +596,7 @@ class Run:
             out.append(d)
             pos = b + 1
         self._chroms = out
+        self.release()
         return out
 
     def chromatogram(self, i: int):

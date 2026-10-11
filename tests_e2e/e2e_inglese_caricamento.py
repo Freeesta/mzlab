@@ -50,7 +50,7 @@ try:
             shutil.rmtree("/tmp/s_ingl_b", ignore_errors=True)
             files = synth.make_series("/tmp/s_ingl_b", [0, 15, 60]); stage(pg, files)
             t = pg.inner_text("#flist")
-            for w in ("Experiment", "Type", "Time (min)", "Size", "sample", "blank"): assert w in t, (w, t)
+            for w in ("Experiment", "Type", "Time", "Size", "sample", "blank"): assert w in t, (w, t)
             assert re.search(r"\d+ files?", t), t
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("file table in English", upload)

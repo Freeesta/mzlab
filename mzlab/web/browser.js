@@ -8,13 +8,12 @@
   const SRC = document.currentScript.src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response);
-  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) { /* optional: keeps the files from being evicted */ }
   try { if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   let worker;
   // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
-  // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database (tests)
+  // ?riparti=1 (the button «start from scratch») deletes the saved files, not the notebook; ?ripresa=ms shortens the wait for a stuck database and ?opfs=0 keeps the files in memory and IndexedDB (tests)
   const wurl = new URL("browser-worker.js", SRC);
-  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); }
+  { const q = new URLSearchParams(location.search); if (q.get("riparti") === "1") wurl.searchParams.set("riparti", "1"); if (/^\d+$/.test(q.get("ripresa") || "")) wurl.searchParams.set("r", q.get("ripresa")); if (q.get("opfs") === "0") wurl.searchParams.set("opfs", "0"); }
   try { if (modern && !window.QQQ_PHONE) worker = new Worker(wurl, { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
@@ -31,6 +30,7 @@
   // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
   const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
   window.qqHardReset = async () => {
+    await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());     // the files and indexes in OPFS
     await wait(new Promise(r => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
@@ -95,8 +95,8 @@
     }
     if (rb && method === "POST" && /^(\.\/)?api\/upload/.test(url)) rb.noteUpload(new URL(url, "http://x/").searchParams.get("name"), init.body);
     let body = null, blob = null;
-    const BIG = 50 << 20;      // a big file goes to the worker as a Blob (no copy: it is mounted there, see browser-worker.js)
-    if (method === "POST" && /^(\.\/)?api\/upload/.test(url) && typeof Blob !== "undefined" && init.body instanceof Blob && init.body.size > BIG) blob = init.body;
+    const BIG = 50 << 20;      // an mzML (or any big file) goes to the worker as a Blob (no copy: the worker keeps it in OPFS and mounts it, see browser-worker.js)
+    if (method === "POST" && /^(\.\/)?api\/upload/.test(url) && typeof Blob !== "undefined" && init.body instanceof Blob && (init.body.size > BIG || /\.mzml$/i.test(new URL(url, "http://x/").searchParams.get("name") || ""))) blob = init.body;
     else if (init.body != null) body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(await new Response(init.body).arrayBuffer());
     const id = ++seq;
     const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
