@@ -15,6 +15,7 @@ pub mod rois;
 pub mod routes;
 pub mod scantable;
 pub mod specpeaks;
+pub mod stats;
 
 pub use error::{Error, Result};
 
