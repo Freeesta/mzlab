@@ -46,22 +46,22 @@ try:
         b = p.chromium.launch()
         out = {}
         def pool():
-            pg, idx, ans, perf = session(b, "?pool=auto")
+            pg, idx, ans, perf = session(b)
             out["pool"] = (idx, ans)
             assert all(i["engine"] == "rust" and i["passes"] >= 1 for i in idx), idx
             assert all(f["indexed"] for f in perf["files"]), perf
             assert len({i["name"] for i in idx}) == N
         step("the pool builds every index with the Rust builder", pool)
         def python():
-            pg, idx, ans, perf = session(b, "")
+            pg, idx, ans, perf = session(b, "?pool=0")
             out["py"] = (idx, ans)
             assert all(i["engine"] == "python" for i in idx), idx
-        step("by default (and with ?pool=0) Python builds them: the pool is opt-in", python)
+        step("?pool=0: Python builds them (the reference)", python)
         def same():
             assert out["pool"][1] == out["py"][1], "chrom/xic differ between the Rust and the Python index"
         step("the charts from the Rust index are identical to those from the Python one", same)
         def nowasm():
-            pg, idx, ans, perf = session(b, "?pool=auto", block_wasm=True)
+            pg, idx, ans, perf = session(b, "", block_wasm=True)
             assert all(i["engine"] == "python" and i["why"] for i in idx), idx
             assert ans == out["py"][1]
         step("without the .wasm Python builds the indexes and the files open all the same", nowasm)
@@ -69,10 +69,9 @@ try:
             pg, idx, ans, perf = session(b, "?pool=1")
             assert all(i["engine"] == "rust" for i in idx) and ans == out["py"][1]
         step("a pool of one worker gives the same result", one)
-        def forced_off():
-            pg, idx, ans, perf = session(b, "?pool=0")
-            assert all(i["engine"] == "python" for i in idx), idx
-        step("?pool=0 gives Python", forced_off)
+        def by_default():
+            assert all(i["engine"] == "rust" for i in out["pool"][0]), out["pool"][0]
+        step("by default the pool builds the indexes", by_default)
         b.close()
 finally:
     srv.terminate()

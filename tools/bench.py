@@ -431,7 +431,7 @@ def scenario_indici(name: str, files: list[str], port: int, site: Path, construc
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1)
     n = len(files)
-    q = "?motore=python" if constructor == "python" else "?motore=python&pool=auto"
+    q = "?motore=python&pool=0" if constructor == "python" else "?motore=python"
     out: dict = {"scenario": name, "constructor": constructor, "files": n, "file_mb": round(sum(os.path.getsize(f) for f in files) / 2**20, 1)}
     try:
         with sync_playwright() as p:
@@ -757,7 +757,7 @@ def main() -> None:
             md = ROOT / "docs" / "agenti" / "misure.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
             sec = [f"## Costruttore del `.mzidx` (`python3 tools/bench.py --indici --scrivi`, Chromium Linux {os.cpu_count()} CPU, {time.strftime('%Y-%m-%d')}, commit {commit})",
-                   "«python» = costruttore Python in Pyodide (predefinito), «pool» = worker Rust (`?pool=auto`). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); "
+                   "«python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); "
                    "memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo."] + lines
             txt = md.read_text(encoding="utf-8")
             head, sep, rest = txt.partition("\n## Costruttore del `.mzidx`")
