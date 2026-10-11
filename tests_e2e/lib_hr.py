@@ -33,3 +33,23 @@ def load(pg, files, wait=6000, n=None, settle=1500):
     pg.click("text=Carica dati"); pg.wait_for_timeout(wait)
     if n:
         pg.wait_for_function(f"E.files.length>={n}", timeout=90000); pg.wait_for_timeout(1500)
+
+
+def hr_variants(src, d):
+    """From a synthetic HR DDA file make three small HR files in folder d: only the Full Scans (HR_full-t5), only the MS2 scans (HR_ms2-t10: no parent scan,
+    so not a DDA) and a single scan (HR_inf-t15, an infusion). Returns the three paths."""
+    import re
+    s = Path(src).read_text(encoding="utf-8")
+    head, rest = s.split("<spectrumList", 1)
+    lst, tail = rest.split("</spectrumList>", 1)
+    attrs, body = lst.split(">", 1)
+    spectra = re.findall(r"<spectrum .*?</spectrum>", body, flags=re.S)
+    lvl = lambda sp: 2 if 'name="ms level" value="2"' in sp else 1
+    ms1, ms2 = [sp for sp in spectra if lvl(sp) == 1], [sp for sp in spectra if lvl(sp) == 2]
+    out = []
+    for name, keep in (("HR_full-t5", ms1), ("HR_ms2-t10", ms2), ("HR_inf-t15", ms1[:1])):
+        k = [re.sub(r'index="\d+"', f'index="{i}"', sp, count=1) for i, sp in enumerate(keep)]
+        p = Path(d) / f"{name}.mzML"
+        p.write_text(head + f'<spectrumList count="{len(k)}">' + "".join(k) + "</spectrumList>" + tail, encoding="utf-8")
+        out.append(p)
+    return out
