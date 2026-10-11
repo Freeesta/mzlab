@@ -43,6 +43,7 @@ class Item:
         # part = {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS2"}: one experiment of a MIXED file (survey + product ions, MRM + EPI, + and - polarity).
         # The parts of a file share one Run (the file is read once); `file` is then "name.mzML#tag", the name of the physical file is `path.name`.
         self.file, self.time, self.type, self.path, self.conc, self.cunit = file, time, typ, path, conc, cunit
+        self.rep: str | None = None           # replicate group typed by the user (None = the automatic one: same type, time and concentration)
         self.part = part
         base = label or Path(path).stem
         self.label = base + (f" · {part['tag']}" if part and not base.endswith(part["tag"]) else "")
@@ -129,7 +130,7 @@ class Item:
         t2 = self._tbl(2) if ms2 else None
         pol = sorted({s.polarity for s in self.sc if s.polarity})
         out = {"file": self.file, "label": self.label, "sha256": getattr(self, "sha256", "") or getattr(r, "sha256", ""),
-                "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
+                "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit, "rep": self.rep,
                 "scans": len(self.sc), "ms1": len(ms1), "ms2": len(ms2),
                 "rt_min": float(min((s.rt for s in self.sc), default=0.0)),
                 "rt_max": float(max((s.rt for s in self.sc), default=0.0)),
@@ -922,11 +923,13 @@ class Session:
             common = (s.get("label") or label, s["time"] if s.get("time") is not None else t, s.get("type") or typ)
             if not parts:
                 item = Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run)
+                item.rep = s.get("rep") or None
                 self.items.append(item)
                 hr_info = item.hr_info()
             else:
                 for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
                     item = Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run)
+                    item.rep = s.get("rep") or None
                     self.items.append(item)
                     hr_info = item.hr_info()
             if hr_info["prof1"]["hr"] or hr_info["prof2"]["hr"]:
@@ -938,6 +941,28 @@ class Session:
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]
+
+    def set_meta(self, entries: list[dict]) -> int:
+        """Change type, time (minutes), concentration, its unit and replicate group of files already open. Each entry names a file
+        ('x.mzML' reaches every part of it) and carries only the fields to change; returns how many items changed."""
+        n = 0
+        for e in entries:
+            name = str(e.get("file", ""))
+            for it in self.items:
+                if name not in (it.file, it.file.partition("#")[0]):
+                    continue
+                if e.get("type") in ("sample", "blank", "standard"):
+                    it.type = e["type"]
+                if "time" in e:
+                    it.time = None if e["time"] in (None, "") else float(e["time"])
+                if "conc" in e:
+                    it.conc = None if e["conc"] in (None, "") else float(e["conc"])
+                if "cunit" in e:
+                    it.cunit = e["cunit"] or None
+                if "rep" in e:
+                    it.rep = str(e["rep"] or "").strip() or None
+                n += 1
+        return n
 
     def grid(self, level: int = 1, rt_bin: float = 0.04, dmz: float = 1.0) -> dict:
         """Common RT x m/z grid for the ion maps of every file that has scans of this level."""
