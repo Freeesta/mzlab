@@ -73,6 +73,25 @@ try:
             pg.fill(".nV", f"{sol[0]:.3f}"); pg.dispatch_event(".nV", "input"); pg.fill(".nL", f"{sol[1]:.5f}"); pg.dispatch_event(".nL", "input")
             pg.click(".ck"); assert "Riuscito" in pg.inner_text(".wk .res")
         step("short games: one round each", games)
+        def hr_levels():
+            pg.goto(base + "pratica-formula.html"); pg.wait_for_timeout(800)
+            pg.select_option(".lv", "3"); pg.wait_for_timeout(300)
+            e = pg.evaluate("LCUI.last.hrnt")
+            assert pg.locator(".c1s").count() == len(e["cands"]) >= 6
+            pg.click(".hp"); assert "M = m/z" in pg.inner_text(".hpt")
+            for c in e["cands"]: pg.select_option(f".c1s[data-id={c['id']}]", c["fails"][0] if c["fails"] else "ok")
+            for b in pg.locator(".wk select, .wk button").all():
+                bb = b.bounding_box(); assert bb is None or (bb["width"] >= 24 and bb["height"] >= 24), bb
+            pg.click(".ck1"); assert f"{len(e['cands'])} risposte su {len(e['cands'])}" in pg.inner_text(".wk .st >> nth=0 >> .fb")
+            pg.click(f".wk .st >> nth=1 >> .opts button[data-id={e['truthId']}]"); assert pg.inner_text(".wk .st >> nth=1 >> .fb").startswith("Sì")
+            pg.select_option(".lv", "4"); pg.wait_for_timeout(300)
+            f = pg.evaluate("LCUI.last.hrfine")
+            for p in f["peaks"]: pg.select_option(f".c1s[data-id={p['id']}]", p["label"])
+            pg.click(".ck1"); assert f"{len(f['peaks'])} assegnazioni su {len(f['peaks'])}" in pg.inner_text(".wk .st >> nth=0 >> .fb")
+            pg.fill(".nS", str(f["nS"])); pg.fill(".nN", str(f["nN"])); pg.click(".ck2")
+            assert pg.inner_text(".wk .st >> nth=1 >> .fb").startswith("Sì")
+            pg.select_option(".lv", "2"); pg.wait_for_timeout(300); assert pg.locator("input[name=fc]").count() >= 1
+        step("formula page: levels 3 (non-target) and 4 (fine isotopes)", hr_levels)
         pg.screenshot(path=SH + "pr_02_quadrupolo.png", full_page=True)
         def formulario():
             pg.goto(base + "22-formulario.html"); pg.wait_for_timeout(800)
