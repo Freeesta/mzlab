@@ -206,11 +206,7 @@ pub fn round_half_up(x: f64, digits: usize) -> f64 {
 }
 
 pub fn mass(f: &Formula) -> f64 {
-    let mut m = 0.0;
-    for (e, n) in f {
-        m += mass_of(e).unwrap_or(0.0) * *n as f64;
-    }
-    m
+    crate::pysum::pysum(f.iter().map(|(e, n)| mass_of(e).unwrap_or(0.0) * *n as f64))
 }
 
 /// Hill order: C, H, then alphabetical.

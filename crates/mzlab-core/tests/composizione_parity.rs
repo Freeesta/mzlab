@@ -134,6 +134,48 @@ fn composition_like_python() {
         if let Some(v) = a.get("parent") {
             o.parent = v.as_str();
         }
+        let pairs = |k: &str| -> Vec<(f64, f64)> {
+            a.get(k).map_or(vec![], |v| {
+                v.as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|p| (p[0].as_f64().unwrap(), p[1].as_f64().unwrap()))
+                    .collect()
+            })
+        };
+        o.obs = pairs("obs");
+        o.frags = pairs("frags");
+        if let Some(v) = a.get("r200") {
+            o.r200 = v.as_f64().unwrap();
+        }
+        if let Some(v) = a.get("sigma_ppm") {
+            o.sigma_ppm = v.as_f64().unwrap();
+        }
+        if let Some(v) = a.get("sigma_int") {
+            o.sigma_int = v.as_f64().unwrap();
+        }
+        if let Some(v) = a.get("iso_min_rel") {
+            o.iso_min_rel = v.as_f64().unwrap();
+        }
+        if let Some(v) = a.get("iso_noise_rel") {
+            o.iso_noise_rel = v.as_f64().unwrap();
+        }
+        if let Some(v) = a.get("frag_ppm") {
+            o.frag_ppm = v.as_f64();
+        }
+        if let Some(v) = a.get("pool") {
+            o.pool = v.as_u64().unwrap() as usize;
+        }
+        if let Some(v) = a.get("norm") {
+            o.norm = v.as_str().unwrap();
+        }
+        if let Some(v) = a.get("weights") {
+            o.weights = (
+                v[0].as_f64().unwrap(),
+                v[1].as_f64().unwrap(),
+                v[2].as_f64().unwrap(),
+            );
+        }
         o.m1 = a.get("m1").and_then(Value::as_f64);
         o.m2 = a.get("m2").and_then(Value::as_f64);
         let mz = r["mz"].as_f64().unwrap();

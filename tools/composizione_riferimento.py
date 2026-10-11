@@ -40,12 +40,21 @@ def main() -> None:
                    dict(ion="M+."), dict(ion="[M]+"), dict(ion="[M]-"), dict(ion="[M+K]+"), dict(ion="[M+Cl]-"), dict(z=2), dict(parent="C20H26N3O2"),
                    dict(m1=0.2, m2=0.03), dict(elements="C:0-30,H:0-50,13C:0-2,15N:0-1,N:0-4,O:0-6", tol=5.0), dict(ion="bad"), dict(unit="x"), dict(parent="Xx")):
             cases.append((mz, kw))
+    for f in BASES[:6]:
+        mz = mass(parse_formula(f)) + ADDUCT_SHIFT["[M+H]+"]
+        obs = [(mz, 100.0), (mz + 1.00335, 7.0 * len(f) / 4), (mz + 2.0067, 3.5), (mz + 5.0, 2.0), (mz - 0.5, 1.5)]
+        frags = [(mz - 18.0106, 50.0), (mz - 44.0, 100.0), (100.0, 20.0), (mz, 10.0), (60.0, 5.0), (mz + 1.0, 4.0)]
+        for kw in (dict(obs=obs), dict(obs=obs, norm="mono"), dict(obs=obs, norm="max"), dict(obs=obs, norm="sum"), dict(obs=obs, r200=0.0), dict(obs=obs, r200=240000.0, sigma_ppm=1.0, sigma_int=0.2),
+                   dict(obs=obs, iso_min_rel=0.1, iso_noise_rel=3.0), dict(frags=frags), dict(frags=frags, frag_ppm=20.0), dict(obs=obs, frags=frags, weights=(1.0, 1.0, 3.0)),
+                   dict(obs=obs, frags=frags, max_results=3, pool=20), dict(obs=[], frags=frags), dict(obs=obs, ion="[M+Na]+"), dict(obs=obs, elements="C:0-30,H:0-50,13C:0-1,N:0-4,O:0-6")):
+            cases.append((mz, dict(tol=5.0, **kw)))
     cases += [(-1.0, {}), (0.0, {}), (float("nan"), {})]
     for mz, kw in cases:
         kw = dict(kw)
         if isinstance(kw.get("elements"), str):
             kw["elements"] = parse_elements(kw["elements"])
         args = {k: (v if k != "elements" else {s: list(r) for s, r in v.items()}) for k, v in kw.items()}
+        args = {k: ([list(x) for x in v] if k in ("obs", "frags") else v) for k, v in args.items()}
         if mz != mz:
             continue
         out.append({"kind": "compose", "mz": mz, "args": args, **run(lambda: compose(mz, **kw))})

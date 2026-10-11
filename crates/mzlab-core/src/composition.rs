@@ -8,7 +8,10 @@
 
 use crate::elements::{mass_of, parse_formula, Formula, ELECTRON};
 use crate::error::{Error, Result};
+use crate::isoscore::{combined, fragment_constraint, isotope_score, Frag, IsoOpts, IsoScore};
 use crate::json::{round, Out};
+
+pub type Counts = Vec<(String, i64)>;
 
 const ISOTOPES: [(&str, f64, &str); 7] = [
     ("2H", 2.01410177812, "H"),
@@ -254,10 +257,7 @@ pub fn format_formula(counts: &[(String, i64)]) -> String {
 }
 
 pub fn ion_mass(counts: &[(String, i64)], z: i32) -> f64 {
-    let mut s = 0.0;
-    for (k, v) in counts {
-        s += sym_mass(k) * *v as f64;
-    }
+    let s = crate::pysum::pysum(counts.iter().map(|(k, v)| sym_mass(k) * *v as f64));
     (s - z as f64 * ELECTRON) / (z.abs() as f64)
 }
 
@@ -316,6 +316,18 @@ pub struct Opts<'a> {
     pub m1: Option<f64>,
     pub m2: Option<f64>,
     pub iso_tol: f64,
+    /// Observed isotope peaks (m/z, intensity) and MS2 peaks of the precursor: they switch the combined score on.
+    pub obs: Vec<(f64, f64)>,
+    pub frags: Vec<(f64, f64)>,
+    pub r200: f64,
+    pub sigma_ppm: f64,
+    pub sigma_int: f64,
+    pub weights: (f64, f64, f64),
+    pub pool: usize,
+    pub iso_min_rel: f64,
+    pub iso_noise_rel: f64,
+    pub frag_ppm: Option<f64>,
+    pub norm: &'a str,
 }
 
 impl Default for Opts<'_> {
@@ -334,6 +346,17 @@ impl Default for Opts<'_> {
             m1: None,
             m2: None,
             iso_tol: 0.20,
+            obs: vec![],
+            frags: vec![],
+            r200: 70000.0,
+            sigma_ppm: 3.0,
+            sigma_int: 0.10,
+            weights: (1.0, 2.0, 1.0),
+            pool: 100,
+            iso_min_rel: 1.0,
+            iso_noise_rel: 1.0,
+            frag_ppm: None,
+            norm: "fit",
         }
     }
 }
@@ -587,6 +610,132 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         let nf = |c: &Cand| c.failed.iter().filter(|b| **b).count();
         p.e.abs().total_cmp(&q.e.abs()).then(nf(p).cmp(&nf(q)))
     });
+    struct Res {
+        formula: String,
+        neutral: Option<String>,
+        mz_calc: f64,
+        delta_mda: f64,
+        delta_ppm: f64,
+        rdb: f64,
+        bad: Vec<&'static str>,
+        t1: f64,
+        t2: f64,
+        errs: Option<(Option<f64>, Option<f64>, bool)>,
+        iso: Option<IsoScore>,
+        mass_t: f64,
+        iso_t: Option<f64>,
+        frag_t: Option<f64>,
+        total: f64,
+        frag: Option<Frag>,
+    }
+    let scored = !o.obs.is_empty() || !o.frags.is_empty();
+    let take = if scored {
+        o.max_results.max(o.pool)
+    } else {
+        o.max_results
+    };
+    let mut res: Vec<Res> = vec![];
+    for c in cands.iter().take(take) {
+        let counts: Counts = syms
+            .iter()
+            .cloned()
+            .zip(c.x.iter().copied())
+            .filter(|(_, v)| *v != 0)
+            .collect();
+        let neutral: Counts = syms
+            .iter()
+            .cloned()
+            .zip(c.nn.iter().copied())
+            .filter(|(_, v)| *v != 0)
+            .collect();
+        let calc = ion_mass(&counts, z);
+        let d_da = calc - mz;
+        let bad: Vec<&'static str> = RULES
+            .iter()
+            .zip(&c.failed)
+            .filter(|(_, f)| **f)
+            .map(|(r, _)| *r)
+            .collect();
+        let (t1, t2) = isotope_ratios(&counts);
+        let errs = if o.m1.is_some() || o.m2.is_some() {
+            let e1 = o.m1.map(|m| (m - t1).abs() / t1.max(1e-9));
+            let e2 = o.m2.map(|m| (m - t2).abs() / t2.max(1e-9));
+            Some((
+                e1.map(|e| round(e, 3)),
+                e2.map(|e| round(e, 3)),
+                [e1, e2].iter().flatten().all(|e| *e <= o.iso_tol),
+            ))
+        } else {
+            None
+        };
+        let iso = if o.obs.is_empty() {
+            None
+        } else {
+            let io = IsoOpts {
+                r200: o.r200,
+                sigma_ppm: o.sigma_ppm,
+                sigma_int: o.sigma_int,
+                min_rel: o.iso_min_rel,
+                noise_rel: o.iso_noise_rel,
+                norm: o.norm,
+            };
+            Some(isotope_score(&counts, z, &o.obs, &io)?)
+        };
+        let delta_ppm = round(d_da / mz * 1e6, 3);
+        let iso_t = iso.as_ref().map(|s| round(s.score, 4));
+        let total = if scored {
+            round(
+                combined(mass_t_raw(delta_ppm, o.sigma_ppm), iso_t, None, o.weights),
+                4,
+            )
+        } else {
+            0.0
+        };
+        res.push(Res {
+            formula: format_formula(&counts),
+            neutral: if add.is_empty() {
+                None
+            } else {
+                Some(format_formula(&neutral))
+            },
+            mz_calc: round(calc, 5),
+            delta_mda: round(d_da * 1000.0, 3),
+            delta_ppm,
+            rdb: c.r_db,
+            bad,
+            t1,
+            t2,
+            errs,
+            iso,
+            mass_t: round(mass_t_raw(delta_ppm, o.sigma_ppm), 4),
+            iso_t,
+            frag_t: None,
+            total,
+            frag: None,
+        });
+    }
+    if scored {
+        res.sort_by(|a, b| b.total.total_cmp(&a.total));
+        if !o.frags.is_empty() {
+            res.truncate(o.max_results.max(40));
+            let ppm = o
+                .frag_ppm
+                .filter(|p| *p != 0.0)
+                .unwrap_or(if o.unit == "ppm" {
+                    o.tol.max(5.0)
+                } else {
+                    10.0
+                });
+            for r in res.iter_mut() {
+                let f = fragment_constraint(&r.formula, z, &o.frags, ppm, 50.0)?;
+                r.frag_t = f.explained.map(|v| round(v, 4));
+                r.total = round(combined(r.mass_t, r.iso_t, f.explained, o.weights), 4);
+                r.frag = Some(f);
+            }
+            res.sort_by(|a, b| b.total.total_cmp(&a.total));
+        }
+        res.truncate(o.max_results);
+    }
     let mut out = Out::default();
     out.raw("{\"mz\":")
         .num(mz)
@@ -601,65 +750,115 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     out.raw(",\"n_candidates\":")
         .int(n_candidates as i64)
         .raw(",\"results\":[");
-    for (i, c) in cands.iter().take(o.max_results).enumerate() {
-        let counts: Vec<(String, i64)> = syms
-            .iter()
-            .cloned()
-            .zip(c.x.iter().copied())
-            .filter(|(_, v)| *v != 0)
-            .collect();
-        let neutral: Vec<(String, i64)> = syms
-            .iter()
-            .cloned()
-            .zip(c.nn.iter().copied())
-            .filter(|(_, v)| *v != 0)
-            .collect();
-        let calc = ion_mass(&counts, z);
-        let d_da = calc - mz;
+    for (i, r) in res.iter().enumerate() {
         out.raw(if i > 0 { "," } else { "" })
             .raw("{\"formula\":")
-            .str(&format_formula(&counts))
+            .str(&r.formula)
             .raw(",\"neutral\":");
-        if add.is_empty() {
-            out.raw("null");
-        } else {
-            out.str(&format_formula(&neutral));
-        }
+        match &r.neutral {
+            Some(n) => out.str(n),
+            None => out.raw("null"),
+        };
         out.raw(",\"mz_calc\":")
-            .num(round(calc, 5))
+            .num(r.mz_calc)
             .raw(",\"delta_mda\":")
-            .num(round(d_da * 1000.0, 3))
+            .num(r.delta_mda)
             .raw(",\"delta_ppm\":")
-            .num(round(d_da / mz * 1e6, 3));
-        out.raw(",\"rdb\":").num(c.r_db).raw(",\"rules_failed\":[");
-        let bad: Vec<&str> = RULES
-            .iter()
-            .zip(&c.failed)
-            .filter(|(_, f)| **f)
-            .map(|(r, _)| *r)
-            .collect();
-        for (j, r) in bad.iter().enumerate() {
-            out.raw(if j > 0 { "," } else { "" }).str(r);
+            .num(r.delta_ppm);
+        out.raw(",\"rdb\":").num(r.rdb).raw(",\"rules_failed\":[");
+        for (j, b) in r.bad.iter().enumerate() {
+            out.raw(if j > 0 { "," } else { "" }).str(b);
         }
         out.raw("],\"rules_ok\":")
-            .int((RULES.len() - bad.len()) as i64);
-        let (t1, t2) = isotope_ratios(&counts);
+            .int((RULES.len() - r.bad.len()) as i64);
         out.raw(",\"iso\":{\"m1\":")
-            .num(round(t1, 4))
+            .num(round(r.t1, 4))
             .raw(",\"m2\":")
-            .num(round(t2, 4));
-        if o.m1.is_some() || o.m2.is_some() {
-            let e1 = o.m1.map(|m| (m - t1).abs() / t1.max(1e-9));
-            let e2 = o.m2.map(|m| (m - t2).abs() / t2.max(1e-9));
+            .num(round(r.t2, 4));
+        if let Some((e1, e2, ok)) = r.errs {
             out.raw(",\"err1\":")
-                .opt(e1.map(|e| round(e, 3)))
+                .opt(e1)
                 .raw(",\"err2\":")
-                .opt(e2.map(|e| round(e, 3)));
-            let ok = [e1, e2].iter().flatten().all(|e| *e <= o.iso_tol);
-            out.raw(",\"ok\":").raw(if ok { "true" } else { "false" });
+                .opt(e2)
+                .raw(",\"ok\":")
+                .raw(if ok { "true" } else { "false" });
         }
-        out.raw("}}");
+        if let Some(s) = &r.iso {
+            out.raw(",\"score\":")
+                .num(round(s.score, 4))
+                .raw(",\"peaks\":[");
+            for (j, p) in s.peaks.iter().enumerate() {
+                out.raw(if j > 0 { "," } else { "" })
+                    .raw("{\"mz\":")
+                    .num(p.mz)
+                    .raw(",\"rel\":")
+                    .num(p.rel)
+                    .raw(",\"obs_mz\":")
+                    .opt(p.obs_mz)
+                    .raw(",\"obs_rel\":")
+                    .opt(p.obs_rel);
+                out.raw(",\"d_ppm\":")
+                    .opt(p.d_ppm)
+                    .raw(",\"t_mass\":")
+                    .num(p.t_mass)
+                    .raw(",\"t_int\":")
+                    .num(p.t_int)
+                    .raw(",\"t\":")
+                    .num(p.t)
+                    .raw(",\"w\":")
+                    .num(p.w)
+                    .raw("}");
+            }
+            out.raw("],\"extra\":[");
+            for (j, e) in s.extra.iter().enumerate() {
+                out.raw(if j > 0 { "," } else { "" })
+                    .raw("{\"mz\":")
+                    .num(e.mz)
+                    .raw(",\"rel\":")
+                    .num(e.rel)
+                    .raw(",\"w\":")
+                    .num(e.w)
+                    .raw("}");
+            }
+            out.raw("],\"n_missing\":")
+                .int(s.n_missing as i64)
+                .raw(",\"n_extra\":")
+                .int(s.extra.len() as i64);
+        }
+        out.raw("}");
+        if scored {
+            out.raw(",\"score\":{\"mass\":")
+                .num(r.mass_t)
+                .raw(",\"iso\":")
+                .opt(r.iso_t)
+                .raw(",\"frag\":")
+                .opt(r.frag_t)
+                .raw(",\"total\":")
+                .num(r.total)
+                .raw("}");
+        }
+        if let Some(f) = &r.frag {
+            out.raw(",\"frag\":{\"explained\":")
+                .opt(f.explained)
+                .raw(",\"n_explained\":");
+            match f.n_explained {
+                Some(n) => out.int(n as i64),
+                None => out.raw("null"),
+            };
+            out.raw(",\"n_peaks\":");
+            match f.n_peaks {
+                Some(n) => out.int(n as i64),
+                None => out.raw("null"),
+            };
+            out.raw("}");
+        }
+        out.raw("}");
     }
     out.raw("]}");
     Ok(out.0)
+}
+
+/// The Gaussian mass term of the combined score, from the rounded error in ppm.
+fn mass_t_raw(delta_ppm: f64, sigma_ppm: f64) -> f64 {
+    (-0.5 * (delta_ppm / sigma_ppm).powi(2)).exp()
 }
