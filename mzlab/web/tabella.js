@@ -58,7 +58,8 @@ const TABELLA = (() => {
   // ---------------------------------------------------------------- the table of the page
   let tb = null;                                               // {source, features, files}
   const files = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter(f => f.kind !== "mrm");
-  const roles = () => files().map(f => CAMPIONI.roleOf(f));
+  const fileObjs = () => (tb ? tb.files : files().map(f => f.file)).map(n => files().find(f => f.file === n) || { file: n, type: "sample" });      // the files of the columns of the table, in its order
+  const roles = () => fileObjs().map(f => CAMPIONI.roleOf(f));
   function setTable(source, features) {
     tb = { source, features, files: files().map(f => f.file) };
     document.dispatchEvent(new CustomEvent("tabella"));
@@ -135,7 +136,7 @@ const TABELLA = (() => {
     box.onkeydown = e => { const tr = e.target.closest && e.target.closest("#feat-tab tbody tr"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); tr.click(); } };
   }
   if (typeof STAT !== "undefined") STAT.add({ id: "features", title: "feat.title", hr: true, visible: () => true, mount });
-  return { parseList, parseTable, toMatrix, baseName, fromList, fromText, fromMzFinder, mount, matrix, roles, files, get table() { return tb; } };
+  return { parseList, parseTable, toMatrix, baseName, fromList, fromText, fromMzFinder, mount, matrix, roles, fileObjs, files, get table() { return tb; } };
 })();
 if (typeof window !== "undefined") window.TABELLA = TABELLA;
 if (typeof module !== "undefined") module.exports = TABELLA;
