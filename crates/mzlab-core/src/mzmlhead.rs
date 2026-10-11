@@ -256,6 +256,14 @@ impl<R: ReadAt> Mzml<R> {
         Ok(text(&probe[..end]))
     }
 
+    /// The start of the file up to `<run ` plus 3000 bytes, as text (where `fileinfo` finds the time stamp and the processing steps).
+    pub fn info_head(&mut self) -> Result<String> {
+        let probe = self.read(0, self.size.min(MAX_REGION))?;
+        let run = find(&probe, b"<run ", 0);
+        let end = run.map_or(0, |p| p) + 3000;
+        Ok(text(&probe[..end.min(probe.len())]))
+    }
+
     /// Polarity written in the header (used when a file has no scans, e.g. MRM): positive, negative, mixed or unknown.
     pub fn header_polarity(&mut self) -> Result<String> {
         let all = self.read(0, self.size.min(MAX_REGION))?;

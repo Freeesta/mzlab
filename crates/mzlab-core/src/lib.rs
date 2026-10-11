@@ -2,6 +2,7 @@
 
 pub mod analysis;
 pub mod entropy;
+pub mod fileroutes;
 pub mod error;
 pub mod idxread;
 pub mod iteminfo;

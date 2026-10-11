@@ -71,7 +71,7 @@ def main(argv) -> int:
         app = App()
         app.session = type("S", (), {"items": [item]})()
         rows = []
-        for path, q in queries(item) if item.run.scans else []:
+        for path, q in (queries(item) if item.run.scans else []) + [("/api/fileinfo", {"k": "0"}), ("/api/mrm", {"k": "0"})]:
             status, _ctype, body, _h = dispatch(app, "GET", path, q)
             rows.append({"path": path, "query": q, "status": status, "body": json.loads(body)})
         (out / (f.stem + ".rotte.json")).write_text(json.dumps(rows), encoding="utf-8")
