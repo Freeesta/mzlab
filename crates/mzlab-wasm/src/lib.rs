@@ -247,6 +247,17 @@ impl Engine {
             .map_err(|e| error_json(&e))
     }
 
+    /// `/api/scaninfo` of scan `sid`: the scan comes from the index, the header from the mzML (`size` bytes, read through `read`). Empty = Python's.
+    pub fn scaninfo(&mut self, slot: u32, sid: u32, size: f64, read: Function) -> Result<String, JsValue> {
+        let _ = size;
+        match self.idx.get(&slot) {
+            Some(r) if r.has_scans() => r
+                .scaninfo(sid as usize, &mut JsReader { read })
+                .map_err(|e| error_json(&e)),
+            _ => Ok(String::new()),
+        }
+    }
+
     /// `{"rt": [...], "y": [...]}` of the XIC of one level from the index.
     pub fn index_xic(
         &mut self,
