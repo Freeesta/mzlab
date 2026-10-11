@@ -60,6 +60,23 @@ try:
             c = pg.evaluate("window.__clip"); assert c.split("\n")[0].split("\t")[1] == "RT (min)" and "\t" in c.split("\n")[1], c[:80]
             close()
         step("Copy puts the table in the clipboard as tab separated text", copy)
+        def map_table():
+            pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(2500); ready(pg)
+            M_ = "E.panels.find(p=>p.type==='map'&&p.tab==='full')"
+            pg.evaluate(f"{M_}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+            t = tbl(); assert t["cols"][1][0] == "m/z" and 1 <= len(t["rows"]) <= 100, t["cols"]
+            vals = [float(r[2]) for r in t["rows"]]; assert vals == sorted(vals, reverse=True)
+            top = pg.evaluate(f"(()=>{{const a={M_}._a;let m=0;for(let i=0;i<60;i++)for(let j=0;j<60;j++){{const v=a.mapv(a.x0+(i+.5)/60*(a.x1-a.x0),a.y0+(j+.5)/60*(a.y1-a.y0));if(v>m)m=v}}return m}})()")
+            assert abs(vals[0] - top) <= max(1.0, top * 0.001), (vals[0], top)
+            close()
+        step("T on the map: the most intense cells of the visible region, in decreasing order", map_table)
+        def small_chart():
+            pg.evaluate("document.body.insertAdjacentHTML('beforeend','<canvas id=zz width=100 height=50></canvas>')")
+            pg.evaluate("TDATI.series(document.getElementById('zz'), {title:'Prova', xl:'x', yl:'y', series:[{x:[1,2,3],y:[4,5,6],name:'a'}]})")
+            pg.evaluate("document.getElementById('zz').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+            t = tbl(); assert t["rows"] == [["a", "1", "4"], ["a", "2", "5"], ["a", "3", "6"]], t["rows"]
+            close()
+        step("the component for small charts (series) gives the exact values", small_chart)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
