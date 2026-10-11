@@ -192,6 +192,7 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
+  if (p.type === "map") return MAPPA.setCorr(p, v);
   if (p.type === "spec") {                         // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
     p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);
     ctl(p); draw(p); uiSave(); return;

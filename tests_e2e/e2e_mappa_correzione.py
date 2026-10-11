@@ -36,10 +36,10 @@ try:
             nm = {t: items(t) for t in ("chrom", "spec", "map")}
             for t in ("chrom", "spec", "map"):
                 labs = [x[1] for x in nm[t]]
-                assert labs[0] == "None" and any(l.startswith("Subtract the file: ") for l in labs) and "Background of a stretch" in labs, (t, labs)
+                assert labs[0] == "None" and any(l.startswith("Subtract file: ") for l in labs) and "Background of a stretch" in labs, (t, labs)
                 assert all(0 < len(x[2]) < 130 for x in nm[t]), (t, nm[t])                                  # one short line each
             assert "Automatic background" in [x[1] for x in nm["chrom"]] and "Automatic background" in [x[1] for x in nm["map"]] and "Automatic background" not in [x[1] for x in nm["spec"]]
-            assert [x[1] for x in nm["map"] if x[1].startswith("Subtract the file")] == ["Subtract the file: FullScan_t30"], nm["map"]           # not the file itself
+            assert [x[1] for x in nm["map"] if x[1].startswith("Subtract file")] == ["Subtract file: FullScan_t30"], nm["map"]           # not the file itself
         step("same items in the three panels; the spectrum has no automatic background", same_items)
         def header():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
