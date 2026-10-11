@@ -363,5 +363,8 @@
   "meta.grad.aria": "Etichetta accessibile della barra di colore del tempo. {a} = primo tempo, {b} = ultimo tempo (con unità).",
   "meta.imported": "Messaggio dopo l'importazione della tabella dei metadati. {n} = file aggiornati.",
   "meta.of": "Prefisso dell'etichetta accessibile dei campi della tabella dei metadati. {f} = nome del file.",
-  "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole."
+  "meta.unknown": "Righe della tabella importata senza file aperto corrispondente. {list} = nomi separati da virgole.",
+  "prof.chart.aria": "Etichetta accessibile del grafico del profilo nel tempo. {ion} = etichetta dell'ione scelto.",
+  "prof.sum": "Riga sopra il grafico del profilo nel tempo. {mz} = m/z, {rt} = RT atteso in minuti.",
+  "prof.sum.istd": "Seguito della riga del profilo quando è normalizzato. {istd} = etichetta dello standard interno."
 }

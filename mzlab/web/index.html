@@ -193,6 +193,7 @@ body.sb-resizing{user-select:none!important;cursor:col-resize!important}
 #sb-panel-stat .qq-n{display:inline-block;min-width:1.4em;color:var(--muted)}
 #sb-panel-stat .bad{color:var(--bad)}
 #sb-panel-stat input,#sb-panel-stat select{max-width:100%;box-sizing:border-box;font-size:11px}
+#sb-panel-stat .prof-chart{width:100%;height:auto;display:block}
 .cmp-grad{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:6px 0}
 .cmp-grad i{display:block;flex:1;min-width:60px;height:8px;border-radius:4px;border:1px solid var(--line)}
 .liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}
@@ -300,16 +301,20 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 @media (pointer:coarse),(max-width:1100px){body.hrw #flst .fl{padding:3px 4px}body.hrw #flst .fgh{margin:4px 0 1px}body.hrw #flst .fgh[data-gg]:focus-visible{outline:2px solid var(--accent)}}
 
 /* smartphone (telefono.js): only the header with logo, Teoria and info, and the card that sends to the Teoria; nothing else is built or downloaded */
-#phone{max-width:560px;margin:0 auto;padding:22px 16px 40px}
-#phone h1{font-size:24px;margin:6px 0 12px}#phone h2{font-size:18px;margin:18px 0 6px}#phone p{line-height:1.55;margin:0 0 12px}
-#phone .phw{background:#fffbeb;border:1px solid #f3d38a;border-radius:10px;padding:12px 14px}
-#phone .phb{display:block;text-align:center;background:var(--accent);color:#fff;border-radius:10px;padding:14px;font-size:18px;font-weight:650;text-decoration:none;margin:18px 0}
-#phone .phs{font-size:13px;color:var(--muted)}#phone .phs a{color:var(--muted)}
+#phone{max-width:560px;margin:0 auto}#phone h1{font-size:1.5rem;margin:0}#phone h2{font-size:1.125rem;margin:0 0 6px}#phone p{line-height:1.55;margin:0}
+#phone{display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:calc(100dvh - 70px);justify-content:center;padding:24px max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#phone[hidden]{display:none}
+#phone .phw{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:5px solid var(--warn);border-radius:10px;padding:14px 16px;font-size:1.0625rem;line-height:1.5}
+#phone .phb,#phone .pho{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:10px;padding:10px 14px;font-size:1.125rem;font-weight:650;text-decoration:none;text-align:center}
+#phone .phb{background:var(--accent);color:var(--bg)}
+#phone .pho{background:none;border:1px solid var(--line);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+#phone .phb:focus-visible,#phone .pho:focus-visible,#phinfo:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #phinfo{display:none}
 html.phone header{flex-wrap:nowrap;transition:transform .2s}html.phone header.away{transform:translateY(-110%)}
 html.phone header>:not(.logo):not(#nav):not(#phinfo){display:none!important}
 html.phone #nav button:not([data-v=theory]){display:none}
-html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
+html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
+html.phone #loading{display:none}
 html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
 </style></head><body>
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
@@ -319,11 +324,10 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
   <button class="hq" data-help="header" data-i18n-title="header.about" title="Informazioni su {APP}" data-i18n-aria-label="header.about" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
 <div id="phone" hidden>
   <h1 data-i18n="phone.title">Siete su uno smartphone</h1>
-  <p class="phw" data-i18n-html="phone.warn"><b>Il sito non è ottimizzato per gli smartphone.</b> L'analisi dei dati (scheda Dati), il disegno delle molecole (Disegno) e gli esercizi della Pratica hanno bisogno di uno schermo grande: usateli da un computer o da un tablet.</p>
-  <p id="phtheory">Dal telefono potete leggere tutta la <b>Teoria</b>: cromatografia GC e LC, ionizzazione, analizzatori a bassa e alta risoluzione, come si risolve uno spettro EI, il formulario e le domande dell'orale.</p>
-  <a class="phb" href="static/teoria/index.html">Vai alla Teoria</a>
+  <p class="phw" data-i18n="phone.line">Per Dati, Disegno e Pratica serve uno schermo grande.</p>
+  <a class="phb" href="static/teoria/index.html" data-i18n="phone.go">Vai alla Teoria</a>
+  <button class="pho" type="button" id="phopen" data-i18n="phone.open">Apri comunque</button>
   <div id="phmore" hidden><h2 data-i18n="phone.about.title">Che cos'è {APP}</h2><p data-i18n="phone.about.text">Il programma dell'esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a cercare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.</p></div>
-  <p class="phs" data-i18n-html="phone.full"><a href="?telefono=0">Aprire comunque la versione completa</a> (sconsigliato: scarica circa 15 MB e non entra nello schermo).</p>
 </div>
 <div id="err"></div>
 <section id="v-data" hidden>
@@ -530,48 +534,10 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
   <div id="mlist"></div></div>
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
-<script src="static/icons-modi.js"></script>
-<script src="static/modi.js"></script>
-<script src="static/ordine.js"></script>
-<script src="static/conversione.js"></script>
-<script src="static/explore.js"></script>
-<script src="static/pannelli.js"></script>
-<script src="static/grafici.js"></script>
-<script src="static/picchi.js"></script>
-<script src="static/eventi.js"></script>
-<script src="static/hr.js"></script>
-<script src="static/composizione.js"></script>
-<script src="static/elementare.js"></script>
-<script src="static/visualizza.js"></script>
-<script src="static/dda.js"></script>
-<script src="static/cromato.js"></script>
-<script src="static/calcola.js"></script>
-<script src="static/perdite.js"></script>
-<script src="static/liste.js"></script>
-<script src="static/scroll.js"></script>
-<script src="static/spettro.js"></script>
-<script src="static/mappa.js"></script>
-<script src="static/xlsx.js"></script>
-<script src="static/origine.js"></script>
-<script src="static/elements.js"></script>
-<script src="static/tabs.js"></script>
-<script src="static/banco.js"></script>
-<script src="static/settings.js"></script>
-<script src="static/aggiorna.js"></script>
-<script src="static/livelli-1.js"></script><script src="static/livelli.js"></script>
-<script src="static/libreria.js"></script>
-<script src="static/touch.js"></script>
-<script src="static/qaqc.js"></script>
-<script src="static/stat.js"></script><script src="static/campioni.js"></script>
-<script src="static/rapporto.js"></script>
-<script type="module" src="static/workflow.js"></script>
-<script src="static/tables.js"></script>
-<script src="static/barra.js"></script>
-<script src="static/paletta.js"></script>
-<script src="static/help.js"></script>
-<script type="module" src="static/perf.js"></script>
-<script src="static/tpmine-loader.js"></script>
-<script>
+<script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
+(function(){var L=["icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mappa.js","xlsx.js","origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","rapporto.js","m:workflow.js","tables.js","barra.js","paletta.js","help.js","m:perf.js","tpmine-loader.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
+<script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
 const S={view:"data",sess:null,adding:false};
@@ -802,14 +768,8 @@ function prefetchIdle(){const go=()=>{const c=navigator.connection||{};if(c.save
   if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
   window.requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
-// on a smartphone (telefono.js) only the card that sends to the Teoria: no session, no engine, no drawing editor
-function phoneMode(){$("#loading").hidden=true;$("#phone").hidden=false;
-  // the Teoria exists only in Italian: in English the card says so and the button opens the Italian version anyway
-  const en=I18N.lang==="en";$("#phtheory").innerHTML=I18N.t(en?"theory.sorry.message":"phone.theory");document.querySelector("#phone .phb").textContent=I18N.t(en?"theory.sorry.openItalian":"phone.go");
-  const hd=document.querySelector("header"),nav=$("#nav");if(!$("#phinfo"))nav.insertAdjacentHTML("afterend",'<button id="phinfo" type="button" aria-label="'+I18N.t("phone.info")+'" title="'+I18N.t("phone.info")+'">i</button>');
-  $("#phinfo").onclick=()=>{$("#phmore").hidden=!$("#phmore").hidden;if(!$("#phmore").hidden)$("#phmore").scrollIntoView({behavior:"smooth",block:"nearest"})};
-  nav.querySelector("[data-v=theory]").onclick=()=>{if(en)$("#phtheory").scrollIntoView({behavior:"smooth",block:"nearest"});else location.href="static/teoria/index.html"};
-  let y0=scrollY;addEventListener("scroll",()=>{const y=scrollY;hd.classList.toggle("away",y>y0&&y>60);y0=y},{passive:true})}   // the header goes away scrolling down, comes back scrolling up
-if(window.QQQ_PHONE)phoneMode();else{const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
+{const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
 </script>
+<script>/* the shell above is data on a smartphone (it needs the scripts that are not fetched there); elsewhere it runs now, as a classic script, sharing the globals */
+if(!window.QQQ_PHONE){var sh=document.createElement("script");sh.textContent=document.getElementById("shell").textContent;document.body.appendChild(sh)}</script>
 </body></html>
