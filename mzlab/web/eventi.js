@@ -28,6 +28,25 @@ function attach(p) {
     else { let l = mo != null ? Math.min(mo, v) : -Infinity; oth.forEach(i => { if (iHi(i) <= v + INT_EPS) l = Math.max(l, iHi(i)); }); nx = Math.min(o, Math.max(l, x)); }
     it[e] = nx; if (mate) mate.it[mate.e] = nx;
   };
+  // the vertical line (or its dot) goes to x: the linked spectrum follows once per frame
+  const moveCur = x => {
+    const a = p._a; if (!a || x == null) return;
+    p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
+    if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+  };
+  // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
+  if (p.ch) {
+    const h = p.ch, at = e => e.clientX - cv.getBoundingClientRect().left;
+    h.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); try { h.setPointerCapture(e.pointerId); } catch (_) { /* the events still arrive over the dot */ } setActive(p); drag = { cursor: true }; h.classList.add("on"); });
+    h.addEventListener("pointermove", e => { if (drag && drag.cursor && h.classList.contains("on")) moveCur(xd(at(e))); });
+    const end = e => { if (!h.classList.contains("on")) return; h.classList.remove("on"); if (e.type === "pointerup") moveCur(xd(at(e))); p._up(e); };
+    h.addEventListener("pointerup", end); h.addEventListener("pointercancel", end);
+    h.addEventListener("keydown", e => {
+      const d = e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : 0;
+      if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault(); e.stopPropagation(); setActive(p); if (p._a && p._a.sr) stepScan(p, d * (e.shiftKey ? 5 : 1));
+    });
+  }
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
@@ -35,10 +54,8 @@ function attach(p) {
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
       if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = (py - drag.y0) / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
       draw(p);
-    } else if (drag && drag.cursor) {                         // dragging the vertical line: the linked spectrum follows
-      p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-      if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
-    } else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
+    } else if (drag && drag.cursor) moveCur(x);                // dragging the vertical line: the linked spectrum follows
+    else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
       zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";

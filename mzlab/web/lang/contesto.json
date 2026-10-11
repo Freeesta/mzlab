@@ -129,6 +129,7 @@
   "tip.peakLabel": "Riquadro del mouse sull'etichetta di un picco; {mz} = m/z.",
   "zoom.mz": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in m/z.",
   "zoom.rt": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in minuti.",
+  "cursor.handle.value": "Valore letto da un lettore di schermo sul pallino del cursore del cromatogramma; {rt} = tempo di ritenzione in minuti.",
   "ms2.nearestScan": "Messaggio sul cromatogramma; {rt} = tempo di ritenzione della scansione trovata.",
   "ctx.map.where": "Prima riga (grigia) del menu del clic destro sulla mappa; {rt} = RT, {mz} = m/z, {file} = campione.",
   "ctx.map.xic": "Menu del clic destro sulla mappa; {mz} = m/z.",
