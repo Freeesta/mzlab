@@ -8,6 +8,10 @@
 .tp .flag{color:#9a5b00;font-size:11px}
 .tp .fl-s{color:#b42318;font-weight:600}.tp .fl-u{color:#2b5c8a;font-weight:600}
 .tp{--sim-eq:#0072B2;--sim-sh:#D55E00;--sim-nl:#009E73}
+.tp{--rta-0:#000000;--rta-1:#E69F00;--rta-2:#56B4E9;--rta-3:#009E73;--rta-4:#F0E442;--rta-5:#0072B2;--rta-6:#D55E00;--rta-7:#CC79A7}
+.tp .rta-svg{display:block;width:100%;max-width:640px;height:auto}.tp .rta-svg text{fill:var(--muted);font-size:10px}.tp .rta-svg .ax{stroke:var(--line);stroke-width:1}
+.tp .rta-svg .zero{stroke:var(--muted);stroke-dasharray:2 3}.tp .rta-leg{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:11px;margin-top:4px}
+.tp .rta-open{display:inline-block;width:8px;height:8px;border:2px solid var(--muted);border-radius:50%;vertical-align:middle;margin-right:4px}
 .tp .pd-1{--lvc:#009E73}.tp .pd-2{--lvc:#0072B2}.tp .pd-3{--lvc:#E69F00}.tp .pd-4{--lvc:#999999}
 .tp .sim-bar{display:inline-flex;width:64px;height:8px;border-radius:4px;background:var(--soft);overflow:hidden;vertical-align:middle}.tp .sim-bar i{display:block;height:100%}
 .tp .sim3{display:grid;grid-template-columns:150px 1fr 1fr 44px;gap:4px 10px;font-size:12px;align-items:center;margin:6px 0}
@@ -22,6 +26,24 @@
   const predBadge = r => r.pred ? `<span class="lvb pd-${r.pred}" title="prediction level ${r.pred}: ${esc(PD_TEXT[r.pred])}">P${r.pred}</span>` : "";
   const simBar = sim => sim ? `<span class="sim-bar" role="img" aria-label="cosine: equal ${sim.cos[0]}, shifted ${sim.cos[1]}, neutral losses ${sim.cos[2]}" title="cosine: equal ${sim.cos[0]} · shifted ${sim.cos[1]} · common neutral losses ${sim.cos[2]}">${sim.cos.map((v, i) => `<i style="width:${Math.round(100 * v)}%;background:var(${SIM_VAR[i]})"></i>`).join("")}</span>` : "";
   const lvBadge = (r, title) => `<span class="lvb lv-${r.level}" title="${esc(title)}">${r.level}${r.diagnostic ? " ◆" : ""}</span>`;
+
+  // Shift of the apex of the anchor features in every file against the median over the files (piecewise linear between the nodes of the curve).
+  const RTA_DASH = [[], [6, 3], [2, 3], [8, 2, 2, 2]];
+  function rtAlign(a, esc) {
+    if (!a || !a.rt || !a.rt.length) return "";
+    const W = 560, H = 200, L = 46, T = 10, B = 30, Rt = 12, lo = Math.min(...a.rt), hi = Math.max(...a.rt, lo + 1);
+    const ym = Math.max(0.05, ...a.shift.flat().map(Math.abs)), X = v => L + (v - lo) / (hi - lo) * (W - L - Rt), Y = v => T + (1 - (v + ym) / (2 * ym)) * (H - T - B);
+    const line = (k, sh) => `<polyline fill="none" stroke="var(--rta-${k % 8})" stroke-width="1.6" stroke-dasharray="${RTA_DASH[Math.floor(k / 8) % 4].join(" ")}" points="${a.rt.map((r, j) => X(r).toFixed(1) + "," + Y(sh[j]).toFixed(1)).join(" ")}"/>`;
+    const xt = [0, 1, 2, 3, 4].map(i => lo + (hi - lo) * i / 4), yt = [-ym, 0, ym];
+    const svg = `<svg class="rta-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`RT shift of ${a.files.length} files against the median, ${a.anchors} anchor features, largest shift ${ym.toFixed(2)} min`)}">
+      <line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${H - B}" x2="${W - Rt}" y2="${H - B}"/><line class="zero" x1="${L}" y1="${Y(0)}" x2="${W - Rt}" y2="${Y(0)}"/>
+      ${xt.map(v => `<text x="${X(v).toFixed(1)}" y="${H - B + 14}" text-anchor="middle">${v.toFixed(1)}</text>`).join("")}${yt.map(v => `<text x="${L - 4}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${v > 0 ? "+" : ""}${v.toFixed(2)}</text>`).join("")}
+      <text x="${(L + W - Rt) / 2}" y="${H - 4}" text-anchor="middle">RT (min)</text><text transform="rotate(-90)" x="${-(T + H - B) / 2}" y="11" text-anchor="middle">shift (min)</text>
+      ${a.shift.map((sh, k) => line(k, sh)).join("")}</svg>`;
+    const leg = a.files.map((f, k) => `<span><span class="sw" style="border-top-color:var(--rta-${k % 8});border-top-style:${RTA_DASH[Math.floor(k / 8) % 4].length ? "dashed" : "solid"}"></span>${esc(f)}</span>`).join("");
+    return `<details class="card" id="hr-rta"><summary>Retention time alignment (${a.anchors} anchor features)</summary>
+      <div class="mut">Shift of the apex of the anchors (strong, alone in their <i>m/z</i> and RT neighbourhood, present in the files) in each file against the median of the files. No signal is moved: the curve tells where a feature is expected in a file when its area is filled.</div>${svg}<div class="rta-leg">${leg}</div></details>`;
+  }
 
   function render(R, s, h) {
     if (!document.getElementById("tp-hr-css")) { const st = document.createElement("style"); st.id = "tp-hr-css"; st.textContent = CSS; document.head.appendChild(st); }
@@ -46,6 +68,7 @@
       <details class="card"><summary>Applied filters (funnel) and sessions</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("en")} · ${esc(f.text)}</div>`).join("")}
         <div class="mut" style="margin-top:6px">Sessions: ${esc([...new Set(s.sessions.labels)].map(l => l + " (" + s.sessions.labels.filter(x => x === l).length + " files)").join(", "))}${s.sessions.factors.applied ? "; areas rescaled to the reference session" : "; no correction needed"}.</div>
         <div class="mut">Timings (s): ${esc(Object.entries(s.timing).map(([k, v]) => k + " " + v).join(" · "))}</div></details>
+      ${rtAlign(s.rt_align, esc)}
       <div class="card" id="hr-tree"></div>`;
 
     function spark(series) {
@@ -62,7 +85,7 @@
         k.map((r, i) => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}"><td>${o.indexOf(r) + 1}</td><td>${lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "")}</td>
           <td>${predBadge(r)}</td><td>${simBar(r.sim)}</td><td class="n">${r.score}</td><td class="n">${r.mz.toFixed(4)}</td><td>${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}</td>
           <td>${esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}</td><td class="n">${r.rt}</td><td class="n">${r.tmax ?? ""}</td><td>${esc(r.class || "")}</td>
-          <td>${esc(r.region || "")}</td><td>${spark(r.series)}</td></tr>`).join("");
+          <td>${esc(r.region || "")}</td><td>${spark(r.series)}${r.filled.length ? ` <span class="mut" title="${r.filled.length} area(s) re-integrated where no peak was found (filled)">○${r.filled.length}</span>` : ""}</td></tr>`).join("");
       $("#hr-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
     }
     $("#hr-lv").onchange = e => { st.minLevel = e.target.value === "d" ? "d" : +e.target.value; table(); };
@@ -152,10 +175,12 @@
       const labs = [...new Set(d.sessions)], t = d.times, series = [];
       labs.forEach((lab, j) => {
         const ix = t.map((_, i) => i).filter(i => d.sessions[i] === lab && t[i] >= 0).sort((a, b) => t[a] - t[b]);
-        if (ix.length) series.push({ x: ix.map(i => t[i]), y: ix.map(i => d.areas[i]), color: hue(j, Math.max(2, labs.length)), dots: true, label: lab });
+        const fl = new Set(d.row.filled || []);
+        if (ix.length) series.push({ x: ix.map(i => t[i]), y: ix.map(i => d.areas[i]), color: hue(j, Math.max(2, labs.length)), dots: true, hollow: ix.map((i, p) => fl.has(i) ? p : -1).filter(p => p >= 0), label: lab });
       });
       chart($("#hr-kin"), series, { xlabel: "treatment time (min)" });
-      $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("");
+      $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("") +
+        ((d.row.filled || []).length ? `<span class="mut"><span class="rta-open"></span> filled: area re-integrated where no peak was found (${d.row.filled.map(k => t[k]).join(", ")} min)</span>` : "");
       if (d.ms2) mirror($("#hr-ms2"), d);
       const cb = $("#hr-cmp-tree");
       if (cb) cb.onclick = () => { window.TPALBERO && window.TPALBERO.compare(id); const t = $("#hr-tree"); if (t) t.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
@@ -192,13 +217,13 @@
     async function exportAll(kind) {
       const name = (s.parent.formula || "parent") + "_TPMine_HR";
       const keys = Object.keys(s.weights), times = s.times;
-      const head = ["#", "Level", "Diagnostic evidence", "Score", "m/z", "Formula", "ppm", "Possible formulas", "Change", "RT (min)", "t max (min)", "Class", "Appears at (min)", "Region", "Margin", "Precursor", "Transformation", "MS2 scans", "Modified cosine", "Matched peaks", "Prediction level", "Cosine: equal fragments", "Cosine: shifted fragments", "Cosine: common neutral losses", "Flags", ...keys.map(k => "score " + k), ...times.map(t => "Area t" + t)];
-      const line = (r, i) => [i + 1, r.level, r.diagnostic ? "yes" : "", r.score, r.mz, r.formula ?? "", r.ppm ?? "", r.n_formulas ?? "", r.derivation ?? r.delta ?? "", r.rt, r.tmax ?? "", r.class ?? "", r.onset ?? "", r.region ?? "", r.margin ?? "", r.predecessor ?? "", r.transformation ?? "", r.ms2_scans, r.modcos ?? "", r.n_matched, r.pred ?? "", ...(r.sim ? r.sim.cos : ["", "", ""]), r.flags.join("; "), ...keys.map(k => r.components[k]), ...r.series];
+      const head = ["#", "Level", "Diagnostic evidence", "Score", "m/z", "Formula", "ppm", "Possible formulas", "Change", "RT (min)", "t max (min)", "Class", "Appears at (min)", "Region", "Margin", "Precursor", "Transformation", "MS2 scans", "Modified cosine", "Matched peaks", "Prediction level", "Cosine: equal fragments", "Cosine: shifted fragments", "Cosine: common neutral losses", "Flags", "Filled areas (t, min)", ...keys.map(k => "score " + k), ...times.map(t => "Area t" + t)];
+      const line = (r, i) => [i + 1, r.level, r.diagnostic ? "yes" : "", r.score, r.mz, r.formula ?? "", r.ppm ?? "", r.n_formulas ?? "", r.derivation ?? r.delta ?? "", r.rt, r.tmax ?? "", r.class ?? "", r.onset ?? "", r.region ?? "", r.margin ?? "", r.predecessor ?? "", r.transformation ?? "", r.ms2_scans, r.modcos ?? "", r.n_matched, r.pred ?? "", ...(r.sim ? r.sim.cos : ["", "", ""]), r.flags.join("; "), r.filled.map(k => times[k]).join("; "), ...keys.map(k => r.components[k]), ...r.series];
       if (kind === "json") return dl(name + ".json", JSON.stringify(s, null, 1), "application/json");
       if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...rows.map(line)].map(x => x.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
       toast("Preparing the Excel file...");
       const top = rows.slice(0, 50), det = []; for (const r of top) det.push(await detail(r.id));
-      const sheets = [{ name: "Ranking", head, rows: rows.map(line), widths: [6, 8, 9, 10, 18, 7, 9, 28, 8, 9, 18, 9, 30, 8, 12, 24, 9, 9, 9, 9, 9, 9, 9, 40, ...keys.map(() => 10), ...times.map(() => 11)] },
+      const sheets = [{ name: "Ranking", head, rows: rows.map(line), widths: [6, 8, 9, 10, 18, 7, 9, 28, 8, 9, 18, 9, 30, 8, 12, 24, 9, 9, 9, 9, 9, 9, 9, 40, 16, ...keys.map(() => 10), ...times.map(() => 11)] },
         { name: "Criteria", head: ["#", "Formula", "Criterion", "Outcome", "Detail"], rows: det.flatMap((d, i) => d.criteria.map(c => [i + 1, d.row.formula ?? "", c.name, c.status, c.text])), widths: [6, 18, 32, 8, 80] },
         { name: "Localisation", head: ["#", "Formula", "Region", "Fragment m/z", "% rel.", "Fragment formula", "Evidence"], rows: det.flatMap((d, i) => ((d.localization && d.localization.evidence) || []).map(e => [i + 1, d.row.formula ?? "", d.row.region ?? "", e.mz, e.rel, e.formula, e.kind])), widths: [6, 18, 30, 12, 8, 18, 8] },
         { name: "Mass differences", head: ["From", "To", "Rule", "Δm/z", "Rule scope", "Kinetics", "Shifted fragments", "Share of the cosine", "Kind"], rows: ((s.mass_network || {}).edges || []).map(e => [e.from, e.to, e.rule, e.dm, e.scope ?? "", e.kinetic, e.shifted ? e.shifted.n : "", e.shifted ? e.shifted.share : "", e.kind]), widths: [12, 12, 36, 10, 12, 12, 9, 9, 10] },

@@ -287,6 +287,7 @@ function ctxFor(p, e, x, px, py) {
         items.push(mi({ label: I18N.t("ctx.spec.addLab"), fn: () => LISTE.askAdd(m, pol) }));
       }
     }
+    if (window.DISP && window.BANCO && BANCO.on()) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
     if (a.hrp && window.ELEM) {
       items.push(mi({ label: I18N.t("ctx.spec.generate", { mz: lab }), fn: () => ELEM.generate({ mz: m, sp: p, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
       if (p.fm && p.fm.length) items.push({ label: I18N.t("cx.clear"), fn: () => { p.fm = []; draw(p); } });
@@ -332,6 +333,7 @@ function ctxFor(p, e, x, px, py) {
       items.push({ label: I18N.t("ctx.spec.atRt"), fn: () => { const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); } else nearScan(k, x).then(n => { if (n) { p.cur = n.rt; newSpec(p, n.rt - NEAR, n.rt + NEAR, k); } else newSpec(p, x - dt / 2, x + dt / 2, k); }); } });
     }
     if (p.type === "chrom") items.push({ label: I18N.t("ctx.chrom.xic"), fn: () => openXic(null, { after: p }) });
+    if (window.DISP && window.BANCO && BANCO.on() && (p.type === "chrom" || p.type === "xic")) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
     if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: I18N.t("ctx.chrom.identAll"), fn: () => LIB.identifyAll(k) });
     if (p.type === "chrom" && window.COMP && window.HR && HR.isHr(E.files[k], 2) && E.files[k].kind === "ms2") items.push({ label: I18N.t("ctx.chrom.tree"), fn: () => COMP.tree(k) });

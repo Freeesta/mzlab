@@ -26,12 +26,13 @@ from . import kinetics as KN
 from . import localize as LZ
 from . import msn
 from . import network as NW
+from . import rtalign as RA
 from . import rules as RU
 from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True}
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True, "fill_rt_tol": 0.04}
 NO_PROGRESS = lambda text, frac=None, phase=None, payload=None: None      # noqa: E731
 
 
@@ -174,6 +175,7 @@ class ExperimentHR:
         t = time.perf_counter()
         types = [("blank" if x["type"] == "blank" else "control" if x["type"] == "control" else "sample") for x in self.lc]
         self.al = FT.align(self.feats)
+        self.rtmap = RA.build(self.al, min_height=self.s["min_height"])
         self.sess_factors = KN.session_factors(self.al.area, self.sessions)
         if self.sess_factors["applied"]:
             self.warnings.append("measurement sessions differ: areas were rescaled to the reference session")
@@ -193,8 +195,9 @@ class ExperimentHR:
             self.isf_hidden = FL.isf_hidden(self.isf_measures, self.times, types, self.isf_masses, self.sessions)
 
     def _fill_gaps(self):
-        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor (a weak product at
-        the first times falls under `min_height` and would look like a late one). The files are read again, one at a time; `self.filled` marks the cells."""
+        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor where the RT map of
+        the series expects it (a weak product at the first times falls under `min_height` and would look like a late one). The files are read
+        again, one at a time; `self.filled` marks the cells: they are never a found peak and every output says so."""
         self.filled = np.zeros(self.al.area.shape, bool)
         if not self.s["fill_gaps"] or len(self.funnel.idx) == 0:
             return
@@ -211,7 +214,8 @@ class ExperimentHR:
             r = getters[k]()
             last.append(r)
             return r.table(1, self.s["polarity"])
-        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"])
+        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"],
+                                   rt_tol=self.s["fill_rt_tol"] if self.rtmap.ok else 0.1, rtmap=self.rtmap)
         self._close_runs()
         gc.collect()
         self.timing["riempimento"] = round(time.perf_counter() - t0, 2)
@@ -481,7 +485,7 @@ class ExperimentHR:
         return {"mode": "hr", "parent": {"formula": chem.fmt(self.neutral), "ion": F.fmt(self.ion_vec, self.els), "mz": round(self.parent_mz, 4),
                                          "rt": round(float(self.al.rt[self.parent_group]), 2) if self.parent_group is not None else self.parent_rt_hint, "name": self.parent_name},
                 "files": files, "times": [float(t) for t in self.times], "sessions": {"labels": self.sessions, "factors": self.sess_factors},
-                "saturation": self.saturation, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
+                "saturation": self.saturation, "rt_align": self.rtmap.as_dict([x["label"] for x in self.lc]) if self.rtmap.ok else None, "funnel": self.funnel.steps, "n_candidates": len(self.cands), "n_rows": len(rows), "rows": rows,
                 "mass_network": getattr(self, "mass_net", None), "isf_hidden": [d for d in self.isf_hidden if d["candidate"]], "tree": self._tree_summary(), "calibration": self.tree.cal.as_dict() if self.tree else None,
                 "inclusion": [{"mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "rt_from": round(float(np.nanmin(self.al.left[c["id"]])), 2),
                                "rt_to": round(float(np.nanmax(self.al.right[c["id"]])), 2), "formula": c.get("formula"), "score": round(c["priority"]["score"], 1)} for c in incl],
