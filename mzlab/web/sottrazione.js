@@ -20,6 +20,7 @@ function eff(p) {
   const tab = p.tab || E.tab, r = R();
   if (p.type === "chrom" && (tab === "ms2" || (p.ranges && p.ranges.length))) return null;       // precursor chromatograms and the stacked graphs of the bench have their own logic
   if (p.type === "spec" && p.bg === "x") return null;                            // «none» chosen in the panel while the session has a reference
+  if (p.type === "map" && (p.corr === "none" || p.corr === "auto" || p.corr === "tract")) return null;       // another correction chosen in the panel
   const own = p.type === "spec" ? (p.bg !== "w" ? p.bg : null) : p.type === "map" ? p.ref : p.type === "mrm" ? null : p.bk;
   let f = fileOf(own), auto = false;
   if (!f && r.on[tab]) { f = r.k === "auto" ? autoFile(tab) : fileOf(r.k) || autoFile(tab); auto = r.k === "auto"; }
