@@ -167,7 +167,10 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             _ => bad(),
         },
         "idx/read" => match (q.get("name"), n("off"), n("len")) {
-            (Some(name), Some(off), Some(len)) => match state.indexer().and_then(|b| b.read(&decode(name), off, len)) {
+            (Some(name), Some(off), Some(len)) => match state
+                .indexer()
+                .and_then(|b| b.read(&decode(name), off, len))
+            {
                 Ok(body) => Response {
                     status: 200,
                     content_type: "application/octet-stream",

@@ -336,7 +336,11 @@ struct JsOutput {
 impl mzidx::Output for JsOutput {
     fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
         self.write
-            .call2(&JsValue::NULL, &(offset as f64).into(), &Uint8Array::from(data))
+            .call2(
+                &JsValue::NULL,
+                &(offset as f64).into(),
+                &Uint8Array::from(data),
+            )
             .map(|_| ())
             .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "write"))
     }

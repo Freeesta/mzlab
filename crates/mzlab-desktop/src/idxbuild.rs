@@ -31,7 +31,12 @@ pub struct IdxBuilder {
 
 /// A name that is only a file name (the page never chooses a path).
 fn clean(name: &str) -> Result<&str, Error> {
-    if name.is_empty() || name.contains(['/', '\\']) || name == "." || name == ".." || name.contains('\0') {
+    if name.is_empty()
+        || name.contains(['/', '\\'])
+        || name == "."
+        || name == ".."
+        || name.contains('\0')
+    {
         return Err(Error::new("err.file.index").with("detail", "bad name"));
     }
     Ok(name)
@@ -66,7 +71,10 @@ pub fn decode_inputs(body: &[u8]) -> Result<ScanTable, Error> {
         run_json: text(items[6])?,
         hr1: items[7].first().is_some_and(|&b| b != 0),
     };
-    if table.polarity.len() != table.level.len() || table.rt.len() != table.level.len() || table.tic.len() != table.level.len() {
+    if table.polarity.len() != table.level.len()
+        || table.rt.len() != table.level.len()
+        || table.tic.len() != table.level.len()
+    {
         return Err(bad());
     }
     Ok(table)
@@ -113,7 +121,8 @@ impl IdxBuilder {
         let size = f.metadata().map_err(|e| io_error(&e))?.len();
         let len = len.min(size.saturating_sub(off)).min(64 << 20);
         let mut buf = Vec::new();
-        buf.try_reserve_exact(len as usize).map_err(|_| Error::memory_budget())?;
+        buf.try_reserve_exact(len as usize)
+            .map_err(|_| Error::memory_budget())?;
         buf.resize(len as usize, 0);
         f.seek(SeekFrom::Start(off)).map_err(|e| io_error(&e))?;
         f.read_exact(&mut buf).map_err(|e| io_error(&e))?;
@@ -128,6 +137,8 @@ impl IdxBuilder {
 
     /// `(size)` of an index in the folder, if there is one.
     pub fn size(&self, name: &str) -> Option<u64> {
-        std::fs::metadata(self.path(name).ok()?).ok().map(|m| m.len())
+        std::fs::metadata(self.path(name).ok()?)
+            .ok()
+            .map(|m| m.len())
     }
 }
