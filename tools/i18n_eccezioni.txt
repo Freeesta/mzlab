@@ -19,3 +19,4 @@ mzlab/web/liste.js	nome
 mzlab/web/liste.js	ione
 mzlab/web/liste.js	addotto
 mzlab/web/banco.js	del
+mzlab/web/libreria-worker.js	librerie
