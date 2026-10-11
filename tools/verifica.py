@@ -227,10 +227,11 @@ CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js") 
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi"}),
     ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
     ("mzlab/web/telefono.js", {"e2e_telefono"}),
-    ("mzlab/web/telefono-scheda.js", {"e2e_telefono"}),
+    ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}),
+    ("tools/build_site.py", set()), ("tests_e2e/e2e_indirizzi.py", {"e2e_indirizzi"}), ("tests_e2e/e2e_teoria_mobile.py", {"e2e_teoria_mobile"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/ordine.js", {"e2e_ordine", "e2e_lista_hr"}), ("mzlab/web/conversione.js", {"e2e_conversione"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
     ("mzlab/web/visualizza.js", {"e2e_hr_display", "e2e_hr_xic", "e2e_spettro_hr"}), ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui", "e2e_hr_display", "e2e_hr_isotopi"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2", "e2e_hr_nearest", "e2e_hr_vista", "e2e_spettro_hr"}), ("mzlab/web/banco.js", {"e2e_intestazioni", "e2e_hr_vista", "e2e_banco_barra", "e2e_banco_celle", "e2e_hr_pannelli", "e2e_banco_info", "e2e_hr_display", "e2e_hr_isotopi"}), ("mzlab/web/liste.js", {"e2e_contaminanti", "e2e_hr_pannelli", "e2e_spettro_hr"}), ("tests_e2e/e2e_hr_pannelli.py", {"e2e_hr_pannelli"}), ("mzlab/web/elementare.js", {"e2e_hr_formule", "e2e_hr_composizione", "e2e_hr_pannelli"}), ("mzlab/web/composizione.js", {"e2e_hr_formule", "e2e_hr_composizione", "e2e_hr_msntree"}), ("tests_e2e/e2e_hr_formule.py", {"e2e_hr_formule"}), ("mzlab/web/visualizza.js", {"e2e_hr_display", "e2e_banco_barra"}), ("tests_e2e/e2e_hr_display.py", {"e2e_hr_display"}), ("mzlab/chem/composition.py", {"e2e_hr_composizione", "e2e_hr_formule"}), ("mzlab/chem/isoscore.py", {"e2e_hr_composizione", "e2e_hr_formule"}), ("mzlab/chem/subformulas.py", {"e2e_hr_vista"}),
@@ -241,6 +242,7 @@ AREE = [
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore", "e2e_asse_x"}), ("mzlab/web/spettro.js", {"e2e_asse_x", "e2e_spettro"}), ("tests_e2e/e2e_asse_x.py", {"e2e_asse_x"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
+    ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_avvio", "e2e_mzidx", "e2e_pool"}), ("mzlab/web/archivio", {"e2e_mzidx", "e2e_pool"}), ("mzlab/web/idx", {"e2e_pool"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust", "e2e_libreria_wasm"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),

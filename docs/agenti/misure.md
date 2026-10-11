@@ -133,3 +133,6 @@ Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (
 | byte scaricati fino a rete ferma | 1 034 427 | 330 178 (comprende ~85 KB di Teoria scaldata) |
 
 Sul telefono non partono più gli script di Dati/Disegno né la shell; test `e2e_telefono`.
+
+## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
+Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
