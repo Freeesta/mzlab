@@ -51,13 +51,17 @@ try:
         def edit_edges():
             pid = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().id")
             pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});ctl(p)}})()")
-            v = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return [p.el.querySelector('[data-o=xlo]').value,p.el.querySelector('[data-o=xhi]').value]}})()"); print(v)
-            assert 412.13 < float(v[0]) < 412.1364 < float(v[1]) < 412.14, v
-            pg.fill(f"#dpanels .pnl:nth-of-type(1) [data-o=xlo]", v[0]) if False else None
-            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});const l=p.el.querySelector('[data-o=xlo]'),h=p.el.querySelector('[data-o=xhi]');l.value='412.1360';h.value='412.1370';l.dispatchEvent(new Event('change'))}})()"); pg.wait_for_timeout(800)
-            t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); print(t)
-            assert not t.get("ion") and abs(t["w"] - 0.0005) < 1e-6 and abs(t["mz"] - 412.1365) < 1e-6, t      # an explicit window written by the student
-        step("the edges can be edited: they become an explicit window", edit_edges)
+            assert pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return [p.el.querySelectorAll('[data-o=xlo],[data-o=xhi]').length,p.el.querySelector('.xlab').textContent]}})()") == [0, "XIC \u2022 m/z 412.1364"], "HR header: only «XIC • m/z value»"
+            # m/z and interval live in «Display options» of that chromatogram
+            def item(i): return f"DISP.items.chrom.find(x=>x.id==='{i}')"
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});{item('xtol')}.set(p,'3')}})()"); pg.wait_for_timeout(500)
+            t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); assert t["ion"] and t["ppm"] == 3 and t["label"].endswith("\u00b1 3 ppm"), t
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});{item('xunit')}.set(p,'da')}})()"); pg.wait_for_timeout(500)
+            t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); assert abs(t["wda"] - 412.1364 * 3e-6) < 2e-5 and "ppm" not in t["label"], t
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});{item('xmz')}.set(p,'412.1370')}})()"); pg.wait_for_timeout(500)
+            t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); assert abs(t["mz"] - 412.137) < 1e-6, t
+            assert pg.evaluate(f"E.panels.find(q=>q.id=={pid}).el.querySelector('.xlab').textContent") == "XIC \u2022 m/z 412.1370"
+        step("HR XIC: header «XIC • m/z value»; m/z and interval (ppm / Da) in Display options", edit_edges)
         def no_switch():
             assert pg.evaluate("UIP.hr === undefined && !HR.on") and not pg.evaluate("!!document.querySelector('#uip-hr')")
             pid = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].id")
