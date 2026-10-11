@@ -2,6 +2,7 @@
 
 pub mod analysis;
 pub mod elements;
+pub mod composition;
 pub mod entropy;
 pub mod error;
 pub mod idxread;
