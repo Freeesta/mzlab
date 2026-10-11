@@ -100,3 +100,13 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 | RSS massima del browser, MB | 1701.2 | 1355.3 |
 
 Letture: la riapertura dei file HR passa da 253 s a 24 s e il primo disegno da 128 s a 13 s (l'indice si costruisce durante l'invio, che dura il 20% in più; apertura + primo disegno 267 s → 180 s); i picchi non stanno più nella memoria del motore (heap WASM 1011 → 571 MB: resta la tabella delle scansioni, ~1,9 KB per scansione, 440 MB per 237.000 scansioni sintetiche) e la RSS scende di 350 MB. Nei file LR piccoli l'invio costa il doppio (8,7 s contro 4,3: l'indice è costruito subito, prima si costruiva al primo disegno, 3,9 s → 1,4 s) e la riapertura scende da 11,4 s a 8,2 s, di cui ~4,5 s sono l'avvio del motore. Mappa di tutti i file: ×4 per HR (23 s → 5,6 s, `np.maximum.at` al posto dell'ordinamento per cella), invariata per LR. XIC su 20 file LR 69 → 45 ms (mediana), sotto i 100 ms; su 15 file HR resta 500 ms perché la risposta contiene 475.000 numeri da scrivere in JSON (`rounded()` ha tolto 130 ms): il lavoro sull'indice è ~1 ms. Spettro 2,5 ms (LR) e 7,5 ms (HR), cambio file 5,7 e 74 ms: sotto 16 ms e 200 ms.
+
+## Pulizia del codice (motore Python, 5 file Full Scan sintetici, 3 giri; Chromium cloud senza WASM Rust)
+| misura | prima | dopo |
+|---|---|---|
+| apertura (open_s) | 3.32 / 3.49 / 3.42 | 3.08 / 3.33 / 3.07 |
+| TIC + 5 XIC (tic_xic_s) | 0.61 / 0.33 / 0.31 | 0.34 / 0.34 / 0.34 |
+| RSS del browser, MB | 806 / 810 / 790 | 766 / 810 / 725 |
+| JS degli script di `mzlab/web/` (senza vendor e teoria), byte | 1 124 713 | 1 122 273 (−2 440) |
+
+Tempi invariati entro il rumore; `workflow.js` e `perf.js` passano a moduli ES (partono dopo gli script classici).
