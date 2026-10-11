@@ -9,7 +9,7 @@ Generata da `python3 tools/indice.py` (non modificare a mano; la CI controlla ch
 - `lettura.js` (229) mzLab - Teoria: reading aids for narrow screens and touch (loaded by teoria.js after the layout). — reduced:18, close:61, build:123
 - `pratica/domande.js` (106) QqQ lab - Pratica: the question bank of the oral exam (page pratica-orale.html).
 - `pratica/ei-aiuti.js` (73) QqQ lab - Pratica EI: third level of the hints of the hard mode, one sentence per compound of the pa
-- `pratica/ei-difficile.js` (255) QqQ lab - Pratica EI, "Modalità difficile": the student gets ONLY the spectrum (no formula, no class — startHard:111, onpick:117, refreshHint:209
+- `pratica/ei-difficile.js` (276) QqQ lab - Pratica EI, "Modalità difficile": the student gets ONLY the spectrum (no formula, no class — sectionDelivery:190, current:192, startHard:228, onpick:234
 - `pratica/esercizi-lcms.js` (202) mzLab - Pratica: data and generators of the LC-MS exercises (games "lc-dm" and "lc-esi"; classic scr — LCMS:8, ex:11, genDm:85
 - `pratica/giochi-lc.js` (156) mzLab - Pratica: the two LC-MS games of pratica-tp.html ("lc-dm": delta m of a transformation produc — LCUI:5, LCDM:40, dm:43, LCESI:93, esi:96
 - `pratica/giochi.js` (378) QqQ lab - Pratica: the short games (pages pratica-perdite, -isotopi, -formula, -strumento, -quadrupo — GIOCHI:7, perdite:62, isotopi:118, formula:181, quadrupolo:309
