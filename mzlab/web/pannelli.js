@@ -433,6 +433,7 @@ function afterDraw(p) {
   if (btn) btn.disabled = !z;                      // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
   placeLeg(p);
+  { const hd = p.el.querySelector(".hd"); if (hd && hd.scrollWidth > hd.clientWidth + 1) fitHdSoon(p); }       // the title or the reading changed the width of the header: fit it again
   if (window.TDATI_P) TDATI_P.update(p);                      // table of the data and description for screen readers (tdati.js)
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
