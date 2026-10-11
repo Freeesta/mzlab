@@ -1,0 +1,47 @@
+ACCESSION: MSBNK-UniTO-UT000029
+RECORD_TITLE: Haloperidol; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000029
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 2 injection(s), 2 scan(s).
+CH$NAME: Haloperidol
+CH$COMPOUND_CLASS: Non-Natural Product; Antipsychotic
+CH$FORMULA: C21H23ClFNO2
+CH$EXACT_MASS: 375.14013
+CH$SMILES: C1CN(CCC1(C2=CC=C(C=C2)Cl)O)CCCC(=O)C3=CC=C(C=C3)F
+CH$IUPAC: InChI=1S/C21H23ClFNO2/c22-18-7-5-17(6-8-18)21(26)11-14-24(15-12-21)13-1-2-20(25)16-3-9-19(23)10-4-16/h3-10,26H,1-2,11-15H2
+CH$LINK: CAS 52-86-8
+CH$LINK: INCHIKEY LNEPOXFFQSENCJ-UHFFFAOYSA-N
+CH$LINK: PUBCHEM CID:3559
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 18.783 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 376.14741
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-014i-0903000000-332742ccd3acad90cb29
+PK$NUM_PEAK: 8
+PK$PEAK: m/z int. rel.int.
+  123.02373 644137.9 173
+  165.07050 3725643.3 999
+  166.07387 521047.5 140
+  173.38457 1078208.8 289
+  194.07234 169539.8 45
+  358.13596 1610216.7 432
+  359.13934 477128.8 128
+  360.13293 421240.7 113
+//

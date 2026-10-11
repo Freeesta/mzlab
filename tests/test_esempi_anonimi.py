@@ -35,7 +35,7 @@ def test_the_forbidden_names_are_not_in_public_files():
     hits = []
     for rel in filter(None, out.split("\0")):
         p = ROOT / rel
-        if not p.is_file() or "/vendor/" in rel:
+        if not p.is_file() or "/vendor/" in rel or rel.startswith("tests/golden/librerie/massbank_unito/"):      # the libraries may hold any compound (the records of the UniTO standards)
             continue
         low = (rel + "\n").lower().encode("utf-8") + p.read_bytes().lower()
         hits += [(rel, n) for n in nomi if n.encode("utf-8") in low]

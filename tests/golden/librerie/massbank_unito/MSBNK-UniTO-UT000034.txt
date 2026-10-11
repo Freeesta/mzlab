@@ -1,0 +1,52 @@
+ACCESSION: MSBNK-UniTO-UT000034
+RECORD_TITLE: Paracetamol; LC-ESI-ITFT; MS2; CID 30 % (nominal); [M+H]+
+DATE: 2026.09.29 (Created 2026.07.01)
+AUTHORS: Cristaudo F, University of Turin [dtc][com]; Fabbri D, University of Turin; Calza P, University of Turin
+LICENSE: CC BY
+COPYRIGHT: Copyright (C) 2026 University of Turin
+COMMENT: CONFIDENCE Reference Standard (Level 1)
+COMMENT: INTERNAL_ID UT000034
+COMMENT: Authentic standard from a pharmaceutical reference mixture; column temperature 40 C, injection 20 uL, activation Q 0.25, isolation window 3.0 m/z, MS2 detector Orbitrap (60000 FWHM); spectrum merged from 3 injection(s), 54 scan(s).
+CH$NAME: Paracetamol
+CH$COMPOUND_CLASS: Non-Natural Product; Analgesic/antipyretic
+CH$FORMULA: C8H9NO2
+CH$EXACT_MASS: 151.06333
+CH$SMILES: CC(=O)NC1=CC=C(C=C1)O
+CH$IUPAC: InChI=1S/C8H9NO2/c1-6(10)9-7-2-4-8(11)5-3-7/h2-5,11H,1H3,(H,9,10)
+CH$LINK: CAS 103-90-2
+CH$LINK: INCHIKEY RZVAJINKPMORJF-UHFFFAOYSA-N
+CH$LINK: PUBCHEM CID:1983
+AC$INSTRUMENT: Orbitrap Fusion Tribrid, Thermo Fisher Scientific
+AC$INSTRUMENT_TYPE: LC-ESI-ITFT
+AC$MASS_SPECTROMETRY: MS_TYPE MS2
+AC$MASS_SPECTROMETRY: ION_MODE POSITIVE
+AC$MASS_SPECTROMETRY: IONIZATION ESI
+AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE CID
+AC$MASS_SPECTROMETRY: COLLISION_ENERGY 30 % (nominal)
+AC$MASS_SPECTROMETRY: RESOLUTION 60000
+AC$CHROMATOGRAPHY: COLUMN_NAME Phenomenex Luna C18(2) 150 x 2.1 mm, 3 um
+AC$CHROMATOGRAPHY: FLOW_GRADIENT 5% B to 100% B in 47 min, hold to 49 min, 5% B at 50 min, re-equilibration to 55 min
+AC$CHROMATOGRAPHY: FLOW_RATE 0.2 mL/min
+AC$CHROMATOGRAPHY: RETENTION_TIME 5.937 min
+AC$CHROMATOGRAPHY: SOLVENT A water with 0.1% formic acid
+AC$CHROMATOGRAPHY: SOLVENT B acetonitrile with 0.1% formic acid
+MS$FOCUSED_ION: PRECURSOR_M/Z 152.07060
+MS$FOCUSED_ION: PRECURSOR_TYPE [M+H]+
+MS$DATA_PROCESSING: WHOLE MZmine 4.10.6 batch spectral library generation (representative scans merged across the injections of the mixture)
+PK$SPLASH: splash10-03di-0900000000-08c58479b7d2585e79a6
+PK$NUM_PEAK: 13
+PK$PEAK: m/z int. rel.int.
+  108.90409 221614.0 8
+  110.05984 29188013.5 999
+  111.04388 458506.9 16
+  111.06321 2231187.6 76
+  111.96819 224816.3 8
+  113.96349 2893537.7 99
+  115.96389 657358.1 22
+  131.97394 638241.8 22
+  134.05975 950363.2 33
+  141.00020 385337.0 13
+  152.07024 1063846.1 36
+  153.07360 303462.1 10
+  157.99233 318825.7 11
+//
