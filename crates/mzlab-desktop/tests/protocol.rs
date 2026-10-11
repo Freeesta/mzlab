@@ -142,3 +142,11 @@ fn tic_xic_chunks_and_errors() {
     handle(&st, "/close", "slot=0");
     assert_eq!(handle(&st, "/tic", "slot=0&level=1").status, 400);
 }
+
+#[test]
+fn rawprogress_of_a_file_that_never_converted_is_empty() {
+    let st = State::new();
+    let r = handle(&st, "/rawprogress", "id=7");
+    assert_eq!(r.status, 200);
+    assert_eq!(String::from_utf8(r.body).unwrap(), "{}");
+}

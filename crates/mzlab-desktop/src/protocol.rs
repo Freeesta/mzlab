@@ -134,6 +134,13 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             },
             None => bad(),
         },
+        "rawprogress" => match u("id").and_then(|id| state.raw_progress(id)) {
+            Some((total, read, written)) => json(
+                200,
+                format!("{{\"total\":{total},\"read\":{read},\"written\":{written}}}"),
+            ),
+            None => json(200, "{}".into()),
+        },
         "lookup" => match (q.get("name"), n("size")) {
             (Some(name), Some(size)) => match state.find(&decode(name), size) {
                 Some(id) => json(200, format!("{{\"id\":{id}}}")),
