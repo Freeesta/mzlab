@@ -38,13 +38,30 @@ try:
             v = pg.evaluate(RUN % "'#tdati'"); assert not v, v
             pg.keyboard.press("Escape")
         step("axe: the data table dialog has no serious or critical violation", tabledlg)
+        MEAS = """(coarse) => [...document.querySelectorAll('#dpanels button, #dpanels select, #dpanels input, #dpanels [role=slider], #dpanels [role=separator], #dpanels [tabindex="0"]')]
+              .filter(e => e.offsetParent && !e.closest('[hidden]') && !e.closest('.hmore:not([hidden])') && (coarse || !e.classList.contains('pgrip')))
+              .map(e => [e, (e.closest('label') && e.matches('input[type=checkbox],input[type=radio]') ? e.closest('label') : e).getBoundingClientRect()])
+              .filter(([e, r]) => (r.width < 24 || r.height < 24) && getComputedStyle(e).display !== 'inline')
+              .map(([e, r]) => (e.dataset.a || e.dataset.o || e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height))"""
         def targets():
-            small = pg.evaluate("""(() => [...document.querySelectorAll('#dpanels button, #dpanels select, #dpanels input, #dpanels [role=slider], #dpanels [tabindex="0"]')]
-              .filter(e => e.offsetParent && !e.closest('[hidden]') && !e.closest('.hmore:not([hidden])'))
-              .map(e => [e, e.getBoundingClientRect()]).filter(([e, r]) => (r.width < 24 || r.height < 24) && getComputedStyle(e).display !== 'inline')
-              .map(([e, r]) => (e.dataset.a || e.dataset.o || e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)))()""")
-            assert not small, small
+            small = pg.evaluate("(" + MEAS + ")(false)"); assert not small, small
         step("WCAG 2.5.8: the controls of the panels are at least 24 x 24 px", targets)
+        def keys():
+            CH = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
+            pg.evaluate(f"{CH}.cv.focus()"); w0 = pg.evaluate(f"{CH}._a.x1-{CH}._a.x0")
+            pg.keyboard.press("+"); pg.wait_for_timeout(500); w1 = pg.evaluate(f"{CH}._a.x1-{CH}._a.x0"); assert w1 < w0 * 0.6, (w0, w1)
+            x0 = pg.evaluate(f"{CH}._a.x0"); pg.keyboard.press("]"); pg.wait_for_timeout(500); assert pg.evaluate(f"{CH}._a.x0") > x0
+            pg.keyboard.press("0"); pg.wait_for_timeout(500); assert pg.evaluate(f"{CH}.zoom") is None
+        step("WCAG 2.5.7: zoom and pan without dragging (+ - [ ] 0 on the focused chart)", keys)
+        def touch():
+            ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, is_mobile=True, locale="it-IT")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
+            try:
+                q.evaluate("1"); ready(q)
+                small = q.evaluate("(" + MEAS + ")(true)"); assert not small, small
+            finally: ctx.close()
+        step("touch device: grips and controls at least 24 x 24 px", touch)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

@@ -778,7 +778,7 @@ window.MAPPA = (() => {
   const css = document.createElement("style");
   css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:10px;z-index:5;cursor:ns-resize;touch-action:none}" +
     ".pnl .pgrip.t{top:-3px}.pnl .pgrip.b{bottom:-3px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:3px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
-    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:22px}.pnl .pgrip.t{top:-10px}.pnl .pgrip.b{bottom:-10px}.pnl .pgrip::after{opacity:.8;top:9px}}" +
+    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:24px}.pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{opacity:.8;top:10px}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);
   const host = () => document.getElementById("dpanels");
@@ -786,9 +786,10 @@ window.MAPPA = (() => {
   const simple = p => !(window.DDA && (DDA.docked(p) || E.panels.some(q => q.dock === p.id && DDA.docked(q))));
   const above = p => { let best = null; for (const q of E.panels) if (q !== p && q.full && simple(q) && q.y < p.y && (!best || q.y > best.y)) best = q; return best; };
   const done = p => { if (p.full && typeof relayout === "function") relayout(); if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
-  function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); }
+  function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");
+    { const p0 = pOf(el); g.setAttribute("aria-valuemin", String(HMIN)); g.setAttribute("aria-valuemax", "2000"); g.setAttribute("aria-valuenow", String(p0 ? p0.h : el.offsetHeight)); }          // a focusable separator needs its value (the height of the panel)
     g.setAttribute("aria-label", I18N.t(side === "t" ? "mappa.rz.top" : "mappa.rz.bot")); g.title = I18N.t("mappa.rz.title");
     g.addEventListener("pointerdown", ev => {
       const p = pOf(el); if (!p || el.classList.contains("max") || ev.button > 0) return;
