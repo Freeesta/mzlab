@@ -14,8 +14,10 @@ pub mod project;
 pub mod raw;
 pub mod rois;
 pub mod routes;
+pub mod scaninfo;
 pub mod scantable;
 pub mod specpeaks;
+pub mod stats;
 pub mod subformulas;
 
 pub use error::{Error, Result};

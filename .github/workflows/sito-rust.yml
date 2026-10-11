@@ -1,0 +1,70 @@
+# The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_pool, e2e_mzidx, e2e_progressivo.
+# Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
+name: sito-rust
+
+on:
+  pull_request:
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", ".github/workflows/sito-rust.yml"]
+  workflow_dispatch:
+    inputs:
+      solo:
+        description: "e2e to run (comma separated)"
+        default: "e2e_rust,e2e_pool,e2e_mzidx,e2e_progressivo"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sito-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sito:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cache/ms-playwright
+            target
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
+      - name: Install
+        run: |
+          python -m pip install -e ".[test]" playwright
+          python -m playwright install --with-deps chromium
+      - name: Build the site (downloads Pyodide from jsDelivr)
+        run: python tools/build_site.py
+      - name: Build the WASM engine into the site (as pages.yml does)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm --config 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
+      - name: e2e on the built site
+        run: python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e_rust,e2e_pool,e2e_mzidx,e2e_progressivo' }}"
+      - name: Print the logs of the failed tests (readable in the job log)
+        if: failure()
+        shell: bash
+        run: |
+          cat .verifica/ultimo.md | cut -c1-2000
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
+      - name: Logs of the failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sito-rust
+          path: .verifica/
+          include-hidden-files: true
+          if-no-files-found: ignore

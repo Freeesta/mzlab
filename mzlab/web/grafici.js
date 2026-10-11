@@ -77,7 +77,18 @@ async function corrected(p, all) {
   return out;
 }
 async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
+// the kinds of chromatogram that come from an analog trace of the file: the pump pressure ("press") and any other device trace ("an:<id>")
+const isAnalog = k => k === "press" || (typeof k === "string" && k.startsWith("an:"));
+const analogOf = (f, kind) => (f.analog || []).find(a => (kind === "press" ? a.kind === "pressure" : a.id === String(kind).slice(3)));
+async function analogSeries(p) {
+  const r = await Promise.all(shownFor(p).filter(f => analogOf(f, p.kind)).map(f => {
+    const a = analogOf(f, p.kind);
+    return memo(`an${f.k}|${a.i}`, () => J(`api/analog?k=${f.k}&i=${a.i}&n=2000`)).then(d => ({ x: d.t, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `a|${f.k}|${a.i}`, ion: a.id, time: f.time, unit: d.unit, unitNote: d.unit_note }));
+  }));
+  return r.filter(s => s.x.length);
+}
 async function rawSeries(p) {
+  if (p.type === "chrom" && isAnalog(p.kind)) return analogSeries(p);
   if (p.type === "chrom" && p.ranges && p.ranges.length && window.BANCO) return BANCO.rangeSeries(p);       // stacked graphs of the bench (banco.js)
   if (p.type === "chrom") {
     let fl = shownFor(p);
@@ -171,6 +182,7 @@ function syncView(p) {
   if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
 }
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
+const analogTitle = (p, sr) => (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
   try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
@@ -293,7 +305,7 @@ async function drawLines(p) {
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
   const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: YT_I }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : YT_I;
+  const yt = nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: YT_I }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : isAnalog(p.kind) && p.type === "chrom" ? analogTitle(p, sr) : YT_I;
   // waterfall: the traces are ordered by time (the first one in front), each moved up and a little to the right; the room is taken from the axes
   const pw0 = W - M.l - M.r, ph0 = H - M.t - M.b;
   const cs = cas ? sr.slice().sort((a, b) => ((E.files[a.k] || {}).time ?? 1e9) - ((E.files[b.k] || {}).time ?? 1e9) || a.k - b.k) : null;
@@ -385,13 +397,13 @@ async function drawLines(p) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(top))), W, 26);
   }
-  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay === "grad") GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
+  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
   // cosa mostrare quando il mouse passa sul grafico: RT e intensità di ogni traccia visibile in quel punto
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => ({ s, v: s.ys[nearIdx(s.x, x)] })).sort((a, b) => b.v - a.v);
-    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b></div>`).join("") + (window.GRADIENTE && p.overlay === "grad" ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b></div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
-  legend(p, all, (p.type === "chrom" && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
+  legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
 
 // ---- mouse sul grafico: linea verticale + riquadro con i valori; la linea compare anche negli altri pannelli con l'asse RT
