@@ -12,12 +12,20 @@
   /** first block of an InChIKey (14 characters, upper case): the connectivity, whatever the stereochemistry or the protonation */
   const structKey = ik => { const s = String(ik || "").trim().toUpperCase(); return s.length >= 14 && /^[A-Z]{14}/.test(s) ? s.slice(0, 14) : ""; };
 
+  /** the strongest MS2_PEAKS peaks of the fragmentation spectrum of a feature, for the evidence of its links (null without MS2) */
+  const MS2_PEAKS = 40;
+  function ms2Peaks(f) {
+    if (!f.ms2 || !f.ms2.mz || !f.ms2.mz.length) return null;
+    const ix = f.ms2.mz.map((_, i) => i).sort((a, b) => f.ms2.it[b] - f.ms2.it[a]).slice(0, MS2_PEAKS);
+    return { mz: ix.map(i => f.ms2.mz[i]), it: ix.map(i => f.ms2.it[i]) };
+  }
+
   /** table → payload of the engine. Only the features that can be linked by shape (>= min_common samples) or already carry an ion identity are sent; the others are singletons. */
   function payload(table, o = {}) {
     const opt = { ...OPT, ...(o.opt || {}) }, sidx = new Map(table.samples.map((s, i) => [s, i])), send = [], rest = [];
     for (const f of table.features) {
       const a = []; for (const s in f.areas) { const i = sidx.get(s); if (i != null && f.areas[s] > 0) a.push([i, f.areas[s]]); }
-      if (a.length >= opt.min_common || f.iin) send.push({ k: f.key, id: f.id, mz: f.mz, rt: f.rt, a, iin: f.iin ? { id: f.iin.id, ions: f.iin.ions || "", neutral: f.iin.neutral } : null }); else rest.push(f);
+      if (a.length >= opt.min_common || f.iin) send.push({ k: f.key, id: f.id, mz: f.mz, rt: f.rt, a, ms2: ms2Peaks(f), iin: f.iin ? { id: f.iin.id, ions: f.iin.ions || "", neutral: f.iin.neutral } : null }); else rest.push(f);
     }
     return { send, rest, body: { pol: table.pol > 0 ? 1 : -1, samples: table.samples, features: send, edges: table.edges || [], opt } };
   }
@@ -63,9 +71,15 @@
     return graph.identities;
   }
 
-  const edgeText = e => e.source === "computed"
-    ? `${e.label} · Δm/z ${fmt(e.dmz, 4)}${e.relations && e.relations[0] ? ` (${fmt(e.relations[0].ppm, 1)} ppm)` : ""} · r ${fmt(e.r, 2)} over ${e.n_common} samples · ΔRT ${fmt(Math.abs(e.drt) * 60, 1)} s (${fmt(e.dscans, 1)} scans)`
-    : `mzMine IIN · ${e.label}${e.neutral ? ` · neutral mass ${fmt(e.neutral, 4)}` : ""}${e.score != null ? ` · score ${e.score}` : ""}${e.note ? e.note : ""}`;
+  /** the label of the link with its evidence («adduct (evidence: ...)», «in-source fragment? (evidence: ...)», «not distinguishable»), from the engine; "" for an isotope or an unexplained step */
+  const evidenceText = e => (e.evidence && e.evidence.text) || "";
+  const edgeText = e => {
+    const base = e.source === "computed"
+      ? `${e.label} · Δm/z ${fmt(e.dmz, 4)}${e.relations && e.relations[0] ? ` (${fmt(e.relations[0].ppm, 1)} ppm)` : ""} · r ${fmt(e.r, 2)} over ${e.n_common} samples · ΔRT ${fmt(Math.abs(e.drt) * 60, 1)} s (${fmt(e.dscans, 1)} scans)`
+      : `mzMine IIN · ${e.label}${e.neutral ? ` · neutral mass ${fmt(e.neutral, 4)}` : ""}${e.score != null ? ` · score ${e.score}` : ""}${e.note ? e.note : ""}`;
+    const ev = evidenceText(e);
+    return ev ? `${ev} · ${base}` : base;
+  };
   const edgeShort = e => (e.source === "computed" ? e.label.split(" | ")[0].replace(/ \/ \[M[+-]H\][+-]$/, "") : "mzMine IIN");
 
   /** the neutral-mass hypothesis in words (a hypothesis with its evidence, never a verdict) */
@@ -95,7 +109,7 @@
     return call("polarity_pairs", { pos: f(pos), neg: f(neg), ppm: o.ppm ?? 5, rt_min: o.rtMin ?? 0.15 });
   }
 
-  const UNTID = { OPT, MIN_COMMON, structKey, payload, compute, annotate, single, edgeText, edgeShort, hypothesisText, networkSvg, pairPolarity };
+  const UNTID = { OPT, MIN_COMMON, structKey, payload, compute, annotate, single, edgeText, evidenceText, edgeShort, hypothesisText, networkSvg, pairPolarity };
   G.UNTID = UNTID;
   if (typeof module !== "undefined") module.exports = UNTID;
 })();
