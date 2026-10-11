@@ -127,6 +127,19 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 #stbar .tb-split .tb-car{border-top-left-radius:0;border-bottom-left-radius:0;padding:4px 3px;margin-left:-1px}
 #stbar .tb-sep{width:1px;align-self:stretch;margin:4px 3px;background:var(--line);flex:none}
 #stbar [hidden]{display:none!important}
+#paletta{position:fixed;inset:0;z-index:7200;display:flex;align-items:flex-start;justify-content:center;padding-top:14vh;background:rgba(0,0,0,.35)}
+#paletta[hidden]{display:none}
+#paletta .pal-b{width:min(560px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.35);overflow:hidden}
+#paletta input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 14px;font-size:15px;background:var(--panel);color:var(--ink);outline:none;box-sizing:border-box}
+#paletta input:focus-visible{box-shadow:inset 0 -2px 0 var(--accent)}
+#pal-l{list-style:none;margin:0;padding:4px;max-height:min(50vh,360px);overflow-y:auto}
+#pal-l li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;cursor:pointer;min-height:34px}
+#pal-l li[aria-selected=true]{background:var(--sel);outline:1px solid var(--accent)}
+#pal-l .pal-i{display:inline-flex;color:var(--accent);flex:none}#pal-l .pal-t{flex:1;min-width:0}#pal-l .pal-g{font-size:11px;color:var(--muted);flex:none}
+#pal-l li.pal-e{cursor:default;color:var(--muted)}
+#paletta .pal-f{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.pal-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (pointer:coarse){#pal-l li{min-height:44px}}
 #stmenu{position:fixed;z-index:7100;min-width:190px;max-width:min(340px,calc(100vw - 16px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:4px;display:flex;flex-direction:column;gap:1px}
 #stmenu button{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;padding:6px 10px;border-radius:5px;color:var(--ink);cursor:pointer;font-size:13px;white-space:normal;min-height:30px}
 #stmenu button:hover,#stmenu button:focus-visible{background:var(--sel);outline:none}
@@ -507,6 +520,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
 <script src="static/workflow.js"></script>
 <script src="static/tables.js"></script>
 <script src="static/barra.js"></script>
+<script src="static/paletta.js"></script>
 <script src="static/help.js"></script>
 <script src="static/perf.js"></script>
 <script src="static/tpmine-loader.js"></script>

@@ -35,9 +35,9 @@ try:
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
-            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "more"], ids
+            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["File", "Calcolatrice", "Perdite", "Addotti", "Liste", "Tavola", "Altro"], lab
+            assert lab == ["File", "Calcolatrice", "Perdite", "Addotti", "Liste", "Tavola", "Altro", "Cerca"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
@@ -159,9 +159,9 @@ try:
 
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
-            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "scan", "form", "idn", "more"], ids
+            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
-            assert lab[-4:] == ["Scansione", "Formule", "Librerie", "Altro"], lab
+            assert lab[-5:] == ["Scansione", "Formule", "Librerie", "Altro", "Cerca"], lab
             assert "·" not in " ".join(lab) and not any(x.isupper() and len(x) == 3 for x in lab), lab
             assert pg.evaluate("document.querySelector('#stbar [data-hrgrp]').offsetParent !== null"), "separator before the HR group"
             for w in (1280, 1440, 1680):
@@ -203,6 +203,116 @@ try:
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
             pg.click("#sb-pin"); pg.click("#sb-x")
         step("HR state in qqq.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
+
+        # ------------------------------------------------------------------ narrow windows, iPad, phone
+        def stretta():
+            pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
+            pg.evaluate("(()=>{BARRA.setPinned(true);BARRA.setTab('adducts',{noFocus:true})})()"); pg.wait_for_timeout(300)
+            assert pg.evaluate("BARRA.pinned && BARRA.open")
+            pg.set_viewport_size({"width": 1000, "height": 900}); pg.wait_for_timeout(500)
+            assert not pg.is_visible("#dfiles") and not pg.evaluate("BARRA.pinned"), "a narrow window closes the pinned panel"
+            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(300)
+            assert pg.is_visible("#dfiles") and not pg.is_visible("#sb-pin"), "below 1100 px it is only a drawer: no pin"
+            assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 1000 * 0.9 + 1
+            assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            pg.evaluate("localStorage.removeItem('qqq.barra.hr')"); pg.set_viewport_size({"width": 1500, "height": 1000})
+        step("a narrow window closes the pinned panel; under 1100 px it is only a drawer, at most 90 % wide", stretta)
+
+        def ipad():
+            for w, h in ((1024, 1366), (1366, 1024)):
+                ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
+                q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
+                try:
+                    ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
+                    q.evaluate("window.scrollTo(0,0)")
+                    f = q.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
+                    small = q.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).map(b=>b.dataset.cmd||b.dataset.cmdMain||b.dataset.cmdCar)")
+                    assert not small, (w, small)
+                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); q.wait_for_timeout(300)
+                    assert q.is_visible("#dfiles") and not q.is_visible("#sb-pin") and not q.evaluate("BARRA.pinned"), (w, "iPad: only a drawer")
+                    assert q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= w * 0.9 + 1
+                    big = q.evaluate("[...document.querySelectorAll('#sb-header button')].filter(b=>b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).length"); assert big == 0, big
+                    q.set_viewport_size({"width": h, "height": w}); q.wait_for_timeout(600)           # rotation
+                    ov = q.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(p=>p.el&&!p.el.classList.contains('max')).map(p=>p.x+p.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
+                    assert ov[0] <= 1 and ov[1] <= 2, (w, ov)
+                    f = q.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (h, f)
+                finally:
+                    ctx.close()
+        step("iPad 1024×1366 and 1366×1024 (touch): buttons ≥ 40 px, the panel is only a drawer, rotation leaves charts and bar whole", ipad)
+
+        def telefono():
+            ctx = r.b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
+            q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
+            try:
+                ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
+                assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "the page does not scroll sideways"
+                vis = q.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
+                assert vis == ["file", "more", "search"], vis
+                q.click("#tb-more"); q.wait_for_selector("#stmenu")
+                t = q.inner_text("#stmenu"); assert "Calcolatrice m/z" in t and "Perdite neutre" in t and "Tavola periodica" in t and "PubChem" in t, t
+                q.locator("#stmenu button", has_text="Calcolatrice m/z").click(); q.wait_for_timeout(500)
+                assert q.is_visible("#calcdlg") and q.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 390 * 0.9 + 1
+                q.evaluate("BARRA.close(false)")
+                assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1
+            finally:
+                ctx.close()
+        step("phone (?telefono=0, 390 px): File, «Altro» and the search only, everything else under «Altro», page does not break", telefono)
+
+        # ------------------------------------------------------------------ command palette and keyboard
+        pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
+        def paletta():
+            pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
+            assert pg.get_attribute("#paletta", "role") == "dialog" and pg.get_attribute("#pal-in", "role") == "combobox" and pg.get_attribute("#pal-l", "role") == "listbox"
+            assert pg.evaluate("document.activeElement.id") == "pal-in"
+            pg.keyboard.type("isotop"); pg.wait_for_timeout(200)
+            t = pg.inner_text("#pal-l"); assert "Simulazione isotopica" in t, t
+            pg.keyboard.press("Control+a"); pg.keyboard.type("CALCOL"); pg.wait_for_timeout(200)
+            assert pg.inner_text("#pal-l #pal-o-0").startswith("Calcolatrice") or "Calcolatrice m/z" in pg.inner_text("#pal-o-0"), pg.inner_text("#pal-l")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("perdita"); pg.wait_for_timeout(200); assert "Perdite neutre" in pg.inner_text("#pal-l")       # singular finds the plural entry through its keywords
+            pg.keyboard.press("Control+a"); pg.keyboard.type("zzzzqq"); pg.wait_for_timeout(200); assert "Nessun comando" in pg.inner_text("#pal-l")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("metodo"); pg.wait_for_timeout(200); assert "Metodo di acquisizione" in pg.inner_text("#pal-l")
+            pg.keyboard.press("Control+a"); pg.keyboard.type("pannello"); pg.wait_for_timeout(200)
+            assert pg.locator("#pal-l li[role=option]").count() >= 3, "several matches: the side of the panel, pin"
+            n0 = pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')"); pg.keyboard.press("ArrowDown")
+            assert pg.evaluate("document.querySelector('#pal-in').getAttribute('aria-activedescendant')") != n0 and pg.evaluate("document.querySelectorAll('#pal-l [aria-selected=true]').length") == 1
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#paletta")
+            pg.click("#tb-search"); pg.wait_for_selector("#paletta:not([hidden])"); pg.keyboard.type("calcol"); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+            assert not pg.is_visible("#paletta") and pg.evaluate("BARRA.curTab") == "calc" and pg.is_visible("#calcdlg"), "Enter runs the command"
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            if pg.is_visible("#dfiles"): pg.click("#sb-x")
+        step("palette: Ctrl+K or 🔍, finds «isotop» and «calcol» without accents, partial words, ↑↓ Enter Esc, dialog/combobox/listbox", paletta)
+
+        def paletta_hr():
+            pg.keyboard.press("Control+k"); pg.keyboard.type("isotop"); pg.wait_for_timeout(200)
+            assert "Simulazione isotopica" in pg.inner_text("#pal-l") and "Alta risoluzione" in pg.inner_text("#pal-l")
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(700)
+            assert pg.evaluate("BARRA.curTab") == "iso" and pg.is_visible("#hrinfo")
+            pg.click("#sb-x"); pg.keyboard.press("Control+k"); pg.keyboard.type("sinistra"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
+            assert pg.evaluate("BARRA.side") == "left"
+            pg.keyboard.press("Control+k"); pg.keyboard.type("destra"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300); assert pg.evaluate("BARRA.side") == "right"
+            pg.evaluate("BARRA.setSide('left')")
+        step("palette in HR: the HR items are there («Pannello a sinistra / a destra» too), Enter opens the panel", paletta_hr)
+
+        def tastiera():
+            pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Alt+0"); pg.wait_for_timeout(100)
+            assert pg.evaluate("!!document.activeElement.closest('#stbar')"), "Alt+0 reaches the bar"
+            a = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain")
+            pg.keyboard.press("ArrowRight"); b = pg.evaluate("document.activeElement.dataset.cmd||document.activeElement.dataset.cmdMain||document.activeElement.dataset.cmdCar"); assert a != b
+            pg.keyboard.press("End"); assert pg.evaluate("document.activeElement.dataset.cmd") == "search"
+            pg.keyboard.press("Home"); assert pg.evaluate("document.activeElement.dataset.cmd") == "file"
+            assert pg.evaluate("document.querySelectorAll('#stbar .tb[tabindex=\"0\"]').length") == 1, "roving tabindex"
+            pg.keyboard.press("Escape"); assert pg.evaluate("!document.activeElement.closest('#stbar')"), "Esc goes back where the focus was"
+            pg.keyboard.press("F6"); assert pg.evaluate("!!document.activeElement.closest('#stbar')"), "F6 reaches the bar too"
+            pg.keyboard.press("Escape")
+            # the arrows of the chromatograms are not taken by the bar when the focus is on a graph
+            pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
+            box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(500)
+            c0 = pg.evaluate("E.active.cur"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(300)
+            assert pg.evaluate("E.active.cur") != c0 and not pg.evaluate("!!document.activeElement.closest('#stbar')"), "← → move the cursor of the chromatogram"
+        step("keyboard: Alt+0 / F6 reach the bar, arrows Home End inside it (roving tabindex), Esc goes back; arrows of the chromatograms unchanged", tastiera)
 
         r.close()
 except Exception as e:
