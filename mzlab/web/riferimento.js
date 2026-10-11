@@ -145,7 +145,12 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       const s1 = newSpec(np, near ? near.rt - NEAR : apex - NEAR, near ? near.rt + NEAR : apex + NEAR, f.k);
       if (window.DDA && f.dda && s1) {                                                // a data-dependent file: the MS2 scans of this ion, if the instrument took any
         DDA.make(np, s1);
-        setTimeout(() => { try { const q = DDA.ms2For(s1, mz)[0]; if (q) DDA.openMs2(s1, q.j); } catch (_) { /* no MS2 */ } }, 600);
+        try { await DDA.get(f.k); } catch (_) { /* the scans are read again below */ }
+        for (let n = 0; n < 12; n++) {                                                  // the spectrum draws after the scans are read: wait for it
+          const q = DDA.ms2For(s1, mz)[0];
+          if (q) { DDA.openMs2(s1, q.j); break; }
+          await new Promise(r => setTimeout(r, 400));
+        }
       }
       say("ref.opened");
     } catch (err) { if (note) note.textContent = String(err && err.message || err); }
