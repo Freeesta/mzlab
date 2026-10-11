@@ -49,6 +49,7 @@ function attach(p) {
   }
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
+    if (p.type === "spec" && a.markN != null) hoverMark(p, px);
     if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
       const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = (px - drag.x0) / pw * span;
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
@@ -96,7 +97,7 @@ function attach(p) {
     const cx = e.clientX, cy = e.clientY;
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
@@ -294,7 +295,11 @@ function ctxFor(p, e, x, px, py) {
     const m = specPick(p, px, py);                          // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-");
-    items.push(mi({ label: I18N.t("ctx.spec.xic", { mz: lab }), fn: () => xicDirect(m, p) }));
+    p._pm = has ? m : null;
+    let mark = items.length;                                  // HR: the entries are grouped at the end (tag), the others keep their order
+    const tag = g => { for (let i = mark; i < items.length; i++) if (items[i] !== "-" && !items[i].g) items[i].g = g; mark = items.length; };
+    if (a.hrp && window.DDA && has) { const q = DDA.ms2For(p, m)[0]; if (q) { items.push({ label: I18N.t("ctx.spec.openMs2", { mz: q.prec.toFixed(mzd(p, 2)) }), aria: I18N.t("ctx.spec.openMs2.aria", { mz: lab }), fn: () => DDA.openMs2(p, q.j) }); tag("ms2"); } }
+    items.push(mi({ label: I18N.t("ctx.spec.xic", { mz: lab }), fn: () => xicDirect(m, p) })); tag("xic");
     if (window.LISTE) {
       const pol = a.data[0].f && a.data[0].f.polarity;
       items.push(mi({ label: I18N.t("ctx.spec.contLists"), fn: () => LISTE.open({ mz: m, polarity: pol, hr: !!a.hrp }) }));
@@ -303,17 +308,22 @@ function ctxFor(p, e, x, px, py) {
         if (kn.length) items.push({ label: I18N.t("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || I18N.t("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? I18N.t("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true });
         items.push(mi({ label: I18N.t("ctx.spec.addLab"), fn: () => LISTE.askAdd(m, pol) }));
       }
+      tag("cont");
     }
-    if (window.DISP && window.BANCO && BANCO.on()) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
+    if (a.hrp && window.DISP && window.BANCO && BANCO.on()) { items.push({ label: I18N.t("ctx.spec.marker"), check: markOn(p), aria: I18N.t("ctx.spec.marker.aria"), fn: () => { p.mk = !markOn(p); draw(p); uiSave(); } }, { label: I18N.t("ctx.spec.noCont"), check: !!p.noCont, aria: I18N.t("ctx.spec.noCont.aria"), fn: () => { p.noCont = !p.noCont; draw(p); uiSave(); } }); tag("view"); }
+    if (window.DISP && window.BANCO && BANCO.on()) { items.push({ label: I18N.t("disp.menu"), aria: I18N.t("disp.menu.aria"), fn: () => DISP.open(p) }); tag("disp"); }
     if (a.hrp && window.ELEM) {
       items.push(mi({ label: I18N.t("ctx.spec.generate", { mz: lab }), fn: () => ELEM.generate({ mz: m, sp: p, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
       if (p.fm && p.fm.length) items.push({ label: I18N.t("cx.clear"), fn: () => { p.fm = []; draw(p); } });
+      tag("gen");
     }
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = I18N.t("ctx.spec.overlay.tip");
     const ov = q => ({ label: I18N.t("ctx.spec.overlay", { name: xicName(q), n: q.num || "?" }), tip: TIPX, fn: () => xicDirect(m, p, q) });
     if (xs.length > 3) items.push(mi({ label: I18N.t("ctx.spec.overlayMany"), tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));
     else xs.forEach(q => items.push(mi(ov(q))));
+    tag("xic");
     if (window.DDA) { const dm = DDA.menu(p, px, py, m); if (dm.length) items.push("-", ...dm); }       // DDA trio: average of the MS2 of an ion, follow an ion
+    tag("dda");
     items.push("-", ...measMenu(p, m).map((o, i) => i === 0 ? mi(o) : o));
     items.push(mi({ label: I18N.t("ctx.spec.annotate"), fn: async () => { const v = await ask(I18N.t("ctx.spec.annotate.prompt", { mz: lab }), ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } }));
     items.push({ label: I18N.t("ctx.spec.iso"), fn: async () => {
@@ -335,13 +345,21 @@ function ctxFor(p, e, x, px, py) {
       draw(p);
     } });
     if (p.iso) items.push({ label: I18N.t("ctx.spec.isoOff"), fn: () => { p.iso = null; draw(p); } });
+    tag("tools");
     if (window.LIB && p.level === 2) items.push("-", LIB.isHr(p) ? { label: I18N.t("ctx.libWhat"), fn: () => LIB.whatIs(p) } : { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });       // «What is it?» only for high resolution
     if (p.level === 2 && window.WORKFLOW) items.push("-", { label: I18N.t("ctx.spec.exportMgf"), fn: () => WORKFLOW.exportSpectrumMgf(p) }, { label: I18N.t("ctx.spec.exportMsp"), fn: () => WORKFLOW.exportSpectrumMsp(p) });
     if (p.level === 2 && window.FAIR && FAIR.available(p)) items.push({ label: I18N.t("ctx.spec.exportMassbank"), fn: () => FAIR.massbank(p) }, { label: I18N.t("ctx.spec.exportSirius"), fn: () => FAIR.sirius(p) });
+    tag("lib");
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
     if (p.link) items.push("-", { label: I18N.t("ctx.spec.freeze"), fn: () => { freezeSpec(p); uiSave(); } });
     else if (srcP) items.push("-", { label: I18N.t("ctx.spec.relink"), fn: () => liveSpec(p, srcP) });
+    tag("link");
+    if (a.hrp) {                                              // HR: open the MS2, then formula and display, then the rest in groups with separators
+      const ORDER = [["ms2"], ["gen", "view", "disp"], ["xic"], ["cont"], ["tools"], ["dda"], ["lib"], ["link"]], head = items.splice(0, 2), body = items.splice(0).filter(i => i !== "-");
+      items.push(...head);
+      ORDER.forEach(g => { const l = body.filter(i => g.includes(i.g)).sort((a, b) => g.indexOf(a.g) - g.indexOf(b.g)); if (l.length) { if (items.length > head.length) items.push("-"); items.push(...l); } });
+    }
   } else {
     const k = nearestFile(p, x);
     items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-");
