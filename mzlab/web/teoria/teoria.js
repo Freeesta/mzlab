@@ -368,9 +368,9 @@ const TP = (() => {
 
   // The page scripts are added in this order (async=false keeps it): the bar of commands first, then the settings button that goes into it
   function load(src) { const s = document.createElement("script"); s.src = src; s.async = false; document.head.appendChild(s); }
-  // comandi.js: TCMD, the commands of the header; a11y.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
+  // comandi.js: TCMD, the commands of the header; impostazioni.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
   // lettura.js: menu sheet, reading position, figure viewer; cerca.js: search dialog (Ctrl/⌘K, TEORIA.cerca(), index read on first use);
   // strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "a11y.js", "lettura.js", "cerca.js", "strumenti/pannello.js"].forEach(load); });
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "strumenti/pannello.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();

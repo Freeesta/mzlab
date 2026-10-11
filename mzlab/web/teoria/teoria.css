@@ -172,7 +172,7 @@ body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 :root[data-theme=dark] .box.oral{background:#2a2216;border-left-color:#fbbf24}:root[data-theme=dark] .box.oral>b:first-child{color:#fcd34d}
 :root[data-theme=dark] details.poe{background:#12272b;border-color:#22d3ee}
 
-/* ---- Lettura facilitata (a11y.js; the choices live in localStorage «qqq.a11y», tema.js puts them on <html> as data-a11y-*) ---- */
+/* ---- Lettura facilitata (impostazioni.js; the choices live in localStorage «qqq.a11y», tema.js puts them on <html> as data-a11y-*) ---- */
 @font-face{font-family:"Atkinson Hyperlegible Next";src:url(fonts/AtkinsonHyperlegibleNext-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Atkinson Hyperlegible Next";src:url(fonts/AtkinsonHyperlegibleNext-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
 @font-face{font-family:"OpenDyslexic";src:url(fonts/OpenDyslexic-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}

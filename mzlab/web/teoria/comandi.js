@@ -114,7 +114,7 @@
   if (phone) {
     put("cerca");
     const al = btn({ id: "altro", icona: "altro", etichetta: "Altro", titolo: "Altro: strumenti didattici" }); al.className += " tb-altro"; bar.appendChild(al);
-    // the gear is added by a11y.js (#a11y-btn) at the end of the bar
+    // the gear is added by impostazioni.js (#a11y-btn) at the end of the bar
     menu(al, cmd("strumenti").figli, "Strumenti didattici");
   } else {
     const n = document.createElement("span"); n.className = "tgrp"; n.id = "tnav"; put("prec", n); put("succ", n); bar.appendChild(n); bar.appendChild(sep());
