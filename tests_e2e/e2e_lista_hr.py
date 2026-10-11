@@ -26,6 +26,7 @@ try:
             assert sorted(g) == sorted(["DDA|1", "Full Scan|1", "MS2 (Product Ion)|1", "Infusione|1"]), g
         step("groups DDA (one row for both parts), Full Scan, MS2, Infusione", groups)
         def click_opens():
+            if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)       # the side bar starts folded
             pg.click("#flst .fl:has-text('HR_inf')"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.files.filter(f=>f.vis).map(f=>f.file.split('.')[0]).sort().join()") == "HR_full-t5,HR_inf-t15"
             pg.click("#flst .fl:has-text('HR_DDA') input[data-k]"); pg.wait_for_timeout(500)
