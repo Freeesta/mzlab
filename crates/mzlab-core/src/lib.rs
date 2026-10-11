@@ -9,6 +9,7 @@ pub mod mzidx;
 pub mod mzml;
 pub mod peaks;
 pub mod raw;
+pub mod rois;
 pub mod routes;
 pub mod scantable;
 
