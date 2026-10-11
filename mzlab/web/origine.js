@@ -65,7 +65,7 @@ function openOrigin(pre = {}) {
 }
 async function ogRun() {
   const d = document.getElementById("ogdlg"), q = id => d.querySelector(id), err = q("#og-err");
-  const mz = numMz(q("#og-mz").value), par = numMz(q("#og-par").value), r0 = parseFloat(q("#og-r0").value.replace(",", ".")), r1 = parseFloat(q("#og-r1").value.replace(",", "."));
+  const mz = numMz(q("#og-mz").value), par = numMz(q("#og-par").value), r0 = numIt(q("#og-r0").value), r1 = numIt(q("#og-r1").value);
   err.hidden = true;
   if (mz == null || par == null) { err.textContent = I18N.t("og.needBoth"); err.hidden = false; return; }
   if (mz === par) { err.textContent = I18N.t("og.differ"); err.hidden = false; return; }

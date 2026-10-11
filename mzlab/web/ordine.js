@@ -46,6 +46,8 @@ const fileBase = name => String(name).split("#")[0];
 // time in minutes <-> value shown in a unit
 const timeShown = (min, unit) => min == null ? null : +(min / (TIME_UNITS[unit] || 1)).toPrecision(6);
 const timeStored = (val, unit) => val == null ? null : +(val * (TIME_UNITS[unit] || 1)).toPrecision(12);
+// decimal text typed by the student ("0,5" or "0.5") -> number | NaN; lenient like parseFloat (a trailing unit is ignored)
+const numIt = t => parseFloat(String(t).replace(",", "."));
 // text typed in the time field: "", "12", "0,5", "1.25" -> number | null (empty) | NaN (not a number); no exponent, no sign
 function parseDecimal(text) {
   const s = String(text ?? "").trim().replace(",", ".");

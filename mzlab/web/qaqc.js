@@ -54,7 +54,7 @@ const QAQC = (() => {
 
   async function addIon(text, rt, label, kind) {
     const r = await resolveMz(text);
-    const x = parseFloat(String(rt).replace(",", "."));
+    const x = numIt(rt);
     if (!(r.mz > 0) || !(x >= 0)) throw new Error(t("qaqc.err.input"));
     st.ions.push({ id: st.seq++, kind: kind === "known" && isHr() ? "known" : "is", text: String(text).trim(), mz: r.mz, rt: x, label: label || r.formula || String(r.mz) });
     save();
@@ -74,7 +74,7 @@ const QAQC = (() => {
   async function runRatio() {
     const text = (Q1("#qq-rin") || {}).value ?? st.ratio.text, rt = (Q1("#qq-rrt") || {}).value ?? st.ratio.rt;
     st.ratio = { text, rt }; save();
-    const r = await resolveMz(text), x = parseFloat(String(rt).replace(",", "."));
+    const r = await resolveMz(text), x = numIt(rt);
     if (!(r.mz > 0) || !(x >= 0)) throw new Error(t("qaqc.err.input"));
     const q = await query(r.mz, x, true);
     res.ratio = { text, mz: r.mz, rt: x, thr: st.thr, files: q.files.map(f => f.file), roles: q.roles, r: q.r };
@@ -203,7 +203,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
       const r = e.target.closest("select[data-role]");
       if (r) { st.roles[r.dataset.role] = r.value; save(); refresh(box); }
       if (e.target.id === "qq-thr") { st.thr = +e.target.value; save(); if (res.ratio) runRatio().then(() => paint(box)).catch(() => {}); }
-      if (e.target.id === "qq-win") { const v = parseFloat(String(e.target.value).replace(",", ".")); if (v > 0) { st.win = v; save(); refresh(box); } }
+      if (e.target.id === "qq-win") { const v = numIt(e.target.value); if (v > 0) { st.win = v; save(); refresh(box); } }
     };
     box.onclick = e => {
       const b = e.target.closest("button[data-rm]");

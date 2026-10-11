@@ -299,7 +299,7 @@ const LIB = (() => {
     return `<details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lv.thr.title")}</summary><div class="sm" style="padding:4px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${THR_KEYS.map(k => `<label>${I18N.t(`lv.thr.${k}`)} <input data-thr="${k}" style="width:56px" value="${String(T[k]).replace(".", ",")}"></label>`).join("")}<button type="button" id="lr-sog-reset">${I18N.t("lv.thr.reset")}</button></div></details>`;
   }
   function thresholdsBind(root, again) {
-    root.querySelectorAll("[data-thr]").forEach(el => el.onchange = () => { const v = parseFloat(el.value.replace(",", ".")); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
+    root.querySelectorAll("[data-thr]").forEach(el => el.onchange = () => { const v = numIt(el.value); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
     const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach(el => { el.value = String(T[el.dataset.thr]).replace(".", ","); }); again(); };
   }
   async function scansOf(p) {                                  // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
@@ -356,7 +356,7 @@ const LIB = (() => {
     };
     const draw = () => { const R = st.res; if (!R || !R.results.length) return; const cv = d.querySelector("#lr-cv"), r = R.results[st.sel]; mirror(cv, { mz: R.query.mz, it: R.query.it, hr: st.hr }, r); };
     const run = async () => {
-      const num = id => parseFloat(String(d.querySelector(id).value).replace(",", "."));
+      const num = id => numIt(String(d.querySelector(id).value));
       st.prec = num("#lr-prec"); st.v = num("#lr-tol"); st.unit = d.querySelector("#lr-unit").value; st.frag = num("#lr-frag");
       if (!(st.prec > 0) || !(st.v > 0) || !(st.frag > 0)) return msg(I18N.t("lib.checkTol"));
       msg(I18N.t("lib.searching")); const t0 = performance.now();
@@ -445,7 +445,7 @@ const LIB = (() => {
       det.innerHTML = `<div class="muted">${I18N.t("lib.what.legend")}</div><div>${nls.length ? I18N.t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : I18N.t("lib.what.nlNone")}</div>${attr}`;
     };
     const run = async () => {
-      const num = id => parseFloat(String(d.querySelector(id).value).replace(",", "."));
+      const num = id => numIt(String(d.querySelector(id).value));
       st.prec = num("#lr-prec"); st.v = num("#lr-tol"); st.frag = num("#lr-frag");
       if (!(st.prec > 0) || !(st.v > 0) || !(st.frag > 0)) return msg(I18N.t("lib.checkTol"));
       msg(I18N.t("lib.searching")); const t0 = performance.now(); st.an = null; st.res = null; st.sel = { k: "id", i: 0 };

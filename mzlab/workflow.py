@@ -6,24 +6,9 @@ filters, library thresholds), and the sequence of operations with UTC timestamps
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 FORMAT_VERSION = "mzworkflow/1"
-
-
-def compute_sha256(path: Path | str) -> str:
-    """Compute SHA-256 of a file in 1 MB chunks."""
-    p = Path(path)
-    if not p.is_file():
-        return ""
-    h = hashlib.sha256()
-    with open(p, "rb") as fh:
-        while chunk := fh.read(1 << 20):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def create_workflow(
