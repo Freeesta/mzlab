@@ -1,4 +1,24 @@
 {
+ "doc_kb": {
+  "docs/agenti/alta-risoluzione.md": 28031,
+  "docs/agenti/mzfinder.md": 28520
+ },
+ "doc_righe": {
+  "AGENTS.md": 2,
+  "docs/agenti/alta-risoluzione.md": 14,
+  "docs/agenti/dati-3200.md": 10,
+  "docs/agenti/dati-mappa.md": 13,
+  "docs/agenti/dati-strumenti.md": 7,
+  "docs/agenti/dati.md": 16,
+  "docs/agenti/librerie.md": 14,
+  "docs/agenti/misure.md": 3,
+  "docs/agenti/mzfinder.md": 13,
+  "docs/agenti/mzidx.md": 1,
+  "docs/agenti/rust-desktop.md": 6,
+  "docs/agenti/rust-rotte.md": 4,
+  "docs/agenti/rust.md": 2,
+  "docs/agenti/teoria.md": 10
+ },
  "file": {
   "TP_Mine/js/20_tpmine.js": 638,
   "TP_Mine/py/tpmine/engine.py": 680,
@@ -35,7 +55,7 @@
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
   "tools/bench.py": 811,
-  "tools/genera_ei.py": 761
+  "tools/genera_ei.py": 751
  },
  "funzioni": {
   "TP_Mine/js/20_tpmine.js::open": 488,
@@ -127,7 +147,8 @@
   "mzlab/web/eventi.js::axisHint": 128,
   "mzlab/web/eventi.js::ctxFor": 112,
   "mzlab/web/eventi.js::inLbl": 109,
-  "mzlab/web/explore.js::renderFileList": 91,
+  "mzlab/web/explore.js::gh": 163,
+  "mzlab/web/explore.js::renderFileList": 196,
   "mzlab/web/fair.js::FAIR": 173,
   "mzlab/web/grafici.js::U": 113,
   "mzlab/web/grafici.js::drawLines": 138,
@@ -137,10 +158,10 @@
   "mzlab/web/libreria.js::LIB": 565,
   "mzlab/web/libreria.js::whatIs": 87,
   "mzlab/web/liste.js::LISTE": 807,
-  "mzlab/web/liste.js::mount": 176,
+  "mzlab/web/liste.js::mount": 227,
   "mzlab/web/livelli.js::LIVELLI": 101,
   "mzlab/web/lr.js::createLr": 157,
-  "mzlab/web/mappa3d.js::open": 449,
+  "mzlab/web/mappa3d.js::open": 494,
   "mzlab/web/paletta.js::PALETTE": 118,
   "mzlab/web/pannelli.js::addPanel": 120,
   "mzlab/web/pannelli.js::ctl": 137,
