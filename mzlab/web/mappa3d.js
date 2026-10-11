@@ -140,27 +140,9 @@ export function diagnose(gl, extra) {
   try { d.attributes = gl.getContextAttributes(); d.error = gl.getError(); d.lost = gl.isContextLost(); } catch (e) { /* context gone */ }
   return d;
 }
-export function open(p, opener) {
-  const a = p._a; if (!a || !a.f) return;
-  const probe = document.createElement("canvas"), c0 = makeContext(probe);                      // a throw-away canvas: is there WebGL2 at all? (the context is let go at once)
-  if (!c0.gl) { let w1 = false; try { w1 = !!document.createElement("canvas").getContext("webgl"); } catch (e) { /* none */ } throw new Fail("nowebgl2", c0.errs.join("; "), { webgl1: w1 }); }
-  try { const x = c0.gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { /* the browser will collect it */ }
-  if (!document.getElementById("m3d-css")) { const s = document.createElement("style"); s.id = "m3d-css"; s.textContent = CSS; document.head.appendChild(s); }
-  const prefs = MAPPA.prefs, P = Object.assign({}, DEF, prefs[PREF_KEY] || {});
-  prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
-  const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
-  const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
-  const V = {                                               // the state of the viewer
-    k: f.k, ref: a.ref ? a.ref.k : null, norm: p.norm || "abs", lv, hr, rt: [a.x0, a.x1], mz: [a.y0, a.y1],
-    g: null, raw: null, Z: null, zmin: 0, zmax: 1, refv: 1, signed: false, pts: null, cur: null, hover: false, plane: false, playing: 0,
-    cam: { az: 35, el: 32, d: 3, t: [0, 0, 0] }, dirty: true, W: 1, H: 1, gen: 0
-  };
-  if (P.sig == null) P.sig = hr ? 0 : 1;
-  const dlg = document.createElement("dialog"); dlg.className = "m3d" + (P.side ? "" : " hid"); dlg.setAttribute("aria-label", T("m3d.title"));
-  const opt = (v, cur, lab, dis) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}${dis ? " disabled" : ""}>${EH(lab)}</option>`;
-  const files = scanFiles(tabFiles(p.tab)).filter(x => x.lv === lv);
-  const others = files.filter(x => x.k !== f.k);
-  dlg.innerHTML = `<div class="m3d-main"><canvas class="m3d-gl" tabindex="0" aria-label="${T("m3d.canvas")}"></canvas><canvas class="m3d-ov" aria-hidden="true"></canvas>
+// the markup of the dialog: the viewer on the left, the sidebar with the groups of controls on the right (the handlers are bound in open())
+function dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt }) {
+  return `<div class="m3d-main"><canvas class="m3d-gl" tabindex="0" aria-label="${T("m3d.canvas")}"></canvas><canvas class="m3d-ov" aria-hidden="true"></canvas>
 <div class="m3d-read" aria-live="polite"></div><div class="m3d-help">${T("m3d.help")}</div>
 <div class="m3d-mini"><canvas class="m3d-xic" aria-label="${T("m3d.xic.aria")}"></canvas><canvas class="m3d-spc" aria-label="${T("m3d.spc.aria")}"></canvas></div>
 <div class="m3d-time"><button data-m="play" aria-label="${T("m3d.play")}" title="${T("m3d.play")}">&#9654;</button><input type="range" data-m="ti" min="0" max="0" value="0" aria-label="${T("m3d.time.aria")}"><span data-m="tt"></span></div>
@@ -188,6 +170,49 @@ export function open(p, opener) {
 <details open><summary>${T("m3d.g.views")}</summary>
 <div class="rw"><button data-m="v1" title="${T("m3d.v.top.title")}">1 ${T("m3d.v.top")}</button><button data-m="v2" title="${T("m3d.v.rt.title")}">2 ${T("m3d.v.rt")}</button><button data-m="v3" title="${T("m3d.v.mz.title")}">3 ${T("m3d.v.mz")}</button><button data-m="v4">4 ${T("m3d.v.iso")}</button></div>
 <div class="rw"><button data-m="reset" title="R">${T("m3d.reset")} (R)</button><button data-m="png">${T("m3d.png")}</button></div></details></aside>`;
+}
+
+function blur(Z, nx, ny, s) {
+  const r = Math.ceil(3 * s), k = new Float32Array(2 * r + 1); let sum = 0;
+  for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-i * i / (2 * s * s)); sum += k[i + r]; } for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const t = new Float32Array(Z.length), o = new Float32Array(Z.length);
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { let acc = 0; for (let d = -r; d <= r; d++) acc += k[d + r] * Z[i * ny + clamp(j + d, 0, ny - 1)]; t[i * ny + j] = acc; }
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { let acc = 0; for (let d = -r; d <= r; d++) acc += k[d + r] * t[clamp(i + d, 0, nx - 1) * ny + j]; o[i * ny + j] = acc; }
+  return o;
+}
+
+function plot(c, xs, ys, cx, label, xlab, signed) {
+  const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), W = Math.round((r.width || 260) * d), H = Math.round((r.height || 104) * d);
+  if (c.width !== W) c.width = W; if (c.height !== H) c.height = H; const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0);
+  const w = W / d, h = H / d; g.clearRect(0, 0, w, h); g.fillStyle = css("--muted"); g.strokeStyle = css("--muted"); g.font = "10px system-ui, sans-serif"; g.fillText(label, 6, 11);
+  const n = ys.length; let mn = 0, mx = 0; for (let i = 0; i < n; i++) { if (ys[i] > mx) mx = ys[i]; if (ys[i] < mn) mn = ys[i]; } if (mx === mn) mx = mn + 1;
+  const X = i => 4 + i / (n - 1) * (w - 8), Y = v => h - 14 - (v - mn) / (mx - mn) * (h - 30);
+  g.strokeStyle = css("--ink"); g.lineWidth = 1; g.beginPath(); for (let i = 0; i < n; i++) { const x = X(i), y = Y(ys[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+  g.strokeStyle = css("--accent"); g.beginPath(); g.moveTo(X(cx), 14); g.lineTo(X(cx), h - 14); g.stroke();
+  g.fillStyle = css("--muted"); g.textAlign = "left"; g.fillText(xlab[0], 4, h - 3); g.textAlign = "right"; g.fillText(xlab[1], w - 4, h - 3); g.textAlign = "right"; g.fillText(fmt(mx), w - 4, 11);
+}
+
+export function open(p, opener) {
+  const a = p._a; if (!a || !a.f) return;
+  const probe = document.createElement("canvas"), c0 = makeContext(probe);                      // a throw-away canvas: is there WebGL2 at all? (the context is let go at once)
+  if (!c0.gl) { let w1 = false; try { w1 = !!document.createElement("canvas").getContext("webgl"); } catch (e) { /* none */ } throw new Fail("nowebgl2", c0.errs.join("; "), { webgl1: w1 }); }
+  try { const x = c0.gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { /* the browser will collect it */ }
+  if (!document.getElementById("m3d-css")) { const s = document.createElement("style"); s.id = "m3d-css"; s.textContent = CSS; document.head.appendChild(s); }
+  const prefs = MAPPA.prefs, P = Object.assign({}, DEF, prefs[PREF_KEY] || {});
+  prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
+  const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
+  const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
+  const V = {                                               // the state of the viewer
+    k: f.k, ref: a.ref ? a.ref.k : null, norm: p.norm || "abs", lv, hr, rt: [a.x0, a.x1], mz: [a.y0, a.y1],
+    g: null, raw: null, Z: null, zmin: 0, zmax: 1, refv: 1, signed: false, pts: null, cur: null, hover: false, plane: false, playing: 0,
+    cam: { az: 35, el: 32, d: 3, t: [0, 0, 0] }, dirty: true, W: 1, H: 1, gen: 0
+  };
+  if (P.sig == null) P.sig = hr ? 0 : 1;
+  const dlg = document.createElement("dialog"); dlg.className = "m3d" + (P.side ? "" : " hid"); dlg.setAttribute("aria-label", T("m3d.title"));
+  const opt = (v, cur, lab, dis) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}${dis ? " disabled" : ""}>${EH(lab)}</option>`;
+  const files = scanFiles(tabFiles(p.tab)).filter(x => x.lv === lv);
+  const others = files.filter(x => x.k !== f.k);
+  dlg.innerHTML = dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt });
   document.body.appendChild(dlg);
   const Q = k => dlg.querySelector(`[data-m="${k}"]`), glc = dlg.querySelector(".m3d-gl"), ovc = dlg.querySelector(".m3d-ov"), rd = dlg.querySelector(".m3d-read");
   const xicc = dlg.querySelector(".m3d-xic"), spcc = dlg.querySelector(".m3d-spc"), main = dlg.querySelector(".m3d-main"), ov = ovc.getContext("2d");
@@ -284,14 +309,6 @@ export function open(p, opener) {
     V.zmin = lo; V.zmax = hi || 1;
     Q("thr").value = +(th * 100).toFixed(2);
     hist(); upload(); V.dirty = true;
-  }
-  function blur(Z, nx, ny, s) {
-    const r = Math.ceil(3 * s), k = new Float32Array(2 * r + 1); let sum = 0;
-    for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-i * i / (2 * s * s)); sum += k[i + r]; } for (let i = 0; i < k.length; i++) k[i] /= sum;
-    const t = new Float32Array(Z.length), o = new Float32Array(Z.length);
-    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { let acc = 0; for (let d = -r; d <= r; d++) acc += k[d + r] * Z[i * ny + clamp(j + d, 0, ny - 1)]; t[i * ny + j] = acc; }
-    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { let acc = 0; for (let d = -r; d <= r; d++) acc += k[d + r] * t[clamp(i + d, 0, nx - 1) * ny + j]; o[i * ny + j] = acc; }
-    return o;
   }
   const palData = () => V.signed ? LUT_DIV : lutSeq(mapPal());
   function upload() {
@@ -476,16 +493,6 @@ export function open(p, opener) {
     rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}`;
     Q("ti").value = String(i); Q("tt").textContent = `RT ${rt.toFixed(2)}`;
     mini();
-  }
-  function plot(c, xs, ys, cx, label, xlab, signed) {
-    const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), W = Math.round((r.width || 260) * d), H = Math.round((r.height || 104) * d);
-    if (c.width !== W) c.width = W; if (c.height !== H) c.height = H; const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0);
-    const w = W / d, h = H / d; g.clearRect(0, 0, w, h); g.fillStyle = css("--muted"); g.strokeStyle = css("--muted"); g.font = "10px system-ui, sans-serif"; g.fillText(label, 6, 11);
-    const n = ys.length; let mn = 0, mx = 0; for (let i = 0; i < n; i++) { if (ys[i] > mx) mx = ys[i]; if (ys[i] < mn) mn = ys[i]; } if (mx === mn) mx = mn + 1;
-    const X = i => 4 + i / (n - 1) * (w - 8), Y = v => h - 14 - (v - mn) / (mx - mn) * (h - 30);
-    g.strokeStyle = css("--ink"); g.lineWidth = 1; g.beginPath(); for (let i = 0; i < n; i++) { const x = X(i), y = Y(ys[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
-    g.strokeStyle = css("--accent"); g.beginPath(); g.moveTo(X(cx), 14); g.lineTo(X(cx), h - 14); g.stroke();
-    g.fillStyle = css("--muted"); g.textAlign = "left"; g.fillText(xlab[0], 4, h - 3); g.textAlign = "right"; g.fillText(xlab[1], w - 4, h - 3); g.textAlign = "right"; g.fillText(fmt(mx), w - 4, 11);
   }
   function mini() {
     const g = V.g, { i, j } = V.cur, col = new Float32Array(g.nrt), row = V.raw.subarray(i * g.nmz, (i + 1) * g.nmz);
