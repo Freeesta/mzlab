@@ -340,6 +340,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 filter=q.get("filter"), level=int(q.get("level", 1)),
                 precursor=float(q["precursor"]) if q.get("precursor") else None
             ))
+        if path == "/api/scan_axis":     # RT and index of every scan of a level (the sight of the map picks the nearest scan in the page)
+            try:
+                return _json(app.scan_axis(int(q["k"]), int(q.get("level", 1))))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         if path == "/api/spectrum":
             pr = q.get("precursor")
             bg = None

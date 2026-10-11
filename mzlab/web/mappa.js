@@ -151,80 +151,161 @@ window.MAPPA = (() => {
   function readout(p) {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
     if (!pt || !(mirOn(p) || st(p).lock)) return;
-    const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sc = s.spec && s.spec.sid != null ? T("mappa.read.scan", { n: s.spec.sid + 1 }) + " · " : "";
+    const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sp = specFor(p, pt), sc = sp && sp.sid != null ? T("mappa.read.scan", { n: sp.sid + 1 }) + " · " : "";
     p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
   }
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
-  let mT = 0;
-  function margins(p) {
-    const s = st(p); if (!s.sp || s.sp.hidden || !is2d(p)) return;
-    const pt = point(p); drawSide(p, pt); drawBottom(p, pt);
-    clearTimeout(mT); if (!pt) return;
-    mT = setTimeout(async () => {
-      const q = point(p); if (!q) return;
-      await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz)]);
-      const r = point(p); drawSide(p, r); drawBottom(p, r); readout(p);
-    }, 60);
+  // Asked only for what the point needs and the page does not hold: the scan is found in the page on the RT axis of the file (/api/scan_axis, once), the
+  // spectrum comes from /api/spectra by position and only when the scan changes, the XIC only when the window changes. One request at a time, the newest
+  // point wins (MIRINO.latest, at most once per frame); what has not arrived yet is a preview read from the matrix of the map, marked as such.
+  const SIGHT = MIRINO.lru(MIRINO.budget()), AX = new Map(), FLY = new Map();      // spectra and XIC under a memory budget; RT axes; requests in flight
+  { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }   // same moments as the cache of explore.js
+  const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
+  const MEAS = /[?&]perf\b/.test(location.search), meas = window.__mir = [];     // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
+  const once = (key, fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
+  const axisOf = f => {                                                  // {rt, sid} of the scans of the level; null until it has arrived
+    const key = `${f.k}|${f.lv || 1}`, e = AX.get(key); if (e) return e.v;
+    const q = { v: null }; AX.set(key, q);
+    once("a" + key, () => J(`api/scan_axis?k=${f.k}&level=${f.lv || 1}`)).then(j => { q.v = { rt: Float64Array.from(j.rt), sid: j.sid }; ask(null); }, () => AX.delete(key));
+    return null;
+  };
+  const axisWait = async f => { const key = `${f.k}|${f.lv || 1}`; if (!AX.has(key)) axisOf(f); try { await FLY.get("a" + key); } catch (e) { /* no axis */ } return (AX.get(key) || {}).v || null; };
+  const specKey = (f, ax, i) => `s${f.k}|${f.lv || 1}|${ax.sid[i]}`;
+  const xicKey = (f, a, mz) => `x${f.k}${a.ref ? "+" + a.ref.k : ""}|${xicCentre(f, mz).toFixed(4)}|${xicTol(f, mz).toFixed(5)}|${f.lv || 1}`;
+  const specSize = sp => (sp.mz.length + sp.y.length) * 8 + 200, xicSize = xi => (xi.tr || []).reduce((n, t) => n + (t.rt.length + t.y.length) * 8 + 100, 200);
+  // what is already in the page for the point: the exact spectrum / XIC, or null
+  function specFor(p, pt) {
+    const s = st(p), a = p._a, f = a && a.f; if (!f || !pt) return null;
+    const ax = axisOf(f); if (!ax) return null;
+    const i = MIRINO.nearest(ax.rt, pt.rt); if (i < 0) return null;
+    const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+    const sp = SIGHT.get(key); if (sp) s.spec = sp; return sp || null;
   }
-  const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
-  const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
+  function xicFor(p, pt) {
+    const s = st(p), a = p._a, f = a && a.f; if (!f || !pt) return null;
+    const key = xicKey(f, a, pt.mz); if (s.xic && s.xic.key === key) return s.xic;
+    const xi = SIGHT.get(key); if (xi) s.xic = xi; return xi || null;
+  }
   async function fetchXic(p, mz) {
-    const s = st(p), a = p._a; if (!a) return null; const f = a.f, c = xicCentre(f, mz), tol = xicTol(f, mz), key = `${f.k}|${c.toFixed(4)}|${tol.toFixed(5)}`;
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f, c = xicCentre(f, mz), tol = xicTol(f, mz), key = xicKey(f, a, mz);
     if (s.xic && s.xic.key === key) return s.xic;
+    const hit = SIGHT.get(key); if (hit) return (s.xic = hit);
     const ks = [f.k, ...(a.ref ? [a.ref.k] : [])].join(",");
-    try { const j = await J(`api/xic?k=${ks}&mz=${c}&tol=${tol}&level=${f.lv || 1}`); s.xic = { key, c, tol, tr: j.traces }; } catch (e) { /* nothing to show */ }
+    try {
+      const xi = await once(key, async () => { const j = await J(`api/xic?k=${ks}&mz=${c}&tol=${tol}&level=${f.lv || 1}`); const r = { key, c, tol, tr: j.traces }; SIGHT.set(key, r, xicSize(r)); return r; });
+      if (p._a && p._a.f === f) s.xic = xi;
+    } catch (e) { /* nothing to show */ }
     return s.xic;
   }
   async function fetchSpec(p, rt) {
-    const s = st(p), a = p._a; if (!a) return null; const f = a.f;
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f, lv = f.lv || 1;
     try {
-      const n = await memo(`mzn${f.k}|${f.lv || 1}|${rt.toFixed(4)}`, () => J(`api/nearest_scan?k=${f.k}&rt=${rt}&level=${f.lv || 1}`));
-      const key = `${f.k}|${n.sid}`; if (s.spec && s.spec.key === key) return s.spec;
-      const j = await memo(`mzs${key}`, () => J(`api/spectrum?k=${f.k}&rt0=${n.rt - NEAR}&rt1=${n.rt + NEAR}&level=${f.lv || 1}&bin=0.1${MERGE()}`));
-      s.spec = { key, sid: n.sid, rt: n.rt, mz: j.mz, y: j.y };
+      const ax = await axisWait(f), i = ax ? MIRINO.nearest(ax.rt, rt) : -1;
+      if (i < 0) return s.spec;
+      const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+      const hit = SIGHT.get(key); if (hit) return (s.spec = hit);
+      const sp = await once(key, async () => {                          // one scan by position: the same arrays as /api/spectrum on a window holding only that scan
+        const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${lv}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
+        if (!n) throw new Error("no scan");
+        const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
+      });
+      s.spec = sp;
     } catch (e) { /* nothing to show */ }
     return s.spec;
   }
-  function canvasOf(c) {
-    const r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * d); c.height = Math.round(r.height * d);
-    const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); return { g, W: r.width, H: r.height };
+  // after the exact answer, the scans next to it in the direction of the movement are asked in the background (one request, only when nothing else is waiting)
+  function prefetch(p, pt) {
+    const s = st(p), a = p._a, f = a && a.f, ax = f && axisOf(f); if (!ax || !pt || ask.pending()) return;
+    const i = MIRINO.nearest(ax.rt, pt.rt), dir = s.dir || 1, want = [i + dir, i + 2 * dir].filter(j => j >= 0 && j < ax.rt.length && !SIGHT.get(specKey(f, ax, j)));
+    if (!want.length) return;
+    const lo = Math.min(...want), hi = Math.max(...want), lv = f.lv || 1;
+    (window.requestIdleCallback || (g => setTimeout(g, 120)))(() => {
+      if (ask.pending() || p._a !== a) return;
+      J(`api/spectra?k=${f.k}&i0=${lo}&i1=${hi}&level=${lv}&bin=0.1${MERGE()}`).then(j => {
+        for (const n of j.scans || []) { const key = specKey(f, ax, n.i); if (!SIGHT.get(key)) { const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); } }
+      }).catch(() => { /* a prefetch is never needed */ });
+    });
   }
-  function drawSide(p, pt) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
+  // preview: the row / column of the matrix of the map (the region on finer bins when the zoom has one) at the point; null for a difference map
+  function preview(p, pt) {
+    const s = st(p), a = p._a, R = s.reg && (p.zoom || p.zoomY) ? s.reg : null, m = R ? { v: R.v, nrt: R.nrt, nmz: R.nmz, rt0: R.rt0, rt1: R.rt1, mz0: R.mz0, dmz: R.dmz } : a && a.mat;
+    if (!m || !pt) return null;
+    const i = Math.floor((pt.rt - m.rt0) / (m.rt1 - m.rt0) * m.nrt), j = Math.floor((pt.mz - m.mz0) / m.dmz);
+    const out = {};
+    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt }; }
+    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }] }; }
+    return out;
+  }
+  function show(p, pt) {                                                 // exact where the page has it, a preview for the rest
+    const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
+    const sp = specFor(p, pt), xi = xicFor(p, pt), pv = !sp || !xi ? preview(p, pt) : null;
+    if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
+    s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null };                 // what the two plots hold (read by e2e_mappa_mirino)
+    drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi);
+    return sp && xi;
+  }
+  const ask = MIRINO.latest(() => { const p = ask.panel; return p ? exact(p) : null; });
+  async function exact(p) {
+    const q = point(p); if (!q) return;
+    const s = st(p), t1 = performance.now();
+    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz)]);
+    const t2 = performance.now(), r = point(p); if (!r || !p._a) return;
+    const done = show(p, r); readout(p);                                 // an answer for a point the sight has left is not drawn: the newest point is already queued
+    if (done) { if (MEAS && s.t0) meas.push({ fetch: t2 - t1, draw: performance.now() - t2, total: performance.now() - s.t0 }); s.t0 = 0; prefetch(p, r); }
+  }
+  function margins(p) {
+    const s = st(p); if (!s.sp || s.sp.hidden && s.xc.hidden || !is2d(p)) return;
+    const pt = point(p); if (!pt) { drawSide(p, null); drawBottom(p, null); return; }
+    if (s.lastRt != null) s.dir = pt.rt > s.lastRt ? 1 : pt.rt < s.lastRt ? -1 : s.dir; s.lastRt = pt.rt;
+    if (show(p, pt)) { if (MEAS) meas.push({ fetch: 0, draw: 0, total: s.t0 ? performance.now() - s.t0 : 0 }); s.t0 = 0; return; }
+    if (!s.t0) s.t0 = performance.now();
+    ask.panel = p; ask(pt);
+  }
+  const frame = p => { const s = st(p); if (!s.raf) s.raf = requestAnimationFrame(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
+  const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
+  const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
+  function canvasOf(c) {
+    const r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }      // resizing reallocates the bitmap: only when the panel changed size
+    const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
+  }
+  function drawSide(p, pt, sp, prev) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
-    const sp = s.spec; if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
+    if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
-    g.strokeStyle = a.f.color || css("--accent"); g.beginPath();
+    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
-    g.stroke();
+    g.stroke(); g.globalAlpha = 1;
+    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
     const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), used = [];
     g.fillStyle = css("--ink"); g.textAlign = "left";
     for (const i of top) { if (used.length >= 8 || sp.y[i] < ymax * 0.05) break; const y = Y(sp.mz[i]); if (used.some(u => Math.abs(u - y) < 12)) continue; used.push(y); g.fillText(sp.mz[i].toFixed(mzd(p)), Math.min(x1 - 40, x0 + 4 + (x1 - x0) * sp.y[i] / ymax), y + 4); }
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
-  function drawBottom(p, pt) {                                          // XIC under the map: the same RT axis
+  function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
     const { g, W, H } = canvasOf(s.xc), ink = css("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const X = v => M.l + (v - a.x0) / (a.x1 - a.x0) * (W - M.l - M.r);
     g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
     for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
-    const xi = s.xic; if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
+    if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
     let ymax = 0; const tr = xi.tr || [];
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
     const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
     tr.forEach((t, n) => {
-      const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
+      const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
-      g.stroke(); g.setLineDash([]); g.lineWidth = 1;
+      g.stroke(); g.setLineDash([]); g.lineWidth = 1; g.globalAlpha = 1;
     });
     g.fillStyle = css("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
-    g.fillText(`XIC ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
+    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 
@@ -233,9 +314,9 @@ window.MAPPA = (() => {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
-    if (!s.lock) { overlay(p); margins(p); } else readout(p);
+    if (!s.lock) frame(p); else readout(p);
   }
-  function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) { overlay(p); margins(p); } }
+  function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel keeps the old zoom of explore.js
     e.preventDefault();
@@ -494,7 +575,7 @@ window.MAPPA = (() => {
     try { const m = await import("./mappa3d.js"); m.open(p, opener); } catch (e) { console.error(e); if (typeof nearMsg === "function") nearMsg(T("m3d.nogl")); }
   }
 
-  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
+  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's

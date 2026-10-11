@@ -643,7 +643,7 @@ function colorFile(f, ev) {
 }
 async function removeFile(f) {
   if (!await yesno(I18N.t("files.remove.confirm", { label: EH(f.label) }))) return;
-  f.gone = true; f.vis = false; paintFiles();
+  f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
   if (E.cur === f.k) E.cur = (tabFiles()[0] || { k: 0 }).k;
   renderTabs(); renderFileList(); renderNav(); toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
