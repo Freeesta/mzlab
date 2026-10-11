@@ -1,6 +1,6 @@
 """Separate addresses: #/dati and #/disegno open the right view from cold (title per view, Back/Forward walk the views); #/teoria, #/teoria/5 and
 #/pratica leave for the standalone Teoria without fetching the engine or the Dati/Disegno scripts; teoria/#5, #cap-12, #A and #09-quadrupolo
-forward to the chapter; "Apri il programma" returns to the program; every internal link of the Teoria answers (small crawler)."""
+forward to the chapter; the Dati tab returns to the program; every internal link of the Teoria answers (small crawler)."""
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -72,13 +72,13 @@ try:
         step("teoria/#5, #cap-12, #A, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
 
         def toapp():
-            c, q = fresh(); q.goto(U + "static/teoria/12-dati.html"); q.wait_for_selector("#goapp")
-            q.click("#goapp"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
+            c, q = fresh(); q.goto(U + "static/teoria/12-dati.html"); q.wait_for_selector("#tab-dati")
+            q.click("#tab-dati"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
             assert q.locator("#nav button.on").get_attribute("data-v") == "data"
             q.click("#nav button[data-v=theory]"); q.wait_for_selector("#tframe"); q.wait_for_timeout(800)
-            fr = q.frame_locator("#tframe"); assert fr.locator("#goapp").count() == 0, "no second header inside the program"
+            fr = q.frame_locator("#tframe"); assert fr.locator("#tabs").count() == 0, "no second header inside the program"
             shut(c, q)
-        step("'Apri il programma' leads to #/dati; inside the program the Teoria has no such link", toapp)
+        step("the «Dati» tab leads to #/dati; inside the program the Teoria has no second header", toapp)
 
         def crawl():
             c, q = fresh(); q.goto(U + "static/teoria/index.html")
