@@ -41,12 +41,12 @@ const DISP = (() => {
   const pdaShift = p => { if (!p.pdaAlign) return 0; const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; };
   register("chrom", { id: "pdadelay", label: "disp.pdaDelay", title: "disp.pdaDelay.title", kind: "number", min: -2, max: 2, step: 0.01, when: p => p.kind === "pda" && !!dfile(p),
     get: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; },
-    set: (p, v) => { const n = parseFloat(String(v).replace(",", ".")); p.pdaDelay = isFinite(n) ? clamp(n, -2, 2) : null; redraw(p); },
+    set: (p, v) => { const n = numIt(v); p.pdaDelay = isFinite(n) ? clamp(n, -2, 2) : null; redraw(p); },
     note: p => { const m = measured(p); return m ? t("disp.pdaDelay.found", { delay: m.delay.toFixed(2), n: m.peaks, corr: m.corr.toFixed(2) }) : t("disp.pdaDelay.none"); } });
   register("chrom", { id: "pdaalign", label: "disp.pdaAlign", title: "disp.pdaAlign.title", kind: "check", when: p => p.kind === "pda" && !!dfile(p), get: p => !!p.pdaAlign, set: (p, v) => { p.pdaAlign = !!v; redraw(p); } });
   // ---- gradient over the chromatogram: the delay at the column is typed by the student (the program does not estimate the dwell volume)
   register("chrom", { id: "gdelay", label: "disp.gdelay", title: "disp.gdelay.title", kind: "number", min: 0, max: 10, step: 0.1, when: p => p.overlay === "grad", get: p => p.gdelay || 0,
-    set: (p, v) => { p.gdelay = clamp(Math.round((parseFloat(String(v).replace(",", ".")) || 0) * 10) / 10, 0, 10); redraw(p); } });
+    set: (p, v) => { p.gdelay = clamp(Math.round((numIt(v) || 0) * 10) / 10, 0, 10); redraw(p); } });
   // ---- XIC in high resolution: the ion and its interval (the header only says «XIC • m/z value»); the interval is per trace, in ppm or in Da
   const xt = p => (p && p.type === "xic" ? p.traces[Math.min(p._xt || 0, p.traces.length - 1)] : null);
   const xhr = p => !!(window.HR && p && p.type === "xic" && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));
@@ -57,7 +57,7 @@ const DISP = (() => {
     ctl(p); redraw(p); if (window.BANCO) BANCO.renderInfo();
   };
   register("chrom", { id: "xmz", label: "disp.xmz", title: "disp.xmz.title", kind: "number", min: 0, step: 0.0001, when: p => xhr(p) && !!xt(p), get: p => (+xt(p).mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1) + 1),
-    set: (p, v) => { const tr = xt(p), n = parseFloat(String(v).replace(",", ".")); if (!(n > 0)) return; tr.mz = rh(n, 5); xrefresh(p, tr); } });
+    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; tr.mz = rh(n, 5); xrefresh(p, tr); } });
   register("chrom", { id: "xunit", label: "disp.xunit", kind: "select", when: p => xhr(p) && !!xt(p), opts: () => [["ppm", "ppm"], ["da", "Da"]], get: p => xunit(p, xt(p)),
     set: (p, v) => {                                          // same interval, written in the other unit
       const tr = xt(p), cur = xunit(p, tr); if (cur === v) return;
@@ -66,7 +66,7 @@ const DISP = (() => {
       xrefresh(p, tr); } });
   register("chrom", { id: "xtol", label: "disp.xtol", title: "disp.xtol.title", kind: "number", min: 0, step: 0.1, when: p => xhr(p) && !!xt(p),
     get: p => { const tr = xt(p), u = xunit(p, tr), f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)); return u === "da" ? +(tr.ion ? tr.wda : (tr.w ?? p.tol)).toFixed(5) : +(tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6).toFixed(2); },
-    set: (p, v) => { const tr = xt(p), n = parseFloat(String(v).replace(",", ".")); if (!(n > 0)) return; const u = xunit(p, tr);
+    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; const u = xunit(p, tr);
       if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5);
       xrefresh(p, tr); } });
 

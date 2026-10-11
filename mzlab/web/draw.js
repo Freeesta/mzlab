@@ -7,7 +7,6 @@ let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = s => document.querySelector(s);
-const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let K = null, starting = null, restored = false, timer = null;
 
 let kldTimer = null, kldN = 0;
@@ -392,7 +391,6 @@ const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.994914
   Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
   As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 };
 const ELECTRON = 0.00054858;
-const roundHalfUp = v => Math.floor(v + 0.5);   // decimals use rh() of explore.js: the same half-up rounding as the Addotti table and elements.round_half_up
 // one entry per connected structure: formula (Hill order), charge, monoisotopic mass, bounding box (Ketcher coordinates, y down)
 // counts {C: 8, H: 9, ...} -> Hill formula and monoisotopic mass
 function formulaOf(n) {
@@ -461,7 +459,7 @@ function labelParts(d0) {
     const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
     const line = f ? (lines.push([]), lines[1]) : parts;
     const lab = d.q ? "m/z" : dec ? "exact mass" : "nominal mass";
-    line.push([lab, "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
+    line.push([lab, "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : rh(raw, 0)}`, ""]);
   }
   return lines;
 }
@@ -618,7 +616,6 @@ function noBackground(svgText) {
   doc.querySelectorAll("rect").forEach(q => { if (!q.closest("defs") && /^(rgb\(100%,\s*100%,\s*100%\)|#fff(fff)?|white)$/i.test(q.getAttribute("fill") || "")) q.remove(); });
   return new XMLSerializer().serializeToString(doc);
 }
-const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
   const raw = await K.getKet(), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
@@ -664,11 +661,11 @@ async function doExport(kind) {
   exwarn("");
   try {
     await start();
-    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
+    if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
-    download(blob, exportName(kind, clear));
+    saveBlob(blob, exportName(kind, clear));
     if (window.toast) toast(I18N.t("draw.export.saved"));
   } catch (e) { exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
@@ -717,7 +714,7 @@ function labelHit(ev) {
 }
 // formula as the student can paste it in the Data view: Hill formula, then the charge (C10H14N+, C6H5O2-)
 const formulaText = d => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
-const massText = d => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(roundHalfUp(raw)); };
+const massText = d => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(rh(raw, 0)); };
 function labelMenu(ev, d, fr) {
   const m = Q("#ctx"); if (!m) return;
   const fr0 = fr.getBoundingClientRect(), mx = fr0.left + ev.clientX, my = fr0.top + ev.clientY;

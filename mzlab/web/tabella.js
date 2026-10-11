@@ -8,7 +8,7 @@
 const TABELLA = (() => {
   const MAX_LIST = 300;                                        // ions of a typed list (each costs one XIC per file)
   const t = (k, p) => I18N.t(k, p);
-  const eh = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const eh = s => EH(s == null ? "" : s);
   const baseName = n => String(n || "").split(/[\\/]/).pop().replace(/#.*$/, "").replace(/\.(mzml|mzxml|raw|wiff|d|dam)\b/i, "").toLowerCase().trim();
 
   // ---------------------------------------------------------------- pure functions
