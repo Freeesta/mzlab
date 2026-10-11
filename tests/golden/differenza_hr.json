@@ -1,0 +1,245 @@
+{
+ "files": [
+  "blank1",
+  "blank2",
+  "t0",
+  "t10a",
+  "t10b",
+  "t30",
+  "t60",
+  "t120",
+  "qc"
+ ],
+ "roles": [
+  "blank",
+  "blank",
+  "sample",
+  "sample",
+  "sample",
+  "sample",
+  "sample",
+  "sample",
+  "qc"
+ ],
+ "times": [
+  null,
+  null,
+  0,
+  10,
+  10,
+  30,
+  60,
+  120,
+  null
+ ],
+ "features": {
+  "product_rises": [
+   0,
+   0,
+   0,
+   50000.0,
+   60000.0,
+   300000.0,
+   800000.0,
+   1500000.0,
+   500000.0
+  ],
+  "intermediate": [
+   0,
+   0,
+   0,
+   200000.0,
+   220000.0,
+   900000.0,
+   300000.0,
+   40000.0,
+   300000.0
+  ],
+  "parent_falls": [
+   0,
+   0,
+   5000000.0,
+   4200000.0,
+   4400000.0,
+   3000000.0,
+   1000000.0,
+   200000.0,
+   2000000.0
+  ],
+  "noise": [
+   3000,
+   2500,
+   2800,
+   3300,
+   2900,
+   3100,
+   2700,
+   3000,
+   2900
+  ],
+  "noise_b": [
+   4100,
+   3800,
+   3900,
+   4300,
+   4000,
+   3700,
+   4200,
+   3900,
+   4000
+  ],
+  "noise_c": [
+   2200,
+   2600,
+   2400,
+   2100,
+   2500,
+   2300,
+   2400,
+   2600,
+   2300
+  ],
+  "noise_d": [
+   5200,
+   4800,
+   5000,
+   5300,
+   4700,
+   5100,
+   4900,
+   5200,
+   5000
+  ],
+  "blank_background": [
+   80000.0,
+   90000.0,
+   85000.0,
+   80000.0,
+   90000.0,
+   87000.0,
+   84000.0,
+   90000.0,
+   80000.0
+  ],
+  "drift_early_row": [
+   0,
+   0,
+   0,
+   300000.0,
+   310000.0,
+   250000.0,
+   0,
+   0,
+   0
+  ],
+  "drift_late_row": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   400000.0,
+   600000.0,
+   0
+  ]
+ },
+ "reference": [
+  0,
+  1,
+  2
+ ],
+ "pseudo": 11850.0,
+ "expected": {
+  "product_rises": {
+   "kept": true,
+   "reason": "absent_in_reference",
+   "shape": "rises",
+   "absent": true,
+   "log2fc": 6.995,
+   "t_max": 120.0,
+   "rho": 1.0
+  },
+  "intermediate": {
+   "kept": true,
+   "reason": "absent_in_reference",
+   "shape": "rises_falls",
+   "absent": true,
+   "log2fc": 6.266,
+   "t_max": 30.0,
+   "rho": 0.3
+  },
+  "parent_falls": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": "falls",
+   "absent": false,
+   "log2fc": -0.184,
+   "t_max": 0.0,
+   "rho": -1.0
+  },
+  "noise": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": null,
+   "absent": true,
+   "log2fc": 0.029,
+   "t_max": 10.0,
+   "rho": -0.154
+  },
+  "noise_b": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": null,
+   "absent": true,
+   "log2fc": 0.018,
+   "t_max": 60.0,
+   "rho": 0.103
+  },
+  "noise_c": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": null,
+   "absent": true,
+   "log2fc": 0.0,
+   "t_max": 120.0,
+   "rho": 0.527
+  },
+  "noise_d": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": null,
+   "absent": true,
+   "log2fc": 0.008,
+   "t_max": 120.0,
+   "rho": 0.359
+  },
+  "blank_background": {
+   "kept": false,
+   "reason": "below_reference",
+   "shape": "flat",
+   "absent": false,
+   "log2fc": 0.0,
+   "t_max": 120.0,
+   "rho": 0.359
+  },
+  "drift_early_row": {
+   "kept": true,
+   "reason": "absent_in_reference",
+   "shape": "rises_falls",
+   "absent": true,
+   "log2fc": 4.763,
+   "t_max": 10.0,
+   "rho": -0.335
+  },
+  "drift_late_row": {
+   "kept": true,
+   "reason": "absent_in_reference",
+   "shape": "rises",
+   "absent": true,
+   "log2fc": 5.69,
+   "t_max": 120.0,
+   "rho": 0.894
+  }
+ }
+}

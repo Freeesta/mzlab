@@ -142,7 +142,7 @@ class Item:
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}), "spectrum_mode": self.spectrum_mode(),
                 "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),
-                "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
+                "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda(), "analog": self.analog_list()}
         out.update(self.hr_info())
         if self.part:
             out["part"] = self.part["tag"]
@@ -408,6 +408,46 @@ class Item:
         sp = self.scan_params()
         if sp:
             res["scan_params"] = sp
+        return res
+
+    # ------------------------------------------------------------------ analog traces (pressure, flow, temperature...)
+    def analog_list(self) -> list[dict]:
+        """[{i, kind, id, unit, t0, t1, n}] of the non-MS traces that are not the PDA: read once (a few thousand points each)."""
+        if self.__dict__.get("_analog") is None:
+            out = []
+            for c in self.run.chromatograms():
+                if c["kind"] not in ("pressure", "analog"):
+                    continue
+                t, y = self.run.chromatogram(c["index"])
+                if not len(t):
+                    continue
+                out.append({"i": c["index"], "kind": c["kind"], "id": c["id"], "unit": self.run.chromatogram_unit(c["index"]),
+                            "t0": round(float(t[0]), 4), "t1": round(float(t[-1]), 4), "n": int(len(t))})
+            self._analog = out
+        return self._analog
+
+    def analog(self, i: int, n: int = 2000) -> dict:
+        """One analog trace: time in minutes, values reduced to the lowest and highest per interval (n of them), the unit to show and, for the pressure, a note
+        when the unit written in the file had to be corrected."""
+        from .analog import pressure_to_bar, reduce_minmax
+        cache = self.__dict__.setdefault("_analog_cache", {})
+        key = (i, n)
+        if key in cache:
+            return cache[key]
+        meta = next((a for a in self.analog_list() if a["i"] == i), None)
+        if meta is None:
+            raise UserError("err.analog.none", {"i": i}, "no such analog trace")
+        t, y = self.run.chromatogram(i)
+        unit, note = meta["unit"], None
+        if meta["kind"] == "pressure":
+            y, note = pressure_to_bar(y, unit); unit = "bar"
+        t, y = reduce_minmax(t, y, n)
+        res = {"i": i, "kind": meta["kind"], "id": meta["id"], "unit": unit, "t": [round(float(v), 4) for v in t], "y": [round(float(v), 3) for v in y]}
+        if note:
+            res["unit_note"] = note
+        if len(cache) >= 8:
+            cache.pop(next(iter(cache)))
+        cache[key] = res
         return res
 
     # ------------------------------------------------------------------ chromatograms

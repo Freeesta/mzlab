@@ -361,6 +361,38 @@ class App:
             m["lab_pick"] = same[-1]
         return m
 
+    def analog(self, k: int, i: int, n: int = 2000) -> dict:
+        return self._item(k).analog(i, max(10, min(int(n), 20000)))
+
+    def gradient(self, k: int) -> dict | None:
+        """The LC gradient of file k: the one in the .dam chosen for it, else the one typed or imported for this file in the session, else None."""
+        from .analog import from_dam
+        m = self.method(k)
+        pick = m.get("lab_pick")
+        g = from_dam(m["lab"][pick].get("lc")) if pick is not None and m["lab"] else None
+        return g or self.__dict__.setdefault("_gradients", {}).get(Path(self._item(k).file).name)
+
+    def set_gradient(self, body: dict) -> dict | None:
+        """Keeps the gradient the student typed, pasted or imported for a file (``model``, or ``text`` + ``fmt`` = chromeleon | csv); model null removes it.
+        ``all`` lists the files of the tab that get the same gradient."""
+        from .analog import gradient_model, parse_chromeleon, parse_gradient_csv
+        store = self.__dict__.setdefault("_gradients", {})
+        if body.get("text") is not None:
+            model = (parse_chromeleon if body.get("fmt") == "chromeleon" else parse_gradient_csv)(body["text"])
+        elif body.get("model"):
+            m = body["model"]
+            model = gradient_model(m.get("source", "manual"), m.get("points", []), m.get("run_time"), m.get("solvents"))
+        else:
+            model = None
+        ks = [int(x) for x in body.get("all", [])] or [int(body["k"])]
+        for k in ks:
+            name = Path(self._item(k).file).name
+            if model:
+                store[name] = model
+            else:
+                store.pop(name, None)
+        return model
+
     def method_warnings(self) -> dict:
         """The loaded .dam methods whose experiment type (MRM / Full Scan / MS2) is not among the types of the open files."""
         if not self.session:
