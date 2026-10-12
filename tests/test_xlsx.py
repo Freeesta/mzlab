@@ -1,4 +1,5 @@
 """The home-made .xlsx writer (mzlab/web/xlsx.js): build a workbook with node, read it back with zipfile + XML (and openpyxl if installed)."""
+import json
 import re
 import shutil
 import subprocess
@@ -47,3 +48,47 @@ def test_xlsx_openpyxl_reads_it(tmp_path):
     assert ws["A1"].value == "RT (min)" and ws["A1"].font.b and ws["A2"].value == 1.5 and ws["B2"].value == 3400.25
     assert ws["C3"].value == "  spazi  " and ws["B4"].value == pytest.approx(1e-7)
     assert openpyxl.load_workbook(build(tmp_path)).worksheets[1]["B1"].value == pytest.approx(123456789.123)
+
+
+def node(code):
+    return subprocess.run(["node", "-e", f"const x=require({str(JS)!r});{code}"], check=True, capture_output=True, encoding="utf-8").stdout
+
+
+def sheet_xml(tmp_path, sheet_js, n=1):
+    out = tmp_path / "s.xlsx"
+    node(f"require('fs').writeFileSync({str(out)!r},x.xlsxBuild([{sheet_js}]))")
+    return zipfile.ZipFile(out).read(f"xl/worksheets/sheet{n}.xml").decode()
+
+
+def test_crc32_known_vector():
+    assert node("console.log(x.xlsxCrc32(new TextEncoder().encode('123456789')))").strip() == str(0xCBF43926)
+
+
+def test_header_frozen_and_widths(tmp_path):
+    xml = sheet_xml(tmp_path, '{name:"a",head:["x","y"],rows:[["corto",1]],widths:[7,33]}')
+    assert 'state="frozen"' in xml and 'ySplit="1"' in xml
+    assert re.findall(r'<col min="(\d)" max="\d" width="([\d.]+)"', xml) == [("1", "7"), ("2", "33")]
+    plain = sheet_xml(tmp_path, '{name:"a",rows:[["x".repeat(200),1]]}')
+    assert 'state="frozen"' not in plain
+    w = [float(v) for v in re.findall(r'width="([\d.]+)"', plain)]
+    assert w == [60, 12]                                         # automatic width: capped at 60, numbers 12
+
+
+def test_sheet_names_and_text_cleanup(tmp_path):
+    out = tmp_path / "n.xlsx"
+    node(f"""require('fs').writeFileSync({str(out)!r},x.xlsxBuild([{{rows:[["a\\u0001b\\nc"]]}},{{name:"x".repeat(40),rows:[]}},{{name:"x".repeat(40),rows:[]}},{{name:"X",rows:[]}},{{name:"x",rows:[]}}]))""")
+    z = zipfile.ZipFile(out)
+    names = re.findall(r'<sheet name="([^"]*)"', z.read("xl/workbook.xml").decode())
+    assert names[0] == "Foglio1" and names[1] == "x" * 31 and names[2] == "x" * 29 + "_2"
+    assert len({n.lower() for n in names}) == 5 and all(len(n) <= 31 for n in names)
+    xml = z.read("xl/worksheets/sheet1.xml").decode()
+    assert "\x01" not in xml and 'xml:space="preserve"' in xml and ">ab\nc<" in xml
+
+
+def test_dlx_completes_the_extension():
+    code = "const calls=[];global.dl=(n,d,m)=>calls.push([n,d.constructor.name,m]);" \
+           "const fs=require('fs');const src=fs.readFileSync(" + repr(str(JS)) + ",'utf8');" \
+           "(0,eval)(src+';globalThis.dlx=dlx');dlx('r',[{name:'a',rows:[[1]]}]);dlx('r.XLSX',[{name:'a',rows:[]}]);console.log(JSON.stringify(calls))"
+    calls = json.loads(subprocess.run(["node", "-e", code], check=True, capture_output=True, encoding="utf-8").stdout)
+    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert calls == [["r.xlsx", "Uint8Array", mime], ["r.XLSX", "Uint8Array", mime]]

@@ -119,7 +119,6 @@ const BARRA = (() => {
     { id: "map", bar: false, group: "graphs", ic: () => IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.4"/><path d="M2.5 8h11M8 2.5v11"/>'), visible: () => inData() && shown("#np-map"), run: () => clickEl("#np-map") },
     { id: "xic", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>'), visible: () => inData() && shown("#np-xic"), run: () => clickEl("#np-xic") },
     { id: "mrm", bar: false, group: "graphs", ic: () => IC('<path d="M2 13h12M4 13V9M7 13V4M10 13V7"/>'), visible: () => inData() && shown("#np-mrm"), run: () => clickEl("#np-mrm") },
-    { id: "tile", bar: false, group: "graphs", ic: () => IC('<rect x="2" y="2" width="12" height="3.2" rx=".8"/><rect x="2" y="6.4" width="12" height="3.2" rx=".8"/><rect x="2" y="10.8" width="12" height="3.2" rx=".8"/>'), visible: () => inData(), run: () => clickEl("#np-tile") },
     { id: "closeall", bar: false, group: "graphs", ic: () => IC('<path d="M4 4l8 8M12 4l-8 8"/>'), visible: () => inData(), run: () => clickEl("#np-closeall") },
     { id: "sideL", bar: false, group: "panel", ic: () => ICONS.left, visible: () => inData(), run: () => setSide("left") },
     { id: "sideR", bar: false, group: "panel", ic: () => ICONS.right, visible: () => inData(), run: () => setSide("right") },
@@ -149,7 +148,7 @@ const BARRA = (() => {
     s = lsObj(storageKey());
     _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = s.open === true;
+    _open = s.open === undefined ? innerWidth >= 900 : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;

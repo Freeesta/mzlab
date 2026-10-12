@@ -197,6 +197,19 @@ fn reason_codes() {
     assert_eq!(b.total, 3.0, "a weak MS2 is not discarded");
 }
 
+#[test]
+fn the_frequency_alone_is_not_a_candidate() {
+    let t = table();
+    let freq = proof(&t, Kind::Frequency, 1.0, None, false);
+    assert!(freq.points > 0.0);
+    let b = breakdown(&t, vec![freq.clone()], 1);
+    assert_eq!(b.total, 0.0);
+    assert!(b.reasons.iter().any(|r| r.code == R_ONLY_FREQUENCY));
+    let b = breakdown(&t, vec![freq, proof(&t, Kind::Mass, 1.0, None, false)], 1);
+    assert!(b.total > 1.0, "with another proof the frequency counts");
+    assert!(b.reasons.iter().all(|r| r.code != R_ONLY_FREQUENCY));
+}
+
 fn strings(v: Option<&Value>) -> Vec<String> {
     v.map(Value::arr)
         .unwrap_or(&[])

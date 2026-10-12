@@ -120,7 +120,7 @@ function chip(p) {
   if (pv) pv.onclick = () => step(p, -1);
   if (nx) nx.onclick = () => step(p, 1);
   c.querySelector("[data-s=off]").onclick = () => { popClose(); set(tab, false); };
-  p.leg.appendChild(c);
+  (p.corrbar || p.leg).appendChild(c);
 }
 
 window.SUBREF = { eff, qs, text, chip, toggle, set, isOn, autoFile, step, normText, num, refresh };
