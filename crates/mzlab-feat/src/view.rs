@@ -71,7 +71,7 @@ impl View {
     /// Counts for the report: rows in, rows kept and, for every rule, the rows it rejected first.
     pub fn counts_json(&self) -> String {
         let mut j = Out::default();
-        j.raw("{\"filas\":").int(self.why.len() as i64).raw(",\"tenute\":").int(self.rows.len() as i64).raw(",\"scartate\":[");
+        j.raw("{\"righe\":").int(self.why.len() as i64).raw(",\"tenute\":").int(self.rows.len() as i64).raw(",\"scartate\":[");
         for i in 0..self.rules.len() {
             let n = self.why.iter().filter(|&&w| w as usize == i + 1).count();
             j.raw(if i > 0 { "," } else { "" }).int(n as i64);
