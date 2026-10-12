@@ -31,6 +31,7 @@ pub mod mapgrid;
 pub mod maproute;
 pub mod ms2sim;
 pub mod ole;
+pub mod wiff;
 pub mod origin;
 pub mod originroute;
 pub mod mzidx;

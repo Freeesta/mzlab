@@ -519,7 +519,7 @@ I18N.add("it", {
   "files.addPair.title": "Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato",
   "files.precGo.title": "Clic: i grafici passano a questo precursore.",
   "files.showHideGroup": "Mostra o nascondi tutto il gruppo",
-  "files.rename.prompt": "Nome del campione <span class='muted sm'>(è solo un'etichetta: il file sul disco non cambia)</span>",
+  "files.rename.prompt": "Nome del campione",
   "files.color.of": "Colore di {label}",
   "files.color.custom": "Personalizzato",
   "files.remove.confirm": "Togliere <b>{label}</b> dalla sessione? Il file sul tuo computer non viene toccato; per riaverlo devi caricarlo di nuovo.",

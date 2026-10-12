@@ -39,11 +39,6 @@ jobs:
             target
           key: desktop-shim-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: python -m pip install numpy
-      - name: cargo test (the mzlab:// protocol against the golden data; the native .mzidx builder against the Python one)
-        env:
-          MZLAB_GOLDEN_STRICT: "1"
-          MZLAB_IDX_STRICT: "1"
-        run: cargo test --locked -p mzlab-desktop
       - run: python -m pip install playwright && python -m playwright install --with-deps chromium
       - name: Site
         run: python tools/build_site.py

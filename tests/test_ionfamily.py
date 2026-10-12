@@ -489,3 +489,8 @@ def test_ms2_membership():
     m = f.ms2_membership(250.0, 364.1, spec)
     assert not m["x_in_p"] and m["nearest_product"] in (194.0, 152.0)
     assert f.ms2_membership(364.0, 364.1, spec)["x_in_p"] is False            # the precursor itself does not count
+
+
+def test_wspearman_constant_trace_is_nan_even_with_weights():     # equal ranks: the weighted mean is the constant up to an ulp, never a correlation of ~1e-16
+    w, y = np.array([0.5067, 0.5499, 0.4706, 0.5874, 0.7650, 0.7180, 0.2594, 0.2256, 0.3320]), np.array([66072.0, 32733.0, 449395.0, 116059.0, 599391.0, 382724.0, 66059.0, 99395.0, 99399.0])
+    assert math.isnan(f.wspearman(np.zeros(9), y, w)) and math.isnan(f.wspearman(np.zeros(9), y))
