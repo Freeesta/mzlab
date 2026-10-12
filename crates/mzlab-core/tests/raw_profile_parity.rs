@@ -277,12 +277,17 @@ fn compare() -> Option<Report> {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return None;
     };
-    let rawp = d.join("HRMS/Profile raw/Timo25ppm_t10.raw");
-    let refp = rawp.with_extension("mzML");
-    if !rawp.is_file() || !refp.is_file() {
-        eprintln!("skipped: no HRMS/Profile raw/Timo25ppm_t10.raw with its mzML");
+    let Some(rawp) = std::fs::read_dir(d.join("HRMS/Profile raw"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| p.extension().is_some_and(|x| x == "raw") && p.with_extension("mzML").is_file())
+    else {
+        eprintln!("skipped: no .raw with its mzML in HRMS/Profile raw");
         return None;
-    }
+    };
+    let refp = rawp.with_extension("mzML");
     let ours_p =
         std::env::temp_dir().join(format!("mzlab-profile-parity-{}.mzML", std::process::id()));
     {
@@ -290,7 +295,7 @@ fn compare() -> Option<Report> {
         raw::to_mzml_with(
             BufReader::new(File::open(&rawp).unwrap()),
             &mut out,
-            "Timo25ppm_t10.raw",
+            "profile.raw",
             raw::Convert {
                 profile: true,
                 anonymous: false,
