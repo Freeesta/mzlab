@@ -48,6 +48,8 @@ pub enum ChromKind {
     /// Pump pressure (MS:1003019, or an id that starts with "Pump Pressure").
     Pressure,
     Srm,
+    /// Selected ion current of one SIM ion (MS:1000627); the id is "SIC <m/z>".
+    Sic,
     /// Any other detector or device trace: it carries no mass-spectrometer term.
     Analog,
     Other,
@@ -270,6 +272,7 @@ fn finish_chromatogram(c: Chrom) -> Result<Chromatogram> {
         _ if c.pda => ChromKind::Pda,
         s if c.pressure || s.starts_with("Pump Pressure") => ChromKind::Pressure,
         s if s.starts_with("SRM") => ChromKind::Srm,
+        s if s.starts_with("SIC ") => ChromKind::Sic,
         _ if !c.ms_term => ChromKind::Analog,
         _ => ChromKind::Other,
     };

@@ -1,5 +1,6 @@
 //! A run as the `Run` that the rest of the program reads: one centroid spectrum per scan (empty ones left out) and the TIC from the index.
 
+use std::collections::BTreeMap;
 use std::io::Write;
 
 use super::peak::read_points;
@@ -42,11 +43,15 @@ impl AgilentD {
         peak: &mut R,
         on: &mut dyn FnMut(Spectrum) -> Result<()>,
     ) -> Result<Vec<Chromatogram>> {
+        let mut sic: BTreeMap<i64, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
         for (n, r) in self.records.iter().filter(|r| r.points > 0).enumerate() {
             let (mz, it) = match &self.inline {
                 Some(v) => v.get(r.id as usize - 1).cloned().unwrap_or_default(),
                 None => read_points(peak, r)?,
             };
+            if r.scan_type == SCAN_SIM {
+                add_sic(&mut sic, r.time_min, &mz, &it);
+            }
             let level = r.level.clamp(1, 255) as u8;
             let filter = self.filter_of(r.scan_type, &mz);
             let exact = it.iter().all(|&v| v as f32 as f64 == v);
@@ -75,7 +80,7 @@ impl AgilentD {
             time: survey.iter().map(|r| r.time_min).collect(),
             intensity: survey.iter().map(|r| r.base_value).collect(),
         };
-        Ok(vec![
+        let mut out = vec![
             Chromatogram {
                 index: 0,
                 id: "TIC".into(),
@@ -87,7 +92,20 @@ impl AgilentD {
                 intensity: survey.iter().map(|r| r.tic).collect(),
             },
             bpc,
-        ])
+        ];
+        for (key, (time, intensity)) in sic {
+            out.push(Chromatogram {
+                index: out.len(),
+                id: format!("SIC {:.2}", key as f64 / 100.0),
+                kind: ChromKind::Sic,
+                q1: None,
+                q3: None,
+                unit: "number of detector counts".into(),
+                time,
+                intensity,
+            });
+        }
+        Ok(out)
     }
 
     pub fn spectrum_count(&self) -> usize {
@@ -207,6 +225,20 @@ impl AgilentD {
         }
         w.finish()?;
         Ok(())
+    }
+}
+
+/// Adds the points of a SIM scan to the trace of each ion (ions told apart at 0.01 m/z); two points of one ion in a scan are summed.
+fn add_sic(sic: &mut BTreeMap<i64, (Vec<f64>, Vec<f64>)>, time: f64, mz: &[f64], it: &[f64]) {
+    for (m, &v) in mz.iter().zip(it) {
+        let (t, y) = sic.entry((m * 100.0).round() as i64).or_default();
+        match t.last() {
+            Some(&last) if last == time => *y.last_mut().unwrap() += v,
+            _ => {
+                t.push(time);
+                y.push(v);
+            }
+        }
     }
 }
 
