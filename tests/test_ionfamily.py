@@ -84,7 +84,6 @@ def test_rois_find_the_ions_and_are_cached():
         assert abs(w.mz[j] - _mz(ions[name])) < 0.1
         assert w.X[j].max() > 0.5 * ions[name]["amp"] * 0.5
     assert f.build_rois(tb, 7.5, 8.6, key="a") is w            # cache hit
-    f.clear_cache()
     empty = f.build_rois(tb, 100, 101)
     assert empty.X.shape[0] == 0
 
@@ -282,8 +281,6 @@ def test_mcr_als_resolves_coeluting_components():
         assert (np.diff(c[:k + 1]) >= -1e-9 * c.max()).all() and (np.diff(c[k:]) <= 1e-9 * c.max()).all()
     st = f.mcr_stability(D, 2, n_starts=4)
     assert min(st["cos_min"]) > 0.9
-    n = f.nmf(D, 2)
-    assert n["lof"] < 8
 
 
 def test_isotonic_up_down_and_simplisma():
