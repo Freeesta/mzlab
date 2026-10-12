@@ -55,32 +55,6 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
 }
 
 impl Opened {
-    /// Every array of the directory lies inside the file (a truncated file is refused even when the reader does not want the missing arrays).
-    fn check(&self, size: u64) -> Result<()> {
-        for e in self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]) {
-            let width = match e.get("dtype").and_then(|v| v.str()) {
-                Some("f64") => 8,
-                Some("f32" | "u32") => 4,
-                Some("u16") => 2,
-                Some("u8" | "i8") => 1,
-                _ => return Err(bad()),
-            };
-            let get = |k: &str| e.get(k).and_then(|v| v.f64()).map(|v| v as u64).ok_or_else(bad);
-            let (offset, count) = (get("offset")?, get("count")?);
-            let end = self.start.checked_add(offset).and_then(|a| a.checked_add(count.checked_mul(width)?));
-            if end.is_none_or(|e| e > size) {
-                return Err(bad());
-            }
-        }
-        Ok(())
-    }
-
-    /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).
-    fn has(&self, name: &str) -> bool {
-        let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
-        e.iter().any(|x| x.get("name").and_then(|v| v.str()) == Some(name))
-    }
-
     /// `(count, offset)` of the array `name` when it has `dtype`.
     fn entry(&self, name: &str, dtype: &str) -> Result<(usize, u64)> {
         let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
@@ -238,4 +212,32 @@ pub fn read_evid(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut r = Slice(bytes);
     let size = bytes.len() as u64;
     open(&mut r, size, "table")?.col(&mut r, size, "evid", "u8", None, |b: [u8; 1]| b[0])
+}
+
+impl Opened {
+    /// Every array of the directory lies inside the file (a truncated file is refused even when the reader does not want the missing arrays).
+    fn check(&self, size: u64) -> Result<()> {
+        for e in self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]) {
+            let width = match e.get("dtype").and_then(|v| v.str()) {
+                Some("f64") => 8,
+                Some("f32" | "u32") => 4,
+                Some("u16") => 2,
+                Some("u8" | "i8") => 1,
+                _ => return Err(bad()),
+            };
+            let get = |k: &str| e.get(k).and_then(|v| v.f64()).map(|v| v as u64).ok_or_else(bad);
+            let (offset, count) = (get("offset")?, get("count")?);
+            let end = self.start.checked_add(offset).and_then(|a| a.checked_add(count.checked_mul(width)?));
+            if end.is_none_or(|e| e > size) {
+                return Err(bad());
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).
+    fn has(&self, name: &str) -> bool {
+        let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
+        e.iter().any(|x| x.get("name").and_then(|v| v.str()) == Some(name))
+    }
 }
