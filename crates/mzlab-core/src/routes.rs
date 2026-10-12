@@ -93,6 +93,8 @@ impl<R: ReadAt> Routes<R> {
             "/api/filters" => self.filters().map(Some),
             "/api/scanlist" => self.scanlist(q),
             "/api/nearest_scan" => self.nearest_scan(q),
+            "/api/scan_axis" => self.scan_axis(q),
+            "/api/ms2tr" => self.ms2_transitions().map(Some),
             "/api/spectrum" => self.spectrum(q),
             "/api/dda" => self.dda(q),
             "/api/spectra" => self.spectra_profile(q),

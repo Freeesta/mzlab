@@ -29,7 +29,7 @@ def queries(item: Item) -> list[tuple[str, dict]]:
     keys = {}
     for s in scans:
         keys.setdefault((s.level, __import__("mzlab.explore", fromlist=["scan_key"]).scan_key(s)), s)
-    out.append(("/api/filters", {"k": "0"}))
+    out += [("/api/filters", {"k": "0"}), ("/api/ms2tr", {"k": "0"}), ("/api/scan_axis", {"k": "0", "level": "7"})]
     n = len(scans)
     for sid in sorted({0, n // 3, n // 2, n - 1}) if n else []:
         out.append(("/api/scaninfo", {"k": "0", "sid": str(sid)}))
@@ -38,7 +38,7 @@ def queries(item: Item) -> list[tuple[str, dict]]:
         out += [("/api/chrom", {**base}), ("/api/chrom", {**base, "kind": "bpc"})]
         out += [("/api/chrom", {**base, "mz0": "100", "mz1": "300"}), ("/api/chrom", {**base, "mz0": "150"}),
                 ("/api/chrom", {**base, "mz1": "250", "kind": "bpc"}), ("/api/chrom", {**base, "mz0": "120", "mz1": "280", "kind": "bpc"})]
-        out += [("/api/scanlist", {**base})]
+        out += [("/api/scanlist", {**base}), ("/api/scan_axis", {**base})]
         if item.spectrum_mode(lv) == "centroid" and not item.hr_on(lv, True):       # the spectra of a window: unit-resolution centroids (the rest is Python's)
             for r0, r1 in ((0, 1), (1.3, 2.9), (3, 3.0), (0, 1000), (5.5, 2.2), (500, 600)):
                 for extra in ({}, {"merge": "1"}, {"bin": "0.5"}):
