@@ -3,7 +3,7 @@
 use super::graph::{Inputs, RT_MARGIN, SOURCE_FEATURES};
 use super::*;
 use crate::hypo::Dir;
-use crate::kinetic::{kinetic_report, Controls, Coupling};
+use crate::kinetic::{kinetic_report, Controls};
 use crate::table::*;
 
 pub(super) fn graded(
@@ -63,16 +63,7 @@ pub(super) fn kinetic_proofs(inp: &Inputs, row: usize) -> Vec<Evidence> {
         return vec![];
     }
     let rep = kinetic_report(k.setup, &y, &ctrl);
-    let ke = &rep.evidence;
-    let params: Vec<_> = ke.params.clone();
-    let kin = graded(
-        inp,
-        Kind::Kinetics,
-        ke.value,
-        None,
-        rep.coupling == Coupling::TooFast,
-        params,
-    );
+    let kin = Evidence::from_kinetic(inp.table, &rep.evidence);
     let fc = if rep.controls == Controls::NoSignal {
         f64::NAN
     } else {

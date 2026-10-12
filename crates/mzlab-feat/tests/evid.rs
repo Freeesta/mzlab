@@ -101,9 +101,9 @@ fn a_proof_against_is_never_offset() {
     );
     assert_eq!((a.against, b.against), (0, 1));
     assert!(b.reasons.iter().any(|r| r.code == R_AGAINST_OPEN));
-    // the identity with the proof against goes after one with fewer points and none against, even with the higher total
-    assert_eq!(b.rank(&c), std::cmp::Ordering::Greater);
-    assert_eq!(c.rank(&b), std::cmp::Ordering::Less);
+    // the order is by total; with the same total the one with nothing against comes first
+    assert_eq!(b.rank(&c), std::cmp::Ordering::Less);
+    assert_eq!(c.rank(&b), std::cmp::Ordering::Greater);
     assert_eq!(a.rank(&b), std::cmp::Ordering::Less);
     let mut forced = proof(&t, Kind::Mass, 1.0, None, true);
     assert_eq!((forced.points, forced.sign), (0.0, Sign::Against));

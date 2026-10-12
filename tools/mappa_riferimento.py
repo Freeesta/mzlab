@@ -59,6 +59,7 @@ def main(argv) -> int:
         mzidx.build(run, out / (f.stem + ".mzidx"))
         run.close()
         names.append(f.name)
+    mzidx.REGISTRY.update({n: str(out / (Path(n).stem + ".mzidx")) for n in names})       # each file with its own index (two synthetic files can share size and probe)
     app = App(out)
     app.session = Session([{"file": n} for n in names], out)
     res = []
