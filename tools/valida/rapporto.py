@@ -86,3 +86,37 @@ def scrivi(cartella, rapporto: dict, prestazioni: bool = True) -> tuple[Path, Pa
     j.write_text(a_json(rapporto, prestazioni), encoding="utf-8")
     m.write_text(a_markdown(rapporto if prestazioni else senza_prestazioni(rapporto)), encoding="utf-8")
     return j, m
+
+
+# ---------------------------------------------------------------------------------------------------------------- the gate
+ESITO = {True: "PASS", False: "FAIL", None: "not measured"}
+
+
+def cancello_markdown(c: dict, det: dict) -> str:
+    """Summary of the gate: the table of the criteria with PASS / FAIL, the result and the details of the measures."""
+    L = [f"# Gate of quality: crate {c['crate_version']}, {c['data']}", "",
+         f"Candidate view: **{'open' if c['vista_candidati'] else 'closed'}**. Agreement with mzmine: {c['concordanza_mzmine']}.", "",
+         "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    if det.get("timololo"):
+        L += ["", "## Real series", "", "| measure | value |", "|---|---|"] + [f"| {k} | {v} |" for k, v in det["timololo"].items()]
+    if det.get("mzmine"):
+        L += ["", "## Agreement with mzmine", "", "| measure | value |", "|---|---|"] + [f"| {k} | {v:.4g} |" for k, v in det["mzmine"].items()]
+    s = det.get("sintetici")
+    if s:
+        L += ["", f"## Synthetic series ({s['profilo']}, seed {s['seme']})", "", f"Rows {s.get('righe')}, candidates {s.get('candidati')}.", "", "| measure | value | n |", "|---|---|---|"]
+        L += [f"| {k} | {'' if m['valore'] is None else round(m['valore'], 4)} | {m['n']} |" for k, m in s.get("misure", {}).items()]
+    return "\n".join(L) + "\n"
+
+
+def scrivi_cancello(cartella, c: dict, det: dict, cancello_json: str) -> list[Path]:
+    """Writes `cancello.json` (where the panel reads it: `cancello_json`) and, in `cartella`, the report with all the numbers (`cancello_rapporto.json` / `.md`)."""
+    d = Path(cartella)
+    d.mkdir(parents=True, exist_ok=True)
+    testo = json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+    out = [Path(cancello_json), d / "cancello_rapporto.json", d / "cancello_rapporto.md"]
+    out[0].parent.mkdir(parents=True, exist_ok=True)
+    out[0].write_text(testo, encoding="utf-8")
+    out[1].write_text(json.dumps(_pulisci({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[2].write_text(cancello_markdown(c, det), encoding="utf-8")
+    return out
