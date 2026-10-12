@@ -1,10 +1,11 @@
-# Desktop app (crates/mzlab-desktop, Tauri v2): builds the installers on macOS (universal) and Windows and keeps them as artifacts of the run.
+# Desktop app (crates/mzlab-desktop, Tauri v2): builds the installers on macOS (universal), Windows and Linux (AppImage, deb) and keeps them as artifacts of the run.
 # The installers are never committed and never published in the site. Unsigned: no Apple/Microsoft account is used here.
 # Runs by hand (workflow_dispatch) and when crates/mzlab-desktop/** changes. Not a required check of the protected main branch.
 name: desktop
 
 on:
   workflow_dispatch:
+  workflow_call:                      # release.yml builds the installers of a tag by calling this workflow
   push:
     branches: [main]
     paths: ["crates/mzlab-desktop/**", ".github/workflows/desktop.yml"]
@@ -69,6 +70,12 @@ jobs:
             os: windows-latest
             args: --bundles nsis
             artifact: "target/release/bundle/nsis/*.exe"
+          - name: Linux
+            os: ubuntu-22.04                  # the oldest glibc of the runners: the AppImage runs on older systems too
+            args: --bundles appimage,deb
+            artifact: |
+              target/release/bundle/appimage/*.AppImage
+              target/release/bundle/deb/*.deb
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -78,6 +85,11 @@ jobs:
           python-version: "3.13"
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      - name: Libraries of the window (WebKitGTK, Tauri prerequisites)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
       - name: Targets of the universal binary
         if: runner.os == 'macOS'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
@@ -94,7 +106,7 @@ jobs:
         env:
           MZLAB_GOLDEN_STRICT: "1"
         run: cargo test --locked -p mzlab-desktop
-      - name: The page of the program (no Python: the app has none)
+      - name: "The page of the program (no Python, the app has none)"
         run: python tools/build_site.py --no-pyodide
       - name: Libraries WASM engine in the page (the .mzlib files of the folder are read by it; built like in pages.yml, never committed)
         shell: bash

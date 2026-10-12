@@ -27,6 +27,12 @@ Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
 
 Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: nessuna compilazione; `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`. Per modificare i testi della Teoria: [`mzlab/web/teoria/LEGGIMI.md`](mzlab/web/teoria/LEGGIMI.md).
 
+## Uso dell'intelligenza artificiale
+
+Il codice, i test e la documentazione tecnica sono sviluppati con l'assistenza di strumenti di IA generativa (Claude Code, Anthropic), diretti dall'autore; i commit scritti con quell'assistenza lo riportano come coautore. Cosa entra in `main` lo decide il manutentore, e solo dopo i test automatici obbligatori. Il programma, quando lo si usa, **non contiene e non chiama modelli di IA**: tutto il calcolo avviene nel browser (o nell'app desktop) con le regole scritte nel codice.
+
+*English: the code, tests and technical documentation are developed with the assistance of generative AI tools (Claude Code, by Anthropic) directed by the author; such commits list it as co-author. What enters `main` is decided by the maintainer after the required automated tests. The program itself contains and calls no AI model.*
+
 ## Licenze e crediti
 
 Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di terzi, ciascuno con la sua licenza (testi in [`LICENZE-TERZI.md`](LICENZE-TERZI.md), copiato anche nel sito):
