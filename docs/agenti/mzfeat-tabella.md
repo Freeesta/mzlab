@@ -1,0 +1,23 @@
+# mzfeat: tabella delle feature, id e campioni
+
+- **Ordine e id** (`aligned_ops.rs::sort_rows`, chiamato alla fine di `series::finish`, quindi anche dal percorso a lastre).
+  - Le righe del `.mzfeat` escono in ordine di m/z crescente, poi RT, poi ordine precedente (stabile).
+  - `Aligned::id(riga)` = posizione 1-based, `row_of_id` l'inverso, `is_id_ordered` il controllo.
+  - L'id vale per una ricetta e un insieme di ingressi (stessi byte del `.mzfeat`), non fra ricette diverse.
+- **Conteggi per riga**: `Aligned::state_counts(riga)` = (rilevate, mirate, riempite); la presenza si legge da `state`, mai da `area > 0`.
+- **Campioni** (`samples.rs`, schema `docs/schemi/campioni-1.json`): metadati di ogni file della serie.
+  - `propose(&[(nome, sha256)])` propone tipo (`sample`, `blank`, `dark`, `t0`, `qc`, `std`, `calibration`), tempo, replica, gruppo, concentrazione e ordine di iniezione dai nomi, con le regole di `mzlab_core::project`.
+  - La replica è numerata per tipo, tempo e concentrazione; `istd` parte falso.
+  - `to_json` è canonico (stesso ordine delle chiavi, stessi byte) e `digest` ne è lo SHA-256, quello registrato dall'operazione `campioni` del `.mzflow`.
+  - `from_json` rifiuta schema, tipo e numeri non validi (`error.badCampioni`); `to_tsv` scrive la tabella di metadati nel formato di mzmine.
+  - Cambiare un metadato non cambia la detection.
+- **Riassunti di riga** (`aligned_meta.rs`, `rowmeta.rs`; `Aligned::meta`): per ogni riga, dai file che l'hanno rilevata.
+  - Bordi mediani del picco (`rt_lo`, `rt_hi`), carica, forma, S/N e FWHM mediani con l'OR dei bit `qreason`.
+  - M+1/M osservato (`iso_m1`, solo in famiglia) e MS2 di purezza più alta (`ms2_file`, `ms2_purity`; `NO_FILE` = nessuno).
+  - `rowmeta::compute` li calcola in coda ad `align_and_fill` (in memoria e a lastre, stessi byte), leggendo i file a blocchi di righe per intervallo di m/z.
+  - Le righe aggiunte dopo (mirate) hanno `RowQ::NONE`; il vettore vuoto vuol dire non calcolati.
+- **Formato `.mzfeat` versione 2** (`store.rs::TABLE_FORMAT`).
+  - In più `id` e i riassunti come array, e nel meta `summaries` (0/1).
+  - Un file di versione 1 si legge con i riassunti vuoti; un file troncato è rifiutato anche se mancano array che il lettore non chiede.
+  - `sort_rows` gira anche in `evidence_to` dopo l'aggiunta delle righe mirate, così gli id scritti sono quelli finali.
+- **Prove**: `tests/samples.rs` (nomi → tipi, andata e ritorno, rifiuti, TSV), `tests/store.rs` (id, conteggi, ordinamento che tiene intere le righe), `tests/rowmeta.rs` (mediane, MS2, M+1/M, file in memoria e a lastre).
