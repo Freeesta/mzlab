@@ -13,7 +13,7 @@ window.MAPPA = (() => {
   const isMax = p => p.el && p.el.classList.contains("max");
   const mirOn = p => { const s = st(p); return s.ex ? true : s.mir != null ? s.mir : isMax(p); };       // «How it is extracted» always uses the two plots at the margins
   const wide = p => p.el && p.el.clientWidth >= NARROW;
-  const point = p => { const s = st(p); return s.lock || s.kp || s.hov; };
+  const point = p => { const s = st(p); return s.lock || s.frz || s.kp || s.hov; };       // frz: the point of the right click, held while the menu is open
   const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
 
   // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
@@ -316,11 +316,12 @@ window.MAPPA = (() => {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
     if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
+    if (s.frz) return;                                                  // the menu is open: the sight stays on the clicked point
     if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
-  function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) frame(p); }
+  function leave(p) { const s = st(p); if (s.frz) return; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     e.preventDefault();
@@ -626,7 +627,14 @@ window.MAPPA = (() => {
     }
     return items;
   }
-  function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); }
+  // while the menu is open the sight (spectrum, XIC) is held on the point of the click; it is let go when the menu closes (a choice such as Lock has already set s.lock)
+  function holdSight(ad) {
+    if (ad.kind !== "2d") return; const s = st(ad.p), q = ad.pt(), m = Q("#ctx"); if (!q || s.lock) return;
+    s.frz = { rt: q.rt, mz: q.mz }; s.kp = null; frame(ad.p);
+    const mo = new MutationObserver(() => { if (!m.hidden) return; mo.disconnect(); s.frz = null; frame(ad.p); navSync(ad.p); });
+    mo.observe(m, { attributes: true, attributeFilter: ["hidden"] });
+  }
+  function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
   // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
   function scaleView(p, f, c, axes) {
     const a = p._a, x = c ? c.rt : (a.x0 + a.x1) / 2, y = c ? c.mz : (a.y0 + a.y1) / 2;
