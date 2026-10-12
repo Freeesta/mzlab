@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Periodic table with isotopes and abundances: ONE place for the markup, the layout and the behaviour, used by the program
 // (tables.js, dialog "Tavola periodica") and by the Teoria (teoria/strumenti/tavola.js). The data of the elements is elements.js.
