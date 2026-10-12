@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, prepare_upload, formula_mz, composition } from "./wasm/mzlab_wasm.js";
+import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
@@ -62,11 +62,20 @@ async function lrFree() {                                                 // the
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
 }
-let labOp = null;                                                          // methods (.dam) and the routes of one item about its acquisition (rust-worker-lab.js)
+// Operations on single scans (`scans.rs` of the engine): the scans of a centroid file come from the mzML by offset, a background comes from the indexes.
+function scanOp({ op, id, slot, path, query, blob }) {
+  const q = query || "";
+  if (op === "scanbin") {
+    const b = engine.scanbin(slot, q, readerFor(blob));
+    postMessage({ id, op, n: b.length, info: null, buf: b.length ? b.buffer : null, len: b.length }, b.length ? [b.buffer] : []);
+    return;
+  }
+  const info = op === "specbg" ? engine.spectrum_bg(slot, q) : engine.mzml_route(slot, path, q, readerFor(blob));
+  postMessage({ id, op, n: 0, info, buf: null, len: 0 });
+}
+
+const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrOp(m) {
-  if (!labOp) labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });
-  const lab = await labOp(m);
-  if (lab) return lab;
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
       const out = [];
@@ -102,6 +111,7 @@ async function lrOp(m) {
     case "lr_entry": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)) }; }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
+    case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": { engine.close(slotOf(m.name)); lrFile.delete(m.name); await ARCH.remove("files", m.name); return { info: "{}" }; }
     case "lr_space": { if (m.free) await lrFree(); return { info: JSON.stringify(await lrSpace()) }; }
@@ -126,7 +136,7 @@ onmessage = async ev => {
   try {
     let out = null, n = 0, info = null;
     if (m.op.startsWith("lr_")) {
-      const r = await lrOp(m);
+      const r = await labOp(m) || await lrOp(m);
       postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null });
       return;
     }
@@ -148,12 +158,15 @@ onmessage = async ev => {
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
+      case "mzmlroute": case "specbg": case "scanbin": return scanOp(m, id);                            // api/spectra, scan, scanavg, scanbin, spectrum with a background: see scanOp
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML
-      case "mzmlroute": info = engine.mzml_route(m.slot, m.path, m.query || "", readerFor(m.blob)); break;   // api/spectra, scan, scanavg of a centroid file: the scans are read from the mzML by offset
       case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
-      case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (profile or high resolution)
+      case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
       case "map": info = engine.map_route(m.path, m.items, m.query); break;             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
+      case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
+      case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
+      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;
       case "reset": engine.close_all(); blobs.clear(); break;

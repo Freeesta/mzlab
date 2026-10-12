@@ -64,6 +64,18 @@ try:
             assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["n"] == 6 and len(r["j"]["mz"]) > 5, (r["status"], r["eng"])
             assert not missed(pg), missed(pg)
         step("api/spectra, api/scan and api/scanavg come from the Rust engine (scans read from the mzML by offset), without a request left to Python", scans)
+        def binary():
+            r = pg.evaluate("""async u => { const r = await fetch(u); const b = new Uint8Array(await r.arrayBuffer()); const hl = new DataView(b.buffer).getUint32(0, true);
+                return { status: r.status, eng: r.headers.get("X-Engine"), head: JSON.parse(new TextDecoder().decode(b.slice(4, 4 + hl))), size: b.length - 4 - hl }; }""", "api/scanbin?k=0&level=1&i0=0&i1=3")
+            n = sum(m["n"] for m in r["head"]["scans"])
+            assert r["status"] == 200 and r["eng"] == "rust" and len(r["head"]["scans"]) == 4 and n > 100 and r["size"] == 12 * n, (r["status"], r["eng"], r["size"], n)
+            assert not missed(pg), missed(pg)
+        step("api/scanbin (binary block) comes from the Rust engine, without a request left to Python", binary)
+        def background():
+            r = pg.evaluate(JSON, "api/spectrum?k=0&level=1&rt0=14.2&rt1=14.6&bgk=0&bgrt0=10.1&bgrt1=10.9")
+            assert r["status"] == 200 and r["eng"] == "rust" and r["j"].get("diff") is True and r["j"]["scans"] > 1, (r["status"], r["eng"], list(r["j"])[:5])
+            assert not missed(pg), missed(pg)
+        step("api/spectrum with a background (bgk) comes from the Rust engine", background)
         b.close()
 finally:
     srv.terminate()

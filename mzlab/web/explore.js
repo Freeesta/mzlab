@@ -813,8 +813,6 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas 
 function dl(name, text, type = "application/octet-stream") {
   saveBlob(new Blob([text], { type }), name);
 }
-const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "ibk"];
-const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "ibk"].map(k => I18N.t(`export.int.${k}`));
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(p) {

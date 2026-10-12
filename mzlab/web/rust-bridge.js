@@ -6,7 +6,8 @@
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches Rust off for the rest of the session
 // (everything goes to Pyodide, `error.engineFallback`).
 import { simdSupported } from "./idxpool.js";
-import { scanRoute } from "./rust-scans.js";
+import { hasScan, scanRoutes } from "./rust-scans.js";
+import { diffRoute } from "./rust-diff.js";
 
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -124,7 +125,6 @@ export function createBridge({ workerUrl, notify }) {
   };
 
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda)$/;
-  const SCAN_ROUTES = /^\/api\/(spectra|scan|scanavg)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
   api.handle = async (method, url) => {
@@ -133,9 +133,14 @@ export function createBridge({ workerUrl, notify }) {
     const level = num(q, "level", 1), px = Math.max(0, num(q, "px", 0) | 0);
     const t0 = performance.now();
     const k0 = num(q, "k", -1);
-    if (SCAN_ROUTES.test(path) && !hasRef(q) && slots[k0]) {
-      const r = await scanRoute({ slots, rpc, stats }, k0, path, u.search);
-      if (r) return { status: 200, text: r, ms: performance.now() - t0 };
+    if (hasScan(path, q) && slots[k0]) {
+      const r = await scanRoutes({ slots, rpc, stats }, k0, path, q, u.search);
+      if (r) return { status: 200, ...r, ms: performance.now() - t0 };
+    }
+    if (hasRef(q) && /^\/api\/(chrom|xic|mrm)$/.test(path)) {
+      const r = await diffRoute({ slots, rpc }, path, u);
+      if (r) { stats.rust++; return { ...r, ms: performance.now() - t0 }; }
+      return null;
     }
     // routes the index answers by itself
     if (INDEX_ROUTES.test(path) && !hasRef(q)) {

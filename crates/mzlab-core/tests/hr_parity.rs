@@ -1,4 +1,4 @@
-//! `/api/dda`, `/api/spectrum`, `/api/spectra`, `/api/scan` and `/api/scanavg` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
+//! `/api/dda`, `/api/spectrum`, `/api/spectra`, `/api/scan`, `/api/scanavg` and `/api/scanbin` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
 //! Orbitrap DDA files): the same columns and peaks, numbers within 1e-9; a window of one scan is read from the mzML (`spectrum_exact`; the index alone answers `None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_HR_DIR` = a folder already written by the script.
 
@@ -33,6 +33,27 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
     }
 }
 
+/// The block of `/api/scanbin` as the reference writes it: the header and, per scan, the m/z (float64) and the intensities (float32).
+fn decode_bin(b: &[u8]) -> String {
+    let hl = u32::from_le_bytes(b[..4].try_into().unwrap()) as usize;
+    let head: Value = serde_json::from_slice(&b[4..4 + hl]).unwrap();
+    let mut off = 4 + hl;
+    let scans: Vec<Value> = head["scans"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| {
+            let n = m["n"].as_u64().unwrap() as usize;
+            let mz: Vec<f64> = (0..n).map(|i| f64::from_le_bytes(b[off + 8 * i..off + 8 * i + 8].try_into().unwrap())).collect();
+            off += 8 * n;
+            let y: Vec<f64> = (0..n).map(|i| f32::from_le_bytes(b[off + 4 * i..off + 4 * i + 4].try_into().unwrap()) as f64).collect();
+            off += 4 * n;
+            serde_json::json!({"mz": mz, "y": y})
+        })
+        .collect();
+    serde_json::json!({"head": head, "scans": scans}).to_string()
+}
+
 #[test]
 fn hr_routes_like_python() {
     let ready = std::env::var("MZLAB_HR_DIR").ok().map(PathBuf::from);
@@ -47,7 +68,7 @@ fn hr_routes_like_python() {
         return;
     }
     let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("hr.json")).unwrap()).unwrap();
-    let mut routes: Vec<Routes<std::fs::File>> = (0..2)
+    let mut routes: Vec<Routes<std::fs::File>> = (0..3)
         .map(|i| {
             let p = out.join(format!("h{i}.mzidx"));
             Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap())
@@ -56,15 +77,19 @@ fn hr_routes_like_python() {
     let (mut bad, mut compared) = (Vec::new(), 0);
     for c in &cases {
         let (k, path, query) = (c["k"].as_u64().unwrap() as usize, c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
-        let t = std::time::Instant::now();
+        if path == "/api/scanbin" && k == 2 {
+            continue;                                          // the profile file: Python's
+        }
         let from_mzml = ["/api/spectra", "/api/scan", "/api/scanavg"].contains(&path);
-        let got = if from_mzml {
+        let got = if path == "/api/scanbin" {
+            let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
+            routes[k].scanbin_route(&Query::parse(query), &mut mzml).unwrap().map(|b| decode_bin(&b))
+        } else if from_mzml {
             let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
             routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()
         } else {
             routes[k].handle(path, &Query::parse(query)).unwrap()
         };
-        eprintln!("k={k} {path}?{query}: rust {:.1} ms, python {:.1} ms", t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
         if c["single"] == true {
             if got.is_some() {
                 bad.push(format!("k={k} {path}?{query}: a window of one scan needs the mzML"));
@@ -79,6 +104,13 @@ fn hr_routes_like_python() {
             bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
             continue;
         }
+        let got = match got {
+            None if c["status"] == 200 && (path == "/api/spectrum" || path == "/api/spectra") => {
+                let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
+                routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()       // a profile level of single-precision peaks: its spacing comes from the mzML
+            }
+            g => g,
+        };
         if c["status"] != 200 {
             if got.is_some() {
                 bad.push(format!("k={k} {path}?{query}: Python refuses, Rust answers"));
