@@ -103,6 +103,12 @@ try:
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n0}", timeout=240000)
             assert pg.evaluate("ST.files.some(f => /\\.mzML$/.test(f.name) && f.name.startsWith(%r))" % os.path.splitext(os.path.basename(raws[0]))[0])
         step("a Thermo .raw is read by the engine and listed as an mzML", thermo_raw)
+        def recycled():
+            pg.evaluate("window.MZLAB_RUST.recycle()")
+            assert pg.evaluate("window.MZLAB_RUST.stats.recycled") == 1 and pg.evaluate("window.MZLAB_RUST.stats.restarts") == 0
+            r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # files reopened, not a fault: nothing counted, no message
+            assert not pg.evaluate("(document.querySelector('#rust-note') || {}).textContent || ''").strip(), "a recycle must be silent"
+        step("a recycled worker (large and idle) is replaced silently: files reopened, no fault counted", recycled)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)

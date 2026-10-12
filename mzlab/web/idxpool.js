@@ -9,8 +9,14 @@ export function poolSize(small, cores) {
   return small ? Math.min(n, 2) : n;
 }
 
-export function createPool({ workerUrl, size, budget = 64, notify = () => {}, WorkerClass = Worker }) {
-  let limit = size, active = 0, off = false;
+// moduleUrl: the .wasm of the builder, compiled ONCE here (compileStreaming) and handed to every worker as a WebAssembly.Module, so that a worker that lives for one file
+// does not compile it again (without it the worker compiles by itself, as the test workers do).
+export function createPool({ workerUrl, size, budget = 64, notify = () => {}, WorkerClass = Worker, moduleUrl = null }) {
+  let limit = size, active = 0, off = false, compiled = null;
+  const getModule = () => compiled || (compiled = (async () => {
+    try { return await WebAssembly.compileStreaming(fetch(moduleUrl)); }
+    catch (_) { try { return await WebAssembly.compile(await (await fetch(moduleUrl)).arrayBuffer()); } catch (e) { compiled = null; return null; } }
+  })());
   const queue = [], running = new Map();          // running: job -> worker
   const finish = (job, res) => { if (job.done) return; job.done = true; job.resolve(res); };
 
@@ -31,6 +37,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, Wo
     };
     try { w = new WorkerClass(workerUrl, { type: "module" }); } catch (e) { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: String(e) }); return pump(); }
     running.set(job, w);
+    (moduleUrl ? getModule() : Promise.resolve(null)).then(module => { if (!job.done) { try { w.postMessage({ op: "module", module }); } catch (_) { /* gone */ } } });
     w.onerror = e => { if (job.done) return; if (job.inited) retry("crash", e.message); else { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: e.message }); pump(); } };
     w.onmessage = ev => {
       const m = ev.data;
