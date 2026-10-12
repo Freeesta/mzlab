@@ -2,3 +2,5 @@
 //! the user gives the SMILES of the parent.
 
 pub mod grafo;
+mod gruppi;
+mod smiles;
