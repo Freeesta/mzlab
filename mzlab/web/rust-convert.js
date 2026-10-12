@@ -1,9 +1,10 @@
 // Conversions to mzML done in the worker (rust-worker.js), for the page: Thermo .raw and SCIEX .wiff + .wiff.scan. `rpc(msg, onProgress)` and `base(name)` come from
 // the bridge (rust-bridge.js). A failed conversion rejects with an Error whose `json` is { error, error_key, params } like the API errors.
+const WIFF_ERRORS = ["err.file.notWiff", "err.file.wiffNoScan", "err.file.wiff", "err.file.mzmlWrite"];        // the keys the Rust reader and writer of the .wiff give
 export function convertApi(rpc, base) {
   const fail = (r, key) => {
     let e = { error_key: key, params: { detail: "" } };
-    try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
+    try { const j = JSON.parse(r.error); if (j.error_key && (key === "err.file.raw" || WIFF_ERRORS.includes(j.error_key))) e = j; } catch (_) { /* the worker was lost */ }
     return Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
   };
   return {

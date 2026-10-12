@@ -1,26 +1,35 @@
-//! SCIEX `.wiff` + `.wiff.scan` (`mzlab_core::wiff`): the samples of a pair and one sample as mzML, written in pieces like the `.raw` conversion.
+//! `.wiff` + `.wiff.scan` pairs (SCIEX 3200 QTRAP) read in the worker: the samples of a `.wiff` and one sample written as mzML, sent to JS in pieces.
+//! The `.wiff` (the container with the indexes and the method) is read whole; the `.wiff.scan` is read by offset, block by block, never whole.
+use js_sys::Function;
+use mzlab_core::idxread::ReadAt;
+use mzlab_core::ole::Ole;
+use mzlab_core::wiff::{self, Wiff};
+use wasm_bindgen::prelude::*;
 
 use crate::{error_json, BlockWriter, Engine, JsReader};
-use js_sys::Function;
-use mzlab_core::wiff;
-use std::io::Write;
-use wasm_bindgen::prelude::*;
+
+fn container(size: f64, read: Function, name: &str) -> Result<Ole, JsValue> {
+    let mut bytes = vec![0u8; size as usize];
+    JsReader { read }.read_at(0, &mut bytes).map_err(|e| error_json(&e))?;
+    wiff::container(bytes, name).map_err(|e| error_json(&e))
+}
 
 #[wasm_bindgen]
 impl Engine {
-    /// The numbers of the samples of a `.wiff` (its bytes), as a JSON array. A file that is not a `.wiff`: error `err.file.notWiff`.
-    pub fn wiff_samples(&mut self, name: &str, wiff: Vec<u8>) -> Result<String, JsValue> {
-        let ole = wiff::container(wiff, name).map_err(|e| error_json(&e))?;
-        Ok(format!("[{}]", wiff::samples(&ole).iter().map(u32::to_string).collect::<Vec<_>>().join(",")))
+    /// The sample numbers of a `.wiff` of `size` bytes: JSON `[2,3,...]`.
+    pub fn wiff_samples(&mut self, name: &str, size: f64, read: Function) -> Result<String, JsValue> {
+        let list: Vec<String> = wiff::samples(&container(size, read, name)?).iter().map(u32::to_string).collect();
+        Ok(format!("[{}]", list.join(",")))
     }
 
-    /// Sample `sample` of a `.wiff` as mzML, sent to `sink(Uint8Array)` piece by piece. `scan_size` is the size of the `.wiff.scan` read through
-    /// `read(offset, length)`, or negative when the pair has none (`err.file.wiffNoScan`). `name` is the `.wiff`.
-    pub fn wiff_to_mzml(&mut self, name: &str, wiff: Vec<u8>, sample: u32, scan_size: f64, read: Function, sink: Function) -> Result<(), JsValue> {
-        let ole = wiff::container(wiff, name).map_err(|e| error_json(&e))?;
-        let w = wiff::Wiff::open(&ole, name, (scan_size >= 0.0).then_some(scan_size as u64), sample).map_err(|e| error_json(&e))?;
+    /// Sample `sample` of the `.wiff` as mzML, sent to `sink(Uint8Array)` piece by piece. `scan_size < 0`: the `.wiff.scan` is missing.
+    #[allow(clippy::too_many_arguments)]
+    pub fn wiff_to_mzml(&mut self, name: &str, size: f64, read: Function, scan_size: f64, scan_read: Function, sample: u32, sink: Function) -> Result<(), JsValue> {
+        let ole = container(size, read, name)?;
+        let len = (scan_size >= 0.0).then_some(scan_size as u64);
+        let w = Wiff::open(&ole, name, len, sample).map_err(|e| error_json(&e))?;
         let mut out = BlockWriter { sink, buf: Vec::new() };
-        w.to_mzml(&mut JsReader { read }, &mut out, name).map_err(|e| error_json(&e))?;
-        out.flush().map_err(|_| error_json(&mzlab_core::Error::new("err.file.wiff").with("detail", "write")))
+        w.to_mzml(&mut JsReader { read: scan_read }, &mut out, name).map_err(|e| error_json(&e))?;
+        std::io::Write::flush(&mut out).map_err(|_| error_json(&mzlab_core::Error::new("err.file.wiff").with("detail", "write")))
     }
 }

@@ -1,116 +1,210 @@
-//! mzML writer for a `Run` (what the readers of this crate give back): spectra with nativeID, polarity, level, precursor and zlib arrays,
-//! chromatograms (TIC, SRM) with their ids as the converter of the instrument vendor writes them. It is the inverse of `mzml::parse`: the
-//! file written reads back to the same `Run` (m/z and times as 64-bit floats, intensities with the width the spectrum holds).
+//! mzML writer over any `Write`, spectrum by spectrum, for readers of vendor files that have no mzML writer of their own (`wiff::to_mzml`).
+//! What it writes is what `mzml::read` and `mzlab/reader/mzml.py` read: spectra (level, polarity, profile or centroid, RT in minutes, precursor,
+//! m/z as 64-bit floats, intensities as 64-bit when the spectrum has `wide`, otherwise 32-bit, both zlib), and TIC, BPC and SRM chromatograms
+//! (the SRM masses are in the `id`, as msconvert writes them, and as isolation windows). No index, no numpress.
 
-use std::io::{self, Write};
+use std::io::Write;
 
 use base64::Engine;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
-use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
+use crate::error::{Error, Result};
+use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 
-const CV: &str = "cvRef=\"MS\"";
-const MINUTE: &str = "unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"";
+/// What the header says about the run.
+#[derive(Debug, Clone, Default)]
+pub struct Header {
+    /// `run id` (the name of the source file without extension).
+    pub run: String,
+    /// Names of the files the data come from.
+    pub sources: Vec<String>,
+    /// (accession, name) of the instrument model, e.g. ("MS:1000651", "3200 QTRAP").
+    pub instrument: Option<(String, String)>,
+    /// Components in order: ("source" | "analyzer" | "detector", accession, name).
+    pub components: Vec<(String, String, String)>,
+    /// Name and version of the program that wrote the file.
+    pub software: (String, String),
+}
+
+pub struct MzmlWriter<W: Write> {
+    out: W,
+    spectra: usize,
+    chroms: usize,
+}
+
+fn io(_: std::io::Error) -> Error {
+    Error::new("err.file.mzmlWrite")
+}
 
 fn esc(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
-fn cv(acc: &str, name: &str, value: &str) -> String {
-    format!("<cvParam {CV} accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>")
+fn b64(bytes: &[u8]) -> Result<(usize, String)> {
+    let mut z = ZlibEncoder::new(Vec::with_capacity(bytes.len() / 2 + 16), Compression::default());
+    z.write_all(bytes).map_err(io)?;
+    let s = base64::engine::general_purpose::STANDARD.encode(z.finish().map_err(io)?);
+    Ok((s.len(), s))
 }
 
-fn encode(bytes: &[u8]) -> io::Result<String> {
-    let mut z = ZlibEncoder::new(Vec::new(), Compression::fast());
-    z.write_all(bytes)?;
-    Ok(base64::engine::general_purpose::STANDARD.encode(z.finish()?))
+fn f64_bytes(v: &[f64]) -> Vec<u8> {
+    v.iter().flat_map(|x| x.to_le_bytes()).collect()
 }
 
-fn array(acc: &str, name: &str, unit: &str, values: ArrayData) -> io::Result<String> {
-    let (width, bytes) = match values {
-        ArrayData::F64(v) => (cv("MS:1000523", "64-bit float", ""), v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()),
-        ArrayData::F32(v) => (cv("MS:1000521", "32-bit float", ""), v.iter().flat_map(|x| x.to_le_bytes()).collect()),
+fn array(kind: &str, unit: &str, wide: bool, bytes: &[u8]) -> Result<String> {
+    let (len, data) = b64(bytes)?;
+    let (acc, name) = if wide { ("MS:1000523", "64-bit float") } else { ("MS:1000521", "32-bit float") };
+    let (unit_acc, unit_name) = match unit {
+        "time" => ("UO:0000031", "minute"),
+        "mz" => ("MS:1000040", "m/z"),
+        _ => ("MS:1000131", "number of detector counts"),
     };
-    let data = if bytes.is_empty() { String::new() } else { encode(&bytes)? };
+    let (cv, label) = match kind {
+        "time" => ("MS:1000595", "time array"),
+        "mz" => ("MS:1000514", "m/z array"),
+        _ => ("MS:1000515", "intensity array"),
+    };
+    let unit_cv = if unit == "time" { "UO" } else { "MS" };
     Ok(format!(
-        "<binaryDataArray encodedLength=\"{}\">{width}{}<cvParam {CV} accession=\"{acc}\" name=\"{name}\" value=\"\"{unit}/><binary>{data}</binary></binaryDataArray>",
-        data.len(),
-        cv("MS:1000574", "zlib compression", "")
+        "<binaryDataArray encodedLength=\"{len}\"><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{cv}\" name=\"{label}\" value=\"\" unitCvRef=\"{unit_cv}\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/><binary>{data}</binary></binaryDataArray>\n"
     ))
 }
 
-enum ArrayData<'a> {
-    F64(&'a [f64]),
-    F32(&'a [f32]),
+fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
+    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>")
 }
 
-fn spectrum(s: &Spectrum, index: usize) -> io::Result<String> {
-    let sum: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
-    let mut x = format!("<spectrum index=\"{index}\" id=\"{}\" defaultArrayLength=\"{}\">", esc(&s.id), s.mz.len());
-    x += &cv("MS:1000511", "ms level", &s.level.to_string());
-    x += &if s.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
-    match s.polarity {
-        1 => x += &cv("MS:1000130", "positive scan", ""),
-        -1 => x += &cv("MS:1000129", "negative scan", ""),
-        _ => {}
-    }
-    x += &cv("MS:1000285", "total ion current", &format!("{sum}"));
-    x += "<scanList count=\"1\"><scan>";
-    x += &format!("<cvParam {CV} accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" {MINUTE}/>", s.rt);
-    if !s.filter.is_empty() {
-        x += &cv("MS:1000512", "filter string", &esc(&s.filter));
-    }
-    x += "</scan></scanList>";
-    if let Some(p) = s.precursor {
-        x += &format!("<precursorList count=\"1\"><precursor><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", cv("MS:1000744", "selected ion m/z", &p.to_string()));
-    }
-    let inten = match &s.wide {
-        Some(w) => ArrayData::F64(w),
-        None => ArrayData::F32(&s.intensity),
-    };
-    x += &format!("<binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></spectrum>", array("MS:1000514", "m/z array", "", ArrayData::F64(&s.mz))?, array("MS:1000515", "intensity array", "", inten)?);
-    Ok(x)
+fn mz_cv(acc: &str, name: &str, value: f64) -> String {
+    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"MS:1000040\" unitName=\"m/z\"/>")
 }
 
-fn chromatogram(c: &Chromatogram, index: usize) -> io::Result<String> {
-    let mut x = format!("<chromatogram index=\"{index}\" id=\"{}\" defaultArrayLength=\"{}\">", esc(&c.id), c.time.len());
-    match c.kind {
-        ChromKind::Tic => x += &cv("MS:1000235", "total ion current chromatogram", ""),
-        ChromKind::Bpc => x += &cv("MS:1000628", "basepeak chromatogram", ""),
-        ChromKind::Srm => x += &cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
-        _ => {}
-    }
-    let unit = if c.unit.is_empty() { String::new() } else { format!(" unitName=\"{}\"", esc(&c.unit)) };
-    x += &format!("<binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></chromatogram>", array("MS:1000595", "time array", &format!(" {MINUTE}"), ArrayData::F64(&c.time))?, array("MS:1000515", "intensity array", &unit, ArrayData::F64(&c.intensity))?);
-    Ok(x)
-}
-
-/// Writes `run` as mzML. `source` is the name of the file it comes from (`sourceFile`), `instrument` the model cvParam name (e.g. "3200 QTRAP").
-pub fn write<W: Write>(run: &Run, out: &mut W, source: &str, instrument: &str) -> io::Result<()> {
-    write!(
-        out,
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\">\n\
-         <fileDescription><fileContent>{}</fileContent><sourceFileList count=\"1\"><sourceFile id=\"SF1\" name=\"{}\" location=\"file:///\"/></sourceFileList></fileDescription>\n\
-         <instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">{}</instrumentConfiguration></instrumentConfigurationList>\n<run id=\"{}\">\n",
-        if run.spectra.iter().any(|s| s.level > 1) { cv("MS:1000580", "MSn spectrum", "") } else { cv("MS:1000579", "MS1 spectrum", "") },
-        esc(source),
-        cv("MS:1000651", &esc(instrument), ""),
-        esc(source.rsplit_once('.').map_or(source, |p| p.0))
-    )?;
-    if !run.spectra.is_empty() {
-        writeln!(out, "<spectrumList count=\"{}\">", run.spectra.len())?;
-        for (i, s) in run.spectra.iter().enumerate() {
-            writeln!(out, "{}", spectrum(s, i)?)?;
+impl<W: Write> MzmlWriter<W> {
+    /// Writes the header and opens `<run>`.
+    pub fn new(mut out: W, h: &Header) -> Result<Self> {
+        let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n");
+        s += "<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"4.1.163\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n";
+        s += &format!("<fileDescription><fileContent>{}</fileContent><sourceFileList count=\"{}\">", cv("MS:1000579", "MS1 spectrum", ""), h.sources.len());
+        for (i, f) in h.sources.iter().enumerate() {
+            s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\"/>", i + 1, esc(f));
         }
-        writeln!(out, "</spectrumList>")?;
-    }
-    if !run.chromatograms.is_empty() {
-        writeln!(out, "<chromatogramList count=\"{}\">", run.chromatograms.len())?;
-        for (i, c) in run.chromatograms.iter().enumerate() {
-            writeln!(out, "{}", chromatogram(c, i)?)?;
+        s += "</sourceFileList></fileDescription>\n";
+        s += &format!("<softwareList count=\"1\"><software id=\"mzlab\" version=\"{}\">{}</software></softwareList>\n", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)));
+        s += "<instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">";
+        if let Some((acc, name)) = &h.instrument {
+            s += &cv(acc, name, "");
         }
-        writeln!(out, "</chromatogramList>")?;
+        s += &format!("<componentList count=\"{}\">", h.components.len());
+        for (i, (kind, acc, name)) in h.components.iter().enumerate() {
+            s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, cv(acc, name, ""));
+        }
+        s += "</componentList><softwareRef ref=\"mzlab\"/></instrumentConfiguration></instrumentConfigurationList>\n";
+        s += "<dataProcessingList count=\"1\"><dataProcessing id=\"conversion\"><processingMethod order=\"0\" softwareRef=\"mzlab\">";
+        s += &cv("MS:1000544", "Conversion to mzML", "");
+        s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\">\n", esc(&h.run));
+        out.write_all(s.as_bytes()).map_err(io)?;
+        Ok(MzmlWriter { out, spectra: 0, chroms: 0 })
     }
-    writeln!(out, "</run>\n</mzML>")
+
+    pub fn open_spectra(&mut self, count: usize) -> Result<()> {
+        self.out.write_all(format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes()).map_err(io)
+    }
+
+    pub fn close_spectra(&mut self) -> Result<()> {
+        self.out.write_all(b"</spectrumList>\n").map_err(io)
+    }
+
+    pub fn open_chromatograms(&mut self, count: usize) -> Result<()> {
+        self.out.write_all(format!("<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes()).map_err(io)
+    }
+
+    pub fn close_chromatograms(&mut self) -> Result<()> {
+        self.out.write_all(b"</chromatogramList>\n").map_err(io)
+    }
+
+    pub fn spectrum(&mut self, sp: &Spectrum) -> Result<()> {
+        let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
+        let base = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)));
+        let mut s = format!("<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">", self.spectra, esc(&sp.id), sp.mz.len());
+        s += &cv("MS:1000511", "ms level", sp.level);
+        s += &if sp.level <= 1 { cv("MS:1000579", "MS1 spectrum", "") } else { cv("MS:1000580", "MSn spectrum", "") };
+        match sp.polarity {
+            1 => s += &cv("MS:1000130", "positive scan", ""),
+            -1 => s += &cv("MS:1000129", "negative scan", ""),
+            _ => {}
+        }
+        s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
+        if let Some(b) = base {
+            s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
+            s += &cv("MS:1000505", "base peak intensity", sp.intensity_f64(b));
+        }
+        s += &cv("MS:1000285", "total ion current", tic);
+        if !sp.filter.is_empty() {
+            s += &cv("MS:1000512", "filter string", esc(&sp.filter));
+        }
+        s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/></scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt);
+        if let Some(p) = sp.precursor {
+            s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
+        }
+        s += "<binaryDataArrayList count=\"2\">\n";
+        s += &array("mz", "mz", true, &f64_bytes(&sp.mz))?;
+        s += &match &sp.wide {
+            Some(w) => array("intensity", "counts", true, &f64_bytes(w))?,
+            None => array("intensity", "counts", false, &sp.intensity.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())?,
+        };
+        s += "</binaryDataArrayList></spectrum>\n";
+        self.spectra += 1;
+        self.out.write_all(s.as_bytes()).map_err(io)
+    }
+
+    /// TIC, BPC and SRM chromatograms; other kinds are not written.
+    pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
+        let kind = match c.kind {
+            ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
+            ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
+            ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
+            _ => return Ok(()),
+        };
+        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{kind}", self.chroms, esc(&c.id), c.time.len());
+        if let (Some(q1), Some(q3)) = (c.q1, c.q3) {
+            s += &format!("<precursor><isolationWindow>{}</isolationWindow></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3));
+        }
+        s += "<binaryDataArrayList count=\"2\">\n";
+        s += &array("time", "time", true, &f64_bytes(&c.time))?;
+        s += &array("intensity", "counts", true, &f64_bytes(&c.intensity))?;
+        s += "</binaryDataArrayList></chromatogram>\n";
+        self.chroms += 1;
+        self.out.write_all(s.as_bytes()).map_err(io)
+    }
+
+    pub fn finish(mut self) -> Result<W> {
+        self.out.write_all(b"</run>\n</mzML>\n").map_err(io)?;
+        Ok(self.out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mzml;
+
+    #[test]
+    fn what_is_written_is_read_back() {
+        let sp = Spectrum { index: 0, id: "sample=1 period=1 cycle=1 experiment=2".into(), level: 2, rt: 1.25, polarity: 1, profile: true, precursor: Some(229.1), mz: vec![100.02, 100.08], intensity: vec![1.5, 2.5], wide: Some(vec![1.5, 2.25]), ..Default::default() };
+        let ch = Chromatogram { index: 0, id: "SRM SIC Q1=300.5 Q3=100.25 sample=1".into(), kind: ChromKind::Srm, q1: Some(300.5), q3: Some(100.25), unit: "number of detector counts".into(), time: vec![0.5, 0.75], intensity: vec![3.0, 4.0] };
+        let mut w = MzmlWriter::new(Vec::new(), &Header { run: "x".into(), ..Default::default() }).unwrap();
+        w.open_spectra(1).unwrap();
+        w.spectrum(&sp).unwrap();
+        w.close_spectra().unwrap();
+        w.open_chromatograms(1).unwrap();
+        w.chromatogram(&ch).unwrap();
+        w.close_chromatograms().unwrap();
+        let bytes = w.finish().unwrap();
+        let run = mzml::read(&bytes[..]).unwrap();
+        let g = &run.spectra[0];
+        assert_eq!((g.id.as_str(), g.level, g.polarity, g.profile, g.precursor), (sp.id.as_str(), 2, 1, true, Some(229.1)));
+        assert!(g.rt == 1.25 && g.mz == sp.mz && g.wide == sp.wide);
+        let c = &run.chromatograms[0];
+        assert_eq!((c.kind, c.q1, c.q3, c.time.clone(), c.intensity.clone()), (ChromKind::Srm, Some(300.5), Some(100.25), ch.time.clone(), ch.intensity.clone()));
+    }
 }

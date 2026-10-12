@@ -11,7 +11,8 @@ use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
-mod scans; mod wiff;
+mod scans;
+mod wiff;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -97,9 +98,9 @@ impl Seek for BlockReader {
 }
 
 /// Sends what is written to JS in blocks: `sink(Uint8Array)`; the page keeps the pieces as Blob parts (outside the WASM memory).
-struct BlockWriter {
-    sink: Function,
-    buf: Vec<u8>,
+pub(crate) struct BlockWriter {
+    pub(crate) sink: Function,
+    pub(crate) buf: Vec<u8>,
 }
 
 impl BlockWriter {
@@ -129,7 +130,7 @@ impl Write for BlockWriter {
     }
 }
 
-fn error_json(e: &mzlab_core::Error) -> JsValue {
+pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
     let params: Vec<String> = e
         .params
         .iter()
@@ -163,8 +164,8 @@ pub struct Engine {
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
-struct JsReader {
-    read: Function,
+pub(crate) struct JsReader {
+    pub(crate) read: Function,
 }
 
 impl ReadAt for JsReader {
@@ -359,12 +360,11 @@ impl Engine {
         size: f64,
         read: Function,
         sink: Function,
+        scans: Function, // scans(done, total): scans converted / scans in the file (first done = 0, last done = total)
     ) -> Result<(), JsValue> {
-        let mut out = BlockWriter {
-            sink,
-            buf: Vec::new(),
-        };
-        raw::to_mzml(BlockReader::new(read, size as u64), &mut out, name)
+        let mut out = BlockWriter { sink, buf: Vec::new() };
+        let mut on_scan = |d: u32, t: u32| drop(scans.call2(&JsValue::NULL, &d.into(), &t.into()));
+        raw::to_mzml_progress(BlockReader::new(read, size as u64), &mut out, name, &mut on_scan)
             .map_err(|e| error_json(&e))?;
         out.flush().map_err(|_| {
             error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))
