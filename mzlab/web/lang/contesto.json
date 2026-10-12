@@ -17,6 +17,7 @@
   "draw.export.filePrefix": "Prefisso del nome dei file scaricati (disegno_AAAA-MM-GG_HHMM.png): solo lettere minuscole senza accento.",
   "draw.export.transparentSuffix": "Suffisso del nome dei file con sfondo trasparente: solo lettere minuscole senza accento.",
   "app.title": "Titolo della scheda del browser; {app} = nome del programma (da appname.js). Le anteprime dei link usano il titolo scritto da tools/build_site.py.",
+  "help.header.body": "Riquadro del pulsante (i) dell'intestazione: gratuito, open source, nessun dato caricato, versione in lavorazione, indirizzo per suggerimenti; {app} = nome del programma.",
   "header.about": "Titolo e testo alternativo del pulsante «i» in alto a destra; {app} = nome del programma.",
   "phone.about.title": "Titolo della scheda «i» sullo smartphone; {app} = nome del programma.",
   "bt.copied": "Nota nella finestra di aiuto di BioTransformer: lo SMILES del disegno è stato copiato negli appunti; {smiles} = SMILES (abbreviato).",
