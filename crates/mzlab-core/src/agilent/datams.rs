@@ -47,23 +47,6 @@ const COUNT_AT: usize = 0x116;
 const START_AT: usize = 0x10A;
 const FIXED: usize = 14 + 10;
 
-fn be16(b: &[u8], o: usize) -> Option<usize> {
-    Some(u16::from_be_bytes([*b.get(o)?, *b.get(o + 1)?]) as usize)
-}
-
-fn be32(b: &[u8], o: usize) -> Option<u32> {
-    Some(u32::from_be_bytes([
-        *b.get(o)?,
-        *b.get(o + 1)?,
-        *b.get(o + 2)?,
-        *b.get(o + 3)?,
-    ]))
-}
-
-fn abundance(v: usize) -> f64 {
-    ((v & 0x3fff) << (3 * (v >> 14))) as f64
-}
-
 /// The name of a Pascal string of the header, as `(label, text)`.
 pub fn string_label(offset: usize) -> String {
     STRING_AT
@@ -161,6 +144,23 @@ pub(super) fn items(d: &DataMs, b: &[u8]) -> Vec<meta::Item> {
         ("data.ms#after-records", b.get(d.end..).unwrap_or(&[])),
     ]));
     out
+}
+
+fn be16(b: &[u8], o: usize) -> Option<usize> {
+    Some(u16::from_be_bytes([*b.get(o)?, *b.get(o + 1)?]) as usize)
+}
+
+fn be32(b: &[u8], o: usize) -> Option<u32> {
+    Some(u32::from_be_bytes([
+        *b.get(o)?,
+        *b.get(o + 1)?,
+        *b.get(o + 2)?,
+        *b.get(o + 3)?,
+    ]))
+}
+
+fn abundance(v: usize) -> f64 {
+    ((v & 0x3fff) << (3 * (v >> 14))) as f64
 }
 
 impl AgilentD {
