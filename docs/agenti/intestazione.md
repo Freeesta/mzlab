@@ -1,6 +1,6 @@
 # Intestazione e tabella di caricamento
 
-- **Schermo intero**: `#fs-btn` nell'header (Fullscreen API sull'intera app, `aria-pressed`, testi `header.fullscreen*`); nascosto dove il browser non ha l'API (iPhone).
+- **Schermo intero**: `#fs-btn` (Fullscreen API con `requestFullscreen({navigationUI:'hide'})`, `aria-pressed`, `header.fullscreen*`); su `fullscreenchange`, anche con Esc, l'icona `.fs-in` diventa `.fs-out` e il titolo «Esci dallo schermo intero (Esc)». Nascosto senza API (iPhone). In `:fullscreen` `--fs-top` (14 px) aggiunge margine sopra l'header: su macOS la barra dei menu compare al bordo superiore e una pagina non può disattivarla (Pointer Lock nasconde il cursore, Keyboard Lock cambia Esc). Prova: `e2e_schermo_intero`.
 - **Finestra «quasi a schermo intero» movibile**: sul web non esiste un modo per averla senza la barra delle schede. `window.open` con `popup`/`width`/`height` apre una finestra con la barra del browser.
   Document Picture-in-Picture accetta solo contenuto già in pagina, non l'app intera. La Window Management API (`getScreenDetails`) è solo Chromium, con permesso, e non toglie la barra. Solo la Fullscreen API la toglie.
 - **Logo**: a ogni clic (`tpmine-loader.js`, `popLogo`) si ingrandisce e «esplode» con la Web Animations API, poi torna; nessuna animazione con `prefers-reduced-motion` o `data-a11y-reduce`. Cinque clic veloci accendono/spengono mzFinder.

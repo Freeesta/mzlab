@@ -1473,7 +1473,7 @@ I18N.add("en", {
   "help.adducts.body": "Electrospray ionization (ESI) is a <i>soft</i> ionization technique generating intact ions via addition or loss of background adducts (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, HCOO<sup>−</sup>, Cl<sup>−</sup>...). Enter the neutral mass or formula to calculate theoretical adducts in both ESI+ and ESI−.",
   "help.header.body": "<p style=\"margin:0 0 8px\">{app} is a free, open-source tool. It never uploads your personal data or files: everything stays in your browser.</p><p style=\"margin:0 0 8px\">This version is still a work in progress.</p><p style=\"margin:0\">Suggestions and corrections: <a href=\"mailto:federico.cristaudo@unito.it\">federico.cristaudo@unito.it</a> (Federico Cristaudo, University of Turin).</p>",
   "header.fullscreen": "Full screen",
-  "header.fullscreen.exit": "Exit full screen",
+  "header.fullscreen.exit": "Exit full screen (Esc)",
   "help.close": "Close",
   "help.guide.open": "Opening the data",
   "help.guide.charts": "Working with the charts",
