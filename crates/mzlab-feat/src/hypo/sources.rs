@@ -20,11 +20,13 @@ pub struct FamilyBase {
     pub polarity: i8,
 }
 
-/// A compound of a list of the user or imported: a label and a molecular formula (a SMILES is turned into a formula by the caller).
+/// A compound of a list of the user or imported: a label and a molecular formula (a SMILES is turned into a formula by the caller), or only a
+/// monoisotopic neutral mass when the formula is empty.
 #[derive(Debug, Clone)]
 pub struct Imported {
     pub name: String,
     pub formula: String,
+    pub mass: Option<f64>,
 }
 
 const D13C: f64 = 1.003355;
@@ -317,11 +319,34 @@ pub fn from_families(bases: &[FamilyBase], p: &HypoParams) -> Vec<Hypothesis> {
 pub fn from_imported(list: &[Imported], p: &HypoParams) -> Result<Vec<Hypothesis>> {
     let mut out = Vec::new();
     for it in list {
+        if it.formula.is_empty() {
+            let neutral = it
+                .mass
+                .ok_or_else(|| Error::new("error.hypo.imported").with("name", &it.name))?;
+            let (adduct, mz) = ion(neutral, p.polarity);
+            out.push(Hypothesis {
+                id: 0,
+                sources: SRC_IMPORTED,
+                label: it.name.clone(),
+                formula: String::new(),
+                neutral,
+                mz,
+                adduct,
+                polarity: p.polarity,
+                steps: 0,
+                level: 0,
+                dir: Dir::Free,
+                rt_ref: None,
+                alternatives: Vec::new(),
+            });
+            continue;
+        }
         let f = elements::parse_formula(&it.formula)?;
+        let label = it.name.clone();
         out.push(hypothesis(
             &f,
             p,
-            it.name.clone(),
+            label,
             SRC_IMPORTED,
             0,
             0,
