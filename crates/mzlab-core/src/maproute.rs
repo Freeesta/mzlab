@@ -1,6 +1,6 @@
 //! The map routes of the session over unit-resolution centroid files, from their indexes: `api/map`, `api/mapsnap`, `api/mappunti`,
-//! `api/mappunti3d` (`_map`, `_map_points`, `_map_sticks` of `mzlab/api_aiuti.py`). `Ok(None)` = Python's: profile or high-resolution files,
-//! a section in single precision, a parameter that Python must reject with its own error.
+//! `api/mappunti3d` (`_map`, `_map_points`, `_map_sticks` of `mzlab/api_aiuti.py`), for unit-resolution and high-resolution files, centroids
+//! or profile points. `Ok(None)` = Python's: a parameter that Python must reject with its own error.
 
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use crate::idxread::ReadAt;
 use crate::iteminfo::group_is_hr;
 use crate::json::Value;
 use crate::jsonb::{floats, opt, text, Obj};
-use crate::mapgrid::{diff_tolerant, map_cells, psum32, py_round, rt_groups, session_grid, subtract_constant, Grid, Point};
+use crate::mapgrid::{diff_tolerant, map_cells, map_cells_hr, psum32, py_round, rt_groups, session_grid, subtract_constant, Grid, Point};
 use crate::originroute::ItemMeta;
 use crate::routes::{Query, Routes};
 
@@ -27,6 +27,8 @@ struct Ask {
     stretch: Option<(f64, f64)>,
     /// (rt0, rt1, mz0, mz1, nrt, nmz) of a region; None = the grid of the session.
     region: Option<(f64, f64, f64, f64, usize, usize)>,
+    /// `mzscale=log` was asked; in force (cells of equal ppm) only for a region of a file read as high resolution.
+    log: bool,
 }
 
 fn number(q: &Query, k: &str) -> Option<f64> {
@@ -45,12 +47,9 @@ fn f32s(a: &[f32]) -> Value {
     b64(a.iter().flat_map(|v| v.to_le_bytes()).collect())
 }
 
-/// Every file of the session is a plain unit-resolution centroid file the index can answer for (an item without a route is an MRM file).
-fn unit_session<R: ReadAt>(items: &[ItemMeta], routes: &Table<R>) -> bool {
-    items.iter().all(|it| match routes.get(&it.slot) {
-        Some(r) => !r.idx.scans.iter().any(|s| s.profile) && !group_is_hr(&r.idx.scans, true) && !r.idx.sections.iter().any(|s| s.f4),
-        None => !it.full,
-    })
+/// Every file of the session has its index (an item without a route is an MRM file).
+fn indexed<R: ReadAt>(items: &[ItemMeta], routes: &Table<R>) -> bool {
+    items.iter().all(|it| routes.contains_key(&it.slot) || !it.full)
 }
 
 fn route<'a, R: ReadAt>(items: &[ItemMeta], routes: &'a mut Table<R>, k: i64) -> Option<&'a mut Routes<R>> {
@@ -60,13 +59,14 @@ fn route<'a, R: ReadAt>(items: &[ItemMeta], routes: &'a mut Table<R>, k: i64) ->
 
 /// `Session.grid(level)` over the files of the session.
 fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> Result<Grid> {
-    let (mut rts, mut mzs) = (Vec::new(), Vec::new());
+    let (mut rts, mut mzs, mut hr) = (Vec::new(), Vec::new(), false);
     for it in items {
         let Some(r) = routes.get_mut(&it.slot) else { continue };
         let at: Vec<f64> = r.idx.scans.iter().filter(|s| s.level == level).map(|s| s.rt).collect();
         if at.is_empty() {
             continue;
         }
+        hr |= group_is_hr(&r.idx.scans, level == 1);
         rts.push(at.iter().cloned().fold(f64::INFINITY, f64::min));
         rts.push(at.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
         if let Some(si) = r.idx.section_of(level, None) {
@@ -75,7 +75,7 @@ fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> R
             }
         }
     }
-    Ok(session_grid(&rts, &mzs))
+    Ok(session_grid(&rts, &mzs, hr))
 }
 
 fn parse_ask(q: &Query, with_ref: bool) -> Option<Ask> {
@@ -102,21 +102,21 @@ fn parse_ask(q: &Query, with_ref: bool) -> Option<Ask> {
     } else {
         None
     };
-    Some(Ask { level: q.level(), mean, bg, stretch, region })
+    Some(Ask { level: q.level(), mean, bg, stretch, region, log: q.some("mzscale") == Some("log") })
 }
 
 /// The map of file `k` on the grid `g` (`mz1` = end of the m/z axis), with the background taken away when asked.
 fn one_map<R: ReadAt>(r: &mut Routes<R>, a: &Ask, g: &Grid, mz1: f64) -> Result<Vec<f32>> {
     let m = match a.region {
-        Some(_) => r.region_map(a.level, (g.rt0, g.rt1), g.nrt, (g.mz0, mz1), g.nmz, a.mean)?,
+        Some(_) => r.region_map(a.level, (g.rt0, g.rt1), g.nrt, (g.mz0, mz1), (g.nmz, a.log), a.mean)?,
         None => r.ion_map(a.level, g, a.mean)?.to_vec(),
     };
     if !(a.bg || a.stretch.is_some()) {
         return Ok(m);
     }
     let bg = match a.stretch {
-        Some(s) => r.stretch_background(a.level, s, (g.mz0, mz1), g.nmz)?,
-        None => r.run_background(a.level, (g.mz0, mz1), g.nmz, a.mean)?,
+        Some(s) => r.stretch_background(a.level, s, (g.mz0, mz1), (g.nmz, a.log))?,
+        None => r.run_background(a.level, (g.mz0, mz1), (g.nmz, a.log), a.mean)?,
     };
     Ok(subtract_constant(&m, g.nmz, &bg))
 }
@@ -138,29 +138,41 @@ fn extent_value(e: Option<((f64, f64), (f64, f64))>) -> Value {
     }
 }
 
+/// The JSON of a map: the grid (with `dlog` for cells of equal ppm), what was asked, and (on the grid of the session) the extent of the data.
+fn map_head(a: &Ask, g: &Grid, mz1: f64, hr: bool) -> Obj {
+    let mut o = Obj::new().n("rt0", g.rt0).n("rt1", g.rt1).i("nrt", g.nrt as i64).n("mz0", g.mz0);
+    o = if a.region.is_none() { o.n("dmz", g.dmz).i("nmz", g.nmz as i64) } else { o.n("mz1", mz1).i("nmz", g.nmz as i64) };
+    if a.region.is_some() {
+        o = if a.log { o.n("dlog", (mz1 / g.mz0).ln() / g.nmz as f64) } else { o.n("dmz", g.dmz) };
+    }
+    o = o.i("level", a.level as i64).b("region", a.region.is_some()).put("agg", text(if a.mean { "mean" } else { "max" })).b("log", a.log);
+    o.b("bg", a.bg || a.stretch.is_some()).put("bgstretch", a.stretch.map_or(Value::Null, |s| floats(&[s.0, s.1]))).b("hr", hr)
+}
+
 /// `api/map`: grid of the session or a region, optionally minus a reference file.
 fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
     let (Some(k), refk) = (index(q, "k"), index(q, "ref")) else { return Ok(None) };
     if q.some("ref").is_some() && refk.is_none() {
         return Ok(None);
     }
-    let Some(a) = parse_ask(q, refk.is_some()) else { return Ok(None) };
+    let Some(mut a) = parse_ask(q, refk.is_some()) else { return Ok(None) };
+    let Some(r) = route(items, routes, k) else { return Ok(None) };
+    let hr = group_is_hr(&r.idx.scans, a.level == 1);
     let (g, mz1) = match a.region {
         Some((rt0, rt1, mz0, mz1, nrt, nmz)) => {
-            let (m0, m1, n) = map_cells(mz0, mz1, nmz);
+            a.log &= hr;
+            let (m0, m1, n) = if hr { (mz0, mz1, map_cells_hr(mz0, mz1, nmz, a.log)) } else { map_cells(mz0, mz1, nmz) };
             (Grid { rt0, rt1, nrt, mz0: m0, dmz: (m1 - m0) / n as f64, nmz: n }, m1)
         }
         None => {
+            a.log = false;
             let g = grid_of(items, routes, a.level)?;
             (g, g.mz0 + g.nmz as f64 * g.dmz)
         }
     };
     let Some(r) = route(items, routes, k) else { return Ok(None) };
     let mut m = one_map(r, &a, &g, mz1)?;
-    let mut o = Obj::new().n("rt0", g.rt0).n("rt1", g.rt1).i("nrt", g.nrt as i64).n("mz0", g.mz0);
-    o = if a.region.is_some() { o.n("mz1", mz1).i("nmz", g.nmz as i64).n("dmz", g.dmz) } else { o.n("dmz", g.dmz).i("nmz", g.nmz as i64) };
-    o = o.i("level", a.level as i64).b("region", a.region.is_some()).put("agg", text(if a.mean { "mean" } else { "max" })).b("log", false);
-    o = o.b("bg", a.bg || a.stretch.is_some()).put("bgstretch", a.stretch.map_or(Value::Null, |s| floats(&[s.0, s.1]))).b("hr", false);
+    let mut o = map_head(&a, &g, mz1, hr);
     if a.region.is_none() {
         o = o.put("extent", extent_value(r.data_extent(a.level)?));
     }
@@ -169,13 +181,22 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
         let sg = grid_of(items, routes, a.level)?;
         let rttol = number(q, "rttol").unwrap_or(0.1);
         let w = py_round(rttol / ((g.rt1 - g.rt0) / g.nrt as f64).max(1e-9)).max(0.0) as usize;
+        let mut wm = 0;
+        if a.log {
+            let mztol = match q.num("mztol") {
+                Ok(v) => v.unwrap_or(5.0),
+                Err(_) => return Ok(None),
+            };
+            let dlog = (mz1 / g.mz0).ln() / g.nmz as f64;
+            wm = py_round(mztol * 1e-6 / dlog.max(1e-12)).clamp(0.0, 20.0) as usize;
+        }
         let Some(rr) = route(items, routes, rk) else { return Ok(None) };
         let b = one_map(rr, &a, &g, mz1)?;
         let fb = norm_factor(rr, &a, &sg, norm)?;
         let Some(r) = route(items, routes, k) else { return Ok(None) };
         let fa = norm_factor(r, &a, &sg, norm)?;
-        m = diff_tolerant(&m.iter().map(|v| v * fa).collect::<Vec<_>>(), &b.iter().map(|v| v * fb).collect::<Vec<_>>(), g.nrt, g.nmz, w);
-        o = o.i("ref", rk).n("rttol", rttol).i("w", w as i64).i("wm", 0);
+        m = diff_tolerant(&m.iter().map(|v| v * fa).collect::<Vec<_>>(), &b.iter().map(|v| v * fb).collect::<Vec<_>>(), g.nrt, g.nmz, w, wm);
+        o = o.i("ref", rk).n("rttol", rttol).i("w", w as i64).i("wm", wm as i64);
     }
     Ok(Some(crate::jsonb::write(&o.put("data", f32s(&m)).done())))
 }
@@ -276,7 +297,7 @@ fn sticks<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Re
 
 /// Answer for one of the map routes, or `None` when Python must answer.
 pub fn map_route<R: ReadAt>(path: &str, items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
-    if !matches!(path, "/api/map" | "/api/mapsnap" | "/api/mappunti" | "/api/mappunti3d") || !unit_session(items, routes) {
+    if !matches!(path, "/api/map" | "/api/mapsnap" | "/api/mappunti" | "/api/mappunti3d") || !indexed(items, routes) {
         return Ok(None);
     }
     match path {

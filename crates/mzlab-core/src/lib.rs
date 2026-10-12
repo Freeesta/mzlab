@@ -1,6 +1,7 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 pub mod analysis;
+pub mod components;
 pub mod comproute;
 pub mod composition;
 pub mod differenza;
@@ -9,6 +10,7 @@ pub mod elements;
 pub mod entropy;
 pub mod fileroutes;
 pub mod hrroutes;
+pub mod hrscanbin;
 pub mod hrscans;
 pub mod error;
 pub mod idxread;
@@ -44,6 +46,7 @@ pub mod routes;
 pub mod scaninfo;
 pub mod sniff;
 pub mod scantable;
+pub mod specdiff;
 pub mod specpeaks;
 pub mod spectrum;
 pub mod subxic;

@@ -272,10 +272,11 @@ def _hr_head(kind: str, broken: bool, stem: str) -> str:
             f'<run id="{stem}" defaultInstrumentConfigurationRef="IC1">')
 
 
-def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dict:
+def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profile: bool = False) -> dict:
     """Thermo-like Orbitrap DDA file (all numbers invented). kind = "exploris" (HCD NCE 30, MS2 in the Orbitrap, isolation +-0.75, 4 decimals)
     or "fusion" (CID 35 in the ion trap, MS2 with 2 decimals and no resolution, isolation +-1.5, +3 ppm systematic error on the MS1);
     broken=True removes everything an HR reader might rely on (spectrumRef, isolation window, resolution, known model, normal filter string).
+    profile=True writes the survey scans as PROFILE (every centroid becomes a Gaussian of nine points 0.004 Da apart; the MS2 stay centroids).
 
     Cycle every 0.03 min: one Full Scan (centroids, ~150 noise peaks) + the top-3 ions above 5e4 with 0.3 min dynamic exclusion.
     Ground truth (masses are invented, m/z of the parent from its formula):
@@ -317,11 +318,17 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dic
     specs, tic, rts_ms1, i, n_ms2 = [], [], [], 0, 0
 
     def build(idx, rt, level_, mz, it, extra_scan="", extra_prec=""):
+        prof = profile and level_ == 1
+        if prof:
+            mz = np.asarray(mz, float); it = np.asarray(it, float)
+            off = np.arange(-4, 5) * 0.004
+            mz = (mz[:, None] + off[None, :]).ravel(); it = (it[:, None] * np.exp(-0.5 * (off / 0.008) ** 2)[None, :]).ravel()
+            o = np.argsort(mz, kind="stable"); mz, it = mz[o], it[o]
         n = len(mz)
         base = int(np.argmax(it)) if n else 0
         return (f'<spectrum index="{idx}" id="{pre}{idx + 1}" defaultArrayLength="{n}">'
                 + _cvp("MS:1000579" if level_ == 1 else "MS:1000580", "MS1 spectrum" if level_ == 1 else "MSn spectrum")
-                + _cvp("MS:1000511", "ms level", level_) + _cvp("MS:1000130", "positive scan") + _cvp("MS:1000127", "centroid spectrum")
+                + _cvp("MS:1000511", "ms level", level_) + _cvp("MS:1000130", "positive scan") + (_cvp("MS:1000128", "profile spectrum") if prof else _cvp("MS:1000127", "centroid spectrum"))
                 + _cvp("MS:1000504", "base peak m/z", f"{mz[base]:.6f}" if n else 0, _U_MZ) + _cvp("MS:1000505", "base peak intensity", f"{it[base]:.6g}" if n else 0)
                 + _cvp("MS:1000285", "total ion current", f"{float(np.sum(it)):.6g}")
                 + f'<scanList count="1">{_cvp("MS:1000795", "no combination")}<scan{extra_scan}>'
