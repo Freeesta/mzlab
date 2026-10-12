@@ -9,18 +9,19 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tutti.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 VIS = "E.panels.filter(p=>p.el&&p.el.style.display!=='none'&&p.el.offsetParent).map(p=>p.tab)"
-r = Run(port=8990, wd="/tmp/wd_tutti", motore="python")
+r = Run(port=8990, wd="/tmp/wd_tutti")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t15"), mz("B_MS2-t15"), mz("B_MRM-t0")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=30000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def off():
             assert pg.evaluate("UIP.tog") is False
             v = set(pg.evaluate(VIS)); assert v == {"full"}, v
         step("off by default: only the panels of the tab", off)
         def gear():
+            pg.wait_for_function("E.panels.some(p=>p.tab==='full'&&p.type==='spec')", timeout=30000); ready(pg)      # the spectrum of the tab is made when its chromatogram is read: before the other blocks go under it
             pg.click("#np-set"); pg.wait_for_selector("#uip-tog", timeout=5000)
             assert not pg.is_checked("#uip-tog")
             pg.check("#uip-tog"); pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000); pg.wait_for_timeout(1500)
