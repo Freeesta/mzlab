@@ -44,7 +44,12 @@ fn raw_matches_msconvert_mzml() {
         .flatten()
         .flat_map(|e| std::fs::read_dir(e.path()).into_iter().flatten().flatten())
         .map(|e| e.path())
-        .find(|p| p.extension().is_some_and(|x| x == "raw") && p.with_extension("mzML").is_file())
+        .find(|p| {
+            p.extension().is_some_and(|x| x == "raw")
+                && p.with_extension("mzML").is_file()
+                && !p.to_string_lossy().contains("Profile raw")
+        })
+    // the profile .raw has its own test (raw_profile_parity.rs)
     else {
         eprintln!("skipped: no .raw with its mzML in HRMS");
         return;

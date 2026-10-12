@@ -25,6 +25,14 @@ pub struct MzmlFilter<W: Write> {
     last: [u32; 8],
 }
 
+fn number_after(s: &str, key: &str) -> Option<u32> {
+    let rest = &s[s.find(key)? + key.len()..];
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
 impl<W: Write> MzmlFilter<W> {
     pub fn new(inner: W, anonymous: bool) -> Self {
         MzmlFilter {
@@ -44,7 +52,34 @@ impl<W: Write> MzmlFilter<W> {
         }
         Ok(())
     }
+}
 
+impl<W: Write> Write for MzmlFilter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        for chunk in buf.split_inclusive(|&b| b == b'\n') {
+            if chunk.last() == Some(&b'\n') {
+                self.line.extend_from_slice(&chunk[..chunk.len() - 1]);
+                self.emit()?;
+            } else {
+                self.line.extend_from_slice(chunk);
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if !self.line.is_empty() {
+            self.emit()?;
+        }
+        self.inner.flush()
+    }
+}
+
+fn value_of(s: &str) -> Option<&str> {
+    s.split("value=\"").nth(1)?.split('"').next()
+}
+
+impl<W: Write> MzmlFilter<W> {
     /// The line to write instead of `l` (with its end of line), or `None` to drop it.
     fn rewrite(&mut self, l: &str) -> Option<String> {
         let t = l.trim_start();
@@ -77,9 +112,7 @@ impl<W: Write> MzmlFilter<W> {
                 .nth(1)
                 .unwrap_or("")
                 .trim_start_matches("opentfraw.");
-            if IDENTITY.contains(&name)
-                || (name.starts_with("user_label.") && name.ends_with(".value"))
-            {
+            if is_identity(name) {
                 return None;
             }
         }
@@ -87,37 +120,9 @@ impl<W: Write> MzmlFilter<W> {
     }
 }
 
-fn number_after(s: &str, key: &str) -> Option<u32> {
-    let rest = &s[s.find(key)? + key.len()..];
-    let end = rest
-        .find(|c: char| !c.is_ascii_digit())
-        .unwrap_or(rest.len());
-    rest[..end].parse().ok()
-}
-
-fn value_of(s: &str) -> Option<&str> {
-    s.split("value=\"").nth(1)?.split('"').next()
-}
-
-impl<W: Write> Write for MzmlFilter<W> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        for chunk in buf.split_inclusive(|&b| b == b'\n') {
-            if chunk.last() == Some(&b'\n') {
-                self.line.extend_from_slice(&chunk[..chunk.len() - 1]);
-                self.emit()?;
-            } else {
-                self.line.extend_from_slice(chunk);
-            }
-        }
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        if !self.line.is_empty() {
-            self.emit()?;
-        }
-        self.inner.flush()
-    }
+/// Whether the `userParam` `opentfraw.<name>` carries personal data: the computer, the user folders, the paths, the user-label values.
+fn is_identity(name: &str) -> bool {
+    IDENTITY.contains(&name) || (name.starts_with("user_label.") && name.ends_with(".value"))
 }
 
 #[cfg(test)]

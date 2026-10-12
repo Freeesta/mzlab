@@ -2,7 +2,7 @@
 Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo eguaglia sui dati d'oro. Decisioni complete: `ARCHITETTURA.md` nel repository privato dei dati (`scratchpad/`).
 
 ## Struttura
-- `crates/mzlab-core`: `raw.rs` (lettore dei `.raw` Thermo con OpenTFRaw `=2.0.0`, Apache-2.0, da `Read + Seek`: `read` dà gli stessi `Spectrum` dell'mzML (centroidi), `to_mzml` scrive l'mzML che il resto del programma già legge)
+- `crates/mzlab-core`: `raw.rs` (lettore dei `.raw` Thermo con OpenTFRaw 2.0.0 copiato e corretto in `vendor/opentfraw/` (Apache-2.0; le modifiche in `MODIFICHE-MZLAB.md`: tabella degli eventi dei Tribrid con finestre DIA e coefficienti di calibrazione degli eventi MS1; fuori dal workspace, quindi senza clippy né fmt), da `Read + Seek`: `read` dà gli stessi `Spectrum` dell'mzML (centroidi), `to_mzml` scrive l'mzML che il resto del programma già legge)
 - `crates/mzlab-core`: `rawfilter.rs` (filtro riga per riga sull'mzML che `opentfraw` scrive: il `spectrumRef` dei precursori 1 diventa l'ultima scansione del livello sopra; con `Convert { anonymous }` toglie computer, cartelle utente, percorsi e valori delle etichette utente dal `<run>`); `numarray.rs` (tipo numerico di un array binario mzML: float e interi a 32 e 64 bit)
   - `mzml.rs` (lettore a eventi con quick-xml da `Read`: spettri con livello, RT in minuti, polarità, precursore, filtro, m/z `f64`, intensità `f32`; cromatogrammi TIC/BPC/SRM/PDA; Numpress rifiutato)
   - `analysis.rs` (TIC e XIC come `Item.total`/`PeakTable.xic`)
