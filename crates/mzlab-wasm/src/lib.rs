@@ -288,6 +288,17 @@ impl Engine {
         mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms).map_err(|e| error_json(&e))
     }
 
+    /// `api/chrom` of the MRM file at `slot`: the chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`).
+    pub fn mrm_chrom(&mut self, slot: u32, size: f64, read: Function, kind: &str) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        };
+        let end = r.idx.scans.last().map_or(0, |s| s.end);
+        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
+        mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, kind).map_err(|e| error_json(&e))
+    }
+
     /// The entry of the loading table for the file at `slot` (index opened with `open_index`; the mzML is read through `read`): JSON, `App.files()` of Python.
     pub fn lr_entry(
         &mut self,
@@ -349,9 +360,6 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Ok(String::new());
         };
-        if !r.has_scans() {
-            return Ok(String::new());
-        }
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 

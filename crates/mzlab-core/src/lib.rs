@@ -58,6 +58,7 @@ pub mod roles;
 pub mod routes;
 pub mod scaninfo;
 pub mod scanparams;
+pub mod mrmroutes;
 pub mod sniff;
 pub mod scantable;
 pub mod specdiff;

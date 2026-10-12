@@ -69,11 +69,11 @@ impl Engine {
         mzlab_core::itemroutes::pda_trace(&mut m, &chroms).map_err(|e| error_json(&e))
     }
 
-    /// `/api/delay` of the file at `slot`.
-    pub fn item_delay(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
+    /// `/api/delay` of the item `item` of the file at `slot`.
+    pub fn item_delay(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let (mut m, chroms) = self.chroms(slot, size, read)?;
         let r = self.idx.get_mut(&slot).ok_or_else(no_index)?;
-        r.delay(&mut m, &chroms).map_err(|e| error_json(&e))
+        r.delay_item(&mut m, &chroms, item).map_err(|e| error_json(&e))
     }
 }
 

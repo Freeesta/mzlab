@@ -311,6 +311,45 @@ try:
             pa.evaluate(POST, ["api/remove", {"name": "garbage.dam"}])
             assert len(pa.evaluate(JSON, "api/state")["j"]["methods"]) == 2
         step("methods (.dam), analog traces, PDA, delay and gradient: Rust equals the reference's, without Pyodide", methods_same)
+        def methods_hr_same():
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds, dam_riferimento as dr
+            d = Path(tempfile.mkdtemp()); ds.hr_dda(d / "hrdda.mzML", np.random.default_rng(5)); dr.build(d)
+            ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/"); open_files(pa, files=[str(d / "hrdda.mzML")], n=1)
+            pb = PyRef([str(d / "hrdda.mzML")])
+            for i, n in enumerate(["Q1 full scan.dam", "MRM prova.dam"], 1):
+                pb.upload(str(d / n)); pa.set_input_files("#pick", [str(d / n)])
+                pa.wait_for_function(f"fetch('api/state').then(r => r.json()).then(s => s.methods.length >= {i})", timeout=60000)
+            for u in ["api/method?k=0", "api/method_warnings", "api/analog?k=0&i=999", "api/delay?k=0", "api/chrom?k=0&kind=pda", "api/gradient?k=0"]:
+                a, b2 = pa.evaluate(JSON, u), pb.evaluate(JSON, u)
+                assert a["status"] == b2["status"], (u, a["status"], b2["status"])
+                if a["status"] == 200: json_close(a["j"], b2["j"], path=u)
+                else: assert a["j"].get("error_key") == b2["j"].get("error_key"), (u, a["j"], b2["j"])
+                assert a["eng"] == "rust", (u, a["eng"], why(pa))
+            assert "scan_params" in pa.evaluate(JSON, "api/method?k=0")["j"]
+            assert not pyodide(ra) and not why(pa)[0], why(pa)
+        step("high-resolution session with methods (.dam): method, scan parameters, delay, PDA and gradient equal the reference's", methods_hr_same)
+        def mrm_traces_same():
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds
+            d = Path(tempfile.mkdtemp()); ds.mrm(d / "mrm.mzML", 1.0, np.random.default_rng(3), 1)
+            ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/"); pa.wait_for_selector("#drop", timeout=120000)
+            pa.set_input_files("#pick", [str(d / "mrm.mzML")]); pa.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pa.click("#opbtn"); pa.wait_for_selector("canvas", timeout=120000); pa.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
+            pb = PyRef([str(d / "mrm.mzML")])
+            for u in ["api/chrom?k=0", "api/chrom?k=0&kind=bpc", "api/chrom?k=0&kind=srm", "api/chrom?k=0&kind=none", "api/chrom?k=0&level=2&mz0=100&mz1=300&prec=200", "api/xic?k=0&mz=200&tol=0.35",
+                      "api/xic?k=0,0&mz=200&tol=0.35&level=2", "api/filters?k=0", "api/scanlist?k=0", "api/scan_axis?k=0"]:
+                a, b2 = pa.evaluate(JSON, u), pb.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"], why(pa))
+                json_close(a["j"], b2["j"], path=u)
+                assert a["eng"] == "rust", (u, a["eng"], why(pa))
+            assert len(pa.evaluate(JSON, "api/chrom?k=0")["j"]["rt"]) > 100
+            assert not pyodide(ra) and not why(pa)[0], why(pa)
+        step("an MRM file: its chromatograms and the empty routes of the scans equal the reference's, without Pyodide", mrm_traces_same)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
