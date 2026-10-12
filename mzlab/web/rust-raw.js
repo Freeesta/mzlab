@@ -1,5 +1,5 @@
 // Thermo .raw -> mzML for rust-bridge.js: made in the worker, which reports the scans converted and writes the mzML to a file of OPFS (a File backed by the disk, not a Blob in memory;
-// rust-opfs.js; without OPFS a Blob). `opts.profile`: keep the profile data (default: the vendor centroids). `signal` (AbortSignal) cancels it.
+// rust-opfs.js; without OPFS a Blob). `opts.profile`: keep the profile data (default: the vendor centroids). `opts.anonymous`: leave the computer, user folders, paths and user-label values out of the mzML. `signal` (AbortSignal) cancels it.
 // The worker is busy in one long call and cannot hear a message, so cancelling asks the bridge to stop it and start a new one (h.abort).
 // Rejects with an Error whose `json` is { error, error_key, params } like the API errors, or with { cancelled: true } after a cancel.
 export function makeConvertRaw(h) {
@@ -10,7 +10,7 @@ export function makeConvertRaw(h) {
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;      // in OPFS mzlab/conv/
     const drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});
-    const r = await h.rpc({ op: "raw2mzml", name: h.base(file.name), blob: file, dest, profile: !!opts.profile }, onProgress);
+    const r = await h.rpc({ op: "raw2mzml", name: h.base(file.name), blob: file, dest, profile: !!opts.profile, anonymous: !!opts.anonymous }, onProgress);
     if (signal) signal.removeEventListener("abort", onAbort);
     if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
     if (r.dead || r.error) {

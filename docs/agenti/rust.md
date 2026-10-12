@@ -3,6 +3,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
 
 ## Struttura
 - `crates/mzlab-core`: `raw.rs` (lettore dei `.raw` Thermo con OpenTFRaw `=2.0.0`, Apache-2.0, da `Read + Seek`: `read` dà gli stessi `Spectrum` dell'mzML (centroidi), `to_mzml` scrive l'mzML che il resto del programma già legge)
+- `crates/mzlab-core`: `rawfilter.rs` (filtro riga per riga sull'mzML che `opentfraw` scrive: il `spectrumRef` dei precursori 1 diventa l'ultima scansione del livello sopra; con `Convert { anonymous }` toglie computer, cartelle utente, percorsi e valori delle etichette utente dal `<run>`); `numarray.rs` (tipo numerico di un array binario mzML: float e interi a 32 e 64 bit)
   - `mzml.rs` (lettore a eventi con quick-xml da `Read`: spettri con livello, RT in minuti, polarità, precursore, filtro, m/z `f64`, intensità `f32`; cromatogrammi TIC/BPC/SRM/PDA; Numpress rifiutato)
   - `analysis.rs` (TIC e XIC come `Item.total`/`PeakTable.xic`)
   - `peaks.rs` (porta riga per riga di `ionfamily.detect_peaks`: `detect_peaks`, `detect_full` con tracce corretta e levigata e rumore), `signal.rs` (mediana, riflessione, Savitzky-Golay, SNIP, AsLS, ondina Ricker), `peakext.rs` (apice parabolico con incertezza, FWHM, affidabilità)

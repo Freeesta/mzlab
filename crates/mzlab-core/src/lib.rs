@@ -55,6 +55,7 @@ pub mod methodjson;
 pub mod mzml;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+pub mod numarray;
 pub mod mzmlwrite;
 pub mod peakq;
 pub mod peaks;
@@ -65,6 +66,7 @@ pub mod project;
 pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod raw;
+pub mod rawfilter;
 pub mod rng;
 pub mod rois;
 pub mod roles;
