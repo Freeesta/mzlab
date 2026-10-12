@@ -1,5 +1,5 @@
 # Accessibilità della vista Dati: lacune note
-Obiettivo WCAG 2.2 AA (il lettore di schermo da privilegiare lo conferma Federico). Il test `e2e_a11y_dati` (giro `--fumo`) fallisce su ogni violazione axe `serious`/`critical` negli stati che copre; un id regola tollerato si mette in `KNOWN` dentro il test e si elenca qui.
+Obiettivo WCAG 2.2 AA; lettore di schermo di riferimento VoiceOver (macOS/iPad), secondo controllo NVDA (Windows). Il test `e2e_a11y_dati` (giro `--fumo`) fallisce su ogni violazione axe `serious`/`critical` negli stati che copre; un id regola tollerato si mette in `KNOWN` dentro il test e si elenca qui.
 - **Regole tollerate**: nessuna.
 - **Stati non ancora coperti da axe**: mondo HR (Banco, formule, albero MSn), Disegno, Pratica, finestre di integrazione e calcolatrice, tour guidato, app desktop.
 - **Livelli non controllati**: violazioni axe `moderate`/`minor`; l'ordine di lettura e le etichette dei grafici (`TDATI` dà l'alternativa testuale ma nessuno ha provato un lettore di schermo).
