@@ -7,6 +7,10 @@ m/z, side lobes, continuous background), their `.mzidx` built by the Python buil
 `features.detect` with the first and last scan of every trace. With --golden the JSON files go to tests/golden/feat/ as well.
 No compound names: every ion is a number.
 
+    python3 tools/feat_riferimento.py OUT --solo allinea [--golden]
+
+writes `allinea_sintetico.json` (alignment and RT map of a synthetic series, see `tools/feat_allinea.py`).
+
     python3 tools/feat_riferimento.py OUT --solo identita [--golden]
 
 writes only `iso_ms2_identita.json`: on one file of the synthetic identity series (isotopologues, co-isolated MS2) the features of `features.detect` with
@@ -267,6 +271,10 @@ def main(argv) -> int:
     golden = AQUI.parent / "tests" / "golden" / "feat" if "--golden" in argv else None
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "famiglie":
         print("famiglie", un_file_famiglie(out, golden))
+        return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "allinea":
+        import feat_allinea  # noqa: E402
+        print("allinea", feat_allinea.un_file_allinea(out, golden))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
         print("identita", un_file_identita(out, golden))

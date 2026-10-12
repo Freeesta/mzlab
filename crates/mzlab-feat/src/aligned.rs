@@ -1,0 +1,49 @@
+//! Table of the features of a series aligned across files.
+
+/// Cell states of `Aligned::state` (one per row and file; never read `area > 0` as presence).
+/// A peak was found in the file by the detection.
+pub const CELL_DETECTED: u8 = 0;
+/// Found by the targeted pass (reserved).
+pub const CELL_TARGETED: u8 = 1;
+/// Area re-extracted by forced integration where the detection found nothing.
+pub const CELL_FILLED: u8 = 2;
+/// Below the threshold: the file has no peak for the row.
+pub const CELL_ABSENT: u8 = 3;
+
+/// Features of a series aligned across files: one row per group, cells are `row * n_files + file`.
+/// `apex_rt`/`width` are NaN where the file has no detected peak; `width` = right - left (minutes).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Aligned {
+    pub n_files: usize,
+    pub mz: Vec<f64>,
+    pub rt: Vec<f64>,
+    pub area: Vec<f64>,
+    pub height: Vec<f32>,
+    pub apex_rt: Vec<f32>,
+    pub width: Vec<f32>,
+    pub state: Vec<u8>,
+}
+
+impl Aligned {
+    pub fn len(&self) -> usize {
+        self.mz.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.mz.is_empty()
+    }
+
+    /// Index of the cell of `row` in `file`.
+    pub fn cell(&self, row: usize, file: usize) -> usize {
+        row * self.n_files + file
+    }
+
+    /// Bytes of the heap held by the columns.
+    pub fn heap_bytes(&self) -> usize {
+        self.mz.capacity() * 8
+            + self.rt.capacity() * 8
+            + self.area.capacity() * 8
+            + (self.height.capacity() + self.apex_rt.capacity() + self.width.capacity()) * 4
+            + self.state.capacity()
+    }
+}

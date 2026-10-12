@@ -1,5 +1,7 @@
 //! Table of the features of one file: one row per ion trace, one vector per column (same row in every vector).
 
+pub use crate::aligned::*;
+
 /// Bits of `flags`.
 pub const FLAG_BACKGROUND: u8 = 1 << 0;
 /// Fourier-transform side lobe of a much more intense ion.
@@ -34,50 +36,6 @@ pub const ALT_FORMATE: u8 = 1 << 1;
 pub const ALT_ROLE: u8 = 1 << 2;
 /// More than one ion could be the one it derives from.
 pub const ALT_PARENT: u8 = 1 << 3;
-
-/// Features of one file and polarity, sorted by m/z. `rt`, `left`, `right` in minutes; `area` in counts x seconds.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct FileFeatures {
-    pub mz: Vec<f64>,
-    pub rt: Vec<f32>,
-    pub left: Vec<f32>,
-    pub right: Vec<f32>,
-    /// Position of the apex scan in the MS1 section of the index.
-    pub apex: Vec<u32>,
-    pub scan_lo: Vec<u32>,
-    pub scan_hi: Vec<u32>,
-    pub area: Vec<f64>,
-    pub height: Vec<f32>,
-    pub npts: Vec<u16>,
-    pub flags: Vec<u8>,
-    pub iso_group: Vec<u32>,
-    pub charge: Vec<i8>,
-    /// Pearson correlation of the raw trace with a Gaussian of the same apex and FWHM (-1..1).
-    pub shape: Vec<f32>,
-    /// Apex over the noise of the flanks (1.4826 MAD, never below a third of the intensity floor).
-    pub snr: Vec<f32>,
-    /// Full width at half maximum, in scans (interpolated).
-    pub fwhm: Vec<f32>,
-    /// Width of the right half over the left half at 10 % of the height; 0 when the trace does not come down to 10 %.
-    pub asym: Vec<f32>,
-    /// Scans without signal between the edges.
-    pub gaps: Vec<u16>,
-    /// Bits of `quality::Q_*`: why the peak is not good (0 = good).
-    pub qreason: Vec<u8>,
-    /// MS2 scans linked to the peak and the highest purity of the precursor among them (-1 = no MS2).
-    pub ms2_n: Vec<u16>,
-    pub purity: Vec<f32>,
-    /// Area of the raw trace (no floor) within `quality::AREA_HALF_WINDOW` minutes of the apex, counts x seconds: the isotope ratios use it.
-    pub area_win: Vec<f64>,
-    /// Family of the row = position + 1 of its `ROLE_M` row (0 = none); the unit that is aligned across files.
-    pub family_id: Vec<u32>,
-    /// `ROLE_*`.
-    pub role: Vec<u8>,
-    /// `ALT_*`: readings left open.
-    pub alt: Vec<u8>,
-    /// Median scan interval, seconds.
-    pub dt: f64,
-}
 
 impl FileFeatures {
     pub fn len(&self) -> usize {
@@ -118,4 +76,46 @@ impl FileFeatures {
         b.extend_from_slice(&self.alt);
         b
     }
+}
+
+/// Features of one file and polarity, sorted by m/z. `rt`, `left`, `right` in minutes; `area` in counts x seconds.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FileFeatures {
+    pub mz: Vec<f64>,
+    pub rt: Vec<f32>,
+    pub left: Vec<f32>,
+    pub right: Vec<f32>,
+    /// Position of the apex scan in the MS1 section of the index.
+    pub apex: Vec<u32>,
+    pub scan_lo: Vec<u32>,
+    pub scan_hi: Vec<u32>,
+    pub area: Vec<f64>,
+    pub height: Vec<f32>,
+    pub npts: Vec<u16>,
+    pub flags: Vec<u8>,
+    pub iso_group: Vec<u32>,
+    pub charge: Vec<i8>,
+    /// Pearson correlation of the raw trace with a Gaussian of the same apex and FWHM (-1..1).
+    pub shape: Vec<f32>,
+    /// Apex over the noise of the flanks (1.4826 MAD, never below a third of the intensity floor).
+    pub snr: Vec<f32>,
+    /// Full width at half maximum, in scans (interpolated).
+    pub fwhm: Vec<f32>,
+    /// Width of the right half over the left half at 10 % of the height; 0 when the trace does not come down to 10 %.
+    pub asym: Vec<f32>,
+    /// Scans without signal between the edges.
+    pub gaps: Vec<u16>,
+    /// Bits of `quality::Q_*`: why the peak is not good (0 = good).
+    pub qreason: Vec<u8>,
+    /// MS2 scans linked to the peak and the highest purity of the precursor among them (-1 = no MS2).
+    pub ms2_n: Vec<u16>,
+    pub purity: Vec<f32>,
+    /// Area of the raw trace (no floor) within `quality::AREA_HALF_WINDOW` minutes of the apex, counts x seconds: the isotope ratios use it.
+    pub area_win: Vec<f64>,
+    /// Family of the row = position + 1 of its `ROLE_M` row (0 = none), the unit aligned across files; `role`: `ROLE_*`; `alt`: `ALT_*`.
+    pub family_id: Vec<u32>,
+    pub role: Vec<u8>,
+    pub alt: Vec<u8>,
+    /// Median scan interval, seconds.
+    pub dt: f64,
 }

@@ -19,6 +19,12 @@ pub fn coelute(f: &FileFeatures, i: usize, j: usize, coelution_min: f64) -> bool
     ((f.rt[i] - f.rt[j]).abs() as f64) <= coelution_min.max(0.5 * fw_min)
 }
 
+/// `coelute` on the `gate` of `candidate_pairs`; false when either row is not eligible.
+fn gate_coelutes(gate: &[[f32; 2]], dt: f64, i: usize, j: usize, coelution_min: f64) -> bool {
+    let fw_min = gate[i][1].min(gate[j][1]) as f64 * dt / 60.0;
+    ((gate[i][0] - gate[j][0]).abs() as f64) <= coelution_min.max(0.5 * fw_min)
+}
+
 /// `(lighter, heavier)` row pairs, ascending by heavier then lighter, each once.
 pub fn candidate_pairs(
     f: &FileFeatures,
@@ -29,18 +35,34 @@ pub fn candidate_pairs(
 ) -> Vec<(u32, u32)> {
     let mut out: Vec<(u32, u32)> = Vec::new();
     let steps: Vec<f64> = t.steps().map(|(_, _, d)| d).collect();
-    for j in (0..f.len()).filter(|&j| eligible(f, j)) {
+    // (rt, fwhm) of every row side by side, NaN for the rows that cannot be members: the window loop touches one cache line per hit
+    let gate: Vec<[f32; 2]> = (0..f.len())
+        .map(|i| {
+            if eligible(f, i) {
+                [f.rt[i], f.fwhm[i]]
+            } else {
+                [f32::NAN; 2]
+            }
+        })
+        .collect();
+    let ok = |i: usize| !gate[i][0].is_nan();
+    // `want = up - step` and its tolerance grow with `up`: one pair of moving pointers per step instead of two binary searches
+    let mut at = vec![(0usize, 0usize); steps.len() + 1];
+    for j in (0..f.len()).filter(|&j| ok(j)) {
         let up = f.mz[j];
-        let mut wants: Vec<f64> = steps.iter().map(|d| up - d).collect();
-        wants.push(t.dimer_base(up));
-        for want in wants {
+        let wants = steps.iter().map(|d| up - d).chain([t.dimer_base(up)]);
+        for (want, ptr) in wants.zip(at.iter_mut()) {
             let tol = (want * ppm * 1e-6).max(abs_da) * 1.01 + 1e-9;
-            let a = f.mz.partition_point(|&m| m < want - tol);
-            let b = f.mz.partition_point(|&m| m <= want + tol);
-            for i in a..b.min(j) {
-                if eligible(f, i)
-                    && coelute(f, i, j, coelution_min)
-                    && !t.readings(f.mz[i], up, ppm, abs_da).is_empty()
+            while ptr.0 < f.len() && f.mz[ptr.0] < want - tol {
+                ptr.0 += 1;
+            }
+            ptr.1 = ptr.1.max(ptr.0);
+            while ptr.1 < f.len() && f.mz[ptr.1] <= want + tol {
+                ptr.1 += 1;
+            }
+            for i in ptr.0..ptr.1.min(j) {
+                if gate_coelutes(&gate, f.dt, i, j, coelution_min)
+                    && t.has_reading(f.mz[i], up, ppm, abs_da)
                 {
                     out.push((i as u32, j as u32));
                 }
