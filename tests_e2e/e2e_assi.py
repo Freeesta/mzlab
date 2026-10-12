@@ -100,7 +100,7 @@ try:
             n0 = pg.evaluate("E.panels.length"); pg.evaluate(f"openXic(null, {{mz:364.4, obs:true, after:{SPEC}}})"); pg.wait_for_timeout(300)
             pg.click("#xic-go"); ready(pg)
             xp = pg.evaluate("(()=>{const x=E.panels.find(p=>p.type==='xic'&&p.traces.length===1);return {y:x.y,full:x.full}})()")
-            assert abs(xp["y"] - (sp["y"] + sp["h"] + 10)) < 3, (xp, sp)
+            assert abs(xp["y"] - (sp["y"] + sp["h"] + pg.evaluate("pnlGap()"))) < 3, (xp, sp)
         step("XIC from the spectrum menu sits right under that spectrum", xic_below)
     r.close()
 except Exception as e:

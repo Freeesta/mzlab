@@ -9,6 +9,7 @@ import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
 import { makeConvertRaw } from "./rust-raw.js";
 import { wiffApi } from "./rust-convert.js";
+import { makeRecycler } from "./rust-recycle.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -19,6 +20,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const api = { enabled: true, disabled: false, stats };
   const base = n => String(n || "").split(/[\\/]/).pop();
 
+  const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
   function spawn() {
     const w = new Worker(workerUrl, { type: "module" });
     w.onmessage = ev => {
@@ -29,7 +31,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
-      pending.delete(m.id);
+      pending.delete(m.id); recycler.seen(m.mem);
       if (m.fatal) { p.res({ dead: true, error: m.error }); died(w); } else p.res(m);
     };
     w.onerror = () => died(w);

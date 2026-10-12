@@ -13,7 +13,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#stbar [data-cmd=file]"); pg.wait_for_selector("#flst .fl:not(.ghost) > i", timeout=5000)
+        pg.wait_for_selector("#flst .fl:not(.ghost) > i", timeout=5000)
         def colour():
             k = pg.evaluate("+Q('#flst .fl:not(.ghost) .nm').dataset.k")
             pg.evaluate("window.__picked = 0; HTMLInputElement.prototype.showPicker = function () { window.__picked = this.type === 'color' ? 1 : 0; window.__inp = this; }")

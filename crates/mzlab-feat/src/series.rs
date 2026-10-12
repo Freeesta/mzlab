@@ -1,6 +1,7 @@
 //! A series of files from the indexes to the aligned table: the analysis of every file (`analyse_file`), the alignment in the mode of the recipe
 //! and the gap filling (`align_and_fill`). One index is open at a time; the tables of the files are the only thing kept between the steps.
 
+use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -88,7 +89,7 @@ pub fn align_and_fill<R: ReadAt>(
             ..FileFeatures::default()
         })
     };
-    finish(table, &mut { pos }, files.len(), r, open)
+    finish(table, &mut { pos }, files.len(), r, None, open)
 }
 
 /// Weak tier, map of RT and gap filling on the aligned table of the strong peaks. `strong(k)` gives the table of file `k` (only its m/z and RT are read).
@@ -97,12 +98,20 @@ pub(crate) fn finish<R: ReadAt>(
     strong: &mut dyn FnMut(usize) -> Result<FileFeatures>,
     n: usize,
     r: &Recipe,
+    budget: Option<&MemBudget>,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<(Aligned, usize)> {
     if r.weak_files > 0 {
         let mut weak = Vec::with_capacity(n);
+        let mut held = 0usize;
         for k in 0..n {
-            weak.push(weak_tier(&mut open(k)?, &strong(k)?, r)?);
+            let w = weak_tier(&mut open(k)?, &strong(k)?, r)?;
+            // the weak tables of all the files are held together (7 columns, 29 bytes a row) and aligned: past the budget the phase is refused in order
+            held += w.len() * 29;
+            if let Some(b) = budget.filter(|b| held > b.left() / 2) {
+                return Err(b.refuse("align", held * 2));
+            }
+            weak.push(w);
         }
         let refs: Vec<&FileFeatures> = weak.iter().collect();
         let mut ions = align(&refs, &r.align.ion);
