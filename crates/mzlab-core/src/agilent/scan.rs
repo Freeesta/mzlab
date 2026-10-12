@@ -43,17 +43,47 @@ impl Kind {
 
 /// The fields of the verified layout, in order: the scan part and the spectrum part (`SpectrumParamValues`).
 const SCAN_FIELDS: &[(&str, Kind)] = &[
-    ("ScanID", Kind::I32), ("ScanMethodID", Kind::I32), ("TimeSegmentID", Kind::I32), ("ScanTime", Kind::F64), ("MSLevel", Kind::I32), ("ScanType", Kind::I32),
-    ("TIC", Kind::F64), ("BasePeakMZ", Kind::F64), ("BasePeakValue", Kind::F64), ("CycleNumber", Kind::I32), ("Status", Kind::I32), ("IonMode", Kind::I32),
-    ("IonPolarity", Kind::I32), ("Fragmentor", Kind::F64), ("CollisionEnergy", Kind::F64), ("MzOfInterest", Kind::F64), ("SamplingPeriod", Kind::F64),
-    ("MeasuredMassRangeMin", Kind::F64), ("MeasuredMassRangeMax", Kind::F64), ("Threshold", Kind::F64), ("IsFragmentorDynamic", Kind::I32), ("IsCollisionEnergyDynamic", Kind::I32),
+    ("ScanID", Kind::I32),
+    ("ScanMethodID", Kind::I32),
+    ("TimeSegmentID", Kind::I32),
+    ("ScanTime", Kind::F64),
+    ("MSLevel", Kind::I32),
+    ("ScanType", Kind::I32),
+    ("TIC", Kind::F64),
+    ("BasePeakMZ", Kind::F64),
+    ("BasePeakValue", Kind::F64),
+    ("CycleNumber", Kind::I32),
+    ("Status", Kind::I32),
+    ("IonMode", Kind::I32),
+    ("IonPolarity", Kind::I32),
+    ("Fragmentor", Kind::F64),
+    ("CollisionEnergy", Kind::F64),
+    ("MzOfInterest", Kind::F64),
+    ("SamplingPeriod", Kind::F64),
+    ("MeasuredMassRangeMin", Kind::F64),
+    ("MeasuredMassRangeMax", Kind::F64),
+    ("Threshold", Kind::F64),
+    ("IsFragmentorDynamic", Kind::I32),
+    ("IsCollisionEnergyDynamic", Kind::I32),
 ];
 const SPECTRUM_FIELDS: &[(&str, Kind)] = &[
-    ("SpectrumFormatID", Kind::I32), ("SpectrumOffset", Kind::I64), ("ByteCount", Kind::I32), ("PointCount", Kind::I32),
-    ("MinY", Kind::F64), ("MaxY", Kind::F64), ("MinX", Kind::F64), ("MaxX", Kind::F64),
+    ("SpectrumFormatID", Kind::I32),
+    ("SpectrumOffset", Kind::I64),
+    ("ByteCount", Kind::I32),
+    ("PointCount", Kind::I32),
+    ("MinY", Kind::F64),
+    ("MaxY", Kind::F64),
+    ("MinX", Kind::F64),
+    ("MaxX", Kind::F64),
 ];
 /// Fields that a layout must have: without them there is no scan to read.
-const REQUIRED: &[&str] = &["ScanTime", "SpectrumOffset", "ByteCount", "PointCount", "SpectrumFormatID"];
+const REQUIRED: &[&str] = &[
+    "ScanTime",
+    "SpectrumOffset",
+    "ByteCount",
+    "PointCount",
+    "SpectrumFormatID",
+];
 
 #[derive(Debug, Clone, PartialEq)]
 struct Field {
@@ -78,19 +108,34 @@ impl Layout {
         let mut at = 0;
         let mut fields = Vec::new();
         for (name, kind) in scan.iter().chain(spectrum) {
-            fields.push(Field { name: name.clone(), kind: *kind, at });
+            fields.push(Field {
+                name: name.clone(),
+                kind: *kind,
+                at,
+            });
             at += kind.size();
         }
-        if let Some(m) = REQUIRED.iter().find(|r| !fields.iter().any(|f| f.name == **r)) {
+        if let Some(m) = REQUIRED
+            .iter()
+            .find(|r| !fields.iter().any(|f| f.name == **r))
+        {
             return Err(bad(format!("the record layout has no {m}")));
         }
-        Ok(Layout { fields, record_len: at })
+        Ok(Layout {
+            fields,
+            record_len: at,
+        })
     }
 
     /// The layout of the three GC/MS runs (184 bytes).
     pub fn builtin() -> Layout {
-        let own = |l: &[(&str, Kind)]| l.iter().map(|(n, k)| (n.to_string(), *k)).collect::<Vec<_>>();
-        Layout::new(&own(SCAN_FIELDS), &own(SPECTRUM_FIELDS)).expect("the built-in layout is complete")
+        let own = |l: &[(&str, Kind)]| {
+            l.iter()
+                .map(|(n, k)| (n.to_string(), *k))
+                .collect::<Vec<_>>()
+        };
+        Layout::new(&own(SCAN_FIELDS), &own(SPECTRUM_FIELDS))
+            .expect("the built-in layout is complete")
     }
 
     /// The layout `MSScan.xsd` describes: the elements of `ScanRecordType` in order (the `SpectrumParamValues` element stands for the elements of
@@ -103,18 +148,34 @@ impl Layout {
         for (name, ty) in &scan {
             if name == "SpectrumParamValues" {
                 if ty != "SpectrumParamsType" {
-                    return Err(bad(format!("MSScan.xsd: SpectrumParamValues has type {ty}")));
+                    return Err(bad(format!(
+                        "MSScan.xsd: SpectrumParamValues has type {ty}"
+                    )));
                 }
                 continue;
             }
-            head.push((name.clone(), Kind::of_xsd(ty).ok_or_else(|| bad(format!("MSScan.xsd: field {name} has the unknown type {ty}")))?));
+            head.push((
+                name.clone(),
+                Kind::of_xsd(ty).ok_or_else(|| {
+                    bad(format!(
+                        "MSScan.xsd: field {name} has the unknown type {ty}"
+                    ))
+                })?,
+            ));
         }
         if !scan.iter().any(|(n, _)| n == "SpectrumParamValues") {
             return Err(bad("MSScan.xsd has no SpectrumParamValues".into()));
         }
         let mut tail = Vec::new();
         for (name, ty) in spectrum {
-            tail.push((name.clone(), Kind::of_xsd(&ty).ok_or_else(|| bad(format!("MSScan.xsd: field {name} has the unknown type {ty}")))?));
+            tail.push((
+                name.clone(),
+                Kind::of_xsd(&ty).ok_or_else(|| {
+                    bad(format!(
+                        "MSScan.xsd: field {name} has the unknown type {ty}"
+                    ))
+                })?,
+            ));
         }
         Layout::new(&head, &tail)
     }
@@ -166,7 +227,9 @@ fn attr(tag: &str, name: &str) -> Option<String> {
 /// (name, type) of the `xs:element`s inside the `xs:complexType` called `type_name`.
 fn elements(xsd: &str, type_name: &str) -> Result<Vec<(String, String)>> {
     let key = format!("name=\"{type_name}\"");
-    let from = xsd.find(&key).ok_or_else(|| bad(format!("MSScan.xsd has no {type_name}")))?;
+    let from = xsd
+        .find(&key)
+        .ok_or_else(|| bad(format!("MSScan.xsd has no {type_name}")))?;
     let body = &xsd[from..];
     let body = &body[..body.find("</xs:complexType>").unwrap_or(body.len())];
     let mut out = Vec::new();
@@ -209,18 +272,41 @@ pub struct ScanRec {
 
 /// The records of an `MSScan.bin`. `peak_len`: size of `MSPeak.bin`, to check that every spectrum lies inside it. `scans`: how many scans the other files
 /// of the folder announce (`MSTS.xml`), only to say in the error what record size the file would have.
-pub fn parse(bytes: &[u8], layout: &Layout, peak_len: u64, scans: Option<usize>) -> Result<Vec<ScanRec>> {
+pub fn parse(
+    bytes: &[u8],
+    layout: &Layout,
+    peak_len: u64,
+    scans: Option<usize>,
+) -> Result<Vec<ScanRec>> {
     if bytes.len() < HEADER_MIN {
         return Err(bad(format!("MSScan.bin has {} bytes", bytes.len())));
     }
-    let start = i32::from_le_bytes([bytes[DATA_OFFSET_AT], bytes[DATA_OFFSET_AT + 1], bytes[DATA_OFFSET_AT + 2], bytes[DATA_OFFSET_AT + 3]]) as usize;
+    let start = i32::from_le_bytes([
+        bytes[DATA_OFFSET_AT],
+        bytes[DATA_OFFSET_AT + 1],
+        bytes[DATA_OFFSET_AT + 2],
+        bytes[DATA_OFFSET_AT + 3],
+    ]) as usize;
     let n = layout.record_len;
-    if start < DATA_OFFSET_AT + 4 || start > bytes.len() || !(bytes.len() - start).is_multiple_of(n) {
-        let seen = scans.filter(|s| *s > 0 && start <= bytes.len()).map(|s| format!(", {s} scans announced: record size {:.2}", (bytes.len() - start) as f64 / s as f64)).unwrap_or_default();
-        return Err(bad(format!("MSScan.bin: {} bytes, records from {start}, a record of {n} bytes does not fit{seen}", bytes.len())));
+    if start < DATA_OFFSET_AT + 4 || start > bytes.len() || !(bytes.len() - start).is_multiple_of(n)
+    {
+        let seen = scans
+            .filter(|s| *s > 0 && start <= bytes.len())
+            .map(|s| {
+                format!(
+                    ", {s} scans announced: record size {:.2}",
+                    (bytes.len() - start) as f64 / s as f64
+                )
+            })
+            .unwrap_or_default();
+        return Err(bad(format!(
+            "MSScan.bin: {} bytes, records from {start}, a record of {n} bytes does not fit{seen}",
+            bytes.len()
+        )));
     }
     let mut out = Vec::new();
-    out.try_reserve_exact((bytes.len() - start) / n).map_err(|_| Error::memory_budget())?;
+    out.try_reserve_exact((bytes.len() - start) / n)
+        .map_err(|_| Error::memory_budget())?;
     for (k, r) in bytes[start..].chunks_exact(n).enumerate() {
         let i = |name: &str| layout.int(r, name).unwrap_or(0);
         let f = |name: &str| layout.real(r, name).unwrap_or(0.0);
@@ -243,12 +329,22 @@ pub fn parse(bytes: &[u8], layout: &Layout, peak_len: u64, scans: Option<usize>)
             format: i("SpectrumFormatID") as i32,
             offset: i("SpectrumOffset").max(0) as u64,
             bytes: i("ByteCount").max(0) as u32,
-            uncompressed: layout.at("UncompressedByteCount").map(|_| i("UncompressedByteCount").max(0) as u32),
+            uncompressed: layout
+                .at("UncompressedByteCount")
+                .map(|_| i("UncompressedByteCount").max(0) as u32),
             points: i("PointCount").max(0) as u32,
             max_y: f("MaxY"),
         };
-        if !rec.time_min.is_finite() || rec.offset.checked_add(rec.bytes as u64).is_none_or(|e| e > peak_len) {
-            return Err(bad(format!("scan record {} points outside MSPeak.bin or has no time", k + 1)));
+        if !rec.time_min.is_finite()
+            || rec
+                .offset
+                .checked_add(rec.bytes as u64)
+                .is_none_or(|e| e > peak_len)
+        {
+            return Err(bad(format!(
+                "scan record {} points outside MSPeak.bin or has no time",
+                k + 1
+            )));
         }
         out.push(rec);
     }

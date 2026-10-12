@@ -33,7 +33,16 @@ pub fn decode(b: &[u8]) -> String {
         [a, 0, ..] if *a != 0 => (true, b),
         _ => return String::from_utf8_lossy(b).into_owned(),
     };
-    let u: Vec<u16> = body.chunks_exact(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
+    let u: Vec<u16> = body
+        .chunks_exact(2)
+        .map(|c| {
+            if le {
+                u16::from_le_bytes([c[0], c[1]])
+            } else {
+                u16::from_be_bytes([c[0], c[1]])
+            }
+        })
+        .collect();
     String::from_utf16_lossy(&u)
 }
 
@@ -59,7 +68,10 @@ fn pairs(line: &str) -> Vec<(f64, f64)> {
 
 pub fn parse(bytes: &[u8]) -> AcqMethod {
     let text = decode(bytes);
-    let mut m = AcqMethod { text: text.clone(), ..Default::default() };
+    let mut m = AcqMethod {
+        text: text.clone(),
+        ..Default::default()
+    };
     let mut in_ms = false;
     for line in text.lines() {
         if line.contains("MS Information") {
@@ -70,10 +82,20 @@ pub fn parse(bytes: &[u8]) -> AcqMethod {
         }
         let t = line.trim();
         if t.starts_with("Group ") && t.contains("Group ID") {
-            m.groups.push(SimGroup { id: kv(&t[t.find("Group ID").unwrap_or(0)..]).map(|(_, v)| v.to_string()).unwrap_or_default(), ..Default::default() });
+            m.groups.push(SimGroup {
+                id: kv(&t[t.find("Group ID").unwrap_or(0)..])
+                    .map(|(_, v)| v.to_string())
+                    .unwrap_or_default(),
+                ..Default::default()
+            });
             continue;
         }
-        let Some(g) = m.groups.last_mut().filter(|_| t.contains("Group Start Time") || t.contains("Resolution") || t.starts_with('(') || t.contains("Dwell In Group")) else {
+        let Some(g) = m.groups.last_mut().filter(|_| {
+            t.contains("Group Start Time")
+                || t.contains("Resolution")
+                || t.starts_with('(')
+                || t.contains("Dwell In Group")
+        }) else {
             if let Some((k, v)) = kv(t) {
                 match k {
                     "Acquisition Mode" => m.mode = v.to_string(),
@@ -116,13 +138,39 @@ mod tests {
 Dwell In Group            :(  Mass,  Dwell) (  Mass,  Dwell)\n                           (  95.10,70  )  (  108.10,70  )\n                           (  135.10,50  )\n\n\
 Group 2               Group ID                  : B\nResolution                : 1\nGroup Start Time          : 8.5\n                           (  111.00,70  )\n\n[MSZones]\nMS Source : 230 C\n";
         let m = parse(&utf16(sim));
-        assert_eq!((m.mode.as_str(), m.solvent_delay_min, m.tune_file.as_str()), ("SIM", Some(4.0), "D:\\x\\bfb.u"));
+        assert_eq!(
+            (m.mode.as_str(), m.solvent_delay_min, m.tune_file.as_str()),
+            ("SIM", Some(4.0), "D:\\x\\bfb.u")
+        );
         assert_eq!(m.groups.len(), 2);
-        assert_eq!((m.groups[0].id.as_str(), m.groups[0].start_min, m.groups[0].resolution), ("A", 4.0, Some(1.0)));
-        assert_eq!(m.groups[0].ions, vec![(95.1, 70.0), (108.1, 70.0), (135.1, 50.0)]);
-        assert_eq!((m.groups[1].start_min, m.groups[1].ions.clone()), (8.5, vec![(111.0, 70.0)]));
+        assert_eq!(
+            (
+                m.groups[0].id.as_str(),
+                m.groups[0].start_min,
+                m.groups[0].resolution
+            ),
+            ("A", 4.0, Some(1.0))
+        );
+        assert_eq!(
+            m.groups[0].ions,
+            vec![(95.1, 70.0), (108.1, 70.0), (135.1, 50.0)]
+        );
+        assert_eq!(
+            (m.groups[1].start_min, m.groups[1].ions.clone()),
+            (8.5, vec![(111.0, 70.0)])
+        );
         let scan = "MS Information\nAcquisition Mode         : Scan\nSolvent Delay (minutes)  : 3\n[Scan Parameters]\nStart Time               : 3\nLow Mass                 : 50\nHigh Mass                : 500\nThreshold                : 100\n";
         let m = parse(scan.as_bytes());
-        assert_eq!((m.mode.as_str(), m.start_min, m.low_mass, m.high_mass, m.threshold, m.groups.len()), ("Scan", Some(3.0), Some(50.0), Some(500.0), Some(100.0), 0));
+        assert_eq!(
+            (
+                m.mode.as_str(),
+                m.start_min,
+                m.low_mass,
+                m.high_mass,
+                m.threshold,
+                m.groups.len()
+            ),
+            ("Scan", Some(3.0), Some(50.0), Some(500.0), Some(100.0), 0)
+        );
     }
 }

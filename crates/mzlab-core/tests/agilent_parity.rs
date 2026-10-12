@@ -36,7 +36,10 @@ fn encode(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
         s.pts.iter().for_each(|p| put_f64(&mut peak, p.0));
         s.pts.iter().for_each(|p| put_f64(&mut peak, p.1));
         let tic: f64 = s.pts.iter().map(|p| p.1).sum();
-        let (bmz, bv) = s.pts.iter().fold((0.0, 0.0), |a, p| if p.1 > a.1 { *p } else { a });
+        let (bmz, bv) = s
+            .pts
+            .iter()
+            .fold((0.0, 0.0), |a, p| if p.1 > a.1 { *p } else { a });
         let r = &mut idx;
         put_i32(r, k as i32 + 1);
         put_i32(r, 1);
@@ -68,31 +71,70 @@ fn encode(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
 }
 
 fn sample() -> Vec<Scan> {
-    let spec = |t: f64, k: f64| Scan { time: t, level: 1, kind: 1, pol: 0, precursor: 0.0, pts: vec![(50.5, 10.0 * k), (84.0, 500.0 * k), (86.25, 320.5 * k)] };
-    vec![spec(3.0, 1.0), spec(3.01, 2.0), Scan { time: 3.02, level: 1, kind: 1, pol: 0, precursor: 0.0, pts: vec![] }, spec(3.03, 0.5)]
+    let spec = |t: f64, k: f64| Scan {
+        time: t,
+        level: 1,
+        kind: 1,
+        pol: 0,
+        precursor: 0.0,
+        pts: vec![(50.5, 10.0 * k), (84.0, 500.0 * k), (86.25, 320.5 * k)],
+    };
+    vec![
+        spec(3.0, 1.0),
+        spec(3.01, 2.0),
+        Scan {
+            time: 3.02,
+            level: 1,
+            kind: 1,
+            pol: 0,
+            precursor: 0.0,
+            pts: vec![],
+        },
+        spec(3.03, 0.5),
+    ]
 }
 
 #[test]
 fn synthetic_folder_reads_back() {
     let (idx, peak) = encode(&sample());
-    let d = AgilentD::open("x.D", &Files { ms_scan: &idx, ms_peak_len: peak.len() as u64, ..Default::default() }).unwrap();
+    let d = AgilentD::open(
+        "x.D",
+        &Files {
+            ms_scan: &idx,
+            ms_peak_len: peak.len() as u64,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert_eq!(d.records.len(), 4);
     let mut p = peak.clone();
     let run = d.run(&mut p).unwrap();
     assert_eq!(run.spectra.len(), 3, "the empty scan is left out");
     assert_eq!(run.spectra[1].mz, vec![50.5, 84.0, 86.25]);
     assert_eq!(run.spectra[1].intensity_f64(1), 1000.0);
-    assert_eq!((run.spectra[0].id.as_str(), run.spectra[0].level, run.spectra[0].polarity, run.spectra[0].profile), ("scan=1", 1, 1, false));
+    assert_eq!(
+        (
+            run.spectra[0].id.as_str(),
+            run.spectra[0].level,
+            run.spectra[0].polarity,
+            run.spectra[0].profile
+        ),
+        ("scan=1", 1, 1, false)
+    );
     let tic = &run.chromatograms[0];
     assert_eq!(tic.time, vec![3.0, 3.01, 3.02, 3.03]);
     assert_eq!(tic.intensity[1], 1661.0);
     // mzML written and read back
     let mut out = Vec::new();
-    d.to_mzml(&mut peak.clone(), peak.len() as u64, &mut out).unwrap();
+    d.to_mzml(&mut peak.clone(), peak.len() as u64, &mut out)
+        .unwrap();
     let back = mzml::read(&out[..]).unwrap();
     assert_eq!(back.spectra.len(), 3);
     for (a, b) in back.spectra.iter().zip(&run.spectra) {
-        assert_eq!((a.mz.clone(), a.level, a.polarity, a.id.clone()), (b.mz.clone(), b.level, b.polarity, b.id.clone()));
+        assert_eq!(
+            (a.mz.clone(), a.level, a.polarity, a.id.clone()),
+            (b.mz.clone(), b.level, b.polarity, b.id.clone())
+        );
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
         assert!((a.rt - b.rt).abs() < 1e-12);
     }
@@ -106,21 +148,63 @@ fn product_scans_keep_level_and_precursor() {
     s[1].precursor = 84.0;
     s[1].pol = 1;
     let (idx, peak) = encode(&s);
-    let d = AgilentD::open("x.D", &Files { ms_scan: &idx, ms_peak_len: peak.len() as u64, ..Default::default() }).unwrap();
+    let d = AgilentD::open(
+        "x.D",
+        &Files {
+            ms_scan: &idx,
+            ms_peak_len: peak.len() as u64,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     let run = d.run(&mut peak.clone()).unwrap();
-    assert_eq!((run.spectra[1].level, run.spectra[1].precursor, run.spectra[1].polarity), (2, Some(84.0), -1));
+    assert_eq!(
+        (
+            run.spectra[1].level,
+            run.spectra[1].precursor,
+            run.spectra[1].polarity
+        ),
+        (2, Some(84.0), -1)
+    );
     assert_eq!(run.spectra[0].precursor, None);
-    assert_eq!(run.chromatograms[0].time.len(), 3, "the TIC is made of the survey scans");
+    assert_eq!(
+        run.chromatograms[0].time.len(),
+        3,
+        "the TIC is made of the survey scans"
+    );
 }
 
 #[test]
 fn what_it_cannot_read_is_an_error_with_the_numbers() {
     let (idx, peak) = encode(&sample());
-    let open = |i: &[u8], n: u64| AgilentD::open("x.D", &Files { ms_scan: i, ms_peak_len: n, ..Default::default() });
+    let open = |i: &[u8], n: u64| {
+        AgilentD::open(
+            "x.D",
+            &Files {
+                ms_scan: i,
+                ms_peak_len: n,
+                ..Default::default()
+            },
+        )
+    };
     assert_eq!(open(&[], 0).err().unwrap().key, "err.file.notAgilentD");
-    assert_eq!(open(&idx[..idx.len() - 7], peak.len() as u64).err().unwrap().key, "err.file.agilent");
-    assert_eq!(open(&idx, peak.len() as u64 - 1).err().unwrap().key, "err.file.agilent", "a spectrum past the end of MSPeak.bin");
-    assert_eq!(open(&idx[..160], 0).err().unwrap().key, "err.file.agilent", "no scans");
+    assert_eq!(
+        open(&idx[..idx.len() - 7], peak.len() as u64)
+            .err()
+            .unwrap()
+            .key,
+        "err.file.agilent"
+    );
+    assert_eq!(
+        open(&idx, peak.len() as u64 - 1).err().unwrap().key,
+        "err.file.agilent",
+        "a spectrum past the end of MSPeak.bin"
+    );
+    assert_eq!(
+        open(&idx[..160], 0).err().unwrap().key,
+        "err.file.agilent",
+        "no scans"
+    );
     let mut other = idx.clone();
     other[160 + 132..160 + 136].copy_from_slice(&3i32.to_le_bytes());
     let d = open(&other, peak.len() as u64).unwrap();
@@ -129,9 +213,20 @@ fn what_it_cannot_read_is_an_error_with_the_numbers() {
 }
 
 fn dati() -> Option<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().ok()?;
-    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI").map(PathBuf::from).into_iter().collect();
-    cands.extend(root.ancestors().skip(1).take(3).map(|up| up.join("mzlab-dati")));
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .ok()?;
+    let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
+        .map(PathBuf::from)
+        .into_iter()
+        .collect();
+    cands.extend(
+        root.ancestors()
+            .skip(1)
+            .take(3)
+            .map(|up| up.join("mzlab-dati")),
+    );
     cands.into_iter().find(|p| p.join("GC-MS").is_dir())
 }
 
@@ -141,45 +236,118 @@ fn read(d: &Path, f: &str) -> Option<Vec<u8>> {
 
 /// The index and the points of one real run against the numbers the files carry.
 fn check_index_and_points(d: &AgilentD, run: &mzlab_core::mzml::Run, peak_len: u64, label: &str) {
-    assert!(d.records.iter().enumerate().all(|(k, r)| r.id == k as i32 + 1 && r.cycle == r.id), "{label}: ids");
-    assert!(d.records.windows(2).all(|w| w[0].time_min < w[1].time_min), "{label}: times");
+    assert!(
+        d.records
+            .iter()
+            .enumerate()
+            .all(|(k, r)| r.id == k as i32 + 1 && r.cycle == r.id),
+        "{label}: ids"
+    );
+    assert!(
+        d.records.windows(2).all(|w| w[0].time_min < w[1].time_min),
+        "{label}: times"
+    );
     let mut at = 68;
     for r in &d.records {
-        assert_eq!(r.offset, at, "{label}: scan {} is not where the previous one ends", r.id);
+        assert_eq!(
+            r.offset, at,
+            "{label}: scan {} is not where the previous one ends",
+            r.id
+        );
         at += r.bytes as u64;
     }
     assert_eq!(at, peak_len, "{label}: MSPeak.bin has bytes no scan owns");
     // MSTS.xml counts by time, the records by segment: the totals agree, a segment can differ by the scan on the boundary
-    assert_eq!(d.segments.iter().map(|s| s.scans).sum::<usize>(), d.records.len(), "{label}: scans of MSTS.xml");
+    assert_eq!(
+        d.segments.iter().map(|s| s.scans).sum::<usize>(),
+        d.records.len(),
+        "{label}: scans of MSTS.xml"
+    );
     for s in &d.segments {
-        let n = d.records.iter().filter(|r| r.time_min >= s.start_min && r.time_min <= s.end_min).count();
+        let n = d
+            .records
+            .iter()
+            .filter(|r| r.time_min >= s.start_min && r.time_min <= s.end_min)
+            .count();
         assert_eq!(n, s.scans, "{label}: segment {} by time", s.id);
     }
     let tree = d.tree.as_ref().unwrap();
-    assert_eq!((tree.scans, tree.device.as_str(), tree.polarity.as_str()), (d.records.len(), "SingleQuad", "Positive"), "{label}: MSTree2.bin");
+    assert_eq!(
+        (tree.scans, tree.device.as_str(), tree.polarity.as_str()),
+        (d.records.len(), "SingleQuad", "Positive"),
+        "{label}: MSTree2.bin"
+    );
     // the points: TIC of the record = sum of the intensities, base peak = their maximum, m/z ascending
-    assert_eq!(run.spectra.len(), d.records.iter().filter(|r| r.points > 0).count());
-    for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
+    assert_eq!(
+        run.spectra.len(),
+        d.records.iter().filter(|r| r.points > 0).count()
+    );
+    for (s, r) in run
+        .spectra
+        .iter()
+        .zip(d.records.iter().filter(|r| r.points > 0))
+    {
         let sum: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
-        assert!((sum - r.tic).abs() <= 3e-3 * r.tic + 1.0, "{label} scan {}: sum {sum} TIC {}", r.id, r.tic);
-        let top = (0..s.mz.len()).map(|i| s.intensity_f64(i)).fold(0.0, f64::max);
-        assert!((top - r.base_value).abs() <= 1e-3 * top + 1.0, "{label} scan {}: base peak", r.id);
-        assert!(s.mz.windows(2).all(|w| w[0] < w[1]) && s.polarity == 1 && s.level == 1, "{label} scan {}", r.id);
+        assert!(
+            (sum - r.tic).abs() <= 3e-3 * r.tic + 1.0,
+            "{label} scan {}: sum {sum} TIC {}",
+            r.id,
+            r.tic
+        );
+        let top = (0..s.mz.len())
+            .map(|i| s.intensity_f64(i))
+            .fold(0.0, f64::max);
+        assert!(
+            (top - r.base_value).abs() <= 1e-3 * top + 1.0,
+            "{label} scan {}: base peak",
+            r.id
+        );
+        assert!(
+            s.mz.windows(2).all(|w| w[0] < w[1]) && s.polarity == 1 && s.level == 1,
+            "{label} scan {}",
+            r.id
+        );
     }
 }
 
 /// A SIM run holds only the ions of its group, a scan run stays in its range.
 fn check_method(d: &AgilentD, run: &mzlab_core::mzml::Run, label: &str) {
     let m = d.method.as_ref().unwrap();
-    for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
+    for (s, r) in run
+        .spectra
+        .iter()
+        .zip(d.records.iter().filter(|r| r.points > 0))
+    {
         if m.mode == "SIM" {
             // the scan time is the end of the scan: the group a scan belongs to is the one running at the time of the scan before it
-            let before = d.records.iter().rev().find(|p| p.id < r.id).map_or(r.time_min, |p| p.time_min);
-            let g = m.groups.iter().rev().find(|g| before >= g.start_min).unwrap();
+            let before = d
+                .records
+                .iter()
+                .rev()
+                .find(|p| p.id < r.id)
+                .map_or(r.time_min, |p| p.time_min);
+            let g = m
+                .groups
+                .iter()
+                .rev()
+                .find(|g| before >= g.start_min)
+                .unwrap();
             let ions: Vec<f64> = g.ions.iter().map(|i| i.0).collect();
-            assert!(s.mz.len() == ions.len() && s.mz.iter().zip(&ions).all(|(a, b)| (a - b).abs() < 0.05), "{label} scan {}: ions {:?} of the group {:?}", r.id, s.mz, ions);
+            assert!(
+                s.mz.len() == ions.len()
+                    && s.mz.iter().zip(&ions).all(|(a, b)| (a - b).abs() < 0.05),
+                "{label} scan {}: ions {:?} of the group {:?}",
+                r.id,
+                s.mz,
+                ions
+            );
         } else {
-            assert!(s.mz[0] >= m.low_mass.unwrap() - 1.0 && *s.mz.last().unwrap() <= m.high_mass.unwrap() + 1.0, "{label} scan {}: range", r.id);
+            assert!(
+                s.mz[0] >= m.low_mass.unwrap() - 1.0
+                    && *s.mz.last().unwrap() <= m.high_mass.unwrap() + 1.0,
+                "{label} scan {}: range",
+                r.id
+            );
         }
     }
 }
@@ -190,17 +358,44 @@ fn real_runs_agree_with_their_own_numbers() {
         eprintln!("SKIP agilent_parity: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut folders: Vec<PathBuf> = std::fs::read_dir(data.join("GC-MS")).unwrap().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "D")).collect();
+    let mut folders: Vec<PathBuf> = std::fs::read_dir(data.join("GC-MS"))
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "D"))
+        .collect();
     folders.sort();
     assert!(!folders.is_empty());
     for f in folders {
         let acq = f.join("AcqData");
-        let (scan, xsd) = (read(&acq, "MSScan.bin").unwrap(), read(&acq, "MSScan.xsd").unwrap());
+        let (scan, xsd) = (
+            read(&acq, "MSScan.bin").unwrap(),
+            read(&acq, "MSScan.xsd").unwrap(),
+        );
         let mut peak = std::fs::read(acq.join("MSPeak.bin")).unwrap();
         let label = f.display().to_string();
-        assert_eq!(Layout::from_xsd(&String::from_utf8_lossy(&xsd)).unwrap(), Layout::builtin(), "{label}: the xsd of the folder and the built-in layout agree");
-        let (ts, dev, contents, tree, meth) = (read(&acq, "MSTS.xml"), read(&acq, "Devices.xml"), read(&acq, "Contents.xml"), read(&acq, "MSTree2.bin"), read(&f, "acqmeth.txt"));
-        let files = Files { ms_scan: &scan, ms_scan_xsd: Some(&xsd), ms_peak_len: peak.len() as u64, ms_ts: ts.as_deref(), devices: dev.as_deref(), contents: contents.as_deref(), ms_tree: tree.as_deref(), acqmeth: meth.as_deref() };
+        assert_eq!(
+            Layout::from_xsd(&String::from_utf8_lossy(&xsd)).unwrap(),
+            Layout::builtin(),
+            "{label}: the xsd of the folder and the built-in layout agree"
+        );
+        let (ts, dev, contents, tree, meth) = (
+            read(&acq, "MSTS.xml"),
+            read(&acq, "Devices.xml"),
+            read(&acq, "Contents.xml"),
+            read(&acq, "MSTree2.bin"),
+            read(&f, "acqmeth.txt"),
+        );
+        let files = Files {
+            ms_scan: &scan,
+            ms_scan_xsd: Some(&xsd),
+            ms_peak_len: peak.len() as u64,
+            ms_ts: ts.as_deref(),
+            devices: dev.as_deref(),
+            contents: contents.as_deref(),
+            ms_tree: tree.as_deref(),
+            acqmeth: meth.as_deref(),
+        };
         let d = AgilentD::open(&f.file_name().unwrap().to_string_lossy(), &files).unwrap();
         let run = d.run(&mut peak).unwrap();
         check_index_and_points(&d, &run, peak.len() as u64, &label);
@@ -212,9 +407,21 @@ fn real_runs_agree_with_their_own_numbers() {
         let back = mzml::read(&out[..]).unwrap();
         assert_eq!(back.spectra.len(), run.spectra.len(), "{label}");
         for (a, b) in back.spectra.iter().zip(&run.spectra) {
-            assert!(a.mz == b.mz && (0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)) && a.id == b.id && (a.rt - b.rt).abs() < 1e-12, "{label} {}", b.id);
+            assert!(
+                a.mz == b.mz
+                    && (0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i))
+                    && a.id == b.id
+                    && (a.rt - b.rt).abs() < 1e-12,
+                "{label} {}",
+                b.id
+            );
         }
-        eprintln!("{label}: {} scans, {} segments, {}", d.records.len(), d.segments.len(), d.method.as_ref().unwrap().mode);
+        eprintln!(
+            "{label}: {} scans, {} segments, {}",
+            d.records.len(),
+            d.segments.len(),
+            d.method.as_ref().unwrap().mode
+        );
     }
 }
 
@@ -255,16 +462,62 @@ fn the_layout_comes_from_the_xsd_of_the_folder() {
     }
     let layout = Layout::from_xsd(XSD).unwrap();
     assert_eq!(layout.record_len, 4 + 8 + 4 + 8 + 2 + 4 + 8 + 4 + 4 + 4);
-    let open = |xsd: Option<&[u8]>| AgilentD::open("x.D", &Files { ms_scan: &idx, ms_scan_xsd: xsd, ms_peak_len: peak.len() as u64, ..Default::default() });
+    let open = |xsd: Option<&[u8]>| {
+        AgilentD::open(
+            "x.D",
+            &Files {
+                ms_scan: &idx,
+                ms_scan_xsd: xsd,
+                ms_peak_len: peak.len() as u64,
+                ..Default::default()
+            },
+        )
+    };
     let d = open(Some(XSD.as_bytes())).unwrap();
     let run = d.run(&mut peak.clone()).unwrap();
-    assert_eq!((d.records.len(), run.spectra.len(), run.spectra[1].mz.clone()), (4, 3, vec![50.5, 84.0, 86.25]));
+    assert_eq!(
+        (
+            d.records.len(),
+            run.spectra.len(),
+            run.spectra[1].mz.clone()
+        ),
+        (4, 3, vec![50.5, 84.0, 86.25])
+    );
     assert_eq!(d.records[1].time_min, 3.01);
-    assert!(open(None).is_err(), "the built-in layout does not fit this file");
+    assert!(
+        open(None).is_err(),
+        "the built-in layout does not fit this file"
+    );
     // compressed points are refused by name, an unknown type and a missing field are errors
     let mut z = peak.clone();
-    let d = AgilentD { records: d.records.iter().cloned().map(|mut r| { r.uncompressed = Some(r.bytes + 40); r }).collect(), ..open(Some(XSD.as_bytes())).unwrap() };
-    assert!(d.run(&mut z).err().unwrap().to_string().contains("compressed"));
-    assert!(Layout::from_xsd(&XSD.replace("xs:short", "xs:dateTime")).err().unwrap().to_string().contains("dateTime"));
-    assert!(Layout::from_xsd(&XSD.replace("name=\"PointCount\"", "name=\"Points\"")).err().unwrap().to_string().contains("PointCount"));
+    let d = AgilentD {
+        records: d
+            .records
+            .iter()
+            .cloned()
+            .map(|mut r| {
+                r.uncompressed = Some(r.bytes + 40);
+                r
+            })
+            .collect(),
+        ..open(Some(XSD.as_bytes())).unwrap()
+    };
+    assert!(d
+        .run(&mut z)
+        .err()
+        .unwrap()
+        .to_string()
+        .contains("compressed"));
+    assert!(Layout::from_xsd(&XSD.replace("xs:short", "xs:dateTime"))
+        .err()
+        .unwrap()
+        .to_string()
+        .contains("dateTime"));
+    assert!(
+        Layout::from_xsd(&XSD.replace("name=\"PointCount\"", "name=\"Points\""))
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("PointCount")
+    );
 }
