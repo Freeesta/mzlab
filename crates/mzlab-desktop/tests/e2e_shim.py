@@ -1,6 +1,7 @@
-"""Desktop shim in Chromium, without Tauri: the page of the desktop (dist/, made by prepare.py), the shim and the native worker against the
-real native engine (`cargo run --example serve`, the mzlab:// protocol over HTTP), with a fake `window.__TAURI__` for the file dialog.
-Same checks as e2e_rust: TIC and XIC from the native engine equal Python's (Pyodide). Run from the repository root:
+"""Desktop shim in Chromium, without Tauri: the page of the desktop (dist/, made by prepare.py), the shim and the native worker against the real native engine
+(`cargo run --example serve`, the mzlab:// protocol over HTTP), with a fake `window.__TAURI__` for the file dialog. The answers of every route the page asks of
+its engine equal the Python reference's (tests_e2e/pyref.py); nothing is left to Python (window.MZLAB_LR_MISS stays empty, the app carries none). Run from
+the repository root:
   python3 tools/build_site.py && python3 crates/mzlab-desktop/prepare.py && python3 crates/mzlab-desktop/tests/e2e_shim.py"""
 import json, os, re, subprocess, sys, tempfile, threading, time, urllib.request
 from functools import partial
@@ -11,25 +12,33 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests_e2e"))
 import lib  # noqa: F401,E402  (its wait_for_function polls: the page CSP forbids eval)
+from pyref import PyRef  # noqa: E402
 DIST = ROOT / "crates" / "mzlab-desktop" / "dist"
-FILE = ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"
+EX = ROOT / "mzlab" / "web" / "esempi"
+LR_FILES = [EX / "FullScan_t10.mzML", EX / "FullScan_t30.mzML", EX / "MS2_t15.mzML", EX / "MRM_std_2.4ppm.mzML"]
+from lib_hr import synth  # noqa: E402  (synthetic high-resolution DDA files)
+HR_FILES = [synth("shimhr") / "HR_DDA-Exploris-t30.mzML", synth("shimhr") / "HR_DDA-Fusion-t30.mzML"]
 PAGE_PORT, ENGINE_PORT = 8841, 8842
 fails = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
-    except Exception as e: fails.append(name); print("  ", (name, "FAIL " + str(e)[:400]))
+    except Exception as e:
+        fails.append(name); print("  ", (name, "FAIL " + (str(e) or repr(e))[:600]))
+        if os.environ.get("SHIM_DEBUG"): import traceback; traceback.print_exc()
 
-if not (DIST / "index.html").exists() or not FILE.exists():
+if not (DIST / "index.html").exists() or not all(f.exists() for f in LR_FILES + HR_FILES):
     print("  ", ("dist", "FAIL run tools/build_site.py and crates/mzlab-desktop/prepare.py first")); sys.exit(1)
 
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 LIBDIR = Path(tempfile.mkdtemp(prefix="mzlab-libs-")) / "Librerie"      # the native folder of the libraries (does not exist yet: the app creates it)
-eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), str(FILE)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR)})
-picked = []
+DATA = Path(tempfile.mkdtemp(prefix="mzlab-data-"))                    # the folder of the app: files.json, kv.json, the indexes
+eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_DATA": str(DATA)})
+picked = {}
 for line in eng.stdout:
     if line.startswith("FILE "):
-        _, i, name, size = line.split(); picked.append({"id": int(i), "name": name, "size": int(size)})
+        _, i, name, size = line.split(); picked[name] = {"id": int(i), "name": name, "size": int(size)}
     if line.startswith("READY"): break
+LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]
 
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -39,7 +48,7 @@ threading.Thread(target=page.serve_forever, daemon=True).start()
 FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [], delay: 0 };
 try { localStorage.setItem("qqq.upd.last", String(Date.now())); } catch (_) {}       // the daily silent check stays out of the way: the steps drive it
 window.__TAURI__ = { core: { invoke: async (cmd, a) => {
-    if (cmd === "pick_files") return a.dam ? [] : %s;
+    if (cmd === "pick_files") return a.dam ? [] : (window.__PICK || %s);
     if (cmd === "update_check") { window.__UPD.calls.push(cmd); if (window.__UPD.delay) await new Promise(r => setTimeout(r, window.__UPD.delay)); return JSON.stringify(window.__UPD.check); }
     if (cmd === "update_apply") {
       window.__UPD.calls.push(cmd);
@@ -51,7 +60,7 @@ window.__TAURI__ = { core: { invoke: async (cmd, a) => {
     return [];
   } },
   event: { listen: async (name, f) => { if (name === "update-progress") window.__UPD.listeners.push(f); return () => {}; } },
-  window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(picked)
+  window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(LR_PICK)
 def native(route):                    # mzlab.localhost -> the engine over HTTP (what the window does with the custom protocol)
     u = route.request.url.replace("http://mzlab.localhost", f"http://127.0.0.1:{ENGINE_PORT}")
     try:
@@ -60,16 +69,23 @@ def native(route):                    # mzlab.localhost -> the engine over HTTP 
     except urllib.error.HTTPError as e: status, body, ctype = e.code, e.read(), e.headers["Content-Type"]
     route.fulfill(status=status, body=body, headers={"Content-Type": ctype, "Access-Control-Allow-Origin": "*"})
 
-GET = """async u => { const r = await fetch(u); return { eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
-def close(a, b, tol, rel=0.0):
-    assert len(a) == len(b), (len(a), len(b))
-    bad = [(i, x, y) for i, (x, y) in enumerate(zip(a, b)) if abs(x - y) > max(tol, rel * abs(y))]
-    assert not bad, f"{len(bad)} values differ, first {bad[:3]}"
+JSON = """async u => { const r = await fetch(u); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
+def json_close(a, b, tol=1e-9, path=""):
+    if isinstance(a, dict) and isinstance(b, dict):
+        assert a.keys() == b.keys(), f"{path}: keys {sorted(a.keys() ^ b.keys())}"
+        for k in a: json_close(a[k], b[k], tol, f"{path}.{k}")
+    elif isinstance(a, list) and isinstance(b, list):
+        assert len(a) == len(b), f"{path}: length {len(a)} against {len(b)}"
+        for i, (x, y) in enumerate(zip(a, b)): json_close(x, y, tol, f"{path}[{i}]")
+    elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+        assert abs(a - b) <= tol * max(1.0, abs(a), abs(b)), f"{path}: {a} against {b}"
+    else: assert a == b, f"{path}: {a!r} against {b!r}"
+ctx_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
 
 try:
     with sync_playwright() as p:
         import os; b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
-        ctx = b.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36")
+        ctx = b.new_context(user_agent=ctx_ua)
         ctx.add_init_script(FAKE_TAURI)
         ctx.route(re.compile(r"http://mzlab\.localhost/.*"), native)
         pg = ctx.new_page()
@@ -80,36 +96,103 @@ try:
             pg.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=30000)
         step("the page loads with the desktop shim and the native bridge", boot)
         def load():
-            pg.click("#drop")                                    # the shim opens the (fake) system dialog and hands the file to upload()
-            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            pg.click("#drop")                                    # the shim opens the (fake) system dialog and hands the files to upload()
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            pg.wait_for_function(f"E.files.length >= {len(LR_FILES)} && E.pending.length === 0", timeout=120000)
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
-        step("a file picked in the dialog is opened and its TIC is drawn by the native engine", load)
-        def native_index():
-            idx = pg.evaluate("window.MZLAB_IDX || []")
-            assert idx and all(i["engine"] == "native" for i in idx), idx
-            perf = pg.evaluate("fetch('api/perf').then(r=>r.json())")
-            assert perf["files"] and all(f["indexed"] and "costruzione .mzidx" not in f["timing"] for f in perf["files"]), perf
-        step("the .mzidx of the picked file is built by the native side (cache folder of the app) and Python reads it without building another", native_index)
-        def tic_xic():
-            for url in ("api/chrom?k=0&kind=tic&level=1", "api/xic?k=0&mz=364&tol=0.35&level=1", "api/xic?k=0&mz=300&tol=0.5&level=1&px=200"):
-                pg.evaluate("window.MZLAB_RUST.enabled = true"); r = pg.evaluate(GET, url)
-                pg.evaluate("window.MZLAB_RUST.enabled = false"); py = pg.evaluate(GET, url)
-                assert r["eng"] == "rust" and py["eng"] is None, (url, r["eng"], py["eng"])
-                if "px=" in url: continue                        # a reduced trace has no Python twin to compare with
-                ra, pa = (r["j"], py["j"]) if "traces" not in r["j"] else (r["j"]["traces"][0], py["j"]["traces"][0])
-                close(ra["rt"], pa["rt"], 2e-4); close(ra["y"], pa["y"], 0.11, 1e-6)
-            pg.evaluate("window.MZLAB_RUST.enabled = true")
-        step("TIC and XIC from the native engine: same values as Python", tic_xic)
-        def scans():
-            url = "api/spectra?k=0&i0=0&i1=6&level=1&bin=0.1"
-            pg.evaluate("window.MZLAB_RUST.enabled = true"); r = pg.evaluate(GET, url)
-            pg.evaluate("window.MZLAB_RUST.enabled = false"); py = pg.evaluate(GET, url); pg.evaluate("window.MZLAB_RUST.enabled = true")
-            assert r["eng"] == "rust" and py["eng"] is None
-            assert r["j"]["n"] == py["j"]["n"] and len(r["j"]["scans"]) == len(py["j"]["scans"])
-            for a, c in zip(r["j"]["scans"], py["j"]["scans"]):
-                close(a["mz"], c["mz"], 1.1e-3); close(a["y"], c["y"], 0.11, 1e-6)
-        step("single scans from the native engine: same values as Python", scans)
+            assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")
+        step("files picked in the dialog are opened and the TIC is drawn by the native engine", load)
+        ref = {}
+        def state_same():
+            sess = pg.evaluate(JSON, "api/session")["j"]
+            ref["names"] = [it["file"] for it in sess["session"]]
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= %d)" % len(LR_FILES), timeout=30000)      # saved a moment after the last change
+            nb = pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"]
+            ref["py"] = PyRef([str(EX / n.split("#")[0]) for n in dict.fromkeys(ref["names"])], nb)
+            py = {"state": ref["py"].get("api/state")["j"], "session": ref["py"].get("api/session")["j"]}
+            st = pg.evaluate(JSON, "api/state")["j"]
+            json_close(st["files"], py["state"]["files"], path="state.files")
+            json_close({k: v for k, v in sess.items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+        step("api/state and api/session: the JSON of the Python reference", state_same)
+        def routes_same():
+            names = ref["names"]; k = {n.split("#")[0]: i for i, n in reversed(list(enumerate(names)))}
+            full, full2, ms2, mrm = k["FullScan_t10.mzML"], k["FullScan_t30.mzML"], k["MS2_t15.mzML"], k["MRM_std_2.4ppm.mzML"]
+            urls = [f"api/chrom?k={full}&kind=tic&level=1", f"api/chrom?k={full}&kind=bpc&level=1&mz0=150&mz1=400", f"api/xic?k={full},{full2}&mz=364&tol=0.35&level=1",
+                    f"api/filters?k={full}", f"api/scanlist?k={full}&level=1", f"api/nearest_scan?k={full}&rt=9&level=1", f"api/scaninfo?k={full}&sid=3",
+                    f"api/spectrum?k={full}&rt0=14&rt1=14.7&level=1&bin=0.1", f"api/spectra?k={full}&i0=100&i1=104&level=1&bin=0.1", f"api/scan?k={full}&sid=300",
+                    f"api/fileinfo?k={full}", f"api/ms2tr?k={ms2}", f"api/scan_axis?k={full}&level=1", f"api/mrm?k={mrm}", f"api/contaminants",
+                    "api/formula?f=C6H12O6", "api/formula?f=Xx2", "api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8&tol=5&unit=ppm&max=10",
+                    f"api/map?k={full}", f"api/map?k={full2}&bg=1&agg=mean", f"api/map?k={full}&ref={full2}&norm=max", f"api/mapsnap?k={full}&rt=14.25&mz=364.4",
+                    f"api/mappunti?k={full}&ref={full2}&pts=14.3,364.3;14.32,194.2", f"api/mappunti3d?k={full}&rt0=13&rt1=16&mz0=150&mz1=370&max=300",
+                    f"api/origin?k={full}&mz=194.2&parent=364.37", f"api/chrom?k={full2}&ref={full}", f"api/xic?k={full2}&ref={full}&mz=364.4&tol=0.35", f"api/mrm?k={mrm}&ref={mrm}",
+                    f"api/qaqc?k={full},{full2}&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/method_warnings", f"api/gradient?k={full}", f"api/delay?k={full}", f"api/chrom?k={full}&kind=pda"]
+            bad = []
+            for u in urls:
+                a = pg.evaluate(JSON, u); b2 = ref["py"].get(u)
+                if a["status"] != b2["status"]: bad.append((u, a["status"], b2["status"], str(a["j"])[:120])); continue
+                if a["status"] == 200:
+                    for r in (a["j"], b2["j"]):
+                        if isinstance(r, dict): r.pop("timing", None)
+                    try: json_close(a["j"], b2["j"], 1e-6, u)
+                    except AssertionError as e: bad.append(str(e)[:200])
+                if a["eng"] != "rust": bad.append((u, "engine", a["eng"]))
+            assert not bad, bad[:4]
+            POST = """async ([u, b]) => { const r = await fetch(u, { method: "POST", body: JSON.stringify(b) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
+            pts = [{"file": f"f{i}", "time": t, "rt": 5.0, "area": 100.0 * (i + 1), "height": 9.0 * i} for i, t in enumerate([30, 0, 60, 15])]
+            for u, body in [("api/stat/profile", {"points": pts, "metric": "area"}), ("api/gradient_parse", {"fmt": "csv", "text": "0,5\n5,95\n10,95\n11,5"})]:
+                a = pg.evaluate(POST, [u, body]); b2 = ref["py"].post(u, body)
+                assert a["status"] == b2["status"] == 200 and a["eng"] == "rust", (u, a["status"], b2["status"])
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")
+        step("every route of the low-resolution flow: the JSON of the Python reference, nothing left to Python", routes_same)
+        def persists():
+            assert (DATA / "files.json").is_file() and (DATA / "kv.json").is_file() and list((DATA / "mzidx").glob("*.mzidx")), list(DATA.rglob("*"))
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= %d)" % len(LR_FILES), timeout=30000)
+            pg.reload(); pg.wait_for_function("[...document.querySelectorAll('.pnl canvas')].some(c => c.checkVisibility())", timeout=120000)      # the first canvas may be a hidden one
+            pg.wait_for_function("E.files.length >= 1 && window.MZLAB_LR !== undefined", timeout=120000)
+            assert sorted(f["name"] for f in pg.evaluate(JSON, "api/state")["j"]["files"]) == sorted(f.name for f in LR_FILES)
+        step("the files and the notebook are still there after a reload (the app's folder), as references to the files on the disk", persists)
+        def dragged():                                           # a File that only exists in the page (not picked in the dialog): its bytes go to the app once
+            pg.set_input_files("#pick", [str(EX / "FullScan_t5.mzML")])
+            pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=60000)
+            assert (DATA / "files" / "FullScan_t5.mzML").is_file()
+            pg.evaluate("fetch('api/remove', { method: 'POST', body: JSON.stringify({ name: 'FullScan_t5.mzML' }) })")
+            pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => !s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=30000)
+            assert not (DATA / "files" / "FullScan_t5.mzML").exists()
+        step("a File of the page (no dialog) is sent to the app as bytes, and removing it removes the copy", dragged)
+        def hr():
+            c2 = b.new_context(user_agent=ctx_ua); c2.add_init_script(FAKE_TAURI + "\nwindow.__PICK = %s;" % json.dumps(HR_PICK)); c2.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            pg2 = c2.new_page(); pg2.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            pg2.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html?riparti=1"); pg2.wait_for_selector("#drop", timeout=120000)
+            pg2.click("#drop"); pg2.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(HR_FILES)}", timeout=120000)
+            pg2.click("#opbtn"); pg2.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            pg2.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000); pg2.wait_for_timeout(1500)
+            sess = pg2.evaluate(JSON, "api/session")["j"]
+            py = PyRef([str(f) for f in HR_FILES])
+            items = sess["session"]
+            ms1 = [k for k, it in enumerate(items) if "MS1" in it["label"] or it.get("kind") == "full"]
+            ka, kc = ms1[0], ms1[1]
+            sid = py.get(f"api/dda?k={ka}")["j"]["sid"]
+            urls = [f"api/dda?k={ka}", f"api/spectrum?k={ka}&rt0=0&rt1=1000&level=1", f"api/spectrum?k={ka}&rt0=0&rt1=1000&level=2", f"api/spectra?k={ka}&level=1&i0=0&i1=2", f"api/spectra?k={ka}&level=2&i0=0&i1=3",
+                    f"api/scan?k={ka}&sid={sid[5]}", f"api/scanavg?k={ka}&sids=" + ",".join(str(x) for x in sid[3:9]), f"api/map?k={ka}", f"api/map?k={ka}&ref={kc}&norm=max", f"api/mapsnap?k={ka}&rt=14.3&mz=364.07",
+                    f"api/mappunti3d?k={ka}&rt0=14&rt1=14.6&mz0=363&mz1=367&max=300", f"api/origin?k={ka}&mz=305.0702&parent=364.0737", f"api/subxic?k={ka}&f=C14H14F4N3O2S&ppm=5&min=150",
+                    f"api/fileinfo?k={ka}", f"api/scanlist?k={ka}&level=1", f"api/spectrum?k={ka}&rt0=14.2&rt1=14.6&level=1&bgk=0&bgrt0=10.1&bgrt1=10.9"]
+            bad = []
+            for u in urls:
+                a = pg2.evaluate(JSON, u); b2 = py.get(u)
+                if a["status"] != b2["status"]: bad.append((u, a["status"], b2["status"], str(a["j"])[:100])); continue
+                if a["status"] == 200:
+                    for r in (a["j"], b2["j"]):
+                        if isinstance(r, dict): r.pop("timing", None)
+                    try: json_close(a["j"], b2["j"], 1e-6, u)
+                    except AssertionError as e: bad.append(str(e)[:200])
+            assert not bad, bad[:4]
+            r = pg2.evaluate("""async u => { const r = await fetch(u); const b = new Uint8Array(await r.arrayBuffer()); return { status: r.status, size: b.length }; }""", f"api/scanbin?k={ka}&level=1&i0=0&i1=3")
+            assert r["status"] == 200 and r["size"] > 100, r
+            assert not pg2.evaluate("window.MZLAB_LR_MISS || []"), pg2.evaluate("window.MZLAB_LR_MISS")
+            c2.close()
+        step("high-resolution files: dda, spectra, scans, maps, origin, sub-formulas, the binary block: the Python reference's JSON, nothing left to Python", hr)
         def upd_set(check):
             pg.evaluate("c => { window.__UPD.check = c; window.__UPD.calls.length = 0; window.__UPD.progress.length = 0; }", check)
         def gear_check():

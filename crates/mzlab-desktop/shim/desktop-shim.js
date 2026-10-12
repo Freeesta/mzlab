@@ -1,28 +1,23 @@
-// Desktop app only (prepare.py puts it before browser.js): turns on the Rust engine (the native one, see desktop-worker.js) and replaces
-// the browser file chooser with the system dialog, so that mzML and .raw files are opened from the disk by the native engine.
+// Desktop app only (prepare.py puts it before browser.js): tells the page that the engine is the native one (desktop-worker.js) and replaces
+// the browser file chooser with the system dialog, so that mzML, .dam and .raw files are opened from the disk by the native engine.
 // The page itself is the same as the site's. Without Tauri (a normal browser) this file does nothing.
 (() => {
   const T = window.__TAURI__;
   if (!T || !T.core) return;
   window.MZLAB_DESKTOP = true;
-  try { localStorage.setItem("qqq.motore", "rust"); } catch (_) { /* optional */ }
   const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
-  const CHUNK = 32 << 20;
   const tag = id => "application/x-mzlab-file;id=" + id;
 
-  // A file of the disk as the page's File. A .raw is an empty stub that carries its number (the native engine reads it from the disk);
-  // the other files are read in chunks from the native side, with the number in `type` so that the engine finds them again.
-  async function toFile(f) {
-    if (/\.raw$/i.test(f.name)) return new File([], f.name, { type: tag(f.id) });
-    const parts = [];
-    for (let off = 0; off < f.size; off += CHUNK) parts.push(await (await fetch(`${BASE}file?id=${f.id}&off=${off}&len=${CHUNK}`)).blob());
-    return new File(parts, f.name, { type: tag(f.id) });
+  // A file of the disk as the page's File: an empty stub that carries its number in `type` (the native engine reads the file from the disk, the page never
+  // holds its bytes) and says its real size, which is all the page looks at.
+  function toFile(f) {
+    const file = new File([], f.name, { type: tag(f.id) });
+    Object.defineProperty(file, "size", { value: f.size });
+    return file;
   }
   async function deliver(files, into) {
     if (!files.length || typeof window.upload !== "function") return;
-    const out = [];
-    for (const f of files) out.push(await toFile(f));
-    window.upload(out, into);
+    window.upload(files.map(toFile), into);
   }
 
   // «Scarica mzML»: the native save dialog for a converted mzML (by its number on the disk); resolves to the chosen path or null

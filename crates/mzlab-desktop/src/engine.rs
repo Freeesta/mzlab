@@ -77,14 +77,14 @@ impl<W: Write> Write for CountWrite<W> {
 }
 
 #[derive(Default)]
-struct Inner {
+pub(crate) struct Inner {
     /// progress of the conversion of each `.raw` (by the number of the picked file)
     progress: HashMap<u32, Arc<Progress>>,
     next_id: u32,
-    picked: HashMap<u32, Picked>,
+    pub(crate) picked: HashMap<u32, Picked>,
     runs: HashMap<u32, mzml::Run>,
     /// mzML files written by `raw2mzml` (also in `picked`, so that the page reads and opens them as any file); removed at exit.
-    temps: Vec<PathBuf>,
+    pub(crate) temps: Vec<PathBuf>,
 }
 
 /// Shared by the protocol handler (any thread) and the Tauri commands.
@@ -95,6 +95,10 @@ pub struct State {
     pub libs: crate::librerie::Folder,
     /// where the `.mzidx` of the picked files are built (`set_index_folder`; a folder of the system temp dir until then)
     idx: Mutex<Option<Arc<crate::idxbuild::IdxBuilder>>>,
+    /// the indexes by slot, the methods: the operations of `rpc.rs`
+    pub(crate) eng: Mutex<crate::rpc::Eng>,
+    /// the files and the notebook of the student between two runs (`store.rs`)
+    pub(crate) store: Mutex<crate::store::Store>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -109,6 +113,11 @@ impl State {
         let b = crate::idxbuild::IdxBuilder::new(dir)?;
         *self.idx.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(b));
         Ok(())
+    }
+
+    /// The folder of the app for what survives a run: the list of the files, the notebook, the files made by the app.
+    pub fn set_data_folder(&self, dir: PathBuf) {
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).set_dir(dir);
     }
 
     pub fn indexer(&self) -> Result<Arc<crate::idxbuild::IdxBuilder>> {
@@ -130,6 +139,10 @@ impl State {
             "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"size\":{}}}",
             st.scans, st.peaks, st.sections, st.passes, st.bytes
         ))
+    }
+
+    pub(crate) fn lock_inner(&self) -> std::sync::MutexGuard<'_, Inner> {
+        self.lock()
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
@@ -155,7 +168,7 @@ impl State {
         Ok((id, p))
     }
 
-    fn picked(&self, id: u32) -> Result<Picked> {
+    pub(crate) fn picked(&self, id: u32) -> Result<Picked> {
         self.lock()
             .picked
             .get(&id)
