@@ -125,6 +125,8 @@ if DATI:
             pg.set_input_files("#pick", TIO); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=180000); pg.click("text=Carica dati")
             pg.wait_for_function("E.files.length>=6", timeout=420000); pg.wait_for_timeout(4000)
             def three():
+                drawer(pg, "file")                                          # high resolution: only the first file is open at the start, a click on the box opens each of the others
+                for k in (2, 4): pg.click(f'#flst input[data-k="{k}"]'); pg.wait_for_timeout(600)
                 pg.evaluate("E.browse=false;renderNav();redrawAll()"); pg.wait_for_timeout(3500)
                 n = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.sr.length"); assert n == 3, n
             step("three TiO2 files together: the same trace of the three files overlaid in the chromatogram", three)
