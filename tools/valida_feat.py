@@ -97,9 +97,20 @@ def valida(serie: list[dict], ioni: list[dict] | None = None, mzmine: str | None
     return r
 
 
+def main_cancello(a) -> int:
+    import datetime
+    from valida import cancello
+    ioni = carica_verita(a.verita) if a.verita else []
+    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello"
+    c, det = cancello.misura(Path(a.serie) if a.serie else None, ioni, a.mzmine, a.sintetico, a.seme, a.debole, lavoro, a.data or datetime.date.today().isoformat(), not a.senza_wasm)
+    for p in rapporto.scrivi_cancello(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_json):
+        print(p)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--serie", required=True, help="folder with the mzML files of the series")
+    ap.add_argument("--serie", help="folder with the mzML files of the series (required unless --cancello)")
     ap.add_argument("--verita", help="truth JSON (optional)")
     ap.add_argument("--mzmine", help="mzmine CSV export (optional)")
     ap.add_argument("--uscita", help="output folder (default .verifica/valida/<series folder name>)")
@@ -107,7 +118,20 @@ def main(argv=None) -> int:
     ap.add_argument("--rt-tol", type=float, default=RT_TOL)
     ap.add_argument("--senza-sensibilita", action="store_true", help="skip the two reruns with thresholds x0.8 / x1.2")
     ap.add_argument("--deterministico", action="store_true", help="leave time and memory out of the JSON")
+    cg = ap.add_argument_group("gate of quality (the native pipeline of the site; the series is optional, without it the real-series criteria are not measured)")
+    cg.add_argument("--cancello", action="store_true", help="measure the gate and write cancello.json and cancello_rapporto.{json,md}")
+    cg.add_argument("--sintetico", choices=("piccolo", "completo"), default="completo", help="profile of the synthetic identity series")
+    cg.add_argument("--seme", type=int, default=7)
+    cg.add_argument("--debole", type=float, help="factor on the heights of the products for the weak variant (band 3-10 x the noise)")
+    cg.add_argument("--cancello-json", default=str(ROOT / "TP_Mine" / "data" / "cancello.json"))
+    cg.add_argument("--data", help="date written in cancello.json (default today)")
+    cg.add_argument("--lavoro", help="work folder of the gate (default .verifica/cancello)")
+    cg.add_argument("--senza-wasm", action="store_true", help="skip the comparison with the .wasm run through Node")
     a = ap.parse_args(argv)
+    if a.cancello:
+        return main_cancello(a)
+    if not a.serie:
+        ap.error("--serie is required")
     cartella = Path(a.serie)
     serie = tabelle.trova_serie(cartella)
     ioni = carica_verita(a.verita) if a.verita else []
