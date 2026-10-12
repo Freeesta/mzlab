@@ -15,7 +15,7 @@ COUNT = """() => { window.__n = {fit: 0, draw: 0}; const f = window.fitWidth, d 
   window.fitWidth = function () { window.__n.fit++; return f.apply(this, arguments); }; window.draw = function () { window.__n.draw++; return d.apply(this, arguments); }; }"""
 LONG = """() => { window.__long = []; try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__long.push(Math.round(e.duration)))).observe({type: 'long-animation-frame', buffered: false}); } catch (_) {} }"""
 def cold(p, vw, vh, reduced, saved=None):
-    r = Run(port=8873, wd="/tmp/wd_transizioni", motore="python"); r.b = p.chromium.launch()
+    r = Run(port=8873, wd="/tmp/wd_transizioni"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');"

@@ -312,12 +312,14 @@ async function bootSession() { await bootSession0(); methodWarn(); window.TOUR &
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
-  if (!j.session) { E.files = []; E.key = ""; E.pending = []; E.progTok = null; return; }
+  if (!j.session) { E.files = []; E.key = ""; E.pending = []; E._seq = false; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map(s => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map(f => f.file), oldVis = Object.fromEntries(E.files.map(f => [f.file, f]));
   E.key = key;
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
+  const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));      // seq: a list opened file by file, this is not its first step
+  E._seq = waiting;
   const isFirstLoad = !oldNames.length || !!(E.pending && E.pending.some(x => x.state === "wait"));       // while a list is opened file by file the new ones follow the rules of the first load
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
   const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
@@ -341,7 +343,7 @@ async function bootSession0() {
     if (S.ref.k !== "auto") S.ref.k = idx(oldNames[S.ref.k]);
     E.cur = Math.min(E.cur, E.files.length - 1);
     renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll();
-    const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     return;
   }
   renderFileList();

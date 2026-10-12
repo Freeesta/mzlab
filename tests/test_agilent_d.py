@@ -26,12 +26,12 @@ def test_a_file_knows_its_folder():
 def test_runs_are_grouped_and_the_other_files_pass():
     code = """(()=>{const fs=[F('MSScan.bin','t/a.D/AcqData/'),F('MSPeak.bin','t/a.D/AcqData/'),F('acqmeth.txt','t/a.D/'),F('TEMPBASE','t/a.D/'),F('x.mzML','t/'),
       F('MSScan.bin','t/b.D/AcqData/'),F('data.ms','t/c.D/')];const g=a.group(fs);
-      return [g.rest.map(f=>f.name),g.runs.map(r=>[r.name,Object.keys(r.files).sort(),r.missing,r.old])]})()"""
+      return [g.rest.map(f=>f.name),g.runs.map(r=>[r.name,Object.keys(r.files).sort(),r.missing])]})()"""
     rest, runs = run(code)
     assert rest == ["x.mzML"]
-    assert runs[0] == ["a.D", ["acqmeth", "peak", "scan"], [], False]
-    assert runs[1] == ["b.D", ["scan"], ["AcqData/MSPeak.bin"], False]
-    assert runs[2] == ["c.D", [], ["AcqData/MSScan.bin", "AcqData/MSPeak.bin"], True]
+    assert runs[0] == ["a.D", ["acqmeth", "peak", "scan"], []]
+    assert runs[1] == ["b.D", ["scan"], ["AcqData/MSPeak.bin"]]
+    assert runs[2] == ["c.D", ["datams"], []]
 
 
 def test_the_name_of_the_mzml():
