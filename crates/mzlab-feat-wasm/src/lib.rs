@@ -11,6 +11,8 @@ use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
 pub mod run;
+#[cfg(feature = "proofs")]
+pub mod state;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
@@ -221,6 +223,10 @@ impl Hypotheses {
     pub fn registry_json(&self) -> String {
         self.inner.registry.to_json()
     }
+    /// The state the proofs need, as bytes (`load_hypotheses` gives the object back in another worker).
+    pub fn state(&self) -> Vec<u8> {
+        state::dump(&self.inner)
+    }
     /// Hypotheses searched.
     pub fn tried(&self) -> u32 {
         self.inner.result.tried
@@ -229,6 +235,15 @@ impl Hypotheses {
     pub fn found(&self) -> u32 {
         self.inner.result.found
     }
+}
+
+#[cfg(feature = "proofs")]
+/// The hypotheses of a run made in another worker, from `Hypotheses.state()`: all that `build_evidence_to` reads.
+#[wasm_bindgen]
+pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue> {
+    Ok(Hypotheses {
+        inner: state::load(state).map_err(js_err)?,
+    })
 }
 
 #[cfg(feature = "proofs")]

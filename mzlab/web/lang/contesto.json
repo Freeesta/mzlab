@@ -468,5 +468,7 @@
   "settings.arch.line": "Riga delle impostazioni «Archivio nel browser»; {files} = dimensione dei file caricati e {idx} = dimensione degli indici, già formattate (es. 28 MB).",
   "settings.arch.nosize": "Come sopra quando la dimensione non è nota; {n} = numero di file caricati.",
   "settings.arch.quota": "Frase sulla quota del browser; {quota} = spazio concesso in tutto e {used} = spazio già usato, già formattati.",
-  "settings.arch.rm.ask": "Domanda di conferma prima di togliere file, indici e sessione; {size} = spazio che si libera, già formattato."
+  "settings.arch.rm.ask": "Domanda di conferma prima di togliere file, indici e sessione; {size} = spazio che si libera, già formattato.",
+  "tpmine.feat.degraded": "Avviso di mzFinder (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
+  "error.featMemory": "Errore di mzFinder (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB."
 }

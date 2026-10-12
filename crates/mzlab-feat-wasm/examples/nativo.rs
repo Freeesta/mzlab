@@ -86,6 +86,8 @@ fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, ru
     let rt = prt.is_finite().then_some(prt);
     let rules = std::fs::read(rules).expect("rules");
     let h = run::hypotheses_stored(&mut ix, &mut stored, &rules, parent, rt, &r).expect("hypotheses");
+    // the proofs run on the state as another worker would receive it
+    let h = mzlab_feat_wasm::state::load(&mzlab_feat_wasm::state::dump(&h)).expect("state");
     println!("hypotheses {} tried, {} found", h.result.tried, h.result.found);
     let mins: Vec<f64> = files.iter().map(|p| minutes(&base(p))).collect();
     let par = (pmz.is_finite() && prt.is_finite()).then_some((pmz, prt));
