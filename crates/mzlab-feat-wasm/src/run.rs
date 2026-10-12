@@ -11,6 +11,7 @@ use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
 use mzlab_feat::store::{read_file, read_table, write_file, write_table_with_evid, Origin};
 use mzlab_feat::table::FileFeatures;
+use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
@@ -159,7 +160,9 @@ pub fn evidence(
     parent: Option<(f64, f64)>,
     r: &Recipe,
 ) -> Result<Vec<u8>> {
-    let (aligned, meta) = read_table(table_bytes)?;
+    let (mut aligned, meta) = read_table(table_bytes)?;
+    hypo.result
+        .add_missing_to(&mut aligned, &JoinParams::default());
     let origin = Origin {
         inputs: inputs_of(&meta),
         times: Vec::new(),
