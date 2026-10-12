@@ -192,6 +192,24 @@ try:
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs8), (pyodide(reqs8)[:3], why(pg8))
         step("profile spectra (window and single scans): Rust equals Python's, still without Pyodide", profile_same)
+        def stat_same():
+            import numpy as np
+            rng = np.random.default_rng(12)
+            roles = ["blank", "blank"] + ["sample"] * 9
+            times = [None, None, 0, 0, 0, 15, 15, 15, 60, 60, 60]
+            m = np.round(rng.lognormal(10, 1.2, (40, 11)) * np.array([0.05, 0.05] + [1] * 9)).tolist()
+            post = """async a => { const r = await fetch(a[0], { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(a[1]) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
+            ctxa, pga, reqsa = context(); pga.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pga.wait_for_selector("#drop", timeout=120000)
+            ctxb, pgb, reqsb = context(); pgb.goto(f"http://127.0.0.1:{PORT}/?motore=python"); pgb.wait_for_selector("#drop", timeout=120000)
+            pts = [{"file": f"f{k}", "time": t, "rt": 5.0, "area": 100.0 * (k + 1), "height": 9.0 * k} for k, t in enumerate([30, 0, 60, 15])]
+            for u, body in [("api/stat/profile", {"points": pts, "metric": "area"}), ("api/stat/blank", {"matrix": m, "roles": roles, "factor": 3, "min_detect": 2}),
+                            ("api/stat/reference", {"matrix": m, "roles": roles, "times": times}), ("api/stat/pca", {"matrix": m, "roles": roles, "groups": [None, None] + ["a"] * 3 + ["b"] * 3 + ["c"] * 3}),
+                            ("api/stat/blank", {"matrix": m, "roles": ["sample"] * 11})]:
+                a = pga.evaluate(post, [u, body]); b2 = pgb.evaluate(post, [u, body])
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pga))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqsa), (pyodide(reqsa)[:3], why(pga))
+        step("statistics (profile, blank, reference, PCA): Rust equals Python's, without Pyodide", stat_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")

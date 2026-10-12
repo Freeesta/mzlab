@@ -8,6 +8,7 @@
   const DEF = { ppm: 5, floor: 2e4, min_height: 2e5, min_points: 5, rt_tol: 0.1, fill: true };
   const st = { pool: null, crate: "", gate: null, files: [], prev: null, auto: { floor: true, ppm: false }, proofs: null, busy: false };
   let dlg = null;
+  const hooks = [];                       // called after the list of files was read again (the section «Run» refreshes its treatment times)
   const $ = q => dlg.querySelector(q);
   const say = (t, err) => { const e = $("#pipe-msg"); if (e) { e.textContent = t || ""; e.className = err ? "err" : "mut"; } };
   const CSS = `#pipe{width:min(1100px,97vw);max-width:97vw;max-height:94vh;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
@@ -60,6 +61,13 @@
   }
   const msg = (key, params) => { try { const t = window.I18N && I18N.t(key, params || {}); return t && t !== key ? t : key; } catch (_) { return key; } };
 
+  /** puts the parameters of a recipe (the `parametri` of a record) into the form; a floor that is not in the recipe stays the estimated one */
+  function apply(p) {
+    const set = (id, v) => { if (v != null) $(id).value = v; };
+    set("#pipe-ppm", p.ppm); set("#pipe-hmin", p.min_height); set("#pipe-npts", p.min_points); set("#pipe-rt", p.rt_tol); set("#pipe-pol", p.polarity); set("#pipe-mode", p.mode);
+    if (typeof p.fill === "boolean") $("#pipe-fill").checked = p.fill;
+    st.auto.floor = p.floor == null; if (p.floor != null) { $("#pipe-floor").value = p.floor; $("#pipe-floor-why").textContent = "chosen"; }
+  }
   /** values of the six parameters (+ Advanced) from the form; `floor` is left out while it is the estimated one */
   function values() {
     const n = id => +$(id).value, v = { polarity: n("#pipe-pol"), mode: $("#pipe-mode").value, ppm: n("#pipe-ppm"), min_height: n("#pipe-hmin"), min_points: n("#pipe-npts"), rt_tol: n("#pipe-rt"), fill: $("#pipe-fill").checked };
@@ -151,19 +159,21 @@
         <label>Fill the gaps<input id="pipe-fill" type="checkbox" checked style="width:24px;height:24px"></label></div>
       <details><summary>Advanced</summary><div class="par"><label>Polarity<select id="pipe-pol"><option value="1">positive</option><option value="-1">negative</option></select></label>
         <label>Rows<select id="pipe-mode"><option value="family">one per family of ions</option><option value="ion">one per ion</option></select></label></div></details>
-      <div id="pipe-proof"></div><div class="charts" id="pipe-hist"><div class="ch a"></div><div class="ch b"></div></div><div class="charts" id="pipe-ex"></div>`;
+      <div id="pipe-proof"></div><div class="charts" id="pipe-hist"><div class="ch a"></div><div class="ch b"></div></div><div class="charts" id="pipe-ex"></div><div id="pipe-run"></div>`;
     $("#pipe-x").onclick = () => dlg.close();
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
+    if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: false }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
   }
   async function refresh() {
     st.files = await listIdx();
+    hooks.forEach(fn => fn());
     $("#pipe-file").innerHTML = st.files.map(n => `<option>${esc(n)}</option>`).join("");
     if (!st.files.length) say("No .mzidx file: open an mzML in Data first, its index is made there.");
   }
   async function open() {
-    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS; document.head.appendChild(s); }
+    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (window.PIPEV ? window.PIPEV.CSS : ""); document.head.appendChild(s); }
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");

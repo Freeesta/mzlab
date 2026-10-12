@@ -14,7 +14,20 @@
 const WORKFLOW = (() => {
   const FORMAT = "mzflow/1";
   const LEGACY_FORMATS = ["mzworkflow/1"];   // old name, still accepted when opening
-  const KNOWN_OPS = ["export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "workflow_applied"];
+  const KNOWN_OPS = ["feature_pipeline", "export_all_ms2_mgf", "export_all_ms2_msp", "export_massbank_record", "export_sirius_ms", "export_mgf_spectrum", "export_msp_spectrum", "export_report", "export_workflow", "qaqc_measure", "qaqc_ratio", "stat_profile", "stat_blank", "stat_reference", "stat_pca", "workflow_applied"];
+  // the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json, written by TP_Mine/js/35_pipeline_recipe.js): the problems of a record, [] when it can be re-applied
+  const FEATURE_KEYS = ["schema", "crate_version", "recipe", "parametri", "ingressi", "tabella_sha256", "regole", "livelli", "sospetti", "ipotesi", "giri"];
+  function checkFeatureOp(o) {
+    const bad = [];
+    if (!o || o.op !== "feature_pipeline") return ["op"];
+    for (const k of FEATURE_KEYS) if (!(k in o)) bad.push(k);
+    if (o.schema !== "feature_pipeline/1") bad.push("schema");
+    try { if (typeof o.recipe !== "string" || typeof JSON.parse(o.recipe) !== "object") bad.push("recipe"); } catch (_) { bad.push("recipe"); }
+    if (!Array.isArray(o.ingressi) || o.ingressi.some(i => !i || !i.nome || !i.sha256)) bad.push("ingressi");
+    if (!/^[0-9a-f]{64}$/.test(String(o.tabella_sha256 || ""))) bad.push("tabella_sha256");
+    return bad.filter((k, i) => bad.indexOf(k) === i);
+  }
+
   // operations a reader of mzflow/1 does not know are ignored (forward compatibility); returns the kept ones and the unknown names
   function splitOps(ops) {
     const keep = [], unknown = [];
@@ -380,6 +393,7 @@ const WORKFLOW = (() => {
     open: openWorkflow,
     applyWorkflow,
     splitOps,
+    checkFeatureOp,
     formatMgf,
     formatMsp,
     exportSpectrumMgf,
