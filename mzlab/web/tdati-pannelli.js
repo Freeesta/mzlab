@@ -68,4 +68,5 @@ TDATI.watch("svg.qq-chart", (el, t) => TDATI.fromDom(el.closest(".qq-ion")?.quer
 TDATI.watch("svg.prof-chart", (el, t) => TDATI.fromDom(el.closest("#prof-res")?.querySelector("table"), t));
 TDATI.watch("svg#pca-loadings", (el, t) => TDATI.fromDom(document.querySelector("#pca-tab"), t));
 TDATI.watch("svg#pca-scores", (el, t) => (window.PCA && PCA.scoresTable ? { title: t, ...PCA.scoresTable() } : null));
+TDATI.watch("svg#kmd-plot", (el, t) => (window.KMD && KMD.plotTable ? { title: t, ...KMD.plotTable() } : null));
 window.TDATI_P = { update, data, text };
