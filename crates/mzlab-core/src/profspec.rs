@@ -11,19 +11,6 @@ use crate::specpeaks::{pad_zeros, profile_peaks};
 
 const MAX_SCANS: usize = 60;
 
-/// `np.rint(mz / step)`.
-fn rint(step: f64) -> impl Fn(f64) -> i64 {
-    move |m| (m / step).round_ties_even() as i64
-}
-
-/// `"mode":"profile","mz":..,"y":..,"pmz":..,"py":..` of `_spec_json`: peaks (m/z to 3 decimals, height to 1) and the padded profile line.
-fn spec_json(o: &mut Out, mz: &[f64], y: &[f64], step: f64) {
-    let (pm, py) = profile_peaks(mz, y, 0.002);
-    let (lm, ly) = pad_zeros(mz, y, step);
-    o.raw("\"mode\":\"profile\",\"mz\":").rounded(&pm, 3).raw(",\"y\":").rounded(&py, 1);
-    o.raw(",\"pmz\":").rounded(&lm, 3).raw(",\"py\":").rounded(&ly, 1);
-}
-
 impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
     fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
@@ -166,4 +153,17 @@ fn window_tail(o: &mut Out, b: &crate::spectrum::Binned) {
     if b.in_win.len() == 1 {
         o.raw(",\"sid\":").int(b.scan_ids[b.sel[b.in_win[0]]]);
     }
+}
+
+/// `np.rint(mz / step)`.
+fn rint(step: f64) -> impl Fn(f64) -> i64 {
+    move |m| (m / step).round_ties_even() as i64
+}
+
+/// `"mode":"profile","mz":..,"y":..,"pmz":..,"py":..` of `_spec_json`: peaks (m/z to 3 decimals, height to 1) and the padded profile line.
+fn spec_json(o: &mut Out, mz: &[f64], y: &[f64], step: f64) {
+    let (pm, py) = profile_peaks(mz, y, 0.002);
+    let (lm, ly) = pad_zeros(mz, y, step);
+    o.raw("\"mode\":\"profile\",\"mz\":").rounded(&pm, 3).raw(",\"y\":").rounded(&py, 1);
+    o.raw(",\"pmz\":").rounded(&lm, 3).raw(",\"py\":").rounded(&ly, 1);
 }
