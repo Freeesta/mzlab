@@ -59,12 +59,23 @@ impl WriteAt for FileSink {
 }
 
 fn sink(out: &str, name: &str) -> Hashing<FileSink> {
-    Hashing::new(FileSink(File::create(Path::new(out).join(name)).expect("create")))
+    Hashing::new(FileSink(
+        File::create(Path::new(out).join(name)).expect("create"),
+    ))
 }
 
 /// The pipeline under a budget, outputs to files; prints the same lines.
 #[allow(clippy::too_many_arguments)]
-fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, rules: &str, pmz: f64, prt: f64) {
+fn budgeted(
+    files: &[String],
+    recipe: &str,
+    out: &str,
+    mb: f64,
+    parent: &str,
+    rules: &str,
+    pmz: f64,
+    prt: f64,
+) {
     let r = run::recipe_from_json(recipe).expect("recipe");
     let budget = MemBudget::mb(mb);
     for p in files {
@@ -77,7 +88,8 @@ fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, ru
         .map(|p| std::fs::read(Path::new(out).join(format!("{}.mzfeatf", base(p)))).expect("read"))
         .collect();
     let mut s = sink(out, "series.mzfeat");
-    run::align_to(&mut stored, &budget, &r, |k| Ok(open(&files[k])), &mut s).unwrap_or_else(|e| panic!("align: {e}"));
+    run::align_to(&mut stored, &budget, &r, |k| Ok(open(&files[k])), &mut s)
+        .unwrap_or_else(|e| panic!("align: {e}"));
     println!("series.mzfeat {}", s.finish().2);
     if parent.is_empty() {
         return;
@@ -85,16 +97,21 @@ fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, ru
     let mut ix: Vec<_> = files.iter().map(|p| open(p)).collect();
     let rt = prt.is_finite().then_some(prt);
     let rules = std::fs::read(rules).expect("rules");
-    let h = run::hypotheses_stored(&mut ix, &mut stored, &rules, parent, rt, &r).expect("hypotheses");
+    let h = run::hypotheses_stored(&mut ix, &mut stored, &rules, "", parent, rt, &r)
+        .expect("hypotheses");
     // the proofs run on the state as another worker would receive it
     let h = mzlab_feat_wasm::state::load(&mzlab_feat_wasm::state::dump(&h)).expect("state");
-    println!("hypotheses {} tried, {} found", h.result.tried, h.result.found);
+    println!(
+        "hypotheses {} tried, {} found",
+        h.result.tried, h.result.found
+    );
     let mins: Vec<f64> = files.iter().map(|p| minutes(&base(p))).collect();
     let par = (pmz.is_finite() && prt.is_finite()).then_some((pmz, prt));
     let mut table = File::open(Path::new(out).join("series.mzfeat")).expect("table");
     let size = table.metadata().expect("size").len();
     let mut s = sink(out, "series_evid.mzfeat");
-    run::evidence_to(&mut table, size, &h, &mins, par, &r, &budget, &mut s).unwrap_or_else(|e| panic!("evidence: {e}"));
+    run::evidence_to(&mut table, size, &h, &mins, par, &r, &budget, &mut s)
+        .unwrap_or_else(|e| panic!("evidence: {e}"));
     println!("series_evid.mzfeat {}", s.finish().2);
 }
 
@@ -142,7 +159,7 @@ fn main() {
     let fr: Vec<_> = feats.iter().collect();
     let rt = prt.is_finite().then_some(prt);
     let rules = std::fs::read(rules).expect("rules");
-    let h = run::hypotheses(&mut ix, &fr, &rules, &parent, rt, &r).expect("hypotheses");
+    let h = run::hypotheses(&mut ix, &fr, &rules, "", &parent, rt, &r).expect("hypotheses");
     println!(
         "hypotheses {} tried, {} found",
         h.result.tried, h.result.found

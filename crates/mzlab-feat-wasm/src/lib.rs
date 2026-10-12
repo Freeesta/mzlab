@@ -103,7 +103,11 @@ struct JsSink {
 impl WriteAt for JsSink {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
         self.write
-            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(data))
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &Uint8Array::from(data),
+            )
             .map(|_| ())
             .map_err(|_| Error::new("error.io"))
     }
@@ -202,7 +206,9 @@ pub fn align_series_to(
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let open = |k| open_one(&read, k, sizes[k]);
-    to_sink(write, |sink| run::align_to(&mut src, &budget, &r, open, sink))
+    to_sink(write, |sink| {
+        run::align_to(&mut src, &budget, &r, open, sink)
+    })
 }
 
 #[cfg(feature = "detect")]
@@ -261,13 +267,16 @@ pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue>
 }
 
 #[cfg(feature = "proofs")]
-/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp.json` bytes), searched in every file. `parent_rt` NaN = the whole run.
+/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp_2.json` bytes), searched in every file. `structure` is the `grafo/1` JSON of the SMILES of the parent
+/// (with `"profile"` to choose the profile of the rules), or empty text. `parent_rt` NaN = the whole run.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn run_hypotheses(
     files: Array,
     read: Function,
     sizes: Vec<f64>,
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: f64,
     recipe: &str,
@@ -276,7 +285,8 @@ pub fn run_hypotheses(
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
     let mut src = JsStored { files };
-    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, parent, rt, &r).map_err(js_err)?;
+    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r)
+        .map_err(js_err)?;
     Ok(Hypotheses { inner })
 }
 
@@ -305,7 +315,16 @@ pub fn build_evidence_to(
     };
     to_sink(write, |sink| {
         let size = table_size as u64;
-        run::evidence_to(&mut table, size, &hypotheses.inner, &minutes, parent, &r, &budget, sink)
+        run::evidence_to(
+            &mut table,
+            size,
+            &hypotheses.inner,
+            &minutes,
+            parent,
+            &r,
+            &budget,
+            sink,
+        )
     })
 }
 
@@ -325,7 +344,16 @@ pub fn build_evidence(
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut at = mzlab_feat::store::Slice(table);
-    run::evidence_to(&mut at, table.len() as u64, &hypotheses.inner, &minutes, parent, &r, &budget, &mut out)
-        .map_err(js_err)?;
+    run::evidence_to(
+        &mut at,
+        table.len() as u64,
+        &hypotheses.inner,
+        &minutes,
+        parent,
+        &r,
+        &budget,
+        &mut out,
+    )
+    .map_err(js_err)?;
     Ok(out)
 }

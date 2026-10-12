@@ -25,6 +25,7 @@ fn none<'a>() -> Inputs<'a> {
         families: &[],
         imported: &[],
         fragments: &[],
+        groups: None,
     }
 }
 
@@ -121,7 +122,7 @@ fn two_runs_give_the_same_registry() {
 
 #[test]
 fn unknown_version_and_format_are_refused() {
-    let e = Rules::parse(br#"{"format":"regole_tp","version":2,"regole":[]}"#)
+    let e = Rules::parse(br#"{"format":"regole_tp","version":3,"regole":[]}"#)
         .err()
         .unwrap();
     assert_eq!(e.key, "error.hypo.rulesVersion");

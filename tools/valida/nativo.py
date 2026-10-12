@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import struct
 import subprocess
@@ -21,7 +22,7 @@ from .tabelle import Tabella
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
 CELLA_RILEVATA, CELLA_MIRATA, CELLA_RIEMPITA, CELLA_ASSENTE = 0, 1, 2, 3
 ESEMPIO = ROOT / "target" / "release" / "examples" / "nativo"
-REGOLE = ROOT / "TP_Mine" / "data" / "regole_tp.json"
+REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp.json")
 
 
 def apri(dati: bytes) -> tuple[dict, dict]:

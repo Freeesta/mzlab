@@ -24,7 +24,7 @@ const stored = files.map((f, k) => {
 });
 let s = sink("series.mzfeat");
 feat.align_series_to(stored, read, sizes, recipe, s.write, 192); fs.closeSync(s.fd); mark("align", featMem);
-const h = feat.run_hypotheses(stored, read, sizes, fs.readFileSync(process.env.RULES), "C21H32N2O2", 1.0, recipe); mark("hypotheses", featMem);
+const h = feat.run_hypotheses(stored, read, sizes, fs.readFileSync(process.env.RULES), "", "C21H32N2O2", 1.0, recipe); mark("hypotheses", featMem);
 const fd = fs.openSync(path.join(out, "series.mzfeat"), "r");
 s = sink("series_evid.mzfeat");
 const minutes = Float64Array.from(files, f => { const m = /_t(\d+)min/.exec(base(f)); return m ? Number(m[1]) : NaN; });

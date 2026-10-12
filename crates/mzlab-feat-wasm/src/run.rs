@@ -5,21 +5,24 @@ use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
+use mzlab_feat::evid::rowproofs::row_signs;
 use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
 use mzlab_feat::facts::{file_facts, FileFacts};
-use mzlab_feat::evid::rowproofs::row_signs;
-use mzlab_feat::hypo::{generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules};
+use mzlab_feat::hypo::{
+    generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules, Structure,
+};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
 use mzlab_feat::slabs::{align_and_fill_stored, Stored};
 use mzlab_feat::store::{
-    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_tp, write_table_with_evid, Origin, Slice,
+    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to,
+    write_table_tp, write_table_with_evid, Origin, Slice,
 };
 use mzlab_feat::table::{FileFeatures, RowIdent};
-use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
+use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
 pub fn recipe_from_json(text: &str) -> Result<Recipe> {
@@ -125,7 +128,10 @@ pub fn align<R: ReadAt>(
 }
 
 /// How each of the `n` inputs was acquired, read from its index.
-fn facts_of<R: ReadAt>(n: usize, open: &mut impl FnMut(usize) -> Result<Index<R>>) -> Result<Vec<FileFacts>> {
+fn facts_of<R: ReadAt>(
+    n: usize,
+    open: &mut impl FnMut(usize) -> Result<Index<R>>,
+) -> Result<Vec<FileFacts>> {
     (0..n).map(|k| Ok(file_facts(&open(k)?))).collect()
 }
 
@@ -160,25 +166,34 @@ pub struct HypoRun {
     pub result: TargetResult,
 }
 
-/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp.json`) and the parameters of the targeted pass.
+/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_2.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
+/// the parameters of the targeted pass.
 fn hypotheses_setup(
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     polarity: i8,
 ) -> Result<(Registry, TargetParams)> {
+    let st = Structure::parse(structure)?;
+    st.check_parent(parent)?;
     let inp = HypoInputs {
         parent,
         suspects: None,
         families: &[],
         imported: &[],
-        fragments: &[],
+        fragments: &st.fragments,
+        groups: st.groups.as_deref(),
     };
     let hp = HypoParams {
         polarity,
         ..HypoParams::default()
     };
-    let registry = generate(&Rules::parse(rules)?, &inp, &hp)?;
+    let registry = generate(
+        &Rules::parse_profile(rules, st.profile.as_deref())?,
+        &inp,
+        &hp,
+    )?;
     let tp = TargetParams {
         polarity,
         parent_rt,
@@ -192,11 +207,18 @@ pub fn hypotheses<R: ReadAt>(
     indexes: &mut [Index<R>],
     feats: &[&FileFeatures],
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
-    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, r.detect.polarity.unwrap_or(1))?;
+    let (mut registry, tp) = hypotheses_setup(
+        rules,
+        structure,
+        parent,
+        parent_rt,
+        r.detect.polarity.unwrap_or(1),
+    )?;
     let result = run(indexes, feats, &mut registry, &tp)?;
     Ok(HypoRun { registry, result })
 }
@@ -206,12 +228,13 @@ pub fn hypotheses_stored<R: ReadAt>(
     indexes: &mut [Index<R>],
     src: &mut dyn Stored,
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
     let polarity = r.detect.polarity.unwrap_or(1);
-    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, polarity)?;
+    let (mut registry, tp) = hypotheses_setup(rules, structure, parent, parent_rt, polarity)?;
     let n = indexes.len().min(src.count());
     let mut load = |k: usize| Ok(read_file(&src.bytes(k)?)?.0);
     let result = mzlab_feat::target::run_loading(indexes, n, &mut load, &mut registry, &tp)?;
@@ -311,10 +334,25 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
 }
 
 /// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
-fn tp_block(inp: &Inputs, minutes: &[f64], hyps: &[Hypothesis], parent: Option<(f64, f64)>) -> TpBlock {
-    let Some(parent) = parent else { return TpBlock::default() };
+fn tp_block(
+    inp: &Inputs,
+    minutes: &[f64],
+    hyps: &[Hypothesis],
+    parent: Option<(f64, f64)>,
+) -> TpBlock {
+    let Some(parent) = parent else {
+        return TpBlock::default();
+    };
     let signs = row_signs(inp);
-    let tp = TpInputs { aligned: inp.aligned, minutes, hyps, signs: &signs, parent, fragments: None, params: &TpParams::default() };
+    let tp = TpInputs {
+        aligned: inp.aligned,
+        minutes,
+        hyps,
+        signs: &signs,
+        parent,
+        fragments: None,
+        params: &TpParams::default(),
+    };
     build_tp(&tp).ok().flatten().unwrap_or_default()
 }
 

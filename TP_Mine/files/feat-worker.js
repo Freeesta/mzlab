@@ -273,7 +273,7 @@ const OPS = {
     if (hypo) { hypo.free(); hypo = null; }
     const f = await openAll(m.paths);
     try {
-      hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
+      hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.structure || "", m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
       return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json(), state: hypo.state() };
     } finally { f.close(); }
   },
