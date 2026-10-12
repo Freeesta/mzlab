@@ -709,7 +709,7 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
   const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
     const ui=ConvUI.start(box,++i,n,f.name);
-    try{const name=f.name.replace(/\.raw$/i,".mzML"),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert

@@ -27,3 +27,8 @@ def test_phase_and_percent():
 def test_elapsed_and_megabytes():
     assert run("console.log(JSON.stringify([0,999,1000,65000,3599000,3600000,7325000].map(c.convElapsed)))") == ["0:00", "0:00", "0:01", "1:05", "59:59", "1:00:00", "2:02:05"]
     assert run("console.log(JSON.stringify([c.convMB(1048576*3.14), c.convMB(1048576*250)]))") == ["3.1", "250"]
+
+
+def test_converted_name_keeps_the_extension_when_taken():
+    got = run("""console.log(JSON.stringify([c.convName("a.raw",[]), c.convName("a.RAW",["b.mzML"]), c.convName("a.raw",["A.mzml"]), c.convName("a.raw")]))""")
+    assert got == ["a.mzML", "a.mzML", "a.raw.mzML", "a.mzML"]
