@@ -80,8 +80,8 @@ fn separated_ions_become_two_rows() {
 
 #[test]
 fn apexes_closer_than_the_limit_stay_one() {
-    // 8 scans = 0.08 min apart with a deep valley: not two ions
-    let f = run(&two(8.0, 900.0, 1.5));
+    // 3 scans = 0.03 min apart with a deep valley: not two ions
+    let f = run(&two(3.0, 900.0, 0.7));
     assert!(f.pieces.is_empty());
 }
 
