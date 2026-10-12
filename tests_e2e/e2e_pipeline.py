@@ -1,5 +1,6 @@
 """Panel «Pipeline» of mzFinder (TP_Mine/js/32_pipeline.js, 33_pipeline_view.js, 34_pipeline_run.js). Part 1: parameters with their proof, preview on one file, gate of quality (cancello.json).
 Part 2: run on the series, list of identities (gate open) or of rows (gate absent: no candidate in the DOM), detail with XIC and MS2, 10 000 rows virtualized, send to the feature tables.
+Part 3: the recipe in the log and in the .mzflow, «Re-apply» (same SHA-256 of the table), unknown operation.
 Builds the site (python3 tools/build_site.py) and the two .wasm of the feature engine (tools/build_feat_wasm.sh), writes a synthetic .mzidx to OPFS, turns mzFinder on and
 opens the panel. Needs cargo, the wasm32 target, wasm-bindgen and numpy (SKIP without). MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site (the TP_Mine
 files are copied over it); MZLAB_PIPE_MZIDX=<file .mzidx> adds the time of the preview on a real file (its time is printed).
@@ -35,6 +36,8 @@ if not reuse:
 else:                                                      # fresh sources of mzFinder over the site that was built
     for sub in ("js", "files"):
         for f in (ROOT / "TP_Mine" / sub).glob("*"): shutil.copy2(f, site / "static" / "mzfinder" / f.name)
+    ix = site / "static" / "mzfinder" / "indice.json"; d = json.loads(ix.read_text())
+    d["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); ix.write_text(json.dumps(d))
 data = site / "static" / "dati_pipeline"; data.mkdir(exist_ok=True)
 ser = tmp / "ser"
 subprocess.run([sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser)], cwd=ROOT, check=True, capture_output=True)
@@ -206,10 +209,38 @@ try:
             pg.evaluate("document.querySelector('#pv-big').remove()")
         step("10 000 rows are virtualized: few nodes in the DOM", virtual)
 
+        def recipe_logged():
+            ops = pg.evaluate("NB.ops.filter(o => o.op === 'feature_pipeline')"); assert len(ops) >= 1, ops
+            o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
+            assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
+            assert o["genitore"]["formula"] == "C21H32N2O2" and json.loads(o["recipe"]) == o["parametri"]
+            wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
+            pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
+        step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
+
+        def reopen_and_again():
+            pg.evaluate("document.querySelector('#unt') && document.querySelector('#unt').close(); NB.ops = []; PIPER.state.last = null; null"); pg.evaluate("PIPE.open()")
+            pg.wait_for_function("document.querySelector('#pipe-again').disabled === true", timeout=20000)
+            pg.evaluate("WORKFLOW.applyWorkflow(window.__wf)")
+            pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelector('#pipe-again') && !document.querySelector('#pipe-again').disabled", timeout=20000)
+            pg.fill("#pipe-floor", "1"); pg.fill("#pipe-pf", "")                       # the recipe must bring them back
+            pg.click("#pipe-again")
+            pg.wait_for_function("/Re-applied/.test(document.querySelector('#pipe-run-msg').textContent)", timeout=180000)
+            m = pg.inner_text("#pipe-run-msg"); assert "identical" in m and pg.evaluate("window.__sha").startswith(m.split("SHA-256 ")[1][:12]), m
+            assert pg.input_value("#pipe-pf") == "C21H32N2O2" and float(pg.evaluate("PIPE.values().floor")) == 5e4
+        step("saved, reopened and «Re-apply» give the same table (same SHA-256)", reopen_and_again)
+
+        def unknown_op():
+            pg.evaluate("window.__msgs = []; const i = window.info; window.info = m => { window.__msgs.push(String(m)); }; null")
+            ok = pg.evaluate("WORKFLOW.applyWorkflow(Object.assign({}, window.__wf, { operazioni: window.__wf.operazioni.concat([{ op: 'dal_futuro' }]) }))")
+            ops = pg.evaluate("NB.ops.map(o => o.op)"); assert "dal_futuro" not in ops and "feature_pipeline" in ops, ops
+            assert any("dal_futuro" in m for m in pg.evaluate("window.__msgs")), pg.evaluate("window.__msgs")
+        step("a .mzflow with an unknown operation opens with a warning", unknown_op)
+
         AXE = axe_path()
         def axe():
             pg.add_script_tag(path=AXE)
-            v = pg.evaluate("""axe.run('#pipe', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))""")
+            v = pg.evaluate("""axe.run('#pipe', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length, v.nodes.map(n => n.target.join(' ')).join(' | ').slice(0, 200)]))""")
             assert not v, v
         step("axe: the panel has no violation", axe) if AXE else print("  SKIP axe-core not available")
 
