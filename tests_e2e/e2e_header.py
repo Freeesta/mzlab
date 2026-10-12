@@ -20,6 +20,7 @@ try:
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
             ps = pg.locator("#helppop p"); assert ps.count() == 3, ps.count()
+            assert "{" not in pg.inner_text("#helppop") and pg.locator("#helppop p").first.inner_text().startswith(pg.evaluate("APP_NAME") + " "), "the name of the program fills {app}"
             assert ps.nth(2).inner_text().startswith("Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).")
             assert pg.get_attribute("#helppop a", "href") == "mailto:federico.cristaudo@unito.it"
             pg.keyboard.press("Escape")
