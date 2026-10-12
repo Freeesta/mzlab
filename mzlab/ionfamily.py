@@ -489,7 +489,7 @@ def rankdata(a) -> np.ndarray:
 
 
 def wpearson(x, y, w=None) -> float:
-    """Weighted Pearson correlation (NaN if a trace is constant)."""
+    """Weighted Pearson correlation (NaN if a trace is constant, also up to rounding noise)."""
     x, y = np.asarray(x, float), np.asarray(y, float)
     if len(x) < 3:
         return float("nan")
@@ -500,8 +500,8 @@ def wpearson(x, y, w=None) -> float:
     mx, my = (w * x).sum() / sw, (w * y).sum() / sw
     cx, cy = x - mx, y - my
     vx, vy = (w * cx * cx).sum(), (w * cy * cy).sum()
-    if vx <= 1e-300 or vy <= 1e-300:
-        return float("nan")
+    if vx <= 1e-300 or vy <= 1e-300 or vx <= 1e-24 * sw * mx * mx or vy <= 1e-24 * sw * my * my:
+        return float("nan")                              # constant up to rounding noise (the sums differ by an ulp between numpy builds)
     return float((w * cx * cy).sum() / math.sqrt(vx * vy))
 
 
