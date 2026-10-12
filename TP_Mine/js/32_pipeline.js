@@ -61,6 +61,13 @@
   }
   const msg = (key, params) => { try { const t = window.I18N && I18N.t(key, params || {}); return t && t !== key ? t : key; } catch (_) { return key; } };
 
+  /** puts the parameters of a recipe (the `parametri` of a record) into the form; a floor that is not in the recipe stays the estimated one */
+  function apply(p) {
+    const set = (id, v) => { if (v != null) $(id).value = v; };
+    set("#pipe-ppm", p.ppm); set("#pipe-hmin", p.min_height); set("#pipe-npts", p.min_points); set("#pipe-rt", p.rt_tol); set("#pipe-pol", p.polarity); set("#pipe-mode", p.mode);
+    if (typeof p.fill === "boolean") $("#pipe-fill").checked = p.fill;
+    st.auto.floor = p.floor == null; if (p.floor != null) { $("#pipe-floor").value = p.floor; $("#pipe-floor-why").textContent = "chosen"; }
+  }
   /** values of the six parameters (+ Advanced) from the form; `floor` is left out while it is the estimated one */
   function values() {
     const n = id => +$(id).value, v = { polarity: n("#pipe-pol"), mode: $("#pipe-mode").value, ppm: n("#pipe-ppm"), min_height: n("#pipe-hmin"), min_points: n("#pipe-npts"), rt_tol: n("#pipe-rt"), fill: $("#pipe-fill").checked };
@@ -157,7 +164,7 @@
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
-    if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: false }, pool: getPool, recipe: () => recipe(values()), values, msg, chart });
+    if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: false }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
   }
   async function refresh() {
     st.files = await listIdx();

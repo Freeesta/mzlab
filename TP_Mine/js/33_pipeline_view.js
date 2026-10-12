@@ -91,20 +91,20 @@
     const head = gated ? HEAD_CAND : HEAD_PLAIN;
     el.innerHTML = `<div class="pv-head" role="rowgroup"><div role="row" class="pv-hrow">${head.map(h => `<span role="columnheader">${h}</span>`).join("")}</div></div><div class="pv-scroll" role="rowgroup"><div class="pv-space"><div class="pv-win"></div></div></div>`;
     el.setAttribute("role", "grid"); el.setAttribute("aria-label", "Identities"); el.setAttribute("aria-rowcount", "0"); el.tabIndex = 0;
-    el.classList.toggle("pv-cand", gated);
-    const sc = el.querySelector(".pv-scroll"), space = el.querySelector(".pv-space"), win = el.querySelector(".pv-win");
+    el.classList.add("pv-grid"); el.classList.toggle("pv-cand", gated);
+    const sc = el, hd = el.querySelector(".pv-head"), space = el.querySelector(".pv-space"), win = el.querySelector(".pv-win");
     let list = [], sel = -1, raf = 0;
     const draw = () => {
       raf = 0;
-      const h = sc.clientHeight || 400, a = Math.max(0, Math.floor(sc.scrollTop / ROW_H) - 4), b = Math.min(list.length, Math.ceil((sc.scrollTop + h) / ROW_H) + 4);
+      const h = (sc.clientHeight || 400) - hd.offsetHeight, a = Math.max(0, Math.floor(sc.scrollTop / ROW_H) - 4), b = Math.min(list.length, Math.ceil((sc.scrollTop + h) / ROW_H) + 4);
       let s = ""; for (let i = a; i < b; i++) s += rowHtml(list[i], i, gated, sel);
       win.innerHTML = s;
     };
     const later = () => { if (!raf) raf = requestAnimationFrame(draw); };
     const pick = i => {
       if (i < 0 || i >= list.length) return;
-      sel = i; const top = i * ROW_H;
-      if (top < sc.scrollTop) sc.scrollTop = top; else if (top + ROW_H > sc.scrollTop + sc.clientHeight) sc.scrollTop = top + ROW_H - sc.clientHeight;
+      sel = i; const top = i * ROW_H, vis = sc.clientHeight - hd.offsetHeight;
+      if (top < sc.scrollTop) sc.scrollTop = top; else if (top + ROW_H > sc.scrollTop + vis) sc.scrollTop = top + ROW_H - vis;
       draw(); el.setAttribute("aria-activedescendant", "pv-r" + i); onPick(list[i], i);
     };
     sc.addEventListener("scroll", later);
@@ -120,7 +120,7 @@
 
   const CSS = `#pipe{--pv-d:#0072b2;--pv-t:#e69f00;--pv-f:#56b4e9;--pv-a:#767676}.pv-hrow,.pv-row{display:grid;gap:6px;align-items:center;padding:0 6px}
 .pv-hrow,.pv-row{grid-template-columns:56px 90px 80px 70px minmax(90px,1fr)}.pv-cand .pv-hrow,.pv-cand .pv-row{grid-template-columns:56px 90px 110px 50px minmax(160px,1fr) 44px minmax(90px,150px) 150px}
-.pv-hrow{font-size:11px;color:var(--muted);border-bottom:1px solid var(--line);min-height:24px}.pv-scroll{height:min(420px,50vh);overflow:auto;position:relative;border:1px solid var(--line);border-radius:6px}.pv-space{position:relative}.pv-win{position:absolute;left:0;right:0;top:0}
+.pv-hrow{font-size:11px;color:var(--muted);border-bottom:1px solid var(--line);min-height:24px}.pv-grid{height:min(420px,50vh);overflow:auto;position:relative;border:1px solid var(--line);border-radius:6px}.pv-head{position:sticky;top:0;z-index:1;background:var(--bg)}.pv-space{position:relative}.pv-win{position:absolute;left:0;right:0;top:0}
 .pv-row{position:absolute;left:0;right:0;height:${ROW_H}px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden}.pv-row.pv-sel{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}.pv-row .n{text-align:right}
 .pv-chip{display:inline-block;padding:0 4px;margin-right:3px;border:1px solid var(--line);border-radius:4px;font-size:10px}.pv-chip.pv-against{color:var(--bad);border-color:var(--bad);font-weight:600}
 .pv-c{display:inline-block;width:14px;height:14px;margin-right:1px;text-align:center;font-size:9px;line-height:14px;color:#fff;border-radius:2px}.pv-c0{background:var(--pv-d)}.pv-c1{background:var(--pv-t);color:#000}.pv-c2{background:var(--pv-f);color:#000}.pv-c3{background:var(--pv-a)}
