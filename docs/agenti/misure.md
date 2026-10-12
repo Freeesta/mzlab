@@ -232,7 +232,7 @@ Parità: stessi candidati nello stesso ordine e numeri entro 1e-9 per `compositi
 | 60 scansioni singole | 92 | 29-30 | 220 / 85 |
 | una scansione singola | 1,6-2,7 | 4-5 (una lettura dell'indice intero) | – |
 
-Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i punti sono sommati sulla griglia `rint(m/z / passo)` con il passo letto da venti scansioni a metà corsa, come `Item._step`.
+Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i punti sono sommati sulla griglia `rint(m/z / passo)` con il passo letto da venti scansioni a metà corsa, come `Item._step`; se nessuna di quelle ha più di 20 punti (convertitore che omette i bin a zero, come il lettore `.wiff`) il passo viene dalle scansioni della sezione che li hanno (fino a venti, l'intervallo più corto).
 
 ## Rilevatori di picchi e misure di qualità (`peakq.rs` contro `peaks::detect_peaks`, nativo, release, media di 20 giri, traccia sintetica di 15 min con tre picchi gaussiani e rumore)
 | Punti della traccia | CWT (ms) | prominenza + minimo locale (ms) | misure di qualità (µs per picco) |

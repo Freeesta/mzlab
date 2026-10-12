@@ -500,6 +500,8 @@ I18N.add("it", {
   "err.route.unavailable": "Questa operazione non è disponibile per questi dati.",
   "error.memoryBudget": "Il file è troppo grande per la memoria che il browser concede al motore di calcolo.",
   "err.engine.index": "Non riesco a leggere questo file: {name}",
+  "err.engine.indexWhy": "Non riesco a leggere questo file: {name} (indicizzazione fallita: {detail}).",
+  "err.engine.indexCrash": "L'indicizzazione di {name} si è interrotta (probabile memoria esaurita del browser). Chiudi le altre schede e riprova.",
   "err.memory.tooBig": "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "err.memory.over4gb": "file oltre 4 GB: troppo grande. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "tabs.overview.title": "Tempi ed esperimenti",
@@ -1482,7 +1484,7 @@ I18N.add("it", {
   "help.adducts.body": "La ionizzazione electrospray (ESI) è un metodo <i>soft</i> che produce ioni intatti per aggiunta o rimozione di ioni di fondo (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, HCOO<sup>−</sup>, Cl<sup>−</sup>...). Inserisci la massa neutra o la formula bruta per visualizzare tutti gli addotti teorici calcolati sia in ESI+ che in ESI−.",
   "help.header.body": "<p style=\"margin:0 0 8px\">{app} è uno strumento gratuito e open source. Non carica mai dati o file personali: tutto resta nel tuo browser.</p><p style=\"margin:0 0 8px\">Questa versione è ancora in lavorazione.</p><p style=\"margin:0\">Suggerimenti e correzioni: <a href=\"mailto:federico.cristaudo@unito.it\">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).</p>",
   "header.fullscreen": "Schermo intero",
-  "header.fullscreen.exit": "Esci da schermo intero",
+  "header.fullscreen.exit": "Esci dallo schermo intero (Esc)",
   "help.close": "Chiudi",
   "help.guide.open": "Aprire i dati",
   "help.guide.charts": "Lavorare con i grafici",
@@ -3184,5 +3186,6 @@ I18N.add("it", {
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
   "error.badRecipe": "I parametri della pipeline non sono validi.",
-  "logo.gold.live": "Il logo è diventato dorato"
+  "logo.gold.live": "Il logo è diventato dorato",
+  "logo.normal.live": "Il logo è tornato normale"
 });
