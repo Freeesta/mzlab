@@ -41,6 +41,7 @@ try:
         step("2.4: scan line on the row of the x axis title", below)
         def tabs():
             assert pg.evaluate("document.querySelectorAll('#dtabs .qi, #flst .qi').length") == 0, "no icons in tabs / file list"
+            pg.evaluate("scrollTo(0, 0)"); hold(pg, 300)      # a scroll event would cancel the pending tooltip
             b = pg.locator("#dtabs [data-t=ms2]"); b.hover(); hold(pg, 900)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "not yet at 0.9 s"
             hold(pg, 800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))

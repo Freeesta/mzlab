@@ -3,7 +3,7 @@
 function place(w, h) {
   // a new panel goes under the existing ones, as wide as the page
   const W = w || hostWidth(), H = h || 300;
-  const tp = tabPanels(), y = tp.length ? Math.max(...tp.map(p => p.y + p.h)) + 10 : 0;
+  const tp = tabPanels(), y = tp.length ? Math.max(...tp.map(p => p.y + p.h)) + pnlGap() : 0;
   return { x: 0, y, w: W, h: H, full: !w };
 }
 // fixed slots: full-width panels sit one under the other; dragging one up or down makes the others change place
@@ -15,7 +15,8 @@ const followers = p => {
   const f = tabPanels().filter(q => q !== p && q.full && q.el && q.type === "spec" && (q.link === p.id || q.src === p.id));
   return [...f, ...tabPanels().filter(q => q.full && q.el && q.type === "spec" && q.dock != null && f.some(x => x.id === q.dock))];       // + the MS2 panel docked to one of them
 };
-const gapAfter = (a, b) => (window.DDA && b && DDA.joined(a, b)) ? 0 : 10;       // the chromatogram and its Full Scan of a DDA trio touch each other
+const pnlGap = () => pnlGap.v ??= (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--pnl-gap")) || 6);      // space between stacked panels: the CSS token
+const gapAfter = (a, b) => (window.DDA && b && DDA.joined(a, b)) ? 0 : pnlGap();       // the chromatogram and its Full Scan of a DDA trio touch each other
 function restack(drag, final, grp = []) {
   grp = grp.filter(q => !dockedP(q));
   const st = tabPanels().filter(q => q.full && q.el && !dockedP(q));
