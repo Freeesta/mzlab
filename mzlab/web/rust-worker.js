@@ -101,6 +101,18 @@ async function lrMigrate() {                                              // wha
     try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
   }
 }
+async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
+  await ARCH.ensureRoom(m.blob.size);                                 // room first (error.quota with the MB needed and free), never write hoping
+  idxPool().cancel(m.name);
+  engine.close(slotOf(m.name));
+  await ARCH.remove("idx", m.name + ".mzidx");
+  let f;
+  try { f = await ARCH.put("files", m.name, m.blob); }
+  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
+  lrFile.set(m.name, f);
+  await ARCH.persistOnce();
+  return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
+}
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -114,18 +126,7 @@ async function lrOp(m) {
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
-    case "lr_put": {                                                      // an uploaded file: into OPFS, replacing the one of the same name and its index
-      await ARCH.ensureRoom(m.blob.size);                                 // room first (error.quota with the MB needed and free), never write hoping
-      idxPool().cancel(m.name);
-      engine.close(slotOf(m.name));
-      await ARCH.remove("idx", m.name + ".mzidx");
-      let f;
-      try { f = await ARCH.put("files", m.name, m.blob); }
-      catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
-      lrFile.set(m.name, f);
-      await ARCH.persistOnce();
-      return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
-    }
+    case "lr_put": return lrPut(m);
     case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
