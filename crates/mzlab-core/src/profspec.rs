@@ -11,19 +11,6 @@ use crate::specpeaks::{pad_zeros, profile_peaks};
 
 const MAX_SCANS: usize = 60;
 
-/// The spacing from the m/z of one scan: its shortest gap above 1e-4 Da, to 4 decimals.
-fn step_of(mz: &[f64]) -> Option<f64> {
-    gap_step(mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min))
-}
-
-fn gap_step(gap: f64) -> Option<f64> {
-    if !gap.is_finite() {
-        return None;
-    }
-    let step = (gap * 1e4).round_ties_even() / 1e4;
-    (step > 0.0).then_some(step)
-}
-
 impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
     fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
@@ -231,4 +218,17 @@ fn spec_json(o: &mut Out, mz: &[f64], y: &[f64], step: f64) {
     let (lm, ly) = pad_zeros(mz, y, step);
     o.raw("\"mode\":\"profile\",\"mz\":").rounded(&pm, 3).raw(",\"y\":").rounded(&py, 1);
     o.raw(",\"pmz\":").rounded(&lm, 3).raw(",\"py\":").rounded(&ly, 1);
+}
+
+/// The spacing from the m/z of one scan: its shortest gap above 1e-4 Da, to 4 decimals.
+fn step_of(mz: &[f64]) -> Option<f64> {
+    gap_step(mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min))
+}
+
+fn gap_step(gap: f64) -> Option<f64> {
+    if !gap.is_finite() {
+        return None;
+    }
+    let step = (gap * 1e4).round_ties_even() / 1e4;
+    (step > 0.0).then_some(step)
 }
