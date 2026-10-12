@@ -390,6 +390,8 @@
   "conv.detail.eta": "Numeri sotto la barra della conversione: {eta} = tempo stimato rimanente (m:ss).",
   "conv.detail.handover": "Numeri sotto la barra quando l'app desktop passa l'mzML alla pagina: {done}/{total} = MB passati e totali, {elapsed} = tempo trascorso.",
   "conv.detail.wait": "Numeri sotto la barra prima delle scansioni, mentre si legge l'indice del file; {elapsed} = tempo trascorso (m:ss).",
+  "conv.row.run": "Riga di un campione .wiff nell'elenco dei file mentre viene convertito; {pc} = percentuale della conversione.",
+  "conv.row.index": "Riga di un campione .wiff nell'elenco dei file mentre viene indicizzato; {pc} = percentuale.",
   "conv.total": "Barra del totale con più file .raw; {pc} = percentuale di tutti i file (pesata sulla dimensione).",
   "qaqc.ratio.atleast": "Intestazione di colonna del pannello QA/QC: il rapporto campione/bianco raggiunge la soglia scelta. {thr} = 3 o 10.",
   "qaqc.ratio.sum": "Riga sopra la tabella del rapporto campione/bianco di uno ione. {mz} = m/z, {blank} = area media dei bianchi, {thr} = soglia (3 o 10).",

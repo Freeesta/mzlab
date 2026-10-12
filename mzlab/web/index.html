@@ -628,7 +628,8 @@ function renderFiles(){const F=ST.files,el=$("#flist");
    `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
-  el.innerHTML=F.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
+  rows+=CONVROWS.html(ncol);
+  el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
       if(k==="time"||k==="conc"){v=parseDecimal(x.value);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=timeStored(v,tunitGet())}
@@ -685,16 +686,20 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
   if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
-  const jobs=[];
-  for(const [k,e] of [...WIFF_WAIT]){
+  const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],pairs=[];
+  for(const [k,e] of [...WIFF_WAIT]){      // a pair is in the list as soon as its two files are together, before anything is read
     if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
-    WIFF_WAIT.delete(k);
-    try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>jobs.push({e,n,several:s.length>1}))}catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}}
-  const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],g=ConvUI.group(box,jobs.map(j=>j.e.scan.size));let i=0;
-  for(const j of jobs){if(g.signal.aborted)break;      // cancelled: the samples still to convert are left out
-    const nm=wiffName(j.e.stem,j.n,j.several,taken),ui=g.start(++i,nm);
-    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>ui.update(p));taken.push(nm);CONV.add(nm,blob);res.files.push(new File([blob],nm));ui.done();renderFiles()}
-    catch(x){ui.fail(x.json?I18N.err(x.json).message:x.message)}}
+    WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open")}
+  const jobs=[];
+  for(const e of pairs){
+    try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>{const j={e,n,several:s.length>1};j.nm=wiffName(e.stem,n,j.several,taken);taken.push(j.nm);jobs.push(j);CONVROWS.add(j.nm,"wait")})}
+    catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
+    CONVROWS.drop(e.row)}
+  const g=ConvUI.group(box,jobs.map(j=>j.e.scan.size));let i=0;
+  for(const j of jobs){if(g.signal.aborted){CONVROWS.drop(j.nm);continue}      // cancelled: the samples still to convert are left out
+    const ui=g.start(++i,j.nm);CONVROWS.set(j.nm,"run",0);
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{ui.update(p);CONVROWS.set(j.nm,"run",convPercent(p))});CONV.add(j.nm,blob);res.files.push(new File([blob],j.nm));ui.done();CONVROWS.set(j.nm,"conv")}
+    catch(x){CONVROWS.drop(j.nm);ui.fail(x.json?I18N.err(x.json).message:x.message)}}
   g.end();
   return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -741,10 +746,11 @@ async function upload(files,into){const box=$("#up");fail();const wr=await wiffT
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
-      if(j.error)throw I18N.err(j);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
+    CONVROWS.set(f.name,"index",0);
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b))});
+      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
-    catch(e){row.remove();(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
+    catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
   reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}

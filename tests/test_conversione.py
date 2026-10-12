@@ -50,3 +50,9 @@ def test_converted_name_keeps_the_extension_when_taken():
 def test_wiff_sample_name():
     got = run("""console.log(JSON.stringify([c.wiffName("FullMass",3,false,[]), c.wiffName("FullMass",3,true,[]), c.wiffName("FullMass",3,true,["fullmass_S3.mzml"]), c.wiffName("x",1,false,["X.mzML"])]))""")
     assert got == ["FullMass.mzML", "FullMass_s3.mzML", "FullMass_s3.wiff.mzML", "x.wiff.mzML"]
+
+
+def test_the_rows_of_the_files_being_converted_have_a_text_for_each_state():
+    # CONVROWS shows a sample in the list of the files from the pairing of its .wiff and .wiff.scan: one key per state, an unknown state is "queued"
+    got = run("console.log(JSON.stringify(['open','wait','run','conv','index','x'].map(c.convRowKey)))")
+    assert got == ["conv.row.open", "conv.row.wait", "conv.row.run", "conv.row.conv", "conv.row.index", "conv.row.wait"]
