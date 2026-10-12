@@ -1,5 +1,5 @@
 //! `api/origin` ("Da dove viene questo ione?") over the files of the session, from their indexes: `App.origin` of Python.
-//! Unit-resolution centroid files only; `Ok(None)` = Python's (profile or high resolution, which keep their own path).
+//! Any full-scan file with an index (unit or high resolution, centroids or profile points); `Ok(None)` = Python's (a file without index).
 
 use std::collections::HashMap;
 
@@ -67,12 +67,11 @@ fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>,
 /// The report of `App.origin` for the session `items` (whose indexes are in `routes`, by slot), or `None` when Python must answer.
 pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>, a: &Ask) -> Result<Option<Value>> {
     let mut full: Vec<(usize, &ItemMeta)> = Vec::new();
+    let mut hr = false;
     for (i, it) in items.iter().enumerate() {
         let Some(r) = routes.get(&it.slot) else { return Ok(None) };
-        if r.idx.scans.iter().any(|s| s.profile) || group_is_hr(&r.idx.scans, true) {
-            return Ok(None);
-        }
         if it.full && has_scans(r, 1) {
+            hr |= group_is_hr(&r.idx.scans, true);
             full.push((i, it));
         }
     }
@@ -101,7 +100,7 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
     for (k, v) in fields {
         out.set(&k, v);
     }
-    out.set("hr", Value::Bool(false));
+    out.set("hr", Value::Bool(hr));
     out.set("pol", Value::Num(pol as f64));
     if let Some(m) = &ms2 {
         let x = m.x.as_ref().map_or(Value::Null, strongest);
