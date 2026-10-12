@@ -14,7 +14,7 @@ def step(name, fn):
 
 EX = ROOT / "mzlab" / "web" / "esempi" / "FullScan_t15.mzML"
 D = synth("strumenti")
-r = Run(port=8957, wd="/tmp/wd_strumenti")
+r = Run(port=8957, wd="/tmp/wd_strumenti", motore="python")
 
 # a toolbar that fits: one row, every visible button inside the bar, no text cut
 FIT = """(() => {

@@ -10,7 +10,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
 CH = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
-r = Run(port=8876, wd="/tmp/wd76")
+r = Run(port=8876, wd="/tmp/wd76", motore="python")
 try:
     with sync_playwright() as p:
         br = None

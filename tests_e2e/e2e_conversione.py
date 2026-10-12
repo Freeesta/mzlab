@@ -28,7 +28,7 @@ FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp,
   await wait();
   return new Blob([xml], { type: 'application/xml' });
 } });""" % json.dumps(XML)
-r = Run(port=8924, wd="/tmp/wd_conv")
+r = Run(port=8924, wd="/tmp/wd_conv", motore="python")
 try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
