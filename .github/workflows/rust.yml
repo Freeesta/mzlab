@@ -1,13 +1,13 @@
 # Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
-# Not a required check of the protected main branch. fmt and clippy only warn.
+# Not a required check of the protected main branch. fmt, clippy and deny block this workflow (clippy and fmt against tools/clippy_base.json, which can only shrink).
 name: rust
 
 on:
   push:
     branches: [main]
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml", "tools/controlla_rust.py", "tools/clippy_base.json"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml", "tools/controlla_rust.py", "tools/clippy_base.json"]
 
 permissions:
   contents: read
@@ -62,16 +62,12 @@ jobs:
           wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
-      - name: fmt (warning only)
-        run: cargo fmt --all --check || echo "::warning::cargo fmt differences"
-      - name: clippy (warning only)
-        run: cargo clippy --locked --all-targets || echo "::warning::cargo clippy warnings"
+      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
+        run: python3 tools/controlla_rust.py
 
-  # Advisories and licences of the dependencies. NOT blocking at the start (continue-on-error): the first runs will show which
-  # licences of the Tauri graph are missing from deny.toml; make it blocking when the job is green.
+  # Advisories, licences and sources of the dependencies (deny.toml).
   deny:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
