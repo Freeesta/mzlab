@@ -42,6 +42,7 @@ mod store_read;
 pub mod suspects;
 mod sweep;
 pub mod table;
+pub mod tp;
 pub mod target;
 pub mod trace;
 pub mod view;
