@@ -40,7 +40,7 @@ jobs:
           MZLAB_GOLDEN_STRICT: "1"
         run: cargo test --locked --release
       - name: WASM build (release)
-        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm --config 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'
+        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
       - name: The libraries crates and mzlab-feat build for WASM
         run: |
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat

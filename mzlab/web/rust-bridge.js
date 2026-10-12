@@ -1,23 +1,20 @@
-// Page side of the Rust engine (?motore=rust or localStorage qqq.motore = "rust"): browser.js hands every GET api/chrom (TIC), api/xic and
-// api/spectra to this module first. It answers them from rust-worker.js when it can answer exactly as Python does (same JSON); otherwise
-// it returns null and Pyodide answers. Every other route always goes to Pyodide. Without the option this file is never loaded.
+// Page side of the Rust engine: browser.js hands every GET of the routes in RUST_ROUTES to this module first. It answers them from
+// rust-worker.js (the same JSON as mzlab/api.py, the reference of the tests); null = the request is not one it answers.
 //
 // Supervisor: if the worker dies (a trap, a lost memory, a script error) it is terminated, a new one is started, the files of the session
-// are opened again and the page shows `error.engineRestarted`; a second death within a minute switches Rust off for the rest of the session
-// (everything goes to Pyodide, `error.engineFallback`).
-import { simdSupported } from "./idxpool.js";
+// are opened again and the page shows `error.engineRestarted`; a second death within a minute switches the engine off for the rest of the
+// session (`error.engineFallback`: the page asks to be reloaded).
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
 
-export function createBridge({ workerUrl, notify }) {
+export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
   let worker = null, seq = 0, restarts = [];
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
   const api = { enabled: true, disabled: false, stats };
-  if (!simdSupported() && !(typeof window !== "undefined" && window.MZLAB_DESKTOP)) api.disabled = true;      // the .wasm is built with SIMD (simd128): a browser without it stays on Python, same results (the desktop engine is native)
   const base = n => String(n || "").split(/[\\/]/).pop();
 
   function spawn() {
@@ -25,6 +22,7 @@ export function createBridge({ workerUrl, notify }) {
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
+      if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
       if (m.op === "notice") { notify(m.key); return; }                                                    // e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
@@ -112,6 +110,7 @@ export function createBridge({ workerUrl, notify }) {
     return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
   };
   api.crash =() => rpc({ op: "crash" });
+  api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
   api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };

@@ -1,6 +1,6 @@
-"""High-resolution DDA file with the flow without Pyodide (?motore=rust&lr=1) on the built site: opening the file, the DDA table (api/dda) and the mean
+"""High-resolution DDA file in the browser version on the built site: opening the file, the DDA table (api/dda) and the mean
 spectrum of a window (api/spectrum, api/spectra, api/scan, api/scanavg: survey, product ions, one scan read from the mzML) come from the Rust engine and no request of those routes is left to
-Python (window.MZLAB_LR_MISS; api/contaminants, a static list, still is). Needs the site and the .wasm (python tools/build_site.py)."""
+Python (window.MZLAB_LR_MISS stays empty). Needs the site and the .wasm (python tools/build_site.py)."""
 import subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -20,14 +20,14 @@ srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind"
 time.sleep(1)
 JSON = """async u => { const r = await fetch(u); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
 MISS = 'window.MZLAB_LR_MISS || []'
-def missed(pg): return [m for m in pg.evaluate(MISS) if not m.startswith(("GET api/contaminants", "POST api/notebook"))]   # api/contaminants (a static list) is still Python's, not part of this package
+def missed(pg): return [m for m in pg.evaluate(MISS) if not m.startswith("POST api/notebook")]
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=__import__("os").environ.get("MZLAB_CHROMIUM") or None)
         c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000); reqs = []
         c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000)
+        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         def load():
             pg.set_input_files("#pick", [str(D / "HR_DDA-Exploris-t30.mzML")])
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)

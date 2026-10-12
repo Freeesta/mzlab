@@ -1,6 +1,6 @@
 // @ts-check
-// `api/origin` of the flow without Pyodide: "where does this ion come from?", the evidence for the ion X against the candidate precursor P over
-// the files of the session, computed by the Rust engine from the indexes (unit-resolution centroids). null = Python's: high resolution,
+// `api/origin` of the browser version: "where does this ion come from?", the evidence for the ion X against the candidate precursor P over
+// the files of the session, computed by the Rust engine from the indexes (unit-resolution centroids). null = not served: high resolution,
 // a part of a mixed file, a file without index.
 
 /** @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>, json: (o: any, status?: number) => any, items: any[] | null}} env */
