@@ -10,6 +10,7 @@ mod channels;
 pub mod famalign;
 pub mod family;
 pub mod isotopes;
+pub mod kinetic;
 pub mod ms2;
 pub mod pipeline;
 mod post;
