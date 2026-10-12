@@ -34,18 +34,19 @@ impl<R: ReadAt> Routes<R> {
         Ok(acc)
     }
 
-    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six are kept). A section in single precision
+    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six of a file are kept, and the engine trims all the files to its byte budget). A section in single precision
     /// puts its peaks in the cells with float32 arithmetic, as numpy does on a float32 array.
     pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Arc<Vec<f32>>> {
         let key = format!("{level}|{mean}|{:?}", g);
-        if let Some(i) = self.maps.iter().position(|(k, _)| *k == key) {
+        if let Some(i) = self.maps.iter().position(|(k, _, _)| *k == key) {
+            self.maps[i].2 = super::routes::next_tick();
             return Ok(self.maps[i].1.clone());
         }
         let m = Arc::new(self.build_ion_map(level, g, mean)?);
         if self.maps.len() >= 6 {
             self.maps.remove(0);
         }
-        self.maps.push((key, m.clone()));
+        self.maps.push((key, m.clone(), super::routes::next_tick()));
         Ok(m)
     }
 

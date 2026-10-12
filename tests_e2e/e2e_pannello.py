@@ -28,17 +28,15 @@ try:
         def base():
             r, ctx, pg, errs = cold(p, 1440, 900)
             try:
-                assert pg.is_visible("#sb-toggle") and not pg.is_visible("#dfiles"), "button visible with the panel hidden"
-                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "false" and pg.get_attribute("#sb-toggle", "aria-label") == "Pannello laterale" and pg.get_attribute("#sb-toggle", "title")
-                b0 = pg.evaluate(BOX)
-                pg.click("#sb-toggle"); pg.wait_for_timeout(600)
+                assert pg.is_visible("#sb-toggle") and pg.is_visible("#dfiles"), "first start on a wide screen: File panel open"
+                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "true" and pg.get_attribute("#sb-toggle", "aria-label") == "Pannello laterale" and pg.get_attribute("#sb-toggle", "title")
                 b1 = pg.evaluate(BOX)
-                assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.curTab") == "file" and pg.get_attribute("#sb-toggle", "aria-pressed") == "true", "first start: File"
-                assert b1["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b1), (b0, b1)
+                assert pg.evaluate("BARRA.curTab") == "file" and not overlap(b1), b1
                 assert b1["side"]["x"] < 20 and b1["side"]["h"] > 400, b1["side"]
                 assert abs(b1["dp"]["x"] - b1["side"]["r"]) < 30, "the workspace starts where the panel ends"
                 pg.click("#sb-toggle"); pg.wait_for_timeout(600)
-                assert not pg.is_visible("#dfiles") and abs(pg.evaluate(BOX)["chart"]["w"] - b0["chart"]["w"]) < 3
+                b0 = pg.evaluate(BOX)
+                assert not pg.is_visible("#dfiles") and pg.get_attribute("#sb-toggle", "aria-pressed") == "false" and b1["chart"]["w"] < b0["chart"]["w"] - 200, (b0, b1)
                 pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(600)
                 b2 = pg.evaluate(BOX); assert pg.evaluate("BARRA.curTab") == "adducts" and b2["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b2), b2
                 pg.click("#sb-toggle"); pg.wait_for_timeout(500); assert not pg.is_visible("#dfiles")
@@ -49,7 +47,7 @@ try:
                 assert pg.evaluate("BARRA.commands.some(c => c.id === 'panel' && c.run)") and pg.locator("#sb-pin").count() == 0
             finally: ctx.close(); r.close()
             assert not errs, errs
-        step("button always visible; opens File on first start; tool buttons dock the panel and narrow the charts; second click / Ctrl+B hide it", base)
+        step("button always visible; File open on first start (wide screen); tool buttons dock the panel and narrow the charts; second click / Ctrl+B hide it", base)
 
         def lato():
             r, ctx, pg, errs = cold(p, 1440, 900, saved={"qqq.barra.lato": "right", "qqq.barra.lr": '{"tab":"losses","open":true,"w":340}'})
@@ -81,7 +79,8 @@ try:
                 r, ctx, pg, errs = cold(p, vw, vh, touch=True)
                 try:
                     assert pg.is_visible("#sb-toggle")
-                    pg.click("#sb-toggle"); pg.wait_for_timeout(600); b = pg.evaluate(BOX)
+                    if not pg.is_visible("#dfiles"): pg.click("#sb-toggle")      # open at first start from 900 px up
+                    pg.wait_for_timeout(600); b = pg.evaluate(BOX)
                     assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") == sheet, (vw, b)
                     if sheet: assert b["side"]["w"] >= vw - 30 and not pg.is_visible("#dpanels") and pg.is_visible("#sb-x"), (vw, b)
                     else: assert not overlap(b), (vw, b)
@@ -95,7 +94,7 @@ try:
             for scheme in ("light", "dark"):
                 r, ctx, pg, errs = cold(p, 1440, 900, scheme=scheme)
                 try:
-                    pg.click("#sb-toggle"); pg.wait_for_timeout(500)
+                    pg.wait_for_timeout(500)
                     bg = pg.evaluate("getComputedStyle(document.querySelector('#sb-toggle')).backgroundColor"); assert bg != "rgba(0, 0, 0, 0)", (scheme, bg)
                     assert pg.is_visible("#dfiles") and not overlap(pg.evaluate(BOX))
                 finally: ctx.close(); r.close()

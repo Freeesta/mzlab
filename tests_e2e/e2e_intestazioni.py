@@ -33,7 +33,9 @@ def check(q, tag):
     return res
 
 def setup(q):
-    ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
+    ready(q); q.wait_for_timeout(300)
+    if q.is_visible("#dfiles"): q.click("#sb-x"); q.wait_for_timeout(400)      # the File panel is open at first start: the test measures the panel headers at the width of the window
+    q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
     q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); q.wait_for_timeout(1500)
     q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); q.wait_for_timeout(1500)
 

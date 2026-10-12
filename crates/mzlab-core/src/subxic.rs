@@ -9,7 +9,6 @@ use crate::iteminfo::group_is_hr;
 use crate::json::{round, Value};
 use crate::jsonb::{floats, opt, text, Obj};
 use crate::routes::{Query, Routes};
-use crate::peaktable::PeakTable;
 use crate::stats::psum;
 use crate::subformulas::subformulas;
 
@@ -36,10 +35,31 @@ fn pearson(a: &[f64], b: &[f64]) -> Option<f64> {
     Some((cov / sa / sb).clamp(-1.0, 1.0))
 }
 
-/// Summed intensity of the peaks `a..b` in every scan, added in table order (`np.bincount`).
-fn trace(t: &PeakTable, a: usize, b: usize, n: usize) -> Vec<f64> {
+/// The peaks of one window of the table (`a..b`), read from the index on their own: the whole table of a survey (tens of millions of peaks) is never held.
+struct Win {
+    mz: Vec<f64>,
+    pos: Vec<u32>,
+    inten: Vec<f64>,
+}
+
+fn read_win<R: ReadAt>(idx: &mut crate::idxread::Index<R>, si: usize, a: u64, b: u64) -> Result<Win> {
+    let n = b.saturating_sub(a) as usize;
+    let mut w = Win { mz: Vec::new(), pos: Vec::new(), inten: Vec::new() };
+    w.mz.try_reserve_exact(n).map_err(|_| crate::error::Error::memory_budget())?;
+    w.pos.try_reserve_exact(n).map_err(|_| crate::error::Error::memory_budget())?;
+    w.inten.try_reserve_exact(n).map_err(|_| crate::error::Error::memory_budget())?;
+    idx.each_peak(si, a, b, |p, mz, y| {
+        w.pos.push(p as u32);
+        w.inten.push(y);
+        w.mz.push(mz);
+    })?;
+    Ok(w)
+}
+
+/// Summed intensity of the peaks of a window in every scan, added in table order (`np.bincount`).
+fn trace(t: &Win, n: usize) -> Vec<f64> {
     let mut y = vec![0.0; n];
-    for i in a..b {
+    for i in 0..t.pos.len() {
         if (t.pos[i] as usize) < n {
             y[t.pos[i] as usize] += t.inten[i];
         }
@@ -48,11 +68,11 @@ fn trace(t: &PeakTable, a: usize, b: usize, n: usize) -> Vec<f64> {
 }
 
 /// One row of the table: the sub-formula `name` at `mz`, from the peaks `w` of its window.
-fn row(name: &str, mz: f64, (t, a, b): (&PeakTable, usize, usize), rt: &[f64], full: &[f64], is_full: bool) -> (f64, Value) {
-    let y = trace(t, a, b, rt.len());
+fn row(name: &str, mz: f64, t: &Win, rt: &[f64], full: &[f64], is_full: bool) -> (f64, Value) {
+    let y = trace(t, rt.len());
     let apex = y.iter().enumerate().fold(0, |b, (i, v)| if *v > y[b] { i } else { b });
-    let wsum = psum(&t.inten[a..b]);
-    let err = (wsum > 0.0).then(|| (psum(&(a..b).map(|i| t.mz[i] * t.inten[i]).collect::<Vec<_>>()) / wsum - mz) / mz * 1e6);
+    let wsum = psum(&t.inten);
+    let err = (wsum > 0.0).then(|| (psum(&(0..t.inten.len()).map(|i| t.mz[i] * t.inten[i]).collect::<Vec<_>>()) / wsum - mz) / mz * 1e6);
     let r = if is_full { None } else { pearson(&y, full) };
     let o = Obj::new().put("formula", text(name)).n("mz", round(mz, 5)).put("ppm", opt(err.map(|e| round(e, 2))));
     let o = o.n("int", round(y[apex], 1)).n("rt", round(rt[apex], 4)).put("r", opt(r.map(|r| round(r, 3))));
@@ -71,26 +91,34 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
     if subs.is_empty() {
         return Ok(None);
     }
-    let Some(t) = r.idx.load_table(si)? else { return Ok(None) };
     let rt = r.idx.arrays(si)?.rt.clone();
-    let spans: Vec<(usize, usize)> = subs.iter().map(|(_, mz)| t.window(mz - mz * ppm * 1e-6, mz + mz * ppm * 1e-6)).collect();
+    let mut spans: Vec<(usize, usize)> = Vec::with_capacity(subs.len());
+    for (_, mz) in &subs {
+        let (lo, hi) = (r.idx.search(si, mz - mz * ppm * 1e-6, false)?, r.idx.search(si, mz + mz * ppm * 1e-6, true)?);
+        spans.push((lo as usize, hi as usize));
+    }
     let whole = fmt(&f);
     let full_i = subs.iter().position(|(s, _)| *s == whole);
     let full = match full_i {
-        Some(i) if spans[i].1 > spans[i].0 => trace(&t, spans[i].0, spans[i].1, rt.len()),
+        Some(i) if spans[i].1 > spans[i].0 => trace(&read_win(&mut r.idx, si, spans[i].0 as u64, spans[i].1 as u64)?, rt.len()),
         _ => vec![0.0; rt.len()],
     };
     let mut rows = Vec::new();
     for (i, &(a, b)) in spans.iter().enumerate().filter(|(_, s)| s.1 > s.0) {
-        rows.push(row(&subs[i].0, subs[i].1, (&t, a, b), &rt, &full, Some(i) == full_i));
+        let w = read_win(&mut r.idx, si, a as u64, b as u64)?;
+        rows.push(row(&subs[i].0, subs[i].1, &w, &rt, &full, Some(i) == full_i));
     }
     let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).cloned().collect();
     merged.sort();
     let mut comb = vec![0.0; rt.len()];
     let mut done = 0;
     for (a, b) in merged {                                   // the union of the windows: a peak inside two of them counts once
-        for i in a.max(done)..b {
-            comb[t.pos[i] as usize] += t.inten[i];
+        let from = a.max(done);
+        if from < b {
+            let w = read_win(&mut r.idx, si, from as u64, b as u64)?;
+            for i in 0..w.pos.len() {
+                comb[w.pos[i] as usize] += w.inten[i];
+            }
         }
         done = done.max(b);
     }
