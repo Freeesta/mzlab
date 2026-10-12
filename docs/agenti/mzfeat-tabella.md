@@ -19,7 +19,7 @@
 - **Identità di riga** (`rowident.rs`, `Aligned::ident`): `neutral` (f64), `ion` (u8) e `src` (u8) per riga, calcolate in `evidence_to` dopo l'ultimo `sort_rows` (quindi non viaggiano con le righe).
   - Con ipotesi trovata da `evid::match_hypotheses(hyps, tabella)`: massa neutra e addotto dell'ipotesi, `src` = `sources << 1 | SRC_DETECTED`; senza: ione protonato (o deprotonato) di riferimento, `src` = solo il bit rilevata (almeno un file con la cella rilevata).
   - `ion` = 1 + posizione in `adduct_names()` (0 = nessuno); i nomi stanno nel meta `adducts`.
-- **Dati per file** (`facts.rs`): `file_facts(&Index)` legge dal `.mzidx` polarità (scansioni MS1), risoluzione mediana, acquisizione (`ms1`, `dda`, `dia`, `mrm`) e analizzatore; vanno nel meta `columns` (un oggetto per file, nell'ordine di `inputs`) e lo SHA-256 del `campioni/1` in `samples` (`Origin::facts`, `Origin::samples`; `origin_from_meta` li rilegge e `evidence_to` li conserva).
+- **Dati per file** (`facts.rs`): `file_facts(&Index)` legge dal `.mzidx` polarità (scansioni MS1), risoluzione media, acquisizione (`ms1`, `dda`, `dia` se la maggior parte degli MS2 isola una finestra oltre 5 m/z, `mrm`) e analizzatore; vanno nel meta `columns` (un oggetto per file, nell'ordine di `inputs`) e lo SHA-256 del `campioni/1` in `samples` (`Origin::facts`, `Origin::samples`; `origin_from_meta` li rilegge e `evidence_to` li conserva).
 - **Formato `.mzfeat` versione 2** (`store.rs::TABLE_FORMAT`).
   - In più `id` e i riassunti come array, e nel meta `summaries` (0/1); le colonne di identità sono opzionali, con `identity` (0/1) nel meta.
   - Un file di versione 1 si legge con i riassunti vuoti; un file troncato è rifiutato anche se mancano array che il lettore non chiede.
