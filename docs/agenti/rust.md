@@ -12,7 +12,7 @@ Stato attuale; il Python in Pyodide resta il riferimento finché Rust non lo egu
   - `mzidx.rs` (costruttore del `.mzidx` in streaming, vedi sotto)
   - `crates/mzlab-feat`: tracce di massa MS1 a lastre di m/z (`trace::detect`, porta di `features.detect`), vedi `docs/agenti/mzfeat.md`
   - `project.rs` (tipo, tempo e concentrazione dal nome del file: `guess_sample`, `guess_conc` come `mzlab/project.py`, senza regex; prova `tests/project_parity.rs` su ~36000 nomi generati da `tools/project_riferimento.py`)
-  - `specpeaks.rs` (`profile_peaks`, `merge_unit`, `pad_zeros` come `mzlab/peaks.py`; prova `tests/specpeaks_parity.rs` con `tools/specpeaks_riferimento.py`; `merge_unit` serve `spectrum`, gli altri due non sono collegati: gli spettri in profilo sono di Python)
+  - `specpeaks.rs` (`profile_peaks`, `merge_unit`, `pad_zeros` come `mzlab/peaks.py`; prova `tests/specpeaks_parity.rs` con `tools/specpeaks_riferimento.py`; `merge_unit` serve `spectrum`, `profile_peaks` e `pad_zeros` servono `profspec.rs`)
   - `mapgrid.rs`, `mapcells.rs`, `maproute.rs` (mappa RT × m/z e punti segnati dagli indici, solo risoluzione unitaria con centroidi: `map`, `mapsnap`, `mappunti`, `mappunti3d`; le ultime sei mappe intere restano in memoria; prova `tests/map_parity.rs` con `tools/mappa_riferimento.py`, mappe identiche bit a bit)
   - `project.rs` (tipo, tempo e concentrazione dal nome del file: `guess_sample`, `guess_conc` come `mzlab/project.py`, senza regex; prova `tests/project_parity.rs` su ~36000 nomi generati da `tools/project_riferimento.py`)
   - `specpeaks.rs` (`profile_peaks`, `merge_unit`, `pad_zeros` come `mzlab/peaks.py`; prova `tests/specpeaks_parity.rs`, spettri sintetici di `tools/specpeaks_riferimento.py`; non ancora collegati alle rotte)

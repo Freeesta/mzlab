@@ -206,3 +206,14 @@ Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazio
 | aggancio, misure dei punti, punti del 3D (300 punti) | 0,3-5 | 0,1-6 |
 
 Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_lr`): mappa intera 54 ms in Rust contro 46 in Pyodide già avviato, con sfondo 102 contro 73, regione 36 contro 24, aggancio 7 contro 2, punti 26 contro 3, punti 3D 22 contro 37. Il guadagno non è la velocità della singola richiesta (Pyodide ha già la tabella in memoria) ma che Pyodide non parte: avvio della pagina 1,3 s contro 5,0 s. Parità: celle e punti uguali bit a bit; dei punti 3D tagliati a `max` si confrontano gli insiemi per intensità (numpy sceglie a caso fra intensità uguali).
+
+## Spettri in profilo (`api/spectrum` e `api/spectra` di un file LR in profilo; `cargo test --release -p mzlab-core --test profile_parity -- --nocapture` e `tools/profilo_riferimento.py`, nativo; `e2e_lr` nel browser, file sintetico di 400 scansioni)
+| Richiesta | Python (ms) | Rust (ms) | Browser: Pyodide già avviato / Rust (ms) |
+|---|---|---|---|
+| spettro di una finestra di 14 scansioni | 7-11 | 4-9 | 84 / 38 |
+| spettro medio di tutta la corsa | 15-20 | 4-5 | 58 / 27 |
+| 11 scansioni singole | 14-20 | 8-9 | 38 / 31 |
+| 60 scansioni singole | 92 | 29-30 | 220 / 85 |
+| una scansione singola | 1,6-2,7 | 4-5 (una lettura dell'indice intero) | – |
+
+Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i punti sono sommati sulla griglia `rint(m/z / passo)` con il passo letto da venti scansioni a metà corsa, come `Item._step`.

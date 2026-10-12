@@ -31,10 +31,16 @@ impl<R: ReadAt> Routes<R> {
             of_level
         };
         let nprof = pool.iter().filter(|s| s.profile).count();
-        if nprof != 0 || group_is_hr(&self.idx.scans, level == 1) || !(bin > 0.0) {
+        let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
+        if nprof != 0 {
+            return match self.profile_level(level)? {
+                Some((_, step)) => Ok(Some(self.profile_spectrum(q, level, (lo, hi), step)?)),
+                None => Ok(None),
+            };
+        }
+        if group_is_hr(&self.idx.scans, level == 1) || !(bin > 0.0) {
             return Ok(None);
         }
-        let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
         let mut o = Out::default();
         let Some(m) = self.binned(level, lo, hi, precursor, bin, filt)? else {
             o.raw("{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}");
@@ -73,21 +79,26 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
-/// The mean spectrum of a window, peaks merged within `bin` (`Item._binned`), not rounded.
-pub(crate) struct Binned {
-    pub mz: Vec<f64>,
-    pub y: Vec<f64>,
-    /// Scans of the window.
-    pub n: usize,
-    /// Positions (in the section) of the scans that pass the filter, and the indices among them that fall in the window.
-    pub sel: Vec<usize>,
-    pub in_win: Vec<usize>,
-    pub scan_ids: Vec<i64>,
-}
-
 impl<R: ReadAt> Routes<R> {
+    /// Positions (in the section) of the scans that pass the filter and the precursor of a request (`_scan_ids`).
+    pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, filt: Option<&str>) -> Result<Vec<usize>> {
+        let ar = self.idx.arrays(si)?.clone();
+        let want_prec = if level > 1 { precursor } else { None };
+        Ok((0..ar.rt.len())
+            .filter(|&j| {
+                let s = &self.idx.scans[ar.scan_ids[j] as usize];
+                filt.is_none_or(|f| s.filter == f || s.key() == f) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= 0.6)
+            })
+            .collect())
+    }
+
     /// `None` when the file has no section of `level`.
     pub(crate) fn binned(&mut self, level: u8, lo: f64, hi: f64, precursor: Option<f64>, bin: f64, filt: Option<&str>) -> Result<Option<Binned>> {
+        self.binned_cells(level, lo, hi, precursor, filt, |m| (m / bin).floor() as i64)
+    }
+
+    /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
+    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, precursor: Option<f64>, filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
         let Some(si) = self.idx.section_of(level, None) else {
             return Ok(None);
         };
@@ -119,7 +130,7 @@ impl<R: ReadAt> Routes<R> {
                 if !ok[pos] {
                     return;
                 }
-                let c = (m / bin).floor() as i64;
+                let c = cell_of(m);
                 if c != cell {
                     if cell != i64::MIN {
                         cm.push(smy / sy.max(1e-12));
@@ -141,4 +152,16 @@ impl<R: ReadAt> Routes<R> {
         }
         Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.iter().map(|&v| v as i64).collect() }))
     }
+}
+
+/// The mean spectrum of a window, peaks merged within `bin` (`Item._binned`), not rounded.
+pub(crate) struct Binned {
+    pub mz: Vec<f64>,
+    pub y: Vec<f64>,
+    /// Scans of the window.
+    pub n: usize,
+    /// Positions (in the section) of the scans that pass the filter, and the indices among them that fall in the window.
+    pub sel: Vec<usize>,
+    pub in_win: Vec<usize>,
+    pub scan_ids: Vec<i64>,
 }

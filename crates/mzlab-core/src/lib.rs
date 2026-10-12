@@ -27,6 +27,7 @@ pub mod peakq;
 pub mod peaks;
 pub mod peakext;
 pub mod signal;
+pub mod profspec;
 pub mod project;
 pub mod pysum;
 pub mod raw;
