@@ -69,7 +69,7 @@ try:
             assert s["at9"] < 1e4 or s["at12"] < 1e4, s                          # the ppm window is the only way: the two isobars are never in one window
         step("no «Alta risoluzione» switch any more: a high-resolution file is always read in ppm", no_switch)
         def reload():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(7000)
+            saved(pg); pg.reload(); pg.wait_for_function("typeof E!=='undefined'&&E.panels.some(p=>p.type==='xic'&&p.traces&&p.traces.length)", timeout=90000); ready(pg)
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].traces[0]"); print(tr)
             assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6, tr
         step("an ion trace comes back after a reload", reload)

@@ -65,7 +65,9 @@ export function createLr({ rb }) {
     if (fresh) return;
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
-      const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));
+      const seen = new Set();                                                         // the notebook lists the items: the parts of a mixed file ("name.mzML#MS1") come back as the file
+      const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && x.file).map(x => (String(x.file).includes("#") ? { ...x, file: String(x.file).split("#")[0], label: null } : x))
+        .filter(x => safeName(x.file) && files.has(safeName(x.file)) && !seen.has(x.file) && seen.add(x.file));
       if (list.length) await explore({ samples: list });
     } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
   };

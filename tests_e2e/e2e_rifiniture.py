@@ -31,15 +31,13 @@ try:
             assert "cella attiva:" not in body.lower() and "active cell:" not in body.lower()
         step("«cella attiva» label is gone", cleanup)
         def busy():
-            held = []
-            pg.route("**/api/lento", lambda route: held.append(route))
-            pg.evaluate("() => { window.__slow = fetch('api/lento').catch(() => 0); }")
+            # the engine of the site answers in a few ms: its worker is slowed down (the messages to it wait `__lag` ms) so that a call stays pending
+            pg.evaluate("() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (...a) { setTimeout(() => pm.apply(this, a), window.__lag || 0); }; window.__lag = 1800; window.__slow = fetch('api/formula?f=C6H12O6').catch(() => 0); }")
             assert pg.evaluate("document.getElementById('busybar').hidden") is True
             pg.wait_for_selector("#busybar:not([hidden])", timeout=4000)
             assert pg.get_attribute("#busybar", "aria-label")
-            for rt in held: rt.fulfill(status=200, body="{}")
-            pg.wait_for_selector("#busybar[hidden]", state="attached", timeout=4000)
-            pg.evaluate("fetch('api/lento').catch(() => 0)") if False else None
+            pg.evaluate("window.__lag = 0")
+            pg.wait_for_selector("#busybar[hidden]", state="attached", timeout=6000)
         step("progress bar shows after ~1 s of a pending API call and hides afterwards", busy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)

@@ -85,6 +85,12 @@ def stage(pg, files, timeout=90000):
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
 
+def saved(pg, timeout=60000):
+    """Save the view now and wait until the notebook (which a reload resumes from) holds the session: it is written in the background."""
+    pg.evaluate("uiSave(true)")
+    pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 1)", timeout=timeout)
+
+
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t
