@@ -125,6 +125,13 @@ export function createBridge({ workerUrl, notify }) {
     return out;
   };
 
+  async function indexRoute(s, k, path, u, t0) {
+    let r = await rpc({ op: "route", slot: k, path, query: u.search });
+    if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
+    if (r.dead || r.error || !r.info) return null;
+    stats.rust++;
+    return { status: 200, text: r.info, ms: performance.now() - t0 };
+  }
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
@@ -147,12 +154,8 @@ export function createBridge({ workerUrl, notify }) {
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
-      if (!s.idx || s.bad) return null;
-      let r = await rpc({ op: "route", slot: k0, path, query: u.search });
-      if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k0, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
-      if (r.dead || r.error || !r.info) return null;
-      stats.rust++;
-      return { status: 200, text: r.info, ms: performance.now() - t0 };
+      if (s.bad) return null;
+      if (s.idx) return indexRoute(s, k0, path, u, t0);              // a file without index (the desktop engine reads the mzML itself) goes on to the TIC/XIC/spectra below
     }
     if (path === "/api/mrm" && !hasRef(q)) {                         // the SRM transitions: chromatograms of the mzML (no scans, no peaks)
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
