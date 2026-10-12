@@ -152,7 +152,8 @@ try:
             pg5.set_input_files("#pick", five)
             pg5.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
             pg5.click("#opbtn"); pg5.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-            pg5.wait_for_function("E.files.length >= 5 && E.pending.length === 0", timeout=120000); pg5.wait_for_timeout(2000)
+            pg5.wait_for_function("E.files.length >= 5 && E.pending.length === 0", timeout=120000)
+            pg5.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 5)", timeout=60000)   # the notebook is saved 0.8 s + 0.5 s after the last change of the page: a reload before it keeps only the files that were open then
             pg5.reload()
             pg5.wait_for_selector(".pnl canvas", timeout=180000)
             pg5.wait_for_function("E.files.length >= 1", timeout=180000)
