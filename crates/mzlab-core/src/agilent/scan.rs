@@ -7,7 +7,8 @@
 use crate::error::{Error, Result};
 
 const DATA_OFFSET_AT: usize = 88;
-const HEADER_MIN: usize = 160;
+pub const HEADER_LEN: usize = 160;
+const HEADER_MIN: usize = HEADER_LEN;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Kind {
@@ -194,6 +195,11 @@ fn strip_comments(s: &str) -> String {
 }
 
 impl Layout {
+    /// Names of all the fields of the layout, in order.
+    pub fn field_names(&self) -> Vec<String> {
+        self.fields.iter().map(|f| f.name.clone()).collect()
+    }
+
     /// Names of the fields that `ScanRec::extra` holds, in order.
     pub fn extra_names(&self) -> Vec<String> {
         self.fields
@@ -279,6 +285,11 @@ const MAPPED: &[&str] = &[
     "PointCount",
     "MaxY",
 ];
+
+/// The fields that have a member in `ScanRec` (the others are in `ScanRec::extra`).
+pub fn mapped_fields() -> &'static [&'static str] {
+    MAPPED
+}
 
 /// A scan record. Times are in minutes; `offset`/`bytes` locate the points in `MSPeak.bin`. A field the layout does not have is 0.
 #[derive(Debug, Clone, PartialEq)]
