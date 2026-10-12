@@ -36,10 +36,10 @@ try:
         def menu():
             x, y = at(.4, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)
             its = menu_items(); names = [i[0] for i in its]
-            for want in ["XIC", "Spectrum", "Lock the sight", "Reset zoom", "Copy coordinates", "Gestures"]:
+            for want in ["XIC", "Spectrum", "Lock the sight", "Mark the point", "Reset zoom", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
             assert not any("both" in n or "axis only" in n or "selection" in n or "How it is" in n or "Extract" in n for n in names), names     # a short menu: no duplicates, no teaching view in it
-            assert sum(1 for i in its if i[1]) >= 6 and len([n for n in names]) <= 7, its                # six commands with an aria-label (plus the line of the point)
+            assert sum(1 for i in its if i[1]) >= 7 and len([n for n in names]) <= 8, its                # seven commands with an aria-label (plus the line of the point)
             assert pg.evaluate("document.querySelectorAll('#ctx hr').length") >= 3
             assert "At the pointer" in names[0]
             pg.keyboard.press("Escape"); pg.wait_for_timeout(100); assert pg.evaluate("document.getElementById('ctx').hidden")

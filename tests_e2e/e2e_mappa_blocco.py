@@ -8,7 +8,7 @@ steps = []
 r = Run(port=8902, wd="/tmp/wd_mapblocco_e2e")
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + repr(e)[:600]))
+    except Exception as e: steps.append((name, "FAIL " + repr(e)[:600] + " | menu=" + str(pg.evaluate("document.querySelector('#ctx').innerText")[:300])))
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
@@ -51,6 +51,28 @@ try:
             pg.keyboard.press("Escape"); settle(); assert not menu_open() and not lock()
             pg.mouse.move(c[0] + c[2] * .3, c[1] + c[3] * .8, steps=5); settle(); assert shown() != r0
         step("closing the menu without a choice: the sight follows the pointer again", dismiss)
+        def dot():
+            pg.mouse.click(ax, ay, button="right"); settle(); pg.click("#ctx [aria-label='Lock the sight']"); settle(); assert lock(), 'lock'
+            def off():
+                return pg.evaluate(f"(()=>{{const s={M}._mz,a={M}._a,q=s.lock;return s.dot?[s.dot.x-a.X(q.rt),s.dot.y-a.Y(q.mz)]:null}})()")
+            o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ('dot', o)
+            q = pg.evaluate(f"(()=>{{const a={M}._a,q={M}._mz.lock,r={M}.cv.getBoundingClientRect();return [r.left+a.X(q.rt),r.top+a.Y(q.mz)]}})()")
+            pg.mouse.move(q[0], q[1]); pg.mouse.wheel(0, -300); settle()                  # zoom around the locked point
+            o = off(); assert o and abs(o[0]) <= .5 and abs(o[1]) <= .5, ("zoom", o)
+            pg.mouse.wheel(0, 200); settle(); o = off(); assert o is None or (abs(o[0]) <= .5 and abs(o[1]) <= .5), ("zoom out", o)
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Escape"); settle(); assert not lock() and pg.evaluate(f"{M}._mz.dot") is None
+        step("locked point: a dot centred on it (±0.5 px) after zoom, gone on unlock", dot)
+        def mark():
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("0"); settle()
+            n = lambda: pg.evaluate(f"MAPPA.pts({M}).length")
+            n0 = n(); mx, my = c[0] + c[2] * .6, c[1] + c[3] * .55
+            pg.mouse.move(mx, my); settle(); pg.mouse.click(mx, my, button="right"); settle(); pg.click("#ctx [aria-label='Mark the point']"); settle()
+            assert n() == n0 + 1, (n0, n())
+            pg.mouse.move(c[0] + c[2] * .3, c[1] + c[3] * .3, steps=4); settle(); assert n() == n0 + 1
+            mp = pg.evaluate(f"(()=>{{const a={M}._a,q=MAPPA.pts({M})[{n0}],r={M}.cv.getBoundingClientRect();return [r.left+a.X(q.rt),r.top+a.Y(q.mz)]}})()")
+            pg.mouse.click(mp[0], mp[1], button="right"); settle(); assert not lock()
+            pg.click("#ctx [aria-label='Unmark the point']"); settle(); assert n() == n0, (n0, n())
+        step("Mark / Unmark from the menu, independent of the lock", mark)
         b.close()
     r.close()
 except Exception as e:
