@@ -47,7 +47,7 @@ window.LIVELLI_DATI = {
      "isotopi": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.9, "punti": 2}, {"soglia": 0.7, "punti": 1}]},
      "MS2": {"op": ">=", "richiede": {"op": ">=", "soglia": "picchi_min"}, "gradini": [{"soglia": "entropia_min", "punti": 3}, {"soglia": "entropia_provvisorio", "punti": 1}]},
      "frammenti": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.8, "punti": 2}, {"soglia": 0.5, "punti": 1}]},
-     "rete": {"op": "<=", "assoluto": true, "unita": "ppm", "gradini": [{"soglia": 5, "punti": 1}]},
+     "rete": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.5, "punti": 1}]},
      "cinetica": {"op": "<=", "massimo": 0, "massimo_se_pesata": 1, "gradini": [{"soglia": 0.693, "punti": 1}]},
      "controlli": {"op": ">=", "gradini": []},
      "RT": {"op": ">=", "gradini": []},

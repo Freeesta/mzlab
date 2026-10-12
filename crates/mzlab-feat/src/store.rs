@@ -4,8 +4,8 @@
 //! `MZFEAT01` | meta length (u64) | meta (JSON text) | padding to 64 bytes | arrays, each starting at a multiple of 64 bytes from the end of the padding.
 //!
 //! The meta carries the recipe and its fingerprints, the version of the crate, the SHA-256 of every input file (from its index), the times (empty when
-//! the bytes must be reproducible) and the directory of the arrays (`name`, `dtype`, `count`, `offset`). `evid` is reserved for the evidence of the
-//! identification: it is written empty. The bytes depend only on the table and on the meta given: no clock, no path.
+//! the bytes must be reproducible) and the directory of the arrays (`name`, `dtype`, `count`, `offset`). `evid` holds the graph of the proofs (`evid/1`, JSON): empty in
+//! the file of one sample and when no graph was built. The bytes depend only on the table and on the meta given: no clock, no path.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
@@ -164,8 +164,13 @@ pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
     container(&meta_json("file", r, o, &[("rows", f.len())], &a), &a)
 }
 
-/// Bytes of the `.mzfeat` of a series.
+/// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
 pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
+    write_table_with_evid(t, r, o, &[])
+}
+
+/// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
+pub fn write_table_with_evid(t: &Aligned, r: &Recipe, o: &Origin, evid: &[u8]) -> Vec<u8> {
     let mut a = Arrays::default();
     a.f64s("mz", &t.mz);
     a.f64s("rt", &t.rt);
@@ -178,7 +183,7 @@ pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
     a.f64s("member_mz", &t.member_mz);
     a.f32s("member_rt", &t.member_rt);
     a.u8s("member_role", &t.member_role);
-    a.u8s("evid", &[]);
+    a.u8s("evid", evid);
     container(
         &meta_json(
             "table",
@@ -318,4 +323,9 @@ pub fn read_table(bytes: &[u8]) -> Result<(Aligned, Value)> {
         member_role: o.u8s("member_role")?,
     };
     Ok((t, o.meta))
+}
+
+/// The `evid` section of a `.mzfeat` of a series: the JSON bytes of the graph of the proofs (empty when none was written).
+pub fn read_evid(bytes: &[u8]) -> Result<Vec<u8>> {
+    open(bytes, "table")?.u8s("evid")
 }
