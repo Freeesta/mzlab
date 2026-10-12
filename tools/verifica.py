@@ -148,7 +148,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-opfs.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
