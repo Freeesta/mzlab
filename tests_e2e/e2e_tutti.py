@@ -9,7 +9,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tutti.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 VIS = "E.panels.filter(p=>p.el&&p.el.style.display!=='none'&&p.el.offsetParent).map(p=>p.tab)"
-r = Run(port=8990, wd="/tmp/wd_tutti")
+r = Run(port=8990, wd="/tmp/wd_tutti", motore="python")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})

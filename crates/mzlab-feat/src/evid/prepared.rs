@@ -43,6 +43,7 @@ impl Prepared {
     }
 
     /// The identity of row `r` (a pure function of the row: it can be made again whenever it is needed).
+    #[inline(never)]
     pub fn identity(&self, inp: &Inputs, r: usize) -> Identity {
         identity_of(
             inp,

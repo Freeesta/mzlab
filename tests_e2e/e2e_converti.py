@@ -13,7 +13,7 @@ def blob(name, data=b"X"): return {"name": name, "mimeType": "application/octet-
 def lum(rgb):
     c = [(v / 255) ** 2.2 if v / 255 > 0.04 else v / 255 / 12.92 for v in rgb]
     return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-r = Run(port=8991, wd="/tmp/wd_converti")
+r = Run(port=8991, wd="/tmp/wd_converti", motore="python")
 try:
     shutil.rmtree("/tmp/s_converti", ignore_errors=True)
     mz = synth.make_series("/tmp/s_converti", [0], blank=False, std=False)[0]
