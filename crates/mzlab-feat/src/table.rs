@@ -35,6 +35,47 @@ pub const ALT_ROLE: u8 = 1 << 2;
 /// More than one ion could be the one it derives from.
 pub const ALT_PARENT: u8 = 1 << 3;
 
+impl FileFeatures {
+    pub fn len(&self) -> usize {
+        self.mz.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.mz.is_empty()
+    }
+
+    /// Append row `i` of `src` (every column).
+    pub fn push_row(&mut self, src: &FileFeatures, i: usize) {
+        macro_rules! cp {
+            ($($c:ident),*) => { $( self.$c.push(src.$c[i]); )* };
+        }
+        cp!(
+            mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group,
+            charge, shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
+        );
+    }
+
+    /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut b = Vec::with_capacity(self.len() * 91 + 16);
+        b.extend_from_slice(&(self.len() as u64).to_le_bytes());
+        b.extend_from_slice(&self.dt.to_le_bytes());
+        macro_rules! put {
+            ($($c:ident),*) => { $( for v in &self.$c { b.extend_from_slice(&v.to_le_bytes()); } )* };
+        }
+        put!(mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts);
+        b.extend_from_slice(&self.flags);
+        put!(iso_group);
+        b.extend(self.charge.iter().map(|&v| v as u8));
+        put!(shape, snr, fwhm, asym, purity, gaps, ms2_n, area_win);
+        b.extend_from_slice(&self.qreason);
+        put!(family_id);
+        b.extend_from_slice(&self.role);
+        b.extend_from_slice(&self.alt);
+        b
+    }
+}
+
 /// Features of one file and polarity, sorted by m/z. `rt`, `left`, `right` in minutes; `area` in counts x seconds.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FileFeatures {
@@ -77,45 +118,4 @@ pub struct FileFeatures {
     pub alt: Vec<u8>,
     /// Median scan interval, seconds.
     pub dt: f64,
-}
-
-impl FileFeatures {
-    pub fn len(&self) -> usize {
-        self.mz.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.mz.is_empty()
-    }
-
-    /// Append row `i` of `src` (every column).
-    pub fn push_row(&mut self, src: &FileFeatures, i: usize) {
-        macro_rules! cp {
-            ($($c:ident),*) => { $( self.$c.push(src.$c[i]); )* };
-        }
-        cp!(
-            mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group,
-            charge, shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
-        );
-    }
-
-    /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b = Vec::with_capacity(self.len() * 91 + 16);
-        b.extend_from_slice(&(self.len() as u64).to_le_bytes());
-        b.extend_from_slice(&self.dt.to_le_bytes());
-        macro_rules! put {
-            ($($c:ident),*) => { $( for v in &self.$c { b.extend_from_slice(&v.to_le_bytes()); } )* };
-        }
-        put!(mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts);
-        b.extend_from_slice(&self.flags);
-        put!(iso_group);
-        b.extend(self.charge.iter().map(|&v| v as u8));
-        put!(shape, snr, fwhm, asym, purity, gaps, ms2_n, area_win);
-        b.extend_from_slice(&self.qreason);
-        put!(family_id);
-        b.extend_from_slice(&self.role);
-        b.extend_from_slice(&self.alt);
-        b
-    }
 }

@@ -102,6 +102,17 @@ impl Tables {
         out
     }
 
+    /// `!readings(..).is_empty()` without building the readings.
+    pub fn has_reading(&self, mz_lo: f64, mz_up: f64, ppm: f64, abs_da: f64) -> bool {
+        let delta = mz_up - mz_lo;
+        let tol = (mz_lo * ppm * 1e-6).max(abs_da);
+        let near = |d: &f64| (delta - d).abs() <= tol;
+        self.adducts.iter().any(|(_, d)| near(d))
+            || ISOTOPES.iter().any(|(_, d)| near(d))
+            || self.losses.iter().any(|(_, d)| near(d))
+            || self.is_dimer(mz_lo, mz_up, ppm, abs_da)
+    }
+
     /// Mass of the neutral NH3, the typical loss of the ammonium adduct.
     pub fn nh3(&self) -> f64 {
         self.losses[1].1
