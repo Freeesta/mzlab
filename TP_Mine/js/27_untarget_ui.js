@@ -88,6 +88,14 @@
     } catch (e) { st.table = null; $("#unt-go").disabled = true; say(""); $("#unt-sum").innerHTML = `<span class="err">${esc(e.message || e)}</span>`; }
   }
 
+  /** a table made elsewhere (the pipeline of mzFinder): it replaces the table read from files and is ready to match */
+  function adopt(t) {
+    open();
+    st.table = t; st.res = null; st.sel = null; st.graph = null; st.open = new Set(); st.files = [];
+    $("#unt-sum").innerHTML = `<b>${esc(t.file.name)}</b>: ${t.features.length.toLocaleString("en")} features · ${t.samples.length} samples (pipeline of mzFinder)`;
+    $("#unt-go").disabled = !t.features.length; $("#unt-res").hidden = true;
+  }
+
   // ------------------------------------------------------------ match
   async function match() {
     if (st.busy || !st.table) return;
@@ -237,5 +245,5 @@
     } catch (e) { mm.textContent = String(e.message || e); }
   }
 
-  window.UNTUI = { open, state: st };
+  window.UNTUI = { open, state: st, adopt };
 })();
