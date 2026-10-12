@@ -39,9 +39,22 @@ impl<R: ReadAt> Routes<R> {
 
     /// `/api/spectra` of a level with centroids only.
     fn spectra_centroids<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+        let bin = q.num("bin")?.unwrap_or(0.1);
+        let Some(p) = self.picked_scans(q, mzml, bin, false)? else { return Ok(None) };
+        let mut o = Out::default();
+        o.raw("{\"n\":").int(p.n as i64).raw(",\"scans\":[");
+        for (k, r) in p.rows.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(r.j as i64).raw(",\"sid\":").int(r.sid);
+            o.raw(",\"rt\":").num(round(r.rt, 4)).raw(",\"mode\":\"centroid\",\"mz\":").rounded(&r.mz, p.nd).raw(",\"y\":").rounded(&r.y, 1).raw("}");
+        }
+        o.raw("]}");
+        Ok(Some(o.0))
+    }
+
+    /// The scans `i0..=i1` of a level of centroids as `App.spectra` / `App.scanbin` have them (`raw_filt`: with a filter the peaks are not binned).
+    pub(crate) fn picked_scans<M: ReadAt>(&mut self, q: &Query, mzml: &mut M, bin: f64, raw_filt: bool) -> Result<Option<Picked>> {
         let (Some(i0), Some(i1)) = (int(q, "i0"), int(q, "i1")) else { return Ok(None) };
         let level = q.level();
-        let bin = q.num("bin")?.unwrap_or(0.1);
         let of_level = self.idx.scans.iter().filter(|s| s.level == level);
         let nscans = of_level.clone().count();
         let pool_has_profile = if nscans > 0 { of_level.clone().any(|s| s.profile) } else { self.idx.scans.iter().any(|s| s.profile) };
@@ -55,29 +68,26 @@ impl<R: ReadAt> Routes<R> {
             Some(p) if level > 1 && p != 0.0 && hr.on => (p * hr.ppm * 1e-6).max(1e-3),
             _ => 0.6,
         };
-        let sel = self.selected(level, si, precursor, tol, q.some("filt"))?;
+        let filt = q.some("filt").or(q.some("filter"));
+        let sel = self.selected(level, si, precursor, tol, filt)?;
         if i0 > i1 || i1 - i0 + 1 > MAX_SCANS || i0 < 0 || i0 as usize >= sel.len() {
             return Ok(None);
         }
         let ar = self.idx.arrays(si)?.clone();
         let merge = q.get("merge") == Some("1") && !hr.on;
-        let nd = if hr.on { hr.dec + 1 } else { 3 };
-        let mut o = Out::default();
-        o.raw("{\"n\":").int(sel.len() as i64).raw(",\"scans\":[");
-        for (k, j) in (i0 as usize..=(i1 as usize).min(sel.len() - 1)).enumerate() {
+        let mut rows = Vec::new();
+        for j in i0 as usize..=(i1 as usize).min(sel.len() - 1) {
             let (sid, rt) = (ar.scan_ids[sel[j]], ar.rt[sel[j]]);
             let (mut mz, mut y) = read_scan(&self.idx.scans[sid as usize], mzml)?;
-            if !hr.on && !mz.is_empty() {
+            if !hr.on && !mz.is_empty() && !(raw_filt && filt.is_some()) {
                 (mz, y) = bin_cells(&mz, &y, bin);
             }
             if merge {
                 (mz, y) = merge_unit(&mz, &y);
             }
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(j as i64).raw(",\"sid\":").int(sid);
-            o.raw(",\"rt\":").num(round(rt, 4)).raw(",\"mode\":\"centroid\",\"mz\":").rounded(&mz, nd).raw(",\"y\":").rounded(&y, 1).raw("}");
+            rows.push(PickedScan { j, sid, rt, mz, y });
         }
-        o.raw("]}");
-        Ok(Some(o.0))
+        Ok(Some(Picked { n: sel.len(), nd: if hr.on { hr.dec + 1 } else { 3 }, rows }))
     }
 
     /// `/api/scan`: one scan with its own centroids and what the file says about it.
@@ -167,6 +177,21 @@ impl<R: ReadAt> Routes<R> {
     fn nce(&self) -> bool {
         self.idx.run.get("nce").and_then(|v| v.bool()).unwrap_or(false)
     }
+}
+
+/// What `picked_scans` found: the number of scans of the kind, the decimals of the m/z and the scans asked for.
+pub(crate) struct Picked {
+    pub n: usize,
+    pub nd: usize,
+    pub rows: Vec<PickedScan>,
+}
+
+pub(crate) struct PickedScan {
+    pub j: usize,
+    pub sid: i64,
+    pub rt: f64,
+    pub mz: Vec<f64>,
+    pub y: Vec<f64>,
 }
 
 /// Cells of 3 ppm in high resolution, of 0.1 Da otherwise (`Item.scan_avg`).

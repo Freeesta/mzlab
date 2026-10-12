@@ -14,6 +14,12 @@ impl Engine {
         r.mzml_route(path, &Query::parse(query), &mut JsReader { read }).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
     }
 
+    /// `/api/scanbin` of a centroid file: the binary block of the scans, read from the mzML. Empty = Python's.
+    pub fn scanbin(&mut self, slot: u32, query: &str, read: Function) -> Result<Vec<u8>, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else { return Ok(Vec::new()) };
+        r.scanbin_route(&Query::parse(query), &mut JsReader { read }).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
+    }
+
     /// `/api/spectrum` with a background (`bgk`): the window minus the window of the background, from the index(es). Empty = Python's.
     pub fn spectrum_bg(&mut self, slot: u32, query: &str) -> Result<String, JsValue> {
         let q = Query::parse(query);

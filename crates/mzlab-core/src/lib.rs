@@ -7,6 +7,7 @@ pub mod elements;
 pub mod entropy;
 pub mod fileroutes;
 pub mod hrroutes;
+pub mod hrscanbin;
 pub mod hrscans;
 pub mod error;
 pub mod idxread;

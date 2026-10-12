@@ -61,6 +61,18 @@ async function lrFree() {                                                 // the
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
 }
+// Operations on single scans (`scans.rs` of the engine): the scans of a centroid file come from the mzML by offset, a background comes from the indexes.
+function scanOp({ op, id, slot, path, query, blob }) {
+  const q = query || "";
+  if (op === "scanbin") {
+    const b = engine.scanbin(slot, q, readerFor(blob));
+    postMessage({ id, op, n: b.length, info: null, buf: b.length ? b.buffer : null, len: b.length }, b.length ? [b.buffer] : []);
+    return;
+  }
+  const info = op === "specbg" ? engine.spectrum_bg(slot, q) : engine.mzml_route(slot, path, q, readerFor(blob));
+  postMessage({ id, op, n: 0, info, buf: null, len: 0 });
+}
+
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -143,9 +155,8 @@ onmessage = async ev => {
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
+      case "mzmlroute": case "specbg": case "scanbin": return scanOp(m, id);                            // api/spectra, scan, scanavg, scanbin, spectrum with a background: see scanOp
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML
-      case "mzmlroute": info = engine.mzml_route(m.slot, m.path, m.query || "", readerFor(m.blob)); break;   // api/spectra, scan, scanavg of a centroid file: the scans are read from the mzML by offset
-      case "specbg": info = engine.spectrum_bg(m.slot, m.query || ""); break;                 // api/spectrum minus the window of a background (bgk), both from the index(es)
       case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (profile or high resolution)
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
