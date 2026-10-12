@@ -75,7 +75,7 @@ fn a_row_is_rejected_by_the_first_rule_it_fails() {
     assert_eq!(v.rows, vec![0, 1]);
     assert_eq!(v.area(&t, 1, 0), None, "the blank has no peak there");
     assert!(v.area(&t, 0, 2).is_some());
-    assert!(v.counts_json().contains("\"tenute\":2"));
+    assert!(v.counts_json().contains("\"tenute\":2") && v.counts_json().starts_with("{\"righe\":4"));
 }
 
 #[test]
