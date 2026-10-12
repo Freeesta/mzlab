@@ -8,7 +8,7 @@ const LIVELLI = (() => {
   const KEY = "qqq.lib.soglie", ORDER = D.livelli;
   const LEGACY = { ent: "entropia_min", shared: "picchi_min", ppm: "precursore_ppm_max", ent2: "entropia_provvisorio" };      // the keys of the first version of the thresholds
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
-  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } };
+  const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };   // lsObj lives in i18n.js (not loaded under node)
   const write = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
 
   // ------------------------------------------------------------ profiles and thresholds
@@ -34,7 +34,7 @@ const LIVELLI = (() => {
   }
 
   // ------------------------------------------------------------ the gates
-  const num = (v, d) => (v == null || !isFinite(v) ? "–" : Number(v).toLocaleString(typeof I18N !== "undefined" && I18N.lang === "en" ? "en-US" : "it-IT", { maximumFractionDigits: d, minimumFractionDigits: d }));
+  const num = (v, d) => (v == null || !isFinite(v) ? "–" : (typeof I18N !== "undefined" ? I18N.fix(v, d) : Number(v).toFixed(d)));
   const dec = g => (g.id === "score" || g.id === "distinct" || g.id === "stdscore" ? 2 : g.unita === "ppm" || g.unita === "min" ? 1 : 0);
   function evalGate(g, vals, T) {
     let thr = T[g.soglia]; const r = g.ridotta;

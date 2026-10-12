@@ -18,7 +18,7 @@ const QAQC = (() => {
   const blankState = () => ({ roles: {}, ions: [], thr: 3, win: 0.5, ratio: { text: "", rt: "" }, seq: 1 });
   let st = blankState();
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
+  Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
 
   // ---------------------------------------------------------------- the series and the type of each file
