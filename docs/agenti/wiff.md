@@ -1,0 +1,18 @@
+# `.wiff` + `.wiff.scan` (SCIEX Analyst, 3200 QTRAP e simili): lettore Rust
+Stato attuale. Codice in `crates/mzlab-core/src/wiff/` (`mod.rs` apertura e campioni, `idx.rs` indice delle scansioni, `scan.rs` blocchi del `.scan`), contenitore OLE2 da `ole.rs` (lo stesso dei `.dam`; nessun crate nuovo, niente Python/Pyodide). Fonte del formato: studio del codice OpenSXRaw (Sigilweaver, Apache-2.0, https://github.com/Sigilweaver/OpenSXRaw), poi riscritto da zero; la licenza va citata nei commenti dei file.
+
+## Formato (come lo legge il codice)
+- La coppia è `X.wiff` + `X.wiff.scan` (stesso nome più `.scan`). Senza il `.scan` il lettore dà `err.file.wiffNoScan`; un file non OLE2 dà `err.file.notWiff`; il resto `err.file.wiff` (`detail`). Le chiavi nei cataloghi `lang/` arrivano con la PR che le usa nella pagina.
+- Il `.wiff` è un contenitore OLE2: `SampleSubtree/SampleN/Idx` per ogni campione (più campioni: `wiff::samples`, ordine numerico; `Wiff::open(.., None)` con più campioni è un errore, si sceglie con `Some("Sample2")`). Il metodo di acquisizione sta in `MethodSubtree/...` (già letto da `methodinfo.rs` per i `.wiff`).
+- `Idx`: intestazione di 32 byte e record di 54 byte, little-endian: u32 offset e u32 dimensione del blocco nel `.scan`, f32 RT in minuti (+0x0C), u8 livello (+0x10: 1 = MS1, altro = MS2), f64 TIC in cps (+0x12). Record con dimensione ≤ 56 sono segnaposto e si saltano.
+- Blocco del `.scan`: i primi 56 byte sono la coda del blocco precedente (con il terminatore `ff ff ff ff`) e un’area di sincronia; il carico utile inizia a `offset+56` e finisce al primo `ff ff ff ff` che cade su un confine di token. Token: `0x00-0x7f` salto dell’accumulatore (bin += b); `0x80-0xfb` conteggio di 1 byte (b & 0x7f); `0xfc` u8, `0xfd` u16, `0xfe` u24, `0xff` u32 (little-endian). L’accumulatore parte da 0. Il valore `0xFFFFFFFF` come conteggio u32 è ambiguo col terminatore e (come in OpenSXRaw) chiude il blocco.
+- Le letture sono limitate da dimensione dichiarata, blocco successivo, lunghezza del file e 64 MiB: un indice falso non alloca di più.
+
+## Limiti noti (non risolti, da leggere prima di (b))
+- **L’asse m/z dei QTRAP non è un m/z.** I punti decodificati hanno un «bin» intero del rivelatore (`Point.bin`), non una massa. Né OpenSXRaw né questo lettore sanno convertirlo: per i TripleTOF c’è una calibrazione lineare (stream `TOFCalibrationData`), per i QTRAP non c’è. Il README di OpenSXRaw lo dichiara per i 5500/6500+; per il 3200 non c’è ancora nessun file vero. Finché non si trova la conversione (con file veri del 3200 e le masse note) il lettore NON espone m/z.
+- Il tipo di esperimento (Full Scan, MRM, EPI...) e le transizioni MRM (Q1/Q3, CE) non sono nell’indice letto qui, e OpenSXRaw non le riporta (solo un TIC). Vanno cercati in `MethodSubtree` e negli stream per esperimento (`ExperimentHeaderFJ`, ...), con file veri.
+- Polarità: OpenSXRaw la deduce dal segno della tensione di spray (`IonSourceParamsTable`, parametro `ISVF`/`IS`); non ancora portata qui.
+- `.wiff2` (SCIEX OS, cifrato) e flat file senza `.scan` non sono supportati.
+
+## Parità
+`tests/wiff_parity.rs` confronta il lettore con OpenSXRaw (oracolo, eseguito a mano: `pip install opensxraw`, test con `MZLAB_WIFF_PYTHON=<python con opensxraw>`; senza oracolo si salta, `MZLAB_GOLDEN_STRICT=1` fallisce) su coppie sintetiche costruite da `tools/wiff_riferimento.py` (con `cfb_scrivi.py`): scansioni, livelli, RT (secondi), punti (bin e conteggio, conteggio > 0), cromatogramma TIC, a ≤ 1e-9; il TIC dell’oracolo ha i tempi in f32. L’oracolo non ha mai letto un `.wiff` vero di questo repository: la parità prova il livello contenitore, indice e token, non la fisica.
