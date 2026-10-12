@@ -9,7 +9,7 @@ use mzlab_feat::target::{Cell, TargetResult, TargetRow};
 
 use crate::run::HypoRun;
 
-const MAGIC: &[u8; 8] = b"MZHYPO01";
+const MAGIC: &[u8; 8] = b"MZHYPO02";
 
 struct Put(Vec<u8>);
 
@@ -38,7 +38,12 @@ pub fn dump(h: &HypoRun) -> Vec<u8> {
     o.u32(reg.hyps.len() as u32);
     for x in &reg.hyps {
         o.u32(x.id);
-        o.u32(u32::from(x.sources) | u32::from(x.polarity as u8) << 8 | (x.dir as u32) << 16);
+        o.u32(
+            u32::from(x.sources)
+                | u32::from(x.polarity as u8) << 8
+                | (x.dir as u32) << 16
+                | u32::from(x.steps) << 24,
+        );
         o.str(&x.label);
         o.str(&x.formula);
         o.f64(x.neutral);
@@ -70,6 +75,9 @@ pub fn dump(h: &HypoRun) -> Vec<u8> {
             o.u32(c.feature);
         }
     }
+    o.u32(h.rules_src.len() as u32);
+    o.0.extend_from_slice(&h.rules_src);
+    o.str(h.profile.as_deref().unwrap_or(""));
     o.0
 }
 
@@ -114,9 +122,9 @@ fn hypothesis(g: &mut Get) -> Result<Hypothesis> {
         mz,
         adduct: "",
         polarity: (packed >> 8) as u8 as i8,
-        steps: 0,
+        steps: (packed >> 24) as u8,
         level: 0,
-        dir: match packed >> 16 {
+        dir: match (packed >> 16) & 0xff {
             0 => Dir::MorePolar,
             1 => Dir::LessPolar,
             _ => Dir::Free,
@@ -169,11 +177,18 @@ pub fn load(bytes: &[u8]) -> Result<HypoRun> {
     }
     let (rules_version, polarity) = (g.u32()?, g.u32()? as u8 as i8);
     let n = g.u32()? as usize;
-    let hyps = (0..n).map(|_| hypothesis(&mut g)).collect::<Result<Vec<_>>>()?;
+    let hyps = (0..n)
+        .map(|_| hypothesis(&mut g))
+        .collect::<Result<Vec<_>>>()?;
     let (n_files, tried, found) = (g.u32()? as usize, g.u32()?, g.u32()?);
     let m = g.u32()? as usize;
     let rows = (0..m).map(|_| row(&mut g)).collect::<Result<Vec<_>>>()?;
+    let n = g.u32()? as usize;
+    let rules_src = g.take(n)?.to_vec();
+    let profile = g.str()?;
     Ok(HypoRun {
+        rules_src,
+        profile: (!profile.is_empty()).then_some(profile),
         registry: Registry {
             hyps,
             outcomes: Vec::new(),
