@@ -19,7 +19,7 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 }[k] || k);
 
 import { originRoute } from "./lr-origin.js";
-import { engineRoute } from "./lr-map.js";
+import { engineRoute, statRoute } from "./lr-map.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
@@ -181,6 +181,7 @@ export function createLr({ rb }) {
       const t = text();
       if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: true })).info };
       if (t === null) return null;
+      { const r = await statRoute(path, t, { rpc }); if (r !== undefined) return r; }                       // the statistics of the series: the Rust engine, no file needed
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }
       const body = JSON.parse(t || "{}");
       if (path === "/api/explore") return await explore(body);
