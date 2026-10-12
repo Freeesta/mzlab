@@ -30,6 +30,8 @@ pub struct Recipe {
     pub align: FamAlignParams,
     pub rt: RtParams,
     pub fill: FillParams,
+    /// Fill the gaps of the aligned table with the integration of the raw traces (L6).
+    pub fill_gaps: bool,
 }
 
 impl Default for Recipe {
@@ -42,6 +44,7 @@ impl Default for Recipe {
             align: FamAlignParams::default(),
             rt: RtParams::default(),
             fill: FillParams::default(),
+            fill_gaps: true,
         }
     }
 }
@@ -76,12 +79,13 @@ impl Recipe {
     /// Text of what the aligned table depends on: the text of the files and the alignment, the RT map and the filling.
     pub fn table_text(&self) -> String {
         format!(
-            "{}\nmode={:?}\nalign={:?}\nrt={:?}\nfill={:?}",
+            "{}\nmode={:?}\nalign={:?}\nrt={:?}\nfill={:?}{}",
             self.file_text(),
             self.mode,
             self.align,
             self.rt,
-            self.fill
+            self.fill,
+            if self.fill_gaps { "" } else { "\nfill=off" }
         )
     }
 

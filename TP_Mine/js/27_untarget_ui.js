@@ -37,7 +37,7 @@
         <div class="drop" id="unt-drop">Drop the files here <button type="button" id="unt-pick">Choose files...</button><input type="file" id="unt-in" multiple hidden accept=".csv,.tsv,.txt,.mgf"></div>
         <div class="row"><label>Polarity <select id="unt-pol"><option value="auto">auto</option><option value="1">positive</option><option value="-1">negative</option></select></label>
           <label>Precursor tolerance <input type="number" id="unt-tol" value="10" min="1" step="1" style="width:64px"> ppm</label>
-          <button type="button" id="unt-libs">Libraries...</button><button type="button" id="unt-go" class="imp" disabled>Match</button><button type="button" id="unt-stop" hidden>Stop</button></div>
+          <button type="button" id="unt-libs">Libraries...</button><button type="button" id="unt-pipe">Pipeline...</button><button type="button" id="unt-go" class="imp" disabled>Match</button><button type="button" id="unt-stop" hidden>Stop</button></div>
         <div id="unt-sum" class="mut"></div><progress id="unt-prog" max="1" value="0" hidden aria-label="Progress"></progress><div id="unt-msg" role="status" class="mut"></div>
         <div id="unt-res" hidden><div class="row"><label>Level <select id="unt-lv"></select></label><label>Filter <input type="text" id="unt-q" placeholder="id, m/z, name..." style="width:170px"></label>
           <label><input type="checkbox" id="unt-ms2"> only with MS<sup>2</sup></label>
@@ -50,6 +50,7 @@
       drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
       drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); load([...e.dataTransfer.files]); };
       $("#unt-libs").onclick = () => { if (window.LIB) window.LIB.open(); };
+      $("#unt-pipe").onclick = () => { if (window.PIPE) window.PIPE.open(); };
       $("#unt-go").onclick = match; $("#unt-stop").onclick = () => { st.cancel = true; };
       $("#unt-pol").onchange = () => { if (st.files.length) build(); };
       $("#unt-lv").onchange = e => { st.level = e.target.value; st.nShown = PAGE; table(); };
