@@ -98,7 +98,10 @@ impl AgilentD {
 }
 
 fn metadata(f: &Files) -> Vec<meta::Item> {
-    let named: [(&str, Option<&[u8]>); 5] = [
+    let head = f.ms_scan.get(..scan::HEADER_LEN);
+    let named: [(&str, Option<&[u8]>); 7] = [
+        ("AcqData/MSScan.bin#header", head),
+        ("AcqData/MSTree2.bin", f.ms_tree),
         ("AcqData/MSTS.xml", f.ms_ts),
         ("AcqData/Devices.xml", f.devices),
         ("AcqData/Contents.xml", f.contents),

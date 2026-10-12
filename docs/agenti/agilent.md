@@ -30,7 +30,7 @@ Regola: nessuna informazione dei file grezzi si butta; ciò che non so mappare s
 | `runstart.txt`, `IndexedDataConverter.log` | variabili di inizio corsa, log del convertitore | testo intero in `metadata` |
 | `TEMPBASE` | vuoto | no |
 | `data.ms` | formato ChemStation vecchio, dati di partenza della conversione | non letto (formato non decodificato) |
-| `*.M/` (metodo di analisi dati, `Quant`, `Unknowns`) | impostazioni di quantificazione e ricerca nelle librerie | non letto |
+| `AcqData/*.M/` e `*.m/` (copia del metodo di acquisizione, `DaMethod/Quant`, `Unknowns`) | RTP, monitor, tracce di audit, quantificazione (RT, ioni, livelli, curva) | XML sì (`metadata`), binari e testi non decodificati con SHA-1; i `.m` fuori dalla corsa non sono letti |
 | TIC e picco base | TIC del record per scansione (= TIC dell'mzML) e `BasePeakMZ`/`BasePeakValue` | TIC sì (cromatogramma); il picco base è nel record, non scritto in un cromatogramma |
 
 ## `MSScan.bin`
@@ -76,6 +76,12 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 ## Parità con msconvert (`crates/mzlab-core/tests/agilent_msconvert.rs`, salta senza i dati)
 - Sulle tre corse: stesso numero di spettri (3417, 3417, 3868), stessi punti per spettro, intensità uguali (scarto 0), tempo entro 1e-9 min (msconvert scrive 12 decimali), livello 1, polarità positiva, TIC (cromatogramma) uguale punto per punto, TIC e picco base per scansione uguali a quelli del record.
 - Differenze note: m/z fino a 1.5e-5 (msconvert li scrive come decimali brevi, il file ha valori f32); nativeID `scanId=N` in msconvert, `scan=N` qui perché il programma ricava il numero di scansione da `scan=`; msconvert aggiunge il termine «SIM spectrum», le finestre di scansione e un cromatogramma SIC per ione (`Q1` = m/z del metodo meno 0.05, 7 nelle corse SIM): qui no, gli XIC li costruisce il programma dagli spettri.
+
+## Audit di perdita (`tests/agilent_audit.rs`, `tests/agilent_audit/`)
+- Inventario del grezzo fatto senza il codice del lettore: elenco dei file, valori di testo e di attributo degli XML (scansione di testo semplice), valori degli `.ini`, campi del layout dei record. Ogni voce deve stare in `AgilentD::metadata` (nome o valore, origine = percorso nella cartella), in `ScanRec` o `extra_names`, oppure in `scarti.txt` con il motivo. I file che non si decodificano (`MSTree2.bin`, intestazione di `MSScan.bin`, formati ignoti) entrano con «undecoded bytes» e «undecoded sha1».
+- `noti.txt` (solo nomi di file e conteggi, i nomi dei metodi sono sostituiti da `*.M`): se un file noto dà meno voci di prima il test fallisce; si riscrive con `AUDIT_WRITE=1`. Prova sintetica sempre attiva: un campo mai visto si conserva.
+- Il primo giro ha trovato quattro perdite vere, corrette: XML in UTF-16, entità (`&lt;` arriva a parte nel lettore XML), testo misto con figli, nome di visualizzazione dei campi di `sample_info.xml`.
+- Le cartelle `*.M` dentro `AcqData` (copia del metodo di acquisizione: `7890Method.bin`, `Acq.RTP*.xml`, tracce di audit, `quantitative.xml` con ioni e livelli di calibrazione) sono lette come file piccoli (`Files::others`): XML a nome/valore, il resto dichiarato con SHA-1.
 
 ## Cosa scrive nell'mzML oltre agli spettri
 - Intestazione: `startTimeStamp` = `AcquiredTime` di `Contents.xml` come scritto (con il suo fuso, senza frazioni di secondo); msconvert lo scrive 2 ore avanti (16:00:45+01:00 diventa 17:00:45Z), qui no. Seriale (MS:1000529) da `Devices.xml`; software di acquisizione MS:1000678 con la versione di `Contents.xml` (msconvert scrive 8.0, il file dice 10.0); `sampleList` e userParam «sample type» da `sequence.xml`; per ogni file letto formato MassHunter, nativeID format e SHA-1 (`MSPeak.bin` si calcola prima di convertire, in blocchi da 1 MB); `fileContent` con centroide, TIC e BPC.

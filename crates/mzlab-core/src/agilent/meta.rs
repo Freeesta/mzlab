@@ -23,7 +23,7 @@ struct Node {
 }
 
 fn text_of(b: &[u8]) -> String {
-    String::from_utf8_lossy(b)
+    super::method::decode(b)
         .trim_start_matches('\u{feff}')
         .to_string()
 }
@@ -54,6 +54,11 @@ fn close(stack: &mut Vec<Node>) {
 }
 
 fn tree(xml: &str) -> Option<Node> {
+    // a declaration that says utf-16 is wrong for the text we hold (already characters): cut it
+    let xml = match xml.trim_start().strip_prefix("<?xml") {
+        Some(rest) => rest.split_once("?>").map_or(xml, |(_, r)| r),
+        None => xml,
+    };
     let mut r = Reader::from_str(xml);
     let mut stack = vec![Node::default()];
     loop {
@@ -75,6 +80,23 @@ fn tree(xml: &str) -> Option<Node> {
             Event::Text(t) => {
                 if let Some(n) = stack.last_mut() {
                     n.text.push_str(&t.xml10_content());
+                }
+            }
+            Event::GeneralRef(r) => {
+                // &lt; &gt; &amp; &apos; &quot; and character references arrive apart from the text around them
+                let c = match r.resolve_char_ref() {
+                    Ok(Some(c)) => Some(c.to_string()),
+                    _ => match r.as_ref() {
+                        "lt" => Some("<".to_string()),
+                        "gt" => Some(">".to_string()),
+                        "amp" => Some("&".to_string()),
+                        "apos" => Some("'".to_string()),
+                        "quot" => Some("\"".to_string()),
+                        other => Some(format!("&{other};")),
+                    },
+                };
+                if let (Some(n), Some(c)) = (stack.last_mut(), c) {
+                    n.text.push_str(&c);
                 }
             }
             Event::CData(t) => {
@@ -105,6 +127,20 @@ fn emit(n: &Node, path: &str, origin: &str, out: &mut Vec<Item>) {
             .map(|c| c.text.trim().to_string())
     };
     if let (Some(name), Some(value)) = (kid("Name"), kid("Value")) {
+        if let Some(d) = kid("DisplayName").filter(|d| *d != name && !d.is_empty()) {
+            out.push(Item {
+                origin: origin.into(),
+                name: format!("{name} (display name)"),
+                value: d,
+            });
+        }
+        for (k, v) in &n.attrs {
+            out.push(Item {
+                origin: origin.into(),
+                name: format!("{here}@{k}"),
+                value: v.clone(),
+            });
+        }
         out.push(Item {
             origin: origin.into(),
             name,
@@ -127,7 +163,7 @@ fn emit(n: &Node, path: &str, origin: &str, out: &mut Vec<Item>) {
         });
     }
     let t = n.text.trim();
-    if n.kids.is_empty() && !t.is_empty() {
+    if !t.is_empty() {
         out.push(Item {
             origin: origin.into(),
             name: here.clone(),
@@ -211,12 +247,23 @@ pub fn collect(files: &[(&str, &[u8])]) -> Vec<Item> {
             continue;
         }
         if out.len() == before {
+            // not decoded: declared with its size and SHA-1 so that it can be found again in the original
             out.push(Item {
                 origin: name.to_string(),
-                name: "bytes".into(),
+                name: "undecoded bytes".into(),
                 value: bytes.len().to_string(),
+            });
+            out.push(Item {
+                origin: name.to_string(),
+                name: "undecoded sha1".into(),
+                value: sha1_hex(bytes),
             });
         }
     }
     out
+}
+
+fn sha1_hex(b: &[u8]) -> String {
+    use sha1::{Digest as _, Sha1};
+    Sha1::digest(b).iter().map(|x| format!("{x:02x}")).collect()
 }
