@@ -406,7 +406,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), turning round the centre.
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), advancing and weaving together.
 // The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
 const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
 let ldIonRaf = 0, ldAnLoad = null;
@@ -424,8 +424,10 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions turning round the centre (depth z sets size and brightness)
-    n: 22, dt: 0.035, at(j, t) { const a = TAU * 0.55 * t + j * TAU / 3; return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(a), z: Math.sin(a) }; } } };
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions 120° apart, their trails advancing and weaving together (depth z sets size and brightness)
+    n: 26, dt: 0.045, step: 9,
+    at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
+    shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; } } };
   if (LD_ANALYSERS) for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
   const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
