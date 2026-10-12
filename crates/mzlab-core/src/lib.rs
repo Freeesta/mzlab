@@ -5,6 +5,7 @@ pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
 pub mod budget;
+pub mod centroidi;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;

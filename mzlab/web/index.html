@@ -82,7 +82,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 
 .cont{margin-top:5px;padding-top:4px;border-top:1px solid var(--line);max-width:300px}.cont-h{color:var(--accent)}.cont-row{margin-top:3px}#convhelp{margin-top:8px}#convhelp summary{cursor:pointer;color:var(--accent)}#convhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}#convhelp a{color:var(--accent)}#unopen{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--ink)}#unopen p{margin:4px 0}#unopen ul{margin:4px 0 0 18px;padding:0}#unopen .row{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
 .go{background:var(--accent);color:var(--on-accent);border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
-.cp-head{display:flex;gap:8px;align-items:center;justify-content:space-between}.cp-phase{margin-top:4px}.cp-spin{display:inline-block;width:.8em;height:.8em;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;vertical-align:-.1em;animation:cpspin 1s linear infinite}@keyframes cpspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.cp-spin{animation:none;border-top-color:var(--accent);border-right-color:var(--accent)}}.cp-total{margin-top:8px}.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
+.cp-num{font-variant-numeric:tabular-nums}.convopt{margin:10px 0 0}.convopt-l{display:inline-flex;align-items:center;gap:8px;min-height:24px;cursor:pointer}.convopt-l input{margin:0;width:16px;height:16px;flex:none}.convopt-n{margin:2px 0 0 24px}.cp-head{display:flex;gap:8px;align-items:center;justify-content:space-between}.cp-phase{margin-top:4px}.cp-spin{display:inline-block;width:.8em;height:.8em;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;vertical-align:-.1em;animation:cpspin 1s linear infinite}@keyframes cpspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.cp-spin{animation:none;border-top-color:var(--accent);border-right-color:var(--accent)}}.cp-total{margin-top:8px}.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
@@ -108,7 +108,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 html[data-bar-lab=all] #sb-toggle .tl{display:inline}
 html[data-bar-lab=all] #sb-toggle{border-radius:999px;padding:4px 10px 4px 8px}
 #sidebar-resize-handle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent);opacity:.6}
-#bar-hint{position:fixed;z-index:6000;display:flex;gap:8px;align-items:flex-start;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:9px 10px 9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}#bar-hint::before{content:"";position:absolute;top:-6px;left:18px;width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}#bar-hint button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}#bar-hint button:hover{color:var(--ink)}#bar-hint button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (prefers-reduced-motion:no-preference){#bar-hint{animation:hint-in .25s ease}@keyframes hint-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
+#bar-hint{position:fixed;z-index:6000;display:flex;gap:8px;align-items:flex-start;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:9px 10px 9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}#bar-hint::before{content:"";position:absolute;top:-6px;left:var(--ha,18px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}#bar-hint button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}#bar-hint button:hover{color:var(--ink)}#bar-hint button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (prefers-reduced-motion:no-preference){#bar-hint{animation:hint-in .25s ease}@keyframes hint-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
 #sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
 #sb-pane:focus{outline:none}#sb-pane:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 #sb-grip{display:inline-flex;color:var(--muted);cursor:grab;padding:2px 2px 2px 0}
@@ -517,8 +517,10 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
  <div class="card" id="loaded" hidden></div>
  <div class="card req"><h3 data-i18n="load.step1.title">1. Carica i file dei dati (.mzML)</h3>
   <div id="drop" data-i18n-html="load.drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
-  <label id="rawprof" class="sm muted" style="display:block;margin:8px 0 0" hidden data-i18n-title="conv.profile.title" title="Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroide: i picchi già calcolati dallo strumento."><input type="checkbox" id="rawprofile" style="margin-right:6px"><span data-i18n="conv.profile">File .raw: conserva il profilo (predefinito: centroide)</span></label>
+  <div id="rawprof" class="convopt" hidden><label class="convopt-l" data-i18n-title="conv.profile.title" title="Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroidi: i picchi già calcolati o ricavati dallo strumento, uno per picco."><input type="checkbox" id="rawprofile" aria-describedby="rawprofnote"><span data-i18n="conv.profile">Conserva i dati in profilo (predefinito: centroidi)</span></label><div id="rawprofnote" class="convopt-n muted sm" data-i18n="conv.profile.note">Vale per i file Thermo .raw e SCIEX .wiff; gli mzML sono già convertiti e restano come sono.</div></div>
   <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px" data-i18n="load.or">oppure</div><button id="demobtn" class="sec" aria-expanded="false" aria-controls="demochoice" data-i18n-title="load.demo.title" title="Scegli quali file di esempio aprire: si scarica solo ciò che scegli"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg><span data-i18n="load.demo.button">Prova con i file di esempio &#9662;</span></button><div id="demochoice" hidden style="margin-top:8px;display:none;gap:6px;justify-content:center;flex-wrap:wrap"><button type="button" class="sec" data-demo="full" data-i18n-title="load.demo.full.title" title="5 file Full Scan: 0, 5, 10, 15 e 30 minuti di irraggiamento">Full Scan <span class="muted" data-i18n="load.demo.full.size">5 file · 28 MB</span></button><button type="button" class="sec" data-demo="ms2" data-i18n-title="load.demo.ms2.title" title="2 file MS2 (ioni prodotto): 15 e 60 minuti">MS2 <span class="muted" data-i18n="load.demo.ms2.size">2 file · 10 MB</span></button><button type="button" class="sec" data-demo="mrm" data-i18n-title="load.demo.mrm.title" title="4 standard MRM a concentrazione crescente (0.6; 2.4; 7.2 e 18 ppm)">MRM <span class="muted" data-i18n="load.demo.mrm.size">4 file · 2 MB</span></button><button type="button" class="sec" data-demo="hrms" data-i18n-title="load.demo.hrms.title" title="4 file ad alta risoluzione (Orbitrap, DDA): serie temporale di un inquinante degradato su TiO2 (0, 5, 10 e 30 min)">HRMS <span class="muted" data-i18n="load.demo.hrms.size">4 file · 28 MB</span></button></div></div>
+  <div style="text-align:center;margin:8px 0"><button type="button" id="pickdirbtn" class="sec" data-i18n="cart.pick" data-i18n-title="cart.pick.title" title="Carica tutti i file compatibili di una cartella, sottocartelle comprese">Carica una cartella</button><input type="file" id="pickdir" webkitdirectory multiple hidden></div>
+  <div id="cartinfo" class="note" role="status" aria-live="polite" hidden></div>
   <div id="unopen" class="note" role="status" aria-live="polite" hidden></div>
   <details id="convhelp" class="sm"><summary data-i18n="conv.help.summary">Non hai file mzML?</summary>
    <p id="convhint" class="muted" hidden></p>
@@ -538,7 +540,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
-(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","kmd-calc.js","kmd-vista.js","kmd.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js","logo-piccone.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","cartella-carica.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","kmd-calc.js","kmd-vista.js","kmd.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js","logo-piccone.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
 L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
 <script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
@@ -684,14 +686,15 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
     const ui=g.start(++i,f.name);
     try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal,{profile:!!$("#rawprofile")?.checked});CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){if(e.cancelled){ui.done();continue}ui.fail(e.json?I18N.err(e.json).message:e.message)}}
-  g.end();if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
+  if(g.signal.aborted){g.end();const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
+  else if(i)out.panel=g;else g.end();      // the panel stays for the indexing (upload shows it as the last phase of the same bar)
   return out}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
 async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
   if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
-  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
   const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],pairs=[];
   for(const [k,e] of [...WIFF_WAIT]){      // a pair is in the list as soon as its two files are together, before anything is read
     if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
@@ -707,7 +710,7 @@ async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?awa
   const title=()=>ui.title(T("conv.wiff.batch",{done:nDone,n:jobs.length})),total=()=>{let f=0,w=0;for(const j of jobs){f+=part(j)*(j.fr||0);w+=j.written||0}return{scans:Math.round(1000*f/all),scansTotal:1000,written:w,several:true}};
   title();g.signal.addEventListener("abort",()=>jobs.forEach(j=>{if(!j.over)rb.cancelWiff(j.nm)}));
   await Promise.all(jobs.map(async j=>{
-    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{j.fr=convFraction(p);j.written=p.written;ui.update(total());CONVROWS.set(j.nm,"run",convPercent(p))},j.nm);
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{j.fr=convFraction(p);j.written=p.written;ui.update(total());CONVROWS.set(j.nm,"run",convPercent(p))},j.nm,!$("#rawprofile")?.checked);
       j.over=true;j.fr=1;nDone++;title();ui.update(total());CONV.add(j.nm,blob);const f=new File([blob],j.nm);CONVROWS.set(j.nm,"conv");if(onFile)onFile(f);else res.files.push(f)}
     catch(x){j.over=true;CONVROWS.drop(j.nm);if(!x.cancelled){const d=document.createElement("div");d.className="fail";d.textContent=j.nm+": "+(x.json?I18N.err(x.json).message:x.message);box.appendChild(d)}}}));
   ui.done();g.end();
@@ -754,24 +757,28 @@ async function upload(files,into){const box=$("#up");fail();
   const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
-    const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
-    CONVROWS.set(f.name,"index",0);
-    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b))});
-      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
+    const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
+    if(!pn){row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row)}
+    CONVROWS.set(f.name,"index",0);if(pn)pn.index(f.name,0);
+    const onIdx=e=>{if(e.detail.name===f.name){const pc=Math.min(99,Math.floor(100*e.detail.frac));CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc);else row.querySelector("i").style.width=pc+"%"}};
+    addEventListener("mzlab-index",onIdx);
+    try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
+      if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
-  const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
-  const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+    catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
+  let panel=null;const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
+  const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  await Promise.all(early);reportLoad(rep)}
+  await Promise.all(early);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
+$("#pickdirbtn").onclick=()=>$("#pickdir").click();$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
-$("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files],"data"));
+$("#drop").addEventListener("drop",e=>{if(!CartCarica.fromDrop(e))upload([...e.dataTransfer.files],"data")});   // a dropped folder is read by cartella-carica.js
 ["dragenter","dragover"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.remove("over")}));
 $("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files],"dam"));
@@ -780,7 +787,7 @@ addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.
 // are in E.pending (grey rows, aria-busy, not selectable); a file that fails stays there in red with its message and the others go on; a file taken off the list is not read.
 async function exploreList(samples){
   if(samples.length<2||!(window.QQQ_BROWSER||/[?&]progressivo=1\b/.test(location.search))){await post("api/explore",{samples});return null}
-  await post("api/explore",{samples:[samples[0]]});
+  await post("api/explore",{samples:[samples[0]],all:samples.map(s=>s.file)});
   const tok=E.progTok={};E.pendN=samples.length;
   E.pending=samples.slice(1).map(s=>({file:s.file,label:s.label||s.file,state:"wait"}));
   return ()=>openRest(samples.slice(1),tok)}
