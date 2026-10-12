@@ -26,9 +26,9 @@ export function createLr({ rb }) {
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const api = { files };
-  const rpc = async (msg) => {
+  const rpc = async (msg, onp) => {
     const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
-    const r = await rb.rpc(msg);
+    const r = await rb.rpc(msg, onp);
     if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
     if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
     return r;
@@ -74,11 +74,11 @@ export function createLr({ rb }) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
     if (blob.size > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
-    try {
+    try {                                                              // lr_index reports how far the index has got: the page shows it (event mzlab-index, index.html upload)
       const put = await rpc({ op: "lr_put", name: n, blob });
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { await rpc({ op: "lr_index", name: n }); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
+      else { await rpc({ op: "lr_index", name: n }, p => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name: n, frac: p.frac } }))); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       return fail(key, { name: n, ...params }, `cannot read the file: ${n}`);

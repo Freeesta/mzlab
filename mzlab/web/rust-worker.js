@@ -142,7 +142,7 @@ async function lrOp(m) {
     case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
-      const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part });
+      const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part, onProgress: p => postMessage({ op: "progress", id: m.id, frac: p.frac }) });      // frac: how far the builder has read
       if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
         await ARCH.remove("idx", part);
         if (res.reason === "memory") jerr("error.memoryBudget");

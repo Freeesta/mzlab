@@ -43,28 +43,29 @@ try:
         def progress():
             pg.wait_for_selector(".convprog"); pg.wait_for_function("!!window.__go")
             t = pg.inner_text(".convprog")
-            assert "File 1 di 2: irr_t5.raw" in t and "1/3 Lettura" in t and "2/3" not in t, t       # read = total at once, yet still phase 1: the percent comes from the scans
+            assert "File 1 di 2: irr_t5.raw" in t and "Conversione in mzML" in t and "/3" not in t and "restano" not in t, t       # no "1/3", no estimate; read = total at once, yet no percent: it comes from the scans
             assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") is None
             go(); pg.wait_for_function("!!window.__go")
             t = pg.inner_text(".convprog")
-            assert "2/3 Conversione in mzML" in t and "0%" in t and "0 di 10 scansioni" in t, t
+            assert "Conversione in mzML" in t and "0%" in t and "0 di 10 scansioni" in t, t
             assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "0"
             go(); pg.wait_for_function("!!window.__go")
             t = pg.inner_text(".convprog")
             assert "40%" in t and "4 di 10 scansioni" in t and "MB scritti" in t and "trascorso" in t, t
-            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "40"
-            assert pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow") == "20", pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow")      # 0.4 of the first of two files of the same size
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "15", pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow")      # ONE bar: 0.4 of the first of two files = 20% of the conversion = 15% of the job (the conversion is 3/4 of it)
+            assert pg.locator(".convprog [data-r=tot]").count() == 0 and "restano" not in t
+            assert pg.evaluate("getComputedStyle(document.querySelector('.convprog [data-r=detail]')).fontVariantNumeric").find("tabular-nums") >= 0
             assert pg.locator(".cp-spin").count() == 0
             pg.wait_for_function("document.querySelector('.cp-beat') && document.querySelector('.cp-beat').textContent.includes('Sto ancora convertendo')", timeout=8000)    # no news for 2 s: still working
             assert pg.locator(".cp-spin").count() == 1 and pg.get_attribute("[data-r=beat]", "aria-live") == "polite"
             go(); pg.wait_for_function("!!window.__go")
-            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "50"      # the hand-over of the mzML
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "37"      # the hand-over of the mzML: the first of two files is converted
             assert pg.locator(".cp-spin").count() == 0
             go()
-        step("the panel says File 1 di 2, the phases in order, the real percent, the total bar and the heartbeat", progress)
+        step("the panel says File 1 di 2, the phase, the real percent, one bar over the job, no time left and the heartbeat", progress)
         def second():
             pg.wait_for_function("document.querySelector('.convprog b') && document.querySelector('.convprog b').textContent.includes('2 di 2')")
-            pg.wait_for_function("!!window.__go"); assert pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow") == "50"      # the first file is done
+            pg.wait_for_function("!!window.__go"); assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "37"      # the first file is done
             for _ in range(4): pg.wait_for_function("!!window.__go"); pg.evaluate("window.__go(); window.__go=null")
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=2", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('.convprog').length") == 0
