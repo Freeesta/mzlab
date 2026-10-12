@@ -19,6 +19,7 @@ def cold(p, vw, vh, reduced, saved=None):
     ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');"
+    if "qqq.barra.lr" not in (saved or {}): init += "localStorage.setItem('qqq.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)

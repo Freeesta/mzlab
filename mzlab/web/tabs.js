@@ -123,10 +123,10 @@ function defaultLayoutTab(t) {
     const f0 = tabFiles("full")[0];
     // chromatogram + linked spectrum must both fit in the window (a laptop at 1280x720 would push the spectrum below the fold and the arrows need both in view):
     // the usual 330 + 310 px when there is room, otherwise the height left in the window shared 50/50 (never below 190 px each)
-    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 126, avail = innerHeight - top - 42;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
-    let hc = 330, hs = 310; if (avail < hc + hs + 10) { hc = Math.max(190, Math.round((avail - 10) * 0.5)); hs = Math.max(190, Math.round(avail - 10 - hc)); }
+    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 84, avail = innerHeight - top - 42;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
+    const g = pnlGap(); let hc = 330, hs = 310; if (avail < hc + hs + g) { hc = Math.max(190, Math.round((avail - g) * 0.5)); hs = Math.max(190, Math.round(avail - g - hc)); }
     const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: hc, full: true });
-    const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + 10, w, h: hs, full: true });
+    const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + g, w, h: hs, full: true });
     if (window.DDA && f0.dda) DDA.make(c, sp);                 // a data-dependent file: the MS2 scans sit to the right of the Full Scan
     apexSpectrum(c, sp);
     let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
@@ -134,8 +134,8 @@ function defaultLayoutTab(t) {
       if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;      // the student already resized them
       if (!dp.offsetParent) { if (++tries < 60) requestAnimationFrame(fix); return; }
       const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
-      if (c.h + sp.h + 10 <= av) return;
-      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
+      const g = pnlGap(); if (c.h + sp.h + g <= av) return;
+      c.h = Math.max(190, Math.round((av - g) * 0.5)); sp.h = Math.max(190, Math.round(av - g - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
     requestAnimationFrame(fix);
     if (window.BANCO) BANCO.afterLayout();       // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
@@ -168,7 +168,7 @@ const ms2PairOf = prec => E.panels.find(p => p.tab === "ms2" && p.type === "chro
 // sidebar of the MS2 tab: tick a precursor to show its two graphs (they are created if missing), untick to close them, click the name to go to them
 function ms2Toggle(prec, on) {
   const c = ms2PairOf(prec);
-  if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Pair(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + 10), 0)); relayout(); fitHost(); } }
+  if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Pair(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0)); relayout(); fitHost(); } }
   if (!on && c) { [...E.panels.filter(q => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
   renderFileList(); uiSave();
 }

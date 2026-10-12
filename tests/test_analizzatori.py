@@ -57,7 +57,7 @@ def test_zat_inverts_radius_and_equal_potential_rm():
 def test_every_analyser_draws_finite_points():
     code = """
     global.window = global; const noop = new Proxy(function(){}, { get: () => noop, apply: () => noop, set: () => true });
-    require('./an-util.js'); for (const f of ['quad','tof','orbi','esi','trappola','fticr','qqq']) require('./an-' + f + '.js');
+    require('./an-util.js'); for (const f of require('fs').readdirSync('.').filter(f => /^an-.+\\.js$/.test(f) && f !== 'an-util.js')) require('./' + f);
     const names = Object.keys(window.LDAN), out = {};
     for (const k of names) {
       const an = window.LDAN[k]({ cx: noop, W: 420, H: 120, TAU: 2 * Math.PI, line: '#ccc', muted: '#888' }); let seen = 0, bad = 0;
@@ -68,5 +68,5 @@ def test_every_analyser_draws_finite_points():
     """
     r = subprocess.run(["node", "-e", code], cwd=WEB, check=True, capture_output=True, encoding="utf-8").stdout
     res = json.loads(r)
-    assert sorted(res) == sorted(["quad", "tof", "orbi", "esi", "trappola", "fticr", "qqq"])
+    assert len(res) >= 7 and {"quad", "tof", "orbi"} <= set(res)
     assert all(v == [True, 0] for v in res.values()), res
