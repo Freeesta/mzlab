@@ -13,7 +13,7 @@ const PROFILO = (() => {
   const qaOn = () => !!(window.FEATURES && FEATURES.qaqc);      // «Normalise on» (internal standards of QA/QC) exists only with QA/QC on
   let st = { text: "", rt: "", metric: "area", istd: "" };
   let res = null;                                              // last result {ion, rows, series, normalized, metric}
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
+  Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const series = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter(f => f.kind !== "mrm");
   const fmt = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(d));

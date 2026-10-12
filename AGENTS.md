@@ -2,7 +2,7 @@
 
 Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rileggerlo. Leggi il file d'area del tuo lavoro (§5). Per trovare un file o una funzione: `python3 tools/indice.py` poi `grep -n '<nome>' docs/agenti/mappa.md`, o il subagente `cercatore`.
 
-**Non leggere** (bloccati da `.claude/settings.json`; grep resta permesso): `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/tpmine.enc`, `mzlab/web/esempi/`, `.git/`, `.verifica/` (anche `cache_massbank`), `docs/agenti/misure-diario.md`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`.
+**Non leggere** (bloccati da `.claude/settings.json`; grep resta permesso): `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/esempi/`, `.git/`, `.verifica/` (anche `cache_massbank`), `docs/agenti/misure-diario.md`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`.
 
 ## 1. Il progetto
 - **mzLab**: programma DIDATTICO per l'esperienza 3 del laboratorio di analisi degli inquinanti. Gli studenti analizzano dati LC-MS di un triplo quadrupolo SCIEX 3200 QTRAP (risoluzione unitaria, ESI+) per trovare i prodotti di trasformazione (TP) di un inquinante degradato su TiO2. Legge anche file HR (Orbitrap, Q-TOF) e DDA. Nome visibile SOLO in `mzlab/web/appname.js`.
@@ -14,7 +14,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
   6. **Accessibilità**: colori solo da variabili CSS, `prefers-reduced-motion`, tastiera e `aria-label`, grafici leggibili dai daltonici (Okabe-Ito); **ogni grafico nuovo nasce con la sua tabella dei dati** (`TDATI`, `docs/agenti/dati.md`), con bersagli di almeno 24×24 px (40 px al tocco) e zoom/spostamento senza trascinamento (WCAG 2.2 AA; `e2e_axe_grafici`).
-- **Dati del laboratorio**: MAI nel repository (pubblico); stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`mzML/`, `dam/`, `HRMS/`; prompt in `scratchpad/`). Eccezione: i file anonimi di `mzlab/web/esempi/`. Il nome del composto dell'esperienza, dei suoi TP e degli inquinanti dei metodi non compare mai nel repository pubblico (interfaccia, Teoria, esempi, test, commit, PR; i test lo controllano).
+- **Dati del laboratorio**: MAI nel repository (pubblico); stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`mzML/`, `dam/`, `HRMS/`; prompt in `scratchpad/`). Eccezione: i file anonimi di `mzlab/web/esempi/`. I cognomi elencati in `nomi_vietati.txt` del repository privato non compaiono mai nel repository pubblico (interfaccia, Teoria, esempi, test, commit, PR; `tests/test_esempi_anonimi.py` lo controlla); nessun composto è vietato.
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato**: il lavoro è finito quando è in `main` e il workflow «pages» di quel commit è riuscito.
@@ -30,9 +30,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - Un front end non provato nel browser è rotto. Niente `pkill -f` con parole presenti nel comando: ferma i server con il PID.
 
 ## 3. Verifica e test
-- **Un comando**: `python3 tools/verifica.py` (sintassi JS, testi, pytest, `prova_hr`, tutti gli e2e; ~9 min con 4 CPU). Opzioni: `--cambiati` (solo gli e2e dei file cambiati rispetto a `origin/main`), `--ultimi-falliti`, `--solo e2e6,e2e18`, `--fumo`. Log in `.verifica/log/<nome>.log`: solo per i FAIL, letti dal `verificatore`.
-- **Tre livelli**: (1) durante il lavoro e prima del merge `--cambiati` + la CI della PR (4 job obbligatori di «main protetto»); (2) CI di ogni PR (`test.yml`); (3) ogni notte su main (`notte.yml`) e a fine di un pacchetto grande.
-- **Mappa e soglie**: `docs/agenti/mappa.md` NON è nel repository: si genera con `python3 tools/indice.py` (~1 s; all'inizio della sessione e dopo aver aggiunto o spostato file; `--controlla` verifica i gruppi: una cartella nuova va in `GROUPS`). `python3 tools/controlla.py` avvisa di file/funzioni/righe troppo lunghi e FALLISCE solo se peggiorano rispetto a `tools/soglie_base.json`; la base si restringe con `--aggiorna`, mai si allarga. `tools/noti_rossi.txt`: e2e rossi noti (non bloccanti).
+- **Verifica**: `python3 tools/verifica.py` (~9 min con 4 CPU; `--cambiati` = solo gli e2e dei file cambiati rispetto a `origin/main`; log in `.verifica/log/`, letti dal `verificatore`). Prima del merge: `--cambiati` + la CI della PR (`test.yml`, 4 job obbligatori di «main protetto»); ogni notte `notte.yml`. Livelli, mappa (`python3 tools/indice.py`, non è nel repository), soglie (`tools/controlla.py`) e `noti_rossi.txt`: `docs/agenti/test.md`.
 - **Dati**: il repository privato si trova da solo (accanto, sopra, nella home o con `MZLAB_DATI=<percorso>`); senza, `tools/dati_sintetici.py` crea file simili e i test che chiedono dati veri si saltano (tabella `NEEDS`). Test con Pyodide (`e2e13`, `e2e_tpmine*`): prima `python3 tools/build_site.py` (scrive `site/`, da cancellare dopo).
 - **Struttura e test nuovi**: `tests/` = pytest, `tests_e2e/` = script Playwright (uno per argomento, `lib.py` → `Run`); regole e aiuti in `docs/agenti/test.md`.
 
@@ -53,6 +51,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, barra laterale, tour | `docs/agenti/dati.md` |
+| header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
@@ -64,6 +63,9 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
+| benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
+| pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`) |
+| formato `.mzidx` | `docs/agenti/mzidx.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |

@@ -11,6 +11,12 @@ function convPhase(p) {
   if (p.read >= p.total) return "writing";
   return p.written > 0 ? "converting" : "reading";
 }
+// name of the mzML made from a .raw: "x.raw" -> "x.mzML"; when that name is taken (a real x.mzML in the same loading or already open) the extension
+// stays in the key, "x.raw.mzML", so both files are listed. `taken`: names (any case) that are already in use.
+function convName(rawName, taken) {
+  const base = String(rawName).replace(/\.raw$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+  return used.has((base + ".mzML").toLowerCase()) ? base + ".raw.mzML" : base + ".mzML";
+}
 // whole percent 0..100 of the file (bytes of the .raw read; bytes handed over while "writing" in the desktop app); null if not known
 function convPercent(p) {
   if (!p) return null;
@@ -78,4 +84,4 @@ const ConvUI = {
   },
 };
 
-if (typeof module !== "undefined") module.exports = { convPhase, convPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, convPhase, convPercent, convElapsed, convMB };

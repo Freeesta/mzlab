@@ -45,6 +45,8 @@
     }
     return out;
   }
+  // THE number format of the whole program (not the Teoria): decimal point in every language, no thousands separator (a comma would be read as a decimal one)
+  const NF = dec => new Intl.NumberFormat("en-US", dec === undefined ? { useGrouping: false } : { useGrouping: false, minimumFractionDigits: dec, maximumFractionDigits: dec });
   function format(msg, params, lg) {
     params = params || {}; let out = "", i = 0;
     while (i < msg.length) {
@@ -58,11 +60,11 @@
       if (c1 < 0) out += v === undefined ? "{" + name + "}" : String(v);
       else {
         const rest = inner.slice(c1 + 1), c2 = rest.indexOf(","), type = (c2 < 0 ? rest : rest.slice(0, c2)).trim();
-        if (type === "number") out += v === undefined ? "{" + name + "}" : new Intl.NumberFormat(lg === "it" ? "it-IT" : "en-US").format(+v);
+        if (type === "number") out += v === undefined ? "{" + name + "}" : NF().format(+v);
         else if (type === "plural" && c2 >= 0) {
           const br = parseBranches(rest.slice(c2 + 1)), n = +v;
           const pick = br["=" + n] !== undefined ? br["=" + n] : (br[new Intl.PluralRules(lg === "it" ? "it" : "en").select(n)] ?? br.other ?? "");
-          out += format(pick.replace(/#/g, new Intl.NumberFormat(lg === "it" ? "it-IT" : "en-US").format(n)), params, lg);
+          out += format(pick.replace(/#/g, NF().format(n)), params, lg);
         } else out += "{" + inner + "}";
       }
       i = e + 1;
@@ -77,8 +79,8 @@
     return params === undefined && m.indexOf("{") < 0 ? m : format(m, params, lang);
   }
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
-  // fixed decimals in the language of the sentence (file sizes inside prose: "1,5 MB" / "1.5 MB"); data values use num()
-  const fix = (x, dec) => new Intl.NumberFormat(lang === "it" ? "it-IT" : "en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(+x);
+  // fixed decimals, always with the point (file sizes inside prose: "1.5 MB"); data values use num()
+  const fix = (x, dec) => NF(dec).format(+x);
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
@@ -120,3 +122,8 @@
   root.I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);
+
+// a saved setting read from localStorage: always a plain object (a missing, old, damaged or foreign value gives an empty one), never an error
+if (typeof window !== "undefined") window.lsObj = function (key) {
+  try { var o = JSON.parse(localStorage.getItem(key) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+};

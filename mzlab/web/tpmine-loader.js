@@ -115,11 +115,25 @@
     render();
   }
 
+  // ---- a click on the logo of the header: it grows and bursts, then comes back (no animation under reduced motion)
+  function popLogo(img) {
+    const still = document.documentElement.hasAttribute("data-a11y-reduce") || !img.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (still || img._pop) return;
+    img._pop = img.animate([
+      { transform: "scale(1)", opacity: 1, offset: 0 },
+      { transform: "scale(1.9)", opacity: 1, offset: 0.45 },
+      { transform: "scale(3.4)", opacity: 0, offset: 0.7 },
+      { transform: "scale(1)", opacity: 0, offset: 0.8 },
+      { transform: "scale(1)", opacity: 1, offset: 1 }], { duration: 900, easing: "ease-out" });
+    img._pop.onfinish = img._pop.oncancel = () => { img._pop = null; };
+  }
+
   // ---- switch: 5 quick clicks on the logo of the header
   let n = 0, t0 = 0;
   document.addEventListener("click", ev => {
     const logo = ev.target && ev.target.closest && ev.target.closest("header img.logo");
     if (!logo) return;
+    popLogo(logo);
     const now = Date.now();
     n = now - t0 > WINDOW_MS ? 1 : n + 1; t0 = now;
     if (n < CLICKS) return;

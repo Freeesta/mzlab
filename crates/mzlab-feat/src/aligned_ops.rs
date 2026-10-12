@@ -1,8 +1,82 @@
 //! Queries and the byte layout of `Aligned`.
 
-use crate::aligned::Aligned;
+use crate::aligned::{Aligned, CELL_DETECTED};
+use crate::table::ROLE_M;
 
 impl Aligned {
+    /// Copies the cells of row `r` of `src` to the end of `self` (columns only, not the members).
+    fn push_cells(&mut self, src: &Aligned, r: usize) {
+        let c = r * src.n_files..(r + 1) * src.n_files;
+        self.area.extend_from_slice(&src.area[c.clone()]);
+        self.height.extend_from_slice(&src.height[c.clone()]);
+        self.apex_rt.extend_from_slice(&src.apex_rt[c.clone()]);
+        self.width.extend_from_slice(&src.width[c.clone()]);
+        self.state.extend_from_slice(&src.state[c]);
+    }
+
+    /// Whether a row has the m/z (within `ppm`, as reference ion or member) and the RT (within `rt_tol` minutes) of an ion.
+    pub fn holds(&self, mz: f64, rt: f64, ppm: f64, rt_tol: f64) -> bool {
+        self.rows_near(mz, ppm)
+            .iter()
+            .any(|&i| (self.rt[i] - rt).abs() <= rt_tol)
+    }
+
+    /// Appends the rows of `other` (a table of ions of the same files) that no row of `self` holds; returns how many. In "per family" mode the
+    /// ion of the new row is its own member.
+    pub fn append_unheld(&mut self, other: &Aligned, ppm: f64, rt_tol: f64) -> usize {
+        let mut added = 0;
+        let new: Vec<usize> = (0..other.len())
+            .filter(|&r| !self.holds(other.mz[r], other.rt[r], ppm, rt_tol))
+            .collect();
+        for r in new {
+            self.mz.push(other.mz[r]);
+            self.rt.push(other.rt[r]);
+            self.push_cells(other, r);
+            if !self.member_start.is_empty() {
+                self.member_mz.push(other.mz[r]);
+                self.member_rt.push(other.rt[r] as f32);
+                self.member_role.push(ROLE_M);
+                self.member_start.push(self.member_mz.len() as u32);
+            }
+            added += 1;
+        }
+        added
+    }
+
+    /// Keeps the rows that look like a product of a series: not detected in the first file (the untreated reference) and detected in one unbroken run of at
+    /// least `files` files (noise and constant background do not appear and disappear only once).
+    pub fn retain_recurring(&mut self, files: usize) {
+        let nf = self.n_files;
+        let mut out = Aligned {
+            n_files: nf,
+            ..Aligned::default()
+        };
+        let had_members = !self.member_start.is_empty();
+        if had_members {
+            out.member_start.push(0);
+        }
+        for r in 0..self.len() {
+            let cells = &self.state[r * nf..(r + 1) * nf];
+            let on: Vec<usize> = (0..nf).filter(|&k| cells[k] == CELL_DETECTED).collect();
+            let run = on.len() >= files && on[on.len() - 1] - on[0] + 1 == on.len();
+            if !run || on[0] == 0 {
+                continue;
+            }
+            out.mz.push(self.mz[r]);
+            out.rt.push(self.rt[r]);
+            out.push_cells(self, r);
+            for m in self.members(r) {
+                out.member_mz.push(self.member_mz[m]);
+                out.member_rt.push(self.member_rt[m]);
+                out.member_role.push(self.member_role[m]);
+            }
+            if had_members {
+                out.member_start.push(out.member_mz.len() as u32);
+            }
+        }
+        *self = out;
+    }
+
     /// Rows with the reference ion or any member within `ppm` of `mz`, ascending (the way to find an ion that is not the reference of its family).
     pub fn rows_near(&self, mz: f64, ppm: f64) -> Vec<usize> {
         let tol = mz * ppm * 1e-6;

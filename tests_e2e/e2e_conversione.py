@@ -11,6 +11,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = Path("/tmp/wd_conv_files"); D.mkdir(parents=True, exist_ok=True)
 write_full(D / "x.mzML", 0, seed=3); XML = (D / "x.mzML").read_text(encoding="utf-8")
+write_full(D / "dup.mzML", 0, seed=4); (D / "dup.raw").write_bytes(b"RAW" * 10)
 for n in ("irr_t5.raw", "irr_t10.raw"): (D / n).write_bytes(b"RAW" * 10)
 FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp) => {
   const xml = %s;
@@ -72,6 +73,13 @@ try:
             with pg.expect_download() as d: pg.evaluate("document.querySelector('#flst [data-dl]').click()")      # the side bar may be folded: the click goes to the button itself
             assert d.value.suggested_filename.endswith(".mzML")
         step("the file list has the buttons too", opened)
+        def same_base():
+            pg.set_input_files("#pick", [str(D / "dup.raw"), str(D / "dup.mzML")])
+            for _ in range(3): pg.wait_for_function("!!window.__go", timeout=60000); pg.evaluate("window.__go(); window.__go=null")
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=60000)
+            names = pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0])")
+            assert "dup.mzML" in names and "dup.raw.mzML" in names, names
+        step("a .raw and an mzML with the same base name are both listed", same_base)
 finally:
     r.close()
 for s in steps: print(s)

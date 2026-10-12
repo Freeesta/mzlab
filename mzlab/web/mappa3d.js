@@ -9,7 +9,7 @@ const REDUCED = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motio
 const SMALL = () => !!(window.MZLAB_PHONE || (matchMedia("(pointer:coarse)").matches && Math.min(screen.width, screen.height) < 900) || (navigator.deviceMemory && navigator.deviceMemory <= 4));
 const GRID = () => SMALL() ? 512 : 1024;                 // cells per side
 const STICKS = () => SMALL() ? 50000 : 200000;           // most points drawn as sticks
-const DEF = { mode: "surf", hs: "sqrt", ex: 1, asp: 1.6, lt: true, fl: true, sig: null, side: true };
+const DEF = { mode: "surf", hs: "lin", ex: 1, asp: 1.6, lt: true, fl: true, sig: null, side: true };
 
 // ---------------------------------------------------------------- small maths (column-major 4x4)
 const m4 = {

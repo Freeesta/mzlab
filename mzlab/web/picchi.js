@@ -25,7 +25,7 @@ function sgFilter(y, m, deriv) {                         // half window m (windo
 }
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 const PK_DEF = { method: "classic", win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0 };
-const PK = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("qqq.picchi") || "{}"); } catch (e) { /* no storage */ } return { ...PK_DEF, ...o }; })();
+const PK = (() => { const o = lsObj("qqq.picchi"); return { ...PK_DEF, ...o }; })();
 function pkSave() { try { localStorage.setItem("qqq.picchi", JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 function autoEdges(s, x, ref) {
   const xs = s.x, n = xs.length, ic = nearIdx(xs, x);

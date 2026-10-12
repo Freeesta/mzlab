@@ -41,7 +41,7 @@ def test_messages_placeholders_numbers_and_plurals():
       f('{x, number}', {x: 12345.5}, 'en'), f('{x, number}', {x: 12345.5}, 'it'), f('{missing}', {}, 'en'),
       f('{n, plural, one {{n} of {name}} other {{n} of {name}}}', {n: 2, name: 'x'}, 'en'),
       I.t('a', {name: 'Ada'}) === (I.lang === 'it' ? 'Ciao Ada' : 'Hello Ada'), I.t('no.such.key'), I.num(3.14159, 2), I.num(5), I.num(null)]))""")
-    assert r == ["Hello Ada", "1 file", "3 files", "no files", "12,345.5", "12.345,5", "{missing}", "2 of x", True, "no.such.key", "3.14", "5", ""]
+    assert r == ["Hello Ada", "1 file", "3 files", "no files", "12345.5", "12345.5", "{missing}", "2 of x", True, "no.such.key", "3.14", "5", ""]
 
 
 @needs_node
@@ -86,3 +86,10 @@ def test_api_answers_with_keys():
     assert code == 500 or code == 400
     j = json.loads(body)
     assert j["error_key"] == "err.session.noSuchFile" and "params" in j
+
+
+@needs_node
+def test_numbers_always_use_the_point_in_both_languages():
+    r = node("""I.add('it', {k: '{x, number} · {n, plural, other {# file}}'}); I.set && I.set('it');
+    console.log(JSON.stringify([I.fix(1234.5, 2), I.fix(0.5, 1), I.t('k', {x: 1234567.25, n: 12345.5})]))""")
+    assert r == ["1234.50", "0.5", "1234567.25 · 12345.5 file"]
