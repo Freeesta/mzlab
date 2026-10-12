@@ -104,6 +104,19 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
             assert not errs, errs
         step("opening the Full Scan series without Pyodide, and no page error", nopy)
+        def product_spectrum():                          # product-ion files of two precursors together: the panel of 229.1 uses the file that has it, never a blank panel
+            c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000); pg = c2.new_page()          # a clean session of its own
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
+            pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
+            pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=use]')).forEach(i => { const on = /^prodotto/.test(i.closest('tr').children[1].textContent.trim()); if (i.checked !== on) i.click(); })")
+            pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0", timeout=120000)
+            pg.evaluate("""() => { const p = E.panels.find(q => q.type === 'spec'); p.all = false; p.link = null; E.browse = false; p.k = E.files.findIndex(f => /_s2/.test(f.label));
+              p.level = 2; p.prec = 229.1; p.r0 = 2.5; p.r1 = 3.5; drawSoon(p); }""")
+            pg.wait_for_function("(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls); })()", timeout=60000)
+            c2.close()
+        step("the product-ion spectrum of a precursor is drawn even when the file shown has another precursor", product_spectrum)
         def mzfinder():                                  # the converted files are ordinary files of the Data tab: mzFinder (LR) lists them
             pg.evaluate("localStorage.setItem('qqq.mzfinder', '1')"); pg.reload()
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)

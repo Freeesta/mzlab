@@ -979,6 +979,7 @@ I18N.add("it", {
   "int.xlsx.tail": "Coda USP (5%)",
   "spec.isMrm": "Questo file è MRM: contiene solo cromatogrammi di transizioni, non spettri.",
   "spec.pickRange": "Clicca o trascina sul cromatogramma per scegliere l'intervallo di tempo, oppure usa ← → dopo aver messo il cursore.",
+  "spec.noPrec": "Nessun file mostrato contiene il precursore m/z {v}: scegli un altro precursore o un altro file.",
   "spec.noScan": "Nessuno scan in questo intervallo (per MS2: scegli il precursore e il livello giusto).",
   "axis.relPct": "Intensità relativa (%)",
   "tip.peak": "<b>m/z {mz}</b><div>intensità <b>{y}</b>{abs}</div>",

@@ -33,6 +33,8 @@ Si tiene ciò che il file contiene, senza peak picking implicito: il `.wiff` del
 - Un mzML per campione: `nome.mzML` se il `.wiff` ha un campione, `nome_s<N>.mzML` se ne ha più (`conversione.js::wiffName`); entrano come file normali (OPFS, `.mzidx`), con il pulsante «Scarica mzML» dei `.raw` (`CONV`). Il tipo (Full Scan, MS2, MRM) lo riconosce l'elenco dal contenuto; mzFinder LR legge gli stessi file della scheda Dati. Senza motore Rust i `.wiff` restano tra i formati non apribili (guida di conversione). L'app desktop non converte ancora i `.wiff`.
 - Prova: `tests_e2e/e2e_wiff.py` (coppie sintetiche di `tools/wiff_riferimento.py`, nessun dato del laboratorio, nessuna richiesta a Pyodide fino alla traccia TIC; l'MRM `two_s2` e i file con meno di 21 punti per scansione passano ancora da Python); `wiff_parity.rs` rilegge ogni mzML scritto.
 
+- Spettro di prodotto: se il file mostrato dal pannello MS2 non ha il precursore del pannello (`p.prec`, tolleranza 0,6), `drawSpec` (`picchi.js`) usa il primo file caricato che lo ha; se nessuno lo ha, il messaggio `spec.noPrec`. La prova usa `prodotto.wiff` di `tools/wiff_riferimento.py` (due campioni, precursori 229,1 e 305,0).
+
 ## Limiti noti
 - Verificati solo full scan, prodotto di ione (MS2) e MRM in un periodo. EPI, MS3, perdita neutra, precursori e più periodi: non visti nei dati (si leggono come full scan se il blocco ha il marcatore).
 - Le tracce DAD/analogiche del `.wiff` e i nomi dei campioni (`DabsInfo`) non si leggono.
