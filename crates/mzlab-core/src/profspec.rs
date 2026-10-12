@@ -52,15 +52,45 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
-        if self.idx.sections.iter().any(|s| s.f4) || self.idx.sections[si].n_scans != of_level_count(&self.idx.scans, level) {
+        if self.idx.sections[si].n_scans != of_level_count(&self.idx.scans, level) {
             return Ok(None);
         }
         if let Some((_, st)) = self.steps.iter().find(|(l, _)| *l == level) {
             return Ok(st.map(|s| (si, s)));
         }
+        if self.idx.sections[si].f4 {
+            return Ok(None); // the points of a single-precision section are not the ones the spacing is read from: `prime_steps` reads them from the mzML
+        }
         let st = self.point_step(si)?;
         self.steps.push((level, st));
         Ok(st.map(|s| (si, s)))
+    }
+
+    /// The spacing of the profile levels whose peak table is single precision (high-resolution survey scans), read from the exact points of the mzML
+    /// as `Item._step` does (the index cannot give it: its m/z are rounded to single precision). A no-op for every other level.
+    pub fn prime_steps<M: ReadAt>(&mut self, mzml: &mut M) -> Result<()> {
+        let mut levels: Vec<u8> = self.idx.scans.iter().map(|s| s.level).collect();
+        levels.sort_unstable();
+        levels.dedup();
+        for level in levels {
+            let all_profile = self.idx.scans.iter().filter(|s| s.level == level).all(|s| s.profile);
+            let f4 = self.idx.section_of(level, None).is_some_and(|si| self.idx.sections[si].f4);
+            if !all_profile || !f4 || self.steps.iter().any(|(l, _)| *l == level) {
+                continue;
+            }
+            let ids: Vec<usize> = (0..self.idx.scans.len()).filter(|&i| self.idx.scans[i].level == level).collect();
+            let mut step = None;
+            for &i in ids.iter().skip(ids.len() / 2).take(20) {
+                let (mz, _) = crate::hrscans::read_scan(&self.idx.scans[i], mzml)?;
+                if mz.len() > 20 {
+                    let gap = mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
+                    step = gap.is_finite().then(|| (gap * 1e4).round_ties_even() / 1e4).filter(|s| *s > 0.0);
+                    break;
+                }
+            }
+            self.steps.push((level, step));
+        }
+        Ok(())
     }
 
     /// `/api/spectrum` on a window of a profile file.
@@ -81,12 +111,25 @@ impl<R: ReadAt> Routes<R> {
         Ok(o.0)
     }
 
-    /// `/api/spectra`: single scans `i0..=i1` of a profile file (points merged on the grid, as `Item.scans`).
+    /// `/api/spectra`: single scans `i0..=i1` of a profile file (points merged on the grid, as `Item.scans`). A level of single-precision peaks is
+    /// the mzML's (`spectra_profile_exact`: the scans are read from the file, as Python does).
     pub(crate) fn spectra_profile(&mut self, q: &Query) -> Result<Option<String>> {
+        self.spectra_profile_in::<std::fs::File>(q, None)
+    }
+
+    /// `spectra_profile` of a level of single-precision peaks: the points of each scan come from the mzML.
+    pub(crate) fn spectra_profile_exact<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+        self.spectra_profile_in(q, Some(mzml))
+    }
+
+    fn spectra_profile_in<M: ReadAt>(&mut self, q: &Query, mut mzml: Option<&mut M>) -> Result<Option<String>> {
         let (Some(i0), Some(i1)) = (index(q, "i0"), index(q, "i1")) else { return Ok(None) };
         let level = q.level();
         let bin = q.num("bin")?.unwrap_or(0.1);
         let Some((si, step)) = self.profile_level(level)? else { return Ok(None) };
+        if self.idx.sections[si].f4 != mzml.is_some() {
+            return Ok(None);
+        }
         let precursor = q.num("prec")?.or(q.num("precursor")?);
         let sel = self.selected(level, si, precursor, 0.6, q.some("filt"))?;
         if !(bin > 0.0) || i0 > i1 || i1 - i0 + 1 > MAX_SCANS as i64 || i0 < 0 || i0 as usize >= sel.len() {
@@ -95,7 +138,10 @@ impl<R: ReadAt> Routes<R> {
         let i1 = (i1 as usize).min(sel.len() - 1);
         let ar = self.idx.arrays(si)?.clone();
         let positions: Vec<usize> = sel[i0 as usize..=i1].to_vec();
-        let pts = self.scan_points(si, &positions)?;
+        let pts = match mzml.as_mut() {
+            Some(m) => positions.iter().map(|&p| crate::hrscans::read_scan(&self.idx.scans[ar.scan_ids[p] as usize], &mut **m)).collect::<Result<Vec<_>>>()?,
+            None => self.scan_points(si, &positions)?,
+        };
         let mut o = Out::default();
         o.raw("{\"n\":").int(sel.len() as i64).raw(",\"scans\":[");
         for (k, (mz, y)) in pts.iter().enumerate() {

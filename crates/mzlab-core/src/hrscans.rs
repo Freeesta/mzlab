@@ -21,8 +21,16 @@ impl<R: ReadAt> Routes<R> {
         if !self.has_scans() {
             return Ok(None);
         }
+        self.prime_steps(mzml)?;
         match path {
-            "/api/spectra" => self.spectra_centroids(q, mzml),
+            "/api/spectrum" => match self.spectrum_exact(q, mzml)? {
+                Some(a) => Ok(Some(a)),
+                None => self.handle(path, q),
+            },
+            "/api/spectra" => match self.spectra_centroids(q, mzml)? {
+                Some(a) => Ok(Some(a)),
+                None => self.spectra_profile_exact(q, mzml),
+            },
             "/api/scan" => self.scan_route(q, mzml),
             "/api/scanavg" => self.scanavg_route(q, mzml),
             _ => Ok(None),

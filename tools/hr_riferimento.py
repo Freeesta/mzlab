@@ -3,7 +3,7 @@
 
     python3 tools/hr_riferimento.py OUT
 
-Writes the synthetic Orbitrap DDA files (Exploris-like, Fusion-like with an ion trap MS2) with their `.mzidx` in OUT/ and OUT/hr.json: a list of
+Writes the synthetic Orbitrap DDA files (Exploris-like, Fusion-like with an ion trap MS2, Exploris-like with PROFILE survey scans) with their `.mzidx` in OUT/ and OUT/hr.json: a list of
 {k, path, query, status, result, single, py_s} with the answer of `api.dispatch` (`single` = a window of one scan: Rust leaves it to Python, which reads
 the centroids of the scan from the file). MZLAB_HR_FILES=a.mzML,b.mzML replaces the synthetic files by real ones. Prints nothing. No compound names.
 """
@@ -45,13 +45,13 @@ def main(argv) -> int:
     out.mkdir(parents=True, exist_ok=True)
     real = [x for x in os.environ.get("MZLAB_HR_FILES", "").split(",") if x]
     names = []
-    for i, kind in enumerate(("exploris", "fusion")):
+    for i, kind in enumerate(("exploris", "fusion", "profilo")):      # the third: survey scans in PROFILE (single-precision peak table, spacing read from the mzML)
         f = out / f"h{i}.mzML"
-        if real:
+        if real and i < 2:
             f.unlink(missing_ok=True)
             f.symlink_to(Path(real[i]).resolve())
         else:
-            ds.hr_dda(f, np.random.default_rng(31 + i), kind)
+            ds.hr_dda(f, np.random.default_rng(31 + i), "exploris" if kind == "profilo" else kind, profile=kind == "profilo")
         run = Run(f, index_path=out / (f.stem + ".mzidx"))
         mzidx.build(run, out / (f.stem + ".mzidx"))
         run.close()
@@ -60,7 +60,7 @@ def main(argv) -> int:
     app = App(out)
     app.session = Session([{"file": n} for n in names], out)
     res = []
-    for k in (0, 1):                                   # file k: a DDA file is two items of the session (survey and product ions), 2k and 2k + 1
+    for k in (0, 1, 2):                                # file k: a DDA file is two items of the session (survey and product ions), 2k and 2k + 1
         item = app._item(2 * k)
         ms2 = [s for s in item.run.scans if s.level > 1 and s.precursor]
         prec = f"{ms2[len(ms2) // 2].precursor:.4f}" if ms2 else "300"
@@ -76,7 +76,8 @@ def main(argv) -> int:
                  ("/api/scanavg", "sids=" + ",".join(map(str, s1[:3] + s1[:3]))), ("/api/scanavg", "sids="), ("/api/scanavg", "sids=-4,99999999"),
                  ("/api/scanavg", "sids=" + ",".join(map(str, range(201))))]
         for path, query in [(p, q.replace("PREC", prec).replace("FILT", quote(filt))) for p, q in QUERIES + SPECTRA] + one + scans:
-            q = {"k": str(2 * k), **{a: unquote(b) for a, b in (p.split("=", 1) for p in query.split("&") if p)}}
+            q = {**{a: unquote(b) for a, b in (p.split("=", 1) for p in query.split("&") if p)}}
+            q = {"k": str(2 * k + (q.get("level") == "2")), **q}               # the product ions are the second item of the file
             t = time.perf_counter()
             code, _, body = dispatch(app, "GET", path, q)[:3]
             res.append({"k": k, "path": path, "query": query, "status": code, "py_s": time.perf_counter() - t, "result": json.loads(body),

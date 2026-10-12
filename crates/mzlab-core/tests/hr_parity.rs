@@ -47,7 +47,7 @@ fn hr_routes_like_python() {
         return;
     }
     let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("hr.json")).unwrap()).unwrap();
-    let mut routes: Vec<Routes<std::fs::File>> = (0..2)
+    let mut routes: Vec<Routes<std::fs::File>> = (0..3)
         .map(|i| {
             let p = out.join(format!("h{i}.mzidx"));
             Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap())
@@ -79,6 +79,13 @@ fn hr_routes_like_python() {
             bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
             continue;
         }
+        let got = match got {
+            None if c["status"] == 200 && (path == "/api/spectrum" || path == "/api/spectra") => {
+                let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
+                routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()       // a profile level of single-precision peaks: its spacing comes from the mzML
+            }
+            g => g,
+        };
         if c["status"] != 200 {
             if got.is_some() {
                 bad.push(format!("k={k} {path}?{query}: Python refuses, Rust answers"));
