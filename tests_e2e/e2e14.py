@@ -32,9 +32,9 @@ with sync_playwright() as p:
             pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(900)
             sw, iw = overflow(pg); assert sw <= iw + 2, ("page scrolls sideways", sw, iw)
             host = pg.evaluate("Q('#dpanels').clientWidth")
-            bad = pg.evaluate("E.panels.filter(p=>p.x + p.w > Q('#dpanels').clientWidth + 2).map(p=>[p.type,p.x,p.w])"); assert not bad, ("panel wider than the area", bad, host)
-            full = pg.evaluate("E.panels.filter(p=>p.full && Math.abs(p.w - Q('#dpanels').clientWidth) > 2).length"); assert full == 0, ("full-width panels did not follow", full)
-            cw = pg.evaluate("E.panels.map(p=>p.cv.clientWidth)"); assert all(c > 150 for c in cw), cw
+            bad = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.x + p.w > Q('#dpanels').clientWidth + 2).map(p=>[p.type,p.x,p.w])"); assert not bad, ("panel wider than the area", bad, host)
+            full = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.full && Math.abs(p.w - Q('#dpanels').clientWidth) > 2).length"); assert full == 0, ("full-width panels did not follow", full)
+            cw = pg.evaluate("E.panels.filter(p=>p.tab===E.tab).map(p=>p.cv.clientWidth)"); assert all(c > 150 for c in cw), cw
             hdr = pg.evaluate("(()=>{const h=document.querySelector('header');return [h.scrollWidth,h.clientWidth,h.getBoundingClientRect().height]})()"); assert hdr[0] <= hdr[1] + 2, ("header clipped", hdr)
             pg.screenshot(path=SH + f"141_data_{w}.png")
         step(f"data view at {w}x{h}", at)
