@@ -93,7 +93,7 @@ export function createFeatPool(opts) {
         await load("feat");
         const t0 = performance.now();
         const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe });
-        if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0) });
+        if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       })));
     },
@@ -103,7 +103,7 @@ export function createFeatPool(opts) {
         await load("feat");
         const t0 = performance.now();
         const r = await call(slot, { op: "align", files: copy(stored), paths, recipe });
-        if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0) });
+        if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
     },
@@ -115,8 +115,8 @@ export function createFeatPool(opts) {
         const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe });
         const t1 = performance.now();
         const e = await call(slot, { op: "evidence", table: table.slice(), minutes, parentMz, parentRt, recipe });
-        if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), msHypotheses: Math.round(t1 - t0) });
-        return { table: e.bytes, tried: h.tried, found: h.found, registry: h.registry };
+        if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), msHypotheses: Math.round(t1 - t0), memMB: Math.max(h.mem, e.mem) / 1048576 });
+        return { table: e.bytes, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: Math.round(t1 - t0) };
       });
     },
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
@@ -137,6 +137,8 @@ export function createFeatPool(opts) {
       if (st.archive) { try { st.archive.w.terminate(); } catch (_) { /* gone */ } st.archive = null; }
     },
     resume() { st.cancelled = false; },
+    get onProgress() { return opts.onProgress; },
+    set onProgress(f) { opts.onProgress = f; },
     get workers() { return slots.size; },
     // for the tests: the worker that is working dies as a crashed tab would
     _killBusy() { for (const s of slots) if (s.busy) { s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } },
@@ -145,7 +147,7 @@ export function createFeatPool(opts) {
 }
 
 // ---------------------------------------------------------------- worker side
-const mods = {};                              // { feat, proofs }: the wasm-bindgen modules
+const mods = {}, mems = {};                              // { feat, proofs }: the wasm-bindgen modules
 let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
 let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
 
@@ -189,8 +191,8 @@ async function init(m) {
   const bytes = await (await fetch(m.wasmUrl)).arrayBuffer();
   if (m.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== m.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
   const mod = await import(m.jsUrl);
-  await mod.default({ module_or_path: bytes });
-  mods[m.which] = mod;
+  const ex = await mod.default({ module_or_path: bytes });
+  mods[m.which] = mod; mems[m.which] = ex.memory;
 }
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
@@ -242,6 +244,7 @@ if (IN_WORKER) self.onmessage = async ev => {
   const m = ev.data;
   try {
     const r = await OPS[m.op](m);
+    r.mem = Math.max(0, ...Object.values(mems).map(x => x.buffer.byteLength));   // linear memory of the .wasm (it only grows): the peak of this worker
     const transfer = [];
     if (r.bytes && r.bytes.buffer instanceof ArrayBuffer) transfer.push(r.bytes.buffer);
     reply(m.id, r, transfer);

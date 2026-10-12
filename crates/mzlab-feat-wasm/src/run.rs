@@ -45,10 +45,12 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, name: &str, r: &Recipe) -> Result
 }
 
 /// The per-file tables and the origin of a list of `.mzfeatf` (name and SHA-256 from their meta).
-pub fn read_files(files: &[&[u8]]) -> Result<(Vec<FileFeatures>, Origin)> {
-    let (mut out, mut origin) = (Vec::with_capacity(files.len()), Origin::default());
+pub fn read_files<B: AsRef<[u8]>>(
+    files: impl IntoIterator<Item = B>,
+) -> Result<(Vec<FileFeatures>, Origin)> {
+    let (mut out, mut origin) = (Vec::new(), Origin::default());
     for b in files {
-        let (f, meta) = read_file(b)?;
+        let (f, meta) = read_file(b.as_ref())?;
         origin.inputs.extend(inputs_of(&meta));
         out.push(f);
     }

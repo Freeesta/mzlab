@@ -73,8 +73,9 @@ fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<JsReader>>> {
         .collect()
 }
 
-fn arrays(list: &Array) -> Vec<Vec<u8>> {
-    list.iter().map(|v| Uint8Array::new(&v).to_vec()).collect()
+/// The byte arrays of a JS list, copied one at a time: the caller parses and drops each before the next is copied (peak memory = the largest, not the sum).
+fn arrays(list: &Array) -> impl Iterator<Item = Vec<u8>> + '_ {
+    list.iter().map(|v| Uint8Array::new(&v).to_vec())
 }
 
 #[cfg(feature = "detect")]
@@ -101,10 +102,7 @@ pub fn align_series(
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let bytes = arrays(&files);
-    let refs: Vec<&[u8]> = bytes.iter().map(Vec::as_slice).collect();
-    let (feats, origin) = run::read_files(&refs).map_err(js_err)?;
-    drop(bytes);
+    let (feats, origin) = run::read_files(arrays(&files)).map_err(js_err)?;
     run::align(&feats, &origin, &r, |k| open_one(&read, k, sizes[k])).map_err(js_err)
 }
 
@@ -145,13 +143,10 @@ pub fn run_hypotheses(
     recipe: &str,
 ) -> std::result::Result<Hypotheses, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let bytes = arrays(&files);
-    let feats = bytes
-        .iter()
-        .map(|b| read_file(b).map(|x| x.0))
+    let feats = arrays(&files)
+        .map(|b| read_file(&b).map(|x| x.0))
         .collect::<Result<Vec<_>>>()
         .map_err(js_err)?;
-    drop(bytes);
     let refs: Vec<&_> = feats.iter().collect();
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);

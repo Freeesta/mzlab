@@ -2,12 +2,11 @@
 the graph of the proofs, and the bytes are the ones of the native engine (SHA-256). A worker that dies (killed from outside, or a trap of the .wasm) is replaced, the job
 runs again and the page stays alive; the files written in OPFS have no `.part` left; each .wasm is under 400 KB when wasm-opt is there (the CI builds and checks it).
 No site is needed: a folder with the worker, the two .wasm and the synthetic series is served by itself. Needs cargo, the wasm32 target, wasm-bindgen and numpy."""
-import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, time
-from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import os, shutil, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
+from lib import ROOT
+from feat_site import sh, build_wasm, serve
 
 errs = []
 def step(name, fn):
@@ -17,8 +16,6 @@ def step(name, fn):
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("  ", ("wasm", "FAIL cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm")); sys.exit(0)
 tmp = Path(tempfile.mkdtemp(prefix="feat_worker_"))
-def sh(*a, cwd=ROOT):
-    return subprocess.run(a, cwd=cwd, check=True, capture_output=True, encoding="utf-8").stdout
 
 # the series, the native reference and the two .wasm
 data = tmp / "data"; data.mkdir()
@@ -28,24 +25,8 @@ shutil.copy(ROOT / "TP_Mine/data/regole_tp.json", data / "regole_tp.json")
 nat = tmp / "nat"; nat.mkdir()
 PARENT = ["--parent", "C21H32N2O2", "--rules", str(data / "regole_tp.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
 native = dict(l.split(" ")[:2] for l in sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], "--recipe", '{"polarity":1,"mode":"family"}', *PARENT).splitlines() if l.endswith(tuple("0123456789abcdef")) and " " in l and "hypotheses" not in l)
-sizes = {}
-for which in ("detect", "proofs"):
-    sh("cargo", "build", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", which)
-    out = tmp / ("feat" if which == "detect" else "proofs")
-    sh("wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
-    bg = out / "mzlab_feat_wasm_bg.wasm"
-    if shutil.which("wasm-opt"):
-        sh("wasm-opt", "-Oz", "--enable-bulk-memory", "--enable-sign-ext", "--enable-mutable-globals", "--enable-nontrapping-float-to-int", "-o", str(bg), str(bg))
-        sizes[which] = bg.stat().st_size
-shutil.copy(ROOT / "TP_Mine/files/feat-worker.js", tmp / "feat-worker.js")
-(tmp / "index.html").write_text("<!doctype html><meta charset=utf-8><title>feat</title><body>feat</body>")
-
-class Quiet(SimpleHTTPRequestHandler):
-    def log_message(self, *a): pass
-port = free_port()
-srv = ThreadingHTTPServer(("127.0.0.1", port), partial(Quiet, directory=str(tmp)))
-threading.Thread(target=srv.serve_forever, daemon=True).start()
-URL = f"http://127.0.0.1:{port}/"
+sizes = build_wasm(tmp)
+srv, URL = serve(tmp)
 
 BOOT = """async ([names, size]) => {
   const { createFeatPool } = await import("./feat-worker.js");
