@@ -6,6 +6,7 @@ use super::peak::read_points;
 use super::{AgilentD, SCAN_FULL, SCAN_SIM};
 use crate::error::Result;
 use crate::idxread::ReadAt;
+use crate::metodo::{self, Source, SrcFile};
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter, SpectrumExtra};
 use crate::window::Windowed;
@@ -94,6 +95,23 @@ impl AgilentD {
         self.records.iter().filter(|r| r.points > 0).count()
     }
 
+    /// The `metodo/1` document for the files read (name, SHA-1).
+    fn document(&self, sources: &[(String, String)]) -> String {
+        self.metodo(&Source {
+            format: "agilent-d",
+            files: sources
+                .iter()
+                .map(|(name, sha1)| SrcFile {
+                    name: name.clone(),
+                    sha1: Some(sha1.clone()).filter(|h| !h.is_empty()),
+                    bytes: 0,
+                })
+                .collect(),
+            sample: None,
+            anonymous: self.anonymous,
+        })
+    }
+
     fn header(&self, peak_sha1: &str) -> Header {
         let base = self
             .name
@@ -127,6 +145,7 @@ impl AgilentD {
                 ("AcqData/MSPeak.bin".into(), peak_sha1.into()),
             );
         }
+        let document = self.document(&sources);
         Header {
             run: base.to_string(),
             sources: sources.iter().map(|s| s.0.clone()).collect(),
@@ -145,14 +164,19 @@ impl AgilentD {
                 ("MS:1000628".into(), "basepeak chromatogram".into()),
             ],
             extra_software: self.acquisition_software().into_iter().collect(),
-            serial: dev.map(|d| d.serial.clone()).filter(|s| !s.is_empty()),
+            serial: dev
+                .filter(|_| !self.anonymous)
+                .map(|d| d.serial.clone())
+                .filter(|s| !s.is_empty()),
             sample: self
                 .sample_name()
                 .map(|n| ("sample1".to_string(), n.to_string())),
             run_params: self
                 .sample_type()
-                .map(|t| vec![("sample type".to_string(), t.to_string())])
-                .unwrap_or_default(),
+                .map(|t| ("sample type".to_string(), t.to_string()))
+                .into_iter()
+                .chain((!document.is_empty()).then(|| (metodo::USERPARAM.to_string(), document)))
+                .collect(),
             instrument: Some(("MS:1000490".into(), name)),
             components,
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
@@ -247,7 +271,7 @@ impl AgilentD {
 
 impl AgilentD {
     /// The acquisition program as `Contents.xml` names it: ("MS:1000678", "MassHunter Data Acquisition", version), for MassHunter.
-    fn acquisition_software(&self) -> Option<(String, String, String)> {
+    pub(crate) fn acquisition_software(&self) -> Option<(String, String, String)> {
         let text = &self.contents.as_ref()?.software;
         let version = text
             .split_whitespace()
