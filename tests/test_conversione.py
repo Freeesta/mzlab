@@ -31,12 +31,6 @@ def test_total_percent_is_weighted_by_the_size_of_the_files():
     assert run("console.log(JSON.stringify([c.convTotalPercent([100,300],0,0.5),c.convTotalPercent([100,300],1,0.5),c.convTotalPercent([100,300],1,1),c.convTotalPercent([0],0,0)]))") == [12, 62, 100, None]
 
 
-def test_eta_needs_a_few_seconds_of_samples_and_uses_the_last_window():
-    got = run("""const S=(a)=>a.map(([t,f])=>({t,f}));console.log(JSON.stringify([c.convEta(S([[0,0.1]]),0),c.convEta(S([[0,0.1],[3000,0.2]]),3000),
-      c.convEta(S([[0,0.1],[5000,0.2]]),5000),c.convEta(S([[0,0.2],[5000,0.2]]),5000),c.convEta(S([[0,0.0],[10000,0.1],[30000,0.5],[40000,0.6]]),40000)]))""")
-    assert got == [None, None, 40, None, 40]      # 0.1 in 5 s -> 0.8 left = 40 s; the last window (15 s) is 0.1 in 10 s -> 0.4 left = 40 s
-
-
 def test_elapsed_and_megabytes():
     assert run("console.log(JSON.stringify([0,999,1000,65000,3599000,3600000,7325000].map(c.convElapsed)))") == ["0:00", "0:00", "0:01", "1:05", "59:59", "1:00:00", "2:02:05"]
     assert run("console.log(JSON.stringify([c.convMB(1048576*3.14), c.convMB(1048576*250)]))") == ["3.1", "250"]

@@ -1,4 +1,4 @@
-"""C1: the ?perf meter. Absent without ?perf; with it: a box with api calls (with the Python timing of the file loading), panel draws and a «Copia» button."""
+"""C1: the ?perf meter. Absent without ?perf; with it: a box with api calls (with no Python timing: the engine of the site is Rust), panel draws and a «Copia» button."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -7,7 +7,7 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_perf.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
-r = Run(port=8893, wd="/tmp/wd93", motore="python")
+r = Run(port=8893, wd="/tmp/wd93")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -28,12 +28,10 @@ try:
             assert any(r["what"].startswith("explore") for r in pg.evaluate("PERF.rows")), "api/explore not measured"
             assert pg.evaluate("PERF.rows.some(r => r.kind === 'disegno' && /draw (chrom|xic|spec)/.test(r.what))"), "panel draws"
         step("api calls and panel draws are measured", rows)
-        def python():
-            j = pg.evaluate("fetch('api/perf').then(r => r.json())")
-            f = j["files"]; assert len(f) == 2 and all(x["mode"] == "mmap" and "indice" in x["timing"] for x in f), j
-            assert any("tabella MS1" in x["timing"] for x in f), j        # the XIC built the peak table
-            assert pg.evaluate("PERF.rows.some(r => r.kind === 'python' && /indice/.test(r.what))"), "Python timings not shown"
-        step("api/perf: reading mode and timings per file", python)
+        def nopython():
+            assert pg.evaluate("fetch('api/perf').then(r => r.json())") == {"files": []}, "the engine of the site has no Python timings"
+            assert not pg.evaluate("PERF.rows.some(r => r.kind === 'python')"), "Python timings shown"
+        step("api/perf: the Rust engine reports no Python timings", nopython)
         def text():
             pg.wait_for_timeout(600)
             t = pg.inner_text("#perf-out"); assert "api" in t and "riassunto" in t and "disegno" in t, t[:400]

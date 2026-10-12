@@ -7,12 +7,12 @@ def step(name, fn):
 def pt(pg, i, x=None, y=0.5, ymz=None):
     return pg.evaluate("""([i,x,fy,mz])=>{const p=E.panels[i],r=p.cv.getBoundingClientRect(),a=p._a;
       return {px:r.left+(x==null?(M.l+(a.W-M.r))/2:a.X(x)), py:r.top+(mz!=null?a.Y(mz):(r.height-60)*fy+10)}}""", [i, x, y, ymz])
-r = Run(motore="python")
+r = Run()
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram

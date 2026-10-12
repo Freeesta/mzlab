@@ -10,7 +10,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
 CH = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
-r = Run(port=8876, wd="/tmp/wd76", motore="python")
+r = Run(port=8876, wd="/tmp/wd76")
 try:
     with sync_playwright() as p:
         br = None
@@ -18,7 +18,7 @@ try:
         try: pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(500)
         def px(expr_m, frac_y=0.0):   # pixel of a peak of the spectrum (m/z -> screen)
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X({expr_m}),y:q.top+a.Y(a.ymax*{frac_y})}}}})()")
