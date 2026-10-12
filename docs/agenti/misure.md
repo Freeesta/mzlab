@@ -229,3 +229,11 @@ Parità: stessi candidati nello stesso ordine e numeri entro 1e-9 per `compositi
 | una scansione singola | 1,6-2,7 | 4-5 (una lettura dell'indice intero) | – |
 
 Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i punti sono sommati sulla griglia `rint(m/z / passo)` con il passo letto da venti scansioni a metà corsa, come `Item._step`.
+
+## Rilevatori di picchi e misure di qualità (`peakq.rs` contro `peaks::detect_peaks`, nativo, release, media di 20 giri, traccia sintetica di 15 min con tre picchi gaussiani e rumore)
+| Punti della traccia | CWT (ms) | prominenza + minimo locale (ms) | misure di qualità (µs per picco) |
+|---|---|---|---|
+| 2000 | 5,9 | 0,20 | 2,3 |
+| 20 000 | 54 | 9,3 | 20 |
+
+La CWT resta il metodo predefinito e non cambia (parità di bordi e aree con Python in `golden.rs`); la modalità nuova costa un decimo e separa i picchi doppi dove la CWT li unisce (prove sintetiche in `peakq.rs`: doppio parzialmente risolto, spalla, coda, solo rumore).
