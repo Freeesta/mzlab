@@ -15,6 +15,13 @@ Lo stato attuale del ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e 
 - I file `.mzidx` si leggono da OPFS (`mzlab/idx/<nome>.mzidx`) con handle sincroni aperti per operazione; un handle di un worker appena morto è atteso fino a 2 s.
 - Chiavi i18n da aggiungere nei cataloghi: `tpmine.feat.restarted`, `tpmine.feat.cancelled`, `error.featWorker`, `error.featWasmHash`, `error.featNoHypotheses`, `error.featFailed`, `error.badRecipe`.
 
+## L1-L9 nel browser (`TP_Mine/files/feat-run.js`)
+- `runFeatPipeline(pool, {files, recipe, parent, save, onPhase})` esegue le fasi in ordine: `detect` (L1-L3 di ogni file, un lavoro per file in parallelo), `align` (L4-L6 in un worker), `proofs` (L7 ipotesi e L8-L9 grafo delle prove nello stesso worker, solo con un genitore), `save` (`.mzfeatf` e `.mzfeat` in `mzlab/feat/` dal worker d'archivio). Torna `{stored, table, evid, tried, found, registry, timings}`; `timings` ha una riga per fase (ms, tempi per file, picco di memoria lineare del `.wasm` in MB).
+- Le API del `.wasm` hanno la granularità delle fasi sopra (L4-L6 e L8-L9 non si separano); le rotte desktop `feat/*` non esistono: `crates/mzlab-desktop` non ne ha, sono rimandate.
+- Misura (container 4 CPU a 2,1 GHz, Chromium, 4 worker; 13 `.mzidx` Orbitrap reali da ~82 MB, 1,26 M feature, genitore con 147 ipotesi): detect 18,3 s (per file 2,8-5,3 s; da solo 3,1 s, di cui L1 1,0 s), align 6,2 s, proofs 13,6 s (ipotesi 3,6 s), save 1,3 s, totale 39,4 s dal clic alla tabella. Il `.mzfeat` con `evid` ha lo stesso SHA-256 del nativo. Picco di memoria lineare per worker: detect 100 MB, align 158 MB, proofs 204 MB (align e proofs tengono in memoria le feature di tutti i file: sopra i 128 MB).
+- `tests_e2e/e2e_feat_run.py` stampa la tabella dei tempi; con `MZLAB_FEAT_MZIDX=<cartella di .mzidx>` e `MZLAB_FEAT_PARENT=FORMULA:MZ:RT` usa file veri (serve un profilo persistente: la quota OPFS di una finestra privata non basta per ~1 GB) e verifica totale < 60 s e detect ≤ 128 MB.
+
 ## Prove
 - `tests/test_feat_wasm.py` (+ `tests/feat_wasm_node.js`): `.mzfeatf`, `.mzfeat` ed `evid` del WASM hanno lo stesso SHA-256 del nativo sulla serie sintetica `piccolo`.
+- `tests_e2e/feat_site.py` costruisce i `.wasm` e il server per i due e2e.
 - `tests_e2e/e2e_feat_worker.py`: costruisce i `.wasm`, pool su OPFS, worker ucciso e trappola, archivio senza `.part`, dimensioni.
