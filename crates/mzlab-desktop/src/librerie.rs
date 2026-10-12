@@ -39,6 +39,9 @@ pub struct Config {
     /// «Scarica librerie pubbliche da fonti esterne»: off until the user turns it on
     #[serde(default)]
     pub esterne: bool,
+    /// the folder of the data pointed at by the user (`cartella.rs`)
+    #[serde(default)]
+    pub dati: Option<String>,
 }
 
 pub fn read_config(data_dir: &Path) -> Config {

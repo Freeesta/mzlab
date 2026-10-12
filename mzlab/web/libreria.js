@@ -564,6 +564,6 @@ const LIB = (() => {
       d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
     } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
   }
-  return { open, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
+  return { open, addFiles, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;

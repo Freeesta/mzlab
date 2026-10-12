@@ -28,3 +28,4 @@ Stato attuale; parte del motore Rust (`docs/agenti/rust.md`).
 - Non incluso: firma, installatore Linux. Nessuna rotta va a Python: l'app non contiene Python né Pyodide.
 
 - Dettagli dell'app desktop: (`crates/mzlab-desktop`, Tauri v2): la stessa pagina web in una finestra, con un motore nativo in Rust (file letti con `memmap2`) dietro il protocollo `mzlab://`; `prepare.py` copia `site/` in `dist/` (non nel repository) e sostituisce il worker WASM con `shim/desktop-worker.js`; dettagli in `docs/agenti/rust.md`.
+- Cartella dei dati puntata: `src/cartella.rs` (`list`, `kind_of`, `resolve`: percorsi relativi, niente `..`) e i comandi `data_choose_dir`, `data_get_dir`, `data_list`, `data_register`, `data_forget` di `main.rs`; il percorso sta in `config.json` (`Config.dati`). Lato pagina `cartella-puntata-desktop.js`; dettagli in `docs/agenti/dati-cartella.md`.

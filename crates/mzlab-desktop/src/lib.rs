@@ -2,6 +2,7 @@
 //! Files are memory-mapped from the disk (`memmap2` lives only in this crate, never in the WASM graph); the answers are binary
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
+pub mod cartella;
 pub mod engine;
 pub mod idxbuild;
 pub mod librerie;
