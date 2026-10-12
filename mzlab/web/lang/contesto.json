@@ -474,5 +474,8 @@
   "settings.arch.quota": "Frase sulla quota del browser; {quota} = spazio concesso in tutto e {used} = spazio già usato, già formattati.",
   "settings.arch.rm.ask": "Domanda di conferma prima di togliere file, indici e sessione; {size} = spazio che si libera, già formattato.",
   "tpmine.feat.degraded": "Avviso di mzFinder (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
-  "error.featMemory": "Errore di mzFinder (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB."
+  "error.featMemory": "Errore di mzFinder (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB.",
+  "settings.arch.feat": "Riga «Archivio nel browser» delle impostazioni: byte dei file della pipeline di mzFinder. {feat} = dimensione già formattata (es. 12 MB).",
+  "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
+  "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file."
 }
