@@ -2,8 +2,8 @@
 //! `SampleN/Log` (instrument, run status, LC modules in text), `SampleN/SampleDABE/DATA` (sample name, method file, vial), `CFR_INFO` (Analyst version, user, computer)
 //! and the OLE property set `SummaryInformation`. Layouts measured on the 3200 QTRAP files; what is only guessed from position is marked in `docs/agenti/metodo.md`.
 
-use crate::metodo::{lc_sections, ms_section, num, obj, text, Source, V};
 use crate::methodinfo::method_of_sample;
+use crate::metodo::{lc_sections, ms_section, num, obj, text, Source, V};
 use crate::ole::Ole;
 
 const GRAW_MAX: usize = 256 * 1024;
@@ -17,7 +17,7 @@ pub fn counted_strings(b: &[u8]) -> Vec<String> {
     let (mut out, mut p) = (vec![], 0);
     while p + 4 <= b.len() {
         let l = u16::from_le_bytes([b[p], b[p + 1]]) as usize;
-        if l >= 2 && l % 2 == 0 && l <= 2000 && p + 2 + l <= b.len() {
+        if l >= 2 && l.is_multiple_of(2) && l <= 2000 && p + 2 + l <= b.len() {
             let s = String::from_utf16(&u16s(&b[p + 2..p + 2 + l]).collect::<Vec<_>>()).ok();
             if let Some(s) = s.filter(|s| s.chars().all(|c| !c.is_control() || c == '\n')) {
                 out.push(s);
@@ -47,12 +47,16 @@ pub fn log_records(b: &[u8]) -> Vec<String> {
     let mut glue = false;
     for r in runs {
         if glue {
-            recs.last_mut().map(|l| l.push_str(&r));
+            if let Some(l) = recs.last_mut() {
+                l.push_str(&r);
+            }
         } else {
             // a length byte in front of the text reads as one stray character
             let mut cs = r.chars();
             let r = match (cs.next(), cs.next()) {
-                (Some(a), Some(b)) if !a.is_alphabetic() && b.is_uppercase() => r.chars().skip(1).collect(),
+                (Some(a), Some(b)) if !a.is_alphabetic() && b.is_uppercase() => {
+                    r.chars().skip(1).collect()
+                }
                 _ => r,
             };
             recs.push(r);
@@ -87,7 +91,9 @@ fn driver_entries(rec: &str) -> Vec<(String, String, String)> {
         let indent = e.len() - e.trim_start().len();
         let t = e.trim();
         match t.split_once(':') {
-            Some((k, v)) if indent > 0 => out.push((sec.clone(), k.trim().to_string(), v.trim().to_string())),
+            Some((k, v)) if indent > 0 => {
+                out.push((sec.clone(), k.trim().to_string(), v.trim().to_string()))
+            }
             _ if indent == 0 => sec = t.split(':').next().unwrap_or(t).trim().to_string(),
             _ => {}
         }
@@ -100,22 +106,49 @@ fn kv(k: &str, v: &str) -> Option<V> {
         Some((x, u)) => (Some(V::Num(x)), text(&u)),
         None => (None, None),
     };
-    obj(vec![("id", text(k)), ("etichetta", text(k)), ("valore", valore.clone()), ("testo", if valore.is_none() { text(v) } else { None }), ("unita", unita)])
+    obj(vec![
+        ("id", text(k)),
+        ("etichetta", text(k)),
+        ("valore", valore.clone()),
+        ("testo", if valore.is_none() { text(v) } else { None }),
+        ("unita", unita),
+    ])
 }
 
 /// OLE property set (MS-OLEPS): (property id, text) of the string properties and the creation time (id 12) as `YYYY-MM-DDTHH:MM:SS`, local time of the instrument PC.
 fn properties(b: &[u8]) -> Vec<(u32, String)> {
-    let rd = |at: usize| b.get(at..at + 4).map(|x| u32::from_le_bytes([x[0], x[1], x[2], x[3]]));
-    let (Some(off), Some(_)) = (rd(0x2c).map(|o| o as usize), rd(0x2c)) else { return vec![] };
+    let rd = |at: usize| {
+        b.get(at..at + 4)
+            .map(|x| u32::from_le_bytes([x[0], x[1], x[2], x[3]]))
+    };
+    let (Some(off), Some(_)) = (rd(0x2c).map(|o| o as usize), rd(0x2c)) else {
+        return vec![];
+    };
     let n = rd(off + 4).unwrap_or(0).min(64) as usize;
     let mut out = vec![];
     for i in 0..n {
-        let (Some(pid), Some(po)) = (rd(off + 8 + 8 * i), rd(off + 12 + 8 * i)) else { break };
+        let (Some(pid), Some(po)) = (rd(off + 8 + 8 * i), rd(off + 12 + 8 * i)) else {
+            break;
+        };
         let at = off + po as usize;
         let s = match rd(at) {
-            Some(30) => rd(at + 4).and_then(|l| b.get(at + 8..at + 8 + l as usize)).map(|x| String::from_utf8_lossy(x).trim_end_matches('\0').to_string()),
-            Some(31) => rd(at + 4).and_then(|l| b.get(at + 8..at + 8 + 2 * l as usize)).map(|x| String::from_utf16_lossy(&u16s(x).collect::<Vec<_>>()).trim_end_matches('\0').to_string()),
-            Some(64) => b.get(at + 4..at + 12).map(|x| filetime(u64::from_le_bytes(x.try_into().unwrap_or([0; 8])))),
+            Some(30) => rd(at + 4)
+                .and_then(|l| b.get(at + 8..at + 8 + l as usize))
+                .map(|x| {
+                    String::from_utf8_lossy(x)
+                        .trim_end_matches('\0')
+                        .to_string()
+                }),
+            Some(31) => rd(at + 4)
+                .and_then(|l| b.get(at + 8..at + 8 + 2 * l as usize))
+                .map(|x| {
+                    String::from_utf16_lossy(&u16s(x).collect::<Vec<_>>())
+                        .trim_end_matches('\0')
+                        .to_string()
+                }),
+            Some(64) => b
+                .get(at + 4..at + 12)
+                .map(|x| filetime(u64::from_le_bytes(x.try_into().unwrap_or([0; 8])))),
             _ => None,
         };
         if let Some(s) = s {
@@ -135,15 +168,28 @@ fn filetime(ft: u64) -> String {
     let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
     let (doy, y) = (doe - (365 * yoe + yoe / 4 - yoe / 100), yoe + era * 400);
     let mp = (5 * doy + 2) / 153;
-    let (d, m) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
-    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}", if m <= 2 { y + 1 } else { y }, m, d, rem / 3600, rem % 3600 / 60, rem % 60)
+    let (d, m) = (
+        doy - (153 * mp + 2) / 5 + 1,
+        if mp < 10 { mp + 3 } else { mp - 9 },
+    );
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
+        if m <= 2 { y + 1 } else { y },
+        m,
+        d,
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }
 
 fn blank_identity(t: &str) -> String {
     let mut s = t.to_string();
     for k in ["User=", "Computer=", "Serial Number:"] {
         if let Some(p) = s.find(k) {
-            let e = s[p + k.len()..].find([':', ',', '\n']).map_or(s.len(), |e| p + k.len() + e);
+            let e = s[p + k.len()..]
+                .find([':', ',', '\n'])
+                .map_or(s.len(), |e| p + k.len() + e);
             s.replace_range(p + k.len()..e, "");
         }
     }
@@ -154,29 +200,80 @@ fn blank_identity(t: &str) -> String {
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let method = method_of_sample(ole, n);
     let sample = format!("SampleSubtree/Sample{n}/");
-    let log = ole.read(&format!("{sample}Log")).map(|b| log_records(&b)).unwrap_or_default();
-    let data = ole.read(&format!("{sample}SampleDABE/DATA")).map(|b| counted_strings(&b)).unwrap_or_default();
-    let cfr = ole.read(&format!("{sample}SampleDABE/CFR_INFO")).map(|b| counted_strings(&b)).unwrap_or_default();
-    let props = ole.paths_list().find(|p| p.ends_with("SummaryInformation") && !p.contains("Document")).and_then(|p| ole.read(p)).map(|b| properties(&b)).unwrap_or_default();
-    let prop = |id| props.iter().find(|(i, _)| *i == id).map(|(_, s)| s.as_str());
+    let log = ole
+        .read(&format!("{sample}Log"))
+        .map(|b| log_records(&b))
+        .unwrap_or_default();
+    let data = ole
+        .read(&format!("{sample}SampleDABE/DATA"))
+        .map(|b| counted_strings(&b))
+        .unwrap_or_default();
+    let cfr = ole
+        .read(&format!("{sample}SampleDABE/CFR_INFO"))
+        .map(|b| counted_strings(&b))
+        .unwrap_or_default();
+    let props = ole
+        .paths_list()
+        .find(|p| p.ends_with("SummaryInformation") && !p.contains("Document"))
+        .and_then(|p| ole.read(p))
+        .map(|b| properties(&b))
+        .unwrap_or_default();
+    let prop = |id| {
+        props
+            .iter()
+            .find(|(i, _)| *i == id)
+            .map(|(_, s)| s.as_str())
+    };
 
-    let ms_rec = |tag: &str| log.iter().find(|r| r.starts_with("Mass Spectrometer:") && r.contains(tag));
+    let ms_rec = |tag: &str| {
+        log.iter()
+            .find(|r| r.starts_with("Mass Spectrometer:") && r.contains(tag))
+    };
     let cfg = ms_rec("Config Table");
     let driver = log.iter().find(|r| r.contains("driver:User="));
     let entries = driver.map(|r| driver_entries(r)).unwrap_or_default();
-    let get = |sec: &str, k: &str| entries.iter().find(|(s, key, _)| s.starts_with(sec) && key == k).map(|(_, _, v)| v.as_str());
+    let get = |sec: &str, k: &str| {
+        entries
+            .iter()
+            .find(|(s, key, _)| s.starts_with(sec) && key == k)
+            .map(|(_, _, v)| v.as_str())
+    };
     let computer = driver.and_then(|r| field(r, "Computer="));
-    let user = driver.and_then(|r| r.split("User=").nth(1)).and_then(|r| r.split(":Computer=").next()).map(|u| u.trim_matches('\\').trim()).filter(|u| !u.is_empty());
-    let version = cfr.iter().find(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.') && s.contains('.'));
-    let domain_user = cfr.iter().find(|s| s.contains('\\') && !s.contains(':')).and_then(|s| s.rsplit('\\').next());
+    let user = driver
+        .and_then(|r| r.split("User=").nth(1))
+        .and_then(|r| r.split(":Computer=").next())
+        .map(|u| u.trim_matches('\\').trim())
+        .filter(|u| !u.is_empty());
+    let version = cfr.iter().find(|s| {
+        !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.') && s.contains('.')
+    });
+    let domain_user = cfr
+        .iter()
+        .find(|s| s.contains('\\') && !s.contains(':'))
+        .and_then(|s| s.rsplit('\\').next());
     let anon = src.anonymous;
 
-    let (lc, det) = method.as_ref().and_then(|m| m.lc.as_ref()).map_or((None, None), lc_sections);
+    let (lc, det) = method
+        .as_ref()
+        .and_then(|m| m.lc.as_ref())
+        .map_or((None, None), lc_sections);
     let mut lc = lc;
-    if let (Some(pmax), Some(V::Obj(f))) = (get("Pumps", "P.Max 1").and_then(value_unit), lc.as_mut()) {
-        f.extend(obj(vec![("valore", num(Some(pmax.0))), ("unita", text(&pmax.1))]).map(|p| ("pressione_max", p)));
+    if let (Some(pmax), Some(V::Obj(f))) =
+        (get("Pumps", "P.Max 1").and_then(value_unit), lc.as_mut())
+    {
+        f.extend(
+            obj(vec![
+                ("valore", num(Some(pmax.0))),
+                ("unita", text(&pmax.1)),
+            ])
+            .map(|p| ("pressione_max", p)),
+        );
     }
-    let autosampler: Vec<V> = entries.iter().filter(|(s, ..)| s.starts_with("Autosampler")).filter_map(|(_, k, v)| kv(k, v)).collect();
+    let autosampler: Vec<V> = entries
+        .iter()
+        .filter(|(s, ..)| s.starts_with("Autosampler"))
+        .filter_map(|(_, k, v)| kv(k, v))
+        .collect();
 
     let registro = run_records(&ms_rec);
     let raw = raw_log(&log, anon);
@@ -190,31 +287,86 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
             "campione",
             obj(vec![
                 ("nome", name.and_then(|s| text(s))),
-                ("vial", data.last().filter(|_| data.len() >= 4).and_then(|s| text(s))),
-                ("iniezione_uL", get("", "Injection Volume").and_then(value_unit).and_then(|v| num(Some(v.0)))),
-                ("metodo_file", data.iter().find(|s| s.to_lowercase().ends_with(".dam")).and_then(|s| text(s))),
+                (
+                    "vial",
+                    data.last()
+                        .filter(|_| data.len() >= 4)
+                        .and_then(|s| text(s)),
+                ),
+                (
+                    "iniezione_uL",
+                    get("", "Injection Volume")
+                        .and_then(value_unit)
+                        .and_then(|v| num(Some(v.0))),
+                ),
+                (
+                    "metodo_file",
+                    data.iter()
+                        .find(|s| s.to_lowercase().ends_with(".dam"))
+                        .and_then(|s| text(s)),
+                ),
             ]),
         ),
         (
             "strumento",
             obj(vec![
-                ("produttore", cfg.and_then(|r| field(r, "Manufacturer:")).and_then(text).or_else(|| Some(V::s("SCIEX")))),
-                ("modello", cfg.and_then(|r| field(r, "Component ID:")).and_then(text)),
-                ("serie", if anon { None } else { cfg.and_then(|r| field(r, "Serial Number:")).and_then(text) }),
-                ("firmware", cfg.and_then(|r| field(r, "Firmware Version:")).and_then(text)),
-                ("software", obj(vec![("nome", Some(V::s("Analyst"))), ("versione", version.and_then(|v| text(v)))]).map(|s| V::Arr(vec![s]))),
+                (
+                    "produttore",
+                    cfg.and_then(|r| field(r, "Manufacturer:"))
+                        .and_then(text)
+                        .or_else(|| Some(V::s("SCIEX"))),
+                ),
+                (
+                    "modello",
+                    cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
+                ),
+                (
+                    "serie",
+                    if anon {
+                        None
+                    } else {
+                        cfg.and_then(|r| field(r, "Serial Number:")).and_then(text)
+                    },
+                ),
+                (
+                    "firmware",
+                    cfg.and_then(|r| field(r, "Firmware Version:"))
+                        .and_then(text),
+                ),
+                (
+                    "software",
+                    obj(vec![
+                        ("nome", Some(V::s("Analyst"))),
+                        ("versione", version.and_then(|v| text(v))),
+                    ])
+                    .map(|s| V::Arr(vec![s])),
+                ),
             ]),
         ),
         (
             "operatore",
-            if anon { None } else { obj(vec![("utente", user.or(domain_user).and_then(text)), ("computer", computer.and_then(text))]) },
+            if anon {
+                None
+            } else {
+                obj(vec![
+                    ("utente", user.or(domain_user).and_then(text)),
+                    ("computer", computer.and_then(text)),
+                ])
+            },
         ),
         ("ms", method.as_ref().and_then(ms_section)),
         ("lc", lc),
-        ("campionatore", obj(vec![("parametri", Some(V::Arr(autosampler)))])),
+        (
+            "campionatore",
+            obj(vec![("parametri", Some(V::Arr(autosampler)))]),
+        ),
         ("rivelatori", det),
         ("registro", Some(V::Arr(registro))),
-        ("grezzo", obj(vec![("sezione", Some(V::s("Log"))), ("testo", text(&raw))]).map(|g| V::Arr(vec![g]))),
+        (
+            "grezzo",
+            obj(vec![("sezione", Some(V::s("Log"))), ("testo", text(&raw))])
+                .map(|g| V::Arr(vec![g])),
+        ),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())
@@ -222,8 +374,21 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
 
 /// The start and end records of the run, from the lookup of the Mass Spectrometer records of the log.
 fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
-    let record = |when: &str, r: Option<&String>| r.and_then(|r| obj(vec![("quando", Some(V::s(when))), ("testo", text(r.splitn(2, ":,").nth(1).unwrap_or(r)))]));
-    [record("inizio", ms_rec("Start of Run")), record("fine", ms_rec("End of Run"))].into_iter().flatten().collect()
+    let record = |when: &str, r: Option<&String>| {
+        r.and_then(|r| {
+            obj(vec![
+                ("quando", Some(V::s(when))),
+                ("testo", text(r.split_once(":,").map_or(r, |x| x.1))),
+            ])
+        })
+    };
+    [
+        record("inizio", ms_rec("Start of Run")),
+        record("fine", ms_rec("End of Run")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// The raw log joined and cut to `GRAW_MAX`, with the identity blanked when the source is anonymous.
@@ -232,18 +397,33 @@ fn raw_log(log: &[String], anon: bool) -> String {
     if anon {
         raw = blank_identity(&raw);
     }
-    raw.truncate(raw.char_indices().map(|(i, _)| i).take_while(|&i| i <= GRAW_MAX).last().unwrap_or(0));
+    raw.truncate(
+        raw.char_indices()
+            .map(|(i, _)| i)
+            .take_while(|&i| i <= GRAW_MAX)
+            .last()
+            .unwrap_or(0),
+    );
     raw
 }
 
 /// What is missing or not decoded, for `avvisi`.
 fn warnings(ole: &Ole, sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
-    if ole.paths_list().any(|p| p.contains("DADRealTimeData") && p.starts_with(sample)) {
-        warn.push(obj(vec![("chiave", Some(V::s("meta.nonDecodificato"))), ("dove", Some(V::s("DAD")))]));
+    if ole
+        .paths_list()
+        .any(|p| p.contains("DADRealTimeData") && p.starts_with(sample))
+    {
+        warn.push(obj(vec![
+            ("chiave", Some(V::s("meta.nonDecodificato"))),
+            ("dove", Some(V::s("DAD"))),
+        ]));
     }
     if no_log {
-        warn.push(obj(vec![("chiave", Some(V::s("meta.mancante"))), ("dove", Some(V::s("Log")))]));
+        warn.push(obj(vec![
+            ("chiave", Some(V::s("meta.mancante"))),
+            ("dove", Some(V::s("Log"))),
+        ]));
     }
     warn
 }
@@ -269,25 +449,41 @@ mod tests {
 
     #[test]
     fn log_records_drop_the_length_byte_and_join_the_blocks_of_1024() {
-        let long: String = (0..1024).map(|i| char::from(b'a' + (i % 26) as u8)).collect();
+        let long: String = (0..1024)
+            .map(|i| char::from(b'a' + (i % 26) as u8))
+            .collect();
         let mut b = vec![1u8, 2, 3, 4, 5, 6, 7, 8];
         b.extend(utf16("6Software Application::0:"));
         b.extend([0, 0, 0xc2, 2, 0, 0]);
-        b.extend(utf16(&format!("Shimadzu Instrument driver:User=\\:Computer=PC1,{long}")[..1024]));
+        b.extend(utf16(
+            &format!("Shimadzu Instrument driver:User=\\:Computer=PC1,{long}")[..1024],
+        ));
         b.extend([0, 0, 0x78, 0x69, 0, 0, 8, 0]);
         b.extend(utf16(",tail of the record"));
         let r = log_records(&b);
         assert_eq!(r[0], "Software Application::0:");
         assert_eq!(r.len(), 2);
-        assert!(r[1].starts_with("Shimadzu Instrument driver:User=") && r[1].ends_with(",tail of the record"), "{}", r[1]);
+        assert!(
+            r[1].starts_with("Shimadzu Instrument driver:User=")
+                && r[1].ends_with(",tail of the record"),
+            "{}",
+            r[1]
+        );
     }
 
     #[test]
     fn the_lc_record_gives_sections_and_values_with_units() {
         let e = driver_entries("Shimadzu Instrument driver:User=\\:Computer=PC1,     Injection Volume:30 uL,Pumps:(LC-20ADXR),     Total Flow:0.25 mL/min,     P.Max 1:8000 psi,,Oven (CTO-20A),     Temperature:40 ");
-        assert!(e.iter().any(|(s, k, v)| s.starts_with("Pumps") && k == "P.Max 1" && v == "8000 psi"));
-        assert!(e.iter().any(|(s, k, _)| s.starts_with("Oven") && k == "Temperature"));
-        assert_eq!(value_unit("0.25 mL/min"), Some((0.25, "mL/min".to_string())));
+        assert!(e
+            .iter()
+            .any(|(s, k, v)| s.starts_with("Pumps") && k == "P.Max 1" && v == "8000 psi"));
+        assert!(e
+            .iter()
+            .any(|(s, k, _)| s.starts_with("Oven") && k == "Temperature"));
+        assert_eq!(
+            value_unit("0.25 mL/min"),
+            Some((0.25, "mL/min".to_string()))
+        );
         assert_eq!(value_unit("Yes"), None);
     }
 
@@ -304,13 +500,19 @@ mod tests {
         b.extend(16u32.to_le_bytes());
         b.extend(64u32.to_le_bytes());
         b.extend(ft.to_le_bytes());
-        assert_eq!(properties(&b), vec![(12, "2025-11-11T13:15:22".to_string())]);
+        assert_eq!(
+            properties(&b),
+            vec![(12, "2025-11-11T13:15:22".to_string())]
+        );
     }
 
     #[test]
     fn identity_is_blanked_in_the_text_of_the_log() {
         let t = blank_identity("driver:User=jdoe:Computer=PC-7,x,Serial Number: AF1\nnext");
-        assert!(!t.contains("jdoe") && !t.contains("PC-7") && !t.contains("AF1"), "{t}");
+        assert!(
+            !t.contains("jdoe") && !t.contains("PC-7") && !t.contains("AF1"),
+            "{t}"
+        );
         assert!(t.contains("next"));
     }
 }

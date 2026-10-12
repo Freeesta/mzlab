@@ -2,6 +2,7 @@
 //! FBMN quantification table, MGF, SIRIUS `.ms`). A `.wasm` of its own, so the engine of the pipeline (`mzlab-feat-wasm`) does not carry it: the page loads
 //! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `campioni/1` and the parameters of the view
 //! come as JSON text, the `.mzidx` of the files (only for MGF and `.ms`) as `read(k, offset, length)`. Errors are JSON `{"error_key", "params"}` strings.
+#![forbid(unsafe_code)]
 use js_sys::{Function, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
