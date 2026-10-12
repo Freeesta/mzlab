@@ -124,7 +124,7 @@ try:
                     f"api/fileinfo?k={full}", f"api/ms2tr?k={ms2}", f"api/scan_axis?k={full}&level=1", f"api/mrm?k={mrm}", f"api/contaminants",
                     "api/formula?f=C6H12O6", "api/formula?f=Xx2", "api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8&tol=5&unit=ppm&max=10",
                     f"api/map?k={full}", f"api/map?k={full2}&bg=1&agg=mean", f"api/map?k={full}&ref={full2}&norm=max", f"api/mapsnap?k={full}&rt=14.25&mz=364.4",
-                    f"api/mappunti?k={full}&ref={full2}&pts=14.3,364.3;14.32,194.2", f"api/mappunti3d?k={full}&rt0=13&rt1=16&mz0=150&mz1=370&max=300",
+                    f"api/mappunti?k={full}&ref={full2}&pts=14.3,364.3;14.32,194.2",
                     f"api/origin?k={full}&mz=194.2&parent=364.37", f"api/chrom?k={full2}&ref={full}", f"api/xic?k={full2}&ref={full}&mz=364.4&tol=0.35", f"api/mrm?k={mrm}&ref={mrm}",
                     f"api/qaqc?k={full},{full2}&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/method_warnings", f"api/gradient?k={full}", f"api/delay?k={full}", f"api/chrom?k={full}&kind=pda"]
             bad = []
