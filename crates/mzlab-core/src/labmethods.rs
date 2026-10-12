@@ -7,6 +7,7 @@ use crate::methodcheck::{check_against, method_kind, write_rows};
 use crate::methodinfo::{read_methods, Kind, Method};
 
 /// One uploaded method: what `read_methods` found, or why the file cannot be read.
+#[derive(Clone)]
 pub struct Lab {
     pub name: String,
     pub res: std::result::Result<Method, String>,

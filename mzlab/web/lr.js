@@ -20,13 +20,15 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 
 import { originRoute } from "./lr-origin.js";
 import { engineRoute } from "./lr-map.js";
+import { createMethodRoutes } from "./lr-method.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let samples = [];                      // the session as the page asked for it, with the later edits (what replay() sends to Python)
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
-  let foreign = false;                   // something in OPFS that only Python reads (a .dam, a file without index): every request goes to Python
+  let foreign = false;                   // something in OPFS that only Python reads (a file without index): every request goes to Python
+  const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items, hr: () => hr });      // the methods (.dam) and how the items were acquired
   const api = { files, get foreign() { return foreign; }, session: () => ({ samples }), freeze: () => { foreign = true; } };
   const rpc = async (msg) => {
     const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
@@ -38,8 +40,8 @@ export function createLr({ rb }) {
   const json = (obj, status = 200) => ({ status, text: JSON.stringify(obj) });
   const fail = (key, params = {}, text = key, status = 400) => json({ error: text, error_key: key, params }, status);
   const sorted = () => [...files.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  const state = () => ({ error: null, phase: "start", app: true, workdir: WORKDIR, files: sorted(), methods: [], version: VERSION });
-  const session = () => ({ session: items, app: true, workdir: WORKDIR, files: sorted(), methods: [], version: VERSION, commit: "dev" });
+  const state = () => ({ error: null, phase: "start", app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION });
+  const session = () => ({ session: items, app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION, commit: "dev" });
   const base = n => String(n || "").split(/[\\/]/).pop();
   // App.safe_name: the name of a file we accept, or null
   const safeName = name => {
@@ -50,7 +52,7 @@ export function createLr({ rb }) {
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
   // «start from scratch» (?riparti=1) when the page could not delete the database itself: files, indexes, notebook
-  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
 
   // the files of an earlier visit (OPFS): the list, the index of every one, the File for the bridge
   api.boot = async () => {
@@ -58,10 +60,12 @@ export function createLr({ rb }) {
     const list = JSON.parse(r.info);
     for (const [name, file] of r.files || []) rb.noteUpload(name, file);
     for (const f of list) {
+      if (/\.dam$/i.test(f.name)) continue;                                           // a method: read on demand
       if (!/\.mzml$/i.test(f.name) || !f.indexed) { foreign = true; continue; }
       try { files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info)); } catch (_) { foreign = true; }
     }
     if (foreign) return;
+    await mr.refresh();
     // App._resume: the files that were open (the list the page keeps in the notebook) open again
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
@@ -73,15 +77,14 @@ export function createLr({ rb }) {
   async function upload(name, blob) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
-    if (/\.dam$/i.test(n)) { foreign = true; return null; }               // the methods are read by Python
     if (blob.size > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     try {
       const put = await rpc({ op: "lr_put", name: n, blob });
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
-      await rpc({ op: "lr_index", name: n });
-      files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info));
+      if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
+      else { await rpc({ op: "lr_index", name: n }); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) { foreign = true; return null; }                         // any trouble: Python takes the file as it always did
-    return json({ files: sorted(), methods: [] });
+    return json({ files: sorted(), methods: mr.list() });
   }
 
   async function explore(body) {
@@ -138,19 +141,19 @@ export function createLr({ rb }) {
     const n = safeName(body.name);
     if (!n) return fail("err.file.notAccepted", { name: body.name }, `file type not accepted: ${body.name}`);
     await rpc({ op: "lr_remove", name: n });
-    files.delete(n);
+    files.delete(n); await mr.refresh();
     if (items) {
       items = items.filter(it => base(it.file) !== n);
       samples = samples.filter(s => s.file !== n);
       if (!items.length) { items = null; hr = lr = false; }
     }
     rb.noteRemove(n); rb.noteExplore(null);
-    return json({ files: sorted(), methods: [] });
+    return json({ files: sorted(), methods: mr.list() });
   }
 
   async function fresh(body) {
     items = null; samples = []; hr = lr = false;
-    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); foreign = false; }
+    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); foreign = false; }
     rb.noteNew();
     return json(state());
   }
@@ -164,14 +167,13 @@ export function createLr({ rb }) {
       if (method === "GET") {
         if (path === "/api/state") return json(state());
         if (path === "/api/session") return json(session());
-        if (path === "/api/gradient") return json({ gradient: null });                      // none typed, none in a .dam (a POST would have sent everything to Python)
+        { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items, hr });
         { const r = await engineRoute(path, u.searchParams, { rb, rpc, items, hr }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = Python)
-        if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
         return null;
@@ -183,6 +185,7 @@ export function createLr({ rb }) {
       if (t === null) return null;
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }
       const body = JSON.parse(t || "{}");
+      { const r = await mr.post(path, body); if (r !== undefined) return r; }
       if (path === "/api/explore") return await explore(body);
       if (path === "/api/meta") return meta(body);
       if (path === "/api/remove") return await remove(body);

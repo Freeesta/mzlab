@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 
+mod items;
+
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -157,6 +159,8 @@ pub struct Engine {
     runs: HashMap<u32, mzml::Run>,
     /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
     idx: HashMap<u32, Routes<JsReader>>,
+    /// The methods (`.dam`) uploaded, oldest first, with their sizes (`items.rs`).
+    labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.

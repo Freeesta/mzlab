@@ -5,6 +5,7 @@ import init, { Engine, prepare_upload, formula_mz, composition } from "./wasm/mz
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
+import { createLabOps } from "./rust-worker-lab.js";
 
 let engine = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -61,7 +62,11 @@ async function lrFree() {                                                 // the
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
 }
+let labOp = null;                                                          // methods (.dam) and the routes of one item about its acquisition (rust-worker-lab.js)
 async function lrOp(m) {
+  if (!labOp) labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });
+  const lab = await labOp(m);
+  if (lab) return lab;
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
       const out = [];
