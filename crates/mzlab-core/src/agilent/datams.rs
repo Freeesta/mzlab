@@ -140,6 +140,29 @@ pub fn parse(b: &[u8]) -> Result<DataMs> {
     })
 }
 
+/// The header strings of `data.ms`, and the parts of the file that are not decoded (the header numbers, the table after the records), with size and SHA-1.
+pub(super) fn items(d: &DataMs, b: &[u8]) -> Vec<meta::Item> {
+    let mut out: Vec<meta::Item> = d
+        .strings
+        .iter()
+        .map(|(o, s)| meta::Item {
+            origin: "data.ms".into(),
+            name: string_label(*o),
+            value: s.clone(),
+        })
+        .collect();
+    out.push(meta::Item {
+        origin: "data.ms".into(),
+        name: "scans".into(),
+        value: d.scans.len().to_string(),
+    });
+    out.extend(meta::collect(&[
+        ("data.ms#header", &b[..d.start]),
+        ("data.ms#after-records", b.get(d.end..).unwrap_or(&[])),
+    ]));
+    out
+}
+
 impl AgilentD {
     /// A run that has only `data.ms` (and the side files): the scans come from it, with the m/z in twentieths as the file holds them.
     pub(super) fn open_data_ms(name: &str, f: &Files, bytes: &[u8]) -> Result<AgilentD> {
@@ -199,27 +222,4 @@ impl AgilentD {
             inline: Some(inline),
         })
     }
-}
-
-/// The header strings of `data.ms`, and the parts of the file that are not decoded (the header numbers, the table after the records), with size and SHA-1.
-pub(super) fn items(d: &DataMs, b: &[u8]) -> Vec<meta::Item> {
-    let mut out: Vec<meta::Item> = d
-        .strings
-        .iter()
-        .map(|(o, s)| meta::Item {
-            origin: "data.ms".into(),
-            name: string_label(*o),
-            value: s.clone(),
-        })
-        .collect();
-    out.push(meta::Item {
-        origin: "data.ms".into(),
-        name: "scans".into(),
-        value: d.scans.len().to_string(),
-    });
-    out.extend(meta::collect(&[
-        ("data.ms#header", &b[..d.start]),
-        ("data.ms#after-records", b.get(d.end..).unwrap_or(&[])),
-    ]));
-    out
 }
