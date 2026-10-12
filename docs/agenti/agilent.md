@@ -11,6 +11,28 @@ Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 
 - `AcqData/MSTree2.bin`: `u32 86, u32 5`, tre testi (`u8` lunghezza + byte: dispositivo, tecnica, strumento), quattro f64 (primo e ultimo tempo, m/z minimo e massimo), `00 01 01 00 00 00`, testo del tipo di scansione («Scan», «SelectedIon»), `u32 1`, testo della polarità («Positive»), `u32` numero di scansioni, poi i tempi e una struttura che non si legge. `info::tree` legge solo questa testa e dà `None` se la forma è diversa.
 - `AcqData/Devices.xml` (nome, modello, seriale, firmware), `Contents.xml` (data, tecnica di separazione 2 = GC, software), `sample_info.xml` e `sequence.xml` (campione, operatore, vial: non letti), `acqmeth.txt` (UTF-16, il metodo; `method::parse`), `*.M/` (metodo di analisi dati: non letto), `data.ms` (formato ChemStation vecchio, «GC / MS Data File»: i dati di partenza da cui `IndexedDataConverter.log` ha generato `AcqData`; non letto), `checksum.xml`, `GC.ini`, `runstart.txt`, `PRE_POST.INI`, `TEMPBASE`.
 
+## Tutto ciò che contiene un `.D` e se lo estraggo
+Regola: nessuna informazione dei file grezzi si butta; ciò che non so mappare si conserva come nome/valore con il file di origine (`AgilentD::metadata`, `meta::collect`; il chiamante passa i file piccoli in `Files::others`).
+
+| File | Contenuto | Estratto? |
+|---|---|---|
+| `AcqData/MSScan.bin` | indice, un record per scansione | tutti i campi: i mappati in `ScanRec`, gli altri (stato, periodo di campionamento, intervallo di massa misurato, soglia, `MinX`/`MaxX`…) in `ScanRec::extra` con i nomi in `AgilentD::extra_names`; l'intestazione di 160 byte (a parte l'offset a +88) non è decodificata |
+| `AcqData/MSPeak.bin` | punti (m/z, intensità) | sì; i 68 byte di intestazione non sono decodificati |
+| `AcqData/MSScan.xsd` | schema dei record | sì, determina il layout; conservato come testo |
+| `AcqData/MSTS.xml` | segmenti di tempo | sì (`segments`, e tutti i campi in `metadata`) |
+| `AcqData/MSIndex.bin` | tempi di scansione per segmento | no (sono uguali ai tempi dei record; verificato sul primo segmento) |
+| `AcqData/MSTree2.bin` | strumento, tipo di scansione, polarità in testo, numero di scansioni, tempi, poi una struttura sconosciuta | solo la testa (`tree`); il resto non è decodificato |
+| `AcqData/Devices.xml`, `Contents.xml` | modello, seriale, firmware, driver, data, tecnica, software | sì, tutti i campi in `metadata` |
+| `AcqData/sample_info.xml`, `sequence.xml` | campione, vial, volume, operatore, metodo, percorsi | sì, in `metadata` (nome/valore e attributi) |
+| `AcqData-CumulativeAuditTrail.xml`, `checksum.xml` | traccia di audit (utente, computer, data, commento), hash | sì, in `metadata` |
+| `acqmeth.txt` | metodo (forno, ALS, ingresso, colonna, linea di trasferimento, MS, gruppi SIM, tune) | testo intero + modo, ritardo del solvente, intervallo, gruppi SIM con ioni e dwell + parametri di tune (`tune NOME`) |
+| `GC.ini`, `PRE_POST.INI` | stato del GC a fine corsa (temperature, flussi, colonne), tune, fattori, iniezione, hardware | sì, `[sezione] chiave = valore` in `metadata` |
+| `runstart.txt`, `IndexedDataConverter.log` | variabili di inizio corsa, log del convertitore | testo intero in `metadata` |
+| `TEMPBASE` | vuoto | no |
+| `data.ms` | formato ChemStation vecchio, dati di partenza della conversione | non letto (formato non decodificato) |
+| `*.M/` (metodo di analisi dati, `Quant`, `Unknowns`) | impostazioni di quantificazione e ricerca nelle librerie | non letto |
+| TIC e picco base | TIC del record per scansione (= TIC dell'mzML) e `BasePeakMZ`/`BasePeakValue` | TIC sì (cromatogramma); il picco base è nel record, non scritto in un cromatogramma |
+
 ## `MSScan.bin`
 - Il layout del record si legge da `AcqData/MSScan.xsd` della cartella (`Layout::from_xsd`: gli `xs:element` di `ScanRecordType` in ordine, quelli in commento esclusi, `SpectrumParamValues` = gli elementi di `SpectrumParamsType`; tipi int/long/double/short/byte/float). Per le tre corse l'xsd dà esattamente i 184 byte e gli offset della tabella (verificato dal test). Senza xsd vale `Layout::builtin` (la stessa tabella).
 - Un tipo ignoto, un campo obbligatorio mancante o una dimensione che non divide il file sono errori con i numeri (e, se `MSTS.xml` annuncia N scansioni, la dimensione di record che il file avrebbe).

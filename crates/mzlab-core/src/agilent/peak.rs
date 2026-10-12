@@ -13,14 +13,33 @@ fn bad(detail: String) -> Error {
 pub fn read_points<R: ReadAt>(peak: &mut R, rec: &ScanRec) -> Result<(Vec<f64>, Vec<f64>)> {
     let n = rec.points as usize;
     if rec.uncompressed.is_some_and(|u| u != rec.bytes) {
-        return Err(bad(format!("scan {}: {} bytes stored for {} uncompressed (compressed spectra are not read)", rec.id, rec.bytes, rec.uncompressed.unwrap_or(0))));
+        return Err(bad(format!(
+            "scan {}: {} bytes stored for {} uncompressed (compressed spectra are not read)",
+            rec.id,
+            rec.bytes,
+            rec.uncompressed.unwrap_or(0)
+        )));
     }
     if rec.format != 1 || rec.bytes as usize != n * 16 {
-        return Err(bad(format!("scan {}: SpectrumFormatID {} with {} bytes for {} points is not a known layout", rec.id, rec.format, rec.bytes, rec.points)));
+        return Err(bad(format!(
+            "scan {}: SpectrumFormatID {} with {} bytes for {} points is not a known layout",
+            rec.id, rec.format, rec.bytes, rec.points
+        )));
     }
     let mut raw = vec![0u8; n * 16];
     peak.read_at(rec.offset, &mut raw)?;
-    let f = |k: usize| f64::from_le_bytes([raw[k], raw[k + 1], raw[k + 2], raw[k + 3], raw[k + 4], raw[k + 5], raw[k + 6], raw[k + 7]]);
+    let f = |k: usize| {
+        f64::from_le_bytes([
+            raw[k],
+            raw[k + 1],
+            raw[k + 2],
+            raw[k + 3],
+            raw[k + 4],
+            raw[k + 5],
+            raw[k + 6],
+            raw[k + 7],
+        ])
+    };
     let mz: Vec<f64> = (0..n).map(|i| f(i * 8)).collect();
     let it: Vec<f64> = (0..n).map(|i| f((n + i) * 8)).collect();
     if mz.iter().chain(&it).any(|v| !v.is_finite()) {
@@ -31,5 +50,8 @@ pub fn read_points<R: ReadAt>(peak: &mut R, rec: &ScanRec) -> Result<(Vec<f64>, 
     }
     let mut ord: Vec<usize> = (0..n).collect();
     ord.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]));
-    Ok((ord.iter().map(|&i| mz[i]).collect(), ord.iter().map(|&i| it[i]).collect()))
+    Ok((
+        ord.iter().map(|&i| mz[i]).collect(),
+        ord.iter().map(|&i| it[i]).collect(),
+    ))
 }

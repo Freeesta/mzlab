@@ -25,13 +25,23 @@ impl AgilentD {
         let source = if self.is_gc() { "EI " } else { "" };
         match scan_type {
             SCAN_FULL => format!("{source}Scan"),
-            SCAN_SIM => format!("{source}SIM {}", mz.iter().map(|m| format!("{m:.1}")).collect::<Vec<_>>().join(",")),
+            SCAN_SIM => format!(
+                "{source}SIM {}",
+                mz.iter()
+                    .map(|m| format!("{m:.1}"))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
             n => format!("{source}type {n}"),
         }
     }
 
     /// Gives the spectra one at a time to `on` (centroid; the scans without points are left out) and returns the TIC chromatogram of the survey scans.
-    pub fn visit<R: ReadAt>(&self, peak: &mut R, on: &mut dyn FnMut(Spectrum) -> Result<()>) -> Result<Vec<Chromatogram>> {
+    pub fn visit<R: ReadAt>(
+        &self,
+        peak: &mut R,
+        on: &mut dyn FnMut(Spectrum) -> Result<()>,
+    ) -> Result<Vec<Chromatogram>> {
         for (n, r) in self.records.iter().filter(|r| r.points > 0).enumerate() {
             let (mz, it) = read_points(peak, r)?;
             let level = r.level.clamp(1, 255) as u8;
@@ -69,12 +79,20 @@ impl AgilentD {
     }
 
     fn header(&self) -> Header {
-        let base = self.name.strip_suffix(".D").or_else(|| self.name.strip_suffix(".d")).unwrap_or(&self.name);
+        let base = self
+            .name
+            .strip_suffix(".D")
+            .or_else(|| self.name.strip_suffix(".d"))
+            .unwrap_or(&self.name);
         let dev = self.device.as_ref();
-        let name = dev.map_or("Agilent instrument model".to_string(), |d| format!("Agilent {} {}", d.model, d.name).trim().to_string());
+        let name = dev.map_or("Agilent instrument model".to_string(), |d| {
+            format!("Agilent {} {}", d.model, d.name).trim().to_string()
+        });
         let low = dev.map(|d| d.name.to_lowercase()).unwrap_or_default();
         let mut components = Vec::new();
-        let mut add = |kind: &str, acc: &str, n: &str| components.push((kind.to_string(), acc.to_string(), n.to_string()));
+        let mut add = |kind: &str, acc: &str, n: &str| {
+            components.push((kind.to_string(), acc.to_string(), n.to_string()))
+        };
         if self.is_gc() {
             add("source", "MS:1000389", "electron ionization");
         }
@@ -101,7 +119,13 @@ impl AgilentD {
     }
 
     /// As `to_mzml`; `progress(done, total)` is called every 32 spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, peak: &mut R, peak_len: u64, out: W, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
+    pub fn to_mzml_progress<R: ReadAt, W: Write>(
+        &self,
+        peak: &mut R,
+        peak_len: u64,
+        out: W,
+        progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<()> {
         let mut peak = Windowed::new(peak, peak_len);
         let mut w = MzmlWriter::new(out, &self.header())?;
         let count = self.spectrum_count();

@@ -988,7 +988,7 @@ const BARRA = (() => {
     const txt = document.createElement("span");
     txt.textContent = t("hint.testo");
     const x = document.createElement("button");
-    x.type = "button"; x.textContent = "×";
+    x.type = "button"; x.className = "x";      // the shared close X (index.html)
     x.setAttribute("aria-label", t("hint.chiudi"));
     x.onclick = () => hintClose(true);
     el.append(txt, x);
