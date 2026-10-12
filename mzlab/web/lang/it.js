@@ -370,6 +370,8 @@ I18N.add("it", {
   "conv.detail.wait": "lettura dell'indice delle scansioni · trascorso {elapsed}",
   "conv.beat": "Sto ancora convertendo…",
   "conv.stall": "Nessuna novità da oltre 30 secondi: un file grande può richiedere molto tempo. Lascia aperta questa scheda e chiudi le altre pesanti; se non riparte puoi annullare e riprovare.",
+  "conv.profile": "File .raw: conserva il profilo (predefinito: centroide)",
+  "conv.profile.title": "Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroide: i picchi già calcolati dallo strumento.",
   "conv.total": "Totale: {pc}%",
   "conv.cancel": "Annulla",
   "conv.cancel.title": "Annulla la conversione dei file .raw",
