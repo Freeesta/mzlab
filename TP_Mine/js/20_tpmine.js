@@ -92,6 +92,18 @@
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
+  async function opfsFiles() {        // the files of the Data tab kept by the Rust engine (low resolution): OPFS mzlab/files/, as File objects (never read whole here)
+    try {
+      const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
+      const out = [];
+      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) out.push({ name, buf: await h.getFile() });
+      return out;
+    } catch (_) { return []; }
+  }
+  async function pageFiles() {
+    const o = await opfsFiles(), have = new Set(o.map(f => f.name));
+    return o.concat((await idbFiles()).filter(f => !have.has(f.name)));
+  }
   async function idbFiles() {
     try {
       // "qqq_lab" is the name of the browser database (kept from the old name: renaming it would lose the users' data)
@@ -221,7 +233,7 @@
     // default: the Full Scan / HRMS files already loaded in the Data tab (browser memory) are taken at once
     async function loadFromData(quiet) {
       msg("Looking for the files in browser memory...");
-      const f = await idbFiles();
+      const f = await pageFiles();
       if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
       await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
     }

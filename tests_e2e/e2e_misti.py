@@ -18,7 +18,9 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "C_IDA-t0.mzML"), str(D / "C_MRM-EPI-t0.mzML"), str(D / "C_POLALT-t0.mzML")]); pg.wait_for_timeout(1500)
         def table():
-            t = pg.inner_text("#flist"); assert t.count("misto") == 3 and "Full Scan + MS2" in t and "MS2 (1 precursore) + MRM" in t and "pos" in t and "neg" in t, t
+            t = pg.inner_text("#flist"); assert "misto" not in t and "precursor" not in t and "Full Scan + DDA" in t and "MS2 + MRM" in t, t
+            assert "Full Scan + MS2" not in t and "pos" not in t and "neg" not in t, t     # IDA = Full Scan + DDA; alternating polarity = a plain Full Scan
+            assert pg.evaluate("[...document.querySelectorAll('#flist td')].some(td=>td.textContent.trim()==='Full Scan')"), t
             assert "il nome fa pensare" not in t
         step("loading table: mixed files say what they hold", table)
         pg.click("text=Carica dati"); ready(pg)

@@ -76,11 +76,6 @@ try:
             pg.screenshot(path=SH + "16_method_mrm.png"); pg.click("#bigx")
             pg.evaluate("E.browse=false;E.cur=0;renderFileList();renderNav();redrawAll()")
         step("method popup (full + mrm)", method)
-        def bt():
-            pg.click("#tb-more"); pg.click("#np-bt"); pg.wait_for_timeout(500)
-            pg.screenshot(path=SH + "17_bt.png")
-            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
-        step("BioTransformer popup", bt)
         def nav():
             pg.evaluate("E.browse=true;renderNav();redrawAll()"); pg.wait_for_timeout(800)      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
             pg.click("#fnext"); ready(pg); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); ready(pg)

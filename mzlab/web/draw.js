@@ -7,14 +7,14 @@ let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = s => document.querySelector(s);
-let K = null, starting = null, restored = false, timer = null;
+let K = null, starting = null, restored = false, timer = null, startTimeout = null;
 
 let kldTimer = null, kldN = 0;
 function start() {
   if (starting) return starting;
   const fr = Q("#kframe");
   starting = new Promise((resolve, reject) => {
-    const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
+    const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
     Q("#kload").hidden = false;
     const dots = Q("#kld-dots");
@@ -27,12 +27,15 @@ function start() {
       }, 400);
     }
     fr.src = "static/vendor/ketcher/index.html";
-    setTimeout(() => reject(new Error(I18N.t("draw.error.ketcherNotStarted"))), 60000);
+    // a slow first download must not break the editor for good: after the wait the attempt is dropped and the next call (Quick draw, export, the tab) starts it again
+    clearTimeout(startTimeout);
+    startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
   });
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
-    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr);
+    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
+    [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
     if (doc && doc.body) {
@@ -199,7 +202,7 @@ const TOOLS = [
 ];
 const TKEY = "qqq.disegno.strumenti"; // kept from the old name: renaming it would lose the users' data
 function toolChoice() {
-  let saved = {}; try { saved = JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch (_) { /* default choice */ }
+  const saved = lsObj(TKEY);
   return Object.fromEntries(TOOLS.map(([k, on]) => [k, k in saved ? !!saved[k] : on]));
 }
 function applyTools() {
@@ -685,6 +688,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
 
 window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
+try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
 // "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
 document.addEventListener("nbreset", () => {

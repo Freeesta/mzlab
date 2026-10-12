@@ -5,7 +5,7 @@
 const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose the users' data
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
-function a11yRead() { var o = {}; try { o = JSON.parse(localStorage.getItem("qqq.a11y") || "{}") || {}; } catch (e) {} return o; }
+function a11yRead() { return lsObj("qqq.a11y"); }
 function a11yApply(o) {
   const r = document.documentElement;
   if (o.font) r.setAttribute("data-a11y-font", o.font); else r.removeAttribute("data-a11y-font");

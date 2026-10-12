@@ -97,7 +97,7 @@ try:
             import os
             raws = [p for d in [os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")] if d for p in __import__("glob").glob(os.path.join(d, "HRMS", "*", "*.raw"))]
             if not raws: print("   (skipped: no .raw in the data repository)"); return
-            assert pg.is_visible("#dropraw"), "the .raw note is not shown"
+            assert ".raw" in pg.inner_text("#drop"), "the drop area does not name .raw"
             n0 = len(pg.query_selector_all("#flist input[data-k=use]"))
             pg.set_input_files("#pick", raws[0])
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n0}", timeout=240000)

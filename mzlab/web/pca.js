@@ -11,10 +11,10 @@ const PCA = (() => {
   const eh = s => EH(s == null ? "" : s);
   let st = { min: 1000, k: 2, transform: "log", scaling: "pareto" };
   let res = null, sel = null;                                  // res: {r, feats, names, files, groups}; sel: index (in r.features) of the feature chosen
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
+  Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
-  const pct = v => (v * 100).toFixed(1).replace(".", I18N.lang === "it" ? "," : ".");
+  const pct = v => (v * 100).toFixed(1);
   const nSamples = () => TABELLA.roles().filter(r => r !== "blank" && r !== "dark").length;
 
   async function run() {

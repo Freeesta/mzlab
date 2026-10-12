@@ -32,7 +32,14 @@ pub struct Recipe {
     pub fill: FillParams,
     /// Fill the gaps of the aligned table with the integration of the raw traces (L6).
     pub fill_gaps: bool,
+    /// Weak tier: peaks from `WEAK_RATIO` of `detect.min_height` up are kept as rows only if this many files show them (0 = no weak tier).
+    pub weak_files: usize,
 }
+
+/// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
+pub const WEAK_RATIO: f64 = 0.3;
+/// Files in an unbroken run that must show a weak peak.
+pub const WEAK_FILES: usize = 5;
 
 impl Default for Recipe {
     fn default() -> Self {
@@ -45,6 +52,7 @@ impl Default for Recipe {
             rt: RtParams::default(),
             fill: FillParams::default(),
             fill_gaps: true,
+            weak_files: WEAK_FILES,
         }
     }
 }
@@ -79,12 +87,13 @@ impl Recipe {
     /// Text of what the aligned table depends on: the text of the files and the alignment, the RT map and the filling.
     pub fn table_text(&self) -> String {
         format!(
-            "{}\nmode={:?}\nalign={:?}\nrt={:?}\nfill={:?}{}",
+            "{}\nmode={:?}\nalign={:?}\nrt={:?}\nfill={:?}\nweak={}{}",
             self.file_text(),
             self.mode,
             self.align,
             self.rt,
             self.fill,
+            self.weak_files,
             if self.fill_gaps { "" } else { "\nfill=off" }
         )
     }
