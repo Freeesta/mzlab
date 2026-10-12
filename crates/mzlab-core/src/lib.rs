@@ -43,6 +43,7 @@ pub mod methodinfo;
 pub mod methodjson;
 pub mod mzml;
 pub mod mzmlhead;
+pub mod mzmlwrite;
 pub mod peakq;
 pub mod peaktable;
 pub mod peaks;

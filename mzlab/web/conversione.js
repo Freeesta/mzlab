@@ -1,5 +1,5 @@
 "use strict";
-// Thermo .raw -> mzML (index.html rawToMzml): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
+// Thermo .raw and SCIEX .wiff -> mzML (index.html rawToMzml, wiffToMzml): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
 // below (also run by node in tests/test_conversione.py). Classic script, loaded after i18n.js.
 
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
@@ -128,10 +128,15 @@ function convName(rawName, taken) {
   const base = String(rawName).replace(/\.raw$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   return used.has((base + ".mzML").toLowerCase()) ? base + ".raw.mzML" : base + ".mzML";
 }
+// name of the mzML of a sample of a SCIEX .wiff: "x.mzML" when the .wiff holds one sample, "x_s3.mzML" (sample number) when it holds several; "x.wiff.mzML" when taken
+function wiffName(stem, sample, several, taken) {
+  const base = several ? stem + "_s" + sample : String(stem), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+  return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
+}
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { convName, convPhase, convFraction, convPercent, convTotalPercent, convEta, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, wiffName, convPhase, convFraction, convPercent, convTotalPercent, convEta, convElapsed, convMB };

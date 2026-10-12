@@ -3,11 +3,12 @@
     python3 tools/wiff_riferimento.py OUT
 
 Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
-product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`), built with
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak), built with
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 """
 import json
+import math
 import struct
 import sys
 from pathlib import Path
@@ -137,7 +138,16 @@ def main():
                  + [{"id": f"SRM SIC sample=2 period=1 experiment=1 transition={j}", "time": [t / 60000.0 for t in times], "intensity": [v[j] for v in MRM]} for j in range(3)]}}
     w.save(out, "two")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two}))
+    w, series = Writer(), []
+    for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step
+        height = round(60000 * math.exp(-((k - 40) / 8.0) ** 2))
+        pts = [(2151 + j, 5 + round(height * math.exp(-(j / 2.5) ** 2))) for j in range(-4, 5)] + [(100 + 37 * j + k % 5, 3 + j % 4) for j in range(40)]
+        pts.sort()
+        series.append(("scan", pts, 6000.0 * k, float(sum(c for _, c in pts))))
+    w.sample(1, series, {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
+    w.save(out, "serie")
+    big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)], "chromatograms": []}}
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big}))
 
 
 if __name__ == "__main__":

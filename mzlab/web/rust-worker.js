@@ -6,6 +6,7 @@ import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
+import { wiffOp } from "./rust-wiff.js";
 
 let engine = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -158,6 +159,7 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
         return;
       }
+      case "wiffsamples": case "wiff2mzml": wiffOp(engine, m, id, readerFor); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
@@ -177,8 +179,7 @@ onmessage = async ev => {
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
-      case "close": engine.close(m.slot); blobs.delete(m.slot); break;
-      case "reset": engine.close_all(); blobs.clear(); break;
+      case "close": engine.close(m.slot); blobs.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); break;
       case "crash": engine.crash(); break;                                           // test hook: the supervisor must recover
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
       case "xic": out = take(2 * engine.count(m.slot, m.level)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;
