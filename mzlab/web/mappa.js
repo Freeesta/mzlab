@@ -496,17 +496,19 @@ window.MAPPA = (() => {
     let rows = [];
     try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? 0.05}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
     rows = rows.map((r, i) => ({ ...r, n: i + 1, note: list[i] ? list[i].note || "" : "" }));
+    const ri = list.findIndex(q => q.ref);                      // the point the student chose as the reference of Δm (none: the most intense of each group)
+    if (ri >= 0 && rows[ri] && rows[ri].mz != null) rows.forEach(r => { r.dm = r.mz == null ? null : r.mz - rows[ri].mz; r.isref = r.n - 1 === ri; });
     s.rows = rows;
     const so = s.sort || { c: "n", d: 1 }, val = (r, c) => r[c] == null ? -Infinity : r[c];
     const view = rows.slice().sort((u, v) => typeof val(u, so.c) === "string" ? so.d * String(val(u, so.c)).localeCompare(String(val(v, so.c))) : so.d * (val(u, so.c) - val(v, so.c)));
     const dec = mzd(p), hr = isHrF(f), num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
-    const head = COLS.map(c => `<th data-c="${c}" title="${T(COLK[c][1])}">${T(COLK[c][0])}${so.c === c ? (so.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th></th>";
+    const head = COLS.map(c => `<th data-c="${c}" title="${T(COLK[c][1])}">${T(COLK[c][0])}${so.c === c ? (so.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + `<th title="${T("mappa.tab.ref.title")}">${T("mappa.tab.ref")}</th><th></th>`;
     box.innerHTML = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? 0.05}"> min</label>` +
       `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
       `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${view.map(r => `<tr data-i="${r.n - 1}" class="${s.psel === r.n - 1 ? "on" : ""}">` +
       `<td>${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
-      `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`).join("")}</tbody></table></div>`;
+      `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`).join("")}</tbody></table></div>`;
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
     box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
@@ -518,6 +520,7 @@ window.MAPPA = (() => {
       tr.ondblclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (q) spectrumAt(p, q.rt); };
     });
     box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { q.note = inp.value; ptsSave(p); } });
+    box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; ptsSave(p); tableNow(p); });
     box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
     box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f)); });
   }

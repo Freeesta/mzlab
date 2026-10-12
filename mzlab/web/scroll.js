@@ -94,7 +94,17 @@ function toggleLock(p) {
 }
 
 // ---- cheap redraws
-function drawSoon(p) { if (p._ds) return; p._ds = requestAnimationFrame(() => { p._ds = 0; draw(p); }); }   // several requests in a frame = one drawing
+// several requests in a frame = one drawing; while a drawing is still waiting for its data the next one is remembered (one, not a queue) and made when it ends
+function drawSoon(p) {
+  if (p._ds) return;
+  p._ds = requestAnimationFrame(async () => {
+    p._ds = 0; if (p._dr) { p._dq = true; return; }
+    p._dr = true; try { await draw(p); } finally { p._dr = false; if (p._dq) { p._dq = false; drawSoon(p); } }
+  });
+}
+// one pace for the held arrow and for Space: STEP_MS between scans on a fixed timetable (not "at least that long since the last frame"), a late frame does not make a burst
+const STEP_MS = 66;
+const paceDue = (o, now) => { if (now - o.t < STEP_MS) return false; o.t = now - o.t > 4 * STEP_MS ? now : o.t + STEP_MS; return true; };
 function cursorLine(p) {                                           // the vertical cursor of a chromatogram: a thin overlay, not part of the canvas, with a dot on top that can be dragged
   const c = p.cl, a = p._a, h = p.ch; if (!c) return;
   if (p.tl && p.cur != null && !p._cs && isLine(p)) tabPanels(p.tab).forEach(q => { if (q !== p && q.tl && isLine(q) && q.cur !== p.cur) { q.cur = p.cur; q._cs = true; cursorLine(q); q._cs = false; } });      // one cursor for the linked chromatograms
@@ -121,11 +131,10 @@ function playStop() { if (PLAY.raf) cancelAnimationFrame(PLAY.raf); PLAY.raf = 0
 function playStart(p) {
   const sel = p.sel && p.sel[1] > p.sel[0] ? [p.sel[0], p.sel[1]] : null;
   if (sel && (p.cur == null || p.cur < sel[0] || p.cur > sel[1])) p.cur = sel[0];
-  PLAY.p = p; PLAY.dir = 1; PLAY.sel = sel; PLAY.t = 0;
+  PLAY.p = p; PLAY.dir = 1; PLAY.sel = sel; PLAY.t = 0;     // t = 0: the first step is due at once
   const tick = now => {
     PLAY.raf = 0; const q = PLAY.p; if (!q || S.view !== "data" || !E.panels.includes(q)) return playStop();
-    if (now - PLAY.t >= 100) {                                       // ~10 scans per second
-      PLAY.t = now;
+    if (paceDue(PLAY, now)) {                                        // ~15 scans per second, like the held arrow
       const sl = PLAY.sel;
       if (sl) { if (PLAY.dir > 0 && q.cur >= sl[1] - 1e-9) PLAY.dir = -1; else if (PLAY.dir < 0 && q.cur <= sl[0] + 1e-9) PLAY.dir = 1; }
       if (!stepScan(q, PLAY.dir, { keepSel: !!sl })) { if (sl) PLAY.dir = -PLAY.dir; else return playStop(); }
@@ -138,7 +147,7 @@ function keyLoop() {
   if (KEY.raf) return;
   const tick = now => {
     KEY.raf = 0; if (!KEY.dir || !KEY.p) return;
-    if (now - KEY.t0 >= 350 && now - KEY.t >= 66) { KEY.t = now; if (!stepScan(KEY.p, KEY.dir * KEY.n)) { KEY.dir = 0; return; } }
+    if (now - KEY.t0 >= 350 && paceDue(KEY, now)) { if (!stepScan(KEY.p, KEY.dir * KEY.n)) { KEY.dir = 0; return; } }
     KEY.raf = requestAnimationFrame(tick);
   };
   KEY.raf = requestAnimationFrame(tick);

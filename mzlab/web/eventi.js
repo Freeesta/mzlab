@@ -303,6 +303,7 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-");
     p._pm = has ? m : null;
+    items.push(mi({ label: I18N.t("ctx.spec.copy"), aria: I18N.t("ctx.spec.copy.aria", { mz: lab }), fn: () => { try { navigator.clipboard.writeText(lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } }));
     let mark = items.length;                                  // HR: the entries are grouped at the end (tag), the others keep their order
     const tag = g => { for (let i = mark; i < items.length; i++) if (items[i] !== "-" && !items[i].g) items[i].g = g; mark = items.length; };
     if (a.hrp && window.DDA && has) { const q = DDA.ms2For(p, m)[0]; if (q) { items.push({ label: I18N.t("ctx.spec.openMs2", { mz: q.prec.toFixed(mzd(p, 2)) }), aria: I18N.t("ctx.spec.openMs2.aria", { mz: lab }), fn: () => DDA.openMs2(p, q.j) }); tag("ms2"); } }
@@ -497,7 +498,6 @@ Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFi
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
-Q("#np-tile").onclick = tile;
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
