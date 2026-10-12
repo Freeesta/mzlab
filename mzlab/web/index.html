@@ -678,8 +678,8 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
 async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
-  if(rb&&(rb.disabled||!rb.convertWiff)&&files.some(isW)){      // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
-    res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t("err.file.wiffEngine"),f.name]));return res}
+  if((rb?(rb.disabled||!rb.convertWiff):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){      // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
+    res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
