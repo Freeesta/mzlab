@@ -10,6 +10,7 @@ import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
+import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -183,12 +184,14 @@ onmessage = async ev => {
     }
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
-      case "raw2mzml": {                                                              // Thermo .raw -> mzML pieces (the .raw is read block by block, never held)
-        const parts = [], total = m.blob.size, rd = readerFor(m.blob);
+      case "raw2mzml": {                                                              // Thermo .raw -> mzML on OPFS (the .raw is read block by block; the mzML goes to the disk, never held)
+        const total = m.blob.size, rd = readerFor(m.blob), sink = await rawSink(m.dest);
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
-        engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { parts.push(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });      // scans: converted / in the file, from the scan index
-        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, !!m.profile); }      // scans: converted / in the file, from the scan index
+        catch (e) { await sink.abort(); throw e; }
+        const r = await sink.finish();
+        postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
       case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)

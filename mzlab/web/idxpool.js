@@ -1,3 +1,4 @@
+// @ts-check
 // Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). Used by rust-worker.js, the engine's worker.
 //  - N workers at most (min(cores - 1, 4); 2 on Safari/iPad; at least 1), one file each, started in the order of the queue (prioritize() puts the list's order first);
 //  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
@@ -13,7 +14,7 @@ export function poolSize(small, cores) {
 
 // moduleUrl: the .wasm of the builder, compiled ONCE here (compileStreaming) and handed to every worker as a WebAssembly.Module, so that a worker that lives for one file
 // does not compile it again (without it the worker compiles by itself, as the test workers do).
-export function createPool({ workerUrl, size, budget = 64, notify = () => {}, WorkerClass = Worker, moduleUrl = null }) {
+export function createPool({ workerUrl, size, budget = 64, notify = /** @type {(key?: string) => void} */ (() => {}), WorkerClass = Worker, moduleUrl = null }) {
   let limit = size, active = 0, off = false, compiled = null;
   const getModule = () => compiled || (compiled = (async () => {
     try { return await WebAssembly.compileStreaming(fetch(moduleUrl)); }

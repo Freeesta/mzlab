@@ -370,6 +370,8 @@ I18N.add("en", {
   "conv.detail.wait": "reading the scan index · elapsed {elapsed}",
   "conv.beat": "Still converting…",
   "conv.stall": "No news for over 30 seconds: a big file can take a long time. Keep this tab open and close other heavy ones; if it does not restart you can cancel and try again.",
+  "conv.profile": "Thermo .raw: keep the profile data (default: centroids)",
+  "conv.profile.title": "Profile: the data as the instrument recorded it (much larger files, slower conversion). Centroid: the peaks the instrument already computed.",
   "conv.total": "Total: {pc}%",
   "conv.cancel": "Cancel",
   "conv.cancel.title": "Cancel the conversion of the .raw files",
@@ -3145,5 +3147,6 @@ I18N.add("en", {
   "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
-  "error.badRecipe": "The parameters of the pipeline are not valid."
+  "error.badRecipe": "The parameters of the pipeline are not valid.",
+  "logo.gold.live": "The logo has turned gold"
 });

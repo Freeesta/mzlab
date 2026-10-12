@@ -6,18 +6,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} · Analisi MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
-<script src="static/an-util.js"></script>
-<script src="static/an-quad.js"></script>
-<script src="static/an-paul.js"></script>
-<script src="static/an-tof.js"></script>
-<script src="static/an-settore.js"></script>
-<script src="static/an-orbi.js"></script>
-<script src="static/an-ims.js"></script>
-<script src="static/an-esi.js"></script>
-<script src="static/an-maldi.js"></script>
-<script src="static/an-trappola.js"></script>
-<script src="static/an-fticr.js"></script>
-<script src="static/an-qqq.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
 <style>
@@ -418,10 +406,15 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), in one of three analysers chosen at random:
-// an-*.js: quadrupole, reflectron TOF, Orbitrap, electrospray source, linear ion trap, FT-ICR cell, triple quadrupole (Q1-q2-Q3).
-let ldIonRaf = 0;
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), turning round the centre.
+// The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
+const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
+let ldIonRaf = 0, ldAnLoad = null;
+function ldAnLoaded() {                                          // plain scripts, in order (an-util first); resolves once they have all run
+  return ldAnLoad || (ldAnLoad = LD_AN.reduce((p, n) => p.then(() => new Promise(ok => { const s = document.createElement("script"); s.src = "static/an-" + n + ".js"; s.onload = s.onerror = ok; document.head.appendChild(s); })), Promise.resolve()));
+}
 function ldIon(on, mode) {
+  if (on && LD_ANALYSERS && !window.LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
   if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
   const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
   cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
@@ -431,9 +424,10 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = {};         // the analysers live in an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
-  for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);
-  const keys = Object.keys(A), an = A[mode in A ? mode : keys[Math.floor(Math.random() * keys.length)]];
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions turning round the centre (depth z sets size and brightness)
+    n: 22, dt: 0.035, at(j, t) { const a = TAU * 0.55 * t + j * TAU / 3; return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(a), z: Math.sin(a) }; } } };
+  if (LD_ANALYSERS) for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
   const frame = ms => {
     const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
@@ -512,6 +506,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
  <div class="card" id="loaded" hidden></div>
  <div class="card req"><h3 data-i18n="load.step1.title">1. Carica i file dei dati (.mzML)</h3>
   <div id="drop" data-i18n-html="load.drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
+  <label id="rawprof" class="sm muted" style="display:block;margin:8px 0 0" hidden data-i18n-title="conv.profile.title" title="Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroide: i picchi già calcolati dallo strumento."><input type="checkbox" id="rawprofile" style="margin-right:6px"><span data-i18n="conv.profile">File .raw: conserva il profilo (predefinito: centroide)</span></label>
   <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px" data-i18n="load.or">oppure</div><button id="demobtn" class="sec" aria-expanded="false" aria-controls="demochoice" data-i18n-title="load.demo.title" title="Scegli quali file di esempio aprire: si scarica solo ciò che scegli"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg><span data-i18n="load.demo.button">Prova con i file di esempio &#9662;</span></button><div id="demochoice" hidden style="margin-top:8px;display:none;gap:6px;justify-content:center;flex-wrap:wrap"><button type="button" class="sec" data-demo="full" data-i18n-title="load.demo.full.title" title="5 file Full Scan: 0, 5, 10, 15 e 30 minuti di irraggiamento">Full Scan <span class="muted" data-i18n="load.demo.full.size">5 file · 28 MB</span></button><button type="button" class="sec" data-demo="ms2" data-i18n-title="load.demo.ms2.title" title="2 file MS2 (ioni prodotto): 15 e 60 minuti">MS2 <span class="muted" data-i18n="load.demo.ms2.size">2 file · 10 MB</span></button><button type="button" class="sec" data-demo="mrm" data-i18n-title="load.demo.mrm.title" title="4 standard MRM a concentrazione crescente (0.6; 2.4; 7.2 e 18 ppm)">MRM <span class="muted" data-i18n="load.demo.mrm.size">4 file · 2 MB</span></button><button type="button" class="sec" data-demo="hrms" data-i18n-title="load.demo.hrms.title" title="4 file ad alta risoluzione (Orbitrap, DDA): serie temporale di un inquinante degradato su TiO2 (0, 5, 10 e 30 min)">HRMS <span class="muted" data-i18n="load.demo.hrms.size">4 file · 28 MB</span></button></div></div>
   <div id="unopen" class="note" role="status" aria-live="polite" hidden></div>
   <details id="convhelp" class="sm"><summary data-i18n="conv.help.summary">Non hai file mzML?</summary>
@@ -532,7 +527,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
-(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js","logo-piccone.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
 L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
 <script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
@@ -669,14 +664,14 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen()).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html",b.convertWiff?"load.dropWiff":"load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html",b.convertWiff?"load.dropWiff":"load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true;const rp=$("#rawprof"),cb=$("#rawprofile");if(rp&&cb){rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}}})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   const raws=files.filter(f=>/\.raw$/i.test(f.name)),out=[];let i=0;const g=ConvUI.group(box,raws.map(f=>f.size));
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
     if(g.signal.aborted)continue;       // cancelled: the .raw files still to convert are left out
     const ui=g.start(++i,f.name);
-    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal);CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal,{profile:!!$("#rawprofile")?.checked});CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){if(e.cancelled){ui.done();continue}ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   g.end();if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return out}
