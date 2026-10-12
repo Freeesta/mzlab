@@ -2,7 +2,7 @@
 //! the gradient that `chromeleon::parse` reads from the method text, the document that the conversion writes into the mzML, and the anonymous document against the complete one.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped.
 use mzlab_core::json::{self, Value};
-use mzlab_core::{chromeleon, metodo, raw};
+use mzlab_core::{chromeleon, metodo, mzml, raw};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -142,6 +142,19 @@ fn the_conversion_carries_the_document_and_the_anonymous_one_has_no_identity() {
             Some(full.as_str()),
             "document in the mzML of {raw_path:?}"
         );
+        // no value of the scan trailer is lost: what the registered fields do not carry is written as `opentfraw.trailer.*` in every spectrum
+        let first = out.windows(10).position(|w| w == b"<spectrum ").unwrap();
+        let end = first
+            + out[first..]
+                .windows(11)
+                .position(|w| w == b"</spectrum>")
+                .unwrap();
+        let body = String::from_utf8_lossy(&out[first..end]);
+        let n = body.matches("name=\"opentfraw.trailer.").count();
+        assert!(
+            n >= 10,
+            "only {n} trailer fields in the first spectrum of {raw_path:?}"
+        );
         // identity: every value the complete document marks as personal is absent from the anonymous one
         let v = json::parse(full.as_bytes()).unwrap();
         let anon = doc(&raw_path, true);
@@ -168,4 +181,52 @@ fn the_conversion_carries_the_document_and_the_anonymous_one_has_no_identity() {
         }
         assert!(anon.len() > 1000 && !anon.contains("\"operatore\""));
     }
+}
+
+#[test]
+fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
+    let Some(d) = dati() else {
+        eprintln!("skipped: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut checked = 0;
+    for (raw_path, mzml_path) in pairs(&d) {
+        let mut out = Vec::new();
+        raw::to_mzml(
+            BufReader::new(File::open(&raw_path).unwrap()),
+            &mut out,
+            "sample.raw",
+        )
+        .unwrap();
+        let ours = mzml::read(&out[..]).unwrap();
+        let theirs = mzml::read(BufReader::new(File::open(&mzml_path).unwrap())).unwrap();
+        let pressure = |r: &mzml::Run| {
+            r.chromatograms
+                .iter()
+                .find(|c| c.kind == mzml::ChromKind::Pressure)
+                .cloned()
+        };
+        let (Some(a), Some(b)) = (pressure(&ours), pressure(&theirs)) else {
+            continue;
+        };
+        assert_eq!(a.unit, "pascal");
+        assert!(a.time.len() >= b.time.len(), "samples of {raw_path:?}");
+        // msconvert takes the number of the file for bar and writes it x 1e5; the unit of the file is psi or bar (in the channel name)
+        let psi = std::fs::read(&raw_path)
+            .map(|x| x.windows(8).any(|w| w == b" \0p\0s\0i\0"))
+            .unwrap_or(false);
+        let k = if psi { 6_894.757_293_168 / 1e5 } else { 1.0 };
+        for (t, y) in b.time.iter().zip(&b.intensity) {
+            let j = a.time.partition_point(|x| x < &(t - 1e-6));
+            assert!((a.time[j] - t).abs() < 1e-5, "time {t} of {raw_path:?}");
+            let want = y * k;
+            assert!(
+                (a.intensity[j] - want).abs() <= want.abs() * 2e-6,
+                "pressure at {t} min of {raw_path:?}: {} against {want}",
+                a.intensity[j]
+            );
+        }
+        checked += 1;
+    }
+    assert!(checked > 0, "no .raw with a pressure channel");
 }
