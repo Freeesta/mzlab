@@ -4,6 +4,7 @@
 - `quad`: 4 barre, RF/DC, oscillazione secolare di Mathieu.
 - `tof`: reflectron, stessa energia, stessa profondità nello specchio, tempo ∝ √(m/z).
 - `orbi`: fuso e barile dalle equipotenziali esatte del potenziale quadro-logaritmico con la W di Lambert (`radiusAt`/`zAt`); ω_z ∝ 1/√m, ω_φ e ω_r di Makarov; test in `tests/test_analizzatori.py`.
+- `ims`: mobilità ionica a tubo di deriva, v=K·E con K ∝ 1/CCS: gli ioni più compatti arrivano prima, urti con il gas tampone.
 - `esi`: cono di Taylor, gocce che si restringono.
 - `trappola`: trappola ionica lineare. `fticr`: cella FT-ICR, ω_c ∝ z/m. `qqq`: triplo quadrupolo (Q1, q2 con gas, Q3).
 - `ldIon(on, mode)` in `index.html` crea gli analizzatori da `window.LDAN`, sceglie `mode` o uno a caso e disegna punto con scia; `q.s` scala la dimensione di un ione (gocce, frammenti).
