@@ -9,6 +9,7 @@ mod aligned_ops;
 mod channels;
 pub mod famalign;
 pub mod family;
+pub mod hypo;
 pub mod isotopes;
 pub mod kinetic;
 pub mod ms2;
