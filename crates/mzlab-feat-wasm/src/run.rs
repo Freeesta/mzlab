@@ -7,15 +7,17 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
 use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
 use mzlab_feat::facts::{file_facts, FileFacts};
-use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules};
+use mzlab_feat::evid::rowproofs::row_signs;
+use mzlab_feat::hypo::{generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
 use mzlab_feat::slabs::{align_and_fill_stored, Stored};
 use mzlab_feat::store::{
-    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_with_evid, Origin, Slice,
+    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_tp, write_table_with_evid, Origin, Slice,
 };
 use mzlab_feat::table::{FileFeatures, RowIdent};
+use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
 
@@ -295,16 +297,25 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         }),
         parent,
     };
+    let tp = tp_block(&inp, minutes, &hypo.registry.hyps, parent);
     let rows = aligned.len();
-    let held = aligned.heap_bytes();
+    let held = aligned.heap_bytes() + tp.heap_bytes();
     if budget.in_memory(held + rows * IDENTITY_BYTES) {
         let json = graph_json(&build_graph(&inp), &points);
-        return write_table_to(sink, &aligned, r, &origin, &mut json.as_bytes());
+        return write_table_tp(sink, &aligned, &tp, r, &origin, &mut json.as_bytes());
     }
     let need = held + rows * GraphStream::bytes_per_row();
     let _g = budget.reserve("proofs", need)?;
     let mut graph = GraphStream::new(&inp);
-    write_table_to(sink, &aligned, r, &origin, &mut graph)
+    write_table_tp(sink, &aligned, &tp, r, &origin, &mut graph)
+}
+
+/// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
+fn tp_block(inp: &Inputs, minutes: &[f64], hyps: &[Hypothesis], parent: Option<(f64, f64)>) -> TpBlock {
+    let Some(parent) = parent else { return TpBlock::default() };
+    let signs = row_signs(inp);
+    let tp = TpInputs { aligned: inp.aligned, minutes, hyps, signs: &signs, parent, fragments: None, params: &TpParams::default() };
+    build_tp(&tp).ok().flatten().unwrap_or_default()
 }
 
 /// The row within 5 ppm and 0.3 min of the parent with the largest area (the parent decay is read from it).

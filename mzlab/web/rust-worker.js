@@ -143,7 +143,13 @@ async function lrOp(m) {
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
       const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part });
-      if (!res.ok) { await ARCH.remove("idx", part); jerr(res.reason === "memory" ? "error.memoryBudget" : "err.engine.index"); }
+      if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
+        await ARCH.remove("idx", part);
+        if (res.reason === "memory") jerr("error.memoryBudget");
+        let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
+        if (key) throw res.text;
+        throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
+      }
       await ARCH.promote("idx", part, m.name + ".mzidx");
       if (!(await lrOpen(m.name))) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
@@ -189,7 +195,7 @@ onmessage = async ev => {
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
         try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, !!m.profile); }      // scans: converted / in the file, from the scan index
-        catch (e) { await sink.abort(); throw e; }
+        catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }      // q: the disk is full (error.quota)
         const r = await sink.finish();
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;

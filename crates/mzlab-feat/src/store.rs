@@ -15,6 +15,7 @@ use crate::facts::FileFacts;
 use crate::recipe::Recipe;
 use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
+use crate::tp::TpBlock;
 
 pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
 pub(crate) const ALIGN: usize = 64;
@@ -152,12 +153,22 @@ fn plan(cols: &[(&'static str, Col)], evid: usize) -> (Vec<(&'static str, &'stat
     (dir, at)
 }
 
+/// The names of the adducts that the codes of `ion` stand for, as the meta `adducts`.
+fn adducts_json(j: &mut Out) {
+    j.raw(",\"adducts\":[");
+    for (i, a) in adduct_names().iter().enumerate() {
+        j.raw(if i > 0 { "," } else { "" }).str(a);
+    }
+    j.raw("]");
+}
+
 /// The JSON meta: format, versions, recipe, fingerprints, inputs, times, shape and directory of the arrays.
 fn meta_json(
     kind: &str,
     r: &Recipe,
     o: &Origin,
     shape: &[(&str, usize)],
+    extra: &str,
     dir: &[(&'static str, &'static str, usize, usize)],
 ) -> String {
     let mut j = Out::default();
@@ -210,12 +221,9 @@ fn meta_json(
         j.raw(",").str(k).raw(":").int(*n as i64);
     }
     if shape.contains(&("identity", 1)) {
-        j.raw(",\"adducts\":[");
-        for (i, a) in adduct_names().iter().enumerate() {
-            j.raw(if i > 0 { "," } else { "" }).str(a);
-        }
-        j.raw("]");
+        adducts_json(&mut j);
     }
+    j.raw(extra);
     j.raw(",\"arrays\":[");
     for (i, (name, dtype, count, off)) in dir.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -239,11 +247,12 @@ fn write_container<W: WriteAt>(
     r: &Recipe,
     o: &Origin,
     shape: &[(&str, usize)],
+    extra: &str,
     cols: &[(&'static str, Col)],
     evid: &mut dyn Section,
 ) -> Result<()> {
     let (dir, _) = plan(cols, evid.len());
-    let meta = meta_json(kind, r, o, shape, &dir);
+    let meta = meta_json(kind, r, o, shape, extra, &dir);
     let mut seq = Seq {
         sink,
         pos: 0,
@@ -299,7 +308,7 @@ pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: 
     let mut cols = file_cols(f);
     let dt = [f.dt];
     cols.push(("dt", Col::F64(&dt)));
-    write_container(sink, "file", r, o, &[("rows", f.len())], &cols, &mut (&[][..]))
+    write_container(sink, "file", r, o, &[("rows", f.len())], "", &cols, &mut (&[][..]))
 }
 
 /// Bytes of the `.mzfeatf` of one file.
@@ -307,6 +316,18 @@ pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
     let mut v = Vec::new();
     write_file_to(&mut v, f, r, o).expect("a Vec grows");
     v
+}
+
+/// Adds the columns of the block `tp/1` to `cols` when the table has one; says whether it did.
+fn tp_cols<'a>(tp: &'a TpBlock, cols: &mut Vec<(&'static str, Col<'a>)>) -> bool {
+    if tp.is_empty() {
+        return false;
+    }
+    cols.push(("tp_status", Col::U8(&tp.status)));
+    cols.push(("tp_notes", Col::U8(&tp.notes)));
+    cols.push(("tp_via", Col::U8(&tp.via)));
+    cols.push(("tp_kinship", Col::U8(&tp.kinship)));
+    true
 }
 
 /// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
@@ -318,6 +339,18 @@ pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
 pub fn write_table_to<W: WriteAt>(
     sink: &mut W,
     t: &Aligned,
+    r: &Recipe,
+    o: &Origin,
+    evid: &mut dyn Section,
+) -> Result<()> {
+    write_table_tp(sink, t, &t.tp, r, o, evid)
+}
+
+/// `write_table_to` with the block `tp/1` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
+pub fn write_table_tp<W: WriteAt>(
+    sink: &mut W,
+    t: &Aligned,
+    tp: &TpBlock,
     r: &Recipe,
     o: &Origin,
     evid: &mut dyn Section,
@@ -360,7 +393,8 @@ pub fn write_table_to<W: WriteAt>(
         ("summaries", usize::from(!t.meta.is_empty())),
         ("identity", usize::from(ident)),
     ];
-    write_container(sink, "table", r, o, &shape, &cols, evid)
+    let tp = if tp_cols(tp, &mut cols) { format!(",\"tp\":{}", tp.meta_json()) } else { String::new() };
+    write_container(sink, "table", r, o, &shape, &tp, &cols, evid)
 }
 
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
