@@ -120,35 +120,41 @@ fn rust_maps_match_python() {
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("mappa.json")).unwrap()).unwrap();
-    let mut routes: HashMap<u32, Routes<std::fs::File>> = (0..3u32)
-        .map(|i| {
-            let p = out.join(format!("s{i}.mzidx"));
-            (i, Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap()))
-        })
-        .collect();
-    let items: Vec<ItemMeta> = (0..3u32).map(|i| ItemMeta { slot: i, label: format!("s{i}"), time: None, full: true }).collect();
+    let sets = [("mappa.json", "s"), ("mappa-prof.json", "p"), ("mappa-hr.json", "h")];
     let (mut failures, mut compared) = (Vec::new(), 0);
-    for c in &cases {
-        let (path, query) = (c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
-        let t = std::time::Instant::now();
-        let got = map_route(path, &items, &mut routes, &Query::parse(query)).unwrap();
-        eprintln!("{path}?{}: rust {:.1} ms, python {:.1} ms", &query[..query.len().min(60)], t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
-        if c["status"] != 200 {
-            if got.is_some() {
-                failures.push(format!("{path}?{query}: Python refuses, Rust answers"));
+    for (json, stem) in sets {
+        let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join(json)).unwrap()).unwrap();
+        let order: Vec<Value> = std::fs::read(out.join(format!("{stem}-ordine.json"))).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_else(|| (0..3).map(|i| serde_json::json!({"stem": format!("{stem}{i}"), "full": true})).collect());
+        let mut routes: HashMap<u32, Routes<std::fs::File>> = order
+            .iter()
+            .enumerate()
+            .map(|(i, o)| {
+                let p = out.join(format!("{}.mzidx", o["stem"].as_str().unwrap()));
+                (i as u32, Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap()))
+            })
+            .collect();
+        let items: Vec<ItemMeta> = order.iter().enumerate().map(|(i, o)| ItemMeta { slot: i as u32, label: format!("{stem}{i}"), time: None, full: o["full"].as_bool().unwrap_or(true) }).collect();
+        for c in &cases {
+            let (path, query) = (c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
+            let t = std::time::Instant::now();
+            let got = map_route(path, &items, &mut routes, &Query::parse(query)).unwrap();
+            eprintln!("{stem}: {path}?{}: rust {:.1} ms, python {:.1} ms", &query[..query.len().min(60)], t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
+            if c["status"] != 200 {
+                if got.is_some() {
+                    failures.push(format!("{stem}: {path}?{query}: Python refuses, Rust answers"));
+                }
+                continue;
             }
-            continue;
+            let Some(got) = got else {
+                failures.push(format!("{stem}: {path}?{query}: Rust gave it to Python"));
+                continue;
+            };
+            let got: Value = serde_json::from_str(&got).unwrap();
+            let mut bad = Vec::new();
+            compared += compare("", &got, &c["result"], &mut bad);
+            failures.extend(bad.iter().take(8).map(|b| format!("{stem}: {path}?{query}: {b}")));
         }
-        let Some(got) = got else {
-            failures.push(format!("{path}?{query}: Rust gave it to Python"));
-            continue;
-        };
-        let got: Value = serde_json::from_str(&got).unwrap();
-        let mut bad = Vec::new();
-        compared += compare("", &got, &c["result"], &mut bad);
-        failures.extend(bad.iter().take(8).map(|b| format!("{path}?{query}: {b}")));
     }
-    assert!(compared > 100_000, "only {compared} values compared");
+    assert!(compared > 300_000, "only {compared} values compared");
     assert!(failures.is_empty(), "{} differences:\n{}", failures.len(), failures.join("\n"));
 }
