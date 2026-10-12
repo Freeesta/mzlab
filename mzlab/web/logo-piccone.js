@@ -16,6 +16,9 @@
   const st = document.createElement("style");
   st.textContent = `:root{--gold:#c9a227}
 html[data-logo-gold] header img.logo{filter:sepia(1) saturate(3.5) hue-rotate(-12deg) brightness(1.12) drop-shadow(0 0 3px var(--gold))}
+/* dark theme (also the high-contrast one): the same gold, brighter, so the glyph keeps >= 4.5:1 on the header (measured 7:1 or more) */
+@media (prefers-color-scheme:dark){html[data-logo-gold]:not([data-theme=light]) header img.logo{filter:sepia(1) saturate(3) hue-rotate(-12deg) brightness(2.3) drop-shadow(0 0 3px var(--gold))}}
+html[data-theme=dark][data-logo-gold] header img.logo{filter:sepia(1) saturate(3) hue-rotate(-12deg) brightness(2.3) drop-shadow(0 0 3px var(--gold))}
 header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #lg-fx{position:fixed;z-index:6100;pointer-events:none;overflow:visible}#lg-fx svg{position:absolute;left:0;top:0;overflow:visible}
 #lg-fx .lg-cr{fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s}#lg-fx .lg-cr.on{opacity:1}
