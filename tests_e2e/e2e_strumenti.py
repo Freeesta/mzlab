@@ -41,8 +41,8 @@ try:
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
-            assert not pg.is_visible("#dfiles"), "the drawer is closed until a tool is chosen"
-        step("barra in the header (role toolbar), file/calc/losses/adducts/lists/table in this order, words under the icons, no rail, drawer closed", barra)
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.curTab") == "file", "first start on a wide screen: the File panel is open"
+        step("barra in the header (role toolbar), file/calc/losses/adducts/lists/table in this order, words under the icons, no rail, File panel open at first start", barra)
 
         def altro():
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu")
@@ -52,6 +52,7 @@ try:
         step("«Altro» menu: PubChem and BioTransformer, Esc closes and gives the focus back", altro)
 
         def apri_chiudi():
+            pg.click("#sb-x"); pg.wait_for_timeout(400)      # open at first start: close it, then reopen with the tool button
             w0 = pg.evaluate("E.panels[0].w")
             pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500)
             assert pg.is_visible("#dfiles") and pg.is_visible("#flst"), "file list in the panel"
@@ -134,7 +135,7 @@ try:
             pg.evaluate("localStorage.setItem('qqq.barra.lr', JSON.stringify({tab:'file', open:true, w:99999}))"); pg.reload(); ready(pg); pg.wait_for_timeout(400)
             assert pg.evaluate("BARRA.width") <= 560, "a width out of range goes back to the default"
             pg.evaluate("localStorage.removeItem('qqq.barra.lr'); localStorage.removeItem('qqq.barra.lato')"); pg.reload(); ready(pg)
-            assert not pg.is_visible("#dfiles"), "first start: hidden"
+            assert pg.is_visible("#dfiles"), "first start: open"
         step("state remembered after reload (open, side, width, tool); old states (pinned, bad side, width 0 or huge) are cleaned", ricorda)
 
         def larghezze():

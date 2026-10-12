@@ -26,6 +26,7 @@ with sync_playwright() as p:
         step(f"start screen at {w}px", start_small)
     pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); pg.wait_for_timeout(2500)
     pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+    if pg.is_visible("#dfiles"): pg.click("#sb-x"); pg.wait_for_timeout(500)      # the File panel is open at first start; under 900 px it would replace the workspace
     for w, h in SIZES:
         def at():
             pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(900)
