@@ -15,9 +15,9 @@ export function wiffApi(rpc, base) {
       return JSON.parse(r.info);
     },
     // one sample of a .wiff (+ its .wiff.scan, null when missing) -> Blob of mzML. Several can be asked at once (the engine converts a few at a time); `key` names the
-    // conversion for cancelWiff. A cancelled one rejects with { cancelled: true }.
-    async convertWiff(wiff, scan, sample, onProgress, key) {
-      const r = await rpc({ op: "wiff2mzml", name: base(wiff.name), blob: wiff, scan: scan || null, sample, key: key || wiff.name + "#" + sample }, onProgress);
+    // conversion for cancelWiff; `centroid` true writes one point per peak (mzLab centroidi, MS:1000035) instead of the profile. A cancelled one rejects with { cancelled: true }.
+    async convertWiff(wiff, scan, sample, onProgress, key, centroid) {
+      const r = await rpc({ op: "wiff2mzml", name: base(wiff.name), blob: wiff, scan: scan || null, sample, centroid: centroid === true, key: key || wiff.name + "#" + sample }, onProgress);
       if (r.cancelled) throw Object.assign(new Error("cancelled"), { cancelled: true });
       if (r.dead || r.error) throw fail(r, "err.file.wiff");
       return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: null });

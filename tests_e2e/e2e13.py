@@ -39,6 +39,7 @@ try:
             assert pg.evaluate("E.panels[0]._a && E.panels[0]._a.sr.length") == 1      # at the first load only the first file of each kind is open
         step("open: TIC drawn", openit)
         def xic():
+            pg.evaluate("setTab('full')"); pg.wait_for_selector("#np-xic", state="visible", timeout=30000)      # the view starts on the tab of the first file of the list
             pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(3000)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic' && p._a && p._a.sr.length>0)")
         step("XIC from the dialog", xic)
@@ -48,7 +49,7 @@ try:
             r = pg.evaluate("fetch('api/formula?f=C15H12N2O&adduct=%5BM%2BH%5D%2B').then(r=>r.json())"); assert abs(r["mz"] - 237.1022) < 0.001, r
         step("formula endpoint", formula)
         def reload():
-            pg.reload(); pg.wait_for_selector(".pnl canvas", timeout=120000); pg.wait_for_timeout(2500)
+            pg.reload(); pg.wait_for_function("[...document.querySelectorAll('.pnl canvas')].some(c => c.checkVisibility())", timeout=120000); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.files.length") == 5, pg.evaluate("E.files.length")
         step("reload resumes the session from the browser storage", reload)
         def tabs():
@@ -58,9 +59,9 @@ try:
             pg.click("#nav button[data-v=data]")
         step("Disegno and Teoria tabs work from the static site", tabs)
         def mrm_spec():
-            assert pg.evaluate("E.panels.some(p=>p.type==='spec' && p._a)"), "spectrum panel"
-            pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
-            assert pg.evaluate("E.panels.some(p=>p.type==='mrm' && p._a && p._a.sr.length>0)")
+            pg.wait_for_function("E.panels.some(p=>p.type==='spec' && p._a)", timeout=60000)      # the spectrum is made after the chromatogram, also after a reload
+            pg.evaluate("setTab('mrm')")      # as the tab button does (the button can sit under a notice or a tooltip)
+            pg.wait_for_function("E.panels.some(p=>p.type==='mrm' && p._a && p._a.sr.length>0)", timeout=60000)
         step("spectrum and MRM panels", mrm_spec)
         def clear_all():
             pg.click("#newrun"); pg.click("#askyes") if pg.locator("#askyes").count() else None
