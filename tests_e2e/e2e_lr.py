@@ -130,6 +130,15 @@ try:
                 json_close(a["j"], b2["j"], 1e-6, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
         step("origin: the evidence of Rust equals Python's, still without Pyodide", origin_same)
+        def map_same():
+            for u in ["api/map?k=0", "api/map?k=1&bg=1", "api/map?k=0&ref=1&norm=max", "api/map?k=0&rt0=13&rt1=16&mz0=140&mz1=400&nrt=120&nmz=100", "api/mapsnap?k=0&rt=14.25&mz=364.4",
+                      "api/mappunti?k=0&ref=1&pts=14.3,364.3;14.32,194.2", "api/mappunti3d?k=0&rt0=13&rt1=16&mz0=150&mz1=370&max=300"]:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
+                assert a["eng"] == "rust", (u, a["eng"])
+                json_close(a["j"], b2["j"], 1e-6, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("map, snap, marked points and 3D sticks: Rust equals Python's, still without Pyodide", map_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")

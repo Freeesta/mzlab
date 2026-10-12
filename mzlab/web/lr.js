@@ -19,6 +19,7 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 }[k] || k);
 
 import { originRoute } from "./lr-origin.js";
+import { mapRoute } from "./lr-map.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
@@ -93,17 +94,17 @@ export function createLr({ rb }) {
       rows.push({ file: n, label: s.label ?? null, type: s.type ?? "sample", time: num(s.time), conc: num(s.conc), cunit: s.cunit ?? null, rep: s.rep ?? null });
     }
     if (!rows.length) return fail("err.session.noFiles", {}, "add at least one file");
-    const add = [];
-    let h = body.append && items ? hr : false, l = body.append && items ? lr : false;
+    const add = [], appended = !!(body.append && items);
+    let h = appended ? hr : false, l = appended ? lr : false;
     for (const r of rows) {
       const out = JSON.parse((await rpc({ op: "lr_items", name: r.file, sample: { label: r.label, type: r.type, time: r.time, conc: r.conc, cunit: r.cunit, rep: r.rep } })).info);
       for (const it of out) add.push(it.info);
       if (out.some(it => it.hr)) h = true; else l = true;
       if (h && l) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
     }
-    if (body.append && items) { items = items.concat(add); samples = samples.concat(rows); } else { items = add; samples = rows; }
+    if (appended) { items = items.concat(add); samples = samples.concat(rows); } else { items = add; samples = rows; }
     hr = h; lr = l;
-    rb.noteExplore({ samples: items.map(it => ({ file: it.file })) });            // one slot per ITEM (a mixed file has several), in the order of the session
+    rb.noteExplore({ append: appended, samples: (appended ? add : items).map(it => ({ file: it.file })) });     // one slot per ITEM (a mixed file has several), in the order of the session; a file added keeps the open indexes of the others
     return json(session());
   }
 
@@ -169,6 +170,7 @@ export function createLr({ rb }) {
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items, hr });
+        if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, u.searchParams, { rb, rpc, items, hr });
         if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
