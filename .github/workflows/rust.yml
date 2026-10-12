@@ -5,9 +5,9 @@ name: rust
 on:
   push:
     branches: [main]
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml"]
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml"]
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
 
 permissions:
   contents: read
@@ -58,3 +58,14 @@ jobs:
         run: cargo fmt --all --check || echo "::warning::cargo fmt differences"
       - name: clippy (warning only)
         run: cargo clippy --locked --all-targets || echo "::warning::cargo clippy warnings"
+
+  # Advisories and licences of the dependencies. NOT blocking at the start (continue-on-error): the first runs will show which
+  # licences of the Tauri graph are missing from deny.toml; make it blocking when the job is green.
+  deny:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses sources

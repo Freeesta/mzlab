@@ -10,7 +10,8 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:",
+      "dangerousDisableAssetCspModification": true
     }
   },
   "bundle": {

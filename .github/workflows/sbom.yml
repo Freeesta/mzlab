@@ -1,0 +1,27 @@
+# SBOM CycloneDX of the Rust workspace. Reusable: the release workflow calls it at every tag (`uses: ./.github/workflows/sbom.yml`)
+# and attaches the artifact `sbom` to the release; it can also be run by hand. Nothing here publishes anything.
+name: sbom
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - name: cargo-cyclonedx
+        run: cargo install cargo-cyclonedx --locked
+      - name: Generate the SBOM (one JSON file per crate)
+        run: cargo cyclonedx --format json --spec-version 1.5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: "**/*.cdx.json"
+          if-no-files-found: error
