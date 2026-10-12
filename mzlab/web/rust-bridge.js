@@ -9,6 +9,7 @@ import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
 import { makeConvertRaw } from "./rust-raw.js";
 import { wiffApi } from "./rust-convert.js";
+import { makeRecycler } from "./rust-recycle.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -19,23 +20,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const api = { enabled: true, disabled: false, stats };
   const base = n => String(n || "").split(/[\\/]/).pop();
 
-  // Recycling: the memory of a WASM instance is never given back, so a worker whose linear memory has grown past RECYCLE_MB and that has been idle
-  // for IDLE_MS (or whose page went to the background) is closed and a new one takes its place; the files of the session are opened again as after a
-  // fault, but nothing is counted as a fault and the page is not told.
-  const RECYCLE_MB = 192, IDLE_MS = 30000;
-  let memNow = 0, idleTimer = null;
-  function maybeRecycle(force) {
-    clearTimeout(idleTimer); idleTimer = null;
-    if (!worker || api.disabled || memNow <= RECYCLE_MB * 1048576 || pending.size) return;
-    if (force || (typeof document !== "undefined" && document.hidden)) return doRecycle();
-    idleTimer = setTimeout(() => { if (!pending.size) doRecycle(); }, IDLE_MS);
-  }
-  function doRecycle() {
-    if (!worker || pending.size) return;
-    stop(worker, { dead: true }); memNow = 0; stats.recycled = (stats.recycled || 0) + 1;
-    respawn();
-  }
-  if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => { if (document.hidden) maybeRecycle(true); });
+  const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
   function spawn() {
     const w = new Worker(workerUrl, { type: "module" });
     w.onmessage = ev => {
@@ -46,8 +31,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
-      pending.delete(m.id);
-      if (typeof m.mem === "number") { memNow = m.mem; maybeRecycle(false); }
+      pending.delete(m.id); recycler.seen(m.mem);
       if (m.fatal) { p.res({ dead: true, error: m.error }); died(w); } else p.res(m);
     };
     w.onerror = () => died(w);
@@ -129,7 +113,6 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
   };
   api.crash =() => rpc({ op: "crash" });
-  api.recycle = () => doRecycle();                                      // for the tests: the worker is recycled now (when nothing is pending)
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
   api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
 
