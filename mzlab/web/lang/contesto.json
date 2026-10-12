@@ -50,6 +50,7 @@
   "files.pendingRemove": "{name} = nome del file.",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.notAccepted": "{name} = nome del file.",
+  "err.engine.index": "{name} = nome del file.",
   "err.file.notMzml": "{name} = nome del file.",
   "err.file.notDam": "{name} = nome del file.",
   "err.dam.unreadable": "Mostrato nella finestra del metodo; {message} = testo tecnico (inglese).",

@@ -1,7 +1,7 @@
 // @ts-check
-// The map routes (`api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d`) of the flow without Pyodide: the Rust engine answers from the
-// indexes of the files of the session (unit or high resolution, centroids or profile points). null = Python's: a file without index,
-// or a parameter that Python must reject with its own error.
+// The map routes (`api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d`) of the browser version: the Rust engine answers from the
+// indexes of the files of the session (unit or high resolution, centroids or profile points). null = not served: a file without index,
+// or a parameter the reference would reject.
 
 /** @param {string} path  @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>, items: any[] | null}} env */
 async function mapRoute(path, q, { rb, rpc, items }) {
@@ -11,7 +11,7 @@ async function mapRoute(path, q, { rb, rpc, items }) {
   return r.info ? { status: 200, text: r.info } : null;
 }
 
-/** `api/subxic` (the combined XIC of the sub-formulas of an ion) of a high-resolution survey, from its index. null = Python's. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
+/** `api/subxic` (the combined XIC of the sub-formulas of an ion) of a high-resolution survey, from its index. null = not served. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
 async function subxicRoute(q, { rb, rpc }) {
   const k = Number(q.get("k"));
   if (!Number.isInteger(k) || !(await rb.ready([k]))) return null;
@@ -19,7 +19,7 @@ async function subxicRoute(q, { rb, rpc }) {
   return r.info ? { status: 200, text: r.info } : null;
 }
 
-/** `api/qaqc` (QA/QC measures of one ion over the series) from the indexes of the files. null = Python's. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
+/** `api/qaqc` (QA/QC measures of one ion over the series) from the indexes of the files. null = not served. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
 async function qaqcRoute(q, { rb, rpc }) {
   const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
   if (!ks.length || !ks.every(k => Number.isInteger(k) && k >= 0) || !(await rb.ready(ks))) return null;
@@ -28,7 +28,7 @@ async function qaqcRoute(q, { rb, rpc }) {
   return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
 }
 
-/** The routes of the Rust engine that need an index or no file at all: undefined = not one of them, null = Python's, else { status, text }.
+/** The routes of the Rust engine that need an index or no file at all: undefined = not one of them, null = not served, else { status, text }.
  * @param {string} path  @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>, items: any[] | null}} env */
 export async function engineRoute(path, q, env) {
   if (path === "/api/composition") {                            // the formulas that fit an m/z: no file, any session
@@ -43,7 +43,7 @@ export async function engineRoute(path, q, env) {
   return undefined;
 }
 
-/** The POST routes of the statistics (`api/stat/profile|blank|reference|pca`): the Rust engine from the table the page sends. null = Python's.
+/** The POST routes of the statistics (`api/stat/profile|blank|reference|pca`): the Rust engine from the table the page sends. null = not served.
  * @param {string} path  @param {string} body  @param {{rpc: (m: any) => Promise<any>}} env */
 export async function statRoute(path, body, { rpc }) {
   if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;

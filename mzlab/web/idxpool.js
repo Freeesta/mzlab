@@ -1,20 +1,16 @@
 // Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). Used by browser-worker.js, the engine's worker.
 //  - N workers at most (min(cores - 1, 4); 2 on Safari/iPad; at least 1), one file each, started in the order of the queue (prioritize() puts the list's order first);
-//  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death gives the file to Python);
+//  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
 //  - memory: a builder that cannot reserve memory (error.memoryBudget) halves the pool and the budget and retries once; the page is told (notice);
-//  - no WASM / no SIMD / no OPFS: unavailable() is true and every job answers { ok: false, reason: "unavailable" }, so Python builds the index as before.
+//  - no WASM / no OPFS: unavailable() is true and every job answers { ok: false, reason: "unavailable" } (the upload fails with an error key).
 // A job's result: { ok: true, stats } or { ok: false, reason: "unavailable" | "cancelled" | "crash" | "memory" | "error", text }.
 export function poolSize(small, cores) {
   const n = Math.max(1, Math.min((cores || 2) - 1, 4));
   return small ? Math.min(n, 2) : n;
 }
 
-// A tiny WebAssembly module that uses a 128-bit SIMD instruction: the browser validates it only when it supports SIMD (the Rust builder is built with it).
-const SIMD_PROBE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]);
-export const simdSupported = () => { try { return WebAssembly.validate(SIMD_PROBE); } catch (_) { return false; } };
-
-export function createPool({ workerUrl, size, budget = 64, notify = () => {}, needSimd = false, WorkerClass = Worker }) {
-  let limit = size, active = 0, off = needSimd && !simdSupported();
+export function createPool({ workerUrl, size, budget = 64, notify = () => {}, WorkerClass = Worker }) {
+  let limit = size, active = 0, off = false;
   const queue = [], running = new Map();          // running: job -> worker
   const finish = (job, res) => { if (job.done) return; job.done = true; job.resolve(res); };
 
@@ -28,7 +24,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, ne
     active++;
     let w;
     const end = () => { if (running.get(job) === w) running.delete(job); try { w.terminate(); } catch (_) { /* gone */ } active--; };
-    const retry = (reason, text) => {                          // the worker is lost: once more at the front of the queue, then Python
+    const retry = (reason, text) => {                          // the worker is lost: once more at the front of the queue, then the error
       end();
       if (!job.tried) { job.tried = true; queue.unshift(job); } else finish(job, { ok: false, reason, text });
       pump();
@@ -46,7 +42,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, ne
         if (m.fatal) return retry("crash", m.text);
         end();
         let key = ""; try { key = JSON.parse(m.text).error_key || ""; } catch (_) { /* not JSON */ }
-        if (key === "error.memoryBudget") {                      // fewer workers and a smaller budget; the page is told why Python reads this file
+        if (key === "error.memoryBudget") {                      // fewer workers and a smaller budget; the page is told why the file fails
           notify(key);
           const was = limit; limit = Math.max(1, limit >> 1);
           if (!job.shrunk && was > 1) { job.shrunk = true; job.budget = Math.max(8, (job.budget || budget) >> 1); queue.unshift(job); }
