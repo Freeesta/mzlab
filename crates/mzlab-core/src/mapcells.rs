@@ -2,49 +2,12 @@
 //! `map_points`, `map_snap` and `map_measure` of `mzlab/explore.py`. The peaks are read in table order (sorted by m/z), so every sum is
 //! added in the order numpy's `bincount` adds it. Sections stored in single precision are Python's (the caller refuses them).
 
+use std::sync::Arc;
+
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::mapgrid::{median_cols, Grid};
 use crate::routes::Routes;
-
-/// The true points of a region for the sticks of the 3D viewer (most intense first).
-pub struct Sticks {
-    pub rt: Vec<f32>,
-    pub mz: Vec<f64>,
-    pub inten: Vec<f32>,
-    pub total: usize,
-}
-
-/// Map cell of the scan position `p` (`scan_bin[p] * nmz + j`) from the fraction `f` of the m/z axis, or None outside the axis.
-fn cell_of(bin: usize, f: f64, nmz: usize) -> Option<usize> {
-    let j = f.floor();
-    (j >= 0.0 && j < nmz as f64).then(|| bin * nmz + j as usize)
-}
-
-/// The same with the cell clipped to the axis (a region holds only peaks inside it; a rounding at the edge must not drop one).
-fn clipped_cell(bin: usize, f: f64, nmz: usize) -> usize {
-    bin * nmz + f.floor().clamp(0.0, (nmz - 1) as f64) as usize
-}
-
-/// RT bin of every scan: `clip(floor((rt - rt0) / span * n), 0, n - 1)`.
-fn scan_bins(rt: &[f64], rt0: f64, span: f64, n: usize) -> Vec<usize> {
-    rt.iter().map(|&r| ((r - rt0) / span * n as f64).floor().clamp(0.0, (n - 1) as f64) as usize).collect()
-}
-
-fn counts(bins: impl Iterator<Item = usize>, n: usize) -> Vec<usize> {
-    let mut c = vec![0; n];
-    bins.for_each(|b| c[b] += 1);
-    c
-}
-
-/// Cells to float32: the maximum as it is, the mean per scan of the RT bin (`n_scans[row]`, at least 1) for the sums.
-fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> {
-    if mean {
-        acc.iter().enumerate().map(|(i, v)| (v / n_scans[i / nmz].max(1) as f64) as f32).collect()
-    } else {
-        acc.iter().map(|&v| v as f32).collect()
-    }
-}
 
 impl<R: ReadAt> Routes<R> {
     /// The section of a level with its scan RTs; None when the level has no peaks to map.
@@ -71,8 +34,21 @@ impl<R: ReadAt> Routes<R> {
         Ok(acc)
     }
 
-    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz`.
-    pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Vec<f32>> {
+    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six are kept).
+    pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Arc<Vec<f32>>> {
+        let key = format!("{level}|{mean}|{:?}", g);
+        if let Some(i) = self.maps.iter().position(|(k, _)| *k == key) {
+            return Ok(self.maps[i].1.clone());
+        }
+        let m = Arc::new(self.build_ion_map(level, g, mean)?);
+        if self.maps.len() >= 6 {
+            self.maps.remove(0);
+        }
+        self.maps.push((key, m.clone()));
+        Ok(m)
+    }
+
+    fn build_ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Vec<f32>> {
         let Some((si, rt)) = self.map_level(level)? else { return Ok(vec![0.0; g.nrt * g.nmz]) };
         let bins = scan_bins(&rt, g.rt0, (g.rt1 - g.rt0).max(1e-9), g.nrt);
         let n_scans = counts(bins.iter().cloned(), g.nrt);
@@ -173,5 +149,44 @@ impl<R: ReadAt> Routes<R> {
             inten: order.iter().map(|&i| pts[i].2 as f32).collect(),
             total,
         })
+    }
+}
+
+/// The true points of a region for the sticks of the 3D viewer (most intense first).
+pub struct Sticks {
+    pub rt: Vec<f32>,
+    pub mz: Vec<f64>,
+    pub inten: Vec<f32>,
+    pub total: usize,
+}
+
+/// Map cell of the scan position `p` (`scan_bin[p] * nmz + j`) from the fraction `f` of the m/z axis, or None outside the axis.
+fn cell_of(bin: usize, f: f64, nmz: usize) -> Option<usize> {
+    let j = f.floor();
+    (j >= 0.0 && j < nmz as f64).then(|| bin * nmz + j as usize)
+}
+
+/// The same with the cell clipped to the axis (a region holds only peaks inside it; a rounding at the edge must not drop one).
+fn clipped_cell(bin: usize, f: f64, nmz: usize) -> usize {
+    bin * nmz + f.floor().clamp(0.0, (nmz - 1) as f64) as usize
+}
+
+/// RT bin of every scan: `clip(floor((rt - rt0) / span * n), 0, n - 1)`.
+fn scan_bins(rt: &[f64], rt0: f64, span: f64, n: usize) -> Vec<usize> {
+    rt.iter().map(|&r| ((r - rt0) / span * n as f64).floor().clamp(0.0, (n - 1) as f64) as usize).collect()
+}
+
+fn counts(bins: impl Iterator<Item = usize>, n: usize) -> Vec<usize> {
+    let mut c = vec![0; n];
+    bins.for_each(|b| c[b] += 1);
+    c
+}
+
+/// Cells to float32: the maximum as it is, the mean per scan of the RT bin (`n_scans[row]`, at least 1) for the sums.
+fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> {
+    if mean {
+        acc.iter().enumerate().map(|(i, v)| (v / n_scans[i / nmz].max(1) as f64) as f32).collect()
+    } else {
+        acc.iter().map(|&v| v as f32).collect()
     }
 }

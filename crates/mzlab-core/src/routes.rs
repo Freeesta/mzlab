@@ -67,11 +67,13 @@ fn decode(s: &str) -> String {
 /// The index of one whole file (not a part of a mixed file) and the routes it answers.
 pub struct Routes<R: ReadAt> {
     pub idx: Index<R>,
+    /// The last whole-file maps of the session grid (the grid, the cells): a difference asks for the same map of a file up to three times.
+    pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>)>,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx }
+        Routes { idx, maps: Vec::new() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).

@@ -109,7 +109,7 @@ fn parse_ask(q: &Query, with_ref: bool) -> Option<Ask> {
 fn one_map<R: ReadAt>(r: &mut Routes<R>, a: &Ask, g: &Grid, mz1: f64) -> Result<Vec<f32>> {
     let m = match a.region {
         Some(_) => r.region_map(a.level, (g.rt0, g.rt1), g.nrt, (g.mz0, mz1), g.nmz, a.mean)?,
-        None => r.ion_map(a.level, g, a.mean)?,
+        None => r.ion_map(a.level, g, a.mean)?.to_vec(),
     };
     if !(a.bg || a.stretch.is_some()) {
         return Ok(m);

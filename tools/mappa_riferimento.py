@@ -4,10 +4,12 @@
 
 Writes a synthetic series of Full Scan files (treatment times 0, 10, 30) with their `.mzidx` in OUT/ and OUT/mappa.json: a list of
 {path, query, result} with the answer of `api.dispatch` (the JSON of `api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d`).
-Prints nothing. No compound names.
+MZLAB_MAP_FILES=a.mzML,b.mzML,c.mzML replaces the synthetic files by real ones. Prints nothing. No compound names.
 """
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -45,9 +47,14 @@ def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
     names = []
+    real = [x for x in os.environ.get("MZLAB_MAP_FILES", "").split(",") if x]       # three real mzML files instead of the synthetic ones (measures, never committed)
     for i, t in enumerate(TIMES):
         f = out / f"s{i}.mzML"
-        ds.full_scan(f, float(t), np.random.default_rng(10 + i))
+        if real:
+            f.unlink(missing_ok=True)
+            f.symlink_to(Path(real[i]).resolve())
+        else:
+            ds.full_scan(f, float(t), np.random.default_rng(10 + i))
         run = Run(f, index_path=out / (f.stem + ".mzidx"))
         mzidx.build(run, out / (f.stem + ".mzidx"))
         run.close()
@@ -57,8 +64,9 @@ def main(argv) -> int:
     res = []
     for path, query in QUERIES:
         q = dict(p.split("=", 1) for p in query.split("&"))
+        t = time.perf_counter()
         code, _, body = dispatch(app, "GET", path, q)[:3]
-        res.append({"path": path, "query": query, "status": code, "result": json.loads(body)})
+        res.append({"path": path, "query": query, "status": code, "py_s": time.perf_counter() - t, "result": json.loads(body)})
     (out / "mappa.json").write_text(json.dumps(res), encoding="utf-8")
     return 0
 

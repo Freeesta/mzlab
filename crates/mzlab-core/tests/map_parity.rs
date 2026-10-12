@@ -22,6 +22,14 @@ fn root() -> PathBuf {
 /// Compares two answers; arrays of cells (base64) must be identical. Returns the number of values compared.
 fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
     match (got, want) {
+        (Value::Object(g), Value::Object(w)) if w.contains_key("rt") && w.get("total").is_some_and(|t| t.as_i64() > w.get("n").and_then(Value::as_i64)) => {
+            let mut rest = (g.clone(), w.clone());
+            for k in ["rt", "mz", "inten"] {
+                rest.0.remove(k);
+                rest.1.remove(k);
+            }
+            compare(path, &Value::Object(rest.0), &Value::Object(rest.1), bad) + same_sticks(got, want, bad)
+        }
         (Value::Object(g), Value::Object(w)) => {
             let mut n = 0;
             for (k, wv) in w {
@@ -49,6 +57,38 @@ fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usiz
             1
         }
     }
+}
+
+/// The sticks of a region cut at `max` points: numpy picks among equal intensities at random (`argpartition`), so the points of each intensity must
+/// be the same set, except at the weakest kept intensity, where only their number is compared.
+fn same_sticks(got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
+    let dec = |v: &Value, k: &str, w: usize| -> Vec<Vec<u8>> {
+        let b = base64::engine::general_purpose::STANDARD.decode(v[k].as_str().unwrap_or("")).unwrap_or_default();
+        b.chunks(w).map(|c| c.to_vec()).collect()
+    };
+    let by_intensity = |v: &Value| {
+        let (rt, mz, y) = (dec(v, "rt", 4), dec(v, "mz", 8), dec(v, "inten", 4));
+        let mut m: std::collections::BTreeMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>> = Default::default();
+        for i in 0..y.len().min(rt.len()).min(mz.len()) {
+            m.entry(y[i].clone()).or_default().push((rt[i].clone(), mz[i].clone()));
+        }
+        m.values_mut().for_each(|p| p.sort());
+        (m, y)
+    };
+    let ((g, gy), (w, wy)) = (by_intensity(got), by_intensity(want));
+    let weakest = wy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).fold(f32::INFINITY, f32::min);
+    if gy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).collect::<Vec<_>>() != wy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).collect::<Vec<_>>() {
+        bad.push("sticks: intensities differ".into());
+    }
+    for (k, pts) in &w {
+        let y = f32::from_le_bytes(k[..4].try_into().unwrap());
+        match g.get(k) {
+            Some(p) if y == weakest && p.len() == pts.len() => {}
+            Some(p) if p == pts => {}
+            _ => bad.push(format!("sticks: the points of intensity {y} differ")),
+        }
+    }
+    wy.len()
 }
 
 fn same_bytes(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
@@ -93,7 +133,7 @@ fn rust_maps_match_python() {
         let (path, query) = (c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
         let t = std::time::Instant::now();
         let got = map_route(path, &items, &mut routes, &Query::parse(query)).unwrap();
-        eprintln!("{path}?{}: rust {:.1} ms", &query[..query.len().min(60)], t.elapsed().as_secs_f64() * 1e3);
+        eprintln!("{path}?{}: rust {:.1} ms, python {:.1} ms", &query[..query.len().min(60)], t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
         if c["status"] != 200 {
             if got.is_some() {
                 failures.push(format!("{path}?{query}: Python refuses, Rust answers"));
