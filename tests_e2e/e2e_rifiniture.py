@@ -14,18 +14,19 @@ def lum(h):
     c = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]; c = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]; return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
 def contrast(a, b):
     x, y = sorted((lum(a), lum(b)), reverse=True); return (x + 0.05) / (y + 0.05)
-r = Run(port=8826, wd="/tmp/wd26")
+r = Run(port=8826, wd="/tmp/wd26", motore="python")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         shutil.rmtree("/tmp/s26", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 30])); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def ions():
-            for mode in pg.evaluate("Object.keys(window.LDAN)"):
+            assert pg.evaluate("window.LDAN === undefined"), "the analyser screens must not be loaded"
+            for mode in ["base", "no-such-analyser"]:
                 pg.evaluate(f"ldIon(true, '{mode}')"); pg.wait_for_timeout(250)
                 assert pg.evaluate("!!document.querySelector('#ldion')"), mode
                 pg.evaluate("ldIon(false)")
-        step("ldIon draws every analyser without errors (still frame with reduced motion)", ions)
+        step("ldIon draws the plain animation (analysers off, not loaded) without errors (still frame with reduced motion)", ions)
         def cleanup():
             body = pg.inner_text("body")
             assert "cella attiva:" not in body.lower() and "active cell:" not in body.lower()

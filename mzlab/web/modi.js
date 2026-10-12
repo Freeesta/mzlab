@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // The three acquisition modes explained once (used by the "?" next to each Dati tab and by the Teoria chapter 9): what each quadrupole does,
 // what the mode is for in the lab, a thumbnail of the typical output, and a comparison table. Classic script; needs icons-modi.js (QICON).
@@ -24,6 +25,7 @@ const QMODI = (() => {
   const th = "padding:3px 8px;border-bottom:1px solid #d9dce2;text-align:left;vertical-align:top;font-weight:600";
   const td = "padding:3px 8px;border-bottom:1px solid #eceef1;vertical-align:top";
   function table(cur) {
+    /** @type {[string, (k: string) => string][]} */
     const rows = [["Q1", k => M[k].q[0].replace(/^Q1 /, "")], ["Q2", k => M[k].q[1].replace(/^Q2 /, "")], ["Q3", k => M[k].q[2].replace(/^Q3 /, "")], [t("modi.row.what"), k => M[k].what], [t("modi.row.out"), k => M[k].out], [t("modi.row.sel"), k => M[k].sel]];
     return `<table style="border-collapse:collapse;width:100%;font-size:12px;margin-top:8px"><tr><th style="${th}"></th>${ORDER.map(k => `<th style="${th};${k === cur ? "background:#edf2f8" : ""}">${QICON.get(M[k].ico, 14)}<br>${M[k].short}</th>`).join("")}</tr>` +
       rows.map(r => `<tr><td style="${td};color:#687080">${r[0]}</td>${ORDER.map(k => `<td style="${td};${k === cur ? "background:#edf2f8" : ""}">${r[1](k)}</td>`).join("")}</tr>`).join("") + "</table>";

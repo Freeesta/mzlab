@@ -54,10 +54,28 @@ try:
             assert names(pg) == ["one.mzML"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
         def several():
+            pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#flist tr[aria-busy=true]').forEach(tr => window.__rows.add(tr.children[1].textContent.trim()))).observe(document.getElementById('flist'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
             shown(pg, 4)
             assert sorted(names(pg)) == ["one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"], names(pg)
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
+        def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
+            seen = set(pg.evaluate("Array.from(window.__rows)"))
+            assert {"two.wiff", "serie.wiff", "two_s1.mzML", "two_s2.mzML", "serie.mzML"} <= seen, seen
+            assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
+        step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
+        def rows_progress():                             # the bar of a row moves without drawing the list again
+            pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
+            bar = pg.locator("#flist [data-cvrow='x_s1.mzML'] [role=progressbar]")
+            pg.evaluate("CONVROWS.set('x_s1.mzML', 'run', 40)")
+            assert bar.get_attribute("aria-valuenow") == "40" and "40" in pg.locator("#flist [data-cvrow='x_s1.mzML'] [data-cvtxt]").inner_text()
+            assert pg.locator("#flist [data-cvrow='x_s2.mzML'] [data-cvtxt]").inner_text().strip() != ""
+            pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
+            assert pg.locator("#flist tr[aria-busy=true]").count() == 0
+        step("a row of the list shows its state and a bar that moves", rows_progress)
+        def pool_converts():                             # the samples are converted by short-lived workers (wiff-worker.js), not by the engine's own thread
+            assert any(u.endswith("wiff-worker.js") for u in reqs), [u for u in reqs if "worker" in u]
+        step("the conversion runs in the pool of workers", pool_converts)
         def downloads():
             assert pg.locator("#flist [data-dl]").count() == 4 and pg.locator("#dlall").count() == 1
         step("the converted mzML can be saved", downloads)
@@ -89,6 +107,21 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
             assert not errs, errs
         step("opening the Full Scan series without Pyodide, and no page error", nopy)
+        def product_spectrum():                          # product-ion files: sample 2 holds two precursors (229.1, 305.0) in interleaved cycles, sample 1 only 305.0; the panel of 229.1 is drawn on either, also when its window holds only scans of the other precursor
+            c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000); pg = c2.new_page()          # a clean session of its own
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
+            pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
+            pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=use]')).forEach(i => { const on = /^prodotto_s2/.test(i.closest('tr').children[1].textContent.trim()); if (i.checked !== on) i.click(); })")
+            pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0 && E.panels.some(q => q.type === 'spec')", timeout=120000); pg.wait_for_timeout(1500)
+            for prec, r0, r1 in ((229.1, 3.7, 3.702), (305, 3.7, 3.702), ("305", 1.0, 1.001), (229.1, 6.0, 6.001)):          # narrow windows, most of them without a scan of the precursor
+                pg.evaluate("""([prec, r0, r1]) => { const p = E.panels.find(q => q.type === 'spec'); p._a = null; p.all = false; p.link = null; E.browse = false; p.k = E.files.findIndex(f => /_s2/.test(f.label));
+                  p.level = 2; p.prec = prec; p.r0 = r0; p.r1 = r1; drawSoon(p); }""", [prec, r0, r1])
+                pg.wait_for_function("(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls); })()", timeout=60000)
+            assert not errs, errs
+            c2.close()
+        step("the product-ion spectrum of a precursor is drawn for a file with two precursors and for a file with another one", product_spectrum)
         def mzfinder():                                  # the converted files are ordinary files of the Data tab: mzFinder (LR) lists them
             pg.evaluate("localStorage.setItem('qqq.mzfinder', '1')"); pg.reload()
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)

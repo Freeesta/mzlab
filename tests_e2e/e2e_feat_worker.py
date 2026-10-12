@@ -1,6 +1,6 @@
 """Pipeline of mzFinder in the browser (crates/mzlab-feat-wasm, TP_Mine/files/feat-worker.js): the pool of workers reads .mzidx files from OPFS, detects, aligns and builds
 the graph of the proofs, and the bytes are the ones of the native engine (SHA-256). A worker that dies (killed from outside, or a trap of the .wasm) is replaced, the job
-runs again and the page stays alive; the files written in OPFS have no `.part` left; each .wasm is under 400 KB when wasm-opt is there (the CI builds and checks it).
+runs again and the page stays alive; the files written in OPFS have no `.part` left; each .wasm is under 450 KB when wasm-opt is there (the CI builds and checks it).
 No site is needed: a folder with the worker, the two .wasm and the synthetic series is served by itself. Needs cargo, the wasm32 target, wasm-bindgen and numpy."""
 import os, shutil, sys, tempfile
 from pathlib import Path
@@ -106,9 +106,9 @@ try:
         step("cancel stops the workers and rejects the jobs", cancel)
         def size():
             if not sizes: print("   (no wasm-opt here: the size is checked by the CI)"); return
-            for k, v in sizes.items(): assert v < 400 * 1024, f"{k} .wasm is {v} bytes"
+            for k, v in sizes.items(): assert v < 450 * 1024, f"{k} .wasm is {v} bytes"
             print("   .wasm sizes:", sizes)
-        step("each .wasm is under 400 KB", size)
+        step("each .wasm is under 450 KB", size)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

@@ -11,12 +11,15 @@ use mzlab_core::budget::WriteAt;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
+use crate::facts::FileFacts;
 use crate::recipe::Recipe;
+use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
+use crate::tp::TpBlock;
 
 pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
 pub(crate) const ALIGN: usize = 64;
-/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id` and the summaries of the rows; the files of version 1 are still read.
+/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id`, the summaries of the rows and, optional, the identity columns (`identity` = 1 in the meta); the files of version 1 are still read.
 pub const TABLE_FORMAT: i64 = 2;
 
 pub(crate) fn bad() -> Error {
@@ -28,6 +31,10 @@ pub(crate) fn bad() -> Error {
 pub struct Origin {
     /// `(name, SHA-256)` of every input file, in the order of the files of the table.
     pub inputs: Vec<(String, String)>,
+    /// How each input was acquired (meta `columns`, same order as `inputs`); empty when not read.
+    pub facts: Vec<FileFacts>,
+    /// SHA-256 of the `campioni/1` document of the series (meta `samples`), when there is one.
+    pub samples: Option<String>,
     /// `(step, seconds)`; leave empty to get the same bytes in two runs.
     pub times: Vec<(String, f64)>,
 }
@@ -146,12 +153,22 @@ fn plan(cols: &[(&'static str, Col)], evid: usize) -> (Vec<(&'static str, &'stat
     (dir, at)
 }
 
+/// The names of the adducts that the codes of `ion` stand for, as the meta `adducts`.
+fn adducts_json(j: &mut Out) {
+    j.raw(",\"adducts\":[");
+    for (i, a) in adduct_names().iter().enumerate() {
+        j.raw(if i > 0 { "," } else { "" }).str(a);
+    }
+    j.raw("]");
+}
+
 /// The JSON meta: format, versions, recipe, fingerprints, inputs, times, shape and directory of the arrays.
 fn meta_json(
     kind: &str,
     r: &Recipe,
     o: &Origin,
     shape: &[(&str, usize)],
+    extra: &str,
     dir: &[(&'static str, &'static str, usize, usize)],
 ) -> String {
     let mut j = Out::default();
@@ -180,7 +197,19 @@ fn meta_json(
             .str(sha)
             .raw("}");
     }
-    j.raw("],\"times\":{");
+    j.raw("]");
+    if !o.facts.is_empty() {
+        j.raw(",\"columns\":[");
+        for (i, f) in o.facts.iter().enumerate() {
+            j.raw(if i > 0 { "," } else { "" });
+            f.write(&mut j);
+        }
+        j.raw("]");
+    }
+    if let Some(s) = &o.samples {
+        j.raw(",\"samples\":").str(s);
+    }
+    j.raw(",\"times\":{");
     for (i, (step, secs)) in o.times.iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" })
             .str(step)
@@ -191,6 +220,10 @@ fn meta_json(
     for (k, n) in shape {
         j.raw(",").str(k).raw(":").int(*n as i64);
     }
+    if shape.contains(&("identity", 1)) {
+        adducts_json(&mut j);
+    }
+    j.raw(extra);
     j.raw(",\"arrays\":[");
     for (i, (name, dtype, count, off)) in dir.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -214,11 +247,12 @@ fn write_container<W: WriteAt>(
     r: &Recipe,
     o: &Origin,
     shape: &[(&str, usize)],
+    extra: &str,
     cols: &[(&'static str, Col)],
     evid: &mut dyn Section,
 ) -> Result<()> {
     let (dir, _) = plan(cols, evid.len());
-    let meta = meta_json(kind, r, o, shape, &dir);
+    let meta = meta_json(kind, r, o, shape, extra, &dir);
     let mut seq = Seq {
         sink,
         pos: 0,
@@ -274,7 +308,7 @@ pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: 
     let mut cols = file_cols(f);
     let dt = [f.dt];
     cols.push(("dt", Col::F64(&dt)));
-    write_container(sink, "file", r, o, &[("rows", f.len())], &cols, &mut (&[][..]))
+    write_container(sink, "file", r, o, &[("rows", f.len())], "", &cols, &mut (&[][..]))
 }
 
 /// Bytes of the `.mzfeatf` of one file.
@@ -282,6 +316,18 @@ pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
     let mut v = Vec::new();
     write_file_to(&mut v, f, r, o).expect("a Vec grows");
     v
+}
+
+/// Adds the columns of the block `tp/1` to `cols` when the table has one; says whether it did.
+fn tp_cols<'a>(tp: &'a TpBlock, cols: &mut Vec<(&'static str, Col<'a>)>) -> bool {
+    if tp.is_empty() {
+        return false;
+    }
+    cols.push(("tp_status", Col::U8(&tp.status)));
+    cols.push(("tp_notes", Col::U8(&tp.notes)));
+    cols.push(("tp_via", Col::U8(&tp.via)));
+    cols.push(("tp_kinship", Col::U8(&tp.kinship)));
+    true
 }
 
 /// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
@@ -297,9 +343,21 @@ pub fn write_table_to<W: WriteAt>(
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
+    write_table_tp(sink, t, &t.tp, r, o, evid)
+}
+
+/// `write_table_to` with the block `tp/1` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
+pub fn write_table_tp<W: WriteAt>(
+    sink: &mut W,
+    t: &Aligned,
+    tp: &TpBlock,
+    r: &Recipe,
+    o: &Origin,
+    evid: &mut dyn Section,
+) -> Result<()> {
     let ids: Vec<u32> = (0..t.len()).map(|r| t.id(r)).collect();
     let m = t.meta.or_none(t.len());
-    let cols = [
+    let mut cols = vec![
         ("id", Col::U32(&ids)),
         ("mz", Col::F64(&t.mz)),
         ("rt", Col::F64(&t.rt)),
@@ -323,8 +381,20 @@ pub fn write_table_to<W: WriteAt>(
         ("ms2_file", Col::U32(&m.ms2_file)),
         ("ms2_purity", Col::F32(&m.ms2_purity)),
     ];
-    let shape = [("rows", t.len()), ("files", t.n_files), ("summaries", usize::from(!t.meta.is_empty()))];
-    write_container(sink, "table", r, o, &shape, &cols, evid)
+    let ident = !t.ident.is_empty();
+    if ident {
+        cols.push(("neutral", Col::F64(&t.ident.neutral)));
+        cols.push(("ion", Col::U8(&t.ident.ion)));
+        cols.push(("src", Col::U8(&t.ident.src)));
+    }
+    let shape = [
+        ("rows", t.len()),
+        ("files", t.n_files),
+        ("summaries", usize::from(!t.meta.is_empty())),
+        ("identity", usize::from(ident)),
+    ];
+    let tp = if tp_cols(tp, &mut cols) { format!(",\"tp\":{}", tp.meta_json()) } else { String::new() };
+    write_container(sink, "table", r, o, &shape, &tp, &cols, evid)
 }
 
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.

@@ -11,7 +11,7 @@ def step(name, fn):
 sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici as ds, numpy as np
 D = pathlib.Path(__file__).resolve().parent / "shots" / "misti_tmp"; D.mkdir(parents=True, exist_ok=True)
 ds.mixed_ida(D / "C_IDA-t0.mzML", np.random.default_rng(1)); ds.mixed_mrm_epi(D / "C_MRM-EPI-t0.mzML", np.random.default_rng(2)); ds.mixed_polarity(D / "C_POLALT-t0.mzML", np.random.default_rng(3))
-r = Run(port=8882, wd="/tmp/wd82")
+r = Run(port=8882, wd="/tmp/wd82", motore="python")
 CH = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
 try:
     with sync_playwright() as p:

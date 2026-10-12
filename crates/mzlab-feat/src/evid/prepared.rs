@@ -17,7 +17,7 @@ pub struct Prepared {
 impl Prepared {
     pub fn new(inp: &Inputs) -> Prepared {
         let n = inp.aligned.len();
-        let hyp = match_hypotheses(inp);
+        let hyp = match_hypotheses(&inp.registry.hyps, inp.aligned);
         let best = best_hits(inp);
         let sign = f64::from(inp.registry.polarity.signum());
         let neutral: Vec<f64> = (0..n)
@@ -43,6 +43,7 @@ impl Prepared {
     }
 
     /// The identity of row `r` (a pure function of the row: it can be made again whenever it is needed).
+    #[inline(never)]
     pub fn identity(&self, inp: &Inputs, r: usize) -> Identity {
         identity_of(
             inp,

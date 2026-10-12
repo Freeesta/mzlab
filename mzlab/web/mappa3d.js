@@ -105,7 +105,7 @@ dialog.m3d[open]{display:flex}dialog.m3d::backdrop{background:rgba(0,0,0,.5)}
 .m3d-main canvas.m3d-gl,.m3d-main canvas.m3d-ov{position:absolute;inset:0;width:100%;height:100%;display:block}.m3d-ov{pointer-events:none}.m3d-gl{touch-action:none;cursor:grab}.m3d-gl:active{cursor:grabbing}
 .m3d-gl:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .m3d-read{position:absolute;left:12px;top:8px;right:12px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);pointer-events:none;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)}
-.m3d-main>.mznav{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:2px;padding:2px;background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:.9}.m3d-help{position:absolute;left:12px;bottom:6px;font-size:11px;color:var(--muted);max-width:55%;pointer-events:none;text-shadow:0 0 3px var(--panel)}
+.m3d-side>.mznav{display:flex;gap:2px;margin:0 0 6px}.m3d-help{position:absolute;left:12px;bottom:6px;font-size:11px;color:var(--muted);max-width:55%;pointer-events:none;text-shadow:0 0 3px var(--panel)}
 .m3d-mini{position:absolute;right:10px;bottom:46px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .m3d-mini canvas{width:260px;height:104px;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:6px}
 .m3d-time{position:absolute;left:12px;right:290px;bottom:26px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.m3d-time input[type=range]{flex:1 1 0}
@@ -578,7 +578,7 @@ export function open(p, opener) {
     if (hit && !V.lock) setCur(hit.i, hit.j);
     MAPPA.showMenu(ad3(hit), { preventDefault() {}, clientX: at.cx, clientY: at.cy, kbd: !!at.kbd, lp: !!at.lp });
   }
-  const navBar = MAPPA.barFor(() => ad3(null), "3d"); main.appendChild(navBar);
+  const navBar = MAPPA.barFor(() => ad3(null), "3d"); dlg.querySelector(".m3d-top").after(navBar);
   dlg.addEventListener("keydown", e => { const c = ctxEl(); if (e.key === "Escape" && c && !c.hidden && dlg.contains(c)) { e.preventDefault(); e.stopPropagation(); c.hidden = true; glc.focus({ preventScroll: true }); } }, true);     // Esc closes the menu first, not the viewer
   dlg.addEventListener("cancel", e => { const c = ctxEl(); if (c && !c.hidden && dlg.contains(c)) { e.preventDefault(); c.hidden = true; } });
 

@@ -10,7 +10,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_sottrazione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 files = make_subtraction("/tmp/wd_sottrazione_files", blank=False)
-r = Run(port=8967, wd="/tmp/wd_sottrazione")
+r = Run(port=8967, wd="/tmp/wd_sottrazione", motore="python")
 MINS = "(()=>{const p=E.panels.find(q=>q.type==='%s'); return p&&p._a&&p._a.sr?Object.fromEntries(p._a.sr.map(s=>[E.files[s.k].file,Math.min(...s.y)])):null})()"
 try:
     with sync_playwright() as p:
@@ -89,7 +89,7 @@ try:
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='xic').length")
             pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_timeout(300); pg.click("#ctx [role^=menuitem]:has-text('XIC')"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.filter(q=>q.type==='xic').length") == n0 + 1, "the menu extracts from the difference map"
-            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.click(f".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
             assert pg.evaluate("MAPEX.numbers(" + M + ").height") is not None
             pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(300)
         step("the difference map works with the new menu and with «How it is extracted»", map_menu_and_explain)

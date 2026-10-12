@@ -49,6 +49,7 @@ class Serie:
     sha: dict = field(default_factory=dict)
     versione_crate: str = ""
     feat_version: int = 0
+    tp: dict | None = None                 # the block tp/1 (status and kinship of every row) when the run had a parent and controls
 
 
 def leggi_serie(cartella, nomi: list[str]) -> Serie:
@@ -69,7 +70,8 @@ def leggi_serie(cartella, nomi: list[str]) -> Serie:
         m, f = apri((cartella / f"{nome}.mzfeatf").read_bytes())
         per_file.append({"nome": nome, "mz": f["mz"].astype(float), "rt": f["rt"].astype(float), "purezza": f["purity"].astype(float), "altezza": f["height"].astype(float)})
     sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(cartella.glob("*.mzfeat*"))}
-    return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"])
+    tp = {"stato": a["tp_status"].astype(int), "parentela": a["tp_kinship"].astype(int), "note": a["tp_notes"].astype(int)} if "tp_status" in a else None
+    return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp)
 
 
 def indici(mzml: list[Path], cartella: Path) -> list[str]:

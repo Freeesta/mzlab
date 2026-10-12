@@ -80,8 +80,8 @@ export function createLr({ rb }) {
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
       else { await rpc({ op: "lr_index", name: n }); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
-      let key = "err.engine.index"; try { key = JSON.parse(e.raw).error_key || key; } catch (_) { /* not an engine error */ }
-      return fail(key, { name: n }, `cannot read the file: ${n}`);
+      let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
+      return fail(key, { name: n, ...params }, `cannot read the file: ${n}`);
     }
     return json({ files: sorted(), methods: mr.list() });
   }

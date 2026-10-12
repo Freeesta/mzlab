@@ -216,6 +216,11 @@ impl Aligned {
         for x in &m.ms2_file {
             b.extend_from_slice(&x.to_le_bytes());
         }
+        for x in &self.ident.neutral {
+            b.extend_from_slice(&x.to_le_bytes());
+        }
+        b.extend_from_slice(&self.ident.ion);
+        b.extend_from_slice(&self.ident.src);
         b
     }
 }
