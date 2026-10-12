@@ -10,14 +10,6 @@ use crate::methodinfo::Kind;
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter};
 
-/// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
-#[derive(Default)]
-struct Mrm {
-    time: Vec<f64>,
-    tic: Vec<f64>,
-    cols: Vec<Vec<f64>>,
-}
-
 impl Wiff {
     fn mrm_transitions(&self, experiment: usize) -> Vec<(Option<f64>, Option<f64>)> {
         let kind = self.method.as_ref().and_then(|m| m.experiments.get(experiment)).map(|e| &e.kind);
@@ -133,4 +125,12 @@ impl Wiff {
             }
         }
     }
+}
+
+/// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
+#[derive(Default)]
+struct Mrm {
+    time: Vec<f64>,
+    tic: Vec<f64>,
+    cols: Vec<Vec<f64>>,
 }

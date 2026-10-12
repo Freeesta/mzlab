@@ -148,7 +148,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "rust-diff.js", "rust-convert.js", "rust-wiff.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "rust-diff.js", "rust-raw.js", "rust-convert.js", "rust-wiff.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -263,7 +263,7 @@ AREE = [
     ("mzlab/web/tavola-periodica.js", {"e2e28", "e2e6", "e2e_teoria_strumenti"}),
     ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
     ("tools/tema_testa.py", {"e2e_tema_lampo"}), ("mzlab/web/telefono.js", {"e2e_telefono"}),
-    ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}),
+    ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}), ("mzlab/web/an-", {"e2e_rifiniture"}),
     ("tools/build_site.py", set()), ("tests_e2e/e2e_indirizzi.py", {"e2e_indirizzi"}), ("tests_e2e/e2e_teoria_mobile.py", {"e2e_teoria_mobile"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6", "e2e_anelli"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/ordine.js", {"e2e_ordine", "e2e_lista_hr"}), ("mzlab/web/conversione.js", {"e2e_conversione", "e2e_wiff"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),

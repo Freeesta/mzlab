@@ -9,7 +9,8 @@ import { simdSupported } from "./idxpool.js";
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
-import { convertApi } from "./rust-convert.js";
+import { makeConvertRaw } from "./rust-raw.js";
+import { wiffApi } from "./rust-convert.js";
 
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -45,15 +46,21 @@ export function createBridge({ workerUrl, notify }) {
       worker.postMessage({ ...msg, id });
     });
   }
+  function stop(w, res) {
+    worker.terminate(); worker = null;
+    for (const [id, p] of pending) if (p.worker === w) { pending.delete(id); p.res(res); }
+  }
+  function respawn() {
+    spawn();
+    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+  }
   function died(w) {
     if (w !== worker) return;
-    worker.terminate(); worker = null;
-    for (const [id, p] of pending) if (p.worker === w) { pending.delete(id); p.res({ dead: true }); }
+    stop(w, { dead: true });
     const now = Date.now();
     restarts = restarts.filter(t => now - t < 60000); restarts.push(now); stats.restarts++;
     if (restarts.length > 1) { api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify("error.engineFallback"); return; }
-    spawn();
-    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+    respawn();
     notify("error.engineRestarted");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
@@ -96,7 +103,9 @@ export function createBridge({ workerUrl, notify }) {
       slots[k].opening = open(k, slots[k]);
     }
   };
-  Object.assign(api, convertApi(rpc, base));                          // convertRaw, wiffSamples, convertWiff (rust-convert.js)
+  // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
+  api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
+  Object.assign(api, wiffApi(rpc, base));                              // wiffSamples, convertWiff (rust-convert.js)
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
