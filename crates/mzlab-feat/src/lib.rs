@@ -22,6 +22,7 @@ pub mod recipe;
 pub mod resolve;
 pub mod rtmap;
 pub mod series;
+pub mod sortc;
 pub mod store;
 pub mod suspects;
 mod sweep;

@@ -2,6 +2,7 @@
 //!
 //! One pass over the peak table of the MS2 section keeps the peaks of the wanted scans only.
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -102,7 +103,7 @@ pub fn gather<R: ReadAt>(
         .iter()
         .filter_map(|&r| best_scan(links, r as usize).map(|s| (s, r)))
         .collect();
-    want.sort_unstable();
+    sortc::ord(&mut want);
     let ids = index.arrays(si)?.scan_ids.clone();
     let mut pos_slot = vec![NONE; ids.len()];
     let mut scans: Vec<u32> = Vec::new();

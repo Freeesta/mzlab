@@ -9,6 +9,7 @@
 use super::evidence::{EdgeKind, ProofKind};
 use super::rel::{RKind, Tables};
 use super::Arc;
+use crate::sortc;
 use crate::table::*;
 
 pub(super) const NO_PARENT: u32 = u32::MAX;
@@ -99,7 +100,7 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
             })
         })
         .collect();
-    deps.sort_by(|a, b| {
+    sortc::any_by(&mut deps, |a, b| {
         a.dep
             .cmp(&b.dep)
             .then(a.rank.cmp(&b.rank))

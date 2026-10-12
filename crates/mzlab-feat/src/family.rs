@@ -21,6 +21,7 @@ mod roles;
 mod spectra;
 mod traces;
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -124,7 +125,7 @@ pub fn candidates(f: &FileFeatures, spectra: &Spectra, pol: i8, p: &FamParams) -
         .filter(|&i| spectra.of(i as usize).is_some())
         .collect();
     out.extend(pairs::ms2_pairs(f, &with_ms2, |i| spectra.of(i), r));
-    out.sort_unstable_by_key(|&(i, j)| (j, i));
+    sortc::by_key(&mut out, |&(i, j)| (j, i));
     out.dedup();
     out
 }
@@ -138,7 +139,7 @@ pub fn correlate<R: ReadAt>(
     p: &FamParams,
 ) -> Result<Vec<(u32, u32, f32)>> {
     let mut rows: Vec<u32> = cand.iter().flat_map(|&(i, j)| [i, j]).collect();
-    rows.sort_unstable();
+    sortc::ord(&mut rows);
     rows.dedup();
     let tr = traces::gather(index, f, &rows, base, p.trace_ppm)?;
     Ok(correlate_traces(f, cand, &tr, p))
@@ -232,7 +233,7 @@ fn alternatives(f: &FileFeatures, arcs: &[Arc], family: &[u32], t: &Tables) -> V
             });
         }
     }
-    out.sort_by(|a, b| {
+    sortc::any_by(&mut out, |a, b| {
         a.family
             .cmp(&b.family)
             .then(a.row.cmp(&b.row))

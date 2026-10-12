@@ -1,6 +1,7 @@
 //! The last steps of the detection: the two grids are merged, the Fourier-transform side lobes are marked (`_merge_grids`,
 //! `fourier_artefacts` of `features.py`).
 
+use crate::sortc;
 use mzlab_core::error::Result;
 
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE};
@@ -33,7 +34,9 @@ fn merge_grids(f: &[Row]) -> Result<Vec<bool>> {
     let mut o: Vec<u32> = Vec::new();
     reserve(&mut o, n)?;
     o.extend(0..n as u32);
-    o.sort_by(|&a, &b| f[a as usize].mz.total_cmp(&f[b as usize].mz));
+    sortc::by(&mut o, |&a, &b| {
+        f[a as usize].mz.total_cmp(&f[b as usize].mz)
+    });
     for j in 1..6usize {
         if n <= j {
             break;
@@ -80,7 +83,9 @@ fn fourier_artefacts(f: &[Row]) -> Result<Vec<bool>> {
     let mut o: Vec<u32> = Vec::new();
     reserve(&mut o, n)?;
     o.extend(0..n as u32);
-    o.sort_by(|&a, &b| f[a as usize].mz.total_cmp(&f[b as usize].mz));
+    sortc::by(&mut o, |&a, &b| {
+        f[a as usize].mz.total_cmp(&f[b as usize].mz)
+    });
     for &r in &refs {
         let m = f[r].mz;
         let lo = o.partition_point(|&i| f[i as usize].mz < m * (1.0 - ppm_hi * 1e-6));
@@ -102,7 +107,7 @@ pub(crate) fn median_interval(rt: &[f64]) -> f64 {
         return 1.0;
     }
     let mut d: Vec<f64> = rt.windows(2).map(|w| w[1] - w[0]).collect();
-    d.sort_by(|a, b| a.total_cmp(b));
+    sortc::by(&mut d, |a, b| a.total_cmp(b));
     let n = d.len();
     let med = if n % 2 == 1 {
         d[n / 2]
@@ -125,7 +130,9 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
     let mut idx: Vec<u32> = Vec::new();
     reserve(&mut idx, f.len())?;
     idx.extend(0..f.len() as u32);
-    idx.sort_by(|&a, &b| f[a as usize].mz.total_cmp(&f[b as usize].mz));
+    sortc::by(&mut idx, |&a, &b| {
+        f[a as usize].mz.total_cmp(&f[b as usize].mz)
+    });
     let n = f.len();
     let mut out = FileFeatures {
         dt,

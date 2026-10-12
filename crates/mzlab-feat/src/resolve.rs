@@ -8,6 +8,7 @@
 //! differ (cosine of the square-rooted spectra binned at `bin` m/z below `mix_cosine`). Runs after `quality::assess` and before the
 //! isotope groups and the MS2 links, which refer to the rows of the new table.
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::peakq::{detect_prominence, ProminenceParams};
@@ -131,7 +132,7 @@ fn look(
     if peaks.len() < 2 {
         return;
     }
-    peaks.sort_by_key(|pk| pk.apex_i);
+    sortc::any_by_key(&mut peaks, |pk| pk.apex_i);
     // consecutive maxima: separated by a valley or part of the same feature
     let mut cuts: Vec<usize> = Vec::new();
     let mut deepest: Option<(f64, usize)> = None;
@@ -230,8 +231,8 @@ pub fn assess_and_resolve<R: ReadAt>(
     }
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let (mut pieces, mut multi) = (found.pieces, found.multi);
-    pieces.sort_by_key(|x| x.0);
-    multi.sort();
+    sortc::any_by_key(&mut pieces, |x| x.0);
+    sortc::ord(&mut multi);
     let mut g = FileFeatures {
         dt: f.dt,
         ..Default::default()
@@ -288,7 +289,7 @@ fn spectra<R: ReadAt>(
     Ok(raw
         .into_iter()
         .map(|mut v| {
-            v.sort_by_key(|x| x.0);
+            sortc::by_key(&mut v, |x| x.0);
             let mut out: Vec<(i64, f64)> = Vec::new();
             for (k, w) in v {
                 match out.last_mut() {
@@ -370,7 +371,7 @@ pub fn mark_mixtures<R: ReadAt>(
         .iter()
         .flat_map(|m| links.of(m.row).0.iter().copied())
         .collect();
-    want.sort_unstable();
+    sortc::ord(&mut want);
     want.dedup();
     let sp = spectra(index, s2, &want, rp.bin)?;
     let mut marked = 0;

@@ -10,6 +10,7 @@
 mod extract;
 pub mod null;
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -297,7 +298,7 @@ fn search_file<R: ReadAt>(
 }
 
 fn median(v: &mut [f32]) -> f64 {
-    v.sort_by(|a, b| a.total_cmp(b));
+    sortc::by(v, |a, b| a.total_cmp(b));
     match v.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => v[n / 2] as f64,
