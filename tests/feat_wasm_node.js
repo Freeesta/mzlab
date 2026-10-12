@@ -56,7 +56,7 @@ if (opt.parent) {
     const tsize = fs.fstatSync(fd).size;
     const s = sink("series_evid.mzfeat");
     const done = JSON.parse(w.build_evidence_to((_, off, len) => { const b = new Uint8Array(len); fs.readSync(fd, b, 0, len, off); return b; },
-      tsize, h, minutes, Number(opt["parent-mz"]), prt, opt.recipe, s.write, budget));
+      tsize, w.load_hypotheses(h.state()), minutes, Number(opt["parent-mz"]), prt, opt.recipe, s.write, budget));
     fs.closeSync(s.fd);
     console.log(`series_evid.mzfeat ${done.sha256}`);
   } else {
