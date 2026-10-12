@@ -220,6 +220,12 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
 }
 
 /// True when the scans of the survey (`survey`) or of the product ions are read as high resolution (`Item.profile(level)["hr"]`).
+/// The analyzer `Item.profile(level)["an"]` of the survey or of the product-ion scans (the most frequent one, `?` when unknown).
+pub fn group_an(scans: &[Scan], survey: bool) -> String {
+    let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
+    mass_profile(&g).an
+}
+
 pub fn group_is_hr(scans: &[Scan], survey: bool) -> bool {
     let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
     mass_profile(&g).hr

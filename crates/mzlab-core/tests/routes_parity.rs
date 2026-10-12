@@ -127,10 +127,9 @@ fn rust_routes_match_python() {
                     Some(mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head).unwrap_or_else(|e| panic!("{what}: {e}")))
                 }
             } else if matches!(path, "/api/method" | "/api/delay" | "/api/analog") || q.get("kind").is_some_and(|k| k == "pda") {
-                if r["body"].get("scan_params").is_some() {
-                    continue; // high resolution: Python's
-                }
                 item_answer(&mut routes, line, path, q, r, &what)
+            } else if path == "/api/chrom" && !routes.has_scans() {
+                Some(mrm_chrom_answer(line, q))
             } else if path == "/api/scaninfo" {
                 let sid = q["sid"].as_str().unwrap().parse().unwrap();
                 Some(routes.scaninfo(sid, &mut mzml).unwrap_or_else(|e| panic!("{what}: {e}")))
@@ -170,6 +169,14 @@ fn rust_routes_match_python() {
         "{files} files, {compared} answers"
     );
     let _ = std::fs::remove_dir_all(&out);
+}
+
+/// `/api/chrom` of a file without scans: the chromatogram of the mzML of that kind.
+fn mrm_chrom_answer(line: &str, q: &serde_json::Map<String, Value>) -> String {
+    let size = std::fs::metadata(line).unwrap().len();
+    let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
+    let chroms = mz.chromatograms(0).unwrap();
+    mzlab_core::itemroutes::mrm_chrom(&mut mz, &chroms, q.get("kind").and_then(Value::as_str).unwrap_or("tic")).unwrap()
 }
 
 /// The routes of one item (`method`, `delay`, `analog`, the PDA trace): the answer of Rust, `None` when it declines (as Python fails).

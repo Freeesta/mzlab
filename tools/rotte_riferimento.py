@@ -68,6 +68,17 @@ def queries(item: Item) -> list[tuple[str, dict]]:
     return out
 
 
+def mrm_queries() -> list[tuple[str, dict]]:
+    """The routes of the scans and of the chromatograms on a file without scans (MRM): empty answers, and the chromatogram of the mzML by kind."""
+    base = {"k": "0"}
+    out = [("/api/chrom", {**base, **extra}) for extra in ({}, {"kind": "tic"}, {"kind": "bpc"}, {"kind": "srm"}, {"kind": "nothing"}, {"level": "2"},
+                                                         {"mz0": "100", "mz1": "300"}, {"prec": "200"}, {"filt": "x"})]
+    out += [("/api/xic", {**base, "mz": "200", "tol": "0.35", "level": lv}) for lv in ("1", "2")]
+    out += [("/api/filters", base), ("/api/scan_axis", base), ("/api/scanlist", base), ("/api/scanlist", {**base, "level": "2"}),
+            ("/api/spectrum", {**base, "rt0": "0", "rt1": "5"}), ("/api/dda", base)]
+    return out
+
+
 def main(argv) -> int:
     out = Path(argv[0])
     out.mkdir(parents=True, exist_ok=True)
@@ -83,7 +94,7 @@ def main(argv) -> int:
         extra = [("/api/method", {"k": "0"}), ("/api/delay", {"k": "0"}), ("/api/chrom", {"k": "0", "kind": "pda"}), ("/api/analog", {"k": "0", "i": "99"})]
         for a in item.analog_list():
             extra += [("/api/analog", {"k": "0", "i": str(a["i"]), "n": n}) for n in ("2000", "50", "5")]
-        for path, q in (queries(item) if item.run.scans else []) + [("/api/fileinfo", {"k": "0"}), ("/api/mrm", {"k": "0"})] + extra:
+        for path, q in (queries(item) if item.run.scans else mrm_queries() if item.kind() == "mrm" else []) + [("/api/fileinfo", {"k": "0"}), ("/api/mrm", {"k": "0"})] + extra:
             status, _ctype, body, _h = dispatch(app, "GET", path, q)
             rows.append({"path": path, "query": q, "status": status, "body": json.loads(body)})
         from mzlab.explore import file_parts

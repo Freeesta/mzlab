@@ -87,7 +87,7 @@ impl<R: ReadAt> Routes<R> {
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
         if !self.has_scans() {
-            return Ok(None);
+            return Ok(crate::mrmroutes::no_scans(path, q));
         }
         match path {
             "/api/chrom" => self.chrom(q),

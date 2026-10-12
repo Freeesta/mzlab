@@ -69,11 +69,22 @@ impl Engine {
         mzlab_core::itemroutes::pda_trace(&mut m, &chroms).map_err(|e| error_json(&e))
     }
 
-    /// `/api/delay` of the file at `slot`.
-    pub fn item_delay(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
+    /// `api/chrom` of the MRM file at `slot`: the chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`).
+    pub fn mrm_chrom(&mut self, slot: u32, size: f64, read: Function, kind: &str) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
+        };
+        let end = r.idx.scans.last().map_or(0, |s| s.end);
+        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
+        mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, kind).map_err(|e| error_json(&e))
+    }
+
+    /// `/api/delay` of the item `item` of the file at `slot`.
+    pub fn item_delay(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let (mut m, chroms) = self.chroms(slot, size, read)?;
         let r = self.idx.get_mut(&slot).ok_or_else(no_index)?;
-        r.delay(&mut m, &chroms).map_err(|e| error_json(&e))
+        r.delay_item(&mut m, &chroms, item).map_err(|e| error_json(&e))
     }
 }
 

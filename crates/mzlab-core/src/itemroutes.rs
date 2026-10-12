@@ -1,6 +1,6 @@
 //! The routes of one open item that read what the mzML says about its acquisition: `Item.method`, `Item.analog`, the PDA trace and the delay between the PDA and the
-//! mass spectrometer (`/api/method`, `/api/analog`, `/api/chrom?kind=pda`, `/api/delay`; `mzlab/explore.py` and `mzlab/app.py`). Low resolution only: a high-resolution
-//! item also carries `scan_params`, which stays Python's.
+//! mass spectrometer (`/api/method`, `/api/analog`, `/api/chrom?kind=pda`, `/api/delay`; `mzlab/explore.py` and `mzlab/app.py`). A high-resolution item also carries
+//! `scan_params` (`scanparams.rs`).
 
 use crate::analog::{analog_json, detector_delay};
 use crate::error::{Error, Result};
@@ -28,7 +28,7 @@ fn median(v: &mut [f64]) -> f64 {
 }
 
 /// The value of the first `<cvParam accession="acc" ... value="...">` of a scan header (`_cv` of `reader/mzml.py`).
-fn cv_value(h: &str, acc: &str) -> Option<String> {
+pub(crate) fn cv_value(h: &str, acc: &str) -> Option<String> {
     let key = format!("accession=\"{acc}\"");
     let mut from = 0;
     while let Some(p) = h[from..].find(&key) {
@@ -132,7 +132,9 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     for (i, c) in chroms.iter().filter(|c| c.kind == "srm").enumerate() {
         o.raw(if i > 0 { ",{\"q1\":" } else { "{\"q1\":" }).opt(c.q1).raw(",\"q3\":").opt(c.q3).raw(",\"ce\":").opt(c.ce).raw(",\"name\":").str(&c.name).raw(",\"dwell\":").opt(c.dwell).raw("}");
     }
-    o.raw("]}");
+    o.raw("]");
+    crate::scanparams::write(idx, &mut m.r, &md.instrument, &mut o)?;
+    o.raw("}");
     Ok(o.0)
 }
 
@@ -159,7 +161,28 @@ pub fn pda_trace<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<String>
     Ok(o.0)
 }
 
+/// `/api/chrom` of an MRM file (no scans): the first chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`), empty when it has none. The m/z window, the
+/// precursor and the filter do not apply to it.
+pub fn mrm_chrom<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom], kind: &str) -> Result<String> {
+    let (t, y) = match chroms.iter().find(|c| c.kind == kind) {
+        Some(c) => m.chromatogram(c)?,
+        None => (vec![], vec![]),
+    };
+    let mut o = Out::default();
+    o.raw("{\"rt\":").rounded(&t, 4).raw(",\"y\":").rounded(&y, 1).raw("}");
+    Ok(o.0)
+}
+
 impl<R: ReadAt> Routes<R> {
+    /// `/api/delay` of the item `item` (`name` or `name#tag`): a part of a mixed file has no PDA of its own to compare, unless the file has one (then the part reads its own
+    /// scans: not served, `err.route.unavailable`).
+    pub fn delay_item<M: ReadAt>(&mut self, m: &mut Mzml<M>, chroms: &[Chrom], item: &str) -> Result<String> {
+        if item.contains('#') && chroms.iter().any(|c| c.kind == "pda") {
+            return Err(Error::new("err.route.unavailable"));
+        }
+        self.delay(m, chroms)
+    }
+
     /// `/api/delay`: `{"delay": {delay, peaks, corr} | null}`; `kind_mrm` files read the TIC from their chromatograms.
     pub fn delay<M: ReadAt>(&mut self, m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<String> {
         let mut o = Out::default();
