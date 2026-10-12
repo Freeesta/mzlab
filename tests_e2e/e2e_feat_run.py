@@ -14,7 +14,7 @@ def step(name, fn):
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:600]))
 
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
-    print("  ", ("wasm", "FAIL cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm")); sys.exit(0)
+    print("  ", ("wasm", "SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm")); sys.exit(0)
 tmp = Path(tempfile.mkdtemp(prefix="feat_run_"))
 data = tmp / "data"; data.mkdir()
 real = os.environ.get("MZLAB_FEAT_MZIDX")
