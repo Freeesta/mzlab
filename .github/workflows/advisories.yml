@@ -1,0 +1,20 @@
+# Advisories of RustSec for the dependencies (cargo-deny, deny.toml). The list changes every day, so this check is NOT part of the pull
+# requests (`rust-ok` in rust.yml covers licences and sources): it runs every day and by hand, and it is red when a new advisory appears.
+name: advisories
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisories:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories

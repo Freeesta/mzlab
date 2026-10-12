@@ -235,6 +235,7 @@ try:
         # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=it"); ready(pg)
         pg.evaluate("localStorage.setItem('qqq.tour.lr', JSON.stringify({stato:'saltato'}))")
+        pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 8)):
             for i in range(n):

@@ -176,3 +176,26 @@ fn the_mzml_of_a_sample_reads_back_the_same() {
         }
     }
 }
+
+/// With `centroid` the same spectra (ids, times, levels) are written as centroids: not profile, fewer points, the processing step MS:1000035 by mzLab centroidi.
+#[test]
+fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
+    let Some((dir, _)) = reference() else { return };
+    let (w, mut scan) = open(&dir, "serie", 1);
+    let want = w.run(&mut scan).unwrap();
+    let mut xml = Vec::new();
+    w.to_mzml_progress(&mut scan, &mut xml, "serie.wiff", true, &mut |_, _| {}).unwrap();
+    let text = String::from_utf8_lossy(&xml);
+    assert!(text.contains("MS:1000035") && text.contains("mzLab centroidi"));
+    let got = mzml::read(&xml[..]).unwrap();
+    assert_eq!(got.spectra.len(), want.spectra.len());
+    let (mut before, mut after) = (0, 0);
+    for (g, e) in got.spectra.iter().zip(&want.spectra) {
+        assert_eq!((&g.id, g.level, g.rt, g.profile), (&e.id, e.level, e.rt, false));
+        before += e.mz.len();
+        after += g.mz.len();
+        assert!(g.mz.windows(2).all(|p| p[0] < p[1]));
+    }
+    assert!(after > 0 && after < before, "{after} against {before}");
+    assert_eq!(got.chromatograms, want.chromatograms);
+}

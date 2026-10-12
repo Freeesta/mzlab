@@ -10,6 +10,7 @@ import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
+import { agilentOp } from "./rust-agilent.js";
 import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
@@ -142,7 +143,7 @@ async function lrOp(m) {
     case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
-      const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part });
+      const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part, onProgress: p => postMessage({ op: "progress", id: m.id, frac: p.frac }) });      // frac: how far the builder has read
       if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
         await ARCH.remove("idx", part);
         if (res.reason === "memory") jerr("error.memoryBudget");
@@ -200,6 +201,7 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
+      case "agilent2mzml": await agilentOp(engine, m, id, readerFor, rawSink); return;        // Agilent .D folder -> mzML on OPFS (rust-agilent.js)
       case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;

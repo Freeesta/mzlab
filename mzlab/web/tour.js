@@ -202,16 +202,16 @@ const TOUR = (() => {
         transform: rotate(45deg);
       }
       #tour-dialog.tour-side-bottom .tour-arrow {
-        top: -6px; left: 24px; border-right: none; border-bottom: none;
+        top: -6px; left: var(--ta, 24px); border-right: none; border-bottom: none;
       }
       #tour-dialog.tour-side-top .tour-arrow {
-        bottom: -6px; left: 24px; border-left: none; border-top: none;
+        bottom: -6px; left: var(--ta, 24px); border-left: none; border-top: none;
       }
       #tour-dialog.tour-side-right .tour-arrow {
-        left: -6px; top: 20px; border-top: none; border-right: none;
+        left: -6px; top: var(--ta, 20px); border-top: none; border-right: none;
       }
       #tour-dialog.tour-side-left .tour-arrow {
-        right: -6px; top: 20px; border-bottom: none; border-left: none;
+        right: -6px; top: var(--ta, 20px); border-bottom: none; border-left: none;
       }
       #tour-dialog.tour-side-bottom-dock .tour-arrow {
         display: none;
@@ -357,6 +357,10 @@ const TOUR = (() => {
     dlg.style.top = pos.top + "px";
     dlg.style.left = pos.left + "px";
     dlg.className = "tour-side-" + pos.side;
+    // the arrow points at the centre of the target (kept inside the bubble)
+    const horiz = pos.side === "bottom" || pos.side === "top";
+    const aim = horiz ? r.left + r.width / 2 - pos.left : r.top + r.height / 2 - pos.top, len = horiz ? dlgW : dlgH;
+    dlg.style.setProperty("--ta", Math.round(Math.max(10, Math.min(aim, len - 20)) - 5) + "px");
   };
 
   let rafScroll = null;
@@ -597,6 +601,7 @@ const TOUR = (() => {
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
+      document.addEventListener("fullscreenchange", onScrollOrResize);
       document.addEventListener("keydown", onKeyDown);
 
       renderStep();
@@ -661,6 +666,7 @@ const TOUR = (() => {
 
       window.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
+      document.removeEventListener("fullscreenchange", onScrollOrResize);
       document.removeEventListener("keydown", onKeyDown);
 
       const spot = document.getElementById("tour-spotlight");

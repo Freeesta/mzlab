@@ -15,6 +15,7 @@ use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
 mod wiff;
+mod agilent;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]

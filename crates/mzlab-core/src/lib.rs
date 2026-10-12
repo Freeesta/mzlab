@@ -1,9 +1,11 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 #![forbid(unsafe_code)]
+pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
 pub mod budget;
+pub mod centroidi;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;
