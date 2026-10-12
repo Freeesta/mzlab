@@ -33,6 +33,7 @@ pub mod ole;
 pub mod origin;
 pub mod originroute;
 pub mod mzidx;
+pub mod msnroute;
 pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
