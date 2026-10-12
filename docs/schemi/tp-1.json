@@ -1,0 +1,128 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tp/1",
+ "title": "tp/1: the view of the transformation products in the .mzfeat of a series",
+ "description": "Object `tp` of the meta of the .mzfeat plus four u8 arrays of one value per row (`tp_status`, `tp_notes`, `tp_via`, `tp_kinship`), written by the proofs step when the parent is in the table and the series has controls. Row i of the arrays is row i of the table (id = i + 1). Code: crates/mzlab-feat/src/tp/.",
+ "type": "object",
+ "required": [
+  "schema",
+  "progenitore",
+  "parametri",
+  "conteggi"
+ ],
+ "properties": {
+  "schema": {
+   "const": "tp/1"
+  },
+  "progenitore": {
+   "type": "integer",
+   "minimum": 1,
+   "description": "id of the row of the parent"
+  },
+  "parametri": {
+   "type": "object",
+   "description": "the thresholds that were used",
+   "properties": {
+    "rapporto": {
+     "type": "number",
+     "description": "treated samples over the controls (blank, dark, t0), NORMAN 3:1"
+    },
+    "isf_cv": {
+     "type": "number",
+     "description": "largest coefficient of variation of the ratio child/parent for an in-source fragment"
+    },
+    "isf_rt": {
+     "type": "number",
+     "description": "largest distance in RT from the parent, minutes"
+    },
+    "isf_punti": {
+     "type": "integer",
+     "description": "fewest times with both ions measured"
+    },
+    "ppm": {
+     "type": "number"
+    },
+    "purezza_min": {
+     "type": "number",
+     "description": "an MS2 with a purity of isolation below this is noted as chimeric"
+    },
+    "saturo": {
+     "type": "boolean",
+     "description": "the parent is saturated: the kinetic coupling with its decay is not used for kinship"
+    }
+   }
+  },
+  "conteggi": {
+   "type": "object",
+   "properties": {
+    "tp": {
+     "type": "integer"
+    },
+    "controllo": {
+     "type": "integer"
+    },
+    "isf": {
+     "type": "integer"
+    },
+    "non_spiegate": {
+     "type": "integer"
+    }
+   }
+  }
+ },
+ "$defs": {
+  "tp_status": {
+   "description": "value of `tp_status`",
+   "enum": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ],
+   "x-codici": {
+    "0": "in the view of the products (formed, not in source, explained)",
+    "1": "rejected by the controls (gate 1)",
+    "2": "in-source fragment of the parent or of an accepted product (gate 2)",
+    "3": "formed but not explained (the list of the unexplained, gate 3)",
+    "4": "the parent"
+   }
+  },
+  "tp_notes": {
+   "description": "bits of `tp_notes`",
+   "x-bit": {
+    "1": "also in the t0 and it grows beyond the ratio",
+    "2": "coelutes with the parent, its fragment is in the parent's MS2 and the ratio is not constant (in-source fragment and product together)",
+    "4": "in-source fragment of an accepted product (neutral loss)",
+    "8": "MS2 of purity of isolation below the minimum"
+   }
+  },
+  "tp_via": {
+   "description": "bits of `tp_via`: how the row is explained",
+   "x-bit": {
+    "1": "rule",
+    "2": "cleavage",
+    "4": "imported hypothesis",
+    "8": "MS2 related to the parent's",
+    "16": "arc of the network of mass differences (reserved)"
+   }
+  },
+  "tp_kinship": {
+   "description": "value of `tp_kinship`",
+   "enum": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ],
+   "x-codici": {
+    "0": "none (not in the view)",
+    "1": "doubtful (a proof of kinship is against)",
+    "2": "possible",
+    "3": "probable",
+    "4": "certain"
+   }
+  }
+ }
+}

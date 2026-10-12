@@ -1,5 +1,5 @@
-"""Logo easter egg (logo-piccone.js): 5 hits (click or Enter) switch mzFinder, the logo turns gold and stays gold after a reload;
-the cracks close if the hits stop; with and without reduced motion.
+"""Logo easter egg (logo-piccone.js): 5 hits (click or Enter) switch mzFinder, the logo turns gold and stays gold after a reload; the next five hits
+switch mzFinder off and give the original logo back (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
 Run from the repo root: python3 tests_e2e/e2e_logo_piccone.py"""
 import sys
 from pathlib import Path
@@ -43,11 +43,30 @@ def run(p, reduced):
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
         g = gold(pg); assert g[0] and g[2] != "none", g
     step(tag + "gold after reload", reload)
+    def bright(): return pg.evaluate("parseFloat((getComputedStyle(document.querySelector('header img.logo')).filter.match(/brightness\\(([\\d.]+)\\)/)||[0,0])[1])")
+    def themes():
+        pg.evaluate("document.documentElement.setAttribute('data-theme','dark')"); d = bright()
+        pg.evaluate("document.documentElement.setAttribute('data-theme','light')"); l = bright()
+        assert d >= 2 and l < 1.5, (d, l)                                 # the gold is brighter in the dark theme (readable on the dark header)
+    step(tag + "gold: brighter in the dark theme, as before in the light one", themes)
     def keyboard():
         pg.focus(LOGO)
         for _ in range(5): pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
         pg.wait_for_function("localStorage.getItem('qqq.mzfinder') !== '1'", timeout=15000)
-    step(tag + "Enter x5 switches mzFinder off", keyboard)
+        pg.wait_for_function("!document.documentElement.hasAttribute('data-logo-gold') && getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=8000)
+        g = gold(pg); assert g[0] is False and g[1] is None and g[2] == "none", g
+    step(tag + "second round (Enter x5): mzFinder off, original logo back", keyboard)
+    def reload2():
+        pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
+        g = gold(pg); assert g[0] is False and g[2] == "none" and not tab(pg), g
+    step(tag + "original logo after a reload", reload2)
+    def third():
+        for _ in range(5): pg.click(LOGO)
+        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') === '1' && document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
+        for _ in range(5):
+            pg.wait_for_function("getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=5000); pg.click(LOGO)
+        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') !== '1' && !document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
+    step(tag + "third and fourth round alternate again (gold, original)", third)
     b.close()
 try:
     with sync_playwright() as p:
