@@ -10,6 +10,7 @@ import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
+import { agilentOp } from "./rust-agilent.js";
 import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
@@ -200,6 +201,7 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
+      case "agilent2mzml": await agilentOp(engine, m, id, readerFor, rawSink); return;        // Agilent .D folder -> mzML on OPFS (rust-agilent.js)
       case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
