@@ -10,7 +10,7 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e12.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
-r = Run(port=8822, wd="/tmp/wd12", motore="python")
+r = Run(port=8822, wd="/tmp/wd12")
 F = FILES + ["B_FullMass-t10"]      # a sixth file of the B series (the old extra file was not in the data repository)
 with sync_playwright() as p:
     pg = r.page(p)

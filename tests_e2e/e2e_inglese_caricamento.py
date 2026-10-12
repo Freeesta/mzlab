@@ -19,7 +19,7 @@ def italian_on_screen(pg):
           for (const a of ['title', 'placeholder', 'aria-label', 'alt']) if (e.getAttribute(a)) out.push(e.getAttribute(a)); }
         return out.join(' | '); }""")
     return sorted({w for w in re.findall(r"[A-Za-zÀ-ÿ]+", t) if w.lower() in WORDS})
-r = Run(port=8830 + 110, wd="/tmp/wd_ingl_b", motore="python")
+r = Run(port=8830 + 110, wd="/tmp/wd_ingl_b")
 try:
     with sync_playwright() as p:
         url = f"http://127.0.0.1:{r.port}/"

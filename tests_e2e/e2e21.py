@@ -7,7 +7,7 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e21.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
-r = Run(port=8821, wd="/tmp/wd21", motore="python")
+r = Run(port=8821, wd="/tmp/wd21")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
