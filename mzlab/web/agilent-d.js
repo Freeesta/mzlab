@@ -4,8 +4,8 @@
 // The pure parts (locate, group, mzmlName) have no DOM and are tested in node (tests/test_agilent_d.py).
 
 const AgilentD = (() => {
-  // the files of a run that the engine takes, by the name of its argument; the first two are required
-  const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt" };
+  // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
+  const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms" };
   const dirOf = f => (typeof CartCarica !== "undefined" ? CartCarica.dir(f) : (f.webkitRelativePath || "").replace(/[^/]*$/, ""));
 
   // where a file lies in a .D folder: { root: "a/b/x.D/", name: "x.D", rel: "AcqData/MSScan.bin" }, or null when no folder above it is called *.D
@@ -16,7 +16,7 @@ const AgilentD = (() => {
     return { root: parts.slice(0, i + 1).join("/") + "/", name: parts[i], rel: parts.slice(i + 1).join("/") };
   }
 
-  // the runs among the files, and the files that are not part of any .D folder. A run: { name, root, files: { scan, peak, ... }, missing: [names of required files not found], old: true if only data.ms is there }
+  // the runs among the files, and the files that are not part of any .D folder. A run: { name, root, files: { scan, peak, ... }, missing: [names of required files not found; none when there is a data.ms] }
   function group(files) {
     const runs = new Map(), rest = [];
     for (const f of files) {
@@ -27,7 +27,7 @@ const AgilentD = (() => {
       r.seen.add(loc.rel.toLowerCase());
       for (const [k, rel] of Object.entries(NEED)) if (rel.toLowerCase() === loc.rel.toLowerCase()) r.files[k] = f;
     }
-    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: ["scan", "peak"].filter(k => !r.files[k]).map(k => NEED[k]), old: r.seen.has("data.ms") && !r.files.scan }));
+    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k]).map(k => NEED[k]) }));
     return { runs: list, rest };
   }
 
@@ -49,13 +49,13 @@ const AgilentD = (() => {
     const taken = (ST.files || []).map(x => x.name);
     const ok = [];
     for (const r of runs) {
-      if (r.missing.length) out.errs.push([T(r.old ? "err.file.agilentOld" : "err.file.notAgilentD", { name: r.name }), r.name]);
+      if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
       else if (!rb || rb.disabled || !rb.convertAgilent) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else ok.push(r);
     }
     const fails = () => out.errs.forEach(([msg, nm]) => { const d = document.createElement("div"); d.className = "fail"; d.textContent = nm + ": " + msg; box.appendChild(d); });
     if (!ok.length) { fails(); return []; }
-    const g = ConvUI.group(box, ok.map(r => r.files.peak.size));
+    const g = ConvUI.group(box, ok.map(r => (r.files.peak || r.files.datams).size));
     let i = 0;
     for (const r of ok) {
       if (g.signal.aborted) break;

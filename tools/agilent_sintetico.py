@@ -40,6 +40,28 @@ def write(root: Path, name: str = "synt.D", n: int = 120) -> Path:
     return d
 
 
+def write_old(root: Path, name: str = "vecchia.D", n: int = 60) -> Path:
+    """An older run: only the ChemStation data.ms (big-endian records, m/z in twentieths), same peak as `write`."""
+    d = root / name
+    d.mkdir(parents=True, exist_ok=True)
+    b = bytearray(0x140)
+    b[0:2] = b"\x01\x32"
+    for o, t in ((0x04, "GC / MS Data File"), (0x18, "vecchia")):
+        b[o] = len(t)
+        b[o + 1 : o + 1 + len(t)] = t.encode()
+    b[0x10A:0x10C] = struct.pack(">H", (0x140 + 2) // 2)
+    b[0x116:0x11A] = struct.pack(">I", n)
+    for t, pts in scans(n):
+        peaks = [(round(m * 20), min(int(a), 0x3FFF)) for m, a in pts]
+        b += struct.pack(">HIHHHH", (24 + 4 * (len(peaks) + 1)) // 2, round(t * 60000), 12, 1, 0, len(peaks))
+        b += struct.pack(">HH", *max(peaks, key=lambda p: p[1]))
+        for m, a in reversed(peaks):
+            b += struct.pack(">HH", m, a)
+        b += struct.pack(">HHHI", 5, 4, 0, sum(a for _, a in peaks))
+    (d / "data.ms").write_bytes(bytes(b))
+    return d
+
+
 if __name__ == "__main__":
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
