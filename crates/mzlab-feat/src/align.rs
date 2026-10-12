@@ -6,6 +6,7 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
+use crate::rtmap::RtMap;
 use crate::table::{Aligned, FileFeatures, CELL_ABSENT, CELL_DETECTED, FLAG_FT_LOBE};
 
 /// Parameters of `align`.
@@ -32,6 +33,18 @@ impl Default for AlignParams {
 
 /// A feature of the slab: (file, row in the file).
 type Item = (u32, u32);
+
+/// RT of a feature (minutes): the one of the table, or the reference RT of the map when one is given.
+fn rt_of(files: &[&FileFeatures], adj: Option<&RtMap>, t: &Item) -> f64 {
+    let r = files[t.0 as usize].rt[t.1 as usize] as f64;
+    adj.map_or(r, |m| m.reference(r, t.0 as usize))
+}
+
+/// Alignment with the group of every feature: `group_of[file][row]` (`u32::MAX` for the rows left out).
+pub struct Grouped {
+    pub table: Aligned,
+    pub group_of: Vec<Vec<u32>>,
+}
 
 /// Entry of the merge heap: smallest m/z first, then smallest file.
 struct Head {
@@ -103,9 +116,10 @@ fn split_slab(
     files: &[&FileFeatures],
     items: &mut Vec<Item>,
     p: &AlignParams,
+    adj: Option<&RtMap>,
 ) -> Vec<(usize, usize)> {
     let mz = |t: &Item| files[t.0 as usize].mz[t.1 as usize];
-    let rt = |t: &Item| files[t.0 as usize].rt[t.1 as usize] as f64;
+    let rt = |t: &Item| rt_of(files, adj, t);
     let x: Vec<f64> = items.iter().map(|t| libm::log(mz(t)) * 1e6).collect();
     let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span);
     let mut groups = Vec::new();
@@ -133,7 +147,7 @@ fn split_slab(
 }
 
 /// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).
-fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned) {
+fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: Option<&RtMap>) {
     let nf = out.n_files;
     let base = out.area.len();
     out.area.resize(base + nf, 0.0);
@@ -145,7 +159,7 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned) {
     for &(k, i) in items {
         let (f, k) = (files[k as usize], k as usize);
         let i = i as usize;
-        if best[k].map_or(true, |b| f.area[i] > f.area[b as usize]) {
+        if best[k].is_none_or(|b| f.area[i] > f.area[b as usize]) {
             best[k] = Some(i as u32);
         }
         out.area[base + k] = out.area[base + k].max(f.area[i]);
@@ -160,7 +174,7 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned) {
         out.state[base + k] = CELL_DETECTED;
         w += f.area[b];
         sm += f.mz[b] * f.area[b];
-        sr += f.rt[b] as f64 * f.area[b];
+        sr += rt_of(files, adj, &(k as u32, b as u32)) * f.area[b];
     }
     out.mz.push(sm / w);
     out.rt.push(sr / w);
@@ -168,9 +182,26 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned) {
 
 /// Aligns the files in "per ion" mode. Cells without a feature have area 0, NaN apex and width, state `CELL_ABSENT`.
 pub fn align(files: &[&FileFeatures], p: &AlignParams) -> Aligned {
-    let mut out = Aligned {
-        n_files: files.len(),
-        ..Aligned::default()
+    align_grouped(files, p, None, false).table
+}
+
+/// `align` with the RT of every feature corrected by `adj` (the reference RT of the map) and, when `record`, the group of every feature.
+pub fn align_grouped(
+    files: &[&FileFeatures],
+    p: &AlignParams,
+    adj: Option<&RtMap>,
+    record: bool,
+) -> Grouped {
+    let mut out = Grouped {
+        table: Aligned {
+            n_files: files.len(),
+            ..Aligned::default()
+        },
+        group_of: if record {
+            files.iter().map(|f| vec![u32::MAX; f.len()]).collect()
+        } else {
+            Vec::new()
+        },
     };
     let ord: Vec<Vec<u32>> = files.iter().map(|f| order(f, p.drop_artefacts)).collect();
     let mut at = vec![0usize; files.len()];
@@ -191,23 +222,35 @@ pub fn align(files: &[&FileFeatures], p: &AlignParams) -> Aligned {
     let mut last = f64::NAN;
     while let Some(h) = heap.pop() {
         if !slab.is_empty() && h.mz - last > h.mz * p.ppm * 1e-6 {
-            flush(files, &mut slab, p, &mut out);
+            flush(files, &mut slab, p, adj, &mut out);
         }
         last = h.mz;
         slab.push((h.file, h.pos));
         at[h.file as usize] += 1;
         push(&mut heap, h.file as usize, &at);
     }
-    flush(files, &mut slab, p, &mut out);
+    flush(files, &mut slab, p, adj, &mut out);
     out
 }
 
-fn flush(files: &[&FileFeatures], slab: &mut Vec<Item>, p: &AlignParams, out: &mut Aligned) {
+fn flush(
+    files: &[&FileFeatures],
+    slab: &mut Vec<Item>,
+    p: &AlignParams,
+    adj: Option<&RtMap>,
+    out: &mut Grouped,
+) {
     if slab.is_empty() {
         return;
     }
-    for (a, b) in split_slab(files, slab, p) {
-        push_group(files, &slab[a..b], out);
+    for (a, b) in split_slab(files, slab, p, adj) {
+        if !out.group_of.is_empty() {
+            let g = out.table.len() as u32;
+            for &(k, i) in &slab[a..b] {
+                out.group_of[k as usize][i as usize] = g;
+            }
+        }
+        push_group(files, &slab[a..b], &mut out.table, adj);
     }
     slab.clear();
 }

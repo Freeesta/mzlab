@@ -5,7 +5,9 @@
 
 pub mod align;
 mod aligned;
+mod aligned_ops;
 mod channels;
+pub mod famalign;
 pub mod family;
 pub mod isotopes;
 pub mod ms2;
