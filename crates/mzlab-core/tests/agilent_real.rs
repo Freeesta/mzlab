@@ -315,3 +315,26 @@ fn real_runs_agree_with_their_own_numbers() {
         );
     }
 }
+
+/// The GC part of the method (oven, inlet, column, transfer line) is read for the real runs.
+#[test]
+fn the_gc_method_is_read() {
+    let Some(all) = folders() else { return };
+    for f in all {
+        let g = Folder::load(&f).open().method.unwrap().gc;
+        let ok = g.oven_initial_c.is_some()
+            && !g.oven_ramps.is_empty()
+            && g.inlet_heater_c.is_some()
+            && g.inlet_pressure_psi.is_some()
+            && g.column_flow_ml_min.is_some();
+        assert!(
+            ok && g.transfer_line_c.is_some()
+                && g.run_time_min.is_some()
+                && !g.column_dimensions.is_empty()
+                && !g.inlet_mode.is_empty(),
+            "{}: {g:?}",
+            f.file_name().unwrap().to_string_lossy()
+        );
+        eprintln!("oven {:?} C hold {:?} min, ramps {:?}, inlet {} {:?} C, column {} {:?} mL/min, transfer {:?}", g.oven_initial_c, g.oven_hold_min, g.oven_ramps, g.inlet_mode, g.inlet_heater_c, g.column_dimensions, g.column_flow_ml_min, g.transfer_line_c);
+    }
+}

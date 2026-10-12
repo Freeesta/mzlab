@@ -540,7 +540,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
  <div class="card"><div id="hrnote" class="muted sm" hidden data-i18n-html="load.hrnote">File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden data-i18n="load.modenote">Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled data-i18n="load.go">Carica dati</button><button id="cancadd" hidden data-i18n="common.cancel">Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script>/* Dati, Disegno and the page shell are not even fetched on a smartphone (telefono.js): there telefono-scheda.js shows the card */
-(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","cartella-carica.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","kmd-calc.js","kmd-vista.js","kmd.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js","logo-piccone.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
+(function(){var L=["features.js","icons-modi.js","modi.js","ordine.js","conversione.js","cartella-carica.js","agilent-d.js","explore.js","pannelli.js","grafici.js","picchi.js","eventi.js","hr.js","composizione.js","elementare.js","visualizza.js","dda.js","cromato.js","calcola.js","perdite.js","liste.js","scroll.js","spettro.js","mirino.js","mappa.js","m:sottrazione.js","xlsx.js","m:origine.js","elements.js","tabs.js","banco.js","settings.js","aggiorna.js","livelli-1.js","livelli.js","libreria.js","touch.js","qaqc.js","stat.js","campioni.js","profilo.js","tabella.js","bianco.js","riferimento.js","pca.js","kmd-calc.js","kmd-vista.js","kmd.js","rapporto.js","m:workflow.js","m:gradiente.js","m:tdati.js","m:tdati-pannelli.js","m:fair.js","m:qualita.js","tavola-periodica.js","tables.js","barra.js","paletta.js","help.js","m:transizioni.js","m:perf.js","molui.js","tpmine-loader.js","logo-piccone.js"];if(window.QQQ_PHONE){document.write('<script src="static/telefono-scheda.js"><\/script>');return}
 L.forEach(function(n){var m=n.slice(0,2)==="m:";document.write('<script '+(m?'type="module" ':'')+'src="static/'+(m?n.slice(2):n)+'"><\/script>')})})()</script>
 <script type="text/plain" id="shell">
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
@@ -699,7 +699,7 @@ async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?awa
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
   const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],pairs=[];
   for(const [k,e] of [...WIFF_WAIT]){      // a pair is in the list as soon as its two files are together, before anything is read
-    if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
+    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}      // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open")}
   const jobs=[];
   for(const e of pairs){
@@ -742,6 +742,7 @@ function reportLoad(rep){
   for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
+  for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
   if(rep.big.length)L.push(`<p>${T("load.note.big",{n:rep.big.length})}</p>`);
   if(!L.length)return;
   const needHelp=rep.unopen.length||rep.other.length;
@@ -755,8 +756,11 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
+async function loneWiffs(wr,rep){      // a .wiff without its .scan is the method of the mzML files made from it (same SHA-1): else it waits for its .scan
+  for(const {e,rb} of wr.lone||[]){try{const r=await rb.metodoWiff(e.wiff);if(r.matched.length){WIFF_WAIT.delete(e.stem.toLowerCase());rep.notes.push(I18N.t("load.note.wiffMethod",{name:e.wiff.name,n:r.matched.length,files:namesCut(r.matched.map(x=>x.name),3)}));continue}}catch(_){}
+    const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 async function upload(files,into){const box=$("#up");fail();
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
@@ -773,7 +777,7 @@ async function upload(files,into){const box=$("#up");fail();
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  await Promise.all(early);if(panel)panel.end();reportLoad(rep)}
+  await Promise.all(early);await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#pickdirbtn").onclick=()=>$("#pickdir").click();$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};

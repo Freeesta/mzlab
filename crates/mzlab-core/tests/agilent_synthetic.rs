@@ -135,7 +135,8 @@ fn synthetic_folder_reads_back() {
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
         assert!((a.rt - b.rt).abs() < 1e-12);
     }
-    assert_eq!(back.chromatograms.len(), 1);
+    assert_eq!(back.chromatograms.len(), 2, "TIC and BPC");
+    assert_eq!(back.chromatograms[1].intensity[0], 500.0);
 }
 
 #[test]

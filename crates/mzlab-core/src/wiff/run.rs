@@ -114,6 +114,7 @@ impl Wiff {
                 .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
             centroided: centroid,
+            ..Default::default()
         };
         let mut scan = Window::new(scan, self.scan_len);
         let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };

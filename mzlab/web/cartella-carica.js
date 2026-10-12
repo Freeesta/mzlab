@@ -63,15 +63,15 @@ const CartCarica = (() => {
     return out;
   }
   const rootName = (entries, files) => (entries && entries.length === 1 && entries[0].isDirectory ? entries[0].name : (files[0] && dir(files[0]).split("/")[0]) || "");
-
   // ---- page part (only where there is a DOM)
   function note(text) { const n = document.getElementById("cartinfo"); if (!n) return; n.textContent = text; n.hidden = !text; }
   async function load(files, name) {
-    const T = (k, p) => I18N.t(k, p), { ok, ignored } = split(files);
+    const ag = AgilentD.group(files), T = (k, p) => I18N.t(k, p), { ok, ignored } = split(ag.rest);     // Agilent .D folders are converted by agilent-d.js
     const ig = ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "";
-    if (!ok.length) { note(T("cart.none", { name }) + ig); return; }
-    note(T(ok.length === 1 ? "cart.found.one" : "cart.found", { n: ok.length, name }) + ig);
-    await upload(uniqueNames(ok, (ST.files || []).map(x => x.name)), null);
+    const n = ok.length + ag.runs.length;
+    if (!n) { note(T("cart.none", { name }) + ig); return; }
+    note(T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig);
+    await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs)], null);
   }
   function fromDrop(e) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
     const es = entriesOf(e.dataTransfer);

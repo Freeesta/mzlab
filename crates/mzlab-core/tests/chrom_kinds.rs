@@ -31,3 +31,21 @@ fn kinds_and_units() {
     assert_eq!(run.chromatograms[2].unit, "pascal");
     assert_eq!(run.chromatograms[3].unit, "degree Celsius");
 }
+
+#[test]
+fn integer_arrays_are_read_as_integers() {
+    // msconvert writes some arrays as 32/64-bit integers (MS:1000519 / MS:1000522): read as floats they are garbage
+    let t = "AAAAAAAAAAAAAAAAAADwPw==";
+    let one = |acc: &str, y: &str| {
+        format!(
+            r#"<mzML><run id="r"><chromatogramList count="1"><chromatogram index="0" id="x" defaultArrayLength="2"><binaryDataArrayList count="2">
+<binaryDataArray encodedLength="0"><cvParam cvRef="MS" accession="MS:1000523" name="64-bit float" value=""/><cvParam cvRef="MS" accession="MS:1000595" name="time array" value="" unitName="minute"/><binary>{t}</binary></binaryDataArray>
+<binaryDataArray encodedLength="0"><cvParam cvRef="MS" accession="{acc}" name="int" value=""/><cvParam cvRef="MS" accession="MS:1000515" name="intensity array" value=""/><binary>{y}</binary></binaryDataArray>
+</binaryDataArrayList></chromatogram></chromatogramList></run></mzML>"#
+        )
+    };
+    for (acc, y) in [("MS:1000519", "BQAAAAYAAAA="), ("MS:1000522", "BQAAAAAAAAAGAAAAAAAAAA==")] {
+        let run = read(one(acc, y).as_bytes()).unwrap();
+        assert_eq!(run.chromatograms[0].intensity, [5.0, 6.0], "{acc}");
+    }
+}
