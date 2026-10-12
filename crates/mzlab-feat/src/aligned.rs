@@ -22,6 +22,12 @@ pub struct Aligned {
     pub apex_rt: Vec<f32>,
     pub width: Vec<f32>,
     pub state: Vec<u8>,
+    /// "Per family" mode only: the ions of each row, `member_start[row]..member_start[row + 1]` (empty in "per ion" mode). The first member of a
+    /// row is its reference ion, the one whose cells the row holds; `member_role` = most frequent `ROLE_*` of the ion over the files.
+    pub member_start: Vec<u32>,
+    pub member_mz: Vec<f64>,
+    pub member_rt: Vec<f32>,
+    pub member_role: Vec<u8>,
 }
 
 impl Aligned {
@@ -38,6 +44,14 @@ impl Aligned {
         row * self.n_files + file
     }
 
+    /// Members of `row` as indices into the `member_*` columns (just the row itself in "per ion" mode: empty range).
+    pub fn members(&self, row: usize) -> std::ops::Range<usize> {
+        if self.member_start.is_empty() {
+            return 0..0;
+        }
+        self.member_start[row] as usize..self.member_start[row + 1] as usize
+    }
+
     /// Bytes of the heap held by the columns.
     pub fn heap_bytes(&self) -> usize {
         self.mz.capacity() * 8
@@ -45,5 +59,9 @@ impl Aligned {
             + self.area.capacity() * 8
             + (self.height.capacity() + self.apex_rt.capacity() + self.width.capacity()) * 4
             + self.state.capacity()
+            + self.member_start.capacity() * 4
+            + self.member_mz.capacity() * 8
+            + self.member_rt.capacity() * 4
+            + self.member_role.capacity()
     }
 }
