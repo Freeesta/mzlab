@@ -3,25 +3,35 @@
 //! `family::build_families` joins isotopologues, adducts and in-source fragments of the same ion into families.
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 
+#![forbid(unsafe_code)]
 pub mod align;
 mod aligned;
 mod aligned_meta;
 mod aligned_ops;
 mod channels;
 pub mod evid;
+pub mod export;
+pub mod export_ms;
 pub mod famalign;
+pub mod facts;
 pub mod family;
+pub mod filters;
 pub mod gapfill;
 pub mod hypo;
 pub mod isotopes;
 pub mod kinetic;
 pub mod ms2;
+pub mod ms2spec;
+pub mod norm;
 pub mod params;
 pub mod pipeline;
 mod post;
+pub mod qc;
 pub mod quality;
 pub mod recipe;
 pub mod resolve;
+pub mod report;
+pub mod rowident;
 pub mod rowmeta;
 pub mod rtmap;
 pub mod samples;
@@ -33,8 +43,10 @@ mod store_read;
 pub mod suspects;
 mod sweep;
 pub mod table;
+pub mod tp;
 pub mod target;
 pub mod trace;
+pub mod view;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).
 pub const FEAT_VERSION: u32 = 3;

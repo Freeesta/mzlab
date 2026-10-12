@@ -1,14 +1,16 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
+import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
+import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -36,6 +38,8 @@ let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+let wifPool = null;                                                       // the pool of the .wiff -> mzML conversions (wiff-worker.js), made when the first one is asked
+const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -56,9 +60,13 @@ const tx = async (store, mode, fn) => {
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
 const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
 // the archive: its schema is brought up to date before any file is opened, and the manifest follows every change of the folders of OPFS
+const infoOf = async (kind, name, fresh) => {
+  const i = kind === "files" ? null : await safe(async () => infoDi(kind, await ARCH.get(kind, name)));
+  return i && fresh && !i.crate ? { ...i, crate: version() } : i;                  // an index just written by this build: the meta of the .mzidx has no crate
+};
 const archiveReady = (async () => {
   try {
-    ARCH.watch(async (ev, kind, name, size) => { if (ev === "del") await tx("manifest", "readwrite", s => s.delete(kind + "/" + name)); else await tx("manifest", "readwrite", s => s.put(rowOf(kind, name, size))); });
+    ARCH.watch(async (ev, kind, name, size) => { if (ev === "del") await tx("manifest", "readwrite", s => s.delete(kind + "/" + name)); else { const info = await infoOf(kind, name, true); await tx("manifest", "readwrite", s => s.put(rowOf(kind, name, size, undefined, info))); } });
     await migra({ getSchema: () => kvGet("schema"), setSchema: n => tx("kv", "readwrite", s => s.put(n, "schema")), list: kind => ARCH.list(kind), putManifest: row => tx("manifest", "readwrite", s => s.put(row)) });
   } catch (_) { /* the archive works without the manifest; the next start tries again */ }
 })();
@@ -66,7 +74,8 @@ const archiveReady = (async () => {
 setTimeout(() => safe(async () => {
   await archiveReady;
   const rows = await safe(() => tx("manifest", "readonly", s => s.getAll())) || [];
-  await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows });
+  await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows, info: infoOf,
+    annota: (k, e, info) => tx("manifest", "readwrite", s => s.put(rowOf(k, e.name, e.size, e.lastModified, info))) });
 }), 8000);
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
@@ -80,6 +89,9 @@ async function lrSpace() {
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+}
+async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
+  for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
 }
 // Operations on single scans (`scans.rs` of the engine): the scans of a centroid file come from the mzML by offset, a background comes from the indexes.
 function scanOp({ op, id, slot, path, query, blob }) {
@@ -131,7 +143,13 @@ async function lrOp(m) {
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
       const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part });
-      if (!res.ok) { await ARCH.remove("idx", part); jerr(res.reason === "memory" ? "error.memoryBudget" : "err.engine.index"); }
+      if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
+        await ARCH.remove("idx", part);
+        if (res.reason === "memory") jerr("error.memoryBudget");
+        let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
+        if (key) throw res.text;
+        throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
+      }
       await ARCH.promote("idx", part, m.name + ".mzidx");
       if (!(await lrOpen(m.name))) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
@@ -142,7 +160,7 @@ async function lrOp(m) {
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": { engine.close(slotOf(m.name)); lrFile.delete(m.name); await ARCH.remove("files", m.name); return { info: "{}" }; }
-    case "lr_space": { if (m.free) await lrFree(); return { info: JSON.stringify(await lrSpace()) }; }
+    case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
     case "lr_kv_get": { const v = await safe(() => tx("kv", "readonly", s => s.get(m.key))); return { info: JSON.stringify({ value: v === undefined ? null : v }) }; }
     case "lr_kv_set": { await safe(() => tx("kv", "readwrite", s => s.put(m.value, m.key))); return { info: "{}" }; }
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
@@ -172,15 +190,17 @@ onmessage = async ev => {
     }
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
-      case "raw2mzml": {                                                              // Thermo .raw -> mzML pieces (the .raw is read block by block, never held)
-        const parts = [], total = m.blob.size, rd = readerFor(m.blob);
+      case "raw2mzml": {                                                              // Thermo .raw -> mzML on OPFS (the .raw is read block by block; the mzML goes to the disk, never held)
+        const total = m.blob.size, rd = readerFor(m.blob), sink = await rawSink(m.dest);
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
-        engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { parts.push(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });      // scans: converted / in the file, from the scan index
-        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, !!m.profile); }      // scans: converted / in the file, from the scan index
+        catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }      // q: the disk is full (error.quota)
+        const r = await sink.finish();
+        postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "wiffsamples": case "wiff2mzml": wiffOp(engine, m, id, readerFor); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
+      case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }

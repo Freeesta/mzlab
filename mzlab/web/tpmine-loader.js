@@ -2,7 +2,7 @@
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) but are downloaded and run ONLY after the switch is turned on: with mzFinder off nothing of it is fetched.
 //
-// Switch: 5 clicks on the logo of the page header within 3 s turn mzFinder on; 5 more turn it off. No password.
+// Switch: 5 hits on the logo of the page header (logo-piccone.js, within 3 s of each other) turn mzFinder on; 5 more turn it off. No password.
 // State in localStorage "qqq.mzfinder" ("1" = on): after a reload it stays on.
 // static/mzfinder/indice.json = {js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
@@ -11,7 +11,7 @@
   "use strict";
   const BASE = new URL(".", document.currentScript ? document.currentScript.src : location.href).href;
   const DIR = BASE + "mzfinder/";
-  const KEY = "qqq.mzfinder", CLICKS = 5, WINDOW_MS = 3000;
+  const KEY = "qqq.mzfinder";
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
@@ -115,31 +115,8 @@
     render();
   }
 
-  // ---- a click on the logo of the header: it grows and bursts, then comes back (no animation under reduced motion)
-  function popLogo(img) {
-    const still = document.documentElement.hasAttribute("data-a11y-reduce") || !img.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (still || img._pop) return;
-    img._pop = img.animate([
-      { transform: "scale(1)", opacity: 1, offset: 0 },
-      { transform: "scale(1.9)", opacity: 1, offset: 0.45 },
-      { transform: "scale(3.4)", opacity: 0, offset: 0.7 },
-      { transform: "scale(1)", opacity: 0, offset: 0.8 },
-      { transform: "scale(1)", opacity: 1, offset: 1 }], { duration: 900, easing: "ease-out" });
-    img._pop.onfinish = img._pop.oncancel = () => { img._pop = null; };
-  }
-
-  // ---- switch: 5 quick clicks on the logo of the header
-  let n = 0, t0 = 0;
-  document.addEventListener("click", ev => {
-    const logo = ev.target && ev.target.closest && ev.target.closest("header img.logo");
-    if (!logo) return;
-    popLogo(logo);
-    const now = Date.now();
-    n = now - t0 > WINDOW_MS ? 1 : n + 1; t0 = now;
-    if (n < CLICKS) return;
-    n = 0;
-    if (on) { setOn(false); turnOff(); } else { setOn(true); turnOn(); }
-  }, true);
+  // ---- switch: logo-piccone.js (the five hits on the logo of the header) calls QTOOLS.flip()
+  reg.flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
   const start = () => { if (getOn()) turnOn(); };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

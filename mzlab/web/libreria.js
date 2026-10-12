@@ -146,7 +146,7 @@ const LIB = (() => {
       box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { b.disabled = true; await call("remove", { id: b.dataset.rm }); refresh(); });
       box.querySelectorAll("[data-idx]").forEach(b => b.onclick = () => indexOne(b.dataset.idx));
       if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = f.mode === "opfs" || f.mode == null ? I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")) : ""; }
-      if (f.mode === "opfs" && navigator.storage && navigator.storage.persist) { const p = (await navigator.storage.persisted()) || (await navigator.storage.persist()); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
+      if (f.mode === "opfs" && navigator.storage && navigator.storage.persist) { await (await import("./archivio.js")).persistOnce(); const p = await navigator.storage.persisted(); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
     } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; }
   }
   const CARTELLA_stem = n => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
@@ -301,11 +301,11 @@ const LIB = (() => {
   }
   function thresholdsHtml() {
     const T = LIVELLI.thresholds();
-    return `<details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lv.thr.title")}</summary><div class="sm" style="padding:4px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${THR_KEYS.map(k => `<label>${I18N.t(`lv.thr.${k}`)} <input data-thr="${k}" style="width:56px" value="${String(T[k]).replace(".", ",")}"></label>`).join("")}<button type="button" id="lr-sog-reset">${I18N.t("lv.thr.reset")}</button></div></details>`;
+    return `<details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lv.thr.title")}</summary><div class="sm" style="padding:4px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${THR_KEYS.map(k => `<label>${I18N.t(`lv.thr.${k}`)} <input data-thr="${k}" style="width:56px" value="${String(T[k])}"></label>`).join("")}<button type="button" id="lr-sog-reset">${I18N.t("lv.thr.reset")}</button></div></details>`;
   }
   function thresholdsBind(root, again) {
     root.querySelectorAll("[data-thr]").forEach(el => el.onchange = () => { const v = numIt(el.value); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
-    const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach(el => { el.value = String(T[el.dataset.thr]).replace(".", ","); }); again(); };
+    const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach(el => { el.value = String(T[el.dataset.thr]); }); again(); };
   }
   async function scansOf(p) {                                  // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
     try {

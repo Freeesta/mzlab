@@ -21,11 +21,12 @@ try:
         shutil.rmtree("/tmp/s26", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 30])); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def ions():
-            for mode in pg.evaluate("Object.keys(window.LDAN)"):
+            assert pg.evaluate("window.LDAN === undefined"), "the analyser screens must not be loaded"
+            for mode in ["base", "no-such-analyser"]:
                 pg.evaluate(f"ldIon(true, '{mode}')"); pg.wait_for_timeout(250)
                 assert pg.evaluate("!!document.querySelector('#ldion')"), mode
                 pg.evaluate("ldIon(false)")
-        step("ldIon draws every analyser without errors (still frame with reduced motion)", ions)
+        step("ldIon draws the plain animation (analysers off, not loaded) without errors (still frame with reduced motion)", ions)
         def cleanup():
             body = pg.inner_text("body")
             assert "cella attiva:" not in body.lower() and "active cell:" not in body.lower()
