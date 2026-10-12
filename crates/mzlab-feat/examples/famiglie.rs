@@ -1,6 +1,6 @@
 //! Families of the peaks of one or more `.mzidx` files: count, size, roles and time; with the truth of a synthetic series, the check.
 //!
-//!     cargo run --release -p mzlab-feat --example famiglie -- <file.mzidx>... [--neg] [--truth verita.json]
+//!     cargo run --release -p mzlab-feat --example famiglie -- <file.mzidx>... [--neg] [--truth verita.json] [--mz M]...
 //!
 //! `--truth` reads `verita.json` of `tools/valida/sintetici_identita.py`: for every base ion (parent, products, isomers) the members it has in
 //! the file are looked for and the family, the roles and the open readings are compared with the truth.
@@ -176,8 +176,35 @@ fn report(s: &Score) {
     }
 }
 
+/// Rows within 0.01 of `mz` with their role, parent and family (heights over 1e6, or 1e5 with `--rt`, only), for a look at known ions.
+fn show(f: &FileFeatures, fam: &Families, mz: f64, rt: Option<f64>) {
+    let (floor, rt_ok) = (if rt.is_some() { 1e5 } else { 1e6 }, |i: usize| {
+        rt.is_none_or(|r| (f.rt[i] as f64 - r).abs() <= 0.15)
+    });
+    for i in
+        (0..f.len()).filter(|&i| (f.mz[i] - mz).abs() <= 0.01 && f.height[i] > floor && rt_ok(i))
+    {
+        let par = fam.parent[i];
+        let par = if par == u32::MAX {
+            "-".to_string()
+        } else {
+            format!("{:.4}@{:.2}", f.mz[par as usize], f.rt[par as usize])
+        };
+        let size = fam
+            .family_id
+            .iter()
+            .filter(|&&x| x == fam.family_id[i] && x > 0)
+            .count();
+        println!(
+            "    m/z {mz}: row {:.4}@{:.2} h {:.0} role {} alt {} parent {par} family of {size} (flags {:#x}, apex {}, fwhm {:.1}, snr {:.0}, ms2 {})",
+            f.mz[i], f.rt[i], f.height[i], fam.role[i], fam.alt[i], f.flags[i], f.apex[i], f.fwhm[i], f.snr[i], f.ms2_n[i]
+        );
+    }
+}
+
 fn main() {
     let (mut p, mut files, mut truth) = (Params::default(), Vec::new(), None::<Value>);
+    let (mut shown, mut at_rt): (Vec<f64>, Option<f64>) = (Vec::new(), None);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -187,6 +214,8 @@ fn main() {
                     serde_json::from_slice(&std::fs::read(t).expect("truth")).expect("json")
                 })
             }
+            "--rt" => at_rt = args.next().and_then(|v| v.parse().ok()),
+            "--mz" => shown.extend(args.next().and_then(|v| v.parse::<f64>().ok())),
             _ => files.push(a),
         }
     }
@@ -200,6 +229,9 @@ fn main() {
         let fam = analyse_families(&mut ix, &mut f, &links, &p, &FamParams::default())
             .unwrap_or_else(|e| panic!("{path}: {e}"));
         summary(path, &f, &fam, t0.elapsed().as_secs_f64());
+        for &m in &shown {
+            show(&f, &fam, m, at_rt);
+        }
         if let Some(t) = &truth {
             report(&judge(&f, t));
         }
