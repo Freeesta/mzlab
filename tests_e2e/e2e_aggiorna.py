@@ -65,8 +65,8 @@ try:
             pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_timeout(4600)
             assert pg.evaluate("__calls") == [], "checked twice in a day"
             pg.evaluate("localStorage.setItem('qqq.upd.last','1')"); pg.evaluate("window.__reply={update_check:{status:'uptodate'}}")
-            pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_timeout(4600)
-            assert pg.evaluate("__calls") == ["update_check"]
+            pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_function("__calls.length>0", timeout=15000)
+            assert pg.evaluate("__calls") == ["update_check"], pg.evaluate("__calls")
         step("the automatic check runs once a day", once_a_day)
         def row():
             assert 'id="uip-upd"' in pg.evaluate("DESKUPD.row()")
