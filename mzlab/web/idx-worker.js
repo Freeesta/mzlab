@@ -3,11 +3,15 @@
 // goes back to the system. Messages only (no SharedArrayBuffer). If it dies, idxpool.js starts another one.
 import init, { build_mzidx } from "./wasm/mzlab_wasm.js";
 
-const ready = init().then(() => postMessage({ op: "ready" })).catch(e => postMessage({ op: "unavailable", text: String(e && e.message || e) }));
+// The pool sends one message first, { op: "module", module }: the .wasm compiled once for all the workers, or null (this worker compiles it itself).
+let ready = null, startInit = null;
+const initWith = module => (ready = (module ? init({ module_or_path: module }) : init()).then(() => postMessage({ op: "ready" })).catch(e => postMessage({ op: "unavailable", text: String(e && e.message || e) })));
+const waiting = new Promise(r => { startInit = r; });
 
 onmessage = async ev => {
   const m = ev.data;
-  await ready;
+  if (m.op === "module") { if (!ready) initWith(m.module); startInit(); return; }
+  await waiting; await ready;
   let ah = null;
   try {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("idx", { create: true });

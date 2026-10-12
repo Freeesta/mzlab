@@ -117,7 +117,7 @@ pub fn align_and_fill_stored<R: ReadAt>(
         slabs(src, n, &cuts, budget, r)?
     };
     drop(s);
-    let (mut table, filled) = finish(table, &mut |k| lean(src, k, None), n, r, open)?;
+    let (mut table, filled) = finish(table, &mut |k| lean(src, k, None), n, r, Some(budget), open)?;
     crate::rowmeta::compute(&mut table, &mut |k, range| {
         let b = src.bytes(k)?;
         let want = Want {
