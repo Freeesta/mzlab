@@ -1,6 +1,7 @@
 //! Table of the features of a series aligned across files.
 
 pub use crate::aligned_meta::{RowMeta, RowQ, NO_FILE};
+pub use crate::rowident::RowIdent;
 
 /// Cell states of `Aligned::state` (one per row and file; never read `area > 0` as presence).
 /// A peak was found in the file by the detection.
@@ -32,6 +33,8 @@ pub struct Aligned {
     pub member_role: Vec<u8>,
     /// The summaries of the rows (`rowmeta::compute`); empty when not computed.
     pub meta: RowMeta,
+    /// Neutral mass, adduct and source of each row (`RowIdent::compute`, after the last sort); empty when not computed.
+    pub ident: RowIdent,
 }
 
 impl Aligned {
@@ -84,5 +87,6 @@ impl Aligned {
             + self.member_rt.capacity() * 4
             + self.member_role.capacity()
             + self.meta.heap_bytes()
+            + self.ident.heap_bytes()
     }
 }

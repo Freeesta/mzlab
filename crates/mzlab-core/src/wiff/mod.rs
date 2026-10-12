@@ -7,6 +7,7 @@
 pub mod idx;
 mod run;
 pub mod scan;
+mod window;
 
 use crate::error::{Error, Result};
 use crate::methodinfo::{self, Method};

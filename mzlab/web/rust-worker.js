@@ -10,6 +10,7 @@ import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
+import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -37,6 +38,8 @@ let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+let wifPool = null;                                                       // the pool of the .wiff -> mzML conversions (wiff-worker.js), made when the first one is asked
+const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -181,15 +184,17 @@ onmessage = async ev => {
     }
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
-      case "raw2mzml": {                                                              // Thermo .raw -> mzML pieces (the .raw is read block by block, never held)
-        const parts = [], total = m.blob.size, rd = readerFor(m.blob);
+      case "raw2mzml": {                                                              // Thermo .raw -> mzML on OPFS (the .raw is read block by block; the mzML goes to the disk, never held)
+        const total = m.blob.size, rd = readerFor(m.blob), sink = await rawSink(m.dest);
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
-        engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { parts.push(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });      // scans: converted / in the file, from the scan index
-        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, !!m.profile); }      // scans: converted / in the file, from the scan index
+        catch (e) { await sink.abort(); throw e; }
+        const r = await sink.finish();
+        postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "wiffsamples": case "wiff2mzml": wiffOp(engine, m, id, readerFor); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
+      case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }

@@ -5,7 +5,9 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{parse, Value};
 
 use crate::store::{bad, ALIGN, MAGIC, PIECE};
-use crate::table::{Aligned, FileFeatures, RowMeta};
+use crate::facts::FileFacts;
+use crate::store::Origin;
+use crate::table::{Aligned, FileFeatures, RowIdent, RowMeta};
 
 /// Bytes in memory as a `ReadAt`.
 pub struct Slice<'a>(pub &'a [u8]);
@@ -198,8 +200,32 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         } else {
             RowMeta::default()
         },
+        ident: if o.meta.get("identity").and_then(|v| v.f64()) == Some(1.0) {
+            RowIdent {
+                neutral: o.col(r, size, "neutral", "f64", rows, f64::from_le_bytes)?,
+                ion: o.col(r, size, "ion", "u8", rows, |b: [u8; 1]| b[0])?,
+                src: o.col(r, size, "src", "u8", rows, |b: [u8; 1]| b[0])?,
+            }
+        } else {
+            RowIdent::default()
+        },
     };
     Ok((t, o.meta))
+}
+
+/// What the meta of a `.mzfeat` or `.mzfeatf` says about its origin: inputs, how they were acquired and the SHA-256 of the samples.
+pub fn origin_from_meta(meta: &Value) -> Origin {
+    let text = |i: &Value, k: &str| i.get(k).and_then(|v| v.str()).unwrap_or("").to_string();
+    let list = |k: &str| meta.get(k).map(|a| a.arr()).unwrap_or(&[]);
+    Origin {
+        inputs: list("inputs")
+            .iter()
+            .map(|i| (text(i, "name"), text(i, "sha256")))
+            .collect(),
+        facts: list("columns").iter().map(FileFacts::from_json).collect(),
+        samples: meta.get("samples").and_then(|v| v.str()).map(String::from),
+        times: Vec::new(),
+    }
 }
 
 /// Reads a `.mzfeat`: the table and its meta.

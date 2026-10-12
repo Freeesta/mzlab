@@ -1,3 +1,4 @@
+// @ts-check
 // Desktop app only (window.MZLAB_DESKTOP, set by desktop-shim.js): update of the web part. The native side does the work
 // (crates/mzlab-desktop/src/update.rs: manifest, only the changed files, SHA-256, atomic swap); this file only asks and shows.
 // In a browser nothing here runs. A silent check at start (at most once a day) shows a small notice, never a dialog.

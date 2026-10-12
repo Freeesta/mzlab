@@ -1,3 +1,4 @@
+// @ts-check
 // Archive of the browser version: the files the student opened and their .mzidx indexes live in OPFS (the origin private file system),
 // outside the memory of the page. The Rust engine's worker (rust-worker.js) and the index builders use this module, so they are the only places that hold
 // OPFS handles; each is opened for one write and closed at once. Reading goes through File objects (getFile).
@@ -51,7 +52,7 @@ export async function ensureRoom(bytes) {
 }
 
 export const available = () => {
-  try { return !!(self.navigator && navigator.storage && navigator.storage.getDirectory && typeof FileSystemFileHandle !== "undefined" && FileSystemFileHandle.prototype.createSyncAccessHandle); }
+  try { return !!(self.navigator && navigator.storage && navigator.storage.getDirectory && typeof FileSystemFileHandle !== "undefined" && /** @type {any} */ (FileSystemFileHandle.prototype).createSyncAccessHandle); }
   catch (_) { return false; }
 };
 

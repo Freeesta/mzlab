@@ -66,20 +66,20 @@ try:
         def lock():
             pt = spot(); pg.mouse.move(pt[0], pt[1]); pg.wait_for_timeout(250)
             cur = pg.evaluate("window.__m3d.V.cur"); assert cur
-            pg.click(".m3d-main [data-nav=maplock]"); pg.wait_for_timeout(200)
-            assert pg.get_attribute(".m3d-main [data-nav=maplock]", "aria-pressed") == "true" and pg.evaluate("window.__m3d.V.lock")
+            pg.click(".m3d-side [data-nav=maplock]"); pg.wait_for_timeout(200)
+            assert pg.get_attribute(".m3d-side [data-nav=maplock]", "aria-pressed") == "true" and pg.evaluate("window.__m3d.V.lock")
             pt2 = spot(); pg.mouse.move(pt2[0] + 40, pt2[1] + 20); pg.wait_for_timeout(250); assert pg.evaluate("window.__m3d.V.cur") == cur, "locked: the cursor stays"
             pg.mouse.click(pt2[0] + 40, pt2[1] + 20, button="right"); pg.wait_for_timeout(250)
             its = items(); assert any("Unlock the sight" in i[0] and i[2] == "true" for i in its), its
             pg.keyboard.press("Escape"); pg.keyboard.press("l"); pg.wait_for_timeout(200); assert not pg.evaluate("window.__m3d.V.lock")
-            assert pg.get_attribute(".m3d-main [data-nav=maplock]", "aria-pressed") == "false"
+            assert pg.get_attribute(".m3d-side [data-nav=maplock]", "aria-pressed") == "false"
         step("3D: lock freezes the cursor, state on the bar and in the menu, L toggles", lock)
         def bar():
-            btns = pg.evaluate("[...document.querySelectorAll('.m3d-main .mznav button')].map(b=>[b.dataset.nav,b.getAttribute('aria-label')])"); assert [x[0] for x in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] and all(x[1] for x in btns), btns
-            d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.click(".m3d-main [data-nav=mapzin]"); pg.wait_for_timeout(150); d1 = pg.evaluate("window.__m3d.V.cam.d"); assert d1 < d0
-            pg.click(".m3d-main [data-nav=mapzout]"); pg.wait_for_timeout(150); assert pg.evaluate("window.__m3d.V.cam.d") > d1
-            pg.click(".m3d-main [data-nav=mapreset]"); pg.wait_for_timeout(150); assert pg.evaluate("window.__m3d.V.cam.az") == 35
-            pg.click(".m3d-main [data-nav=maphelp]"); pg.wait_for_timeout(400)
+            btns = pg.evaluate("[...document.querySelectorAll('.m3d-side .mznav button')].map(b=>[b.dataset.nav,b.getAttribute('aria-label')])"); assert [x[0] for x in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] and all(x[1] for x in btns), btns
+            d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.click(".m3d-side [data-nav=mapzin]"); pg.wait_for_timeout(150); d1 = pg.evaluate("window.__m3d.V.cam.d"); assert d1 < d0
+            pg.click(".m3d-side [data-nav=mapzout]"); pg.wait_for_timeout(150); assert pg.evaluate("window.__m3d.V.cam.d") > d1
+            pg.click(".m3d-side [data-nav=mapreset]"); pg.wait_for_timeout(150); assert pg.evaluate("window.__m3d.V.cam.az") == 35
+            pg.click(".m3d-side [data-nav=maphelp]"); pg.wait_for_timeout(400)
             assert pg.evaluate("document.getElementById('bigdlg').open && document.querySelectorAll('#bigdlg table.mzhelp tbody tr').length >= 8")
             assert "3D" in pg.inner_text("#bigtt"); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
             assert pg.evaluate("!!document.querySelector('dialog.m3d[open]')"), "Esc closes the sheet and not the viewer"
