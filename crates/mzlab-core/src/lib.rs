@@ -3,6 +3,8 @@
 pub mod analysis;
 pub mod comproute;
 pub mod composition;
+pub mod differenza;
+pub mod diffroute;
 pub mod elements;
 pub mod entropy;
 pub mod fileroutes;
