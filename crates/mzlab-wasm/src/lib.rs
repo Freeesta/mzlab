@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 
+mod scans;
+
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
 pub fn version() -> String {
