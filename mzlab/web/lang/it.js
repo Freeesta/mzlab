@@ -416,6 +416,8 @@ I18N.add("it", {
   "unopen.err.many": "{n} file non letti ({names}): {message}",
   "err.file.notWiff": "{name} non è un file .wiff valido.",
   "err.file.wiffNoScan": "Manca il file .wiff.scan di {name}: servono tutti e due, con lo stesso nome.",
+  "err.file.wiffLoad": "Il motore di calcolo non si è caricato: ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
+  "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",
   "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).",
   "err.file.mzmlWrite": "Non riesco a scrivere l'mzML.",
   "err.file.raw": "Il file Thermo .raw non si legge ({detail}).",
