@@ -37,3 +37,20 @@ def test_scan_pairs_only_in_the_same_folder():
     r = run("""(async()=>{const root=dirH('r',[dirH('a',[fileH('S.wiff')]),dirH('b',[fileH('s.wiff.scan')])]);
       const it=await c.collect(root);const w=it.find(x=>x.kind==='data');return [c.pairScan(it,w),c.visible(it).length]})()""")
     assert r == [None, 2]
+
+
+def test_desktop_side_lists_through_the_native_commands_and_opens_a_stub_file():
+    desk = JS.with_name("cartella-puntata-desktop.js")
+    code = """(async()=>{
+      const calls=[];global.window={MZLAB_DESKTOP:true,__TAURI__:{core:{invoke:async(c,a)=>{calls.push(c);
+        if(c==='data_get_dir')return 'lab'; if(c==='data_list')return [{path:'sub/a.mzML',name:'a.mzML',dir:'sub/',kind:'data',size:7,mtime:5}];
+        if(c==='data_register')return {id:3,name:'a.mzML',size:7}; }}}};
+      global.document={hidden:false};
+      const d=require(%r);const S={items:[],stats:new Map(),opened:new Set(),name:'',perm:'none'};let drawn=0;
+      await d.start(S,()=>drawn++);const f=await d.fileOf(S.items[0]);
+      clearInterval(setInterval(()=>{},1));
+      return [d.available(),S.name,S.items.length,S.stats.get('sub/a.mzML').size,drawn>0,f.type,f.size,f.name,calls]})()""" % str(desk)
+    out = subprocess.run(["node", "-e", "(async()=>{const r=await(" + code + ");console.log(JSON.stringify(r));process.exit(0)})()"], check=True, capture_output=True, encoding="utf-8").stdout
+    r = json.loads(out)
+    assert r[:8] == [True, "lab", 1, 7, True, "application/x-mzlab-file;id=3", 7, "a.mzML"]
+    assert r[8] == ["data_get_dir", "data_list", "data_register"]

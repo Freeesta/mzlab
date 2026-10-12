@@ -5,7 +5,7 @@
 // under «Data», the others under «Others». The list follows the folder: FileSystemObserver where it exists, otherwise a light rescan when the tab is shown again and every 20 s.
 // Pure parts (kindOf, collect, pairScan, visible) have no DOM and are tested in node (tests/test_cartella_puntata.py). Desktop app: cartella-puntata-desktop.js.
 
-const CartPunt = (() => {
+const CartPP = (() => {
   const KEY = "cartella.puntata", MAXD = 3, CAP = 3000, POLL = 20000;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
   const TIPI = [["data", /\.(mzml|raw|wiff)$/i], ["method", /\.dam$/i], ["library", /\.(msp|mgf|mzlib|jsonl|ndjson)$/i], ["table", /\.(csv|tsv)$/i]];
@@ -28,9 +28,78 @@ const CartPunt = (() => {
   const visible = items => items.filter(x => x.kind !== "scan" || !items.some(w => /\.wiff$/i.test(w.name) && pairScan(items, w) === x));
   const sameList = (a, b) => a.length === b.length && a.every((x, i) => x.path === b[i].path);
 
-  // ---- state and storage
   const S = { handle: null, name: "", perm: "none", items: [], opened: new Set(), stats: new Map(), busy: false, obs: null, timer: 0, native: null };
   const supported = () => typeof window !== "undefined" && !!window.showDirectoryPicker;
+  return { kindOf, collect, pairScan, visible, sameList, S, supported };
+})();
+
+// the list in the page: rows, groups, messages (the buttons call CartPunt when they are pressed)
+const CartPuntVista = (() => {
+  const { visible, S, supported } = CartPP;
+  const loadedNames = () => new Set((window.ST && ST.files || []).map(f => f.name.toLowerCase()));
+  const isLoaded = x => S.opened.has(x.path) || loadedNames().has(x.name.toLowerCase());
+  // ---- page
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const KIND = { method: "cartp.kind.dam", library: "cartp.kind.lib", table: "cartp.kind.tab" };
+  function rowHtml(x, i) {
+    const T = (k, p) => I18N.t(k, p), done = isLoaded(x), st = S.stats.get(x.path), size = st && typeof sz === "function" ? " · " + sz(st.size) : "";
+    const kind = KIND[x.kind] ? ` · ${T(KIND[x.kind])}` : "", state = T(done ? "cartp.loaded" : "cartp.notloaded");
+    return `<li><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button></li>`;
+  }
+  function render() {
+    const box = document.getElementById("cartbody"), card = document.getElementById("cartcard");
+    if (!box || !card) return;
+    const T = (k, p) => I18N.t(k, p), nat = !!S.native;
+    card.hidden = !!window.QQQ_PHONE;
+    const intro = `<p class="sm muted">${T("cartp.intro")}</p>`;
+    if (!nat && !supported()) { box.innerHTML = intro + `<p class="sm" id="cartnosup">${T("cartp.nosupport")}</p>`; return; }
+    if (!S.handle && !nat) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = () => CartPunt.choose(); return; }
+    if (nat && !S.name) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = () => CartPunt.choose(); return; }
+    const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartchange">${T("cartp.change")}</button> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
+    let body;
+    if (!nat && S.perm !== "granted") body = `<p class="sm">${T(S.perm === "denied" ? "cartp.denied" : "cartp.grant", { name: esc(S.name) })}</p><button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
+    else {
+      const vis = visible(S.items), idx = x => S.items.indexOf(x), data = vis.filter(x => x.kind === "data" || x.kind === "scan"), other = vis.filter(x => x.kind !== "data" && x.kind !== "scan");
+      const list = a => `<ul class="cplist">${a.map(x => rowHtml(x, idx(x))).join("")}</ul>`;
+      body = !vis.length ? `<p class="sm muted">${T("cartp.empty")}</p>`
+        : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
+          + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
+    }
+    box.innerHTML = intro + head + `<div role="status" aria-live="polite">${body}</div>`;
+    box.querySelector("#cartchange").onclick = () => CartPunt.choose(); box.querySelector("#cartforget").onclick = () => CartPunt.forget(); box.querySelector("#cartrefresh").onclick = () => CartPunt.rescan();
+    const g = box.querySelector("#cartgrant"); if (g) g.onclick = () => CartPunt.grant();
+    box.querySelectorAll(".cprow").forEach(b => { b.onclick = () => CartPunt.open(S.items[+b.dataset.i]); });
+  }
+  return { render };
+})();
+
+// opening one file: the only moment its bytes are read (through the handle, or through the native side in the desktop app)
+const CartPuntApri = (() => {
+  const { pairScan, S } = CartPP;
+  async function fileOf(x) { return S.native ? S.native.fileOf(x) : x.h.getFile(); }
+  async function open(x) {
+    const T = (k, p) => I18N.t(k, p);
+    try {
+      if (x.kind === "table") { CartCarica.note(T("cartp.tab.msg")); return; }
+      const f = CartCarica.setDir(await fileOf(x), x.dir);
+      if (x.kind === "method") await upload([f], "dam");
+      else if (x.kind === "library") { await LIB.open(); await LIB.addFiles([f]); }
+      else {
+        const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
+        await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
+      }
+      S.opened.add(x.path);
+    } catch (e) { CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
+    CartPuntVista.render();
+  }
+
+  return { open };
+})();
+
+// state, permission, scan, follow and loading
+const CartPunt = (() => {
+  const { kindOf, collect, pairScan, visible, sameList, S, supported } = CartPP, render = () => CartPuntVista.render();
+  const KEY = "cartella.puntata", POLL = 20000;
   async function db() { const { lab } = await import("./qqq-db.js"); return lab()(); }
   const idb = (mode, f) => db().then(d => new Promise((ok, no) => { const r = f(d.transaction("kv", mode).objectStore("kv")); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
   const saved = () => idb("readonly", s => s.get(KEY)).catch(() => null);
@@ -95,63 +164,11 @@ const CartPunt = (() => {
   async function forget() { stop(); if (S.native) await S.native.forget(); S.handle = null; S.name = ""; S.items = []; S.perm = "none"; S.stats.clear(); S.opened.clear(); await keep(null); render(); }
   async function grant() { S.perm = await perm(true); if (S.perm === "granted") { await rescan(); follow(); } else render(); }
 
-  // ---- loading one file (the only moment its bytes are read)
-  const loadedNames = () => new Set((window.ST && ST.files || []).map(f => f.name.toLowerCase()));
-  const isLoaded = x => S.opened.has(x.path) || loadedNames().has(x.name.toLowerCase());
-  async function fileOf(x) { return S.native ? S.native.fileOf(x) : x.h.getFile(); }
-  async function open(x) {
-    const T = (k, p) => I18N.t(k, p);
-    try {
-      if (x.kind === "table") { CartCarica.note(T("cartp.tab.msg")); return; }
-      const f = CartCarica.setDir(await fileOf(x), x.dir);
-      if (x.kind === "method") await upload([f], "dam");
-      else if (x.kind === "library") { await LIB.open(); await LIB.addFiles([f]); }
-      else {
-        const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
-        await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
-      }
-      S.opened.add(x.path);
-    } catch (e) { CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
-    render();
-  }
-
-  // ---- page
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  const KIND = { method: "cartp.kind.dam", library: "cartp.kind.lib", table: "cartp.kind.tab" };
-  function rowHtml(x, i) {
-    const T = (k, p) => I18N.t(k, p), done = isLoaded(x), st = S.stats.get(x.path), size = st && typeof sz === "function" ? " · " + sz(st.size) : "";
-    const kind = KIND[x.kind] ? ` · ${T(KIND[x.kind])}` : "", state = T(done ? "cartp.loaded" : "cartp.notloaded");
-    return `<li><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button></li>`;
-  }
-  function render() {
-    const box = document.getElementById("cartbody"), card = document.getElementById("cartcard");
-    if (!box || !card) return;
-    const T = (k, p) => I18N.t(k, p), nat = !!S.native;
-    card.hidden = !!window.QQQ_PHONE;
-    const intro = `<p class="sm muted">${T("cartp.intro")}</p>`;
-    if (!nat && !supported()) { box.innerHTML = intro + `<p class="sm" id="cartnosup">${T("cartp.nosupport")}</p>`; return; }
-    if (!S.handle && !nat) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = choose; return; }
-    if (nat && !S.name) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = choose; return; }
-    const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartchange">${T("cartp.change")}</button> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
-    let body;
-    if (!nat && S.perm !== "granted") body = `<p class="sm">${T(S.perm === "denied" ? "cartp.denied" : "cartp.grant", { name: esc(S.name) })}</p><button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
-    else {
-      const vis = visible(S.items), idx = x => S.items.indexOf(x), data = vis.filter(x => x.kind === "data" || x.kind === "scan"), other = vis.filter(x => x.kind !== "data" && x.kind !== "scan");
-      const list = a => `<ul class="cplist">${a.map(x => rowHtml(x, idx(x))).join("")}</ul>`;
-      body = !vis.length ? `<p class="sm muted">${T("cartp.empty")}</p>`
-        : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
-          + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
-    }
-    box.innerHTML = intro + head + `<div role="status" aria-live="polite">${body}</div>`;
-    box.querySelector("#cartchange").onclick = choose; box.querySelector("#cartforget").onclick = forget; box.querySelector("#cartrefresh").onclick = rescan;
-    const g = box.querySelector("#cartgrant"); if (g) g.onclick = grant;
-    box.querySelectorAll(".cprow").forEach(b => { b.onclick = () => open(S.items[+b.dataset.i]); });
-  }
   if (typeof document !== "undefined") {
     addEventListener("load", () => CartPunt.start());
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.handle) rescan(); });
     addEventListener("focus", () => { if (S.handle && !S.obs) rescan(); });
   }
-  return { kindOf, collect, pairScan, visible, sameList, state: S, start, choose, forget, rescan, render, open };
+  return { kindOf, collect, pairScan, visible, sameList, state: S, start, choose, forget, rescan, grant, render, open: CartPuntApri.open };
 })();
 if (typeof module !== "undefined") module.exports = CartPunt;

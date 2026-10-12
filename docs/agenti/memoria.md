@@ -27,3 +27,4 @@ Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 25
 - Strato debole di `align`: le tabelle deboli di tutti i file sono contate sul budget (`series::finish`); oltre metà dello spazio libero la fase è rifiutata con `error.memoryBudget` (fase `align`).
 - Limite noto: l'mzML di un `.raw` grande resta in memoria come Blob durante la conversione.
 - Mappe e XIC: le regioni hanno al massimo 1024×1024 celle; i bastoncini 3D al massimo 200 000 punti, scelti in Rust (`sticks`); `subxic` non carica più la tabella dei picchi di una sopravvista (decine di milioni di picchi): per ogni finestra di ppm legge dall'indice solo i suoi picchi (`each_peak`), stesso JSON.
+- La cartella dei dati puntata dal browser è un handle in `qqq_lab`, store `kv`, chiave `cartella.puntata` (nessun file copiato in OPFS finché non si apre un file: poi vale tutto il resto di questo file); `docs/agenti/dati-cartella.md`.
