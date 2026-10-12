@@ -31,6 +31,22 @@ pub struct Aligned {
 }
 
 impl Aligned {
+    /// An empty table with room for `rows` rows of `n_files` cells (no reallocation while rows are pushed).
+    pub fn with_capacity(n_files: usize, rows: usize) -> Aligned {
+        let cells = rows * n_files;
+        Aligned {
+            n_files,
+            mz: Vec::with_capacity(rows),
+            rt: Vec::with_capacity(rows),
+            area: Vec::with_capacity(cells),
+            height: Vec::with_capacity(cells),
+            apex_rt: Vec::with_capacity(cells),
+            width: Vec::with_capacity(cells),
+            state: Vec::with_capacity(cells),
+            ..Aligned::default()
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.mz.len()
     }
