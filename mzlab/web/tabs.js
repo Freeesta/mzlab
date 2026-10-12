@@ -41,9 +41,9 @@ function setTab(t, quiet) {
   if (t === E.tab && !quiet) return;
   E.curBy[E.tab] = E.cur;
   E.activeBy = E.activeBy || {};      // coming back to a tab: same active graph as when the student left it (no automatic scroll)
-  E.activeBy[E.tab] = E.active; E.tab = t;
+  E.activeBy[E.tab] = E.active; STATO.scheda(t, "tab");
   E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t || allTabs() ? "" : "none"; });
-  const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
+  const back = E.curBy[t]; STATO.file(E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k, "tab");
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
   E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });      // changing tab: the axes of the spectra are free again
   const firstLayout = tabFiles().length && !tabPanels().length;
@@ -64,8 +64,8 @@ function ensureLayout() {
 function ensureBlocks() {
   TABS.forEach(([t]) => {
     if (!tabFiles(t).length || E.panels.some(p => p.tab === t)) return;
-    const before = new Set(E.panels), save = E.tab;
-    E.tab = t; try { defaultLayoutTab(t); } finally { E.tab = save; }
+    const before = new Set(E.panels);
+    STATO.conScheda(t, () => defaultLayoutTab(t), "blocks");
     const shift = () => {
       const nw = E.panels.filter(q => !before.has(q) && q.tab === t && !q._sh); if (!nw.length) return false;
       const top = Math.min(...nw.map(q => q.y)), off = E.panels.filter(q => q.tab !== t).reduce((m, q) => Math.max(m, q.y + q.h + 24), 0) - top;
@@ -124,7 +124,7 @@ async function goMs2(t) {
   await new Promise(r => setTimeout(r, 700));
   await ms2Switch(t.prec);
   const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0]; if (!c) return;
-  E.cur = t.k2; c.cur = t.rt; c.sel = null; const dt = 0.01;
+  STATO.file(t.k2, "transition"); c.cur = t.rt; c.sel = null; const dt = 0.01;
   pushLinked(c, t.rt - dt / 2, t.rt + dt / 2, t.k2); draw(c); uiSave();
 }
 
@@ -210,7 +210,7 @@ function openOverview() {
   big(I18N.t("tabs.overview.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("tabs.overview.intro")}</div><table id="ovw"><tr><th></th>${kinds.map(([, n]) => `<th>${EH(n)}</th>`).join("")}</tr>${body}</table>`, () => {
     Q("#bigbody").querySelectorAll("button.fc").forEach(b => b.onclick = () => {
       const f = E.files[+b.dataset.k]; Q("#bigdlg").close();
-      setTab(f.kind, true); E.cur = f.k; E.browse = true; renderFileList(); renderNav(); redrawAll(); uiSave();
+      setTab(f.kind, true); STATO.file(f.k, "file"); E.browse = true; renderFileList(); renderNav(); redrawAll(); uiSave();
     });
   });
 }

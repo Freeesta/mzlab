@@ -97,7 +97,10 @@ def ready(pg, timeout=90000, settle=400):
     t0 = _t.time()
     while True:
         q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 && (typeof E === 'undefined' || !E.pending || E.pending.length === 0) ? Date.now() - (window.__qqT || 0) : -1; }")
-        if q >= settle: return
+        if q >= settle:
+            bad = pg.evaluate("() => (typeof STATO === 'undefined' ? [] : STATO.verifica())")
+            if bad: raise AssertionError("page state invariants broken: " + "; ".join(bad))
+            return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
 def drawer(pg, tab="file", pin=True):
