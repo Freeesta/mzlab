@@ -958,15 +958,18 @@ const BARRA = (() => {
   }
 
   // First-visit hint anchored under the toolbar. Never together with the tour invitation (it waits until that is answered), closes on Esc, ×, or the first tool opened.
-  let _hintMem = false, _hintTimer = 0;
+  let _hintMem = false, _hintTimer = 0, _hintRo = null;
   function hintSeen() { try { return !!localStorage.getItem(K_HINT); } catch (_) { return _hintMem; } }
   function hintMark() { _hintMem = true; try { localStorage.setItem(K_HINT, "1"); } catch (_) { /* none */ } }
   function hintPlace() {
-    const el = document.getElementById("bar-hint"), bar = Q1("#stbar");
+    const el = document.getElementById("bar-hint"), bar = Q1("#stbar"), tg = Q1("#sb-toggle");
     if (!el || !bar) return;
-    const r = bar.getBoundingClientRect();
-    el.style.top = Math.round(r.bottom + 8) + "px";
-    el.style.left = Math.max(8, Math.round(r.left)) + "px";
+    const r = bar.getBoundingClientRect(), tr = tg && tg.offsetParent ? tg.getBoundingClientRect() : null;      // the arrow points at the Panel button (else at the toolbar)
+    const aim = tr ? tr.left + tr.width / 2 : r.left + 24, w = el.offsetWidth, vw = document.documentElement.clientWidth;
+    const left = Math.max(8, Math.min(Math.round(tr ? Math.min(r.left, aim - 28) : r.left), vw - w - 8));
+    el.style.top = Math.round(Math.max(r.bottom, tr ? tr.bottom : 0) + 8) + "px";
+    el.style.left = left + "px";
+    el.style.setProperty("--ha", Math.round(Math.max(10, Math.min(aim - left, w - 20)) - 5) + "px");      // centre of the arrow (10 px wide) on the target
   }
   function hintOnKey(e) { if (e.key === "Escape") hintClose(true); }
   function hintClose(mark) {
@@ -975,6 +978,8 @@ const BARRA = (() => {
     el.remove();
     document.removeEventListener("keydown", hintOnKey);
     window.removeEventListener("resize", hintPlace);
+    document.removeEventListener("fullscreenchange", hintPlace);
+    if (_hintRo) { _hintRo.disconnect(); _hintRo = null; }
     if (mark) hintMark();
   }
   function hintShow() {
@@ -996,6 +1001,8 @@ const BARRA = (() => {
     hintPlace();
     document.addEventListener("keydown", hintOnKey);
     window.addEventListener("resize", hintPlace);
+    document.addEventListener("fullscreenchange", hintPlace);
+    if (typeof ResizeObserver !== "undefined") { _hintRo = new ResizeObserver(hintPlace); [bar, document.querySelector("header"), el].forEach(x => x && _hintRo.observe(x)); }      // the header or toolbar change size: the arrow follows
     return true;
   }
   // Called after loading: waits (up to 2 minutes) until the tour invitation or the tour itself are gone, then shows the hint once.
