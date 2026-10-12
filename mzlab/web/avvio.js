@@ -1,0 +1,82 @@
+// Start screen of the page: loading phrases and the three-ion animation (functions used by loading() in explore.js).
+// Classic script, run in place by index.html: it shares the global scope with the Dati scripts.
+document.title = I18N.t("app.title", { app: window.APP_NAME || "mzLab" });
+const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
+// loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
+let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), advancing and weaving together.
+// The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
+const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
+let ldIonRaf = 0, ldAnLoad = null;
+function ldAnLoaded() {                                          // plain scripts, in order (an-util first); resolves once they have all run
+  return ldAnLoad || (ldAnLoad = LD_AN.reduce((p, n) => p.then(() => new Promise(ok => { const s = document.createElement("script"); s.src = "static/an-" + n + ".js"; s.onload = s.onerror = ok; document.head.appendChild(s); })), Promise.resolve()));
+}
+function ldIon(on, mode) {
+  if (on && LD_ANALYSERS && !window.LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
+  if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
+  const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
+  cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
+  cv.style.display = on ? "block" : "none"; if (bars) bars.style.display = on ? "none" : "";
+  if (!on) return;
+  const W = 420, H = 120, R = window.devicePixelRatio || 1, TAU = 2 * Math.PI;
+  const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
+  const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
+  cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions 120° apart, their trails advancing and weaving together (depth z sets size and brightness)
+    n: 26, dt: 0.045, step: 9,
+    at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
+    shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; } } };
+  if (LD_ANALYSERS) for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
+  const frame = ms => {
+    const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
+    cx.clearRect(0, 0, W, H); cx.globalAlpha = 1; if (an.draw) an.draw(t);
+    for (let j = 0; j < 3; j++) for (let k = 0; k < an.n; k++) {
+      const tk = t - k * an.dt; if (an.T && tk < 0) continue;
+      const q = an.at(j, tk); if (!q) continue;
+      const z = q.z ?? 0, x = an.shift ? an.shift(k) : q.x;
+      pts.push({ x, y: q.y, z, r: (5.5 + 2 * z) * (1 - k / an.n * 0.7) * (q.s ?? 1), a: (1 - k / an.n) * (0.6 + 0.4 * (z + 1) / 2), c: col[j] });
+    }
+    pts.sort((p, q) => p.z - q.z);
+    let midDone = !an.mid;
+    for (const p of pts) {
+      if (!midDone && p.z >= 0) { cx.globalAlpha = 1; an.mid(); midDone = true; }
+      cx.globalAlpha = p.a; cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
+    }
+    cx.globalAlpha = 1; if (!midDone) an.mid();
+    if (!still) ldIonRaf = requestAnimationFrame(frame);
+  };
+  ldIonRaf = requestAnimationFrame(frame);
+}
+// the ONE status line of the loading screen (#ldmsg): the text of a load in progress (loading(true, msg)) or the phase of the engine start
+// (window.qqPhaseCur, set by browser.js) replaces the funny phrases; the bar under it is determinate only when the percentage is known
+let ldMsg = null;
+function ldRefresh() {
+  const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
+  const el = document.getElementById("ldmsg");
+  if (!el || window.qqFailed) return;
+  if (!cur) { el.setAttribute("aria-live", "off"); if (!ldTimer) return; return ldNext(); }
+  clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
+  el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
+  if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
+}
+function ldAction(label, fn) {                                   // a button under the status line (stuck start: «start from scratch»)
+  const a = document.getElementById("ldact"); a.textContent = ""; a.hidden = !label; if (!label) return;
+  const b = document.createElement("button"); b.className = "btn"; b.textContent = label; b.onclick = fn; a.appendChild(b); b.focus();
+}
+function ldNext() {
+  if (window.qqFailed || ldMsg || window.qqPhaseCur) return;                                    // a failed start keeps its error message on screen
+  if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
+    ldBag = Array.from({ length: NPHRASES }, (_, i) => i).sort(() => Math.random() - 0.5);
+    if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
+  }
+  ldLast = ldBag.pop();
+  const el = document.getElementById("ldmsg"); el.innerHTML = I18N.t(`load.phrase.${ldLast + 1}`);
+  const dots = document.createElement("span");
+  for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
+  el.appendChild(dots);
+  let n = 3; clearInterval(ldDotTimer);
+  ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
+}
+if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(true); }   // at once, on the first paint

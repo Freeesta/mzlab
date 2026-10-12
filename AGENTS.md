@@ -45,7 +45,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Due lingue** (dettagli in `docs/agenti/lingue.md`): ogni testo nuovo nasce come chiave in `lang/it.js` e `lang/en.js`, mai scritto a mano nel codice; `tools/controlla_i18n.py` rifiuta italiano fuori dai cataloghi, chiavi mancanti o orfane.
 - **Sicurezza**: CSP nel meta di `index.html` (niente `unsafe-eval`, `connect-src 'self'`); testi dai file da `EH()`; Ketcher in iframe `sandbox`.
 - **Dati utente nel browser, nomi da NON cambiare mai**: IndexedDB `"qqq_lab"`, localStorage `qqq.*` e `qqq-labels`, cache `qqq-app-*`, `qqq-big-*`, `mzlab-libs`.
-- **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va aggiunto nella lista `L` del caricatore in `index.html` (`docs/agenti/dati.md`).
+- **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va aggiunto nella lista `L` di `carica.js` (`docs/agenti/dati.md`).
 
 ## 5. File d'area (leggi solo quello del tuo lavoro)
 | Se tocchi… | Leggi |
