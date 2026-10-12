@@ -3,7 +3,7 @@
     python3 tools/prepara_sito.py
 
 `tools/build_site.py --no-pyodide`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
-tests run when the engine is missing). Cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
+tests run when the engine is missing). Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
 """
 import re
 import shutil
@@ -24,7 +24,20 @@ def bindgen_version() -> str:
     return m.group(1) if m else ""
 
 
+def up_to_date() -> bool:
+    """site/ and its .wasm exist and nothing they are made from is newer (a site built with mzFinder's Pyodide, as the site tests do, is kept)."""
+    out = ROOT / "site" / "static" / "wasm" / "mzlab_wasm_bg.wasm"
+    if not out.exists() or not (ROOT / "site" / "index.html").exists():
+        return False
+    t = out.stat().st_mtime
+    sources = [ROOT / "Cargo.lock", *(ROOT / "mzlab" / "web").rglob("*"), *(ROOT / "crates").rglob("*.rs")]
+    return all(f.stat().st_mtime <= t for f in sources if f.is_file())
+
+
 def main() -> int:
+    if up_to_date():
+        print("site/ is up to date")
+        return 0
     if not shutil.which("cargo"):
         print("cargo not found: the e2e tests need the Rust toolchain (rustup show)")
         return 1
