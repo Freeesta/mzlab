@@ -13,7 +13,7 @@ window.MAPPA = (() => {
   const isMax = p => p.el && p.el.classList.contains("max");
   const mirOn = p => { const s = st(p); return s.ex ? true : s.mir != null ? s.mir : isMax(p); };       // «How it is extracted» always uses the two plots at the margins
   const wide = p => p.el && p.el.clientWidth >= NARROW;
-  const point = p => { const s = st(p); return s.lock || s.kp || s.hov; };
+  const point = p => { const s = st(p); return s.lock || s.frz || s.kp || s.hov; };       // frz: the point of the right click, held while the menu is open
   const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
 
   // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
@@ -133,19 +133,19 @@ window.MAPPA = (() => {
     drawPoints(p, g);
     if (s.ex && window.MAPEX) MAPEX.overlay(p, g);
     if (s.feat && window.MAPEX) MAPEX.featOverlay(p, g);
-    const pt = point(p), on = mirOn(p) && !s.ex;
+    const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
       g.save(); g.strokeStyle = css("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
       g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
-      if (s.lock) {                                                     // the padlock next to the point
-        g.globalAlpha = 1; g.fillStyle = css("--panel"); g.strokeStyle = css("--ink"); g.lineWidth = 1.4;
-        const lx = Math.min(a.W - M.r - 14, x + 6), ly = Math.max(M.t + 12, y - 8);
-        g.fillRect(lx, ly - 6, 10, 8); g.strokeRect(lx, ly - 6, 10, 8); g.beginPath(); g.arc(lx + 5, ly - 6, 3.2, Math.PI, 0); g.stroke();
-      }
+      if (s.lock) lockDot(g, a.X(pt.rt), a.Y(pt.mz), s);                  // the locked point: a small dot exactly on it
       g.restore();
     }
     readout(p); navSync(p);
+  }
+  // the mark of a locked point: a dot with a dark outline and an accent fill, centred on (x, y); s.dot keeps the centre for the tests
+  function lockDot(g, x, y, s) {
+    g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = css("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = css("--ink"); g.stroke(); s.dot = { x, y };
   }
   function readout(p) {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
@@ -327,11 +327,12 @@ window.MAPPA = (() => {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
     if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
+    if (s.frz) return;                                                  // the menu is open: the sight stays on the clicked point
     if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
-  function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) frame(p); }
+  function leave(p) { const s = st(p); if (s.frz) return; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     e.preventDefault();
@@ -450,6 +451,7 @@ window.MAPPA = (() => {
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
+  const markedAt = (p, q) => p._a ? nearPoint(p, p._a.X(q.rt), p._a.Y(q.mz)) : -1;      // index of the marked point under (rt, m/z), -1 if none
   function nearPoint(p, px, py) {
     const a = p._a; let best = -1, bd = 81;
     pts(p).forEach((q, i) => { const d = (a.X(q.rt) - px) ** 2 + (a.Y(q.mz) - py) ** 2; if (d < bd) { bd = d; best = i; } });
@@ -577,7 +579,7 @@ window.MAPPA = (() => {
   const ICO = {
     xic: '<path d="M2 13h12"/><path d="M3 12c2-7 3-7 5 0s3 3 5-3"/>', spec: '<path d="M3 13V8M6 13V4M9 13V9M12 13V6"/>',
     both: '<path d="M2 13h5"/><path d="M2.5 12c1-6 2-6 3 0M9 13V8M12 13V5"/>',
-    lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>', unlock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 014.8-1"/>',
+    mark: '<circle cx="8" cy="8" r="5.2"/><circle cx="8" cy="8" r="1.6"/>', lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>', unlock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 014.8-1"/>',
     home: '<g transform="translate(1 1) scale(1.0714)"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></g>',       // the corners of the «whole view» button of every panel
      rx: '<path d="M2 8h12M2 5.5v5M14 5.5v5"/>', ry: '<path d="M8 2v12M5.5 2h5M5.5 14h5"/>',
     sel: '<rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2.5 2"/><path d="M8 6v4M6 8h4"/>', plus: '<path d="M8 3v10M3 8h10"/>', minus: '<path d="M3 8h10"/>',
@@ -592,6 +594,8 @@ window.MAPPA = (() => {
     return {
       kind: "2d", p, pt, locked: () => !!s.lock,
       toggleLock: () => { if (s.lock) unlock(p); else { s.lock = { ...(at || point(p) || mid()) }; s.kp = null; overlay(p); margins(p); } navSync(p); },
+      marked: () => { const q = pt(); return !!q && markedAt(p, q) >= 0; },
+      toggleMark: () => { const q = pt(); if (!q) return; const i = markedAt(p, q); if (i >= 0) delPoint(p, i); else addPointAt(p, q.rt, q.mz, p._a.dmz); },
       resetAll: () => whole(p),
       zoomBy: f => zoomBy(p, f, s.lock || at || point(p))
     };
@@ -608,6 +612,7 @@ window.MAPPA = (() => {
     { id: "mapxic", g: "extract", ic: "xic", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "xic") },
     { id: "mapspec", g: "extract", ic: "spec", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "spec") },
     { id: "maplock", g: "lock", ic: "lock", kinds: ["2d", "3d"], on: ad => ad.locked(), run: ad => ad.toggleLock() },
+    { id: "mapmark", g: "lock", ic: "mark", kinds: ["2d"], ok: ad => !!ad.pt(), on: ad => ad.marked(), run: ad => ad.toggleMark() },
     { id: "mapreset", g: "view", ic: "home", kinds: ["2d", "3d"], run: ad => ad.resetAll() },
     { id: "map3top", g: "view", ic: "top", kinds: ["3d"], run: ad => ad.view(1) },
     { id: "map3rt", g: "view", ic: "side", kinds: ["3d"], run: ad => ad.view(2) },
@@ -620,7 +625,7 @@ window.MAPPA = (() => {
     { id: "maphelp", g: "help", ic: "help", kinds: ["2d", "3d"], run: ad => help(ad.kind) }
   ];
   const cmdOf = id => CMDS.find(c => c.id === id);
-  const nameOf = (c, ad) => T(c.id === "maplock" && ad.locked() ? "cmd.maplock.off.name" : `cmd.${c.id}.name`);
+  const nameOf = (c, ad) => T(c.id === "maplock" && ad.locked() || c.id === "mapmark" && ad.marked() ? `cmd.${c.id}.off.name` : `cmd.${c.id}.name`);
   const runCmd = (id, ad) => { const c = cmdOf(id); if (c && (!c.ok || c.ok(ad))) return c.run(ad); };
   // the items of the right-click menu (shared component: menu() in explore.js)
   function itemsFor(ad) {
@@ -637,7 +642,14 @@ window.MAPPA = (() => {
     }
     return items;
   }
-  function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); }
+  // while the menu is open the sight (spectrum, XIC) is held on the point of the click; it is let go when the menu closes (a choice such as Lock has already set s.lock)
+  function holdSight(ad) {
+    if (ad.kind !== "2d") return; const s = st(ad.p), q = ad.pt(), m = Q("#ctx"); if (!q || s.lock) return;
+    s.frz = { rt: q.rt, mz: q.mz }; s.kp = null; frame(ad.p);
+    const mo = new MutationObserver(() => { if (!m.hidden) return; mo.disconnect(); s.frz = null; frame(ad.p); navSync(ad.p); });
+    mo.observe(m, { attributes: true, attributeFilter: ["hidden"] });
+  }
+  function showMenu(ad, ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
   // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
   function scaleView(p, f, c, axes) {
     const a = p._a, x = c ? c.rt : (a.x0 + a.x1) / 2, y = c ? c.mz : (a.y0 + a.y1) / 2;
