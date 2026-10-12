@@ -5,6 +5,7 @@ import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_d
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { createPool, poolSize } from "./idxpool.js";
+import { createLabOps } from "./rust-worker-lab.js";
 
 let engine = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -73,6 +74,7 @@ function scanOp({ op, id, slot, path, query, blob }) {
   postMessage({ id, op, n: 0, info, buf: null, len: 0 });
 }
 
+const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -134,7 +136,7 @@ onmessage = async ev => {
   try {
     let out = null, n = 0, info = null;
     if (m.op.startsWith("lr_")) {
-      const r = await lrOp(m);
+      const r = await labOp(m) || await lrOp(m);
       postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null });
       return;
     }

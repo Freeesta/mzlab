@@ -3,7 +3,7 @@
 //! Every answer is written into a `Float64Array` the caller provides (the worker recycles them, so no allocation per frame):
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
-mod info; mod diff; mod stat;
+mod info; mod diff; mod items; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -11,7 +11,6 @@ use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
-
 mod scans;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
@@ -160,6 +159,7 @@ pub struct Engine {
     runs: HashMap<u32, mzml::Run>,
     /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
     idx: HashMap<u32, Routes<JsReader>>,
+    labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.

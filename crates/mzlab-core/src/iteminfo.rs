@@ -119,7 +119,7 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     }
 }
 
-fn matches(s: &Scan, part: Option<&Part>) -> bool {
+pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
     let Some(p) = part else { return true };
     if p.mode == "mrm"
         || (p.pol.is_some_and(|pp| pp != 0) && s.polarity != p.pol.unwrap() && s.polarity != 0)
