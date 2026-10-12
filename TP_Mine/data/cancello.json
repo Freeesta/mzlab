@@ -1,0 +1,153 @@
+{
+ "concordanza_mzmine": "non_misurata",
+ "crate_version": "0.1.0",
+ "criteri": [
+  {
+   "id": "timololo_tp_trovati",
+   "ok": true,
+   "soglia": 21,
+   "valore": 22
+  },
+  {
+   "id": "timololo_tp_nei_candidati",
+   "ok": false,
+   "soglia": 19,
+   "valore": 17
+  },
+  {
+   "id": "timololo_candidati",
+   "ok": false,
+   "soglia": 494,
+   "valore": 3094
+  },
+  {
+   "id": "timololo_gruppi",
+   "ok": true,
+   "soglia": 25606,
+   "valore": 25524
+  },
+  {
+   "id": "mzmine_richiamo",
+   "ok": null,
+   "soglia": 0.9,
+   "valore": null
+  },
+  {
+   "id": "mzmine_precisione",
+   "ok": null,
+   "soglia": 0.8,
+   "valore": null
+  },
+  {
+   "id": "mzmine_spearman",
+   "ok": null,
+   "soglia": 0.9,
+   "valore": null
+  },
+  {
+   "id": "mzmine_log2_mediano",
+   "ok": null,
+   "soglia": 0.25,
+   "valore": null
+  },
+  {
+   "id": "sintetici_richiamo_sopra_10x",
+   "ok": true,
+   "soglia": 0.98,
+   "valore": 1.0
+  },
+  {
+   "id": "sintetici_richiamo_3x_10x",
+   "ok": false,
+   "soglia": 0.8,
+   "valore": 0.0292
+  },
+  {
+   "id": "sintetici_isomeri_separati",
+   "ok": false,
+   "soglia": 1.0,
+   "valore": 0.5
+  },
+  {
+   "id": "sintetici_errore_area_mediano",
+   "ok": true,
+   "soglia": 0.05,
+   "valore": 0.0251
+  },
+  {
+   "id": "sintetici_righe_false_rumore",
+   "ok": true,
+   "soglia": 0.01,
+   "valore": 0.0
+  },
+  {
+   "id": "sintetici_famiglie_giuste",
+   "ok": true,
+   "soglia": 0.95,
+   "valore": 0.9603
+  },
+  {
+   "id": "sintetici_isf_senza_ms2",
+   "ok": true,
+   "soglia": 0.0,
+   "valore": 0.0
+  },
+  {
+   "id": "sintetici_esche_oltre_livello_4",
+   "ok": true,
+   "soglia": 0.01,
+   "valore": 0.0
+  },
+  {
+   "id": "sintetici_cinetica_forma",
+   "ok": true,
+   "soglia": 0.9,
+   "valore": 0.9421
+  },
+  {
+   "id": "sintetici_cinetica_generazione",
+   "ok": true,
+   "soglia": 0.9,
+   "valore": 1.0
+  },
+  {
+   "id": "sintetici_purezza_errore_mediano",
+   "ok": true,
+   "soglia": 0.05,
+   "valore": 0.0073
+  },
+  {
+   "id": "determinismo_due_esecuzioni",
+   "ok": true,
+   "soglia": 1,
+   "valore": 1
+  },
+  {
+   "id": "determinismo_nativo_wasm",
+   "ok": true,
+   "soglia": 1,
+   "valore": 1
+  },
+  {
+   "id": "prestazioni_13_file",
+   "ok": null,
+   "soglia": 60,
+   "valore": null
+  },
+  {
+   "id": "prestazioni_wasm_file",
+   "ok": null,
+   "soglia": 3,
+   "valore": null
+  },
+  {
+   "id": "prestazioni_memoria_worker",
+   "ok": null,
+   "soglia": 128,
+   "valore": null
+  }
+ ],
+ "data": "2026-10-12",
+ "format": "cancello/1",
+ "vista_candidati": false
+}
