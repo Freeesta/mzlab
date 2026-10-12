@@ -370,10 +370,13 @@ I18N.add("it", {
   "conv.detail.wait": "lettura dell'indice delle scansioni · trascorso {elapsed}",
   "conv.beat": "Sto ancora convertendo…",
   "conv.stall": "Nessuna novità da oltre 30 secondi: un file grande può richiedere molto tempo. Lascia aperta questa scheda e chiudi le altre pesanti; se non riparte puoi annullare e riprovare.",
+  "conv.profile": "File .raw: conserva il profilo (predefinito: centroide)",
+  "conv.profile.title": "Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroide: i picchi già calcolati dallo strumento.",
   "conv.total": "Totale: {pc}%",
   "conv.cancel": "Annulla",
   "conv.cancel.title": "Annulla la conversione dei file .raw",
   "conv.cancelling": "Annullamento…",
+  "conv.wiff.batch": "Campioni convertiti: {done} di {n}",
   "conv.row.group": "In conversione",
   "conv.row.open": "Lettura del file…",
   "conv.row.wait": "In coda",
@@ -989,6 +992,11 @@ I18N.add("it", {
   "zoom.rt": "RT {lo}–{hi} min",
   "axis.zoomHint": "Trascina qui per ingrandire solo quest'asse",
   "ms2.nearestScan": "scansione più vicina con dati · RT {rt} min",
+  "dda.avgTitle": "Media di {n} MS2 · {mz}",
+  "dda.scanParent": "madre {n}",
+  "dda.scanNo": "scansione {n}",
+  "dda.scanAvgOf": "media di {n} scansioni",
+  "ms2.scanStep": "scansione {i}/{tot} · RT {rt} min",
   "ctx.map.where": "RT {rt} min · m/z {mz} · {file}",
   "ctx.map.xic": "Estrai l'XIC di m/z {mz} (scegli la finestra)...",
   "ctx.map.addTo": "Aggiungi m/z {mz} al pannello «{panel}»...",
@@ -3145,5 +3153,6 @@ I18N.add("it", {
   "error.featMemory": "Memoria insufficiente per la fase «{fase}» su {files} file (servono circa {stima_mb} MB su {budget_mb} MB). Le fasi già finite sono salvate; dividi la serie in gruppi più piccoli.",
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
-  "error.badRecipe": "I parametri della pipeline non sono validi."
+  "error.badRecipe": "I parametri della pipeline non sono validi.",
+  "logo.gold.live": "Il logo è diventato dorato"
 });

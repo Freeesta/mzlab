@@ -57,6 +57,7 @@ mostrare mostrato nascosto nascondere cambia cambiare cambiato cerca cercare ric
 etichetta etichette decimali decimale lingua testo colori colore tema impostazioni strumento strumenti metodo metodi acquisizione
 sovrapporre disegna disegnare disegnato disegni struttura strutture molecola molecole carica cariche positivo negativo positiva negativa
 vuol dire significa significato esempio esempi spiegazione guida aiuto domanda domande risposta risposte
+scansione scansioni madre sconosciuto sconosciuta vicina vicino
 """.split())
 
 PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
@@ -296,6 +297,24 @@ def italian_in(text: str) -> list[str]:
     return [w for w in words if w.lower() in ITALIAN_WORDS]
 
 
+# regex literals applied to text (`/più vicina/.test(t)`) and number formatting that bypasses NF (thin-space grouping, locale-less toLocaleString)
+REGEX_TEXT = re.compile(r"/((?:[^/\\\n]|\\.)+)/[a-z]*\s*\.test\(|\.(?:match|replace|search)\(\s*/((?:[^/\\\n]|\\.)+)/")
+BAD_FORMAT = re.compile(r"toLocaleString\(\s*\)|Intl\.NumberFormat|\\u2009|\.replace\(\s*\"\.\"\s*,\s*\",\"\s*\)")
+FORMAT_OK = {"mzlab/web/i18n.js"}       # the one place that owns number formatting
+
+
+def check_leaks_in_code(rel: str, text: str, exc: set, errs: list) -> None:
+    for n, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("//"):
+            continue
+        for m in REGEX_TEXT.finditer(line):
+            rx = m.group(1) or m.group(2)
+            if italian_in(rx) and not any(f == rel and sn in line for f, sn in exc):
+                errs.append(f"Italian in a regular expression on text: {rel}:{n} «{rx[:40]}» (test the key or a flag, not the translated text)")
+        if rel not in FORMAT_OK and BAD_FORMAT.search(line) and not any(f == rel and sn in line for f, sn in exc):
+            errs.append(f"number formatting outside NF: {rel}:{n} (use I18N.num / I18N.fix; see docs/agenti/lingue.md)")
+
+
 def check_italian(errs: list, listing: bool) -> None:
     exc = load_exceptions()
     summary = []
@@ -307,6 +326,8 @@ def check_italian(errs: list, listing: bool) -> None:
         if not strict and not listing:
             continue
         hits = []
+        if p.suffix == ".js" and strict:
+            check_leaks_in_code(rel, p.read_text(encoding="utf-8", errors="replace"), exc, errs)
         if p.suffix == ".js":
             for ln, s in js_strings(p.read_text(encoding="utf-8", errors="replace")):
                 w = italian_in(s)

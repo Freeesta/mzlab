@@ -184,11 +184,11 @@ const DDA = (() => {
   function caption(p) {
     const j = p._scan; if (!j) return;
     const parts = [];
-    if (p.avg && p.avg.length > 1) parts.push(`media di ${p.avg.length} scansioni`);
+    if (p.avg && p.avg.length > 1) parts.push(I18N.t("dda.scanAvgOf", { n: p.avg.length }));
     else {
       const D = ready(p.k), i = D && D.idx.get(p.sid);
-      parts.push(`scansione ${j.no ?? j.sid + 1}`);
-      if (j.parent != null) parts.push(`madre ${j.parent_no ?? j.parent + 1}`);
+      parts.push(I18N.t("dda.scanNo", { n: j.no ?? j.sid + 1 }));
+      if (j.parent != null) parts.push(I18N.t("dda.scanParent", { n: j.parent_no ?? j.parent + 1 }));
     }
     if (j.act) parts.push(j.act);
     if (j.ce != null) parts.push(j.nce ? `NCE ${fmt1(j.ce)}` : `CE ${fmt1(j.ce)} eV`);
@@ -293,7 +293,7 @@ const DDA = (() => {
       if (l.length === 1) return selectMs2(s2, D.sid[l[0]], { parent: false, zoom: false });
       const dec = HR.prof(E.files[s2.k], 2).dec;
       s2.ion = ion; s2.sid = null; s2.avg = l.map(i => D.sid[i]); s2._mixed = null;
-      s2.title = `Media di ${l.length} MS2 · ${ion.toFixed(dec)}`; s2.r0 = D.rt[l[0]]; s2.r1 = D.rt[l[l.length - 1]]; ctl(s2); draw(s2); draw(s1); uiSave();
+      s2.title = I18N.t("dda.avgTitle", { n: l.length, mz: ion.toFixed(dec) }); s2.r0 = D.rt[l[0]]; s2.r1 = D.rt[l[l.length - 1]]; ctl(s2); draw(s2); draw(s1); uiSave();
       return true;
     } catch (e) { return fail("average", e); }
   }

@@ -153,7 +153,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, x0); pushLinked(p, x0 - dt / 2, x0 + dt / 2, k0); nearScan(k0, x0).then(n => { if (n && p.cur === x0) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, x0); pushLinked(p, x0 - dt / 2, x0 + dt / 2, k0); nearScan(k0, x0).then(n => { if (n && p.cur === x0) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up);
@@ -188,7 +188,8 @@ function attach(p) {
       if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
+    if (p.type === "mrm") { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // MRM has no spectra (a new one would jump to the Full Scan tab): double click = whole view
+    if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
@@ -437,7 +438,7 @@ async function showMethod(sel) {
   h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span></div><div class="mgrid">`;
   h += sec(I18N.t("method.sec.experiment"), `<div class="sm hw">${HOW[m.kind === "full" ? (f.mode === "ems" ? "ems" : "q1") : m.kind] || ""}</div>${expTbl}${trTbl}`);
   if (sp && !lab) {
-    const n1 = sp.ms1, n2 = sp.ms2, nf = (v, d = 0) => v == null ? "" : (+v).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009"), join = a => a.join(", ");
+    const n1 = sp.ms1, n2 = sp.ms2, nf = (v, d = 0) => v == null ? "" : (+v).toFixed(d), join = a => a.join(", ");
     const t1 = `<table>${row(I18N.t("method.row.analyzer"), n1.an)}${row(I18N.t("method.row.massRange"), n1.window ? `m/z ${n1.window[0]}-${n1.window[1]}` : "")}${row(I18N.t("method.row.resolution"), n1.res ? nf(n1.res) : "")}${row(I18N.t("method.row.inject"), n1.inject != null ? nf(n1.inject, 1) + " ms" : "")}${row(I18N.t("method.row.scansN"), nf(n1.n))}</table>`;
     const t2 = n2 ? `<table>${row(I18N.t("method.row.activation"), join(n2.act))}${row(I18N.t(n2.nce ? "method.row.ceNce" : "method.row.ce"), n2.ce.length ? join(n2.ce) + (n2.nce ? "" : " eV") : "")}${row(I18N.t("method.row.isolation"), n2.iso.length ? "±" + join(n2.iso) + " m/z" : "")}${row(I18N.t("method.row.analyzer"), n2.an)}${row(I18N.t("method.row.resolution"), n2.res ? nf(n2.res) : "")}${row(I18N.t("method.row.inject"), n2.inject != null ? nf(n2.inject, 1) + " ms" : "")}${row("MS2", I18N.t("method.row.ms2n", { n: nf(n2.n), per: n2.per_cycle }))}</table>` : "";
     h += sec(I18N.t("method.sec.scanParams"), `<div class="sm hw"><b>Full Scan (MS1)</b></div>${t1}${n2 ? `<div class="sm hw" style="margin-top:8px"><b>MS2</b></div>${t2}` : ""}`);

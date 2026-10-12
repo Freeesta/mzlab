@@ -370,10 +370,13 @@ I18N.add("en", {
   "conv.detail.wait": "reading the scan index · elapsed {elapsed}",
   "conv.beat": "Still converting…",
   "conv.stall": "No news for over 30 seconds: a big file can take a long time. Keep this tab open and close other heavy ones; if it does not restart you can cancel and try again.",
+  "conv.profile": "Thermo .raw: keep the profile data (default: centroids)",
+  "conv.profile.title": "Profile: the data as the instrument recorded it (much larger files, slower conversion). Centroid: the peaks the instrument already computed.",
   "conv.total": "Total: {pc}%",
   "conv.cancel": "Cancel",
   "conv.cancel.title": "Cancel the conversion of the .raw files",
   "conv.cancelling": "Cancelling…",
+  "conv.wiff.batch": "Samples converted: {done} of {n}",
   "conv.row.group": "Converting",
   "conv.row.open": "Reading the file…",
   "conv.row.wait": "Queued",
@@ -989,6 +992,11 @@ I18N.add("en", {
   "zoom.rt": "RT {lo}–{hi} min",
   "axis.zoomHint": "Drag here to zoom only this axis",
   "ms2.nearestScan": "nearest scan with data · RT {rt} min",
+  "dda.avgTitle": "Average of {n} MS2 · {mz}",
+  "dda.scanParent": "parent {n}",
+  "dda.scanNo": "scan {n}",
+  "dda.scanAvgOf": "average of {n} scans",
+  "ms2.scanStep": "scan {i}/{tot} · RT {rt} min",
   "ctx.map.where": "RT {rt} min · m/z {mz} · {file}",
   "ctx.map.xic": "Extract the XIC of m/z {mz} (choose the window)...",
   "ctx.map.addTo": "Add m/z {mz} to the panel «{panel}»...",
@@ -3145,5 +3153,6 @@ I18N.add("en", {
   "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
-  "error.badRecipe": "The parameters of the pipeline are not valid."
+  "error.badRecipe": "The parameters of the pipeline are not valid.",
+  "logo.gold.live": "The logo has turned gold"
 });

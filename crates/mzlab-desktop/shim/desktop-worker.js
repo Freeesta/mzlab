@@ -65,7 +65,7 @@ async function handle(m) {
           try { const p = await (await get("rawprogress", { id: rid })).json(); if (p.total) postMessage({ id, op: "progress", total: p.total, read: p.read, written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
         }, 300);
         let out;
-        try { out = await (await get("raw2mzml", { id: rid })).json(); } finally { clearInterval(poll); }
+        try { out = await (await get("raw2mzml", { id: rid, profile: m.profile ? 1 : 0 })).json(); } finally { clearInterval(poll); }
         const parts = [];
         for (let off = 0; off < out.size; off += CHUNK) {
           parts.push(new Uint8Array(await (await get("file", { id: out.id, off, len: CHUNK })).arrayBuffer()));
