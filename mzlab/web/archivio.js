@@ -6,6 +6,10 @@
 const ROOT = "mzlab";
 const STEP = 8 << 20;        // bytes written at a time (a Blob is read slice by slice, never whole)
 let rootP = null;
+// a function told of every change of the folders ("put" | "del", kind, name, size): the manifest of the files (migra.js) follows through it
+let onChange = null;
+export const watch = f => { onChange = f; };
+const told = (ev, kind, name, size) => { if (onChange) { try { Promise.resolve(onChange(ev, kind, name, size)).catch(() => {}); } catch (_) { /* optional */ } } };
 
 export const available = () => {
   try { return !!(self.navigator && navigator.storage && navigator.storage.getDirectory && typeof FileSystemFileHandle !== "undefined" && FileSystemFileHandle.prototype.createSyncAccessHandle); }
@@ -30,7 +34,9 @@ async function write(kind, name, size, chunk) {
     throw e;
   }
   ah.close();
-  return fh.getFile();
+  const f = await fh.getFile();
+  told("put", kind, name, f.size);
+  return f;
 }
 
 // `size` bytes produced by chunk(offset, length) -> Promise<Uint8Array> -> File in OPFS (the desktop copies the index built by the native side)
@@ -47,7 +53,7 @@ export async function put(kind, name, data) {
 export async function promote(kind, from, to) {
   const d = await dir(kind), fh = await d.getFileHandle(from);
   try { await d.removeEntry(to); } catch (_) { /* nothing to replace */ }
-  if (typeof fh.move === "function") { await fh.move(to); return (await d.getFileHandle(to)).getFile(); }
+  if (typeof fh.move === "function") { await fh.move(to); const f = await (await d.getFileHandle(to)).getFile(); told("put", kind, to, f.size); return f; }
   const f = await put(kind, to, await fh.getFile());          // no move() in this browser: a copy
   try { await d.removeEntry(from); } catch (_) { /* optional */ }
   return f;
@@ -67,7 +73,7 @@ export async function list(kind) {
 }
 
 export async function remove(kind, name) {
-  try { await (await dir(kind)).removeEntry(name); return true; } catch (_) { return false; }
+  try { await (await dir(kind)).removeEntry(name); told("del", kind, name, 0); return true; } catch (_) { return false; }
 }
 
 export async function clear(kind) {

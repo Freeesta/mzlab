@@ -4,6 +4,7 @@
 import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
+import { migra, rowOf } from "./migra.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
@@ -17,7 +18,7 @@ const take = len => {
   const i = pool.findIndex(b => b.byteLength >= need);
   return new Float64Array(i >= 0 ? pool.splice(i, 1)[0] : new ArrayBuffer(Math.max(need, 64 << 10)), 0, len);
 };
-const ready = init().then(() => { engine = new Engine(); }).then(() => postMessage({ op: "ready" }));
+const ready = init().then(() => { engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
 ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
 function readerFor(blob) {
@@ -52,6 +53,14 @@ const tx = async (store, mode, fn) => {
   return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
+const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
+// the archive: its schema is brought up to date before any file is opened, and the manifest follows every change of the folders of OPFS
+const archiveReady = (async () => {
+  try {
+    ARCH.watch(async (ev, kind, name, size) => { if (ev === "del") await tx("manifest", "readwrite", s => s.delete(kind + "/" + name)); else await tx("manifest", "readwrite", s => s.put(rowOf(kind, name, size))); });
+    await migra({ getSchema: () => kvGet("schema"), setSchema: n => tx("kv", "readwrite", s => s.put(n, "schema")), list: kind => ARCH.list(kind), putManifest: row => tx("manifest", "readwrite", s => s.put(row)) });
+  } catch (_) { /* the archive works without the manifest; the next start tries again */ }
+})();
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
   const files = await safe(() => ARCH.list("files")) || [], idx = await safe(() => ARCH.list("idx")) || [];
