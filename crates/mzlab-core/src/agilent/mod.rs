@@ -22,6 +22,8 @@ pub const SCAN_SIM: i32 = 2;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Files<'a> {
     pub ms_scan: &'a [u8],
+    /// `AcqData/MSScan.xsd`: the record layout of this file (the built-in layout of the GC/MS runs when it is missing).
+    pub ms_scan_xsd: Option<&'a [u8]>,
     pub ms_peak_len: u64,
     pub ms_ts: Option<&'a [u8]>,
     pub devices: Option<&'a [u8]>,
@@ -47,14 +49,20 @@ impl AgilentD {
         if f.ms_scan.is_empty() {
             return Err(Error::new("err.file.notAgilentD").with("name", name));
         }
-        let records = scan::parse(f.ms_scan, f.ms_peak_len)?;
+        let segments = f.ms_ts.map(info::segments).unwrap_or_default();
+        let layout = match f.ms_scan_xsd {
+            Some(x) => scan::Layout::from_xsd(&String::from_utf8_lossy(x))?,
+            None => scan::Layout::builtin(),
+        };
+        let announced = Some(segments.iter().map(|s| s.scans).sum::<usize>());
+        let records = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
         if records.is_empty() {
             return Err(Error::new("err.file.agilent").with("detail", "no scans"));
         }
         Ok(AgilentD {
             name: name.to_string(),
             records,
-            segments: f.ms_ts.map(info::segments).unwrap_or_default(),
+            segments,
             device: f.devices.and_then(|d| info::devices(d).into_iter().next()),
             contents: f.contents.and_then(info::contents),
             tree: f.ms_tree.and_then(info::tree),

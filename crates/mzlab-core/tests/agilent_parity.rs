@@ -4,6 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
+use mzlab_core::agilent::scan::Layout;
 use mzlab_core::agilent::{AgilentD, Files};
 use mzlab_core::mzml;
 
@@ -151,8 +152,10 @@ fn real_runs_agree_with_their_own_numbers() {
         let acq = f.join("AcqData");
         let (scan, peak_file) = (read(&acq, "MSScan.bin").unwrap(), acq.join("MSPeak.bin"));
         let mut peak = std::fs::read(&peak_file).unwrap();
+        let xsd = read(&acq, "MSScan.xsd").unwrap();
+        assert_eq!(Layout::from_xsd(&String::from_utf8_lossy(&xsd)).unwrap(), Layout::builtin(), "{}: the xsd of the folder and the built-in layout agree", f.display());
         let (ts, dev, contents, tree, meth) = (read(&acq, "MSTS.xml"), read(&acq, "Devices.xml"), read(&acq, "Contents.xml"), read(&acq, "MSTree2.bin"), read(&f, "acqmeth.txt"));
-        let files = Files { ms_scan: &scan, ms_peak_len: peak.len() as u64, ms_ts: ts.as_deref(), devices: dev.as_deref(), contents: contents.as_deref(), ms_tree: tree.as_deref(), acqmeth: meth.as_deref() };
+        let files = Files { ms_scan: &scan, ms_scan_xsd: Some(&xsd), ms_peak_len: peak.len() as u64, ms_ts: ts.as_deref(), devices: dev.as_deref(), contents: contents.as_deref(), ms_tree: tree.as_deref(), acqmeth: meth.as_deref() };
         let d = AgilentD::open(&f.file_name().unwrap().to_string_lossy(), &files).unwrap();
         let label = f.display().to_string();
         // the index: numbering, time, the spectra tile MSPeak.bin from byte 68 to its end
@@ -206,4 +209,55 @@ fn real_runs_agree_with_their_own_numbers() {
         }
         eprintln!("{label}: {} scans, {} segments, {}", d.records.len(), d.segments.len(), m.mode);
     }
+}
+
+const XSD: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:complexType name="ScanRecordType"><xs:sequence>
+<xs:element name="ScanID" type="xs:int"/><xs:element name="ScanTime" type="xs:double"/>
+<!-- <xs:element name="Hidden" type="xs:double"/> -->
+<xs:element name="MSLevel" type="xs:int"/><xs:element name="TIC" type="xs:double"/><xs:element name="Extra" type="xs:short" minOccurs="0"/>
+<xs:element name="SpectrumParamValues" type="SpectrumParamsType" maxOccurs="unbounded"/>
+</xs:sequence></xs:complexType>
+<xs:complexType name="SpectrumParamsType"><xs:sequence>
+<xs:element name="SpectrumFormatID" type="xs:int"/><xs:element name="SpectrumOffset" type="xs:long"/><xs:element name="ByteCount" type="xs:int"/>
+<xs:element name="PointCount" type="xs:int"/><xs:element name="UncompressedByteCount" type="xs:int" minOccurs="0"/>
+</xs:sequence></xs:complexType></xs:schema>"#;
+
+/// A folder whose xsd has other fields than the GC/MS runs (2 bytes more, the uncompressed size, no commented-out field): the records are read by that layout.
+#[test]
+fn the_layout_comes_from_the_xsd_of_the_folder() {
+    let sp = sample();
+    let mut peak = vec![0u8; 68];
+    let mut idx = vec![0u8; 160];
+    idx[88..92].copy_from_slice(&160i32.to_le_bytes());
+    for (k, s) in sp.iter().enumerate() {
+        let off = peak.len() as i64;
+        s.pts.iter().for_each(|p| put_f64(&mut peak, p.0));
+        s.pts.iter().for_each(|p| put_f64(&mut peak, p.1));
+        let n = s.pts.len() as i32 * 16;
+        put_i32(&mut idx, k as i32 + 1);
+        put_f64(&mut idx, s.time);
+        put_i32(&mut idx, s.level);
+        put_f64(&mut idx, s.pts.iter().map(|p| p.1).sum());
+        idx.extend(7i16.to_le_bytes());
+        put_i32(&mut idx, 1);
+        idx.extend(off.to_le_bytes());
+        put_i32(&mut idx, n);
+        put_i32(&mut idx, s.pts.len() as i32);
+        put_i32(&mut idx, n);
+    }
+    let layout = Layout::from_xsd(XSD).unwrap();
+    assert_eq!(layout.record_len, 4 + 8 + 4 + 8 + 2 + 4 + 8 + 4 + 4 + 4);
+    let open = |xsd: Option<&[u8]>| AgilentD::open("x.D", &Files { ms_scan: &idx, ms_scan_xsd: xsd, ms_peak_len: peak.len() as u64, ..Default::default() });
+    let d = open(Some(XSD.as_bytes())).unwrap();
+    let run = d.run(&mut peak.clone()).unwrap();
+    assert_eq!((d.records.len(), run.spectra.len(), run.spectra[1].mz.clone()), (4, 3, vec![50.5, 84.0, 86.25]));
+    assert_eq!(d.records[1].time_min, 3.01);
+    assert!(open(None).is_err(), "the built-in layout does not fit this file");
+    // compressed points are refused by name, an unknown type and a missing field are errors
+    let mut z = peak.clone();
+    let d = AgilentD { records: d.records.iter().cloned().map(|mut r| { r.uncompressed = Some(r.bytes + 40); r }).collect(), ..open(Some(XSD.as_bytes())).unwrap() };
+    assert!(d.run(&mut z).err().unwrap().to_string().contains("compressed"));
+    assert!(Layout::from_xsd(&XSD.replace("xs:short", "xs:dateTime")).err().unwrap().to_string().contains("dateTime"));
+    assert!(Layout::from_xsd(&XSD.replace("name=\"PointCount\"", "name=\"Points\"")).err().unwrap().to_string().contains("PointCount"));
 }

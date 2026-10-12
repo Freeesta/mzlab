@@ -12,6 +12,9 @@ fn bad(detail: String) -> Error {
 /// The m/z values and intensities of a scan, m/z ascending.
 pub fn read_points<R: ReadAt>(peak: &mut R, rec: &ScanRec) -> Result<(Vec<f64>, Vec<f64>)> {
     let n = rec.points as usize;
+    if rec.uncompressed.is_some_and(|u| u != rec.bytes) {
+        return Err(bad(format!("scan {}: {} bytes stored for {} uncompressed (compressed spectra are not read)", rec.id, rec.bytes, rec.uncompressed.unwrap_or(0))));
+    }
     if rec.format != 1 || rec.bytes as usize != n * 16 {
         return Err(bad(format!("scan {}: SpectrumFormatID {} with {} bytes for {} points is not a known layout", rec.id, rec.format, rec.bytes, rec.points)));
     }
