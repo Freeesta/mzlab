@@ -3,9 +3,10 @@
 import { gradient_make } from "./wasm/mzlab_wasm.js";
 
 export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr }) {
-  let sig = null;
+  let sig = null, n = 0;
+  const seq = new Map();                    // name -> order of upload in this session: the files of the same millisecond keep it
   async function sync() {
-    const list = (await ARCH.list("files")).filter(e => /\.dam$/i.test(e.name) && !/\.part$/.test(e.name)).sort((a, b) => a.lastModified - b.lastModified || (a.name < b.name ? -1 : 1));
+    const list = (await ARCH.list("files")).filter(e => /\.dam$/i.test(e.name) && !/\.part$/.test(e.name)).sort((a, b) => a.lastModified - b.lastModified || (seq.get(a.name) || 0) - (seq.get(b.name) || 0) || (a.name < b.name ? -1 : 1));
     const now = list.map(e => `${e.name}:${e.size}:${e.lastModified}`).join("|");
     if (now === sig) return;
     const e = engine();
@@ -20,6 +21,7 @@ export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, 
     return { slot: slotOf(name), f, rd: readerFor(f) };
   }
   return async function labOp(m) {
+    if (m.op === "lr_put" && /\.dam$/i.test(m.name)) seq.set(m.name, ++n);
     const e = engine();
     switch (m.op) {
       case "lr_dam_sync": await sync(); return { info: e.lab_list() };

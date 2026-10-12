@@ -44,7 +44,8 @@ fn parsed(text: &str) -> Value {
 }
 
 fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab-dam-{}", std::process::id()));
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!("mzlab-dam-{}-{}", std::process::id(), N.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
     match Command::new("python3").current_dir(root()).arg("tools/dam_riferimento.py").arg(&out).output() {
         Ok(o) if o.status.success() => {}
         other => {

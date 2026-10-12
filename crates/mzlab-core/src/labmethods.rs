@@ -6,13 +6,6 @@ use crate::json::{self, fmt_g, Out, Value};
 use crate::methodcheck::{check_against, method_kind, write_rows};
 use crate::methodinfo::{read_methods, Kind, Method};
 
-/// One uploaded method: what `read_methods` found, or why the file cannot be read.
-#[derive(Clone)]
-pub struct Lab {
-    pub name: String,
-    pub res: std::result::Result<Method, String>,
-}
-
 impl Lab {
     /// Reads a `.dam`; a broken file never breaks the page (the reason is kept).
     pub fn read(name: &str, data: Vec<u8>) -> Lab {
@@ -90,6 +83,13 @@ impl Lab {
             }
         }
     }
+}
+
+/// One uploaded method: what `read_methods` found, or why the file cannot be read.
+#[derive(Clone)]
+pub struct Lab {
+    pub name: String,
+    pub res: std::result::Result<Method, String>,
 }
 
 fn why(e: &Error) -> String {

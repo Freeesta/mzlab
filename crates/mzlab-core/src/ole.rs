@@ -6,42 +6,6 @@ use crate::error::{Error, Result};
 const END: u32 = 0xFFFF_FFFE;
 const FREE: u32 = 0xFFFF_FFFF;
 
-#[derive(Debug, Clone)]
-struct Entry {
-    name: String,
-    typ: u8,
-    left: u32,
-    right: u32,
-    child: u32,
-    start: u32,
-    size: u32,
-}
-
-pub struct Ole {
-    data: Vec<u8>,
-    ss: usize,
-    mss: usize,
-    cutoff: u32,
-    fat: Vec<u32>,
-    dir: Vec<Entry>,
-    ministream: Vec<u8>,
-    minifat: Vec<u32>,
-    /// Path of every stream (`Dir/Sub/Name`) with its directory entry, in the order of the tree walk.
-    streams: Vec<(String, usize)>,
-}
-
-fn u16_at(d: &[u8], at: usize) -> Result<u16> {
-    d.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]])).ok_or_else(bad)
-}
-
-fn u32_at(d: &[u8], at: usize) -> Result<u32> {
-    d.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])).ok_or_else(bad)
-}
-
-fn bad() -> Error {
-    Error::new("err.dam.unreadable").with("message", "truncated or damaged OLE2 file")
-}
-
 impl Ole {
     /// `name` is the file name, only for the error of a file that is not OLE2.
     pub fn open(data: Vec<u8>, name: &str) -> Result<Ole> {
@@ -166,4 +130,40 @@ impl Ole {
         b.truncate(size);
         Some(b)
     }
+}
+
+#[derive(Debug, Clone)]
+struct Entry {
+    name: String,
+    typ: u8,
+    left: u32,
+    right: u32,
+    child: u32,
+    start: u32,
+    size: u32,
+}
+
+pub struct Ole {
+    data: Vec<u8>,
+    ss: usize,
+    mss: usize,
+    cutoff: u32,
+    fat: Vec<u32>,
+    dir: Vec<Entry>,
+    ministream: Vec<u8>,
+    minifat: Vec<u32>,
+    /// Path of every stream (`Dir/Sub/Name`) with its directory entry, in the order of the tree walk.
+    streams: Vec<(String, usize)>,
+}
+
+fn u16_at(d: &[u8], at: usize) -> Result<u16> {
+    d.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]])).ok_or_else(bad)
+}
+
+fn u32_at(d: &[u8], at: usize) -> Result<u32> {
+    d.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]])).ok_or_else(bad)
+}
+
+fn bad() -> Error {
+    Error::new("err.dam.unreadable").with("message", "truncated or damaged OLE2 file")
 }

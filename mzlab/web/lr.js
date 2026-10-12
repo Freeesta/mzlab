@@ -51,10 +51,8 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
-  // «start from scratch» (?riparti=1) when the page could not delete the database itself: files, indexes, notebook
   api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
 
-  // the files of an earlier visit (OPFS): the list, the index of every one, the File for the bridge
   api.boot = async () => {
     const r = await rpc({ op: "lr_boot" });
     const list = JSON.parse(r.info);
@@ -66,7 +64,6 @@ export function createLr({ rb }) {
     }
     if (foreign) return;
     await mr.refresh();
-    // App._resume: the files that were open (the list the page keeps in the notebook) open again
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
       const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));

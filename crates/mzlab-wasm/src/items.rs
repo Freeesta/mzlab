@@ -8,11 +8,6 @@ use mzlab_core::mzmlhead::{Chrom, Mzml};
 use wasm_bindgen::prelude::*;
 use js_sys::Function;
 
-/// An engine error as a JS value; the slot has no index open.
-fn no_index() -> JsValue {
-    error_json(&mzlab_core::Error::new("error.badIndex"))
-}
-
 #[wasm_bindgen]
 impl Engine {
     /// Forgets every loaded method (the worker loads them again, oldest first, with `lab_put`).
@@ -120,4 +115,9 @@ pub fn gradient_make(fmt: &str, text_in: &str) -> Result<String, JsValue> {
         _ => gradient::parse_csv(text_in),
     };
     g.map(|g| text(&g)).map_err(|e| error_json(&e))
+}
+
+/// An engine error as a JS value; the slot has no index open.
+fn no_index() -> JsValue {
+    error_json(&mzlab_core::Error::new("error.badIndex"))
 }

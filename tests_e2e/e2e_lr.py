@@ -224,6 +224,49 @@ try:
             assert not why(pg5)[0], why(pg5)
             assert not errs, errs[:3]
         step("five files (Full Scan, MS2, MRM): the reload resumes the session without Pyodide", five_files)
+        def methods_same():
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds, dam_riferimento as dr
+            d = Path(tempfile.mkdtemp()); ds.full_scan(d / "press.mzML", 0, np.random.default_rng(9), pressure=True)
+            dr.build(d)
+            ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pa, files=[str(d / "press.mzML")], n=1)
+            cb, pb, rb_ = context(); pb.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pb, files=[str(d / "press.mzML")], n=1)
+            for i, n in enumerate(["Q1 full scan.dam", "MRM prova.dam", "garbage.dam"], 1):         # one at a time: the order of the methods is the order of the uploads
+                for pg_ in (pa, pb):
+                    pg_.set_input_files("#pick", [str(d / n)])
+                    pg_.wait_for_function(f"fetch('api/state').then(r => r.json()).then(s => s.methods.length >= {i})", timeout=60000)
+            POST = """async ([u, b]) => { const r = await fetch(u, { method: "POST", body: JSON.stringify(b) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
+            sa, sb = pa.evaluate(JSON, "api/state")["j"], pb.evaluate(JSON, "api/state")["j"]
+            assert len(sa["methods"]) == 3, sa["methods"]
+            json_close(sa["methods"], sb["methods"], path="state.methods")
+            ses = pa.evaluate(JSON, "api/session")["j"]["session"][0]
+            assert ses["analog"], ses["analog"]
+            i = ses["analog"][0]["i"]
+            gets = ["api/method?k=0", "api/method_warnings", f"api/analog?k=0&i={i}&n=50", f"api/analog?k=0&i={i}", "api/analog?k=0&i=999", "api/delay?k=0", "api/chrom?k=0&kind=pda", "api/gradient?k=0"]
+            for u in gets:
+                a, b2 = pa.evaluate(JSON, u), pb.evaluate(JSON, u)
+                assert a["status"] == b2["status"], (u, a["status"], b2["status"])
+                if a["status"] == 200: json_close(a["j"], b2["j"], path=u)
+                else: assert a["j"].get("error_key") == b2["j"].get("error_key"), (u, a["j"], b2["j"])
+                assert a["eng"] == "rust", (u, a["eng"], why(pa))
+            texts = [("gradient_parse", {"fmt": "csv", "text": "0,5\n5,95\n10,95\n11,5"}), ("gradient_parse", {"fmt": "csv", "text": "x"}), ("gradient_parse", {"fmt": "course"}),
+                     ("gradient_parse", {"fmt": "chromeleon", "text": "0.000 %B = 5.0\n5.000 %B = 90.0\nFlow = 0.4\n10.000 %B = 90.0"}),
+                     ("gradient", {"k": 0, "fmt": "csv", "text": "0,5\n6,95\n8,95"}), ("gradient", {"k": 0, "model": {"points": [{"t": 0, "b": 5}, {"t": 4, "b": 90}]}})]
+            for path, body in texts:
+                a, b2 = pa.evaluate(POST, ["api/" + path, body]), pb.evaluate(POST, ["api/" + path, body])
+                assert a["status"] == b2["status"], (path, body, a, b2)
+                if a["status"] == 200: json_close(a["j"], b2["j"], path=path)
+                else: assert a["j"].get("error_key") == b2["j"].get("error_key"), (path, a["j"], b2["j"])
+                assert a["eng"] == "rust", (path, body, why(pa))
+            json_close(pa.evaluate(JSON, "api/gradient?k=0")["j"], pb.evaluate(JSON, "api/gradient?k=0")["j"], path="gradient after POST")
+            assert not pyodide(ra), (pyodide(ra)[:3], why(pa))
+            pa.reload(); pa.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)           # the methods survive a reload (OPFS)
+            assert len(pa.evaluate(JSON, "api/state")["j"]["methods"]) == 3 and not pyodide(ra), why(pa)
+            pa.evaluate(POST, ["api/remove", {"name": "garbage.dam"}])
+            assert len(pa.evaluate(JSON, "api/state")["j"]["methods"]) == 2
+        step("methods (.dam), analog traces, PDA, delay and gradient: Rust equals Python's, without Pyodide", methods_same)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
         print("   MISURA map and profile spectra (ms, Rust flow, classic engine in Pyodide, first request):", MAPMS)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])

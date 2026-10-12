@@ -32,6 +32,7 @@ pub mod mzidx;
 pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
+pub mod methodjson;
 pub mod mzml;
 pub mod mzmlhead;
 pub mod peakq;

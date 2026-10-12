@@ -1,14 +1,6 @@
 //! A small XML tree reader, enough for the method XML that Analyst stores in a `.dam` (`xml.etree.ElementTree` in `mzlab/reader/methodinfo.py`):
 //! elements, text before the first child, entities, CDATA, comments and declarations. Anything ill-formed is `None`, like a `ParseError`.
 
-#[derive(Debug, Default, Clone)]
-pub struct El {
-    pub name: String,
-    /// Text before the first child element (`Element.text`).
-    pub text: String,
-    pub children: Vec<El>,
-}
-
 impl El {
     /// `findtext(name)` of the first direct child, "" when it has no text.
     pub fn findtext(&self, name: &str) -> Option<&str> {
@@ -29,11 +21,6 @@ impl El {
             c.iter(name, out);
         }
     }
-}
-
-struct P<'a> {
-    s: &'a [u8],
-    i: usize,
 }
 
 impl P<'_> {
@@ -72,6 +59,27 @@ impl P<'_> {
             }
         }
     }
+    /// One `name="value"` pair, skipped.
+    fn attribute(&mut self) -> Option<()> {
+        self.name()?;
+        self.ws();
+        if self.s.get(self.i) != Some(&b'=') {
+            return None;
+        }
+        self.i += 1;
+        self.ws();
+        let q = *self.s.get(self.i)?;
+        if q != b'"' && q != b'\'' {
+            return None;
+        }
+        self.i += 1;
+        while *self.s.get(self.i)? != q {
+            self.i += 1;
+        }
+        self.i += 1;
+        Some(())
+    }
+
     fn element(&mut self) -> Option<El> {
         if self.s.get(self.i) != Some(&b'<') {
             return None;
@@ -92,24 +100,7 @@ impl P<'_> {
                     self.i += 1;
                     break;
                 }
-                _ => {
-                    self.name()?;
-                    self.ws();
-                    if self.s.get(self.i) != Some(&b'=') {
-                        return None;
-                    }
-                    self.i += 1;
-                    self.ws();
-                    let q = *self.s.get(self.i)?;
-                    if q != b'"' && q != b'\'' {
-                        return None;
-                    }
-                    self.i += 1;
-                    while *self.s.get(self.i)? != q {
-                        self.i += 1;
-                    }
-                    self.i += 1;
-                }
+                _ => self.attribute()?,
             }
         }
         let mut text = Vec::new();
@@ -153,6 +144,19 @@ impl P<'_> {
             }
         }
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct El {
+    pub name: String,
+    /// Text before the first child element (`Element.text`).
+    pub text: String,
+    pub children: Vec<El>,
+}
+
+struct P<'a> {
+    s: &'a [u8],
+    i: usize,
 }
 
 /// CDATA is literal text: its `&` and `<` must not be read as entities when the buffer is decoded.
