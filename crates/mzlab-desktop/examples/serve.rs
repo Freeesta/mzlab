@@ -1,6 +1,6 @@
 //! Test aid: the `mzlab://` protocol over plain HTTP on 127.0.0.1 (no Tauri), so that `tests/e2e_shim.py` can drive the page, the
 //! shim and the worker in Chromium against the real native engine. `serve PORT FILE...` registers the files, prints one line
-//! `FILE <id> <name> <size>` per file and then serves until it is killed. `MZLAB_LIBDIR` is the folder of the libraries (POST bodies are read for `lib/put`).
+//! `FILE <id> <name> <size>` per file and then serves until it is killed. `MZLAB_LIBDIR` is the folder of the libraries (POST bodies are read for `lib/put`), `MZLAB_DATA` the folder of the app for the files, the notebook and the indexes.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
@@ -18,6 +18,10 @@ fn main() {
     if let Some(d) = std::env::var_os("MZLAB_LIBDIR") {
         state.libs.set_root(d.into());
     }
+    // the folder of the app for the files, the notebook and the indexes (`MZLAB_DATA`; a folder of the system temp dir otherwise)
+    let data = std::env::var_os("MZLAB_DATA").map(std::path::PathBuf::from).unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-serve-{}", std::process::id())));
+    state.set_data_folder(data.clone());
+    state.set_index_folder(data.join("mzidx")).expect("index folder");
     for f in args {
         let (id, p) = state.pick(f.into()).expect("file");
         println!("FILE {id} {} {}", p.name, p.size);
