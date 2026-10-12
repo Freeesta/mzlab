@@ -469,6 +469,7 @@
   "mapfeat.edges.auto": "Bordi del picco calcolati dalla pagina; {a} e {b} = RT in minuti.",
   "mapfeat.edges.rec": "Bordi dell'integrazione registrati da mzFinder; {a} e {b} = RT in minuti.",
   "map.sc.gamma": "Scala dei colori «gamma» nella legenda della mappa; {g} = esponente scelto (numero).",
+  "settings.arch.der.ask": "Domanda di conferma prima di togliere indici e file della pipeline; {size} = spazio che si libera, già formattato (es. 28 MB).",
   "settings.arch.line": "Riga delle impostazioni «Archivio nel browser»; {files} = dimensione dei file caricati e {idx} = dimensione degli indici, già formattate (es. 28 MB).",
   "settings.arch.nosize": "Come sopra quando la dimensione non è nota; {n} = numero di file caricati.",
   "settings.arch.quota": "Frase sulla quota del browser; {quota} = spazio concesso in tutto e {used} = spazio già usato, già formattati.",

@@ -7,8 +7,8 @@ const KINDS = { files: "sorgente", idx: "indice", feat: "pipeline" };
 export const FOLDERS = Object.keys(KINDS);
 
 /** the manifest row of a file of OPFS (what is not known yet is null) */
-export const rowOf = (kind, name, size, time) => ({ path: kind + "/" + name, tipo: KINDS[kind] || kind, bytes: size, creato: time || Date.now(), usato: time || Date.now(),
-  formato: (/\.([a-z]+)$/i.exec(name) || [])[1] || null, versione_formato: null, crate: null, sorgente_sha256: null });
+export const rowOf = (kind, name, size, time, info) => ({ path: kind + "/" + name, tipo: KINDS[kind] || kind, bytes: size, creato: time || Date.now(), usato: time || Date.now(),
+  formato: (/\.([a-z]+)$/i.exec(name) || [])[1] || null, versione_formato: null, crate: null, sorgente_sha256: null, ...(info || {}) });
 
 // io: { getSchema(), setSchema(n), list(kind) -> [{ name, size, lastModified }], putManifest(row) }
 export const STEPS = {
