@@ -232,7 +232,7 @@ const BANCO = (() => {
   }
   function addCell(type) {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;
-    const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + 10), 0), w = hostWidth();
+    const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + pnlGap()), 0), w = hostWidth();
     const o = { tab, x: 0, y: q, w, h: type === "map" ? 420 : 300, full: true };
     const n = type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o);
     relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
@@ -271,7 +271,7 @@ const BANCO = (() => {
     if (!sync()) return;
     const f2 = tabFiles("ms2").find(f => !f.dda && f.vis !== false);
     if (!f2 || E.panels.some(q => q.tab === "ms2")) return;
-    const y = E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0);
+    const y = E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0);
     addMs2Pair({ prec: null, k: f2.k }, y); relayout(); fitHost();
   }
     // ---------------------------------------------------------------- the information bar (WP-H3c, master-prompt §3.4): tabs as icons, one at a time, acting on the active cell.
@@ -398,7 +398,7 @@ const BANCO = (() => {
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
       if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (!o) return;
-      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true });
+      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
       relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
