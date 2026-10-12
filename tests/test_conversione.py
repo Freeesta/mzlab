@@ -32,3 +32,8 @@ def test_elapsed_and_megabytes():
 def test_converted_name_keeps_the_extension_when_taken():
     got = run("""console.log(JSON.stringify([c.convName("a.raw",[]), c.convName("a.RAW",["b.mzML"]), c.convName("a.raw",["A.mzml"]), c.convName("a.raw")]))""")
     assert got == ["a.mzML", "a.mzML", "a.raw.mzML", "a.mzML"]
+
+
+def test_wiff_sample_name():
+    got = run("""console.log(JSON.stringify([c.wiffName("FullMass",3,false,[]), c.wiffName("FullMass",3,true,[]), c.wiffName("FullMass",3,true,["fullmass_S3.mzml"]), c.wiffName("x",1,false,["X.mzML"])]))""")
+    assert got == ["FullMass.mzML", "FullMass_s3.mzML", "FullMass_s3.wiff.mzML", "x.wiff.mzML"]

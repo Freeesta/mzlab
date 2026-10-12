@@ -1,5 +1,5 @@
 "use strict";
-// Thermo .raw -> mzML (index.html rawToMzml): the progress of the conversion and the download of the converted files. Pure helpers first
+// Thermo .raw and SCIEX .wiff -> mzML (index.html rawToMzml, wiffToMzml): the progress of the conversion and the download of the converted files. Pure helpers first
 // (also run by node in tests/test_conversione.py); the DOM part below only runs in the page. Classic script, loaded after i18n.js.
 
 // progress message { total, read, written } (bytes of the .raw read, bytes of the mzML written) or, while the desktop app hands the mzML over,
@@ -16,6 +16,11 @@ function convPhase(p) {
 function convName(rawName, taken) {
   const base = String(rawName).replace(/\.raw$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   return used.has((base + ".mzML").toLowerCase()) ? base + ".raw.mzML" : base + ".mzML";
+}
+// name of the mzML of a sample of a SCIEX .wiff: "x.mzML" when the .wiff holds one sample, "x_s3.mzML" (sample number) when it holds several; "x.wiff.mzML" when taken
+function wiffName(stem, sample, several, taken) {
+  const base = several ? stem + "_s" + sample : String(stem), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+  return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // whole percent 0..100 of the file (bytes of the .raw read; bytes handed over while "writing" in the desktop app); null if not known
 function convPercent(p) {
@@ -84,4 +89,4 @@ const ConvUI = {
   },
 };
 
-if (typeof module !== "undefined") module.exports = { convName, convPhase, convPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, wiffName, convPhase, convPercent, convElapsed, convMB };

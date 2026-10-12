@@ -9,6 +9,7 @@ import { simdSupported } from "./idxpool.js";
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
+import { convertApi } from "./rust-convert.js";
 
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -95,16 +96,7 @@ export function createBridge({ workerUrl, notify }) {
       slots[k].opening = open(k, slots[k]);
     }
   };
-  // Thermo .raw -> Blob of mzML, made in the worker; rejects with an Error whose `json` is { error, error_key, params } like the API errors
-  api.convertRaw = async (file, onProgress) => {
-    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file }, onProgress);
-    if (r.dead || r.error) {
-      let e = { error_key: "err.file.raw", params: { detail: "" } };
-      try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
-      throw Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
-    }
-    return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
-  };
+  Object.assign(api, convertApi(rpc, base));                          // convertRaw, wiffSamples, convertWiff (rust-convert.js)
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

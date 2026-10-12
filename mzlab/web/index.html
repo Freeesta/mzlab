@@ -706,6 +706,22 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
     try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
+const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
+// SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
+async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+  if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
+  res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  const jobs=[];
+  for(const [k,e] of [...WIFF_WAIT]){
+    if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
+    WIFF_WAIT.delete(k);
+    try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>jobs.push({e,n,several:s.length>1}))}catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}}
+  const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)];let i=0;
+  for(const j of jobs){const nm=wiffName(j.e.stem,j.n,j.several,taken),ui=ConvUI.start(box,++i,jobs.length,nm);
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>ui.update(p));taken.push(nm);CONV.add(nm,blob);res.files.push(new File([blob],nm));ui.done();renderFiles()}
+    catch(x){ui.fail(x.json?I18N.err(x.json).message:x.message)}}
+  return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
 function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
@@ -743,8 +759,8 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
-async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
+async function upload(files,into){const box=$("#up");fail();const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   const one=async f=>{const isDam=isMethodFile(f.name);

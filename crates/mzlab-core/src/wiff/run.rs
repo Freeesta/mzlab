@@ -2,10 +2,13 @@
 //! and the MRM blocks become a TIC and one SRM chromatogram per transition.
 
 use super::{scan, Wiff};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
+
+/// Model written in the mzML header (the format read here is the one of the 3200 QTRAP).
+const INSTRUMENT: &str = "3200 QTRAP";
 
 /// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
 #[derive(Default)]
@@ -57,6 +60,12 @@ impl Wiff {
         }
         self.add_chromatograms(&mut run, mrm);
         Ok(run)
+    }
+
+    /// The sample as mzML (`mzmlwrite`): the same spectra and chromatograms as `run`. `name` is the `.wiff` it comes from.
+    pub fn to_mzml<R: ReadAt, W: std::io::Write>(&self, scan: &mut R, out: &mut W, name: &str) -> Result<()> {
+        let run = self.run(scan)?;
+        crate::mzmlwrite::write(&run, out, name, INSTRUMENT).map_err(|_| Error::new("err.file.wiff").with("detail", "write"))
     }
 
     fn add_chromatograms(&self, run: &mut Run, mrm: Vec<Mrm>) {

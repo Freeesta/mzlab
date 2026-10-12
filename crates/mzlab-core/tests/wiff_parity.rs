@@ -41,7 +41,7 @@ fn open(dir: &Path, name: &str, sample: u32) -> (Wiff, Vec<u8>) {
 #[test]
 fn synthetic_pairs_match_the_reference() {
     let Some((dir, want)) = reference() else { return };
-    for name in ["one", "two"] {
+    for name in ["one", "two", "serie"] {
         let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
         let all = samples(&ole);
         assert_eq!(all.len(), want[name].as_object().unwrap().len(), "{name}: samples");
@@ -142,4 +142,25 @@ fn real_files_match_proteowizard() {
     }
     eprintln!("compared {done} mzML files");
     assert!(done > 0, "no mzML paired with a wiff");
+}
+
+/// The mzML written from a sample reads back to the same `Run` (same ids, times, points, chromatograms).
+#[test]
+fn the_mzml_of_a_sample_reads_back_the_same() {
+    let Some((dir, _)) = reference() else { return };
+    for name in ["one", "two", "serie"] {
+        let ole = container(std::fs::read(dir.join(format!("{name}.wiff"))).unwrap(), name).unwrap();
+        for s in samples(&ole) {
+            let (w, mut scan) = open(&dir, name, s);
+            let (want, mut xml) = (w.run(&mut scan).unwrap(), Vec::new());
+            w.to_mzml(&mut scan, &mut xml, &format!("{name}.wiff")).unwrap();
+            let got = mzml::read(&xml[..]).unwrap();
+            assert_eq!(got.spectra.len(), want.spectra.len(), "{name}/{s}: spectra");
+            for (g, e) in got.spectra.iter().zip(&want.spectra) {
+                assert_eq!((&g.id, g.level, g.polarity, g.profile, g.precursor, g.rt), (&e.id, e.level, e.polarity, e.profile, e.precursor, e.rt), "{name}/{s}");
+                assert_eq!((&g.mz, &g.wide), (&e.mz, &e.wide), "{}: points", e.id);
+            }
+            assert_eq!(got.chromatograms, want.chromatograms, "{name}/{s}: chromatograms");
+        }
+    }
 }
