@@ -37,7 +37,24 @@ window.LIVELLI_DATI = {
     {"id": "stdppm", "campo": "ppm", "op": "<=", "soglia": "std_ppm_max", "assoluto": true, "unita": "ppm"}
    ],
    "provvisorio": {"campo": "ent", "soglia": "entropia_provvisorio"},
-   "senza_prove": "5"
+   "senza_prove": "5",
+   "punti": {
+    "versione": 1,
+    "riferimento": "stepped points per proof after Alygizakis et al., TrAC 2023, as an explanation and never as a learned model: the total orders the candidates, the level stays the cascade above (2b and 1 only by the chemist). A proof 'against' earns no points and is never offset. Steps are listed best first; a string is the key of a threshold of 'soglie'.",
+    "tolleranze": {"massa_ppm": "precursore_ppm_max", "margine_ms2": "margine_min"},
+    "prove": {
+     "massa": {"op": "<=", "assoluto": true, "unita": "ppm", "gradini": [{"soglia": 2, "punti": 2}, {"soglia": 5, "punti": 1}]},
+     "isotopi": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.9, "punti": 2}, {"soglia": 0.7, "punti": 1}]},
+     "MS2": {"op": ">=", "richiede": {"op": ">=", "soglia": "picchi_min"}, "gradini": [{"soglia": "entropia_min", "punti": 3}, {"soglia": "entropia_provvisorio", "punti": 1}]},
+     "frammenti": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.8, "punti": 2}, {"soglia": 0.5, "punti": 1}]},
+     "rete": {"op": "<=", "assoluto": true, "unita": "ppm", "gradini": [{"soglia": 5, "punti": 1}]},
+     "cinetica": {"op": "<=", "massimo": 0, "massimo_se_pesata": 1, "gradini": [{"soglia": 0.693, "punti": 1}]},
+     "controlli": {"op": ">=", "gradini": []},
+     "RT": {"op": ">=", "gradini": []},
+     "frequenza": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.75, "punti": 1}]},
+     "esterne": {"op": ">=", "gradini": [{"soglia": 0.64, "punti": 2}]}
+    }
+   }
   },
   "attributio": {
    "visibile": false,

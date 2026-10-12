@@ -137,3 +137,35 @@ def test_colour_class_and_sentence_never_say_it_is():
     r = lv("return [L.cls('2a'), L.cls('0'), L.sentence('2a'), L.sentence('3'), L.name('5')]")
     assert r[0] == "lv-2a" and r[1] == "lv-0"
     assert r[2] == "Candidato · livello 2a · Probabile (libreria)" and r[3].startswith("Candidato · livello 3")
+
+
+def test_points_section_does_not_change_the_levels():
+    """The points of the proofs (section `punti`, read by crates/mzlab-feat) explain the order and never assign a level: the same cases give the same
+    proposal, reason and gates with the section and without it."""
+    r = run("""const cases = [];
+      for (const ent of [.5, .62, .7, .8, .95]) for (const shared of [2, 4, 6, 9]) for (const dprec of [1, 4.9, 7]) for (const nScans of [1, 3]) for (const profile of ['mzlab', 'attributio'])
+        cases.push([{ cands: [c(ent, shared, dprec), c(ent - .02, shared, dprec, 'B', 'BBBBBBBBBBBBBB-X')], nScans, formulaUnique: shared > 5 }, profile]);
+      cases.push([{ cands: [] }, 'mzlab'], [{ cands: [], formulaUnique: true }, 'mzlab'], [{ cands: [c(.9, 8, 2)], std: { drt: .05, ent: .9, dprec: 1, name: 'S' }, nScans: 3 }, 'mzlab']);
+      const run = () => cases.map(([i, p]) => { const x = L.assess(i, p); return [x.proposed, x.why, x.gates.map(g => g.txt), x.decisive]; });
+      const withPoints = run(), had = !!L.data.profili.mzlab.punti; delete L.data.profili.mzlab.punti;
+      console.log(JSON.stringify({ had, n: cases.length, same: JSON.stringify(withPoints) === JSON.stringify(run()) }))""")
+    assert r["had"] is True and r["n"] > 200 and r["same"] is True
+
+
+def test_points_section_shape():
+    p = run("console.log(JSON.stringify(L.data.profili.mzlab.punti))")
+    assert p["versione"] == 1 and set(p["prove"]) == {"massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"}
+    assert [g["punti"] for g in p["prove"]["massa"]["gradini"]] == [2, 1] and p["prove"]["MS2"]["gradini"][0] == {"soglia": "entropia_min", "punti": 3}
+    assert p["prove"]["cinetica"]["massimo"] == 0 and p["prove"]["cinetica"]["massimo_se_pesata"] == 1           # K1: informative only
+    soglie = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
+    keys = [g["soglia"] for r in p["prove"].values() for g in r["gradini"] if isinstance(g["soglia"], str)] + [r["richiede"]["soglia"] for r in p["prove"].values() if "richiede" in r]
+    keys += list(p["tolleranze"].values())
+    assert keys and all(k in soglie for k in keys)                                                               # every named threshold exists in `soglie`
+    for r in p["prove"].values():
+        pts = [g["punti"] for g in r["gradini"]]
+        assert pts == sorted(pts, reverse=True) and all(x >= 0 for x in pts)                                    # best step first, never negative points
+
+
+def test_rust_json_is_generated_from_the_data_file():
+    out = subprocess.run(["python3", str(WEB.parent.parent / "tools" / "esporta_livelli.py"), "--controlla"], capture_output=True, encoding="utf-8")
+    assert out.returncode == 0, out.stderr
