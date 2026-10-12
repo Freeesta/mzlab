@@ -2,6 +2,9 @@
 [advisories]
 version = 2
 yanked = "warn"
+# Unmaintained (not a vulnerability) and compile-time only: reached through the gtk3 bindings of Tauri on Linux, no safe upgrade exists.
+# Remove it when Tauri moves to a maintained macro crate.
+ignore = ["RUSTSEC-2024-0370"]
 
 [licenses]
 version = 2
