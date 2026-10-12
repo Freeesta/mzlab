@@ -139,7 +139,7 @@ try:
             assert pg.evaluate("PROFILO.result.rows.find(r=>r.file==='HR_Blank_1.mzML').value") is None, "the blank has no peak of the ion"
         step("HR: profile of an ion divided by the internal standard of the same file", hr_profile)
         def hr_table():
-            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca"], sections(pg)
+            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca", "kmd"], sections(pg)
             pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0\nabc; 1"); pg.click("#feat-go")
             assert "1" in pg.inner_text("#feat-msg") and pg.evaluate("TABELLA.table") is None, "an invalid line is refused with its number"
             pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0"); pg.click("#feat-go")
