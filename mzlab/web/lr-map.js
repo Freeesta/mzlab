@@ -30,3 +30,12 @@ export async function engineRoute(path, q, env) {
   if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, q, env);
   return undefined;
 }
+
+/** The POST routes of the statistics (`api/stat/profile|blank|reference|pca`): the Rust engine from the table the page sends. null = Python's.
+ * @param {string} path  @param {string} body  @param {{rpc: (m: any) => Promise<any>}} env */
+export async function statRoute(path, body, { rpc }) {
+  if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
+  const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;
+  if (!r) return null;
+  return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
+}
