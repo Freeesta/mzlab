@@ -115,9 +115,11 @@ try:
             pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
             pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=use]')).forEach(i => { const on = /^prodotto_s2/.test(i.closest('tr').children[1].textContent.trim()); if (i.checked !== on) i.click(); })")
             pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0 && E.panels.some(q => q.type === 'spec')", timeout=120000); pg.wait_for_timeout(1500)
-            pg.evaluate("""() => { const p = E.panels.find(q => q.type === 'spec'); p.all = false; p.link = null; E.browse = false; p.k = E.files.findIndex(f => /_s2/.test(f.label));
-              p.level = 2; p.prec = "229.1"; p.r0 = 3.0008; p.r1 = 3.0022; drawSoon(p); }""")
-            pg.wait_for_function("(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls); })()", timeout=60000)
+            for prec, r0, r1 in ((229.1, 3.7, 3.702), (305, 3.7, 3.702), ("305", 1.0, 1.001), (229.1, 6.0, 6.001)):          # narrow windows, most of them without a scan of the precursor
+                pg.evaluate("""([prec, r0, r1]) => { const p = E.panels.find(q => q.type === 'spec'); p._a = null; p.all = false; p.link = null; E.browse = false; p.k = E.files.findIndex(f => /_s2/.test(f.label));
+                  p.level = 2; p.prec = prec; p.r0 = r0; p.r1 = r1; drawSoon(p); }""", [prec, r0, r1])
+                pg.wait_for_function("(() => { const p = E.panels.find(q => q.type === 'spec'); return !!(p && p._a && p._a.lbls); })()", timeout=60000)
+            assert not errs, errs
             c2.close()
         step("the product-ion spectrum of a precursor is drawn for a file with two precursors and for a file with another one", product_spectrum)
         def mzfinder():                                  # the converted files are ordinary files of the Data tab: mzFinder (LR) lists them
