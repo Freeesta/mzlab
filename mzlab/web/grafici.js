@@ -234,7 +234,7 @@ function ibkChip(p) {
   chip.querySelector("[data-ib=clip]").onchange = e => { ib.clip = e.target.checked; draw(p); uiSave(); };
   chip.querySelector("[data-ib=spec]").onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { p.ibk = null; draw(p); uiSave(); };
-  p.leg.appendChild(chip);
+  (p.corrbar || p.leg).appendChild(chip);
 }
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
@@ -270,8 +270,9 @@ function legend(p, all, note = "") {
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
   } else p.leg.innerHTML = all.map(s => `<span class="tg${off(isHid(p, s))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${sw(s.color)}${EH(s.name)}${legPol(E.files[s.k])}</span>`).join("");
-  if (!note && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
-  if (note) p.leg.insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
+  if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
+  if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
+  if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   if (window.CAMPIONI && p.leg.innerHTML) {                  // time gradient: the bar from the first to the last time of the files drawn
     const fs = (p.type === "xic" ? scanFiles(shownFor(p)) : all.map(s => E.files[s.k])).filter(f => f && f.rank != null);
     if (fs.length > 1) p.leg.insertAdjacentHTML("beforeend", CAMPIONI.gradientLegend(fs));
@@ -297,7 +298,7 @@ async function drawLines(p) {
   const sr = all.filter(s => !isHid(p, s));
   if (!sr.length) {
     g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : MSG[p.type], M.l, 30);
-    p._a = null; if (all.length) legend(p, all); else p.leg.innerHTML = ""; return;
+    p._a = null; if (all.length) legend(p, all); else { p.leg.innerHTML = ""; if (p.corrbar) p.corrbar.innerHTML = ""; } return;
   }
   let lo = Infinity, hi = -Infinity;
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
