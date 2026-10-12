@@ -35,6 +35,8 @@ pub struct Aligned {
     pub meta: RowMeta,
     /// Neutral mass, adduct and source of each row (`RowIdent::compute`, after the last sort); empty when not computed.
     pub ident: RowIdent,
+    /// The view of the transformation products (`tp::build`); empty when not computed.
+    pub tp: crate::tp::TpBlock,
 }
 
 impl Aligned {
@@ -88,5 +90,6 @@ impl Aligned {
             + self.member_role.capacity()
             + self.meta.heap_bytes()
             + self.ident.heap_bytes()
+            + self.tp.heap_bytes()
     }
 }

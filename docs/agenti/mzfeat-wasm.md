@@ -11,6 +11,11 @@ Lo stato attuale del ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e 
 - `mzlab-feat/src/sortc.rs`: ordinamenti stabili compatti usati dai moduli che girano nel `.wasm` (gli `slice::sort*` istanziati per ogni tipo pesavano 5-10 KB l'uno); non toccano `evid*`, `hypo*`, `kinetic*`, `suspects`.
 - `src/run.rs` contiene la pipeline generica su `ReadAt`, condivisa con l'esempio nativo `examples/nativo.rs` (riferimento: stampa `nome sha256` di ogni file). Lacuna nota: gli archi delle famiglie non stanno nel `.mzfeatf`, quindi `build_evidence` li passa vuoti.
 
+## Il terzo `.wasm`: `crates/mzlab-feat-table-wasm`
+- Viste, rapporto ed esportazioni della tabella, caricato dalla pagina solo quando si mostra o si esporta una tabella (il motore della pipeline non lo porta). Costruito da `tools/build_feat_wasm.sh` in `wasm-feat/table/`, con la voce `table` in `manifest.json` (SHA-256), stesso limite di peso degli altri due.
+- Funzioni: `table_view(read, size, campioni_json, spec)` → `{digest, righe (id), fattori, conteggi}`; `table_report(..., table_sha256)` → `report/1`; `export_table(..., polarita, kind)` con `kind` `full`, `full_mzmine` o `quant`; `export_ms2(..., polarita, kind, index_read, index_sizes)` con `kind` `mgf` o `sirius`; `version()`, `crate_version()`. `spec` è il JSON `{"normalizza":..., "filtra":[...]}` (vuoto = tutta la tabella, aree come misurate); `read(0, offset, len)` legge il `.mzfeat`, `index_read(k, offset, len)` i `.mzidx`. Errori come negli altri (`{error_key, params}`).
+- I passi stanno in `src/core.rs` su qualunque `ReadAt`; l'esempio `tabella` li scrive nativi e `tests/test_feat_table_wasm.py` (con `tests/feat_table_node.js`) confronta i byte con il `.wasm`.
+
 ## Il worker (`TP_Mine/files/feat-worker.js`)
 - Un file, due ruoli.
 - Lato pagina `createFeatPool({workerUrl, wasm:{feat,proofs}, size, notify, onProgress})`: `detectAll(files, recipe)`, `align(stored, paths, recipe)`, `hypotheses({...})` e `evidence({...})` (L7 e L8-L9 in due worker che si chiudono a fine lavoro; lo stato delle ipotesi passa come byte di `Hypotheses.state()` / `load_hypotheses`, `crates/mzlab-feat-wasm/src/state.rs`), `proofs({...})` (le due di seguito), `budgetMb` (memoria di lavoro di un passo, 0 = 192 MB), `fs.write/read/exists/remove` (worker d'archivio, scrive `nome.part` poi `move()`), `cancel()`, `resume()`.

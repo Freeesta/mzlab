@@ -116,7 +116,7 @@
   }
 
   // ---- switch: logo-piccone.js (the five hits on the logo of the header) calls QTOOLS.flip()
-  reg.flip = () => { if (on) { setOn(false); turnOff(); } else { setOn(true); turnOn(); } };
+  reg.flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
   const start = () => { if (getOn()) turnOn(); };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

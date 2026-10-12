@@ -147,13 +147,17 @@ def free_port() -> int:
 # because a few tests share the fixed ones (they were written to run one after the other)
 PARALLEL = get_env("E2E_PARALLEL") == "1"
 class Run:
-    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=()):
+    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=(), motore="sito"):
         if PARALLEL:
             port = free_port(); wd = f"{wd}_{port}"
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
-        s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
-                                 cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if motore == "sito":          # the built site with the Rust engine (tools/prepara_sito.py): what the students get
+            s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        else:                         # "python": the page against the Python reference (tools/dev_server.py), for the tests not moved yet
+            s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
+                                     cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         # ready as soon as the server answers (it was a fixed 2 s wait)
         import urllib.request
         t0 = time.time()

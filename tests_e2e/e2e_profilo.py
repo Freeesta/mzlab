@@ -15,7 +15,7 @@ D = Path("/tmp/prof_e2e"); D.mkdir(exist_ok=True)
 ds.full_scan_profile(D / "P_FullMass-t15.mzML", 15, np.random.default_rng(3))
 ds.full_scan(D / "C_FullMass-t15.mzML", 15, np.random.default_rng(4))
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
-r = Run(port=8884, wd="/tmp/wd84")
+r = Run(port=8884, wd="/tmp/wd84", motore="python")
 try:
     with sync_playwright() as p:
         pg = r.page(p)

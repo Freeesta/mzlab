@@ -93,3 +93,11 @@ def test_numbers_always_use_the_point_in_both_languages():
     r = node("""I.add('it', {k: '{x, number} · {n, plural, other {# file}}'}); I.set && I.set('it');
     console.log(JSON.stringify([I.fix(1234.5, 2), I.fix(0.5, 1), I.t('k', {x: 1234567.25, n: 12345.5})]))""")
     assert r == ["1234.50", "0.5", "1234567.25 · 12345.5 file"]
+
+
+@needs_node
+def test_app_name_fills_in_without_parameters():
+    """{app} comes from window.APP_NAME (appname.js) even when the caller passes no parameters; an explicit parameter still wins."""
+    r = node("globalThis.APP_NAME='NomeProva'; I.add('it', {'k.a': '{app} è gratis', 'k.b': '{app} e {n}'}); I.add('en', {'k.a': '{app} is free', 'k.b': '{app} and {n}'});"
+             "console.log(JSON.stringify([I.t('k.a'), I.t('k.a', {}), I.t('k.b', {n: 2}), I.t('k.a', {app: 'Altro'})]))")
+    assert r == ["NomeProva è gratis", "NomeProva è gratis", "NomeProva e 2", "Altro è gratis"]

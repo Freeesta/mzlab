@@ -9,7 +9,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_base.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("hrbase")
-r = Run(port=8890, wd="/tmp/wdhr1")
+r = Run(port=8890, wd="/tmp/wdhr1", motore="python")
 FILES = lambda: "E.files.map(f=>[f.file,f.kind,f.prof1.hr,f.prof1.an,f.prof1.dec,f.prof2.hr,f.prof2.an,f.prof2.dec,f.instrument,f.dda,f.nce,f.hr_err||null])"
 try:
     with sync_playwright() as p:
@@ -64,7 +64,7 @@ try:
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real Orbitrap cuttings (private data repository), in a clean session
-        r = Run(port=8891, wd="/tmp/wdhr2")
+        r = Run(port=8891, wd="/tmp/wdhr2", motore="python")
         with sync_playwright() as p:
             pg = r.page(p)
             def real():
