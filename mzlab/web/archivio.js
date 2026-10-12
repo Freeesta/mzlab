@@ -1,8 +1,8 @@
 // Archive of the browser version: the files the student opened and their .mzidx indexes live in OPFS (the origin private file system),
-// outside the memory of the page. Only browser-worker.js (the worker of the engine) uses this module, so it is the only place that holds
-// OPFS handles; each is opened for one write and closed at once. Reading goes through File objects (getFile), which Pyodide mounts with WORKERFS.
+// outside the memory of the page. The Rust engine's worker (rust-worker.js) and the index builders use this module, so they are the only places that hold
+// OPFS handles; each is opened for one write and closed at once. Reading goes through File objects (getFile).
 // Folders: files/ (the mzML), idx/ ("<name of the mzML>.mzidx"). No OPFS (an old Safari, a private window that refuses it): available() is false and the
-// program keeps the files in the memory of the engine and in IndexedDB, as before.
+// page says that the browser is too old (browser.js).
 const ROOT = "mzlab";
 const STEP = 8 << 20;        // bytes written at a time (a Blob is read slice by slice, never whole)
 let rootP = null;
@@ -41,13 +41,6 @@ export async function put(kind, name, data) {
   if (data instanceof Blob) return write(kind, name, data.size, async (o, n) => new Uint8Array(await data.slice(o, o + n).arrayBuffer()));
   const u8 = data instanceof Uint8Array ? data : new Uint8Array(data);
   return write(kind, name, u8.length, async (o, n) => u8.subarray(o, o + n));
-}
-
-// a file of the Emscripten file system of Pyodide (FS) -> File in OPFS, read in pieces
-export async function putFromFS(kind, name, FS, path) {
-  const size = FS.stat(path).size, st = FS.open(path, "r"), buf = new Uint8Array(Math.min(STEP, size) || 1);
-  try { return await write(kind, name, size, async (o, n) => { const got = FS.read(st, buf, 0, n, o); return buf.subarray(0, got); }); }
-  finally { FS.close(st); }
 }
 
 // a file written under a temporary name (by a worker of the pool) takes its final name; a half-written file never has it

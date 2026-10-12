@@ -30,7 +30,7 @@ try:
                 vis = q.evaluate("[...document.querySelectorAll('header > *, #nav button')].filter(e=>e.offsetParent!==null).map(e=>e.id||e.dataset.v||e.className)")
                 assert vis == ["logo", "nav", "theory", "phinfo"], vis
                 assert q.is_visible("#phone") and q.is_hidden("#loading") and "schermo grande" in q.inner_text("#phone") and "MB" not in q.inner_text("#phone")
-                heavy = [u for u in reqs if any(k in u for k in ("draw.js", "openchemlib", "ketcher", "esempi/", "pyodide", "browser-worker", ".wasm", "explore.js", "grafici.js", "hr.js", "banco.js"))]
+                heavy = [u for u in reqs if any(k in u for k in ("draw.js", "openchemlib", "ketcher", "esempi/", "pyodide", ".wasm", "explore.js", "grafici.js", "hr.js", "banco.js"))]
                 assert not heavy, heavy
                 assert q.evaluate("document.documentElement.scrollWidth") <= vw
                 q.click("#phinfo"); assert q.is_visible("#phmore")
@@ -72,7 +72,7 @@ try:
             assert q.evaluate("document.documentElement.scrollWidth") <= 390
             q.wait_for_timeout(800)
             q.screenshot(path=SH + f"tel_scheda_{scheme}.png")
-            heavy = [u for u in reqs if any(k in u for k in ("pyodide", ".wasm", "browser-worker", "explore.js", "draw.js", "openchemlib"))]
+            heavy = [u for u in reqs if any(k in u for k in ("pyodide", ".wasm", "explore.js", "draw.js", "openchemlib"))]
             assert not heavy, heavy
             assert any("teoria/teoria.js" in u for u in reqs) and any("teoria/index.html" in u for u in reqs), "Teoria not warmed up"
             t0 = q.evaluate("performance.now()")

@@ -8,6 +8,7 @@ import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
 import { makeConvertRaw } from "./rust-raw.js";
+import { wiffApi } from "./rust-convert.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -102,6 +103,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
   api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
+  Object.assign(api, wiffApi(rpc, base));                              // wiffSamples, convertWiff (rust-convert.js)
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

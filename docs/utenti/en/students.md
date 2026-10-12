@@ -10,7 +10,7 @@ mzLab lets you look at the LC-MS data of experiment 3 and search for transformat
 ## Loading data
 - Drag the `.mzML` files (and the `.dam` method file, if you have it) into the loading screen, check times and types, press **Load data**.
 - No files at hand: **"Try the example files"**.
-- `.wiff` files cannot be opened: convert them to mzML with ProteoWizard MSConvert on Windows (the guide is on the loading screen; profile mode is preferred).
+- 3200 QTRAP `.wiff` files open directly: drop the `.wiff` together with its `.wiff.scan` (same name) and the site makes one mzML per sample, which you can download with «Download mzML». Other `.wiff` variants (not 3200 QTRAP) are converted with ProteoWizard MSConvert or the SCIEX converter on Windows (the guide is on the loading screen; profile mode is preferred).
 - Your files **never leave your computer** (see [Privacy](privacy.md)).
 
 ## What you find

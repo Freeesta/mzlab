@@ -9,7 +9,7 @@
 ## Before the lesson
 1. Try the site with the **example files** ("Try the example files") and with your own data.
 2. Ask students to open the site once beforehand: after the first load the browser keeps most of it.
-3. `.wiff` files must be converted to `.mzML` (MSConvert, profile mode): the guide is on the loading screen.
+3. 3200 QTRAP `.wiff` files open directly together with their `.wiff.scan`; other `.wiff` variants must be converted to `.mzML` (MSConvert or the SCIEX converter, Windows only, profile mode): the guide is on the loading screen.
 4. **Student and laboratory data are never published**: they do not belong in issues, forums or public repositories.
 
 ## Version freeze during lessons
