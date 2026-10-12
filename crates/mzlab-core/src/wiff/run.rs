@@ -90,7 +90,8 @@ impl Wiff {
                 good.push((r.at, r.end));
             }
         }
-        let pick = (0..good.len().min(64)).map(|i| good[i * good.len() / good.len().min(64)]);
+        let n = good.len().min(64);
+        let pick = (0..n).filter_map(|i| good.get(i * good.len() / n).copied());
         let mut scans = Vec::new();
         for (at, end) in pick {
             if let Some(p) = scan::read_scan(scan, self.scan_len, at, end)? {
@@ -129,7 +130,7 @@ impl Wiff {
                 let c = centroidi::centroids(&s.mz, s.wide.as_deref().unwrap_or(&[]), p, &mut buf);
                 s.mz = c.iter().map(|c| c.mz).collect();
                 let v: Vec<f64> = c.iter().map(|c| c.value).collect();
-                s.intensity = v.iter().map(|&x| x as f32).collect();
+                s.intensity = v.iter().map(|&x| narrow(x)).collect();
                 s.wide = Some(v);
                 s.profile = false;
             }
@@ -181,4 +182,10 @@ struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,
     cols: Vec<Vec<f64>>,
+}
+
+/// The f32 copy of a value written as f64 (`Spectrum::intensity` next to `wide`).
+#[allow(clippy::cast_possible_truncation)]
+fn narrow(x: f64) -> f32 {
+    x as f32
 }
