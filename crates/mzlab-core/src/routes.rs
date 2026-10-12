@@ -31,7 +31,7 @@ impl Query {
     pub fn some(&self, k: &str) -> Option<&str> {
         self.get(k).filter(|v| !v.is_empty())
     }
-    pub(crate) fn num(&self, k: &str) -> Result<Option<f64>> {
+    pub fn num(&self, k: &str) -> Result<Option<f64>> {
         match self.some(k) {
             None => Ok(None),
             Some(v) => v

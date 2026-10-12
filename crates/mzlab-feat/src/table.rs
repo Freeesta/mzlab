@@ -1,5 +1,7 @@
 //! Table of the features of one file: one row per ion trace, one vector per column (same row in every vector).
 
+pub use crate::aligned::*;
+
 /// Bits of `flags`.
 pub const FLAG_BACKGROUND: u8 = 1 << 0;
 /// Fourier-transform side lobe of a much more intense ion.
@@ -110,11 +112,9 @@ pub struct FileFeatures {
     pub purity: Vec<f32>,
     /// Area of the raw trace (no floor) within `quality::AREA_HALF_WINDOW` minutes of the apex, counts x seconds: the isotope ratios use it.
     pub area_win: Vec<f64>,
-    /// Family of the row = position + 1 of its `ROLE_M` row (0 = none); the unit that is aligned across files.
+    /// Family of the row = position + 1 of its `ROLE_M` row (0 = none), the unit aligned across files; `role`: `ROLE_*`; `alt`: `ALT_*`.
     pub family_id: Vec<u32>,
-    /// `ROLE_*`.
     pub role: Vec<u8>,
-    /// `ALT_*`: readings left open.
     pub alt: Vec<u8>,
     /// Median scan interval, seconds.
     pub dt: f64,

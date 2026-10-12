@@ -187,3 +187,11 @@ Resta ~0.7 s per la costruzione dell'indice (avvio del worker, 0.2 s di calcolo 
 ## Famiglie di ioni per file (`cargo run --release -p mzlab-feat --example famiglie -- FILE.mzidx [--truth verita.json]`, 4 CPU, solo `analyse_families`)
 Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 98,9 % (basi con la famiglia giusta 181/183), ISF 12/13, addotti 31/31, falsi ISF dichiarati ISF 0/13, NH4 lasciati aperti 8/8. Tre file Orbitrap da circa 80 MB (indice 54-56 MB): 141 208 feature → 119 317 famiglie in 0,76 s (il file con più rumore), 77 197 → 65 645 in 0,32 s, 79 560 → 67 594 in 0,32 s. Il tempo è per due terzi nella lettura delle tracce (`traces::gather` scorre quasi tutta la tabella dei picchi) e nelle finestre di m/z dei candidati.
 
+
+## «Da dove viene questo ione?» (`api/origin`, `cargo test --release -p mzlab-core --test origin_parity` e `tools/origin_riferimento.py`, nativo, dati LR veri e sintetici, un report con 200 bootstrap, 400 spostamenti, 25 candidati)
+| Motore | Tempo per rapporto (ms) |
+|---|---|
+| Python (numpy, `ionfamily.origin_report`) | 320-365 |
+| Rust (`origin::origin_report`) | 80-90 |
+
+Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazione, rapporto con bootstrap, cinetica, ruoli e candidati. Nel browser (WebAssembly) non misurato qui. Parità: stessi indici e conteggi, numeri uguali entro 1e-9, p-value Monte Carlo identici (stesso `default_rng`).
