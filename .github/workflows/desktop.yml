@@ -123,7 +123,10 @@ jobs:
         run: cargo install tauri-cli --version "^2" --locked --force
       - name: Installer
         working-directory: crates/mzlab-desktop
-        run: cargo tauri build --features app ${{ matrix.args }}
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"     # Linux: linuxdeploy is an AppImage and the runners have no FUSE
+          NO_STRIP: "true"                  # Linux: the strip of the runner does not know every section of the libraries
+        run: cargo tauri build --features app ${{ matrix.args }} --verbose
       - uses: actions/upload-artifact@v4
         with:
           name: mzlab-desktop-${{ runner.os }}
