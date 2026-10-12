@@ -9,7 +9,46 @@ let rootP = null;
 // a function told of every change of the folders ("put" | "del", kind, name, size): the manifest of the files (migra.js) follows through it
 let onChange = null;
 export const watch = f => { onChange = f; };
-const told = (ev, kind, name, size) => { if (onChange) { try { Promise.resolve(onChange(ev, kind, name, size)).catch(() => {}); } catch (_) { /* optional */ } } };
+const told = (ev, kind, name, size) => {
+  if (onChange) { try { Promise.resolve(onChange(ev, kind, name, size)).catch(() => {}); } catch (_) { /* optional */ } }
+  try { channel().postMessage({ t: "file", ev, kind, name, size }); } catch (_) { /* optional */ }
+};
+
+// the other tabs hear of every change (BroadcastChannel "mzlab": { t: "file", ev, kind, name, size }); `listen(f)` is called for the ones that come from elsewhere
+let bc = null;
+const channel = () => bc || (bc = new BroadcastChannel("mzlab"));
+export const listen = f => { try { channel().addEventListener("message", e => f(e.data)); } catch (_) { /* no BroadcastChannel */ } };
+
+// one tab at a time writes a file (Web Locks "mzlab-file:<kind>/<name>"): a lock held for more than WAIT_MS is not waited for silently, it is an error with a key
+const WAIT_MS = 2000;
+const fail = (key, params) => JSON.stringify({ error_key: key, params });          // thrown as a string: the worker answers it as an error of the engine (a key, not a fault)
+export async function locked(kind, name, fn) {
+  const L = self.navigator && navigator.locks;
+  if (!L) return fn();
+  const key = "mzlab-file:" + kind + "/" + name, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), WAIT_MS);
+  try {
+    return await L.request(key, { mode: "exclusive", signal: ctl.signal }, async () => { clearTimeout(timer); return fn(); });
+  } catch (e) {
+    if (e && e.name === "AbortError") throw fail("error.fileInUse", { file: name });
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+
+// storage: persist() once (the first file); before a big write the room is checked (sources + their index take about 1.8 times the size)
+let asked = false;
+export async function persistOnce() {
+  if (asked) return;
+  asked = true;
+  try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (_) { /* optional */ }
+}
+export const BIG = 50 << 20, ROOM = 1.8;
+export async function ensureRoom(bytes) {
+  if (bytes < BIG) return;
+  const e = await estimate();
+  if (!e.quota) return;                                      // unknown: not refused
+  const need = bytes * ROOM, free = e.quota - e.usage;
+  if (need > free) throw fail("error.quota", { serve_mb: Math.ceil(need / 1048576), libero_mb: Math.max(0, Math.floor(free / 1048576)) });
+}
 
 export const available = () => {
   try { return !!(self.navigator && navigator.storage && navigator.storage.getDirectory && typeof FileSystemFileHandle !== "undefined" && FileSystemFileHandle.prototype.createSyncAccessHandle); }
@@ -20,7 +59,8 @@ const root = () => rootP || (rootP = navigator.storage.getDirectory().then(d => 
 const dir = async kind => (await root()).getDirectoryHandle(kind, { create: true });
 
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
-async function write(kind, name, size, chunk) {
+function write(kind, name, size, chunk) { return locked(kind, name, () => writeNow(kind, name, size, chunk)); }
+async function writeNow(kind, name, size, chunk) {
   const d = await dir(kind);
   const fh = await d.getFileHandle(name, { create: true });
   const ah = await fh.createSyncAccessHandle();
