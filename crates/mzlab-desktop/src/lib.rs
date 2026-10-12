@@ -8,6 +8,7 @@ pub mod librerie;
 pub mod mapped;
 pub mod protocol;
 pub mod rpc;
+mod rpc_lr;
 pub mod scarica;
 pub mod store;
 pub mod update;

@@ -7,99 +7,20 @@ use std::collections::HashMap;
 use std::io::{Seek, SeekFrom, Write};
 use std::sync::Arc;
 
-use mzlab_core::gradient::{self, Gradient};
+use mzlab_core::gradient::Gradient;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Out};
-use mzlab_core::labmethods::{self, Lab};
-use mzlab_core::mzmlhead::{Chrom, Mzml};
+use mzlab_core::labmethods::Lab;
+use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{Error, Result};
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::engine::State;
 use crate::mapped::Mapped;
-use crate::store::clean;
 
 /// The slots of the files of the page's list (not of the session) start here, as in `rust-worker.js`.
-const LR_BASE: u32 = 1_000_000;
-
-/// A `ReadAt` over a map of the disk.
-pub struct MapAt(pub Arc<Mapped>);
-
-impl ReadAt for MapAt {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        let b = self.0.bytes();
-        let a = off as usize;
-        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| Error::new("error.badIndex"))?;
-        buf.copy_from_slice(src);
-        Ok(())
-    }
-}
-
-/// What an operation gives back.
-pub enum Answer {
-    Text(String),
-    Bytes(Vec<u8>),
-}
-
-#[derive(Default)]
-pub struct Eng {
-    idx: HashMap<u32, Routes<MapAt>>,
-    lr_slot: HashMap<String, u32>,
-    next_lr: u32,
-    labs: Vec<(Lab, u64)>,
-    labs_sig: Option<String>,
-}
-
-fn io_error(e: &std::io::Error) -> Error {
-    Error::new("err.file.raw").with("detail", e.to_string())
-}
-
-fn bad_index() -> Error {
-    Error::new("error.badIndex")
-}
-
-fn text(t: impl Into<String>) -> Result<Answer> {
-    Ok(Answer::Text(t.into()))
-}
-
-fn opt(a: Option<String>) -> Result<Answer> {
-    text(a.unwrap_or_default())
-}
-
-fn map_file(path: &std::path::Path) -> Result<(MapAt, u64)> {
-    let m = Arc::new(Mapped::open(path).map_err(|e| io_error(&e))?);
-    let n = m.bytes().len() as u64;
-    Ok((MapAt(m), n))
-}
-
-/// The indexes of the index folder: `(name of the mzML, size)`.
-fn index_list(b: &crate::idxbuild::IdxBuilder) -> Vec<(String, u64)> {
-    let Some(dir) = b.path("x").ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) else { return Vec::new() };
-    let Ok(rd) = std::fs::read_dir(dir) else { return Vec::new() };
-    rd.flatten().filter_map(|e| Some((e.file_name().to_string_lossy().strip_suffix(".mzidx")?.to_string(), e.metadata().ok()?.len()))).collect()
-}
-
-fn tx(g: &Gradient) -> String {
-    let mut o = Out::default();
-    g.write(&mut o);
-    o.0
-}
-
-/// `[{slot, label, time, full}]` of the session as the page describes it.
-fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>> {
-    use mzlab_core::json::Value as J;
-    let v = json::parse(items.as_bytes())?;
-    Ok(v.arr()
-        .iter()
-        .map(|i| mzlab_core::originroute::ItemMeta {
-            slot: i.get("slot").and_then(J::f64).unwrap_or(-1.0) as u32,
-            label: i.get("label").and_then(J::str).unwrap_or("").to_string(),
-            time: i.get("time").and_then(J::f64),
-            full: matches!(i.get("full"), Some(J::Bool(true))),
-        })
-        .collect())
-}
+pub(crate) const LR_BASE: u32 = 1_000_000;
 
 impl State {
     /// The number of a file of the disk (the same number for the same path).
@@ -138,18 +59,18 @@ impl State {
     }
 
     /// The mzML of a file picked or made by the app, by its number.
-    fn mzml_of(&self, fid: u32) -> Result<(MapAt, u64)> {
+    pub(crate) fn mzml_of(&self, fid: u32) -> Result<(MapAt, u64)> {
         map_file(&self.picked(fid)?.path)
     }
 
     /// The mzML of a registered file, by name.
-    fn mzml_named(&self, name: &str) -> Result<(MapAt, u64)> {
+    pub(crate) fn mzml_named(&self, name: &str) -> Result<(MapAt, u64)> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         map_file(&e.path)
     }
 
     /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none.
-    fn open_lr(&self, eng: &mut Eng, name: &str) -> Result<u32> {
+    pub(crate) fn open_lr(&self, eng: &mut Eng, name: &str) -> Result<u32> {
         let slot = match eng.lr_slot.get(name) {
             Some(s) => *s,
             None => {
@@ -164,39 +85,13 @@ impl State {
         Ok(slot)
     }
 
-    fn open_index_file(&self, name: &str) -> Result<Routes<MapAt>> {
+    pub(crate) fn open_index_file(&self, name: &str) -> Result<Routes<MapAt>> {
         let (r, size) = map_file(&self.indexer()?.path(name)?)?;
         Ok(Routes::new(Index::open(r, size)?))
     }
 
-    fn labs_of(eng: &Eng) -> Vec<Lab> {
-        eng.labs.iter().map(|(l, _)| l.clone()).collect()
-    }
-
-    /// The methods (`.dam`) of the store, oldest first, loaded again whenever the set changes.
-    fn lab_sync(&self, eng: &mut Eng) {
-        let mut dams: Vec<_> = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().filter(|(n, _, _)| n.to_ascii_lowercase().ends_with(".dam")).collect();
-        dams.sort_by(|a, b| (a.1.mtime, a.1.seq, &a.0).cmp(&(b.1.mtime, b.1.seq, &b.0)));
-        let sig = dams.iter().map(|(n, e, _)| format!("{n}:{}:{}", e.size, e.mtime)).collect::<Vec<_>>().join("|");
-        if eng.labs_sig.as_deref() == Some(sig.as_str()) {
-            return;
-        }
-        eng.labs = dams.iter().filter_map(|(n, e, _)| std::fs::read(&e.path).ok().map(|b| (Lab::read(n, b.clone()), b.len() as u64))).collect();
-        eng.labs_sig = Some(sig);
-    }
-
-    /// The chromatograms of the mzML of `name` and the reader to go on with.
-    fn chroms(&self, eng: &mut Eng, name: &str) -> Result<(Mzml<MapAt>, Vec<Chrom>, u32)> {
-        let slot = self.open_lr(eng, name)?;
-        let end = eng.idx[&slot].idx.scans.last().map_or(0, |s| s.end);
-        let (r, size) = self.mzml_named(name)?;
-        let mut m = Mzml::new(r, size);
-        let chroms = m.chromatograms(end)?;
-        Ok((m, chroms, slot))
-    }
-
     /// `lr_index`: the scan table and the index of a registered mzML (a thread of the build pool), then the index is opened again on the next request.
-    fn lr_index(&self, name: &str) -> Result<Answer> {
+    pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
         let (mut rd, size) = map_file(&e.path)?;
@@ -209,19 +104,13 @@ impl State {
         text(format!("{{\"ms\":{}}}", t0.elapsed().as_millis()))
     }
 
-    /// One operation of the page's engine. `p` holds the parameters (a file of the page is its number `fid`), `body` the bytes of a POST.
-    pub fn rpc(&self, op: &str, p: &Value, body: &[u8]) -> Result<Answer> {
+    #[allow(unused_variables)]
+    fn op_index(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let u = |k: &str| p[k].as_u64().unwrap_or(0) as u32;
         let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
         let q = || Query::parse(s("query"));
-        if op == "lr_index" {
-            return self.lr_index(s("name"));                 // the build takes its time: it does not hold the engine
-        }
-        let mut guard = self.eng.lock().unwrap_or_else(|e| e.into_inner());
-        let eng = &mut *guard;
         match op {
-            // ---- the engine of the page: indexes by slot of the session, routes that read the index and the mzML
             "idxopen" => {
                 let r = self.open_index_file(s("name")).map_err(|_| Error::new("error.noIndex"))?;
                 let out = format!("{{\"scans\":{},\"hr1\":{}}}", r.idx.scans.len(), r.idx.hr1());
@@ -277,6 +166,17 @@ impl State {
                 let head = m.info_head()?;
                 text(mzlab_core::fileroutes::fileinfo(r, &mut m, s("name"), &head)?)
             }
+            _ => Err(Error::new("rpc.unknown")),
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn op_session(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let u = |k: &str| p[k].as_u64().unwrap_or(0) as u32;
+        let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
+        let q = || Query::parse(s("query"));
+        match op {
             "origin" => {
                 use mzlab_core::originroute::{origin_route, Ask};
                 let metas = session_items(s("items"))?;
@@ -296,6 +196,29 @@ impl State {
                 let metas = session_items(s("items"))?;
                 opt(mzlab_core::maproute::map_route(s("path"), &metas, &mut eng.idx, &q())?)
             }
+            "reset" => {
+                eng.idx.retain(|k, _| *k >= LR_BASE);
+                text("{}")
+            }
+
+            // ---- the files of the page's list, the session and the notebook
+            "idxxic" => match eng.idx.get_mut(&u("slot")) {
+                Some(r) if r.has_scans() => text(r.xic(f("mz"), f("tol"), u("level") as u8)?),
+                _ => text(""),
+            },
+            "close" => {
+                eng.idx.remove(&u("slot"));
+                text("{}")
+            }
+            _ => Err(Error::new("rpc.unknown")),
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn op_diff(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let q = || Query::parse(s("query"));
+        match op {
             "diff" => {
                 use mzlab_core::diffroute::{plan, Tr};
                 let pl = match plan(s("path"), &q()) {
@@ -340,200 +263,103 @@ impl State {
                 Some(Ok(j)) => text(j),
                 Some(Err(j)) => text(format!("E{j}")),
             },
-            "idxxic" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) if r.has_scans() => text(r.xic(f("mz"), f("tol"), u("level") as u8)?),
-                _ => text(""),
-            },
-            "close" => {
-                eng.idx.remove(&u("slot"));
-                text("{}")
-            }
-            "reset" => {
-                eng.idx.retain(|k, _| *k >= LR_BASE);
-                text("{}")
-            }
-
-            // ---- the files of the page's list, the session and the notebook
-            "lr_boot" => {
-                let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
-                let mut rows = Vec::new();
-                for (name, e, changed) in list {
-                    let mzml = name.to_ascii_lowercase().ends_with(".mzml");
-                    if changed {
-                        self.indexer()?.remove(&name);
-                        if let Some(slot) = eng.lr_slot.get(&name).copied() {
-                            eng.idx.remove(&slot);
-                        }
-                    }
-                    let indexed = mzml && self.open_lr(eng, &name).is_ok();
-                    rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "id": self.pick_path(&e.path) }));
-                }
-                text(Value::Array(rows).to_string())
-            }
-            "lr_put" => {
-                let name = clean(s("name"))?;
-                let pk = self.picked(u("fid"))?;
-                let path = if self.is_temp(&pk.path) {
-                    let dest = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?.join(name);
-                    std::fs::copy(&pk.path, &dest).map_err(|e| io_error(&e))?;
-                    dest
-                } else {
-                    pk.path
-                };
-                if let Some(slot) = eng.lr_slot.get(name) {
-                    eng.idx.remove(slot);
-                }
-                self.indexer()?.remove(name);
-                let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put(name, path)?;
-                text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
-            }
-            "lr_entry" => {
-                let name = s("name");
-                let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
-                let mut m = Mzml::new(rd, size);
-                let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
-                text(mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size)?)
-            }
-            "lr_items" => {
-                use mzlab_core::json::Value as J;
-                let name = s("name");
-                let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
-                let mut m = Mzml::new(rd, size);
-                let v = json::parse(p["sample"].to_string().as_bytes())?;
-                let st = |k: &str| v.get(k).and_then(J::str).map(String::from);
-                let sample = mzlab_core::lr::Sample {
-                    label: st("label"),
-                    typ: st("type"),
-                    time: v.get("time").and_then(J::f64),
-                    conc: v.get("conc").and_then(J::f64),
-                    cunit: st("cunit"),
-                    rep: st("rep"),
-                };
-                let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
-                let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, name, &sample)?;
-                let body: Vec<String> = items.iter().map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr)).collect();
-                text(format!("[{}]", body.join(",")))
-            }
-            "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
-            "lr_stat" => match mzlab_core::statroute::stat_route(s("path"), s("body")) {
-                None => text(""),
-                Some(Ok(j)) => text(j),
-                Some(Err(j)) => text(format!("E{j}")),
-            },
-            "lr_formula" => {
-                let ad = s("adduct");
-                text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
-            }
-            "lr_remove" => {
-                let name = s("name");
-                if let Some(slot) = eng.lr_slot.get(name) {
-                    eng.idx.remove(slot);
-                }
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
-                text("{}")
-            }
-            "lr_space" => {
-                let names: Vec<String> = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().into_iter().map(|(n, _, _)| n).collect();
-                let files: u64 = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().iter().map(|(_, e, _)| e.size).sum();
-                let b = self.indexer()?;
-                let (mut idx, mut gone, mut n_gone) = (0u64, 0u64, 0u64);
-                for (name, size) in index_list(&b) {
-                    if names.contains(&name) {
-                        idx += size;
-                    } else if p["free"].as_bool().unwrap_or(false) {
-                        b.remove(&name);
-                    } else {
-                        gone += size;
-                        n_gone += 1;
-                    }
-                }
-                text(json!({ "opfs": true, "files": files, "idx": idx + gone, "idx_removed": gone, "n_removed": n_gone, "usage": files + idx + gone, "quota": 0, "persisted": true }).to_string())
-            }
-            "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),
-            "lr_kv_set" => {
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_set(s("key"), s("value"));
-                text("{}")
-            }
-            "lr_clear" => {
-                eng.idx.retain(|k, _| *k < LR_BASE);
-                eng.lr_slot.clear();
-                eng.labs.clear();
-                eng.labs_sig = None;
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).clear();
-                for (name, _) in index_list(&*self.indexer()?) {
-                    self.indexer()?.remove(&name);
-                }
-                text("{}")
-            }
-
-            // ---- the methods (.dam) and how an item was acquired
-            "lr_dam_sync" => {
-                self.lab_sync(eng);
-                let mut o = Out::default();
-                o.raw("[");
-                for (i, (l, size)) in eng.labs.iter().enumerate() {
-                    o.raw(if i > 0 { "," } else { "" });
-                    l.write_listed(*size, &mut o);
-                }
-                o.raw("]");
-                text(o.0)
-            }
-            "lr_grad_make" => {
-                let t = s("text");
-                let g = match s("fmt") {
-                    "course" => gradient::course(),
-                    "chromeleon" => mzlab_core::chromeleon::parse(t),
-                    "model" => json::parse(t.as_bytes()).and_then(|v| gradient::model_from_json(&v)),
-                    _ => gradient::parse_csv(t),
-                };
-                text(tx(&g?))
-            }
-            "lr_method_warnings" => {
-                self.lab_sync(eng);
-                let v = json::parse(p["have"].to_string().as_bytes())?;
-                let have: Vec<String> = v.arr().iter().filter_map(|x| x.str().map(String::from)).collect();
-                text(labmethods::warnings_json(&Self::labs_of(eng), &have))
-            }
-            "lr_method" | "lr_gradient" => {
-                self.lab_sync(eng);
-                let item = s("name");
-                let name = item.split('#').next().unwrap_or(item);
-                let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
-                let mut m = Mzml::new(rd, size);
-                let data = mzlab_core::itemroutes::item_method(&eng.idx[&slot].idx, &mut m, item)?;
-                let labs = Self::labs_of(eng);
-                if op == "lr_method" {
-                    return text(labmethods::method_json(&data, &labs, item)?);
-                }
-                let pick = labmethods::pick(&data, &labs, item)?;
-                match gradient::from_dam(labmethods::lc_of(&labs, pick))? {
-                    Some(g) => text(tx(&g)),
-                    None => text("null"),
-                }
-            }
-            "lr_analog" => {
-                let name = s("name").split('#').next().unwrap_or("");
-                let (mut m, chroms, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::analog(&mut m, &chroms, p["i"].as_i64().unwrap_or(-1), p["n"].as_i64().unwrap_or(2000))?)
-            }
-            "lr_pda" => {
-                let name = s("name").split('#').next().unwrap_or("");
-                let (mut m, chroms, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::pda_trace(&mut m, &chroms)?)
-            }
-            "lr_delay" => {
-                let name = s("name").split('#').next().unwrap_or("");
-                let (mut m, chroms, slot) = self.chroms(eng, name)?;
-                let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
-                text(r.delay(&mut m, &chroms)?)
-            }
-            _ => {
-                let _ = body;
-                Err(Error::new("err.file.raw").with("detail", format!("unknown operation {op}")))
-            }
+            _ => Err(Error::new("rpc.unknown")),
         }
     }
+
+    /// One operation of the page's engine. `p` holds the parameters (a file of the page is its number `fid`), `body` the bytes of a POST.
+    pub fn rpc(&self, op: &str, p: &Value, body: &[u8]) -> Result<Answer> {
+        let _ = body;
+        if op == "lr_index" {
+            return self.lr_index(p["name"].as_str().unwrap_or(""));                 // the build takes its time: it does not hold the engine
+        }
+        let mut guard = self.eng.lock().unwrap_or_else(|e| e.into_inner());
+        let eng = &mut *guard;
+        let tries: [fn(&State, &mut Eng, &str, &Value) -> Result<Answer>; 6] = [State::op_index, State::op_session, State::op_diff, State::op_files, State::op_misc, State::op_lab];
+        for t in tries {
+            match t(self, eng, op, p) {
+                Err(e) if e.key == "rpc.unknown" => {}
+                r => return r,
+            }
+        }
+        Err(Error::new("err.file.raw").with("detail", format!("unknown operation {op}")))
+    }
+}
+
+pub(crate) fn io_error(e: &std::io::Error) -> Error {
+    Error::new("err.file.raw").with("detail", e.to_string())
+}
+
+pub(crate) fn bad_index() -> Error {
+    Error::new("error.badIndex")
+}
+
+pub(crate) fn text(t: impl Into<String>) -> Result<Answer> {
+    Ok(Answer::Text(t.into()))
+}
+
+pub(crate) fn opt(a: Option<String>) -> Result<Answer> {
+    text(a.unwrap_or_default())
+}
+
+pub(crate) fn map_file(path: &std::path::Path) -> Result<(MapAt, u64)> {
+    let m = Arc::new(Mapped::open(path).map_err(|e| io_error(&e))?);
+    let n = m.bytes().len() as u64;
+    Ok((MapAt(m), n))
+}
+
+/// The indexes of the index folder: `(name of the mzML, size)`.
+pub(crate) fn index_list(b: &crate::idxbuild::IdxBuilder) -> Vec<(String, u64)> {
+    let Some(dir) = b.path("x").ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) else { return Vec::new() };
+    let Ok(rd) = std::fs::read_dir(dir) else { return Vec::new() };
+    rd.flatten().filter_map(|e| Some((e.file_name().to_string_lossy().strip_suffix(".mzidx")?.to_string(), e.metadata().ok()?.len()))).collect()
+}
+
+pub(crate) fn tx(g: &Gradient) -> String {
+    let mut o = Out::default();
+    g.write(&mut o);
+    o.0
+}
+
+/// `[{slot, label, time, full}]` of the session as the page describes it.
+pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>> {
+    use mzlab_core::json::Value as J;
+    let v = json::parse(items.as_bytes())?;
+    Ok(v.arr()
+        .iter()
+        .map(|i| mzlab_core::originroute::ItemMeta {
+            slot: i.get("slot").and_then(J::f64).unwrap_or(-1.0) as u32,
+            label: i.get("label").and_then(J::str).unwrap_or("").to_string(),
+            time: i.get("time").and_then(J::f64),
+            full: matches!(i.get("full"), Some(J::Bool(true))),
+        })
+        .collect())
+}
+
+/// A `ReadAt` over a map of the disk.
+pub struct MapAt(pub Arc<Mapped>);
+
+impl ReadAt for MapAt {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        let b = self.0.bytes();
+        let a = off as usize;
+        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| Error::new("error.badIndex"))?;
+        buf.copy_from_slice(src);
+        Ok(())
+    }
+}
+
+/// What an operation gives back.
+pub enum Answer {
+    Text(String),
+    Bytes(Vec<u8>),
+}
+
+#[derive(Default)]
+pub struct Eng {
+    pub(crate) idx: HashMap<u32, Routes<MapAt>>,
+    pub(crate) lr_slot: HashMap<String, u32>,
+    pub(crate) next_lr: u32,
+    pub(crate) labs: Vec<(Lab, u64)>,
+    pub(crate) labs_sig: Option<String>,
 }

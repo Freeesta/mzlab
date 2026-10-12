@@ -12,43 +12,6 @@ use serde_json::{json, Value};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-fn io_error(e: &std::io::Error) -> Error {
-    Error::new("err.file.raw").with("detail", e.to_string())
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Entry {
-    pub path: PathBuf,
-    pub size: u64,
-    /// modification date in milliseconds: the order of the methods (`.dam`) and the test that an index still belongs to its file
-    pub mtime: u64,
-    /// order of arrival in this run: files of the same millisecond keep it
-    pub seq: u64,
-}
-
-#[derive(Default)]
-pub struct Store {
-    dir: Option<PathBuf>,
-    loaded: bool,
-    files: BTreeMap<String, Entry>,
-    kv: BTreeMap<String, String>,
-    seq: u64,
-}
-
-fn stamp(path: &Path) -> Option<(u64, u64)> {
-    let m = std::fs::metadata(path).ok()?;
-    let t = m.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_millis() as u64;
-    Some((m.len(), t))
-}
-
-/// A name that is only a file name (the page never chooses a path).
-pub fn clean(name: &str) -> Result<&str> {
-    if name.is_empty() || name.contains(['/', '\\', '\0']) || name == "." || name == ".." || name.starts_with('.') {
-        return Err(Error::new("err.file.notAccepted").with("name", name));
-    }
-    Ok(name)
-}
-
 impl Store {
     /// Where `files.json`, `kv.json` and the files made by the app are. Reads what a previous run left.
     pub fn set_dir(&mut self, dir: PathBuf) {
@@ -192,6 +155,43 @@ impl Store {
         self.kv.insert(key.to_string(), value.to_string());
         self.save_kv();
     }
+}
+
+/// A name that is only a file name (the page never chooses a path).
+pub fn clean(name: &str) -> Result<&str> {
+    if name.is_empty() || name.contains(['/', '\\', '\0']) || name == "." || name == ".." || name.starts_with('.') {
+        return Err(Error::new("err.file.notAccepted").with("name", name));
+    }
+    Ok(name)
+}
+
+fn stamp(path: &Path) -> Option<(u64, u64)> {
+    let m = std::fs::metadata(path).ok()?;
+    let t = m.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_millis() as u64;
+    Some((m.len(), t))
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Entry {
+    pub path: PathBuf,
+    pub size: u64,
+    /// modification date in milliseconds: the order of the methods (`.dam`) and the test that an index still belongs to its file
+    pub mtime: u64,
+    /// order of arrival in this run: files of the same millisecond keep it
+    pub seq: u64,
+}
+
+#[derive(Default)]
+pub struct Store {
+    dir: Option<PathBuf>,
+    loaded: bool,
+    files: BTreeMap<String, Entry>,
+    kv: BTreeMap<String, String>,
+    seq: u64,
+}
+
+fn io_error(e: &std::io::Error) -> Error {
+    Error::new("err.file.raw").with("detail", e.to_string())
 }
 
 fn write_atomic(dir: &Path, name: &str, text: &str) {
