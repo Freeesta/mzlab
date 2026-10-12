@@ -39,6 +39,15 @@ try:
                 pg.wait_for_timeout(500)
             got = pg.evaluate(LIST, "idx"); assert len(got) == 3 and all(n.endswith(".mzML.mzidx") for n, _ in got), got
         step("the .mzidx of each file appears in OPFS right after the upload", indexes)
+        def manifest():
+            # the manifest of qqq_lab has a row for every file of OPFS (kept up to date by the archive) and kv.schema says the data are at the current schema
+            m = pg.evaluate("""async () => { const db = await new Promise((ok, no) => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+              const all = s => new Promise(ok => { const r = db.transaction(s).objectStore(s).getAll(); r.onsuccess = () => ok(r.result); });
+              const kv = await new Promise(ok => { const r = db.transaction("kv").objectStore("kv").get("schema"); r.onsuccess = () => ok(r.result); });
+              const rows = await all("manifest"); db.close(); return { kv, paths: rows.map(x => x.path).sort(), tipi: [...new Set(rows.map(x => x.tipo))].sort() }; }""")
+            assert m["kv"] == 3, m
+            assert sum(p.startswith("files/") for p in m["paths"]) == 3 and sum(p.startswith("idx/") for p in m["paths"]) == 3, m
+        step("the manifest has a row for every file and the schema is current", manifest)
         def open_and_draw():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels[0]._a && E.panels[0]._a.sr.length") >= 1
