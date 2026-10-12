@@ -2,7 +2,7 @@
 
 Stato attuale. `crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
 
-Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; NON c'è un mzML di riferimento Agilent, i controlli sono interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
+Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; Riferimento: gli mzML che ProteoWizard msconvert ha fatto dalle stesse tre corse (64 bit, zlib, senza peak picking, SIM come spettri; repository dati, `GC-MS/mzML/`), più controlli interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
 
 ## File di una cartella `.D` e a cosa servono
 - `AcqData/MSScan.bin`: indice (formato sotto). `AcqData/MSPeak.bin`: punti. Bastano questi due per leggere tutto.
@@ -50,6 +50,10 @@ Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 
 
 ## Controlli fatti sulle tre corse (`crates/mzlab-core/tests/agilent_parity.rs`, saltano senza i dati)
 Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 68 alla fine, totale di `MSTS.xml` = record, scansioni per segmento contate per tempo = `MSTS.xml`, testa di `MSTree2.bin` (conteggio, «Positive»), somma delle intensità = TIC, massimo = picco base, m/z crescenti, ioni di ogni scansione SIM = ioni del gruppo del metodo (`acqmeth.txt`), intervallo m/z della scansione dentro `Low Mass`/`High Mass`, mzML scritto e riletto uguale. Prove sintetiche (senza dati): ciclo completo, scansioni vuote, MS2 con precursore, errori.
+
+## Parità con msconvert (`crates/mzlab-core/tests/agilent_msconvert.rs`, salta senza i dati)
+- Sulle tre corse: stesso numero di spettri (3417, 3417, 3868), stessi punti per spettro, intensità uguali (scarto 0), tempo entro 1e-9 min (msconvert scrive 12 decimali), livello 1, polarità positiva, TIC (cromatogramma) uguale punto per punto, TIC e picco base per scansione uguali a quelli del record.
+- Differenze note: m/z fino a 1.5e-5 (msconvert li scrive come decimali brevi, il file ha valori f32); nativeID `scanId=N` in msconvert, `scan=N` qui perché il programma ricava il numero di scansione da `scan=`; msconvert aggiunge il termine «SIM spectrum», le finestre di scansione e un cromatogramma SIC per ione (`Q1` = m/z del metodo meno 0.05, 7 nelle corse SIM): qui no, gli XIC li costruisce il programma dagli spettri.
 
 ## Come diventa `Run`/mzML
 - `AgilentD::open(nome, &Files)` (record, segmenti, dispositivo, contenuti, albero, metodo), `run(&mut ReadAt)`, `visit`, `to_mzml_progress`. Uno spettro per scansione con punti (le vuote si saltano), `id = scan=<ScanID>`, centroide.
