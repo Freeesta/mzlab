@@ -225,6 +225,20 @@ pub fn group_is_hr(scans: &[Scan], survey: bool) -> bool {
     mass_profile(&g).hr
 }
 
+/// `Item.profile(level, hr)` of the survey scans (`survey`) or of the product ions: whether they are read as high resolution (`on`), the decimals
+/// of their m/z and the tolerance in ppm. `hr` = false (the page switched high resolution off) gives the low-resolution profile.
+pub struct HrProfile {
+    pub on: bool,
+    pub dec: usize,
+    pub ppm: f64,
+}
+
+pub fn hr_profile(scans: &[Scan], survey: bool, hr: bool) -> HrProfile {
+    let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
+    let p = if hr { mass_profile(&g) } else { mass_profile(&[]) };
+    HrProfile { on: p.hr, dec: p.dec as usize, ppm: if p.unit == "ppm" { p.tol } else { 0.0 } }
+}
+
 fn median(v: &mut [f64]) -> Option<f64> {
     if v.is_empty() {
         return None;

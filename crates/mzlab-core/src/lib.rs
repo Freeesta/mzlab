@@ -6,6 +6,7 @@ pub mod composition;
 pub mod elements;
 pub mod entropy;
 pub mod fileroutes;
+pub mod hrroutes;
 pub mod error;
 pub mod idxread;
 pub mod isoscore;

@@ -65,7 +65,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// `/api/spectrum` on a window of a profile file.
     pub(crate) fn profile_spectrum(&mut self, q: &Query, level: u8, (lo, hi): (f64, f64), step: f64) -> Result<String> {
-        let b = self.binned_cells(level, lo, hi, q.num("precursor")?, q.some("filt"), rint(step))?;
+        let b = self.binned_cells(level, lo, hi, (q.num("precursor")?, 0.6), q.some("filt"), rint(step))?;
         let mut o = Out::default();
         o.raw("{");
         let (mz, y, n) = b.as_ref().map_or((vec![], vec![], 0), |b| (b.mz.clone(), b.y.clone(), b.n));
@@ -88,7 +88,7 @@ impl<R: ReadAt> Routes<R> {
         let bin = q.num("bin")?.unwrap_or(0.1);
         let Some((si, step)) = self.profile_level(level)? else { return Ok(None) };
         let precursor = q.num("prec")?.or(q.num("precursor")?);
-        let sel = self.selected(level, si, precursor, q.some("filt"))?;
+        let sel = self.selected(level, si, precursor, 0.6, q.some("filt"))?;
         if !(bin > 0.0) || i0 > i1 || i1 - i0 + 1 > MAX_SCANS as i64 || i0 < 0 || i0 as usize >= sel.len() {
             return Ok(None);
         }

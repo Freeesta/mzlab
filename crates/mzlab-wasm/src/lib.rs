@@ -264,6 +264,16 @@ impl Engine {
         }
     }
 
+    /// `/api/spectrum` of a window holding ONE scan of a centroid HR file: the peaks come from the mzML (`read`), exact as Python reads them. Empty = Python's.
+    pub fn spectrum_exact(&mut self, slot: u32, query: &str, read: Function) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else {
+            return Ok(String::new());
+        };
+        r.spectrum_exact(&Query::parse(query), &mut JsReader { read })
+            .map(|a| a.unwrap_or_default())
+            .map_err(|e| error_json(&e))
+    }
+
     /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).
     pub fn mrm(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else {
