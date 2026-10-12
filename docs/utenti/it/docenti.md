@@ -9,7 +9,7 @@
 ## Prima della lezione
 1. Prova il sito con i **file di esempio** («Prova con i file di esempio») e con i vostri dati.
 2. Chiedi agli studenti di aprire il sito una volta da casa o dall'aula: dopo il primo caricamento il browser tiene in memoria il grosso.
-3. I `.wiff` vanno convertiti in `.mzML` (MSConvert, formato in profilo): la guida è nella schermata di caricamento.
+3. I `.wiff` del 3200 QTRAP si aprono direttamente insieme al `.wiff.scan`; gli altri `.wiff` vanno convertiti in `.mzML` (MSConvert o convertitore SCIEX, solo Windows, formato in profilo): la guida è nella schermata di caricamento.
 4. **I dati degli studenti e del laboratorio non si pubblicano**: non vanno mai in issue, forum o repository pubblici.
 
 ## Congelamento della versione durante le lezioni

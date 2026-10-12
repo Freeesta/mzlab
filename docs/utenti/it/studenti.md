@@ -10,7 +10,7 @@ mzLab serve a guardare i dati LC-MS dell'esperienza 3 e a cercare i prodotti di 
 ## Caricare i dati
 - Trascina i file `.mzML` (e, se ce l'hai, il `.dam` del metodo) nella schermata di caricamento, controlla tempi e tipi, premi **Carica dati**.
 - Senza file: **«Prova con i file di esempio»**.
-- I file `.wiff` non si aprono: si convertono in mzML con ProteoWizard MSConvert su Windows (la guida è nella schermata di caricamento; meglio il formato in profilo).
+- I `.wiff` del 3200 QTRAP si aprono direttamente: trascina il `.wiff` insieme al suo `.wiff.scan` (stesso nome) e il sito crea un mzML per campione, scaricabile con «Scarica mzML». Gli altri `.wiff` (non 3200 QTRAP) si convertono con ProteoWizard MSConvert o con il convertitore SCIEX su Windows (la guida è nella schermata di caricamento; meglio il formato in profilo).
 - I tuoi file **non lasciano il computer** (vedi [Privacy](privacy.md)).
 
 ## Cosa trovi
