@@ -180,7 +180,16 @@ mod tests {
         let (mut a, mut b) = (vec![0.0f32; 6], vec![0.0f32; 6]);
         a[2] = 100.0;
         b[3] = 100.0;
-        assert_eq!(diff_tolerant(&a, &b, 6, 1, 1)[2], 0.0);
-        assert_eq!(diff_tolerant(&a, &b, 6, 1, 0)[2], 100.0);
+        assert_eq!(diff_tolerant(&a, &b, 6, 1, 1, 0)[2], 0.0);
+        assert_eq!(diff_tolerant(&a, &b, 6, 1, 0, 0)[2], 100.0);
+    }
+
+    #[test]
+    fn tolerant_difference_cancels_a_drift_in_mz() {
+        let (mut a, mut b) = (vec![0.0f32; 6], vec![0.0f32; 6]);
+        a[2] = 100.0;
+        b[3] = 100.0;
+        assert_eq!(diff_tolerant(&a, &b, 1, 6, 0, 1)[2], 0.0);
+        assert_eq!(diff_tolerant(&a, &b, 1, 6, 0, 0)[2], 100.0);
     }
 }

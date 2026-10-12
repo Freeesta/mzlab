@@ -252,3 +252,14 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 | `api/spectrum` MS2, tutto il file | 0,9 | 1,7 |
 | `api/spectrum` MS2 con precursore | 0,2 | 0,5 |
 | `api/spectrum` MS1, una sola scansione (legge l'mzML) | 1,5 | 1,7 |
+
+## Mappe HR (`cargo test -p mzlab-core --test map_parity --release -- --nocapture`, 2026-10-12, stessa macchina, un giro, primo uso di ogni file)
+Tre file Orbitrap DDA reali (~3900 scansioni MS1, ~290 000 picchi in 100–130 m/z), `tools/mappa_riferimento.py`; ms nativi dall'indice contro `dispatch` di Python con le tabelle già in memoria. Mappe identiche bit a bit; Rust paga la lettura delle colonne dall'indice alla prima richiesta.
+
+| richiesta | rust | python |
+|---|---|---|
+| `api/map` intera, file 1 | 126 | 126 |
+| `api/map` intera con `bg=1`, file 3 | 286 | 683 |
+| `api/map` regione 250–360 m/z, 120 × 1000 | 16 | 12 |
+| `api/map` regione, `mzscale=log` con `ref` | 19 | 12 |
+| `api/mappunti3d` regione, 300 punti | 21 | 8 |
