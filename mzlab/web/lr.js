@@ -170,7 +170,7 @@ export function createLr({ rb }) {
       if (method !== "POST") return null;
       if (path === "/api/upload") return init.body instanceof Blob ? await upload(u.searchParams.get("name") || "", init.body) : null;
       const t = text();
-      if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: true })).info };
+      if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: u.searchParams.get("derivati") ? "derived" : true })).info };
       if (t === null) return null;
       { const r = await statRoute(path, t, { rpc }); if (r !== undefined) return r; }                       // the statistics of the series: the Rust engine, no file needed
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }

@@ -44,8 +44,9 @@ try:
             m = pg.evaluate("""async () => { const db = await new Promise((ok, no) => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
               const all = s => new Promise(ok => { const r = db.transaction(s).objectStore(s).getAll(); r.onsuccess = () => ok(r.result); });
               const kv = await new Promise(ok => { const r = db.transaction("kv").objectStore("kv").get("schema"); r.onsuccess = () => ok(r.result); });
-              const rows = await all("manifest"); db.close(); return { kv, paths: rows.map(x => x.path).sort(), tipi: [...new Set(rows.map(x => x.tipo))].sort() }; }""")
+              const rows = await all("manifest"); db.close(); return { kv, paths: rows.map(x => x.path).sort(), tipi: [...new Set(rows.map(x => x.tipo))].sort(), idx: rows.filter(x => x.path.startsWith("idx/")).map(x => [x.versione_formato, !!x.crate, !!x.sorgente_sha256]) }; }""")
             assert m["kv"] == 3, m
+            assert m["idx"] == [[1, True, True]] * 3, m                      # the version, the crate and the source are read from each index
             assert sum(p.startswith("files/") for p in m["paths"]) == 3 and sum(p.startswith("idx/") for p in m["paths"]) == 3, m
         step("the manifest has a row for every file and the schema is current", manifest)
         def open_and_draw():
@@ -76,8 +77,14 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uip-space-row:not([hidden])", timeout=10000)
             pg.wait_for_function("document.getElementById('uip-space-val').textContent.includes('MB')", timeout=10000)
             t = pg.inner_text("#uip-space-val"); assert "MB" in t, t
+            pg.wait_for_selector("#uip-arch-der:not([disabled])", timeout=10000)          # «free the derived data»: the indexes go, the files stay
+            pg.click("#uip-arch-der"); pg.wait_for_selector("#askok", timeout=10000); pg.click("#askok")
+            for _ in range(40):
+                if pg.evaluate(LIST, "idx") == []: break
+                pg.wait_for_timeout(500)
+            assert pg.evaluate(LIST, "idx") == [] and len(pg.evaluate(LIST, "files")) == 2, (pg.evaluate(LIST, "idx"), pg.evaluate(LIST, "files"))
             pg.keyboard.press("Escape")
-        step("the gear shows the space", gear)
+        step("the gear shows the space and frees the derived data", gear)
         def new_session():
             pg.click("#newrun"); pg.wait_for_selector("#askok", timeout=10000); pg.click("#askok")
             ok = False

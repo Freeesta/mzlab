@@ -1,11 +1,12 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
+import { infoDi } from "./manifesto.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
@@ -56,9 +57,13 @@ const tx = async (store, mode, fn) => {
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
 const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
 // the archive: its schema is brought up to date before any file is opened, and the manifest follows every change of the folders of OPFS
+const infoOf = async (kind, name, fresh) => {
+  const i = kind === "files" ? null : await safe(async () => infoDi(kind, await ARCH.get(kind, name)));
+  return i && fresh && !i.crate ? { ...i, crate: version() } : i;                  // an index just written by this build: the meta of the .mzidx has no crate
+};
 const archiveReady = (async () => {
   try {
-    ARCH.watch(async (ev, kind, name, size) => { if (ev === "del") await tx("manifest", "readwrite", s => s.delete(kind + "/" + name)); else await tx("manifest", "readwrite", s => s.put(rowOf(kind, name, size))); });
+    ARCH.watch(async (ev, kind, name, size) => { if (ev === "del") await tx("manifest", "readwrite", s => s.delete(kind + "/" + name)); else { const info = await infoOf(kind, name, true); await tx("manifest", "readwrite", s => s.put(rowOf(kind, name, size, undefined, info))); } });
     await migra({ getSchema: () => kvGet("schema"), setSchema: n => tx("kv", "readwrite", s => s.put(n, "schema")), list: kind => ARCH.list(kind), putManifest: row => tx("manifest", "readwrite", s => s.put(row)) });
   } catch (_) { /* the archive works without the manifest; the next start tries again */ }
 })();
@@ -66,7 +71,8 @@ const archiveReady = (async () => {
 setTimeout(() => safe(async () => {
   await archiveReady;
   const rows = await safe(() => tx("manifest", "readonly", s => s.getAll())) || [];
-  await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows });
+  await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows, info: infoOf,
+    annota: (k, e, info) => tx("manifest", "readwrite", s => s.put(rowOf(k, e.name, e.size, e.lastModified, info))) });
 }), 8000);
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
@@ -80,6 +86,9 @@ async function lrSpace() {
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+}
+async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
+  for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
 }
 // Operations on single scans (`scans.rs` of the engine): the scans of a centroid file come from the mzML by offset, a background comes from the indexes.
 function scanOp({ op, id, slot, path, query, blob }) {
@@ -142,7 +151,7 @@ async function lrOp(m) {
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": { engine.close(slotOf(m.name)); lrFile.delete(m.name); await ARCH.remove("files", m.name); return { info: "{}" }; }
-    case "lr_space": { if (m.free) await lrFree(); return { info: JSON.stringify(await lrSpace()) }; }
+    case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
     case "lr_kv_get": { const v = await safe(() => tx("kv", "readonly", s => s.get(m.key))); return { info: JSON.stringify({ value: v === undefined ? null : v }) }; }
     case "lr_kv_set": { await safe(() => tx("kv", "readwrite", s => s.put(m.value, m.key))); return { info: "{}" }; }
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
