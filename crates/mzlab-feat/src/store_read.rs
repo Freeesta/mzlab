@@ -200,7 +200,15 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         } else {
             RowMeta::default()
         },
-        ident: o.ident(r, size)?,
+        ident: if o.meta.get("identity").and_then(|v| v.f64()) == Some(1.0) {
+            RowIdent {
+                neutral: o.col(r, size, "neutral", "f64", rows, f64::from_le_bytes)?,
+                ion: o.col(r, size, "ion", "u8", rows, |b: [u8; 1]| b[0])?,
+                src: o.col(r, size, "src", "u8", rows, |b: [u8; 1]| b[0])?,
+            }
+        } else {
+            RowIdent::default()
+        },
     };
     Ok((t, o.meta))
 }
@@ -251,18 +259,6 @@ impl Opened {
             }
         }
         Ok(())
-    }
-
-    /// The identity columns when the meta says there are (`identity` = 1), else none.
-    fn ident<R: ReadAt>(&self, r: &mut R, size: u64) -> Result<RowIdent> {
-        if self.meta.get("identity").and_then(|v| v.f64()) != Some(1.0) {
-            return Ok(RowIdent::default());
-        }
-        Ok(RowIdent {
-            neutral: self.col(r, size, "neutral", "f64", None, f64::from_le_bytes)?,
-            ion: self.col(r, size, "ion", "u8", None, |b: [u8; 1]| b[0])?,
-            src: self.col(r, size, "src", "u8", None, |b: [u8; 1]| b[0])?,
-        })
     }
 
     /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).

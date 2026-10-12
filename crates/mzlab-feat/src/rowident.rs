@@ -22,12 +22,12 @@ pub struct RowIdent {
 }
 
 /// The adducts that `ion` can name, in the order of the codes (code = position + 1). Written in the meta `adducts` of the `.mzfeat`.
-pub fn adduct_names() -> Vec<&'static str> {
-    elements::adducts().iter().map(|(a, _)| *a).collect()
+pub fn adduct_names() -> [&'static str; 7] {
+    elements::adducts().map(|(a, _)| a)
 }
 
-fn code_of(adduct: &str) -> u8 {
-    adduct_names()
+fn code_of(names: &[&str], adduct: &str) -> u8 {
+    names
         .iter()
         .position(|a| *a == adduct)
         .map_or(0, |p| p as u8 + 1)
@@ -50,17 +50,18 @@ impl RowIdent {
     /// ion of the polarity of the registry.
     pub fn compute(table: &Aligned, hyps: &[Hypothesis], polarity: i8) -> RowIdent {
         let matched = match_hypotheses(hyps, table);
+        let names = adduct_names();
         let (own, sign) = if polarity >= 0 {
-            (code_of("[M+H]+"), 1.0)
+            (code_of(&names, "[M+H]+"), 1.0)
         } else {
-            (code_of("[M-H]-"), -1.0)
+            (code_of(&names, "[M-H]-"), -1.0)
         };
         let mut out = RowIdent::default();
         for (r, m) in matched.iter().enumerate() {
             let seen = table.state_counts(r).0 > 0;
             let bit = if seen { SRC_DETECTED } else { 0 };
             let (neutral, ion, src) = match m.map(|h| &hyps[h]) {
-                Some(h) => (h.neutral, code_of(h.adduct), h.sources << 1 | bit),
+                Some(h) => (h.neutral, code_of(&names, h.adduct), h.sources << 1 | bit),
                 None => (table.mz[r] - sign * PROTON, own, bit),
             };
             out.neutral.push(neutral);
