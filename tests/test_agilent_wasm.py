@@ -72,3 +72,35 @@ def test_an_index_that_is_not_understood_is_an_error_with_a_key(pkg, tmp_path):
     p.write_bytes(p.read_bytes()[:-5])
     r = subprocess.run(["node", str(ROOT / "tests/agilent_wasm_node.js"), str(pkg), str(d), str(tmp_path / "y.mzML")], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and "err.file.agilent" in r.stderr
+
+
+def write_data_ms(root: Path) -> Path:
+    """A folder with only the ChemStation data.ms (an older run): big-endian records of twentieths of m/z."""
+    d = root / "old.D"
+    d.mkdir()
+    b = bytearray(0x140)
+    b[0:2] = b"\x01\x32"
+    for o, s in ((0x04, "GC / MS Data File"), (0x18, "old run")):
+        b[o] = len(s)
+        b[o + 1 : o + 1 + len(s)] = s.encode()
+    b[0x10A:0x10C] = struct.pack(">H", (0x140 + 2) // 2)
+    scans = [(60000, [(1019, 10), (1680, 500)]), (60300, [(1680, 20), (4138, 30)])]
+    b[0x116:0x11A] = struct.pack(">I", len(scans))
+    for ms, peaks in scans:
+        b += struct.pack(">HIHHHH", (24 + 4 * (len(peaks) + 1)) // 2, ms, 12, 1, 0, len(peaks))
+        top = max(peaks, key=lambda p: p[1])
+        b += struct.pack(">HH", *top)
+        for m, a in reversed(peaks):
+            b += struct.pack(">HH", m, a)
+        b += struct.pack(">HHHI", 5, 4, 0, sum(a for _, a in peaks))
+    (d / "data.ms").write_bytes(bytes(b))
+    return d
+
+
+def test_a_folder_with_only_data_ms_is_converted(pkg, tmp_path):
+    d = write_data_ms(tmp_path)
+    out = tmp_path / "old.mzML"
+    run("node", str(ROOT / "tests/agilent_wasm_node.js"), str(pkg), str(d), str(out))
+    x = out.read_text(encoding="utf-8")
+    specs = re.findall(r'<spectrum index="(\d+)" id="([^"]+)" defaultArrayLength="(\d+)">', x)
+    assert [s[2] for s in specs] == ["2", "2"] and 'id="TIC" defaultArrayLength="2"' in x

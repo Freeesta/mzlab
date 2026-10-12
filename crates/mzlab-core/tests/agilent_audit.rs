@@ -179,15 +179,13 @@ impl Loaded {
             .files
             .iter()
             .filter(|(n, _)| {
-                !main.contains(&n.as_str())
-                    && n != "data.ms"
-                    && n != "TEMPBASE"
-                    && n != "AcqData/MSIndex.bin"
+                !main.contains(&n.as_str()) && n != "TEMPBASE" && n != "AcqData/MSIndex.bin"
             })
             .map(|(n, b)| (n.as_str(), b.as_slice()))
             .collect();
         let f = Files {
             ms_scan: self.get(main[0]).unwrap(),
+            data_ms: self.get("data.ms"),
             ms_peak_len: self.get(main[1]).unwrap().len() as u64,
             ms_scan_xsd: self.get(main[2]),
             ms_ts: self.get(main[3]),

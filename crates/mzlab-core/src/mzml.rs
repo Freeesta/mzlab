@@ -2,6 +2,7 @@
 //! Spectra: level, RT (minutes), polarity, precursor, filter string, m/z `f64`, intensity `f32`. Chromatograms: TIC/BPC/SRM/PDA.
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
+use crate::numarray::Num;
 use std::io::{BufReader, Read};
 
 use base64::Engine;
@@ -103,7 +104,7 @@ enum ArrayKind {
 
 struct Array {
     kind: ArrayKind,
-    f32: bool,
+    num: Num,
     zlib: bool,
     seconds: bool,
     text: String,
@@ -148,7 +149,7 @@ fn decode_array(a: &Array, expected: usize) -> Result<(Vec<f64>, Vec<f32>)> {
         .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
     let bytes = if a.zlib {
         let mut out = Vec::new();
-        out.try_reserve(expected.saturating_mul(if a.f32 { 4 } else { 8 }))
+        out.try_reserve(expected.saturating_mul(a.num.width()))
             .map_err(|_| Error::memory_budget())?;
         flate2::read::ZlibDecoder::new(&raw[..])
             .read_to_end(&mut out)
@@ -157,28 +158,18 @@ fn decode_array(a: &Array, expected: usize) -> Result<(Vec<f64>, Vec<f32>)> {
     } else {
         raw
     };
-    let width = if a.f32 { 4 } else { 8 };
+    let width = a.num.width();
     let n = bytes.len() / width;
     let mut f64s: Vec<f64> = Vec::new();
     let mut f32s: Vec<f32> = Vec::new();
     f64s.try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;
-    if a.f32 {
-        f32s.try_reserve_exact(n)
-            .map_err(|_| Error::memory_budget())?;
-        for c in bytes.chunks_exact(4) {
-            let v = f32::from_le_bytes([c[0], c[1], c[2], c[3]]);
-            f32s.push(v);
-            f64s.push(v as f64);
-        }
-    } else {
-        f32s.try_reserve_exact(n)
-            .map_err(|_| Error::memory_budget())?;
-        for c in bytes.chunks_exact(8) {
-            let v = f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]);
-            f64s.push(v);
-            f32s.push(v as f32);
-        }
+    f32s.try_reserve_exact(n)
+        .map_err(|_| Error::memory_budget())?;
+    for c in bytes.chunks_exact(width) {
+        let v = a.num.value(c);
+        f64s.push(v);
+        f32s.push(v as f32);
     }
     Ok((f64s, f32s))
 }
@@ -218,7 +209,7 @@ fn finish_spectrum(s: Spec) -> Result<Spectrum> {
             ArrayKind::Intensity => {
                 let (w, f) = decode_array(a, s.len)?;
                 it = f;
-                wide = if a.f32 { None } else { Some(w) };
+                wide = if a.num == Num::F32 { None } else { Some(w) };
             }
             _ => {}
         }
@@ -366,7 +357,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "binaryDataArray" => {
                         array = Some(Array {
                             kind: ArrayKind::Other,
-                            f32: false,
+                            num: Num::F64,
                             zlib: false,
                             seconds: false,
                             text: String::new(),
@@ -387,7 +378,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             match acc {
                                 "MS:1000812" | "MS:1000813" => c.pda = true,
                                 "MS:1003019" => c.pressure = true,
-                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473" | "MS:1001472" => c.ms_term = true,
+                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473"
+                                | "MS:1001472" => c.ms_term = true,
                                 _ => {}
                             }
                         }
@@ -404,13 +396,15 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                     arr.kind = ArrayKind::Time;
                                     arr.seconds = seconds;
                                 }
-                                "MS:1000521" => arr.f32 = true,
-                                "MS:1000523" => arr.f32 = false,
                                 "MS:1000574" => arr.zlib = true,
                                 "MS:1002312" | "MS:1002313" | "MS:1002314" => {
                                     return Err(Error::new("err.file.numpress"))
                                 }
-                                _ => {}
+                                _ => {
+                                    if let Some(n) = Num::of_accession(acc) {
+                                        arr.num = n;
+                                    }
+                                }
                             }
                         } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
                             match acc {
