@@ -107,3 +107,34 @@ fn not_a_raw_file_is_an_error_with_a_key() {
     let e = raw::read(std::io::Cursor::new(vec![0u8; 100])).unwrap_err();
     assert_eq!(e.key, "err.file.raw");
 }
+
+#[test]
+fn the_instrument_method_text_of_a_raw_is_text() {
+    let Some(d) = dati() else {
+        eprintln!("skipped: no data repository (MZLAB_DATI)");
+        return;
+    };
+    for sub in ["Esempio raw e mzML", "Profile raw"] {
+        let Some(rawp) = std::fs::read_dir(d.join("HRMS").join(sub))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| p.extension().is_some_and(|x| x == "raw"))
+        else {
+            continue;
+        };
+        let t = raw::instrument_method_text(File::open(&rawp).unwrap())
+            .unwrap()
+            .expect("a .raw with a method has its text");
+        // blocks of Latin text (the LC method, the instrument summary), not a binary region read as other scripts
+        assert!(
+            t.contains("---- Overview ----"),
+            "{sub}: the LC method overview is missing"
+        );
+        assert!(
+            t.chars().count() < 100_000 && t.chars().all(|c| (c as u32) < 0x2100),
+            "{sub}: the text looks like noise"
+        );
+    }
+}

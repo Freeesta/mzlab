@@ -1148,9 +1148,9 @@ impl RawFileReader {
         if !self.raw_file_info.preamble.method_file_present {
             return None;
         }
-        // Read metadata region: from byte 0 up to (but not including) scan data.
-        // Cap at 512 KB to avoid reading very large files entirely.
-        const MAX_WINDOW: u64 = 512 * 1024;
+        // Read metadata region: from byte 0 up to (but not including) scan data. The method texts lie
+        // between 400 kB and 700 kB; capped at 4 MB to avoid reading very large files entirely.
+        const MAX_WINDOW: u64 = 4 * 1024 * 1024;
         let window_len = MAX_WINDOW.min(self.data_addr) as usize;
         if window_len < 4 {
             return None;
@@ -1159,65 +1159,64 @@ impl RawFileReader {
         let mut buf = vec![0u8; window_len];
         source.read_exact(&mut buf).ok()?;
 
-        // Scan for the longest valid UTF-16LE text block (min 256 chars = 512 bytes).
-        // Strategy: find aligned 2-byte sequences where every pair decodes to a
-        // printable/whitespace Unicode scalar (U+0020..U+FFFD).
-        extract_utf16le_text(&buf, 256)
+        // Every UTF-16LE text block of at least 256 Latin characters, in file order, separated by a blank
+        // line: the LC method (overview, gradient), the instrument method text and its XML.
+        let blocks = extract_utf16le_texts(&buf, 256);
+        if blocks.is_empty() {
+            None
+        } else {
+            Some(blocks.join("\n\n"))
+        }
     }
 }
 
-/// Scan `buf` for the longest contiguous UTF-16LE text block of at least
-/// `min_chars` characters and return it as a String. Returns `None` if no
-/// such block exists.
-fn extract_utf16le_text(buf: &[u8], min_chars: usize) -> Option<String> {
-    if buf.len() < 2 {
-        return None;
-    }
-    let mut best: Option<String> = None;
-    let mut best_len = 0usize;
-
-    // Try each even alignment (0 or 1 byte offset from start).
+/// The UTF-16LE text blocks of `buf` of at least `min_chars` characters (Latin text: ASCII, Latin-1 and extended, general
+/// punctuation), in file order. Both even and odd alignments are tried; a block found at the odd one that overlaps one of the even is
+/// dropped.
+fn extract_utf16le_texts(buf: &[u8], min_chars: usize) -> Vec<String> {
+    let mut found: Vec<(usize, usize, String)> = Vec::new(); // start byte, end byte, text
     for alignment in 0..2usize {
-        let start = alignment;
-        let usable = buf.len().saturating_sub(start);
-        let n_units = usable / 2;
-        if n_units < min_chars {
-            continue;
-        }
-
-        let mut run_start = 0usize;
-        let mut run_chars: Vec<u16> = Vec::with_capacity(min_chars);
-
-        let flush = |run_chars: &Vec<u16>,
-                     run_start: usize,
-                     best: &mut Option<String>,
-                     best_len: &mut usize| {
-            if run_chars.len() >= min_chars {
-                if let Ok(s) = String::from_utf16(run_chars) {
-                    let _ = run_start; // suppress unused warning
-                    if run_chars.len() > *best_len {
-                        *best_len = run_chars.len();
-                        *best = Some(s);
-                    }
+        let mut run: Vec<u16> = Vec::new();
+        let mut run_start = alignment;
+        let mut flush = |run: &mut Vec<u16>, run_start: usize| {
+            if run.len() >= min_chars {
+                if let Ok(t) = String::from_utf16(run) {
+                    found.push((run_start, run_start + 2 * run.len(), t));
                 }
             }
+            run.clear();
         };
-
-        for i in 0..n_units {
-            let off = start + i * 2;
+        let mut off = alignment;
+        while off + 2 <= buf.len() {
             let u = u16::from_le_bytes([buf[off], buf[off + 1]]);
-            let is_ok = matches!(u, 0x0009 | 0x000A | 0x000D | 0x0020..=0xFFFD);
-            if is_ok {
-                run_chars.push(u);
+            // text of a method is Latin (letters, digits, units, a few punctuation marks); any pair of bytes of a binary block
+            // would pass for a CJK character
+            if matches!(u, 0x0009 | 0x000A | 0x000D | 0x0020..=0x007E | 0x00A0..=0x024F | 0x2010..=0x203A)
+            {
+                if run.is_empty() {
+                    run_start = off;
+                }
+                run.push(u);
             } else {
-                flush(&run_chars, run_start, &mut best, &mut best_len);
-                run_start = i + 1;
-                run_chars.clear();
+                flush(&mut run, run_start);
             }
+            off += 2;
         }
-        flush(&run_chars, run_start, &mut best, &mut best_len);
+        flush(&mut run, run_start);
     }
-    best
+    found.sort_by_key(|f| f.0);
+    let mut out: Vec<(usize, usize, String)> = Vec::new();
+    for f in found {
+        if out.last().is_some_and(|l| f.0 < l.1) {
+            if out.last().is_some_and(|l| f.1 - f.0 > l.1 - l.0) {
+                out.pop();
+                out.push(f);
+            }
+        } else {
+            out.push(f);
+        }
+    }
+    out.into_iter().map(|f| f.2).collect()
 }
 
 // -- High-level typed accessor for scan parameters --
