@@ -9,6 +9,10 @@ for which in detect proofs; do
   wasm-bindgen --target web --no-typescript --out-dir "$dir" target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm
   tools/wasm_opt.sh "$dir/mzlab_feat_wasm_bg.wasm" 460800 "mzFinder $which"
 done
+# the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
+wasm-bindgen --target web --no-typescript --out-dir "$out/grafo" target/wasm32-unknown-unknown/release/mzlab_feat_grafo_wasm.wasm
+tools/wasm_opt.sh "$out/grafo/mzlab_feat_grafo_wasm_bg.wasm" 460800 "mzFinder grafo"
 python3 - "$out" <<'P'
 import hashlib, json, sys
 o = sys.argv[1]

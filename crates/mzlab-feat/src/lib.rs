@@ -8,6 +8,8 @@ mod aligned;
 mod aligned_meta;
 mod aligned_ops;
 mod channels;
+#[cfg(feature = "chem")]
+pub mod chem;
 pub mod evid;
 pub mod famalign;
 pub mod facts;
