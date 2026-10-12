@@ -28,7 +28,7 @@ window.MAPPA = (() => {
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
-    grid.appendChild(navBar(p)); navSync(p); touchInit(p, cv);
+    const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
     const wrap = () => {
       if (!p._setMax || p._setMax._mz) return;
       const orig = p._setMax, f = on => { orig(on); onMax(p, on); }; f._mz = true; p._setMax = f;
@@ -603,7 +603,6 @@ window.MAPPA = (() => {
     { id: "map3mz", g: "view", ic: "spec", kinds: ["3d"], run: ad => ad.view(3) },
     { id: "mapzin", g: "zoom", ic: "plus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(0.7) },
     { id: "mapzout", g: "zoom", ic: "minus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(1 / 0.7) },
-    { id: "mapexplain", g: "learn", ic: "learn", kinds: ["2d"], menu: false, on: ad => !!st(ad.p).ex, run: ad => explain(ad.p) },
     { id: "mapfeat", g: "learn", ic: "feat", kinds: ["2d"], menu: false, vis: ad => featAvail(ad.p), on: ad => !!st(ad.p).feat, run: ad => featToggle(ad.p) },
     { id: "mapcopy", g: "copy", ic: "copy", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: async ad => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } },
     { id: "maphelp", g: "help", ic: "help", kinds: ["2d", "3d"], run: ad => help(ad.kind) }
@@ -647,10 +646,11 @@ window.MAPPA = (() => {
     p.zoom = clampView(x0 - sx, x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(y0 + sy, y1 + sy, a.fullY[0], a.fullY[1]);
   }
   // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
-  const BAR = ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "mapfeat", "maphelp"];
+  const BAR = { "2d": ["mapzin", "mapzout", "maplock", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
+  // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
-    const b = document.createElement("div"); b.className = "mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
-    b.innerHTML = BAR.filter(id => cmdOf(id).kinds.includes(kind)).map(id => `<button type="button" data-nav="${id}"${id === "mapexplain" ? ' class="mznx"' : ""} title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapexplain" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}${id === "mapexplain" ? `<span>${EH(T("cmd.mapexplain.lab"))}</span>` : ""}</button>`).join("");
+    const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
+    b.innerHTML = BAR[kind].map(id => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
     b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;
@@ -661,7 +661,7 @@ window.MAPPA = (() => {
     const nm = T(on ? "cmd.maplock.off.name" : "cmd.maplock.name"); b.title = nm; b.setAttribute("aria-label", nm);
   }
   const navBar = p => { const b = barFor(() => ad2(p, null)); st(p).nav = b; return b; };
-  const navSync = p => { const s = st(p); lockBtn(s.nav, !!s.lock); const f = s.nav && s.nav.querySelector('[data-nav="mapfeat"]'); if (f) { f.hidden = !featAvail(p); f.setAttribute("aria-pressed", String(!!s.feat)); f.classList.toggle("on", !!s.feat); } const e = s.nav && s.nav.querySelector('[data-nav="mapexplain"]'); if (e) { e.setAttribute("aria-pressed", String(!!s.ex)); e.classList.toggle("on", !!s.ex); } };
+  const navSync = p => { const s = st(p); lockBtn(s.nav, !!s.lock); const f = s.nav && s.nav.querySelector('[data-nav="mapfeat"]'); if (f) { f.hidden = !featAvail(p); f.setAttribute("aria-pressed", String(!!s.feat)); f.classList.toggle("on", !!s.feat); } };
   // ---- «Correzione» of the map: one at a time (none | a file | the background of a stretch | the automatic background), like the chromatograms and the spectrum.
   // p.corr: undefined = an old panel (converted at the first draw from p.ref and from the old global switch PREF.bg), "" = follow the reference of the session, "none", "file" (p.ref), "tract" (p.bgr = [rt0, rt1]), "auto".
   function corrInit(p) { if (p.corr === undefined) p.corr = p.ref !== "" && p.ref != null ? "file" : PREF.bg ? "auto" : ""; }
@@ -701,7 +701,7 @@ window.MAPPA = (() => {
     if (d.show !== "all" && corrState(p).now[0] === "f") o.push(T(`mappa.show.${d.show}`));
     return o;
   }
-  // ---- «How it is extracted»: the module loads the first time
+  // ---- the box «How it is extracted» (opened by the markers of mzFinder; the module loads the first time)
   async function explain(p, on) {
     const s = st(p); if (on === undefined) on = !s.ex;
     if (!window.MAPEX) { try { window.MAPEX = await import("./mappa-estrai.js"); } catch (e) { console.error(e); nearMsg(T("mapex.err")); return; } }
@@ -720,7 +720,7 @@ window.MAPPA = (() => {
     s[k] = px; p.h = Math.max(200, p.h + px - prev); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
   }
   // ---- sheet of the gestures (one key per row: action|mouse|trackpad|touch|keyboard)
-  const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "explain", "interval", "mark", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur"] };
+  const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "interval", "mark", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur"] };
   function help(kind) {
     const rows = HELP[kind].map(r => I18N.t(`mapnav.h.${kind}.${r}`).split("|").map(x => EH(x.trim()) || "–"));
     const head = ["act", "mouse", "pad", "touch", "key"].map(k => `<th scope="col">${I18N.t(`mapnav.h.${k}`)}</th>`).join("");

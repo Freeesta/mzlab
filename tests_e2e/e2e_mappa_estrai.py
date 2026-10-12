@@ -37,12 +37,12 @@ try:
         win = lambda: pg.evaluate("MAPEX.numbers(" + M + ")")
         def nothing_before():
             assert pg.evaluate(f"!{M}._mz.ex && !document.querySelector('.pnl.map .mzex')"), "off at the start"
-            assert pg.get_attribute(".pnl.map [data-nav=mapexplain]", "aria-pressed") == "false"
+            assert not pg.evaluate(M + "._mz.ex")
         step("off at the start; the bar has the button", nothing_before)
         def on():
             x, y = at(.4, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
-            pg.click(".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); pg.wait_for_timeout(500)
-            assert pg.get_attribute(".pnl.map [data-nav=mapexplain]", "aria-pressed") == "true"
+            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); pg.wait_for_timeout(500)
+            assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
             n = win(); assert n["win"]["mz1"] - n["win"]["mz0"] > 0.5 and n["win"]["rt1"] > n["win"]["rt0"], n
             assert pg.inner_text(".pnl.map .mzex").count("Σ") >= 1 and "XIC" in pg.inner_text(".pnl.map .mzex")
@@ -78,9 +78,9 @@ try:
             its = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(d=>d.textContent.trim())")
             assert not any("extracted" in i.lower() or "both" in i.lower() for i in its), its                 # the teaching view is not in the menu: it has its own button
             pg.keyboard.press("Escape")
-            b = pg.locator(".pnl.map [data-nav=mapexplain]"); assert "How it is extracted" in b.inner_text() and b.get_attribute("aria-pressed") == "true"
-            assert "box that XIC and spectrum come from" in (b.get_attribute("title") or b.get_attribute("data-tip") or "") and "box that XIC and spectrum come from" in pg.inner_text(".pnl.map .mzex")      # a one-line description on the button and in the panel
-        step("the bar has the button with its words and description; the menu does not carry it", menu_item)
+            assert pg.evaluate("!!" + M + "._mz.ex")
+            assert not pg.evaluate("!!document.querySelector('.pnl.map [data-nav=mapexplain]')")                 # no button for it any more
+        step("the box opens from MAPPA.explain; there is no button and the menu does not carry it", menu_item)
         def touch_drag():
             cdp = ctx.new_cdp_session(pg)
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
@@ -100,14 +100,9 @@ try:
         def off():
             pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(500)
             assert pg.evaluate(f"!{M}._mz.ex && !document.querySelector('.pnl.map .mzex')")
-            assert pg.get_attribute(".pnl.map [data-nav=mapexplain]", "aria-pressed") == "false"
+            assert not pg.evaluate(M + "._mz.ex")
             assert pg.evaluate(f"{M}.el.querySelector('.mzside').hidden")
         step("close: the view returns to the plain map", off)
-        def palette_cmd():
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(300); pg.keyboard.type("how it is extracted"); pg.wait_for_timeout(300)
-            assert "How it is extracted" in pg.inner_text("#pal-l"); pg.keyboard.press("Enter"); pg.wait_for_function("MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
-            pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(300)
-        step("the palette has the command", palette_cmd)
         b.close()
     r.close()
 except Exception as e:
