@@ -1,10 +1,6 @@
 {
- "doc_kb": {
-  "docs/agenti/mzfinder.md": 28520
- },
- "doc_righe": {
-  "docs/agenti/mzfinder.md": 13
- },
+ "doc_kb": {},
+ "doc_righe": {},
  "file": {
   "TP_Mine/js/20_tpmine.js": 638,
   "TP_Mine/py/tpmine/engine.py": 680,
