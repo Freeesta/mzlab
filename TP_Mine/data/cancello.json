@@ -24,7 +24,7 @@
    "id": "timololo_gruppi",
    "ok": true,
    "soglia": 25606,
-   "valore": 25597
+   "valore": 25567
   },
   {
    "id": "mzmine_richiamo",
@@ -64,15 +64,15 @@
   },
   {
    "id": "sintetici_isomeri_separati",
-   "ok": false,
+   "ok": true,
    "soglia": 1.0,
-   "valore": 0.5
+   "valore": 1.0
   },
   {
    "id": "sintetici_errore_area_mediano",
    "ok": true,
    "soglia": 0.05,
-   "valore": 0.0251
+   "valore": 0.0215
   },
   {
    "id": "sintetici_righe_false_rumore",
@@ -102,7 +102,7 @@
    "id": "sintetici_cinetica_forma",
    "ok": true,
    "soglia": 0.9,
-   "valore": 0.9368
+   "valore": 0.9474
   },
   {
    "id": "sintetici_cinetica_generazione",
@@ -148,6 +148,7 @@
   }
  ],
  "data": "2026-10-12",
- "format": "cancello/1",
- "vista_candidati": false
+ "format": "cancello/2",
+ "vista_candidati": false,
+ "vista_tabella": true
 }

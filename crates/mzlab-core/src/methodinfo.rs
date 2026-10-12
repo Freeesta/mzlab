@@ -442,6 +442,12 @@ fn digits(s: &str) -> i64 {
     s.chars().filter(char::is_ascii_digit).collect::<String>().parse().unwrap_or(0)
 }
 
+/// The method of sample `n` of a `.wiff` (`None` when the file has no `MethodN`: the samples of a batch may outnumber the methods).
+pub fn method_of_sample(ole: &Ole, n: u32) -> Option<Method> {
+    let base = format!("MethodSubtree/Method{n}/");
+    ole.has(&format!("{base}DeviceMethod0/Period0/Experiment0/ExperimentHeader")).then(|| Method { name: format!("Method {n}"), sample: Some(n as i64), ..method(ole, &base) })
+}
+
 /// `[{name, source, compound, file, ...}]` for a `.dam` (one method) or a `.wiff` (one per sample).
 pub fn read_methods(data: Vec<u8>, file_name: &str) -> Result<Vec<Method>> {
     let ole = Ole::open(data, file_name)?;

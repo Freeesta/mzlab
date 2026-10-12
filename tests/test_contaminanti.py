@@ -8,9 +8,12 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+import genera_contaminanti as g  # noqa: E402
 from mzlab.chem.contaminants import builtin, expand  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+CHEM = ROOT / "mzlab" / "chem"
 
 
 def one(i, ad, n=None):
@@ -111,3 +114,27 @@ console.log(JSON.stringify(out));
     assert o["tip"] and o["none"] == ""
     assert o["csv"] == [{"mz": 100.1, "name": 'a, "b"', "formula": "C2H6", "polarity": -1, "note": "x"}]
     assert o["csv2"][0]["mz"] == 150.5 and o["csv2"][0]["name"] == "punto e virgola"
+
+
+def test_static_file_equals_the_route():
+    from mzlab.api import dispatch
+    from mzlab.app import App
+    code, _ctype, body, _h = dispatch(App(), "GET", "/api/contaminants", {})
+    assert code == 200
+    assert g.OUT.read_text(encoding="utf-8") == body.decode("utf-8") == g.text()
+    assert len(json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]) == 1
+
+
+def test_every_entry_has_english_name_and_class():
+    d = json.loads((CHEM / "contaminants.json").read_text(encoding="utf-8"))
+    en = json.loads((CHEM / "contaminants_en.json").read_text(encoding="utf-8"))
+    ids = [e["id"] for e in d["entries"]]
+    assert not [i for i in ids if not en["names"].get(i)], "entries without an English name"
+    assert not [e["class"] for e in d["entries"] if e["class"] not in en["classes"]], "classes without an English name"
+    assert not set(en["names"]) - set(ids), "English names of entries that do not exist"
+    assert en["list"]["name"] and en["list"]["license"]
+
+
+def test_builtin_carries_english_fields():
+    b = builtin()
+    assert b["name_en"] and all(i["name_en"] for i in b["items"] if not i.get("mzonly")) and all(i["cls_en"] for i in b["items"])

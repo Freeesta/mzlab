@@ -1,5 +1,5 @@
 {
- "_nota": "English names and classes of contaminants.json (same ids). Every entry of contaminants.json must be here (tests/test_contaminants_en.py).",
+ "_nota": "English names and classes of contaminants.json (same ids). Every entry of contaminants.json must be here (tests/test_contaminanti.py).",
  "list": {
   "name": "Known contaminants and LC-MS background (Keller 2008)",
   "license": "chemical data (formulas): no restriction; list compiled for this program"

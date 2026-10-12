@@ -1,0 +1,40 @@
+name: Errore / Bug
+description: Qualcosa non funziona o si vede male. / Something does not work or looks wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Non allegare dati di laboratorio né dati personali** (file mzML, wiff, raw, schermate con nomi). Descrivi il problema a parole o usa i file di esempio.
+        **Do not attach laboratory or personal data** (mzML, wiff, raw files, screenshots with names). Describe the problem in words or use the example files.
+        Il supporto è *best effort*, senza tempi garantiti. / Support is best effort, with no guaranteed response time.
+  - type: textarea
+    id: cosa
+    attributes:
+      label: Cosa succede / What happens
+      description: I passaggi per ripetere il problema, cosa ti aspettavi e cosa è successo. / Steps to reproduce, what you expected and what happened.
+    validations:
+      required: true
+  - type: dropdown
+    id: dove
+    attributes:
+      label: Dove lo usi / Where you use it
+      options:
+        - Sito nel browser / Site in the browser
+        - App desktop / Desktop app
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Browser e sistema / Browser and system
+      description: Per esempio «Chrome 130, Windows 11». / For example "Chrome 130, Windows 11".
+    validations:
+      required: true
+  - type: checkboxes
+    id: dati
+    attributes:
+      label: Conferma / Confirmation
+      options:
+        - label: Non ho allegato dati di laboratorio né dati personali. / I have not attached laboratory or personal data.
+          required: true
