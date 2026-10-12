@@ -50,6 +50,8 @@ Se usi mzLab nel corso o in una pubblicazione, cita il software con i dati di [`
 
 > Cristaudo, F. *mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products*. Università degli Studi di Torino. https://freeesta.github.io/mzlab/ (codice: https://github.com/Freeesta/mzlab, licenza MIT). DOI Zenodo: da assegnare alla prima release.
 
+*How to cite (English): cite the software with the data of [`CITATION.cff`](CITATION.cff) (GitHub's “Cite this repository” button formats it). Cristaudo, F. mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products. University of Turin. https://freeesta.github.io/mzlab/ (code: https://github.com/Freeesta/mzlab, MIT licence). Zenodo DOI: to be assigned at the first release; cite the concept DOI for the software in general and the version DOI for a given version.*
+
 ## Limiti noti
 
 - Non ancora validato contro il software dello strumento su più composti.
