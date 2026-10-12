@@ -2,9 +2,10 @@
 
     python3 tools/wiff_riferimento.py OUT
 
-Needs `opensxraw` (pip install opensxraw; Apache-2.0), run by hand as the oracle. Writes into OUT/ synthetic pairs (`one.wiff` + `one.wiff.scan`: one
-sample; `two.wiff` + `two.wiff.scan`: two samples; `lonely.wiff`: no `.scan`), built with tools/cfb_scrivi.py, and OUT/riferimento.json: for each pair and sample
-the scans as OpenSXRaw reads them (RT in seconds, level, TIC, points with intensity > 0) and the TIC chromatogram. No data of the laboratory is used.
+Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`), built with
+tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
+chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 """
 import json
 import struct
@@ -14,100 +15,129 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cfb_scrivi  # noqa: E402
 
-
-def token(gap: int, count: int) -> bytes:
-    """Gaps of at most 127, then the shortest intensity token."""
-    out = bytearray()
-    while gap > 127:
-        out.append(127)
-        gap -= 127
-    out.append(gap)
-    if count < 124:
-        out.append(0x80 | count)
-    elif count < 256:
-        out += bytes([0xFC, count])
-    elif count < 1 << 16:
-        out += bytes([0xFD]) + struct.pack("<H", count)
-    elif count < 1 << 24:
-        out += bytes([0xFE]) + struct.pack("<I", count)[:3]
-    else:
-        out += bytes([0xFF]) + struct.pack("<I", count)
-    return bytes(out)
+MARKER = b"\xfe\xff\xff\xff\x02\x00\x00\x00"
+HEAD = [100.02, 300.0, 0.06, 16666.667, 250.02, 400.0, 0.06, 50000.0]  # start1 end1 step scale1 start2 end2 step2 scale2
 
 
-def payload(points) -> bytes:
-    out, bin_ = bytearray(), 0
+def encode(points) -> bytes:
+    """Nibble stream: 1..7 a point; 0 + long a point; 8 + long a skip; 9..15 a short skip. A long is one byte, or 0 and a u32, on a byte boundary."""
+    nibs = []
+
+    def long(v):
+        if len(nibs) % 2:
+            nibs.append(0)
+        raw = bytes([v]) if 1 <= v <= 255 else b"\0" + struct.pack("<I", v)
+        for b in raw:
+            nibs.extend((b >> 4, b & 15))
+
+    pos = 0
     for b, c in points:
-        out += token(b - bin_, c)
-        bin_ = b
-    return bytes(out)
+        gap = b - pos
+        if 0 < gap <= 7:
+            nibs.append(8 + gap)
+        elif gap > 7:
+            nibs.append(8)
+            long(gap)
+        if 1 <= c <= 7:
+            nibs.append(c)
+        else:
+            nibs.append(0)
+            long(c)
+        pos = b + 1
+    if len(nibs) % 2:
+        nibs.append(0)
+    return bytes(nibs[i] << 4 | nibs[i + 1] for i in range(0, len(nibs), 2))
 
 
-def scan_file(blocks):
-    """Returns (bytes of the .scan, [(offset, size)]); each block's terminator lies in the head window of the next one."""
-    data, rows, term = bytearray(), [], bytes(56)
-    for pts in blocks:
-        off = len(data)
-        pl = payload(pts)
-        data += term + pl
-        rows.append((off, 56 + len(pl) + 4))
-        term = b"\xff\xff\xff\xff" + bytes(52)
-    data += b"\xff\xff\xff\xff"
-    return bytes(data), rows
+def scan_block(points) -> bytes:
+    data = encode(points)
+    block = MARKER + struct.pack("<8d", *HEAD) + struct.pack("<I", len(points)) + data
+    return block if points else block + bytes(4)
 
 
-def idx_stream(rows, scans):
-    out = bytearray(32)
-    for (off, size), (rt, level, tic) in zip(rows, scans):
-        out += struct.pack("<IIIfBBdd", off, size, 0, rt, 1 if level == 1 else 0, 0, tic, 0.0) + bytes(20)
-    return bytes(out)
+def expected_scan(points):
+    mz = [HEAD[0] + b * HEAD[2] for b, _ in points]
+    return mz, [c * (HEAD[7] if m > HEAD[4] else HEAD[3]) for (_, c), m in zip(points, mz)]
 
 
-SAMPLE_A = [
-    [(41, 1), (50, 200), (300, 341), (301, 70000), (1500, 20000000), (9000, 5000000000 % (1 << 32))],
-    [(10, 3), (20, 123), (21, 124), (22, 255), (23, 256), (2000, 65535), (2001, 65536), (2002, (1 << 24) - 1)],
-    [(1000, 0xFFFFFF), (1000 + 400, 0xFFFF)],
-    [(5, 0xFFFFFFFF), (6, 7)],
-]
-INFO_A = [(0.0123, 1, 1.5e6), (0.0345, 2, 2.25e4), (0.0567, 2, 0.0), (0.0789, 1, 3.0e9)]
-SAMPLE_B = [[(3, 9), (80, 99)], [(7, 130), (700, 3000)]]
-INFO_B = [(0.5, 1, 12345.5), (0.75, 2, 678.25)]
+def idx_row(offset, size, time_ms, tic, n) -> bytes:
+    return struct.pack("<IId", offset, size, time_ms) + b"\x01\x00" + struct.pack("<dd", tic, float(n)) + bytes(20)
 
 
-def write_pair(out: Path, name: str, samples: dict):
-    scan = bytearray()
-    streams = {}
-    for sample, (blocks, info) in samples.items():
-        base = len(scan)
-        data, rows = scan_file(blocks)
-        scan += data
-        streams[f"SampleSubtree/{sample}/Idx"] = idx_stream([(o + base, s) for o, s in rows], info)
-    cfb_scrivi.write(streams, out / f"{name}.wiff")
-    (out / f"{name}.wiff.scan").write_bytes(bytes(scan))
+def header(code, precursor) -> bytes:
+    d = bytearray(180)
+    d[42:50] = struct.pack("<d", precursor)
+    d[122:126] = struct.pack("<I", code)
+    return bytes(d)
 
 
-def oracle(path: Path):
-    import opensxraw as o
-    res = {}
-    for s in o.list_samples(str(path)):
-        r = o.open_sample(str(path), s)
-        scans = []
-        for sp in (r.read_spectrum(i) for i in range(r.scan_count)):
-            scans.append({"rt": sp.retention_time_sec, "level": sp.ms_level,
-                          "mz": [float(x) for x in sp.mz], "intensity": [float(x) for x in sp.intensity]})
-        c = r.read_chromatograms()[0]
-        res[s] = {"scans": scans, "tic": {"time_sec": c["time_sec"], "intensity": c["intensity"]}}
-    return res
+def ion_spray(volts) -> bytes:
+    return bytes(24) + "IS".encode("utf-16le") + struct.pack("<ff", volts, volts) + bytes(4)
+
+
+class Writer:
+    def __init__(self):
+        self.scan, self.streams, self.table, self.expect = bytearray(), {}, [], {}
+
+    def sample(self, n, blocks, method=None):
+        """blocks: [("scan", points, time_ms, tic) | ("mrm", values, time_ms, tic)] in file order."""
+        start = len(self.scan)
+        self.scan += bytes(44)
+        idx, off = bytearray(32), 0
+        for kind, content, t, tic in blocks:
+            block = scan_block(content) if kind == "scan" else struct.pack(f"<{len(content)}f", *content)
+            idx += idx_row(off, len(block), t, tic, len(content) if kind == "scan" else 0)
+            self.scan += block
+            off += len(block)
+        self.table.append((n, start + 20))
+        self.streams[f"SampleSubtree/Sample{n}/Idx"] = bytes(idx)
+        for path, data in (method or {}).items():
+            self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/Period0/{path}"] = data
+
+    def save(self, out: Path, name: str):
+        t = bytearray(32)
+        for n, base in self.table:
+            t += struct.pack("<II", n, base) + bytes(8)
+        self.streams["SampleSubtree/SampleIdxTable"] = bytes(t)
+        cfb_scrivi.write(self.streams, out / f"{name}.wiff")
+        (out / f"{name}.wiff.scan").write_bytes(bytes(self.scan))
+
+
+FULL = [(41, 1), (50, 200), (300, 341), (301, 70000), (1500, 20000000), (3000, 2), (9000, 5000000000 % (1 << 32))]
+PRODUCT = [(10, 3), (20, 123), (21, 124), (22, 255), (23, 256), (2000, 65535), (2001, 65536), (2002, (1 << 24) - 1), (2010, 7), (2018, 5)]
+LATE = [(1000, 0xFFFFFF), (1400, 0xFFFF)]
+MRM = [[1.5, 20000.25, 0.0], [3.0, 4.5e6, 12.0], [0.0, 0.0, 0.0], [7.25, 1.0, 99999.0]]
+
+
+def spectrum(id_, level, prec, t_ms, pts):
+    mz, it = expected_scan(pts)
+    return {"id": id_, "level": level, "precursor": prec, "rt": t_ms / 60000.0, "mz": mz, "intensity": it}
 
 
 def main():
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
-    write_pair(out, "one", {"Sample1": (SAMPLE_A, INFO_A)})
-    write_pair(out, "two", {"Sample1": (SAMPLE_A, INFO_A), "Sample2": (SAMPLE_B, INFO_B)})
+    method = {
+        "Experiment0/ExperimentHeader": header(15, 30.0),
+        "Experiment1/ExperimentHeader": header(11, 123.4),
+        "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0),
+    }
+    w = Writer()
+    w.sample(1, [("scan", FULL, 1180.0, 1.5e6), ("scan", [], 1630.0, 0.0), ("scan", LATE, 2500.0, 3.0), ("scan", PRODUCT, 3000.0, 4.5e3)], method)
+    one = {"1": {"polarity": 1, "spectra": [spectrum("sample=1 period=1 cycle=1 experiment=1", 1, None, 1180.0, FULL),
+                                             spectrum("sample=1 period=1 cycle=2 experiment=1", 1, None, 2500.0, LATE),
+                                             spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)], "chromatograms": []}}
+    w.save(out, "one")
+    w = Writer()
+    w.sample(1, [("scan", FULL, 600.0, 1.0)])
+    times = [500.0, 1000.0, 1500.0, 2100.5]
+    w.sample(2, [("mrm", v, t, sum(v)) for v, t in zip(MRM, times)])
+    two = {"1": {"polarity": 0, "spectra": [spectrum("sample=1 period=1 cycle=1 experiment=1", 1, None, 600.0, FULL)], "chromatograms": []},
+           "2": {"polarity": 0, "spectra": [], "chromatograms": [{"id": "TIC", "time": [t / 60000.0 for t in times], "intensity": [sum(v) for v in MRM]}]
+                 + [{"id": f"SRM SIC sample=2 period=1 experiment=1 transition={j}", "time": [t / 60000.0 for t in times], "intensity": [v[j] for v in MRM]} for j in range(3)]}}
+    w.save(out, "two")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
-    ref = {n: oracle(out / f"{n}.wiff") for n in ("one", "two")}
-    (out / "riferimento.json").write_text(json.dumps(ref))
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two}))
 
 
 if __name__ == "__main__":

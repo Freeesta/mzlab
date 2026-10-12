@@ -1,18 +1,30 @@
-# `.wiff` + `.wiff.scan` (SCIEX Analyst, 3200 QTRAP e simili): lettore Rust
-Stato attuale. Codice in `crates/mzlab-core/src/wiff/` (`mod.rs` apertura e campioni, `idx.rs` indice delle scansioni, `scan.rs` blocchi del `.scan`), contenitore OLE2 da `ole.rs` (lo stesso dei `.dam`; nessun crate nuovo, niente Python/Pyodide). Fonte del formato: studio del codice OpenSXRaw (Sigilweaver, Apache-2.0, https://github.com/Sigilweaver/OpenSXRaw), poi riscritto da zero; la licenza va citata nei commenti dei file.
+# Lettore `.wiff` + `.wiff.scan` (SCIEX 3200 QTRAP)
 
-## Formato (come lo legge il codice)
-- La coppia è `X.wiff` + `X.wiff.scan` (stesso nome più `.scan`). Senza il `.scan` il lettore dà `err.file.wiffNoScan`; un file non OLE2 dà `err.file.notWiff`; il resto `err.file.wiff` (`detail`). Le chiavi nei cataloghi `lang/` arrivano con la PR che le usa nella pagina.
-- Il `.wiff` è un contenitore OLE2: `SampleSubtree/SampleN/Idx` per ogni campione (più campioni: `wiff::samples`, ordine numerico; `Wiff::open(.., None)` con più campioni è un errore, si sceglie con `Some("Sample2")`). Il metodo di acquisizione sta in `MethodSubtree/...` (già letto da `methodinfo.rs` per i `.wiff`).
-- `Idx`: intestazione di 32 byte e record di 54 byte, little-endian: u32 offset e u32 dimensione del blocco nel `.scan`, f32 RT in minuti (+0x0C), u8 livello (+0x10: 1 = MS1, altro = MS2), f64 TIC in cps (+0x12). Record con dimensione ≤ 56 sono segnaposto e si saltano.
-- Blocco del `.scan`: i primi 56 byte sono la coda del blocco precedente (con il terminatore `ff ff ff ff`) e un’area di sincronia; il carico utile inizia a `offset+56` e finisce al primo `ff ff ff ff` che cade su un confine di token. Token: `0x00-0x7f` salto dell’accumulatore (bin += b); `0x80-0xfb` conteggio di 1 byte (b & 0x7f); `0xfc` u8, `0xfd` u16, `0xfe` u24, `0xff` u32 (little-endian). L’accumulatore parte da 0. Il valore `0xFFFFFFFF` come conteggio u32 è ambiguo col terminatore e (come in OpenSXRaw) chiude il blocco.
-- Le letture sono limitate da dimensione dichiarata, blocco successivo, lunghezza del file e 64 MiB: un indice falso non alloca di più.
+Stato attuale. `crates/mzlab-core/src/wiff/`: Rust puro, nessun crate nuovo, nessun Python né Pyodide. Il contenitore è un file OLE2 letto con `ole.rs`; il `.wiff` dà indice e metodo, il `.wiff.scan` i punti. Il formato dei blocchi NON è quello di OpenSXRaw (Sigilweaver, Apache-2.0: il suo supporto QTRAP non funziona sui file del 3200); è stato ricavato dai file veri confrontandoli con gli mzML di ProteoWizard degli stessi file. Codice scritto da zero.
 
-## Limiti noti (non risolti, da leggere prima di (b))
-- **L’asse m/z dei QTRAP non è un m/z.** I punti decodificati hanno un «bin» intero del rivelatore (`Point.bin`), non una massa. Né OpenSXRaw né questo lettore sanno convertirlo: per i TripleTOF c’è una calibrazione lineare (stream `TOFCalibrationData`), per i QTRAP non c’è. Il README di OpenSXRaw lo dichiara per i 5500/6500+; per il 3200 non c’è ancora nessun file vero. Finché non si trova la conversione (con file veri del 3200 e le masse note) il lettore NON espone m/z.
-- Il tipo di esperimento (Full Scan, MRM, EPI...) e le transizioni MRM (Q1/Q3, CE) non sono nell’indice letto qui, e OpenSXRaw non le riporta (solo un TIC). Vanno cercati in `MethodSubtree` e negli stream per esperimento (`ExperimentHeaderFJ`, ...), con file veri.
-- Polarità: OpenSXRaw la deduce dal segno della tensione di spray (`IonSourceParamsTable`, parametro `ISVF`/`IS`); non ancora portata qui.
-- `.wiff2` (SCIEX OS, cifrato) e flat file senza `.scan` non sono supportati.
+## File
+- `mod.rs`: `container(bytes, nome)` (errore `err.file.notWiff`), `samples(&Ole)` (numeri dei campioni con scansioni), `Wiff::open(&Ole, nome, scan_len, campione)` (`scan_len = None` → `err.file.wiffNoScan`; altri guasti `err.file.wiff` con `detail`), `Wiff { sample, records, experiments, polarity, method }`. Un campione = una iniezione = un elemento del sito.
+- `run.rs`: `Wiff::run(&mut ReadAt) -> mzml::Run`: spettri (`Spectrum`, profilo) e cromatogrammi MRM (`TIC` + un `SRM SIC Q1= Q3= sample= period=1 experiment= transition=` per transizione, `unit` come negli mzML). I `Run` sono quelli che il resto del programma già legge.
+- `idx.rs`: `SampleIdxTable` e `SampleN/Idx`. `scan.rs`: blocchi e codec.
+- `methodinfo.rs::method_of_sample`: il metodo del campione (opzionale: i campioni di un lotto possono essere più dei metodi, e alcuni campioni non hanno metodo).
 
-## Parità
-`tests/wiff_parity.rs` confronta il lettore con OpenSXRaw (oracolo, eseguito a mano: `pip install opensxraw`, test con `MZLAB_WIFF_PYTHON=<python con opensxraw>`; senza oracolo si salta, `MZLAB_GOLDEN_STRICT=1` fallisce) su coppie sintetiche costruite da `tools/wiff_riferimento.py` (con `cfb_scrivi.py`): scansioni, livelli, RT (secondi), punti (bin e conteggio, conteggio > 0), cromatogramma TIC, a ≤ 1e-9; il TIC dell’oracolo ha i tempi in f32. L’oracolo non ha mai letto un `.wiff` vero di questo repository: la parità prova il livello contenitore, indice e token, non la fisica.
+## Formato (3200 QTRAP)
+- `SampleSubtree/SampleIdxTable`: 32 byte di intestazione, righe di 16 byte (u32 numero campione, u32 posizione B). La sezione del campione nel `.scan` inizia a B − 20.
+- `SampleN/Idx`: 32 byte di intestazione, righe di 54 byte: u32 offset (dall'inizio sezione), u32 dimensione (= lunghezza del blocco), f64 tempo in MILLISECONDI (+8), u8 (+16), f64 TIC in cps (+18, uguale al TIC dell'mzML), f64 (+26, numero di punti, 0 = scansione vuota). Il blocco k inizia a sezione + offset + 44 e finisce dove inizia il successivo (l'ultimo: fine file).
+- Un ciclo = una riga per esperimento, in ordine: riga k → ciclo k / E, esperimento k % E, con E = numero di esperimenti di `Period0` del metodo (1 se manca). Gli mzML omettono le scansioni vuote (anche qui).
+- Blocco di scansione: marcatore `fe ff ff ff 02 00 00 00`, 8 f64 `[inizio1, fine1, passo, scala1, inizio2, fine2, passo2, scala2]`, u32 N a +72, dati a +76. m/z = inizio1 + bin × passo; intensità = conteggio × (scala2 se m/z > inizio2, confronto stretto, altrimenti scala1). Gli intervalli sono due perché il rivelatore ha due scale. `passo2` non è usato (uguale a `passo` in tutti i file visti).
+- Flusso di nibble (alto prima) per N punti, posizione `pos` in bin da 0: 1..7 = un punto con quel conteggio (pos += 1); 0 = un punto con conteggio lungo; 8 = salto lungo; 9..15 = salto di nibble − 8. «Lungo» = si salta il resto del byte se si è a metà, poi un byte v; se v = 0 seguono 4 byte u32 LE.
+- Blocco MRM (nessun marcatore): un f32 (cps) per transizione, `dimensione / 4` transizioni.
+- Metodo `MethodSubtree/MethodN/DeviceMethod0/Period0/ExperimentI/ExperimentHeader` (180 byte): f64 a +42 = massa del precursore (valida con codice 11), u32 a +122 = tipo di scansione (15 = full scan, 11 = prodotto di uno ione; MRM ha 0x0004FFFF). Livello 2 e precursore solo con codice 11; qualunque altro codice si legge come full scan (livello 1). Polarità = segno del parametro `IS` (tensione di ionspray) di `Experiment0`; 0 se manca.
+
+## Politica profilo/centroide
+Si tiene ciò che il file contiene, senza peak picking implicito: il `.wiff` del 3200 contiene dati a PROFILO (bin di 0,06 con conteggi, i bin a zero non sono memorizzati: gli mzML di ProteoWizard li riempiono di zeri, qui non ci sono), quindi `Spectrum::profile = true`; il resto del programma tratta i file a profilo come sempre (i picchi li trova `profile_peaks`). Anche `raw.rs` segue la regola: `profile` viene da `scan_mode` di OpenTFRaw (lista di centroidi del file; profilo solo se la scansione non ha altro). La centroidizzazione è un'opzione dell'utente, non implementata nel lettore.
+
+## Parità (`tests/wiff_parity.rs`, `tools/wiff_riferimento.py`)
+- Coppie sintetiche scritte da `tools/wiff_riferimento.py` con un codificatore indipendente (nessun dato del laboratorio): m/z, intensità ≤ 1e-9, tempi e conteggi uguali, livello, precursore, polarità, cromatogrammi MRM, errori. Salta senza `python3` (`MZLAB_GOLDEN_STRICT=1` fa fallire).
+- File veri contro gli mzML ProteoWizard (repository privato dei dati, cartella `3200 qtrap/wiff inquinanti 25-26 B/` con `mzML/` e `mzML_profilo/`; `MZLAB_DATI`): 23 mzML (FullMass, MS2, MRM), punti sopra zero, m/z ≤ 1e-9, intensità ≤ 1e-9 (1e-6 dove l'mzML ha 32 bit), RT, livello, precursore, polarità, cromatogrammi. Salta senza dati. L'ultima scansione di ogni mzML è esclusa: ProteoWizard la legge male (lo stesso TIC dell'indice conferma il nostro valore).
+
+## Limiti noti
+- Verificati solo full scan, prodotto di ione (MS2) e MRM in un periodo. EPI, MS3, perdita neutra, precursori e più periodi: non visti nei dati (si leggono come full scan se il blocco ha il marcatore).
+- Le tracce DAD/analogiche del `.wiff` e i nomi dei campioni (`DabsInfo`) non si leggono.
+- Il TIC è quello dell'indice (come l'mzML), non la somma dei punti. Chiavi i18n: `err.file.notWiff`, `err.file.wiffNoScan`, `err.file.wiff` (nei cataloghi quando la pagina le usa).
