@@ -25,7 +25,7 @@ try:
         def pick_label():
             lb = label_box(0); assert lb, "no peak labels"
             its = ctx_items(lb["x"], lb["y"]); print(lb["m"], its[:3])
-            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
+            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copia valore" and its[2] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
             pg.keyboard.press("Escape")
             # the bar of the same peak gives the same value
             bar = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X({lb['m']}),y:q.top+a.Y(a.ymax*0.02)}}}})()")
