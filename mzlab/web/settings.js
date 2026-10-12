@@ -123,9 +123,14 @@ function uipOpen(btn) {
       if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
       else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
       try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || est.usage / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
+      if (j && j.feat > 0) line += " " + I18N.t("settings.arch.feat", { feat: mb(j.feat) });
+      if (j && j.opfs && j.persisted === false) line += " " + I18N.t("settings.arch.notpersisted");
+      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
       val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : "";
     };
-    paint(null); if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {});
+    const refresh = () => { if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {}); };
+    paint(null); refresh();
+    try { const bc = new BroadcastChannel("mzlab"); bc.onmessage = () => { if (d.isConnected) refresh(); else bc.close(); }; } catch (_) { /* no BroadcastChannel */ }      // another tab added or took away a file
     rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
     d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
   }

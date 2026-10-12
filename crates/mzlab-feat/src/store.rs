@@ -16,6 +16,8 @@ use crate::table::{Aligned, FileFeatures};
 
 pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
 pub(crate) const ALIGN: usize = 64;
+/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id` and the summaries of the rows; the files of version 1 are still read.
+pub const TABLE_FORMAT: i64 = 2;
 
 pub(crate) fn bad() -> Error {
     Error::new("error.badMzfeat")
@@ -160,7 +162,9 @@ fn meta_json(
     };
     j.raw("{\"format\":")
         .str(kind)
-        .raw(",\"version\":1,\"crate\":")
+        .raw(",\"version\":")
+        .int(if kind == "table" { TABLE_FORMAT } else { 1 })
+        .raw(",\"crate\":")
         .str(env!("CARGO_PKG_VERSION"));
     j.raw(",\"feat_version\":")
         .int(crate::FEAT_VERSION as i64)
@@ -293,7 +297,10 @@ pub fn write_table_to<W: WriteAt>(
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
+    let ids: Vec<u32> = (0..t.len()).map(|r| t.id(r)).collect();
+    let m = t.meta.or_none(t.len());
     let cols = [
+        ("id", Col::U32(&ids)),
         ("mz", Col::F64(&t.mz)),
         ("rt", Col::F64(&t.rt)),
         ("area", Col::F64(&t.area)),
@@ -305,8 +312,18 @@ pub fn write_table_to<W: WriteAt>(
         ("member_mz", Col::F64(&t.member_mz)),
         ("member_rt", Col::F32(&t.member_rt)),
         ("member_role", Col::U8(&t.member_role)),
+        ("rt_lo", Col::F32(&m.rt_lo)),
+        ("rt_hi", Col::F32(&m.rt_hi)),
+        ("charge", Col::I8(&m.charge)),
+        ("q_shape", Col::F32(&m.q_shape)),
+        ("q_snr", Col::F32(&m.q_snr)),
+        ("q_fwhm", Col::F32(&m.q_fwhm)),
+        ("qreason", Col::U8(&m.qreason)),
+        ("iso_m1", Col::F32(&m.iso_m1)),
+        ("ms2_file", Col::U32(&m.ms2_file)),
+        ("ms2_purity", Col::F32(&m.ms2_purity)),
     ];
-    let shape = [("rows", t.len()), ("files", t.n_files)];
+    let shape = [("rows", t.len()), ("files", t.n_files), ("summaries", usize::from(!t.meta.is_empty()))];
     write_container(sink, "table", r, o, &shape, &cols, evid)
 }
 

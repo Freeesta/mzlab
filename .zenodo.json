@@ -8,6 +8,7 @@
       "affiliation": "Università degli Studi di Torino"
     }
   ],
+  "language": "eng",
   "license": "MIT",
   "access_right": "open",
   "keywords": [
@@ -26,7 +27,7 @@
     },
     {
       "identifier": "https://freeesta.github.io/mzlab/",
-      "relation": "isIdenticalTo",
+      "relation": "isDocumentedBy",
       "scheme": "url"
     }
   ]

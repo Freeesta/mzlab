@@ -5,7 +5,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{parse, Value};
 
 use crate::store::{bad, ALIGN, MAGIC, PIECE};
-use crate::table::{Aligned, FileFeatures};
+use crate::table::{Aligned, FileFeatures, RowMeta};
 
 /// Bytes in memory as a `ReadAt`.
 pub struct Slice<'a>(pub &'a [u8]);
@@ -46,10 +46,12 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     if meta.get("format").and_then(|v| v.str()) != Some(kind) {
         return Err(bad());
     }
-    Ok(Opened {
+    let opened = Opened {
         meta,
         start: end.div_ceil(ALIGN as u64) * ALIGN as u64,
-    })
+    };
+    opened.check(size)?;
+    Ok(opened)
 }
 
 impl Opened {
@@ -180,6 +182,22 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         member_mz: o.col(r, size, "member_mz", "f64", rows, f64::from_le_bytes)?,
         member_rt: o.col(r, size, "member_rt", "f32", rows, f32::from_le_bytes)?,
         member_role: o.col(r, size, "member_role", "u8", rows, |b: [u8; 1]| b[0])?,
+        meta: if o.meta.get("summaries").and_then(|v| v.f64()) == Some(1.0) && o.has("rt_lo") {
+            RowMeta {
+                rt_lo: o.col(r, size, "rt_lo", "f32", rows, f32::from_le_bytes)?,
+                rt_hi: o.col(r, size, "rt_hi", "f32", rows, f32::from_le_bytes)?,
+                charge: o.col(r, size, "charge", "i8", rows, |b: [u8; 1]| b[0] as i8)?,
+                q_shape: o.col(r, size, "q_shape", "f32", rows, f32::from_le_bytes)?,
+                q_snr: o.col(r, size, "q_snr", "f32", rows, f32::from_le_bytes)?,
+                q_fwhm: o.col(r, size, "q_fwhm", "f32", rows, f32::from_le_bytes)?,
+                qreason: o.col(r, size, "qreason", "u8", rows, |b: [u8; 1]| b[0])?,
+                iso_m1: o.col(r, size, "iso_m1", "f32", rows, f32::from_le_bytes)?,
+                ms2_file: o.col(r, size, "ms2_file", "u32", rows, u32::from_le_bytes)?,
+                ms2_purity: o.col(r, size, "ms2_purity", "f32", rows, f32::from_le_bytes)?,
+            }
+        } else {
+            RowMeta::default()
+        },
     };
     Ok((t, o.meta))
 }
@@ -194,4 +212,32 @@ pub fn read_evid(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut r = Slice(bytes);
     let size = bytes.len() as u64;
     open(&mut r, size, "table")?.col(&mut r, size, "evid", "u8", None, |b: [u8; 1]| b[0])
+}
+
+impl Opened {
+    /// Every array of the directory lies inside the file (a truncated file is refused even when the reader does not want the missing arrays).
+    fn check(&self, size: u64) -> Result<()> {
+        for e in self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]) {
+            let width = match e.get("dtype").and_then(|v| v.str()) {
+                Some("f64") => 8,
+                Some("f32" | "u32") => 4,
+                Some("u16") => 2,
+                Some("u8" | "i8") => 1,
+                _ => return Err(bad()),
+            };
+            let get = |k: &str| e.get(k).and_then(|v| v.f64()).map(|v| v as u64).ok_or_else(bad);
+            let (offset, count) = (get("offset")?, get("count")?);
+            let end = self.start.checked_add(offset).and_then(|a| a.checked_add(count.checked_mul(width)?));
+            if end.is_none_or(|e| e > size) {
+                return Err(bad());
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).
+    fn has(&self, name: &str) -> bool {
+        let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
+        e.iter().any(|x| x.get("name").and_then(|v| v.str()) == Some(name))
+    }
 }

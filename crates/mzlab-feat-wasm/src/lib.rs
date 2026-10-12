@@ -33,6 +33,19 @@ pub fn version() -> String {
     format!("{BRIDGE} feat={}", mzlab_feat::FEAT_VERSION)
 }
 
+/// Bytes of the linear memory of this WASM instance (0 off wasm32): the CI guards its peak per phase (`tests/test_guardie_memoria.py`).
+#[wasm_bindgen]
+pub fn memory_bytes() -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        (core::arch::wasm32::memory_size(0) * 65536) as f64
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        0.0
+    }
+}
+
 /// Version of the crate `mzlab-feat` inside this `.wasm` (`x.y.z`): the page compares it with the one the gate of quality was measured on.
 #[wasm_bindgen]
 pub fn crate_version() -> String {

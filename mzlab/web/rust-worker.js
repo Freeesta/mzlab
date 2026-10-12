@@ -5,6 +5,7 @@ import init, { Engine, prepare_upload, formula_mz, composition, stat_post, mrm_d
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
+import { limpia } from "./pulizia.js";
 import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
@@ -61,13 +62,20 @@ const archiveReady = (async () => {
     await migra({ getSchema: () => kvGet("schema"), setSchema: n => tx("kv", "readwrite", s => s.put(n, "schema")), list: kind => ARCH.list(kind), putManifest: row => tx("manifest", "readwrite", s => s.put(row)) });
   } catch (_) { /* the archive works without the manifest; the next start tries again */ }
 })();
+// when idle, a little after the start: what is left over is cleaned (pulizia.js), then the other tabs are told
+setTimeout(() => safe(async () => {
+  await archiveReady;
+  const rows = await safe(() => tx("manifest", "readonly", s => s.getAll())) || [];
+  await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows });
+}), 8000);
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
   const files = await safe(() => ARCH.list("files")) || [], idx = await safe(() => ARCH.list("idx")) || [];
   const names = new Set(files.map(f => f.name)), gone = idx.filter(e => !names.has(e.name.replace(/\.mzidx$/, "")));
   const sum = l => l.reduce((a, e) => a + e.size, 0), est = await ARCH.estimate();
   let persisted = false; try { persisted = !!(await navigator.storage.persisted()); } catch (_) { /* optional */ }
-  return { opfs: true, files: sum(files), idx: sum(idx), idx_removed: sum(gone), n_removed: gone.length, usage: est.usage, quota: est.quota, persisted };
+  const feat = await safe(() => ARCH.list("feat")) || [];
+  return { opfs: true, files: sum(files), idx: sum(idx), feat: sum(feat), idx_removed: sum(gone), n_removed: gone.length, usage: est.usage, quota: est.quota, persisted };
 }
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
@@ -93,6 +101,18 @@ async function lrMigrate() {                                              // wha
     try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
   }
 }
+async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
+  await ARCH.ensureRoom(m.blob.size);                                 // room first (error.quota with the MB needed and free), never write hoping
+  idxPool().cancel(m.name);
+  engine.close(slotOf(m.name));
+  await ARCH.remove("idx", m.name + ".mzidx");
+  let f;
+  try { f = await ARCH.put("files", m.name, m.blob); }
+  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
+  lrFile.set(m.name, f);
+  await ARCH.persistOnce();
+  return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
+}
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -106,17 +126,7 @@ async function lrOp(m) {
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
-    case "lr_put": {                                                      // an uploaded file: into OPFS, replacing the one of the same name and its index
-      idxPool().cancel(m.name);
-      engine.close(slotOf(m.name));
-      await ARCH.remove("idx", m.name + ".mzidx");
-      let f;
-      try { f = await ARCH.put("files", m.name, m.blob); }
-      catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
-      lrFile.set(m.name, f);
-      try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) navigator.storage.persist(); } catch (_) { /* optional */ }
-      return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
-    }
+    case "lr_put": return lrPut(m);
     case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
