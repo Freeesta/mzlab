@@ -69,8 +69,8 @@ Stato attuale. Il crate porta `TP_Mine/py/tpmine/hr/features.py::detect` (livell
 - `python3 tools/feat_riferimento.py OUT --solo ipotesi [--golden]` scrive `ipotesi_regole.json` (ipotesi di tre formule inventate calcolate da `tools/feat_ipotesi.py` sulla tabella di mzFinder); `tests/hypo.rs` chiede stesse formule, passi e masse (1e-6), lo stesso SHA-256 del registro in due esecuzioni e il file delle regole uguale alla tabella.
 - `cargo test -p mzlab-feat` (`tests/trace_parity.rs`; salta senza python3 e numpy, `MZLAB_GOLDEN_STRICT=1` fallisce): stesso numero di feature, apice e bordi identici, m/z entro 1e-6 relativo, aree entro 1e-4, stessi flag; lastra di mille picchi (budget 1) = lastra grande; due esecuzioni = stessi byte.
 
-## Misura (`examples/feat.rs`)
-`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx... [--neg] [--budget-mb N] [--analyse] [--tsv DIR]` stampa per file tempo, picco di memoria (`VmHWM`, un processo per file), numero di feature e SHA-256 della tabella. Su 13 file reali Orbitrap da circa 80 MB (3,8 M picchi MS1 ciascuno): 1 259 216 feature in totale, le stesse di `features.detect` file per file; 0,5-0,7 s e 62-78 MB di picco per file (Python: 3,5 s e 565 MB); due esecuzioni e budget di 8 MB (picco 42-43 MB) danno lo stesso SHA-256.
+## Esempio `examples/feat.rs`
+`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx... [--neg] [--budget-mb N] [--analyse] [--tsv DIR]` stampa per file tempo, picco di memoria (`VmHWM`, un processo per file), numero di feature e SHA-256 della tabella (stesso SHA con budget di memoria diversi). Le misure sono in `misure.md`.
 `--analyse` esegue tutta la pipeline e stampa tempi per passo e conteggi (`--no-split` salta il taglio dei massimi), `--tsv DIR` scrive la tabella; `python3 tools/valida/picchi.py DIR_VERITA DIR_TSV` la confronta con la verità dei sintetici di `sintetici_identita.py`.
 
 ## Trappole
