@@ -11,6 +11,19 @@ use crate::specpeaks::{pad_zeros, profile_peaks};
 
 const MAX_SCANS: usize = 60;
 
+/// The spacing from the m/z of one scan: its shortest gap above 1e-4 Da, to 4 decimals.
+fn step_of(mz: &[f64]) -> Option<f64> {
+    gap_step(mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min))
+}
+
+fn gap_step(gap: f64) -> Option<f64> {
+    if !gap.is_finite() {
+        return None;
+    }
+    let step = (gap * 1e4).round_ties_even() / 1e4;
+    (step > 0.0).then_some(step)
+}
+
 impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
     fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
@@ -33,15 +46,21 @@ impl<R: ReadAt> Routes<R> {
         let positions: Vec<usize> = (mid..ids.len().min(mid + 20)).collect();
         for pts in self.scan_points(si, &positions)? {
             if pts.0.len() > 20 {
-                let gap = pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
-                if !gap.is_finite() {
-                    return Ok(None);
-                }
-                let step = (gap * 1e4).round_ties_even() / 1e4;
-                return Ok((step > 0.0).then_some(step));
+                return Ok(step_of(&pts.0));
             }
         }
-        Ok(None)
+        // A converter that leaves the zero bins out (the `.wiff` reader) gives baseline scans of a few points: when none of the 20 has more than 20, the
+        // spacing is read from the scans of the whole section that do (up to 20, the shortest gap of all).
+        let all: Vec<usize> = (0..ids.len()).collect();
+        let mut gap = f64::INFINITY;
+        let mut used = 0;
+        for pts in self.scan_points(si, &all)? {
+            if pts.0.len() > 20 && used < 20 {
+                used += 1;
+                gap = gap.min(pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min));
+            }
+        }
+        Ok(gap_step(gap))
     }
 
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
