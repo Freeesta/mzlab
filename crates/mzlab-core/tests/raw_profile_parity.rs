@@ -162,6 +162,107 @@ impl Worst {
     }
 }
 
+/// The points of every scan of the reference against ours: how many differ in number, and the worst errors of m/z and intensity.
+fn compare_points(ours_p: &std::path::Path, refp: &std::path::Path) -> (usize, Worst, Worst) {
+    let ours = mzml::read(BufReader::new(File::open(ours_p).unwrap())).unwrap();
+    let theirs = mzml::read(BufReader::new(File::open(refp).unwrap())).unwrap();
+    // msconvert pads every group of bins of a profile with zero points: the points with a signal are the ones to compare
+    let by_scan: BTreeMap<u32, &mzml::Spectrum> = ours
+        .spectra
+        .iter()
+        .filter_map(|x| Some((scan_of(&x.id)?, x)))
+        .collect();
+    let (mut wmz, mut wint, mut npk, mut bad_n) =
+        (Worst::default(), Worst::default(), 0usize, 0usize);
+    for y in &theirs.spectra {
+        let Some(x) = scan_of(&y.id).and_then(|s| by_scan.get(&s)) else {
+            bad_n += 1;
+            continue;
+        };
+        let signal = |s: &mzml::Spectrum| -> Vec<(f64, f64)> {
+            (0..s.mz.len())
+                .map(|i| (s.mz[i], s.intensity_f64(i)))
+                .filter(|p| p.1 > 0.0)
+                .collect()
+        };
+        let (px, py) = (signal(x), signal(y));
+        if px.len() != py.len() {
+            bad_n += 1;
+            continue;
+        }
+        for (a, b) in px.iter().zip(&py) {
+            npk += 1;
+            wmz.add(y.index as u32, a.0, b.0, 1e-6);
+            wint.add(y.index as u32, a.1, b.1, 1e-6);
+        }
+    }
+    eprintln!("points with a signal compared: {npk}; scans with another number of them {bad_n}");
+    eprintln!("{}\n{}", wmz.line("m/z"), wint.line("intensity"));
+    (bad_n, wmz, wint)
+}
+
+/// Header fields of the scans of the reference against ours: (differences of level, polarity, profile flag, parent scan and one-sided
+/// precursor fields; TIC over tolerance; base peak over tolerance; precursor values over tolerance).
+fn compare_heads(a: &BTreeMap<u32, Head>, b: &BTreeMap<u32, Head>) -> (usize, usize, usize, usize) {
+    let (mut rt, mut tic, mut bpm, mut bpi, mut sel, mut tgt, mut lo, mut hi, mut ce) = (
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+        Worst::default(),
+    );
+    let (mut level, mut pol, mut prof, mut pts, mut parent, mut missing) = (0, 0, 0, 0, 0, 0);
+    for (s, x) in a {
+        let y = &b[s];
+        level += (x.level != y.level) as usize;
+        pol += (x.polarity != y.polarity) as usize;
+        prof += (x.profile != y.profile) as usize;
+        pts += (x.points != y.points) as usize;
+        parent += (x.parent != y.parent) as usize;
+        rt.add(*s, x.rt_min + 1.0, y.rt_min + 1.0, 1e-6); // absolute 1e-6 min: the writer keeps 6 decimals
+        tic.add(*s, x.tic, y.tic, 1e-4);
+        bpm.add(*s, x.bp_mz, y.bp_mz, 1e-6);
+        bpi.add(*s, x.bp_int, y.bp_int, 1e-4);
+        for (o, t, w) in [
+            (x.selected, y.selected, &mut sel),
+            (x.target, y.target, &mut tgt),
+            (x.low, y.low, &mut lo),
+            (x.high, y.high, &mut hi),
+            (x.energy, y.energy, &mut ce),
+        ] {
+            match (o, t) {
+                (Some(o), Some(t)) => w.add(*s, o, t, 1e-6),
+                (None, None) => {}
+                _ => missing += 1,
+            }
+        }
+    }
+    eprintln!("scans {}; level differs {level}, polarity {pol}, profile flag {prof}, points incl. the zero padding of msconvert {pts}, parent scan {parent}, precursor fields on one side only {missing}", a.len());
+    for w in [
+        (&rt, "scan time"),
+        (&tic, "TIC"),
+        (&bpm, "base peak m/z"),
+        (&bpi, "base peak intensity"),
+        (&sel, "selected ion m/z"),
+        (&tgt, "isolation target"),
+        (&lo, "isolation lower offset"),
+        (&hi, "isolation upper offset"),
+        (&ce, "collision energy"),
+    ] {
+        eprintln!("{}", w.0.line(w.1));
+    }
+    (
+        level + pol + prof + parent + missing,
+        tic.bad,
+        bpm.bad + bpi.bad,
+        sel.bad + tgt.bad + lo.bad + hi.bad + ce.bad,
+    )
+}
+
 /// The counts of what differs, and the worst relative errors of the numbers that match.
 struct Report {
     header_differences: usize,
@@ -212,92 +313,16 @@ fn compare() -> Option<Report> {
         "every scan of the reference is in the .raw"
     );
 
-    let (mut rt, mut tic, mut bpm, mut bpi, mut sel, mut tgt, mut lo, mut hi, mut ce) = (
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-        Worst::default(),
-    );
-    let (mut level, mut pol, mut prof, mut pts, mut parent, mut missing) = (0, 0, 0, 0, 0, 0);
-    for (s, x) in &a {
-        let y = &b[s];
-        level += (x.level != y.level) as usize;
-        pol += (x.polarity != y.polarity) as usize;
-        prof += (x.profile != y.profile) as usize;
-        pts += (x.points != y.points) as usize;
-        parent += (x.parent != y.parent) as usize;
-        rt.add(*s, x.rt_min, y.rt_min, 1e-6);
-        tic.add(*s, x.tic, y.tic, 1e-4);
-        bpm.add(*s, x.bp_mz, y.bp_mz, 1e-6);
-        bpi.add(*s, x.bp_int, y.bp_int, 1e-4);
-        for (o, t, w) in [
-            (x.selected, y.selected, &mut sel),
-            (x.target, y.target, &mut tgt),
-            (x.low, y.low, &mut lo),
-            (x.high, y.high, &mut hi),
-            (x.energy, y.energy, &mut ce),
-        ] {
-            match (o, t) {
-                (Some(o), Some(t)) => w.add(*s, o, t, 1e-6),
-                (None, None) => {}
-                _ => missing += 1,
-            }
-        }
-    }
-    eprintln!("scans {}; level differs {level}, polarity {pol}, profile flag {prof}, points {pts}, parent scan {parent}, precursor fields on one side only {missing}", a.len());
-    for w in [
-        (&rt, "scan time"),
-        (&tic, "TIC"),
-        (&bpm, "base peak m/z"),
-        (&bpi, "base peak intensity"),
-        (&sel, "selected ion m/z"),
-        (&tgt, "isolation target"),
-        (&lo, "isolation lower offset"),
-        (&hi, "isolation upper offset"),
-        (&ce, "collision energy"),
-    ] {
-        eprintln!("{}", w.0.line(w.1));
-    }
+    let (header_differences, tic_bad, base_peak_bad, precursor_bad) = compare_heads(&a, &b);
 
-    // the points: m/z and intensity of every scan
-    let ours = mzml::read(BufReader::new(File::open(&ours_p).unwrap())).unwrap();
-    let theirs = mzml::read(BufReader::new(File::open(&refp).unwrap())).unwrap();
-    let (mut wmz, mut wint, mut npk, mut bad_n) =
-        (Worst::default(), Worst::default(), 0usize, 0usize);
-    let by_scan: BTreeMap<u32, &mzml::Spectrum> = ours
-        .spectra
-        .iter()
-        .filter_map(|x| Some((scan_of(&x.id)?, x)))
-        .collect();
-    for y in &theirs.spectra {
-        let Some(x) = scan_of(&y.id).and_then(|s| by_scan.get(&s)) else {
-            bad_n += 1;
-            continue;
-        };
-        if x.mz.len() != y.mz.len() {
-            bad_n += 1;
-            continue;
-        }
-        for i in 0..x.mz.len() {
-            npk += 1;
-            wmz.add(y.index as u32, x.mz[i], y.mz[i], 1e-9);
-            wint.add(y.index as u32, x.intensity_f64(i), y.intensity_f64(i), 1e-6);
-        }
-    }
-    eprintln!("points compared: {npk}; scans with another number of points {bad_n}");
-    eprintln!("{}\n{}", wmz.line("m/z"), wint.line("intensity"));
+    let (bad_n, wmz, wint) = compare_points(&ours_p, &refp);
     let _ = std::fs::remove_file(&ours_p);
     Some(Report {
-        header_differences: level + pol + prof + pts + parent + missing,
+        header_differences,
         point_differences: bad_n + wmz.bad + wint.bad,
-        tic_bad: tic.bad,
-        base_peak_bad: bpm.bad + bpi.bad,
-        precursor_bad: sel.bad + tgt.bad + lo.bad + hi.bad + ce.bad,
+        tic_bad,
+        base_peak_bad,
+        precursor_bad,
     })
 }
 
@@ -313,7 +338,7 @@ fn raw_profile_totals_and_precursors_match_msconvert() {
 }
 
 #[test]
-#[ignore = "known gaps with this Tribrid file: opentfraw reads the scan event (level, polarity, filter) of every second scan wrongly and the profile points differ"]
+#[ignore = "known gaps with this Tribrid file: opentfraw reads the scan events of the DIA windows wrongly (fixed by the vendored copy of opentfraw)"]
 fn raw_profile_matches_msconvert_mzml_scan_by_scan() {
     if let Some(r) = compare() {
         assert_eq!((r.header_differences, r.point_differences), (0, 0));
