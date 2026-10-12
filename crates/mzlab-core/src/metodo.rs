@@ -154,8 +154,9 @@ fn experiment_type(e: &crate::methodinfo::Experiment) -> Option<&'static str> {
     matches!(e.kind, Kind::Mrm(_)).then_some("MRM")
 }
 
-/// `ms`: the source and the experiments of a method (one period: the file does not say where a period ends).
-pub fn ms_section(m: &Method) -> Option<V> {
+/// `ms`: the source and the experiments of a method (one period: the file does not say where a period ends). `source_type`: the kind of
+/// source as the instrument reported it (the log of a `.wiff`: «Turbo Spray»); a method alone does not say, so it is absent then.
+pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
     let exps: Vec<V> = m
         .experiments
         .iter()
@@ -202,7 +203,7 @@ pub fn ms_section(m: &Method) -> Option<V> {
         (
             "sorgente",
             obj(vec![
-                ("tipo", Some(V::s("ESI"))),
+                ("tipo", source_type.and_then(text)),
                 ("parametri", Some(params(&m.source))),
             ]),
         ),
@@ -269,14 +270,7 @@ pub fn from_dam(m: &Method, src: &Source) -> String {
             "campione",
             obj(vec![("metodo_file", file.as_deref().and_then(text))]),
         ),
-        (
-            "strumento",
-            obj(vec![
-                ("produttore", Some(V::s("SCIEX"))),
-                ("modello", Some(V::s("3200 QTRAP"))),
-            ]),
-        ),
-        ("ms", ms_section(m)),
+        ("ms", ms_section(m, None)),
         ("lc", lc),
         ("rivelatori", det),
     ]);

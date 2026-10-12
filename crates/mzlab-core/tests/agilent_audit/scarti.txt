@@ -3,4 +3,3 @@ AcqData/MSPeak.bin|points: decoded by the reader; its 68 byte header is constant
 AcqData/MSScan.bin|records: decoded by the reader; the 160 byte header is declared with size and SHA-1 (MSScan.bin#header)
 AcqData/MSIndex.bin|scan times per segment: equal to the times of the records (checked on the first segment)
 TEMPBASE|empty file
-data.ms|ChemStation file the AcqData was converted from; format not decoded, the same scans are in AcqData

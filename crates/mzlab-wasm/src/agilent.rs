@@ -24,6 +24,7 @@ impl Engine {
         contents: &[u8],
         ms_tree: &[u8],
         acqmeth: &[u8],
+        data_ms: &[u8],
         peak_size: f64,
         peak_read: Function,
         sink: Function,
@@ -38,6 +39,7 @@ impl Engine {
             contents: some(contents),
             ms_tree: some(ms_tree),
             acqmeth: some(acqmeth),
+            data_ms: some(data_ms),
             others: &[],
         };
         let run = AgilentD::open(name, &files).map_err(|e| error_json(&e))?;

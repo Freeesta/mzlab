@@ -34,6 +34,7 @@ agilent_sintetico.write(top / "sub", "due.D", 90)
 broken = agilent_sintetico.write(top, "rotto.D", 30)
 (broken / "AcqData/MSPeak.bin").unlink()
 synth.write_full(top / "mix.mzML", 5, seed=1)
+agilent_sintetico.write_old(top)
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
@@ -50,9 +51,9 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
-            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 3", timeout=120000)
-            n = sorted(names(pg)); assert n == ["due.mzML", "mix.mzML", "uno.mzML"], n
-        step("a folder with two .D runs and an mzML lists three files", folder)
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
+            n = sorted(names(pg)); assert n == ["due.mzML", "mix.mzML", "uno.mzML", "vecchia.mzML"], n
+        step("a folder with two .D runs, an older .D with only data.ms and an mzML lists four files", folder)
         def notice():
             t = pg.inner_text("#up")
             assert "rotto.D" in t, t
