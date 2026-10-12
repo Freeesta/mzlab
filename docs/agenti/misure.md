@@ -206,3 +206,15 @@ Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazio
 | aggancio, misure dei punti, punti del 3D (300 punti) | 0,3-5 | 0,1-6 |
 
 Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_lr`): mappa intera 54 ms in Rust contro 46 in Pyodide già avviato, con sfondo 102 contro 73, regione 36 contro 24, aggancio 7 contro 2, punti 26 contro 3, punti 3D 22 contro 37. Il guadagno non è la velocità della singola richiesta (Pyodide ha già la tabella in memoria) ma che Pyodide non parte: avvio della pagina 1,3 s contro 5,0 s. Parità: celle e punti uguali bit a bit; dei punti 3D tagliati a `max` si confrontano gli insiemi per intensità (numpy sceglie a caso fra intensità uguali).
+
+## Formule compatibili (`api/composition`, `cargo test --release -p mzlab-core --test composition_route_parity -- --nocapture` e `tools/composizione_rotta_riferimento.py`, nativo) e XIC da formula (`api/subxic`, `--test subxic_parity` e `tools/subxic_riferimento.py`, due file Orbitrap veri di 80 MB)
+| Richiesta | Python (ms) | Rust (ms) |
+|---|---|---|
+| composizione con intervalli di elementi (C 0-20, H 0-40, N 0-5, O 0-8, S 0-2) | 1-7 | 0,1-2,5 |
+| composizione con gli intervalli di base | 20-44 | 5-7 |
+| composizione con picchi isotopici e frammenti | 1-5 | 0,5-2,4 |
+| XIC da formula, 24 000 sottoformule a ±5 ppm | 540-660 | 100-220 |
+| XIC da formula, 26 000 sottoformule a ±10 ppm | 700-1240 | 140-280 |
+| XIC da formula, 480 sottoformule | 9-21 | 9-45 (il tempo è quello di caricare la tabella dei picchi) |
+
+Parità: stessi candidati nello stesso ordine e numeri entro 1e-9 per `composition`; righe, ordine e numeri identici per `subxic` (anche sui file veri). Nel browser non misurato: la pagina HR passa a Python alla prima richiesta di spettro, quindi `subxic` ci arriva solo da un motore già avviato; `composition` non ha bisogno di file.
