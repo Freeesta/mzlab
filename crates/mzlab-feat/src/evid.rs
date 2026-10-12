@@ -289,7 +289,8 @@ pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Brea
 
 impl Breakdown {
     /// Order of the candidates: by total, higher first; with the same total the one with fewer proofs against; equal ones keep their place (stable sort).
-    /// A proof against takes no point away and none is added for it, but it never hides an identity behind others with fewer points: it stays in the column.
+    /// A proof against takes no point away, never lowers the level (that stays the cascade of `LIVELLI.assess`) and is always flagged. Revocable decision:
+    /// "proofs against last" is the order `(against > 0).cmp(..)` first, then the total.
     pub fn rank(&self, other: &Breakdown) -> Ordering {
         other
             .total
