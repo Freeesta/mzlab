@@ -56,6 +56,10 @@ PROFILI = {
                      n_tp=12, n_tp2=4, isomeri=[(d, v) for d in (0.05, 0.1, 0.2, 0.3) for v in (0.3, 0.7)] * 4, purezze=[0.95, 0.7, 0.5, 0.3], per_livello=20, n_fondo=12,
                      passo=0.1, famiglie_extra=30, t_sat=20.0, n_rumore=8000, n_regole=12, n_esche=400),
 }
+ESTESO = dict(catene={"3": 6, "2": 12}, f_isf_tp=0.5, n_isf_variabile=6, n_travestiti=8, escala_k=1.0, t_limite=72.0, gap_tmax=1.5, n_alogenati=8, gruppi_per_dt=3)
+PROFILI["V1X"] = {**PROFILI["completo"], "esteso": ESTESO}
+PROFILI["V1X-piccolo"] = {**PROFILI["piccolo"], "esteso": {**ESTESO, "catene": {"3": 2, "2": 3}, "n_isf_variabile": 2, "n_travestiti": 4, "escala_k": 3.0, "t_limite": 16.0, "gap_tmax": 0.5,
+                                                            "n_alogenati": 4, "gruppi_per_dt": 1}}
 LOSSES = ["C4H8", "H2O", "C2H4", "CH2O", "C3H6", "NH3", "C2H2O", "CO", "C2H6", "CH4O", "C3H4", "C4H6", "H2S", "C2H3N"]
 TRASF = [{k: v for k, v in (("C", dc), ("H", dh), ("O", do)) if v} for dc in range(-4, 5) for do in range(0, 4) for dh in range(-6, 7, 2) if (dc, dh, do) != (0, 0, 0)]
 
@@ -210,6 +214,8 @@ class Derivati:
 class Costruttore(Derivati):
     def __init__(self, seme: int, profilo: str):
         self.rng = np.random.default_rng(seme)
+        self.seme = seme
+        self.vx = None                                    # state of the V1X extension (valida/sintetici_esteso.py)
         self.P = PROFILI[profilo]
         self.file = self.P["file"]
         self.tempi = np.array([t for _, _, t in self.file])
@@ -247,7 +253,7 @@ class Costruttore(Derivati):
         if not valida_formula(f) or any(f == g for g in self.formule):
             return False
         mz = E.ion_mz(E.mass(f), "[M+H]+")
-        return all(abs(o.mz - mz) > 1.3 or abs(o.rt - rt) > 0.6 for o in self.ioni if o.amp is not None and o.ruolo in ("progenitore", "tp1", "tp2", "isomero", "chimerica"))
+        return all(abs(o.mz - mz) > 1.3 or abs(o.rt - rt) > 0.6 for o in self.ioni if o.amp is not None and o.ruolo in ("progenitore", "tp1", "tp2", "tp3", "isomero", "chimerica", "progenitore_alog"))
 
     def parametri(self, forma: str, progenitore: Ione) -> dict:
         u = lambda a, b: round(float(self.rng.uniform(a, b)), 3)          # noqa: E731
@@ -343,7 +349,7 @@ def ipotesi(c: Costruttore) -> None:
     n = P["n_rumore"]
     c.rumore = (rng.uniform(*MZ_RUMORE, n), rng.uniform(1.0, c.rt_fine - 0.3, n), rng.uniform(0.04, 0.08, n), rng.lognormal(np.log(6e5), 0.5, n))
     veri = np.sort(np.array([m for o in c.ioni if o.amp is not None for m, _ in o.picchi] + [m for _, m, _, _ in c.fondo]))
-    basi = [o for o in c.ioni if o.ruolo in ("progenitore", "tp1", "tp2", "isomero")]
+    basi = [o for o in c.ioni if o.ruolo in ("progenitore", "tp1", "tp2", "tp3", "isomero")]
     hyp = [(b, r, REGOLE_ESCA[r], b.mz + REGOLE_ESCA[r]) for b in basi for r in range(P["n_regole"])]
     hyp = [h for h in hyp if MZ_RUMORE[0] < h[3] < MZ_RUMORE[1] and (lambda i: min(abs(veri[min(i, len(veri) - 1)] - h[3]), abs(veri[max(i - 1, 0)] - h[3])) > h[3] * 2e-5)(np.searchsorted(veri, h[3]))]
     attese = sum(n * 2 * 5e-6 * h[3] / (MZ_RUMORE[1] - MZ_RUMORE[0]) for h in hyp)
@@ -370,6 +376,9 @@ def costruisci(seme: int, profilo: str) -> Costruttore:
     prodotti_cinetici(c, padre, neutra)
     isomeri(c, padre, neutra)
     chimeriche(c, padre, neutra)
+    if c.P.get("esteso"):
+        from valida import sintetici_esteso                    # V1X: chains, in-source fragments of the products, halogens, close isomers
+        sintetici_esteso.estendi(c)
     c.fondo = [(f"SIN-BG-{i + 1:02d}", float(c.rng.uniform(150, 600)), float(c.rng.uniform(1e6, 4e6)), float(c.rng.uniform(0, 6.28))) for i in range(c.P["n_fondo"])]
     c.rt_fine = c.rt_cursor + 1.0
     ipotesi(c)
@@ -406,7 +415,7 @@ def scrivi_verita(out: Path, c: Costruttore, seme: int, profilo: str) -> None:
     d = {"_note": "Verità dei dati sintetici di tools/valida/sintetici_identita.py: tutte le molecole e i numeri sono inventati. `parent` e `tps` hanno il formato di timolol_truth.json; `ioni` ha tutte le righe.",
          "meta": {"seme": seme, "profilo": profilo, "colonne": COLONNE, "coincidenze": c.meta_coinc, "t_saturazione": c.P["t_sat"]},
          "parent": {"name": padre.id, "ion": padre.ion, "mz": round(padre.mz, 6), "rt_obs": round(padre.rt, 4), "notes": padre.note, "k_dec": padre.k_dec},
-         "tps": [r for r in rows if r["ruolo"] in ("tp1", "tp2", "isomero")], "ioni": rows, "file": [{"nome": f"SIN_{s}", "tipo": k, "time": t} for s, k, t in c.file]}
+         "tps": [r for r in rows if r["ruolo"] in ("tp1", "tp2", "tp3", "isomero")], "ioni": rows, "file": [{"nome": f"SIN_{s}", "tipo": k, "time": t} for s, k, t in c.file]}
     (out / "verita.json").write_text(json.dumps(d, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
@@ -417,6 +426,9 @@ def genera(seme: int, profilo: str, out) -> Path:
     for k, (stem, _, _) in enumerate(c.file):
         scrivi_file(out / f"SIN_{stem}.mzML", k, c, seme)
     scrivi_verita(out, c, seme, profilo)
+    if c.P.get("esteso"):
+        from valida import sintetici_esteso_verita
+        sintetici_esteso_verita.scrivi(out, c, seme, profilo)
     return out
 
 
@@ -424,9 +436,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--seme", type=int, default=7)
     ap.add_argument("--profilo", choices=sorted(PROFILI), default="piccolo")
+    ap.add_argument("--esteso", action="store_true", help="V1X: second and third generations, in-source fragments of the products, halogens, close isomers (+ verita_tp.json)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
-    print(genera(a.seme, a.profilo, a.out))
+    print(genera(a.seme, {"completo": "V1X", "piccolo": "V1X-piccolo"}.get(a.profilo, a.profilo) if a.esteso else a.profilo, a.out))
     return 0
 
 

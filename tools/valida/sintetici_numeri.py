@@ -22,7 +22,7 @@ from valida import PPM, RT_TOL, tabelle                  # noqa: E402
 from valida.abbina import abbina                         # noqa: E402
 from mzlab.chem import elements as E                     # noqa: E402
 
-CON_RT = ("progenitore", "tp1", "tp2", "isomero", "isotopo", "addotto", "isf", "isf_finto", "chimerica", "coincidenza")
+CON_RT = ("progenitore", "tp1", "tp2", "tp3", "progenitore_alog", "isomero", "isotopo", "addotto", "dimero", "isf", "isf_finto", "chimerica", "coincidenza")
 
 
 def ricerca_mz(tab, mz) -> np.ndarray:
