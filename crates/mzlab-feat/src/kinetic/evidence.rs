@@ -241,6 +241,77 @@ fn code<T: PartialEq>(v: T, all: &[T]) -> f64 {
     all.iter().position(|x| *x == v).map_or(-1.0, |i| i as f64)
 }
 
+fn decide(controls: Controls, stable: bool, coupling: Coupling, second: bool) -> Sign {
+    let formed = matches!(controls, Controls::Absent | Controls::Reduced) && stable;
+    match (formed, coupling) {
+        (true, Coupling::Coherent) if !second => Sign::For,
+        (true, Coupling::TooFast) => Sign::Against,
+        _ if controls == Controls::Present => Sign::Against,
+        _ => Sign::Info,
+    }
+}
+
+fn params(s: &Setup, r: &Report, n: usize, would: f64) -> Vec<(&'static str, f64)> {
+    let gen = r.generation.map_or(-1.0, |g| {
+        code(g.verdict, &[Gen::First, Gen::Second, Gen::Undecidable])
+    });
+    let ctl = code(
+        r.controls,
+        &[
+            Controls::Absent,
+            Controls::Reduced,
+            Controls::Present,
+            Controls::NoSignal,
+        ],
+    );
+    let cpl = code(
+        r.coupling,
+        &[
+            Coupling::Coherent,
+            Coupling::TooFast,
+            Coupling::TooSlow,
+            Coupling::Unresolved,
+            Coupling::Unknown,
+        ],
+    );
+    let src = code(
+        s.parent.source,
+        &[
+            ParentSource::Direct,
+            ParentSource::Isotope,
+            ParentSource::AfterPlateau,
+            ParentSource::Unavailable,
+        ],
+    );
+    vec![
+        ("shape", r.shape.map_or(-1.0, |f| f as u8 as f64)),
+        ("gap_aicc", if r.gap.is_finite() { r.gap } else { 1e9 }),
+        ("stability", r.stability.map_or(0.0, |st| st.share())),
+        ("generation", gen),
+        ("generation_delta", r.generation.map_or(0.0, |g| g.delta)),
+        ("k_form", r.k_form),
+        ("k_parent", s.parent.k.unwrap_or(0.0)),
+        ("controls", ctl),
+        ("log2fc_controls", r.log2fc),
+        ("coupling", cpl),
+        ("parent_saturated", s.parent.saturated as u8 as f64),
+        ("parent_source", src),
+        ("points_if_weighed", would),
+        ("n_points", n as f64),
+    ]
+}
+
+/// Formation so fast that the first sampled time already holds 90 % of it: the rate is not resolved.
+fn is_instant(s: &Setup, shape: Option<Form>, rate: f64) -> bool {
+    let first_t = s
+        .times
+        .iter()
+        .copied()
+        .filter(|&t| t > 0.0)
+        .fold(f64::INFINITY, f64::min);
+    shape == Some(Form::Formation) && 1.0 - libm::exp(-rate * first_t) >= 0.9
+}
+
 /// Report and evidence record of the kinetics of `y` (area at `s.times`; t0 is the point with time 0) with the controls `ctrl` (blank, dark).
 pub fn kinetic_report(s: &Setup, y: &[f64], ctrl: &[f64]) -> Report {
     let (controls, log2fc) = controls_of(s, y, ctrl);
@@ -248,114 +319,49 @@ pub fn kinetic_report(s: &Setup, y: &[f64], ctrl: &[f64]) -> Report {
     let fits = s.forms.fit_cols(y, &all);
     let (shape, gap) = choice(&fits).map_or((None, 0.0), |(f, g)| (Some(f), g));
     let stability = s.forms.stability(y, Resample::LeaveOneOut);
-    let gener = generation(s.forms, s.chain, y, MARGIN);
-    let stable = stability.is_some_and(|st| st.stable());
+    let generation = generation(s.forms, s.chain, y, MARGIN);
     let (coupling, k_form, dist) = shape.map_or((Coupling::Unknown, 0.0, 0.0), |f| {
         couple(s, f, fits[0].rates)
     });
-    let first_t = s
-        .times
-        .iter()
-        .copied()
-        .filter(|&t| t > 0.0)
-        .fold(f64::INFINITY, f64::min);
-    let instant = shape == Some(Form::Formation)
-        && 1.0 - libm::exp(-k_form.max(fits.first().map_or(0.0, |f| f.rates[0])) * first_t) >= 0.9;
-    let coupling = if instant {
+    let coupling = if is_instant(s, shape, fits.first().map_or(0.0, |f| f.rates[0])) {
         Coupling::Unresolved
     } else {
         coupling
     };
-    let second = gener.is_some_and(|g| g.verdict == Gen::Second);
-    let formed = matches!(controls, Controls::Absent | Controls::Reduced) && stable;
-    let sign = match (formed, coupling) {
-        (true, Coupling::Coherent) if !second => Sign::For,
-        (true, Coupling::TooFast) => Sign::Against,
-        _ if controls == Controls::Present => Sign::Against,
-        _ => Sign::Info,
-    };
+    let sign = decide(
+        controls,
+        stability.is_some_and(|st| st.stable()),
+        coupling,
+        generation.is_some_and(|g| g.verdict == Gen::Second),
+    );
     let would = if sign == Sign::Info {
         0.0
     } else {
         POINTS_IF_WEIGHED
     };
-    let points = would.min(POINTS_MAX);
-    let params = vec![
-        ("shape", shape.map_or(-1.0, |f| f as u8 as f64)),
-        ("gap_aicc", if gap.is_finite() { gap } else { 1e9 }),
-        ("stability", stability.map_or(0.0, |st| st.share())),
-        (
-            "generation",
-            gener.map_or(-1.0, |g| {
-                code(g.verdict, &[Gen::First, Gen::Second, Gen::Undecidable])
-            }),
-        ),
-        ("generation_delta", gener.map_or(0.0, |g| g.delta)),
-        ("k_form", k_form),
-        ("k_parent", s.parent.k.unwrap_or(0.0)),
-        (
-            "controls",
-            code(
-                controls,
-                &[
-                    Controls::Absent,
-                    Controls::Reduced,
-                    Controls::Present,
-                    Controls::NoSignal,
-                ],
-            ),
-        ),
-        ("log2fc_controls", log2fc),
-        (
-            "coupling",
-            code(
-                coupling,
-                &[
-                    Coupling::Coherent,
-                    Coupling::TooFast,
-                    Coupling::TooSlow,
-                    Coupling::Unresolved,
-                    Coupling::Unknown,
-                ],
-            ),
-        ),
-        ("parent_saturated", s.parent.saturated as u8 as f64),
-        (
-            "parent_source",
-            code(
-                s.parent.source,
-                &[
-                    ParentSource::Direct,
-                    ParentSource::Isotope,
-                    ParentSource::AfterPlateau,
-                    ParentSource::Unavailable,
-                ],
-            ),
-        ),
-        ("points_if_weighed", would),
-        ("n_points", y.len() as f64),
-    ];
-    let evidence = Evidence {
+    let empty = Evidence {
         kind: KIND,
         value: dist,
         threshold: libm::log(COUPLING_FACTOR),
-        points,
+        points: would.min(POINTS_MAX),
         sign,
         source: SOURCE,
         version: super::KINETIC_VERSION,
-        params,
+        params: Vec::new(),
     };
-    Report {
+    let mut r = Report {
         shape,
         gap,
         stability,
-        generation: gener,
+        generation,
         controls,
         log2fc,
         coupling,
         k_form,
-        evidence,
-    }
+        evidence: empty,
+    };
+    r.evidence.params = params(s, &r, y.len(), would);
+    r
 }
 
 /// The record `{kind, value, threshold, points, sign, source, version, params}` that the evidence layer consumes.

@@ -262,7 +262,10 @@ fn evidence_two_runs_same_bytes() {
             let e = &c.report.evidence;
             h.update(c.id.as_bytes());
             h.update([e.sign as u8]);
-            for v in [e.value, e.threshold, e.points].into_iter().chain(e.params.iter().map(|p| p.1)) {
+            for v in [e.value, e.threshold, e.points]
+                .into_iter()
+                .chain(e.params.iter().map(|p| p.1))
+            {
                 h.update(v.to_le_bytes());
             }
         }
