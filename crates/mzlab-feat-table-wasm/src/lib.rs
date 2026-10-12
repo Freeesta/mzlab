@@ -1,0 +1,88 @@
+//! wasm-bindgen bridge of the table of `mzlab-feat`: the view (normalisation and filters), the report and the files that leave the table (CSV full,
+//! FBMN quantification table, MGF, SIRIUS `.ms`). A `.wasm` of its own, so the engine of the pipeline (`mzlab-feat-wasm`) does not carry it: the page loads
+//! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `campioni/1` and the parameters of the view
+//! come as JSON text, the `.mzidx` of the files (only for MGF and `.ms`) as `read(k, offset, length)`. Errors are JSON `{"error_key", "params"}` strings.
+use js_sys::{Function, Uint8Array};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::json::Out;
+use wasm_bindgen::prelude::*;
+
+pub mod core;
+
+/// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
+const BRIDGE: &str = "mzfeat-table/1";
+
+fn js_err(e: Error) -> JsValue {
+    let mut o = Out::default();
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
+    for (i, (k, v)) in e.params.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
+    }
+    o.raw("}}");
+    JsValue::from_str(&o.0)
+}
+
+#[wasm_bindgen]
+pub fn version() -> String {
+    format!("{BRIDGE} feat={}", mzlab_feat::FEAT_VERSION)
+}
+
+/// Version of the crate `mzlab-feat` inside this `.wasm` (`x.y.z`).
+#[wasm_bindgen]
+pub fn crate_version() -> String {
+    mzlab_feat::CRATE_VERSION.to_string()
+}
+
+/// Bytes of file `k` held by JavaScript: `read(k, offset, length) -> Uint8Array`.
+struct JsReader {
+    read: Function,
+    k: u32,
+}
+
+impl ReadAt for JsReader {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        let io = || Error::new("error.io");
+        let v = self.read.call3(&JsValue::NULL, &self.k.into(), &(off as f64).into(), &(buf.len() as f64).into()).map_err(|_| io())?;
+        let a: Uint8Array = v.dyn_into().map_err(|_| io())?;
+        if a.length() as usize != buf.len() {
+            return Err(Error::new("error.badIndex"));
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
+}
+
+fn table_reader(read: Function) -> JsReader {
+    JsReader { read, k: 0 }
+}
+
+/// The view of a table: `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
+#[wasm_bindgen]
+pub fn table_view(table_read: Function, size: f64, samples_json: &str, spec: &str) -> std::result::Result<String, JsValue> {
+    core::view_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
+}
+
+/// The `report/1` of a table under the view `spec` (empty = the whole table).
+#[wasm_bindgen]
+pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str) -> std::result::Result<String, JsValue> {
+    core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
+}
+
+/// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells) or `quant` (FBMN).
+#[wasm_bindgen]
+pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {
+    core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)
+}
+
+/// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
+/// (`index_read(k, offset, length)`, `index_sizes[k]` bytes).
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str, index_read: Function, index_sizes: Vec<f64>) -> std::result::Result<String, JsValue> {
+    let open = |k: usize| {
+        let size = *index_sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+        Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
+    };
+    core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
+}

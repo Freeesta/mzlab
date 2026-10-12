@@ -36,10 +36,10 @@ try:
         def menu():
             x, y = at(.4, .5); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)
             its = menu_items(); names = [i[0] for i in its]
-            for want in ["XIC", "Spectrum", "Lock the sight", "Reset zoom", "Copy coordinates", "Gestures"]:
+            for want in ["XIC", "Spectrum", "Lock the sight", "Mark the point", "Reset zoom", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
             assert not any("both" in n or "axis only" in n or "selection" in n or "How it is" in n or "Extract" in n for n in names), names     # a short menu: no duplicates, no teaching view in it
-            assert sum(1 for i in its if i[1]) >= 6 and len([n for n in names]) <= 7, its                # six commands with an aria-label (plus the line of the point)
+            assert sum(1 for i in its if i[1]) >= 7 and len([n for n in names]) <= 8, its                # seven commands with an aria-label (plus the line of the point)
             assert pg.evaluate("document.querySelectorAll('#ctx hr').length") >= 3
             assert "At the pointer" in names[0]
             pg.keyboard.press("Escape"); pg.wait_for_timeout(100); assert pg.evaluate("document.getElementById('ctx').hidden")
@@ -74,14 +74,14 @@ try:
         step("Copy coordinates", copy)
         def bar():
             btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
-            assert [b[0] for b in btns] == ["mapreset", "mapzin", "mapzout", "maplock", "mapexplain", "maphelp"], btns
+            assert [b[0] for b in btns] == ["mapzin", "mapzout", "maplock", "maphelp"], btns
             assert all(b[1] for b in btns), btns
-            zoom_in(); pg.click(".pnl.map [data-nav=mapreset]"); pg.wait_for_timeout(300); assert z() == [None, None]
+            zoom_in(); pg.click(".pnl.map [data-a=fit]"); pg.wait_for_timeout(300); assert z() == [None, None]
             pg.click(".pnl.map [data-nav=mapzin]"); pg.wait_for_timeout(300); zz = z(); assert zz[0] and zz[1], zz
             pg.click(".pnl.map [data-nav=mapzout]"); pg.wait_for_timeout(300)
             pg.click(".pnl.map [data-nav=maplock]"); pg.wait_for_timeout(200); assert pg.evaluate(f"!!{M}._mz.lock")
             pg.click(".pnl.map [data-nav=maplock]"); pg.wait_for_timeout(200); assert pg.evaluate(f"!{M}._mz.lock")
-            pg.click(".pnl.map [data-nav=mapreset]"); pg.wait_for_timeout(200)
+            pg.evaluate("MAPPA.whole(" + M + ")"); pg.wait_for_timeout(200)
         step("bar on the map: reset, +, −, padlock, gestures", bar)
         def sheet():
             pg.click(".pnl.map [data-nav=maphelp]"); pg.wait_for_timeout(400)
@@ -107,11 +107,11 @@ try:
             assert npan("xic") == n0 + 1, "Enter chooses the first live item: XIC"
         step("keyboard: + − Esc Home 0, menu key, arrows and Enter in the menu", keys)
         def wheels():
-            pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.click(".pnl.map [data-nav=mapreset]"); x, y = at(.5, .45); pg.mouse.move(x, y)
+            pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("MAPPA.whole(" + M + ")"); x, y = at(.5, .45); pg.mouse.move(x, y)
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
-            pg.click(".pnl.map [data-nav=mapreset]"); pg.mouse.move(x, y)
+            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y)
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -300); pg.keyboard.up("Alt"); pg.wait_for_timeout(300); a = z(); assert a[1] and a[0] is None, a             # Alt = m/z only
-            pg.click(".pnl.map [data-nav=mapreset]"); pg.mouse.move(x, y); pg.mouse.wheel(0, -300); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1], a
+            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y); pg.mouse.wheel(0, -300); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1], a
             before = z()[0]; pg.mouse.wheel(120, 0); pg.wait_for_timeout(300); after = z()[0]; assert after[0] > before[0], (before, after)                          # trackpad sideways = move along RT
             pg.mouse.dblclick(x, y); pg.wait_for_timeout(300); assert z() == [None, None]                                                                             # double click = reset
         step("wheel: zoom, Shift = RT, Alt = m/z, sideways = move, double click = reset", wheels)
@@ -144,8 +144,8 @@ try:
         def targets():
             assert pg.evaluate("matchMedia('(pointer:coarse)').matches"), "touch context"
             sizes = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
-            assert len(sizes) == 6 and all(w >= 44 and h >= 44 for w, h in sizes), sizes
-        step("touch screen: the buttons of the bar are at least 44 px", targets)
+            assert len(sizes) == 4 and all(w >= 40 and h >= 40 for w, h in sizes), sizes
+        step("touch screen: the buttons of the bar are at least 40 px, like the others of the head", targets)
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(400)

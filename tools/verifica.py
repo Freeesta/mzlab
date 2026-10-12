@@ -46,7 +46,7 @@ NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
 # About 3 minutes together on a laptop; the whole set (python3 tools/verifica.py) stays the rule before every merge.
 SMOKE = ["e2e3", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2",
-         "e2e_hr_isotopi", "e2e_picchi"]
+         "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded"]   # Firefox: a notice about styles, not an error   # aborted requests = page reloaded or closed by the test
@@ -288,7 +288,7 @@ AREE = [
     ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_tour"}), ("mzlab/web/features.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_strumenti"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/riferimento.js", {"e2e_differenza_hr", "e2e_tour"}), ("tests_e2e/e2e_differenza_hr.py", {"e2e_differenza_hr"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
-    ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/web/gradiente.js", {"e2e_gradiente", "e2e_workflow"}), ("mzlab/web/tdati.js", {"e2e_tabelle_dati"}), ("mzlab/web/tdati-pannelli.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_tabelle_dati.py", {"e2e_tabelle_dati"}), ("mzlab/web/tdati.js", {"e2e_axe_grafici"}), ("mzlab/web/mappa.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_axe_grafici.py", {"e2e_axe_grafici"}), ("mzlab/analog.py", {"e2e_gradiente"}), ("tests_e2e/e2e_gradiente.py", {"e2e_gradiente"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/web/version.js", {"e2e_workflow"}),
+    ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/web/gradiente.js", {"e2e_gradiente", "e2e_workflow"}), ("mzlab/web/tdati.js", {"e2e_tabelle_dati"}), ("mzlab/web/tdati-pannelli.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_tabelle_dati.py", {"e2e_tabelle_dati"}), ("mzlab/web/tdati.js", {"e2e_axe_grafici"}), ("mzlab/web/mappa.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_axe_grafici.py", {"e2e_axe_grafici"}), ("tests_e2e/e2e_a11y_dati.py", {"e2e_a11y_dati"}), ("mzlab/web/settings.js", {"e2e_a11y_dati"}), ("mzlab/web/paletta.js", {"e2e_a11y_dati"}), ("mzlab/analog.py", {"e2e_gradiente"}), ("tests_e2e/e2e_gradiente.py", {"e2e_gradiente"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/web/version.js", {"e2e_workflow"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
 
@@ -361,6 +361,10 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
+    if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
+        rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
+        if rc:
+            results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
     # the site tests (they build or serve the site on fixed ports) always run alone, after the others
     alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
     from concurrent.futures import ThreadPoolExecutor

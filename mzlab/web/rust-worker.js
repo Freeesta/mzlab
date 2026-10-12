@@ -38,6 +38,8 @@ let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+let wifPool = null;                                                       // the pool of the .wiff -> mzML conversions (wiff-worker.js), made when the first one is asked
+const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -141,7 +143,13 @@ async function lrOp(m) {
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
       const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part });
-      if (!res.ok) { await ARCH.remove("idx", part); jerr(res.reason === "memory" ? "error.memoryBudget" : "err.engine.index"); }
+      if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
+        await ARCH.remove("idx", part);
+        if (res.reason === "memory") jerr("error.memoryBudget");
+        let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
+        if (key) throw res.text;
+        throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
+      }
       await ARCH.promote("idx", part, m.name + ".mzidx");
       if (!(await lrOpen(m.name))) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
@@ -187,12 +195,12 @@ onmessage = async ev => {
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
         try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, !!m.profile); }      // scans: converted / in the file, from the scan index
-        catch (e) { await sink.abort(); throw e; }
+        catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }      // q: the disk is full (error.quota)
         const r = await sink.finish();
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "wiffsamples": case "wiff2mzml": wiffOp(engine, m, id, readerFor); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
+      case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }

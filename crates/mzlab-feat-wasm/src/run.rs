@@ -6,15 +6,18 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
 use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
-use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules};
+use mzlab_feat::facts::{file_facts, FileFacts};
+use mzlab_feat::evid::rowproofs::row_signs;
+use mzlab_feat::hypo::{generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
 use mzlab_feat::slabs::{align_and_fill_stored, Stored};
 use mzlab_feat::store::{
-    read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_with_evid, Origin, Slice,
+    origin_from_meta, read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_tp, write_table_with_evid, Origin, Slice,
 };
-use mzlab_feat::table::FileFeatures;
+use mzlab_feat::table::{FileFeatures, RowIdent};
+use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
 
@@ -81,7 +84,7 @@ pub fn detect_to<R: ReadAt, W: WriteAt>(
     let f = analyse_file(index, r)?;
     let o = Origin {
         inputs: vec![(name.to_string(), source_sha256(index))],
-        times: Vec::new(),
+        ..Origin::default()
     };
     write_file_to(sink, &f, r, &o)
 }
@@ -100,23 +103,10 @@ pub fn read_files<B: AsRef<[u8]>>(
     let (mut out, mut origin) = (Vec::new(), Origin::default());
     for b in files {
         let (f, meta) = read_file(b.as_ref())?;
-        origin.inputs.extend(inputs_of(&meta));
+        origin.inputs.extend(origin_from_meta(&meta).inputs);
         out.push(f);
     }
     Ok((out, origin))
-}
-
-/// `(name, SHA-256)` of the inputs named in the meta of a stored file.
-fn inputs_of(meta: &Value) -> Vec<(String, String)> {
-    let text = |i: &Value, k: &str| i.get(k).and_then(Value::str).unwrap_or("").to_string();
-    meta.get("inputs")
-        .map(|a| {
-            a.arr()
-                .iter()
-                .map(|i| (text(i, "name"), text(i, "sha256")))
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 /// Alignment and gap filling of a series: the `.mzfeat` bytes with an empty `evid` section. `open(k)` gives the index of file `k`.
@@ -124,10 +114,19 @@ pub fn align<R: ReadAt>(
     feats: &[FileFeatures],
     origin: &Origin,
     r: &Recipe,
-    open: impl FnMut(usize) -> Result<Index<R>>,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<Vec<u8>> {
+    let origin = Origin {
+        facts: facts_of(feats.len(), &mut open)?,
+        ..origin.clone()
+    };
     let (table, _) = align_and_fill(feats, r, open)?;
-    Ok(write_table_with_evid(&table, r, origin, &[]))
+    Ok(write_table_with_evid(&table, r, &origin, &[]))
+}
+
+/// How each of the `n` inputs was acquired, read from its index.
+fn facts_of<R: ReadAt>(n: usize, open: &mut impl FnMut(usize) -> Result<Index<R>>) -> Result<Vec<FileFacts>> {
+    (0..n).map(|k| Ok(file_facts(&open(k)?))).collect()
 }
 
 /// The origin (name and SHA-256 of every input) of a stored series, from the meta of its files.
@@ -135,7 +134,7 @@ pub fn origin_of(src: &mut dyn Stored) -> Result<Origin> {
     let mut origin = Origin::default();
     for k in 0..src.count() {
         let (meta, _) = read_meta_mz(&src.bytes(k)?)?;
-        origin.inputs.extend(inputs_of(&meta));
+        origin.inputs.extend(origin_from_meta(&meta).inputs);
     }
     Ok(origin)
 }
@@ -146,10 +145,11 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
     src: &mut dyn Stored,
     budget: &MemBudget,
     r: &Recipe,
-    open: impl FnMut(usize) -> Result<Index<R>>,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
 ) -> Result<()> {
-    let origin = origin_of(src)?;
+    let mut origin = origin_of(src)?;
+    origin.facts = facts_of(src.count(), &mut open)?;
     let (table, _) = align_and_fill_stored(src, budget, r, open)?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
@@ -255,10 +255,8 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
     hypo.result
         .add_missing_to(&mut aligned, &JoinParams::default());
     aligned.sort_rows();
-    let origin = Origin {
-        inputs: inputs_of(&meta),
-        times: Vec::new(),
-    };
+    let origin = origin_from_meta(&meta);
+    aligned.ident = RowIdent::compute(&aligned, &hypo.registry.hyps, hypo.registry.polarity);
     let points = PointsTable::bundled()?;
     let treated: Vec<usize> = (0..minutes.len())
         .filter(|&k| minutes[k].is_finite())
@@ -299,16 +297,25 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         }),
         parent,
     };
+    let tp = tp_block(&inp, minutes, &hypo.registry.hyps, parent);
     let rows = aligned.len();
-    let held = aligned.heap_bytes();
+    let held = aligned.heap_bytes() + tp.heap_bytes();
     if budget.in_memory(held + rows * IDENTITY_BYTES) {
         let json = graph_json(&build_graph(&inp), &points);
-        return write_table_to(sink, &aligned, r, &origin, &mut json.as_bytes());
+        return write_table_tp(sink, &aligned, &tp, r, &origin, &mut json.as_bytes());
     }
     let need = held + rows * GraphStream::bytes_per_row();
     let _g = budget.reserve("proofs", need)?;
     let mut graph = GraphStream::new(&inp);
-    write_table_to(sink, &aligned, r, &origin, &mut graph)
+    write_table_tp(sink, &aligned, &tp, r, &origin, &mut graph)
+}
+
+/// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
+fn tp_block(inp: &Inputs, minutes: &[f64], hyps: &[Hypothesis], parent: Option<(f64, f64)>) -> TpBlock {
+    let Some(parent) = parent else { return TpBlock::default() };
+    let signs = row_signs(inp);
+    let tp = TpInputs { aligned: inp.aligned, minutes, hyps, signs: &signs, parent, fragments: None, params: &TpParams::default() };
+    build_tp(&tp).ok().flatten().unwrap_or_default()
 }
 
 /// The row within 5 ppm and 0.3 min of the parent with the largest area (the parent decay is read from it).

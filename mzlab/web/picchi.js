@@ -318,8 +318,14 @@ async function drawSpec(p, snapped) {
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
   const targetK = p.link ? p.k : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k);
   const base = isDda ? [E.files[p.k]] : p.all ? shownFor(p) : [E.files[targetK]];
-  const files = scanFiles(base.filter(Boolean));
+  let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
+  if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
+    const hasPr = f => !(f.precursors || []).length || f.precursors.some(v => Math.abs(v - p.prec) < 0.6);
+    const has = files.filter(hasPr), other = has.length ? has : scanFiles(E.files.filter(Boolean)).filter(hasPr).slice(0, 1);      // none of them: the first loaded file that has it
+    if (!other.length) return say(I18N.t("spec.noPrec", { v: p.prec }));
+    files = other;
+  }
   if (isDda) { const m = DDA.waiting(p); if (m) return say(m); }
   else if (p.r0 == null) return say(I18N.t("spec.pickRange"));
   const sref = window.SUBREF ? SUBREF.eff(p) : null;          // the reference of the session (or the file chosen in «fondo»): same window of time, factor of the session

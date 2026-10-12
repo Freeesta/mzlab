@@ -3,12 +3,13 @@
     python3 tools/wiff_riferimento.py OUT
 
 Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
-product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak), built with
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 """
 import json
 import math
+import random
 import struct
 import sys
 from pathlib import Path
@@ -147,6 +148,20 @@ def main():
     w.sample(1, series, {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "serie")
     big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)], "chromatograms": []}}
+    w = Writer()  # product-ion scans: sample 1 one precursor (305.0); sample 2 two (229.1 every cycle, 305.0 in about one cycle of four, the other scans empty), irregular times, dense scans
+    rnd = random.Random(7)
+    for n, precs in ((1, (305.0,)), (2, (229.1, 305.0))):
+        blocks, t = [], 0.0
+        for k in range(300):
+            t += 1500.0 * (0.5 + rnd.random())
+            for e in range(len(precs)):
+                height = round(60000 * math.exp(-((k - 150) / 30.0) ** 2) * (1 if e == 0 else 0.5))
+                dense = [(100 + 11 * j + rnd.randrange(5), 1 + rnd.randrange(6)) for j in range(300)]
+                pts = sorted(set([(1500 + 100 * e + j, 5 + round(height * math.exp(-(j / 2.5) ** 2))) for j in range(-4, 5)] + dense))
+                pts = [] if e == 1 and len(precs) == 2 and rnd.random() < 0.75 else pts
+                blocks.append(("scan", pts, t + 200 * e, float(sum(c for _, c in pts))))
+        w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
+    w.save(out, "prodotto")
     (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big}))
 
 

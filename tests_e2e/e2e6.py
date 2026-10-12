@@ -5,7 +5,7 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
-r = Run(port=8816, wd="/tmp/wd6")
+r = Run(port=8816, wd="/tmp/wd6", motore="python")
 KQ = "document.getElementById('kframe').contentWindow.ketcher"
 LBL = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
 try:

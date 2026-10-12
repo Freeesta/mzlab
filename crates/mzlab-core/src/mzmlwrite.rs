@@ -6,8 +6,7 @@
 use std::io::Write;
 
 use base64::Engine;
-use flate2::write::ZlibEncoder;
-use flate2::Compression;
+use flate2::{Compress, Compression, FlushCompress};
 
 use crate::error::{Error, Result};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -36,7 +35,7 @@ impl<W: Write> MzmlWriter<W> {
         s += &cv("MS:1000544", "Conversion to mzML", "");
         s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\">\n", esc(&h.run));
         out.write_all(s.as_bytes()).map_err(io)?;
-        Ok(MzmlWriter { out, spectra: 0, chroms: 0 })
+        Ok(MzmlWriter { out, spectra: 0, chroms: 0, z: Compress::new(Compression::default(), true), raw: Vec::new(), packed: Vec::new() })
     }
 
     pub fn open_spectra(&mut self, count: usize) -> Result<()> {
@@ -80,11 +79,11 @@ impl<W: Write> MzmlWriter<W> {
             s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
         }
         s += "<binaryDataArrayList count=\"2\">\n";
-        s += &array("mz", "mz", true, &f64_bytes(&sp.mz))?;
-        s += &match &sp.wide {
-            Some(w) => array("intensity", "counts", true, &f64_bytes(w))?,
-            None => array("intensity", "counts", false, &sp.intensity.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>())?,
-        };
+        self.array(&mut s, "mz", "mz", Data::F64(&sp.mz))?;
+        match &sp.wide {
+            Some(w) => self.array(&mut s, "intensity", "counts", Data::F64(w))?,
+            None => self.array(&mut s, "intensity", "counts", Data::F32(&sp.intensity))?,
+        }
         s += "</binaryDataArrayList></spectrum>\n";
         self.spectra += 1;
         self.out.write_all(s.as_bytes()).map_err(io)
@@ -103,8 +102,8 @@ impl<W: Write> MzmlWriter<W> {
             s += &format!("<precursor><isolationWindow>{}</isolationWindow></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3));
         }
         s += "<binaryDataArrayList count=\"2\">\n";
-        s += &array("time", "time", true, &f64_bytes(&c.time))?;
-        s += &array("intensity", "counts", true, &f64_bytes(&c.intensity))?;
+        self.array(&mut s, "time", "time", Data::F64(&c.time))?;
+        self.array(&mut s, "intensity", "counts", Data::F64(&c.intensity))?;
         s += "</binaryDataArrayList></chromatogram>\n";
         self.chroms += 1;
         self.out.write_all(s.as_bytes()).map_err(io)
@@ -135,6 +134,16 @@ pub struct MzmlWriter<W: Write> {
     out: W,
     spectra: usize,
     chroms: usize,
+    /// The zlib state and the two scratch buffers are kept from one array to the next (same bytes as a new encoder each time, without the allocations).
+    z: Compress,
+    raw: Vec<u8>,
+    packed: Vec<u8>,
+}
+
+/// The values of one binary array: 64-bit or 32-bit floats.
+enum Data<'a> {
+    F64(&'a [f64]),
+    F32(&'a [f32]),
 }
 
 fn io(_: std::io::Error) -> Error {
@@ -145,34 +154,67 @@ fn esc(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
-fn b64(bytes: &[u8]) -> Result<(usize, String)> {
-    let mut z = ZlibEncoder::new(Vec::with_capacity(bytes.len() / 2 + 16), Compression::default());
-    z.write_all(bytes).map_err(io)?;
-    let s = base64::engine::general_purpose::STANDARD.encode(z.finish().map_err(io)?);
-    Ok((s.len(), s))
-}
+impl<W: Write> MzmlWriter<W> {
+    /// Appends `<binaryDataArray>` to `s`: the values as little-endian floats, zlib (default level) and base64.
+    fn array(&mut self, s: &mut String, kind: &str, unit: &str, data: Data) -> Result<()> {
+        self.raw.clear();
+        let wide = match data {
+            Data::F64(v) => {
+                self.raw.reserve(v.len() * 8);
+                v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                true
+            }
+            Data::F32(v) => {
+                self.raw.reserve(v.len() * 4);
+                v.iter().for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                false
+            }
+        };
+        self.deflate()?;
+        let len = (self.packed.len() + 2) / 3 * 4;
+        let (acc, name) = if wide { ("MS:1000523", "64-bit float") } else { ("MS:1000521", "32-bit float") };
+        let (unit_acc, unit_name) = match unit {
+            "time" => ("UO:0000031", "minute"),
+            "mz" => ("MS:1000040", "m/z"),
+            _ => ("MS:1000131", "number of detector counts"),
+        };
+        let (cv, label) = match kind {
+            "time" => ("MS:1000595", "time array"),
+            "mz" => ("MS:1000514", "m/z array"),
+            _ => ("MS:1000515", "intensity array"),
+        };
+        let unit_cv = if unit == "time" { "UO" } else { "MS" };
+        s.push_str(&format!(
+            "<binaryDataArray encodedLength=\"{len}\"><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{cv}\" name=\"{label}\" value=\"\" unitCvRef=\"{unit_cv}\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/><binary>"
+        ));
+        base64::engine::general_purpose::STANDARD.encode_string(&self.packed, s);
+        s.push_str("</binary></binaryDataArray>\n");
+        Ok(())
+    }
 
-fn f64_bytes(v: &[f64]) -> Vec<u8> {
-    v.iter().flat_map(|x| x.to_le_bytes()).collect()
-}
-
-fn array(kind: &str, unit: &str, wide: bool, bytes: &[u8]) -> Result<String> {
-    let (len, data) = b64(bytes)?;
-    let (acc, name) = if wide { ("MS:1000523", "64-bit float") } else { ("MS:1000521", "32-bit float") };
-    let (unit_acc, unit_name) = match unit {
-        "time" => ("UO:0000031", "minute"),
-        "mz" => ("MS:1000040", "m/z"),
-        _ => ("MS:1000131", "number of detector counts"),
-    };
-    let (cv, label) = match kind {
-        "time" => ("MS:1000595", "time array"),
-        "mz" => ("MS:1000514", "m/z array"),
-        _ => ("MS:1000515", "intensity array"),
-    };
-    let unit_cv = if unit == "time" { "UO" } else { "MS" };
-    Ok(format!(
-        "<binaryDataArray encodedLength=\"{len}\"><cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"{cv}\" name=\"{label}\" value=\"\" unitCvRef=\"{unit_cv}\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/><binary>{data}</binary></binaryDataArray>\n"
-    ))
+    /// `raw` compressed into `packed` (a zlib stream at the default level, as `ZlibEncoder` writes it).
+    fn deflate(&mut self) -> Result<()> {
+        self.z.reset();
+        self.packed.clear();
+        self.packed.reserve(self.raw.len() / 2 + 64);
+        let bad = |_| io(std::io::ErrorKind::Other.into());
+        while (self.z.total_in() as usize) < self.raw.len() {
+            if self.packed.len() == self.packed.capacity() {
+                self.packed.reserve(self.raw.len() / 4 + 4096);
+            }
+            let done = self.z.total_in() as usize;
+            self.z.compress_vec(&self.raw[done..], &mut self.packed, FlushCompress::None).map_err(bad)?;
+        }
+        loop {
+            if self.packed.len() == self.packed.capacity() {
+                self.packed.reserve(4096);
+            }
+            if self.z.compress_vec(&[], &mut self.packed, FlushCompress::Finish).map_err(bad)? == flate2::Status::StreamEnd {
+                break;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {

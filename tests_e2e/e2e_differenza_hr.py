@@ -55,7 +55,7 @@ try:
         load(pg, [HRD / f"{n}.mzML" for n in AMP], len(AMP))
         def hr_on():
             assert pg.evaluate("BANCO.on()"), "high resolution"
-            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca"], sections(pg)
+            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca", "kmd"], sections(pg)
             assert pg.is_visible("#stat-reference"), "the section is open"
             assert pg.locator("#ref-form").count() == 1
         step("HR: the section exists, after the blank subtraction", hr_on)

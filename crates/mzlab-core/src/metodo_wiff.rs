@@ -178,20 +178,9 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     }
     let autosampler: Vec<V> = entries.iter().filter(|(s, ..)| s.starts_with("Autosampler")).filter_map(|(_, k, v)| kv(k, v)).collect();
 
-    let record = |when: &str, r: Option<&String>| r.and_then(|r| obj(vec![("quando", Some(V::s(when))), ("testo", text(r.splitn(2, ":,").nth(1).unwrap_or(r)))]));
-    let registro: Vec<V> = [record("inizio", ms_rec("Start of Run")), record("fine", ms_rec("End of Run"))].into_iter().flatten().collect();
-    let mut raw = log.join("\n");
-    if anon {
-        raw = blank_identity(&raw);
-    }
-    raw.truncate(raw.char_indices().map(|(i, _)| i).take_while(|&i| i <= GRAW_MAX).last().unwrap_or(0));
-    let mut warn = vec![];
-    if ole.paths_list().any(|p| p.contains("DADRealTimeData") && p.starts_with(&sample)) {
-        warn.push(obj(vec![("chiave", Some(V::s("meta.nonDecodificato"))), ("dove", Some(V::s("DAD")))]));
-    }
-    if log.is_empty() {
-        warn.push(obj(vec![("chiave", Some(V::s("meta.mancante"))), ("dove", Some(V::s("Log")))]));
-    }
+    let registro = run_records(&ms_rec);
+    let raw = raw_log(&log, anon);
+    let warn = warnings(ole, &sample, log.is_empty());
     let name = data.first().filter(|_| data.len() >= 4);
 
     let doc = obj(vec![
@@ -229,6 +218,34 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())
+}
+
+/// The start and end records of the run, from the lookup of the Mass Spectrometer records of the log.
+fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
+    let record = |when: &str, r: Option<&String>| r.and_then(|r| obj(vec![("quando", Some(V::s(when))), ("testo", text(r.splitn(2, ":,").nth(1).unwrap_or(r)))]));
+    [record("inizio", ms_rec("Start of Run")), record("fine", ms_rec("End of Run"))].into_iter().flatten().collect()
+}
+
+/// The raw log joined and cut to `GRAW_MAX`, with the identity blanked when the source is anonymous.
+fn raw_log(log: &[String], anon: bool) -> String {
+    let mut raw = log.join("\n");
+    if anon {
+        raw = blank_identity(&raw);
+    }
+    raw.truncate(raw.char_indices().map(|(i, _)| i).take_while(|&i| i <= GRAW_MAX).last().unwrap_or(0));
+    raw
+}
+
+/// What is missing or not decoded, for `avvisi`.
+fn warnings(ole: &Ole, sample: &str, no_log: bool) -> Vec<Option<V>> {
+    let mut warn = vec![];
+    if ole.paths_list().any(|p| p.contains("DADRealTimeData") && p.starts_with(sample)) {
+        warn.push(obj(vec![("chiave", Some(V::s("meta.nonDecodificato"))), ("dove", Some(V::s("DAD")))]));
+    }
+    if no_log {
+        warn.push(obj(vec![("chiave", Some(V::s("meta.mancante"))), ("dove", Some(V::s("Log")))]));
+    }
+    warn
 }
 
 #[cfg(test)]
