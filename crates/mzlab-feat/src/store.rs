@@ -11,12 +11,14 @@ use mzlab_core::budget::WriteAt;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
+use crate::facts::FileFacts;
 use crate::recipe::Recipe;
+use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
 
 pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
 pub(crate) const ALIGN: usize = 64;
-/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id` and the summaries of the rows; the files of version 1 are still read.
+/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id`, the summaries of the rows and, optional, the identity columns (`identity` = 1 in the meta); the files of version 1 are still read.
 pub const TABLE_FORMAT: i64 = 2;
 
 pub(crate) fn bad() -> Error {
@@ -28,6 +30,10 @@ pub(crate) fn bad() -> Error {
 pub struct Origin {
     /// `(name, SHA-256)` of every input file, in the order of the files of the table.
     pub inputs: Vec<(String, String)>,
+    /// How each input was acquired (meta `columns`, same order as `inputs`); empty when not read.
+    pub facts: Vec<FileFacts>,
+    /// SHA-256 of the `campioni/1` document of the series (meta `samples`), when there is one.
+    pub samples: Option<String>,
     /// `(step, seconds)`; leave empty to get the same bytes in two runs.
     pub times: Vec<(String, f64)>,
 }
@@ -180,7 +186,19 @@ fn meta_json(
             .str(sha)
             .raw("}");
     }
-    j.raw("],\"times\":{");
+    j.raw("]");
+    if !o.facts.is_empty() {
+        j.raw(",\"columns\":[");
+        for (i, f) in o.facts.iter().enumerate() {
+            j.raw(if i > 0 { "," } else { "" });
+            f.write(&mut j);
+        }
+        j.raw("]");
+    }
+    if let Some(s) = &o.samples {
+        j.raw(",\"samples\":").str(s);
+    }
+    j.raw(",\"times\":{");
     for (i, (step, secs)) in o.times.iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" })
             .str(step)
@@ -190,6 +208,13 @@ fn meta_json(
     j.raw("}");
     for (k, n) in shape {
         j.raw(",").str(k).raw(":").int(*n as i64);
+    }
+    if shape.contains(&("identity", 1)) {
+        j.raw(",\"adducts\":[");
+        for (i, a) in adduct_names().iter().enumerate() {
+            j.raw(if i > 0 { "," } else { "" }).str(a);
+        }
+        j.raw("]");
     }
     j.raw(",\"arrays\":[");
     for (i, (name, dtype, count, off)) in dir.iter().enumerate() {
@@ -299,7 +324,7 @@ pub fn write_table_to<W: WriteAt>(
 ) -> Result<()> {
     let ids: Vec<u32> = (0..t.len()).map(|r| t.id(r)).collect();
     let m = t.meta.or_none(t.len());
-    let cols = [
+    let mut cols = vec![
         ("id", Col::U32(&ids)),
         ("mz", Col::F64(&t.mz)),
         ("rt", Col::F64(&t.rt)),
@@ -323,7 +348,18 @@ pub fn write_table_to<W: WriteAt>(
         ("ms2_file", Col::U32(&m.ms2_file)),
         ("ms2_purity", Col::F32(&m.ms2_purity)),
     ];
-    let shape = [("rows", t.len()), ("files", t.n_files), ("summaries", usize::from(!t.meta.is_empty()))];
+    let ident = !t.ident.is_empty();
+    if ident {
+        cols.push(("neutral", Col::F64(&t.ident.neutral)));
+        cols.push(("ion", Col::U8(&t.ident.ion)));
+        cols.push(("src", Col::U8(&t.ident.src)));
+    }
+    let shape = [
+        ("rows", t.len()),
+        ("files", t.n_files),
+        ("summaries", usize::from(!t.meta.is_empty())),
+        ("identity", usize::from(ident)),
+    ];
     write_container(sink, "table", r, o, &shape, &cols, evid)
 }
 

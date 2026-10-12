@@ -16,8 +16,12 @@
   - M+1/M osservato (`iso_m1`, solo in famiglia) e MS2 di purezza più alta (`ms2_file`, `ms2_purity`; `NO_FILE` = nessuno).
   - `rowmeta::compute` li calcola in coda ad `align_and_fill` (in memoria e a lastre, stessi byte), leggendo i file a blocchi di righe per intervallo di m/z.
   - Le righe aggiunte dopo (mirate) hanno `RowQ::NONE`; il vettore vuoto vuol dire non calcolati.
+- **Identità di riga** (`rowident.rs`, `Aligned::ident`): `neutral` (f64), `ion` (u8) e `src` (u8) per riga, calcolate in `evidence_to` dopo l'ultimo `sort_rows` (quindi non viaggiano con le righe).
+  - Con ipotesi trovata da `evid::match_hypotheses(hyps, tabella)`: massa neutra e addotto dell'ipotesi, `src` = `sources << 1 | SRC_DETECTED`; senza: ione protonato (o deprotonato) di riferimento, `src` = solo il bit rilevata (almeno un file con la cella rilevata).
+  - `ion` = 1 + posizione in `adduct_names()` (0 = nessuno); i nomi stanno nel meta `adducts`.
+- **Dati per file** (`facts.rs`): `file_facts(&Index)` legge dal `.mzidx` polarità (scansioni MS1), risoluzione mediana, acquisizione (`ms1`, `dda`, `dia`, `mrm`) e analizzatore; vanno nel meta `columns` (un oggetto per file, nell'ordine di `inputs`) e lo SHA-256 del `campioni/1` in `samples` (`Origin::facts`, `Origin::samples`; `origin_from_meta` li rilegge e `evidence_to` li conserva).
 - **Formato `.mzfeat` versione 2** (`store.rs::TABLE_FORMAT`).
-  - In più `id` e i riassunti come array, e nel meta `summaries` (0/1).
+  - In più `id` e i riassunti come array, e nel meta `summaries` (0/1); le colonne di identità sono opzionali, con `identity` (0/1) nel meta.
   - Un file di versione 1 si legge con i riassunti vuoti; un file troncato è rifiutato anche se mancano array che il lettore non chiede.
   - `sort_rows` gira anche in `evidence_to` dopo l'aggiunta delle righe mirate, così gli id scritti sono quelli finali.
-- **Prove**: `tests/samples.rs` (nomi → tipi, andata e ritorno, rifiuti, TSV), `tests/store.rs` (id, conteggi, ordinamento che tiene intere le righe), `tests/rowmeta.rs` (mediane, MS2, M+1/M, file in memoria e a lastre).
+- **Prove**: `tests/samples.rs` (nomi → tipi, andata e ritorno, rifiuti, TSV), `tests/store.rs` (id, conteggi, ordinamento che tiene intere le righe), `tests/rowident.rs` (identità, dati per file, tabella senza identità), `tests/rowmeta.rs` (mediane, MS2, M+1/M, file in memoria e a lastre).
