@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
+mod cache;
 mod wiff;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
@@ -159,8 +160,10 @@ fn r4(v: f64) -> f64 {
 pub struct Engine {
     runs: HashMap<u32, mzml::Run>,
     /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
-    idx: HashMap<u32, Routes<JsReader>>,
+    pub(crate) idx: HashMap<u32, Routes<JsReader>>,
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
+    /// Bytes the cached maps of all the files may hold together (`set_cache_budget`; 0 = the default).
+    pub(crate) cache_cap: usize,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -514,7 +517,7 @@ fn f64s(b: &[u8]) -> Vec<f64> {
 }
 
 /// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
-fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
+pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
     use mzlab_core::json::{self, Value};
     let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
     Ok(v.arr()
@@ -553,14 +556,6 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
         let out = mzlab_core::subxic::subxic(r, k as i64, &Query::parse(query)).map_err(|e| error_json(&e))?;
         Ok(out.unwrap_or_default())
-    }
-
-    /// `api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d` over the session `items`; `query` is the query string of the route.
-    /// Empty = Python's (a file without index, parameters Python must reject).
-    pub fn map_route(&mut self, path: &str, items: &str, query: &str) -> Result<String, JsValue> {
-        let metas = session_items(items)?;
-        let r = mzlab_core::maproute::map_route(path, &metas, &mut self.idx, &Query::parse(query)).map_err(|e| error_json(&e))?;
-        Ok(r.unwrap_or_default())
     }
 }
 

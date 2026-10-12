@@ -45,7 +45,6 @@ pub mod mzml;
 pub mod mzmlhead;
 pub mod mzmlwrite;
 pub mod peakq;
-pub mod peaktable;
 pub mod peaks;
 pub mod peakext;
 pub mod signal;

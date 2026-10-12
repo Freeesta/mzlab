@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 PRELUDE = f"""
 import {{ createPool, poolSize }} from {JS.as_uri()!r};
-const log = [];
+const log = [], modules = [];
 let live = 0, maxLive = 0;
 // script(job name, attempt) -> "done" | "die" | "mem" | "unavail" | "fail"
 function fake(script) {{
@@ -19,6 +19,7 @@ function fake(script) {{
   return class {{
     constructor() {{ this.dead = false; live++; maxLive = Math.max(maxLive, live); setTimeout(() => {{ if (!this.dead) this.onmessage({{ data: {{ op: "ready" }} }}); }}, 1); }}
     postMessage(m) {{
+      if (m.op === "module") {{ modules.push(m.module === null ? "null" : "set"); return; }}
       const n = m.blob; attempts[n] = (attempts[n] || 0) + 1; log.push("start " + n + "#" + attempts[n] + " b" + m.budget);
       const act = script(n, attempts[n]);
       setTimeout(() => {{
@@ -114,3 +115,12 @@ await out(async () => {
   return { rs: rs.map(r => r.ok ? "ok" : r.reason), started: log.map(l => l.split("#")[0].slice(6)) };
 });""")
     assert got == {"rs": ["error", "cancelled", "ok"], "started": ["a", "c"]}
+
+
+def test_every_worker_is_told_first_which_module_to_use():
+    got = run("""
+  const p = createPool({ workerUrl: "x", size: 1, WorkerClass: fake(() => "done") });
+  await p.build(job("a")); await p.build(job("b"));
+  console.log(JSON.stringify([modules, log]));
+""")
+    assert got == [["null", "null"], ["start a#1 b64", "start b#1 b64"]]
