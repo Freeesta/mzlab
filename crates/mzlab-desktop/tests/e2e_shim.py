@@ -126,7 +126,8 @@ try:
                     f"api/map?k={full}", f"api/map?k={full2}&bg=1&agg=mean", f"api/map?k={full}&ref={full2}&norm=max", f"api/mapsnap?k={full}&rt=14.25&mz=364.4",
                     f"api/mappunti?k={full}&ref={full2}&pts=14.3,364.3;14.32,194.2",
                     f"api/origin?k={full}&mz=194.2&parent=364.37", f"api/chrom?k={full2}&ref={full}", f"api/xic?k={full2}&ref={full}&mz=364.4&tol=0.35", f"api/mrm?k={mrm}&ref={mrm}",
-                    f"api/qaqc?k={full},{full2}&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/method_warnings", f"api/gradient?k={full}", f"api/delay?k={full}", f"api/chrom?k={full}&kind=pda"]
+                    f"api/qaqc?k={full},{full2}&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/method_warnings", f"api/gradient?k={full}", f"api/delay?k={full}", f"api/chrom?k={full}&kind=pda",
+                    f"api/chrom?k={mrm}", f"api/chrom?k={mrm}&kind=bpc", f"api/chrom?k={mrm}&kind=srm", f"api/xic?k={mrm}&mz=200&tol=0.35", f"api/filters?k={mrm}", f"api/scanlist?k={mrm}"]
             bad = []
             for u in urls:
                 a = pg.evaluate(JSON, u); b2 = ref["py"].get(u)

@@ -243,7 +243,7 @@ impl State {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, chroms, slot) = self.chroms(eng, name)?;
                 let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
-                text(r.delay(&mut m, &chroms)?)
+                text(r.delay_item(&mut m, &chroms, s("name"))?)
             }
 
             _ => Err(Error::new("rpc.unknown")),

@@ -24,7 +24,7 @@ export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
-  const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items, hr: () => hr });      // the methods (.dam) and how the items were acquired
+  const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const api = { files };
   const rpc = async (msg) => {
     const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
@@ -170,7 +170,7 @@ export function createLr({ rb }) {
       if (method !== "POST") return null;
       if (path === "/api/upload") return init.body instanceof Blob ? await upload(u.searchParams.get("name") || "", init.body) : null;
       const t = text();
-      if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: true })).info };
+      if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: u.searchParams.get("derivati") ? "derived" : true })).info };
       if (t === null) return null;
       { const r = await statRoute(path, t, { rpc }); if (r !== undefined) return r; }                       // the statistics of the series: the Rust engine, no file needed
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }

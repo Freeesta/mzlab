@@ -23,6 +23,41 @@ const CONV = {
   async downloadAll() { for (const n of [...this.files.keys()]) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
+// the files being converted (the samples of a SCIEX .wiff), as rows of the list of the files (index.html renderFiles) from the moment their .wiff and .wiff.scan are paired
+// until their index is ready: { name, state, pc }. state: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc), "conv" (converted, waits for the
+// index), "index" (indexing, pc). A change of state draws the list again; a new percentage only moves the bar of its row.
+const CONVROWS = {
+  rows: [],
+  find(name) { return this.rows.find(r => r.name === name); },
+  add(name, state) { if (!this.find(name)) { this.rows.push({ name, state, pc: null }); this.paint(); } },
+  set(name, state, pc) {
+    const r = this.find(name); if (!r) return;
+    const was = r.state, was_pc = r.pc;
+    r.state = state; r.pc = pc == null ? null : pc;
+    if (was !== state) this.paint(); else if (was_pc !== r.pc) this.fill(r);
+  },
+  drop(name) { const i = this.rows.findIndex(r => r.name === name); if (i >= 0) { this.rows.splice(i, 1); this.paint(); } },
+  paint() { if (typeof renderFiles === "function") renderFiles(); },
+  label(r) { return I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc }); },
+  cell(name) { const q = document.getElementById("flist"); return q ? [...q.querySelectorAll("[data-cvrow]")].find(x => x.dataset.cvrow === name) : null; },
+  fill(r) {
+    const c = this.cell(r.name); if (!c) return;
+    const lab = this.label(r), bar = c.querySelector(".prog"), txt = c.querySelector("[data-cvtxt]");
+    if (txt) txt.textContent = lab;
+    if (bar) { bar.setAttribute("aria-label", r.name + ": " + lab); if (r.pc == null) bar.removeAttribute("aria-valuenow"); else bar.setAttribute("aria-valuenow", String(r.pc)); bar.querySelector("i").style.width = (r.pc || 0) + "%"; }
+  },
+  // the rows for the table of the list (a heading row and one row per file), `ncol` = the columns of the table
+  html(ncol) {
+    if (!this.rows.length) return "";
+    const head = `<tr class="grp"><td colspan="${ncol}">${I18N.t("conv.row.group")} <span class="muted">${I18N.t("load.group.count", { n: this.rows.length })}</span></td></tr>`;
+    return head + this.rows.map(r => {
+      const lab = this.label(r), now = r.pc == null ? "" : ` aria-valuenow="${r.pc}"`;
+      return `<tr aria-busy="true"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm" data-cvtxt>${esc(lab)}</div>` +
+        `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${r.pc || 0}%"></i></div></td></tr>`;
+    }).join("");
+  },
+};
+
 // the panel of the running conversions, inside `box`: "File 1 of 2: name", a button to cancel, the phase (1/3 reading, 2/3 converting; 3/3 indexing is the
 // row that upload() shows next), a progress bar (role=progressbar) of the file, the numbers (scans, MB written, elapsed, time left), and with several files a
 // bar of the total. If no news arrives for 2 s it says it is still working (animated dot, still when the system asks for reduced motion); after 30 s it adds advice.
@@ -133,10 +168,12 @@ function wiffName(stem, sample, several, taken) {
   const base = several ? stem + "_s" + sample : String(stem), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
+// the text key of the state of a row of the files being converted (CONVROWS)
+function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { convName, wiffName, convPhase, convFraction, convPercent, convTotalPercent, convEta, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convPhase, convFraction, convPercent, convTotalPercent, convEta, convElapsed, convMB };

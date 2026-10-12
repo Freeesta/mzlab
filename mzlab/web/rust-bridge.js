@@ -157,7 +157,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!s) return null;
       await s.opening;
       if (s.bad) return null;
-      if (s.idx) return indexRoute(s, k0, path, u, t0);              // a file without index (the desktop engine reads the mzML itself) goes on to the TIC/XIC/spectra below
+      if (s.idx) return path === "/api/chrom" && !s.idx.scans ? infoRoute(path, u, { slots, rpc, base, stats, t0 }) : indexRoute(s, k0, path, u, t0);   // an MRM file has no scans: its chromatograms; a file without index goes on to the TIC/XIC/spectra below
     }
     if (path === "/api/mrm" && !hasRef(q)) {                         // the SRM transitions: chromatograms of the mzML (no scans, no peaks)
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);

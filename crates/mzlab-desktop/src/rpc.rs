@@ -159,6 +159,14 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms)?)
             }
+            "mrmchrom" => {
+                let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
+                let end = r.idx.scans.last().map_or(0, |s| s.end);
+                let (rd, size) = self.mzml_of(u("fid"))?;
+                let mut m = Mzml::new(rd, size);
+                let chroms = m.chromatograms(end)?;
+                text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
+            }
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let (rd, size) = self.mzml_of(u("fid"))?;
@@ -203,7 +211,7 @@ impl State {
 
             // ---- the files of the page's list, the session and the notebook
             "idxxic" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) if r.has_scans() => text(r.xic(f("mz"), f("tol"), u("level") as u8)?),
+                Some(r) => text(r.xic(f("mz"), f("tol"), u("level") as u8)?),
                 _ => text(""),
             },
             "close" => {

@@ -49,6 +49,29 @@ if (typeof window !== "undefined" && window.matchMedia) {
   });
 }
 
+// «Archivio nel browser» of the settings: what is kept here (files and indexes in OPFS), the one-line truth, and the ways to remove it
+function uipArchivio(d) {
+    const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
+    const val = d.querySelector("#uip-space-val"), rm = d.querySelector("#uip-arch-rm"), der = d.querySelector("#uip-arch-der");
+    const paint = async j => {
+      const n = typeof E !== "undefined" && E.files ? E.files.filter(f => !f.gone).length : 0, size = j && j.opfs ? (j.files || 0) + (j.idx || 0) : 0;
+      let line;
+      if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
+      else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
+      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || est.usage / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
+      if (j && j.feat > 0) line += " " + I18N.t("settings.arch.feat", { feat: mb(j.feat) });
+      if (j && j.opfs && j.persisted === false) line += " " + I18N.t("settings.arch.notpersisted");
+      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
+      val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : ""; const dsz = j && j.opfs ? (j.idx || 0) + (j.feat || 0) : 0; der.disabled = !(dsz > 0); der.dataset.size = dsz ? mb(dsz) : "";
+    };
+    const refresh = () => { if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {}); };
+    paint(null); refresh();
+    try { const bc = new BroadcastChannel("mzlab"); bc.onmessage = () => { if (d.isConnected) refresh(); else bc.close(); }; } catch (_) { /* no BroadcastChannel */ }      // another tab added or took away a file
+    rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
+    der.onclick = async () => { const ask = I18N.t("settings.arch.der.ask", { size: der.dataset.size || "–" }); if (typeof yesno === "function" && !(await yesno(ask))) return; await fetch("api/spazio?derivati=1", { method: "POST" }).catch(() => {}); refresh(); };
+    d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
+}
+
 // --- popup of the gear
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
@@ -70,7 +93,7 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
-    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div></div>
+    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-der" type="button" title="${I18N.t("settings.arch.der.title")}">${I18N.t("settings.arch.der.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div></div>
     ${window.DESKUPD ? DESKUPD.row() : ""}
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
@@ -114,26 +137,7 @@ function uipOpen(btn) {
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
-  {                                                                        // «Archivio nel browser»: what is kept here (files and indexes in OPFS), the one-line truth, and the two ways to remove it
-    const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
-    const val = d.querySelector("#uip-space-val"), rm = d.querySelector("#uip-arch-rm");
-    const paint = async j => {
-      const n = typeof E !== "undefined" && E.files ? E.files.filter(f => !f.gone).length : 0, size = j && j.opfs ? (j.files || 0) + (j.idx || 0) : 0;
-      let line;
-      if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
-      else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
-      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || est.usage / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
-      if (j && j.feat > 0) line += " " + I18N.t("settings.arch.feat", { feat: mb(j.feat) });
-      if (j && j.opfs && j.persisted === false) line += " " + I18N.t("settings.arch.notpersisted");
-      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
-      val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : "";
-    };
-    const refresh = () => { if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {}); };
-    paint(null); refresh();
-    try { const bc = new BroadcastChannel("mzlab"); bc.onmessage = () => { if (d.isConnected) refresh(); else bc.close(); }; } catch (_) { /* no BroadcastChannel */ }      // another tab added or took away a file
-    rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
-    d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
-  }
+  uipArchivio(d);
   const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {
     __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});

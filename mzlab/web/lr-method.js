@@ -1,7 +1,7 @@
 // The routes of lr.js about the methods (.dam) and how an item was acquired, answered by the Rust engine: /api/method, /api/method_warnings, /api/analog,
 // /api/delay, /api/chrom?kind=pda, /api/gradient (GET and POST), /api/gradient_parse. `get` and `post` return { status, text }, or undefined when the route is
-// not theirs, or null when it is not served (a high-resolution session with a method, a part of a mixed file for the delay).
-export function createMethodRoutes({ rpc, json, items, hr }) {
+// not theirs, or null when it is not served (a part of a mixed file with a PDA for the delay, a reference file).
+export function createMethodRoutes({ rpc, json, items }) {
   let methods = [];                       // App.methods(): [{name, size, info}], oldest first
   const gradients = new Map();            // item file -> the gradient typed, pasted or imported for it (the model)
   const api = { gradients, list: () => methods, clear: () => { methods = []; } };
@@ -9,6 +9,7 @@ export function createMethodRoutes({ rpc, json, items, hr }) {
   const fail = (e, status) => {           // an error of the engine with a key: the JSON of Python's _fail (the page words it from the key); 500 for a GET, as Python's
     let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
     if (!j || !j.error_key) throw e;
+    if (j.error_key === "err.route.unavailable") return null;          // not served: the caller counts it as a miss
     return json({ error: j.error_key, error_key: j.error_key, params: j.params || {} }, status);
   };
   const item = q => { const k = num(q, "k", NaN), it = items(); return it && Number.isInteger(k) && it[k] ? it[k] : null; };
@@ -20,7 +21,6 @@ export function createMethodRoutes({ rpc, json, items, hr }) {
     if (path === "/api/method_warnings") {
       const its = items();
       if (!its) return json({ warnings: [] });
-      if (hr()) return methods.length ? null : json({ warnings: [] });                   // no method loaded: nothing to compare
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
     if (!["/api/method", "/api/analog", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda")) return undefined;
@@ -29,14 +29,13 @@ export function createMethodRoutes({ rpc, json, items, hr }) {
     try {
       if (path === "/api/gradient") {
         if (!methods.length) return json({ gradient: gradients.get(name) || null });
-        const g = hr() ? undefined : JSON.parse((await rpc({ op: "lr_gradient", name })).info);
-        return g === undefined ? null : json({ gradient: g || gradients.get(name) || null });
+        const g = JSON.parse((await rpc({ op: "lr_gradient", name })).info);
+        return json({ gradient: g || gradients.get(name) || null });
       }
-      if (hr()) return null;
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
-      return name.includes("#") ? null : raw(await rpc({ op: "lr_delay", name }));     // a part of a mixed file reads its own scans: not served
+      return raw(await rpc({ op: "lr_delay", name }));                                 // a part of a mixed file with a PDA reads its own scans: not served (null)
     } catch (e) { return fail(e, 500); }
   };
 

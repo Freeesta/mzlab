@@ -1,13 +1,24 @@
 # Release: a tag `vX.Y.Z` builds the site as a zip, the installers (macOS, Windows, Linux), the SBOM and SHA256SUMS, and prepares a DRAFT
 # release with the notes of CHANGELOG.md. Nothing is published by itself: the owner reads the draft and presses "Publish release"
 # (that is also what makes Zenodo archive it). Steps for the owner: docs/agenti/rilascio.md.
-# `workflow_dispatch` is a dry run: everything is built and kept as artifacts, no release is made.
+# Without a terminal: Actions > release > Run workflow on main, with the version typed twice. The draft is made from the head of main; the tag is
+# created when the owner publishes it. With the version left empty it is a dry run: everything is built and kept as artifacts, no release is made.
+# When a published draft creates its tag, this workflow starts again on that tag and sees the release exists: it does nothing.
 name: release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      versione:
+        description: "Version to release, X.Y.Z (leave empty for a dry run: everything is built, nothing is published)"
+        required: false
+        default: ""
+      conferma:
+        description: "Type the same version again to confirm"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -17,9 +28,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  controllo:
+    name: what to do
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.c.outputs.tag }}
+      crea: ${{ steps.c.outputs.crea }}
+      salta: ${{ steps.c.outputs.salta }}
+    steps:
+      - id: c
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSIONE: ${{ inputs.versione }}
+          CONFERMA: ${{ inputs.conferma }}
+        run: |
+          set -euo pipefail
+          tag=dev; crea=false; salta=false
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            tag="$GITHUB_REF_NAME"
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then salta=true; else crea=true; fi
+          elif [ -n "$VERSIONE" ]; then
+            [[ "$VERSIONE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::the version must be X.Y.Z"; exit 1; }
+            [ "$CONFERMA" = "$VERSIONE" ] || { echo "::error::the confirmation must be the same version, typed again"; exit 1; }
+            [ "$GITHUB_REF" = refs/heads/main ] || { echo "::error::run it on the main branch"; exit 1; }
+            tag="v$VERSIONE"
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "::error::the release $tag already exists"; exit 1; fi
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then echo "::error::the tag $tag already exists"; exit 1; fi
+            crea=true
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"; echo "crea=$crea" >> "$GITHUB_OUTPUT"; echo "salta=$salta" >> "$GITHUB_OUTPUT"
   versione:
     name: one version everywhere
+    needs: controllo
+    if: needs.controllo.outputs.salta != 'true'
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.controllo.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,20 +72,22 @@ jobs:
       - name: Cargo.toml, tauri.conf.json and CITATION.cff say the same version
         run: python tools/versione.py
       - name: ... and it is the one of the tag, with notes in CHANGELOG.md
-        if: github.ref_type == 'tag'
+        if: needs.controllo.outputs.crea == 'true'
         run: |
-          python tools/versione.py --tag "$GITHUB_REF_NAME"
-          python tools/versione.py --nota "$GITHUB_REF_NAME" > NOTE.md
+          python tools/versione.py --tag "$TAG"
+          python tools/versione.py --nota "$TAG" > NOTE.md
       - uses: actions/upload-artifact@v4
-        if: github.ref_type == 'tag'
+        if: needs.controllo.outputs.crea == 'true'
         with:
           name: note
           path: NOTE.md
 
   sito:
     name: site (zip) + SBOM of the JavaScript components
-    needs: versione
+    needs: [controllo, versione]
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.controllo.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,7 +141,7 @@ jobs:
       # The same steps as pages.yml (build job): a release ships exactly the site that would be published.
       - name: Zip of the site
         run: |
-          cd site && zip -qr "../mzlab-site-${GITHUB_REF_NAME}.zip" . && cd ..
+          cd site && zip -qr "../mzlab-site-${TAG}.zip" . && cd ..
           python tools/sbom.py --out sbom-js.cdx.json
       - uses: actions/upload-artifact@v4
         with:
@@ -107,18 +153,18 @@ jobs:
 
   desktop:
     name: installers
-    needs: versione
+    needs: [controllo, versione]
     uses: ./.github/workflows/desktop.yml
 
   sbom:
     name: SBOM of the Rust crates
-    needs: versione
+    needs: [controllo, versione]
     uses: ./.github/workflows/sbom.yml
 
   bozza:
     name: draft release
-    needs: [versione, sito, desktop, sbom]
-    if: github.ref_type == 'tag'
+    needs: [controllo, versione, sito, desktop, sbom]
+    if: needs.controllo.outputs.crea == 'true'
     runs-on: ubuntu-latest
     environment: release          # the owner can require an approval here (Settings > Environments); secrets for signing live only there
     permissions:
@@ -135,6 +181,9 @@ jobs:
       - name: Draft release with the notes of CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.controllo.outputs.tag }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
-            --title "mzLab ${GITHUB_REF_NAME}" --notes-file pezzi/note/NOTE.md
+          target=()
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then target=(--target "$GITHUB_SHA"); fi      # from the dispatch: the tag is created when the draft is published
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft "${target[@]}" \
+            --title "mzLab ${TAG}" --notes-file pezzi/note/NOTE.md

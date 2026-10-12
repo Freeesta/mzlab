@@ -349,9 +349,6 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Ok(String::new());
         };
-        if !r.has_scans() {
-            return Ok(String::new());
-        }
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
