@@ -76,7 +76,7 @@ jobs:
         run: |
           python tools/versione.py --tag "$TAG"
           python tools/versione.py --nota "$TAG" > NOTE.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: needs.controllo.outputs.crea == 'true'
         with:
           name: note
@@ -143,7 +143,7 @@ jobs:
         run: |
           cd site && zip -qr "../mzlab-site-${TAG}.zip" . && cd ..
           python tools/sbom.py --out sbom-js.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sito
           path: |

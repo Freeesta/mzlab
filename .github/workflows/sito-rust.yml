@@ -69,7 +69,7 @@ jobs:
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
       - name: Logs of the failed tests
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sito-rust
           path: .verifica/

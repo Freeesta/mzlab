@@ -127,7 +127,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"     # Linux: linuxdeploy is an AppImage and the runners have no FUSE
           NO_STRIP: "true"                  # Linux: the strip of the runner does not know every section of the libraries
         run: cargo tauri build --features app ${{ matrix.args }} --verbose
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mzlab-desktop-${{ runner.os }}
           path: ${{ matrix.artifact }}
