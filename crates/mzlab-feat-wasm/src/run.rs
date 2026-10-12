@@ -8,7 +8,7 @@ use mzlab_core::json::{self, Value};
 use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::evid::rowproofs::row_signs;
-use mzlab_feat::hypo::{generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules};
+use mzlab_feat::hypo::{generate, HypoParams, Hypothesis, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
@@ -160,25 +160,30 @@ pub struct HypoRun {
     pub result: TargetResult,
 }
 
-/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp.json`) and the parameters of the targeted pass.
+/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_2.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
+/// the parameters of the targeted pass.
 fn hypotheses_setup(
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     polarity: i8,
 ) -> Result<(Registry, TargetParams)> {
+    let st = Structure::parse(structure)?;
+    st.check_parent(parent)?;
     let inp = HypoInputs {
         parent,
         suspects: None,
         families: &[],
         imported: &[],
-        fragments: &[],
+        fragments: &st.fragments,
+        groups: st.groups.as_deref(),
     };
     let hp = HypoParams {
         polarity,
         ..HypoParams::default()
     };
-    let registry = generate(&Rules::parse(rules)?, &inp, &hp)?;
+    let registry = generate(&Rules::parse_profile(rules, st.profile.as_deref())?, &inp, &hp)?;
     let tp = TargetParams {
         polarity,
         parent_rt,
@@ -192,11 +197,12 @@ pub fn hypotheses<R: ReadAt>(
     indexes: &mut [Index<R>],
     feats: &[&FileFeatures],
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
-    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, r.detect.polarity.unwrap_or(1))?;
+    let (mut registry, tp) = hypotheses_setup(rules, structure, parent, parent_rt, r.detect.polarity.unwrap_or(1))?;
     let result = run(indexes, feats, &mut registry, &tp)?;
     Ok(HypoRun { registry, result })
 }
@@ -206,12 +212,13 @@ pub fn hypotheses_stored<R: ReadAt>(
     indexes: &mut [Index<R>],
     src: &mut dyn Stored,
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
     let polarity = r.detect.polarity.unwrap_or(1);
-    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, polarity)?;
+    let (mut registry, tp) = hypotheses_setup(rules, structure, parent, parent_rt, polarity)?;
     let n = indexes.len().min(src.count());
     let mut load = |k: usize| Ok(read_file(&src.bytes(k)?)?.0);
     let result = mzlab_feat::target::run_loading(indexes, n, &mut load, &mut registry, &tp)?;

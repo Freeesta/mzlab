@@ -36,6 +36,47 @@ pub(super) struct RawAtom {
     pub charge: i32,
 }
 
+/// Digits at `b[*i..]` as a number (None when there are none).
+fn number(b: &[char], i: &mut usize, smiles: &str) -> Result<Option<i32>> {
+    let s = *i;
+    while *i < b.len() && b[*i].is_ascii_digit() {
+        *i += 1;
+    }
+    if s == *i {
+        return Ok(None);
+    }
+    let n = b[s..*i].iter().collect::<String>().parse().map_err(|_| bad(smiles))?;
+    Ok(Some(n))
+}
+
+/// `H` or `Hn` of a bracket atom (0 when absent).
+fn hcount(b: &[char], i: &mut usize, smiles: &str) -> Result<u32> {
+    if *i < b.len() && b[*i] == 'H' {
+        *i += 1;
+        return Ok(number(b, i, smiles)?.map_or(1, |n| n as u32));
+    }
+    Ok(0)
+}
+
+/// `+`, `++`, `+2`, `-`, `-3` of a bracket atom (0 when absent).
+fn charge_of(b: &[char], i: &mut usize, smiles: &str) -> Result<i32> {
+    if *i >= b.len() || (b[*i] != '+' && b[*i] != '-') {
+        return Ok(0);
+    }
+    let c0 = b[*i];
+    let sign = if c0 == '+' { 1 } else { -1 };
+    *i += 1;
+    if let Some(n) = number(b, i, smiles)? {
+        return Ok(sign * n);
+    }
+    let mut n = 1;
+    while *i < b.len() && b[*i] == c0 {
+        n += 1;
+        *i += 1;
+    }
+    Ok(sign * n)
+}
+
 /// `[13CH3+]`, `[nH]`, `[O-]`: isotope, element, chirality, hydrogens, charge, atom class.
 fn bracket(t: &str, smiles: &str) -> Result<RawAtom> {
     let b: Vec<char> = t.chars().collect();
@@ -62,47 +103,8 @@ fn bracket(t: &str, smiles: &str) -> Result<RawAtom> {
     while i < b.len() && b[i] == '@' {
         i += 1;
     }
-    let mut h = 0;
-    if i < b.len() && b[i] == 'H' {
-        i += 1;
-        let s = i;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-        }
-        h = if s == i {
-            1
-        } else {
-            b[s..i]
-                .iter()
-                .collect::<String>()
-                .parse()
-                .map_err(|_| bad(smiles))?
-        };
-    }
-    let mut charge = 0;
-    if i < b.len() && (b[i] == '+' || b[i] == '-') {
-        let sign = if b[i] == '+' { 1 } else { -1 };
-        let c0 = b[i];
-        i += 1;
-        let s = i;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-        }
-        charge = if s < i {
-            sign * b[s..i]
-                .iter()
-                .collect::<String>()
-                .parse::<i32>()
-                .map_err(|_| bad(smiles))?
-        } else {
-            let mut n = 1;
-            while i < b.len() && b[i] == c0 {
-                n += 1;
-                i += 1;
-            }
-            sign * n
-        };
-    }
+    let h = hcount(&b, &mut i, smiles)?;
+    let charge = charge_of(&b, &mut i, smiles)?;
     if i < b.len() && b[i] == ':' {
         i = b.len();
     }

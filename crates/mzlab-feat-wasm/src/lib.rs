@@ -260,13 +260,15 @@ pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue>
 }
 
 #[cfg(feature = "proofs")]
-/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp.json` bytes), searched in every file. `parent_rt` NaN = the whole run.
+/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp_2.json` bytes), searched in every file. `structure` is the `grafo/1` JSON of the SMILES of the parent
+/// (with `"profile"` to choose the profile of the rules), or empty text. `parent_rt` NaN = the whole run.
 #[wasm_bindgen]
 pub fn run_hypotheses(
     files: Array,
     read: Function,
     sizes: Vec<f64>,
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: f64,
     recipe: &str,
@@ -275,7 +277,7 @@ pub fn run_hypotheses(
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
     let mut src = JsStored { files };
-    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, parent, rt, &r).map_err(js_err)?;
+    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r).map_err(js_err)?;
     Ok(Hypotheses { inner })
 }
 

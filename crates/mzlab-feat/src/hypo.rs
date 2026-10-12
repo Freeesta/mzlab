@@ -6,6 +6,7 @@
 
 mod rules;
 mod sources;
+mod structure;
 
 use std::collections::BTreeMap;
 
@@ -17,6 +18,7 @@ pub use rules::{
     parse_delta, Counts, Dir, Rule, Rules, FORMAT as RULES_FORMAT, VERSION as RULES_VERSION,
 };
 pub use sources::{FamilyBase, Imported};
+pub use structure::Structure;
 
 /// Bits of `Hypothesis::sources`.
 pub const SRC_RULE: u8 = 1;
@@ -106,6 +108,8 @@ pub struct Inputs<'a> {
     pub imported: &'a [Imported],
     /// Formulas of cleavage products of the parent (the caller knows the structure; formulas alone give no fragments).
     pub fragments: &'a [String],
+    /// Functional groups of the parent (`chem::grafo`), when its structure is known: the rules with groups are used, the `fallback` ones are not.
+    pub groups: Option<&'a [String]>,
 }
 
 pub(crate) fn to_formula(c: &Counts) -> Option<Formula> {
@@ -178,7 +182,7 @@ fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
 pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry> {
     let parent = elements::parse_formula(inp.parent)?;
     let pc = counts_of(&parent);
-    let mut raw = sources::from_rules(rules, &pc, p);
+    let mut raw = sources::from_rules(rules, &pc, inp.groups, p);
     raw.extend(sources::from_fragments(inp.fragments, &pc, p)?);
     let mut cut = 0;
     if let Some(s) = inp.suspects {
@@ -193,7 +197,7 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
     Ok(Registry {
         hyps,
         outcomes,
-        rules_version: RULES_VERSION,
+        rules_version: rules.version,
         polarity: p.polarity,
         suspects_cut: cut,
     })

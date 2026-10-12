@@ -1,6 +1,6 @@
 // Runs the pipeline of the mzFinder .wasm (wasm-bindgen --target nodejs, both features) on .mzidx files and prints what the native example `nativo` prints:
 // the SHA-256 of every .mzfeatf and of the .mzfeat (see tests/test_feat_wasm.py). The reads come from files, as the worker's come from OPFS.
-// usage: node feat_wasm_node.js <pkg dir> <out dir> <file.mzidx>... [--recipe JSON] [--budget-mb N] [--parent FORMULA --rules regole_tp.json --parent-mz M --parent-rt R]
+// usage: node feat_wasm_node.js <pkg dir> <out dir> <file.mzidx>... [--recipe JSON] [--budget-mb N] [--parent FORMULA --rules regole_tp_2.json [--structure grafo.json] --parent-mz M --parent-rt R]
 // With --budget-mb the steps run on the sink API (outputs written at offsets, the series read by offsets, slabs and streams under that budget).
 const fs = require("fs");
 const path = require("path");
@@ -9,7 +9,7 @@ const [pkg, out, ...rest] = process.argv.slice(2);
 const w = require(path.join(pkg, "mzlab_feat_wasm.js"));
 
 const files = [];
-const opt = { recipe: "", parent: "", rules: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "" };
+const opt = { recipe: "", parent: "", rules: "", structure: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "" };
 for (let i = 0; i < rest.length; i++) {
   if (rest[i].startsWith("--")) opt[rest[i].slice(2)] = rest[++i]; else files.push(rest[i]);
 }
@@ -48,7 +48,7 @@ if (budget !== null) {
 }
 if (opt.parent) {
   const prt = Number(opt["parent-rt"]);
-  const h = w.run_hypotheses(stored, read, sizes, fs.readFileSync(opt.rules), opt.parent, prt, opt.recipe);
+  const h = w.run_hypotheses(stored, read, sizes, fs.readFileSync(opt.rules), opt.structure || "", opt.parent, prt, opt.recipe);
   console.log(`hypotheses ${h.tried()} tried, ${h.found()} found`);
   const minutes = Float64Array.from(files, f => { const m = /_t(\d+)min/.exec(base(f)); return m ? Number(m[1]) : NaN; });
   if (budget !== null) {

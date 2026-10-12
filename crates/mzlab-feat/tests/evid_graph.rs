@@ -30,6 +30,7 @@ fn registry() -> Registry {
         families: &[],
         imported: &[],
         fragments: &[],
+        groups: None,
     };
     generate(&rules, &inp, &HypoParams::default()).unwrap()
 }

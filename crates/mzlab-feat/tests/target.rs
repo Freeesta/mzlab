@@ -101,6 +101,7 @@ fn targeted_pass_is_deterministic_capped_and_counted() {
         families: &[],
         imported: &imp,
         fragments: &[],
+        groups: None,
     };
     let reg0 = generate(&rules, &inp, &HypoParams::default()).unwrap();
     let tp = TargetParams {
