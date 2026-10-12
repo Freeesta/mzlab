@@ -51,6 +51,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, barra laterale, tour | `docs/agenti/dati.md` |
+| analizzatori animati (quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ) nella schermata di caricamento (`an-*.js`) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
@@ -66,6 +67,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`) |
+| contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |

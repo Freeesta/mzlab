@@ -7,6 +7,7 @@
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
+import { makeConvertRaw } from "./rust-raw.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -42,15 +43,21 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       worker.postMessage({ ...msg, id });
     });
   }
+  function stop(w, res) {
+    worker.terminate(); worker = null;
+    for (const [id, p] of pending) if (p.worker === w) { pending.delete(id); p.res(res); }
+  }
+  function respawn() {
+    spawn();
+    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+  }
   function died(w) {
     if (w !== worker) return;
-    worker.terminate(); worker = null;
-    for (const [id, p] of pending) if (p.worker === w) { pending.delete(id); p.res({ dead: true }); }
+    stop(w, { dead: true });
     const now = Date.now();
     restarts = restarts.filter(t => now - t < 60000); restarts.push(now); stats.restarts++;
     if (restarts.length > 1) { api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify("error.engineFallback"); return; }
-    spawn();
-    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+    respawn();
     notify("error.engineRestarted");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
@@ -93,16 +100,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       slots[k].opening = open(k, slots[k]);
     }
   };
-  // Thermo .raw -> Blob of mzML, made in the worker; rejects with an Error whose `json` is { error, error_key, params } like the API errors
-  api.convertRaw = async (file, onProgress) => {
-    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file }, onProgress);
-    if (r.dead || r.error) {
-      let e = { error_key: "err.file.raw", params: { detail: "" } };
-      try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
-      throw Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
-    }
-    return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
-  };
+  // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
+  api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
@@ -124,6 +123,13 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     return out;
   };
 
+  async function indexRoute(s, k, path, u, t0) {
+    let r = await rpc({ op: "route", slot: k, path, query: u.search });
+    if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
+    if (r.dead || r.error || !r.info) return null;
+    stats.rust++;
+    return { status: 200, text: r.info, ms: performance.now() - t0 };
+  }
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
@@ -146,12 +152,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
-      if (!s.idx || s.bad) return null;
-      let r = await rpc({ op: "route", slot: k0, path, query: u.search });
-      if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k0, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
-      if (r.dead || r.error || !r.info) return null;
-      stats.rust++;
-      return { status: 200, text: r.info, ms: performance.now() - t0 };
+      if (s.bad) return null;
+      if (s.idx) return indexRoute(s, k0, path, u, t0);              // a file without index (the desktop engine reads the mzML itself) goes on to the TIC/XIC/spectra below
     }
     if (path === "/api/mrm" && !hasRef(q)) {                         // the SRM transitions: chromatograms of the mzML (no scans, no peaks)
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);

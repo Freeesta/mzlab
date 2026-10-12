@@ -31,10 +31,13 @@ RECIPE = os.environ.get("MZLAB_FEAT_RECIPE") or '{"polarity":1,"mode":"family"}'
 args = ["--recipe", RECIPE] + (["--parent", fm, "--rules", str(data / "regole_tp.json"), "--parent-mz", mz, "--parent-rt", rt] if fm else [])
 out = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], *args)
 native = dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
+ION = '{"polarity":1,"mode":"ion"}'
+out_ion = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], "--recipe", ION, *args[2:])
+native_ion = dict(l.split(" ")[:2] for l in out_ion.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
 sizes = build_wasm(tmp)
 srv, URL = serve(tmp)
 
-BOOT = """async ([names, size]) => {
+BOOT = """async ([names, size, budget]) => {
   const { createFeatPool } = await import("./feat-worker.js");
   window.RUN = (await import("./feat-run.js")).runFeatPipeline;
   const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle("idx", { create: true });
@@ -44,7 +47,7 @@ BOOT = """async ([names, size]) => {
   const u = n => new URL(n, location.href).href;
   window.POOL = createFeatPool({ workerUrl: u("feat-worker.js"), size: size || Math.max(1, Math.min((navigator.hardwareConcurrency || 2) - 1, 4)),
     wasm: { feat: { jsUrl: u("feat/mzlab_feat_wasm.js"), wasmUrl: u("feat/mzlab_feat_wasm_bg.wasm") }, proofs: { jsUrl: u("proofs/mzlab_feat_wasm.js"), wasmUrl: u("proofs/mzlab_feat_wasm_bg.wasm") } },
-    notify: k => window.NOTES.push(k) });
+    budgetMb: budget || 0, notify: (k, p) => window.NOTES.push([k, p]) });
   return { workers: window.POOL.workers, cores: navigator.hardwareConcurrency };
 }"""
 RUN = """async ([names, recipe, parent]) => {
@@ -55,11 +58,14 @@ RUN = """async ([names, recipe, parent]) => {
     const minutes = names.map(n => { const m = /_t(\\d+)min/.exec(n); return m ? +m[1] : null; });
     par = { rules, parent: parent.formula, parentRt: parent.rt, parentMz: parent.mz, minutes };
   }
-  const r = await RUN(POOL, { files, recipe, parent: par, save: true });
+  if (parent.refuseProofs) POOL.evidence = () => Promise.reject(Object.assign(new Error("memory"), { key: "error.featMemory", params: { fase: "proofs", stima_mb: "300", budget_mb: "192" } }));
+  let r;
+  try { r = await RUN(POOL, { files, recipe, parent: par, save: true }); }
+  catch (e) { return { error: e.key, params: e.params, saved: (await Promise.all(names.map(n => POOL.fs.exists("mzlab/feat/" + n + ".mzfeatf")))).every(Boolean), table: await POOL.fs.exists("mzlab/feat/series.mzfeat") }; }
   const res = {}; for (let i = 0; i < names.length; i++) res[names[i] + ".mzfeatf"] = await SHA(r.stored[i]);
   res["series.mzfeat"] = await SHA(r.table); if (r.evid) res["series_evid.mzfeat"] = await SHA(r.evid);
   const back = await POOL.fs.read("mzlab/feat/series.mzfeat");
-  return { res, timings: r.timings, totalMs: r.totalMs, tried: r.tried, found: r.found, saved: await SHA(back) === await SHA(r.evid || r.table) };
+  return { res, degraded: r.degraded, notes: window.NOTES, timings: r.timings, totalMs: r.totalMs, tried: r.tried, found: r.found, saved: await SHA(back) === await SHA(r.evid || r.table) };
 }"""
 try:
     with sync_playwright() as p:
@@ -72,6 +78,7 @@ try:
         R = {}
         def run():
             R.update(pg.evaluate(RUN, [idx, RECIPE, {"formula": fm, "mz": float(mz) if mz else None, "rt": float(rt) if rt else None}]))
+            assert "res" in R, R
             for k, v in R["res"].items(): assert v == native[k], (k, v, native[k])
             assert R["saved"], "the .mzfeat read back from OPFS differs"
         step("the run from the click to the table: every file is the native one", run)
@@ -81,7 +88,7 @@ try:
                 d = ""
                 if t["phase"] == "detect": d = f"{t['files']} files in parallel, per file max {max(t['perFileMs'])} ms, peak {t['peakMB']:.0f} MB"
                 if t["phase"] == "align": d = f"peak {t['peakMB']:.0f} MB"
-                if t["phase"] == "proofs": d = f"hypotheses {t['hypothesesMs']} ms, {R['tried']} tried, {R['found']} found, peak {t['peakMB']:.0f} MB"
+                if t["phase"] == "proofs": d = f"after the hypotheses worker ({t['hypothesesMs']} ms), {R['tried']} tried, {R['found']} found, peak {t['peakMB']:.0f} MB"
                 print(f"   | {t['phase']} | {t['ms']} | {d} |")
             print(f"   | total | {R['totalMs']} | |\n")
             if real:
@@ -90,6 +97,25 @@ try:
                     assert max(d["perFileMs"]) <= 8000, d["perFileMs"]   # ~3 s alone on a 2.1 GHz core (L1 1 s, the rest of detect 2 s), up to 6 s with 4 workers on 4 cores
                     assert d["peakMB"] <= 128 and max(t.get("peakMB", 0) for t in R["timings"]) <= 256, R["timings"]   # align and proofs hold every file's features: see mzfeat-wasm.md
                 step("whole run under 60 s, detect at most 128 MB per worker", limits)
+        if not real:
+            def budgeted():                      # a pool with a small budget (slabs of m/z, graph by identities): the bytes of the native run, same budget
+                pg.evaluate(BOOT, [idx, 2, 0.5])
+                r = pg.evaluate(RUN, [idx, ION, {"formula": fm, "mz": float(mz), "rt": float(rt)}])
+                for k, v in r["res"].items(): assert v == native_ion[k], (k, v, native_ion[k])
+            step("under a budget of 0.5 MB the bytes are the same (slabs, proofs by identities)", budgeted)
+            def refused_align():                 # nothing fits: an orderly error with the key, the files of the detection saved
+                pg.evaluate(BOOT, [idx, 2, 0.05])
+                r = pg.evaluate(RUN, [idx, ION, {"formula": fm, "mz": float(mz), "rt": float(rt)}])
+                assert r["error"] == "error.featMemory" and r["params"]["fase"] == "align" and r["params"]["files"] == len(idx), r
+                assert r["saved"], r
+            step("a budget that fits nothing: error.featMemory, the .mzfeatf saved", refused_align)
+            def degraded():                      # the proofs refused: the table without proofs, saved, and the warning
+                pg.evaluate(BOOT, [idx, 2, 0])
+                r = pg.evaluate(RUN, [idx, ION, {"formula": fm, "mz": float(mz), "rt": float(rt), "refuseProofs": True}])
+                assert r["degraded"] == "proofs" and "series_evid.mzfeat" not in r["res"] and r["res"]["series.mzfeat"] == native_ion["series.mzfeat"], r
+                assert any(n[0] == "tpmine.feat.degraded" and n[1]["files"] == len(idx) for n in r["notes"]), r["notes"]
+                assert r["saved"], "the table saved is the one returned"
+            step("the proofs refused: the table without proofs and the warning", degraded)
         def alive():
             assert pg.evaluate("1 + 1") == 2
         step("the page is alive", alive)
