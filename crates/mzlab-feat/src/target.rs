@@ -135,6 +135,62 @@ pub struct Evidence<'a> {
     pub level_cap: Option<u8>,
 }
 
+impl TargetResult {
+    /// The proof of `row`: the hypothesis that predicted it, how many were tried and found, the chance of a coincidence and the level cap.
+    pub fn evidence<'a>(&self, reg: &'a Registry, row: usize) -> Evidence<'a> {
+        let r = &self.rows[row];
+        Evidence {
+            hypothesis: &reg.hyps[r.hyp as usize],
+            tried: self.tried,
+            found: self.found,
+            coincidence: r.coincidence,
+            level_cap: r.level_cap(),
+        }
+    }
+
+    /// The rows as an aligned table (one row per hypothesis found, cells in the order of the files) to put next to the detection.
+    pub fn to_aligned(&self) -> Aligned {
+        let n = self.n_files;
+        let mut a = Aligned {
+            n_files: n,
+            ..Default::default()
+        };
+        for r in &self.rows {
+            a.mz.push(r.mz);
+            a.rt.push(r.rt);
+            for c in &r.cells {
+                a.area.push(c.area);
+                a.height.push(c.height);
+                a.apex_rt.push(c.apex_rt);
+                a.width.push(c.width);
+                a.state.push(c.state);
+            }
+        }
+        a
+    }
+
+    /// Bytes of the rows in a fixed layout (the base of the SHA-256 that compares two runs).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut b = Vec::new();
+        b.extend_from_slice(&(self.rows.len() as u64).to_le_bytes());
+        for r in &self.rows {
+            b.extend_from_slice(&r.hyp.to_le_bytes());
+            b.extend_from_slice(&r.mz.to_le_bytes());
+            b.extend_from_slice(&r.rt.to_le_bytes());
+            b.extend_from_slice(&r.coincidence.to_le_bytes());
+            b.extend_from_slice(&r.ms2_total.to_le_bytes());
+            for c in &r.cells {
+                b.push(c.state);
+                b.extend_from_slice(&c.area.to_le_bytes());
+                b.extend_from_slice(&c.height.to_le_bytes());
+                b.extend_from_slice(&c.apex_rt.to_le_bytes());
+                b.extend_from_slice(&c.ms2_n.to_le_bytes());
+            }
+        }
+        b
+    }
+}
+
 /// Window of RT searched for a hypothesis.
 pub fn window(h: &Hypothesis, p: &TargetParams, run: (f64, f64)) -> (f64, f64) {
     if let Some(r) = h.rt_ref {
@@ -288,6 +344,38 @@ pub fn run<R: ReadAt>(
     Ok(res)
 }
 
+fn make_row(
+    h: &Hypothesis,
+    cells: Vec<Cell>,
+    hits: usize,
+    w: (f64, f64),
+    rate: &[f64],
+    p: &TargetParams,
+) -> TargetRow {
+    let mut rts: Vec<f32> = cells
+        .iter()
+        .filter(|c| c.state != CELL_ABSENT)
+        .map(|c| c.apex_rt)
+        .collect();
+    let count = |s: u8| cells.iter().filter(|c| c.state == s).count() as u16;
+    let coincidence = if p.decoys == 0 {
+        1.0
+    } else {
+        null::coincidence(rate, w.1 - w.0, hits)
+    };
+    TargetRow {
+        hyp: h.id,
+        mz: h.mz,
+        rt: median(&mut rts),
+        window: (w.0 as f32, w.1 as f32),
+        ms2_total: cells.iter().map(|c| c.ms2_n as u32).sum(),
+        n_detected: count(CELL_DETECTED),
+        n_targeted: count(CELL_TARGETED),
+        coincidence,
+        cells,
+    }
+}
+
 fn assemble<R: ReadAt>(
     res: &mut TargetResult,
     per: Vec<Vec<Cell>>,
@@ -314,87 +402,9 @@ fn assemble<R: ReadAt>(
         if hits == 0 {
             continue;
         }
-        let w = window(h, p, run);
-        let mut rts: Vec<f32> = cells
-            .iter()
-            .filter(|c| c.state != CELL_ABSENT)
-            .map(|c| c.apex_rt)
-            .collect();
-        let n_det = cells.iter().filter(|c| c.state == CELL_DETECTED).count() as u16;
-        let n_tar = cells.iter().filter(|c| c.state == CELL_TARGETED).count() as u16;
-        let coincidence = if p.decoys == 0 {
-            1.0
-        } else {
-            null::coincidence(&res.decoy_rate, w.1 - w.0, hits)
-        };
-        res.rows.push(TargetRow {
-            hyp: h.id,
-            mz: h.mz,
-            rt: median(&mut rts),
-            window: (w.0 as f32, w.1 as f32),
-            ms2_total: cells.iter().map(|c| c.ms2_n as u32).sum(),
-            n_detected: n_det,
-            n_targeted: n_tar,
-            coincidence,
-            cells,
-        });
+        let row = make_row(h, cells, hits, window(h, p, run), &res.decoy_rate, p);
+        res.rows.push(row);
     }
     res.found = res.rows.len() as u32;
     Ok(())
-}
-
-impl TargetResult {
-    /// The proof of `row`: the hypothesis that predicted it, how many were tried and found, the chance of a coincidence and the level cap.
-    pub fn evidence<'a>(&self, reg: &'a Registry, row: usize) -> Evidence<'a> {
-        let r = &self.rows[row];
-        Evidence {
-            hypothesis: &reg.hyps[r.hyp as usize],
-            tried: self.tried,
-            found: self.found,
-            coincidence: r.coincidence,
-            level_cap: r.level_cap(),
-        }
-    }
-
-    /// The rows as an aligned table (one row per hypothesis found, cells in the order of the files) to put next to the detection.
-    pub fn to_aligned(&self) -> Aligned {
-        let n = self.n_files;
-        let mut a = Aligned {
-            n_files: n,
-            ..Default::default()
-        };
-        for r in &self.rows {
-            a.mz.push(r.mz);
-            a.rt.push(r.rt);
-            for c in &r.cells {
-                a.area.push(c.area);
-                a.height.push(c.height);
-                a.apex_rt.push(c.apex_rt);
-                a.width.push(c.width);
-                a.state.push(c.state);
-            }
-        }
-        a
-    }
-
-    /// Bytes of the rows in a fixed layout (the base of the SHA-256 that compares two runs).
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b = Vec::new();
-        b.extend_from_slice(&(self.rows.len() as u64).to_le_bytes());
-        for r in &self.rows {
-            b.extend_from_slice(&r.hyp.to_le_bytes());
-            b.extend_from_slice(&r.mz.to_le_bytes());
-            b.extend_from_slice(&r.rt.to_le_bytes());
-            b.extend_from_slice(&r.coincidence.to_le_bytes());
-            b.extend_from_slice(&r.ms2_total.to_le_bytes());
-            for c in &r.cells {
-                b.push(c.state);
-                b.extend_from_slice(&c.area.to_le_bytes());
-                b.extend_from_slice(&c.height.to_le_bytes());
-                b.extend_from_slice(&c.apex_rt.to_le_bytes());
-                b.extend_from_slice(&c.ms2_n.to_le_bytes());
-            }
-        }
-        b
-    }
 }

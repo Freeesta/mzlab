@@ -71,6 +71,16 @@ fn load(path: &str, pol: i8) -> (Index<File>, FileFeatures) {
     (ix, feat)
 }
 
+fn load_all(files: &[&String], pol: i8) -> (Vec<Index<File>>, Vec<FileFeatures>) {
+    let (mut ix, mut feats) = (Vec::new(), Vec::new());
+    for p in files {
+        let (i, f) = load(p, pol);
+        ix.push(i);
+        feats.push(f);
+    }
+    (ix, feats)
+}
+
 fn imported(ions: &[Ion], role: &[&str], tag: &str) -> Vec<Imported> {
     let it = ions.iter().filter(|i| role.contains(&i.role.as_str()));
     it.map(|i| Imported {
@@ -185,6 +195,37 @@ fn report_decoys(ions: &[Ion], res: &TargetResult, reg: &Registry) {
     println!("hypotheses of the rules: {n_rule}; rows that match no ion of the truth: {} ({:.1} %), with MS2: {ms2}", false_rows.len(), pct(false_rows.len(), n_rule));
 }
 
+fn report_cap(res: &TargetResult) {
+    let capped = res.rows.iter().filter(|r| r.level_cap().is_some()).count();
+    let mut p: Vec<f64> = res
+        .rows
+        .iter()
+        .filter(|r| r.n_targeted > 0)
+        .map(|r| r.coincidence)
+        .collect();
+    p.sort_by(|a, b| a.total_cmp(b));
+    println!("rows capped at level 4: {capped} of {}; chance of coincidence (rows with a targeted cell) median {:.3}", res.rows.len(), p.get(p.len() / 2).copied().unwrap_or(f64::NAN));
+}
+
+fn build_imports(ions: &[Ion], esche: bool, oracle: bool, extra: Option<String>) -> Vec<Imported> {
+    let mut imp = Vec::new();
+    if esche {
+        imp.extend(imported(ions, &["esca"], "esche"));
+    }
+    if oracle {
+        imp.extend(imported(ions, &["tp1", "tp2", "isomero"], "orac"));
+    }
+    if let Some(n) = extra.and_then(|v| v.parse::<usize>().ok()) {
+        // n invented neutral masses, evenly spread and off the mass-defect ridge, to time the pass on thousands of hypotheses
+        imp.extend((0..n).map(|k| Imported {
+            name: format!("extra:{k}"),
+            formula: String::new(),
+            mass: Some(150.0 + 650.0 * (k as f64 + 0.37) / n as f64),
+        }));
+    }
+    imp
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let flag = |f: &str| args.iter().any(|a| a == f);
@@ -197,35 +238,16 @@ fn main() {
     let pol: i8 = if flag("--neg") { -1 } else { 1 };
     let files: Vec<&String> = args.iter().filter(|a| a.ends_with(".mzidx")).collect();
     let (ions, parent, parent_rt) = truth(&val("--truth").expect("--truth verita.json"));
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let rules_path = val("--rules").unwrap_or_else(|| {
-        root.join("TP_Mine/data/regole_tp.json")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../TP_Mine/data/regole_tp.json")
             .display()
             .to_string()
     });
     let rules = Rules::parse(&std::fs::read(rules_path).expect("rules")).expect("rules");
-    let mut imp = Vec::new();
-    if flag("--esche") {
-        imp.extend(imported(&ions, &["esca"], "esche"));
-    }
-    if flag("--oracle") {
-        imp.extend(imported(&ions, &["tp1", "tp2", "isomero"], "orac"));
-    }
-    if let Some(n) = val("--extra").and_then(|v| v.parse::<usize>().ok()) {
-        // n invented neutral masses, evenly spread and off the mass-defect ridge, to time the pass on thousands of hypotheses
-        imp.extend((0..n).map(|k| Imported {
-            name: format!("extra:{k}"),
-            formula: String::new(),
-            mass: Some(150.0 + 650.0 * (k as f64 + 0.37) / n as f64),
-        }));
-    }
+    let imp = build_imports(&ions, flag("--esche"), flag("--oracle"), val("--extra"));
     let t = Instant::now();
-    let (mut ix, mut feats) = (Vec::new(), Vec::new());
-    for p in &files {
-        let (i, f) = load(p, pol);
-        ix.push(i);
-        feats.push(f);
-    }
+    let (mut ix, feats) = load_all(&files, pol);
     println!(
         "{} files read and detected in {:.1} s; parent {parent} at {parent_rt} min",
         files.len(),
@@ -278,13 +300,5 @@ fn main() {
     );
     report_products(&ions, &feats, &res, &mut ix);
     report_decoys(&ions, &res, &reg);
-    let capped = res.rows.iter().filter(|r| r.level_cap().is_some()).count();
-    let mut p: Vec<f64> = res
-        .rows
-        .iter()
-        .filter(|r| r.n_targeted > 0)
-        .map(|r| r.coincidence)
-        .collect();
-    p.sort_by(|a, b| a.total_cmp(b));
-    println!("rows capped at level 4: {capped} of {}; chance of coincidence (rows with a targeted cell) median {:.3}", res.rows.len(), p.get(p.len() / 2).copied().unwrap_or(f64::NAN));
+    report_cap(&res);
 }

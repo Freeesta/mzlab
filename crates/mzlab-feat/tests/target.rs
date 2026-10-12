@@ -49,6 +49,29 @@ fn series() -> Option<PathBuf> {
     ok.then_some(out)
 }
 
+/// The index files of the series and their detection tables.
+fn load(dir: &Path) -> (Vec<Index<File>>, Vec<FileFeatures>) {
+    let mut paths: Vec<_> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "mzidx"))
+        .collect();
+    paths.sort();
+    let (mut ix, mut feats) = (Vec::new(), Vec::<FileFeatures>::new());
+    for p in &paths {
+        let f = File::open(p).unwrap();
+        let size = f.metadata().unwrap().len();
+        let mut i = Index::open(f, size).unwrap();
+        let pr = Params {
+            polarity: Some(1),
+            ..Default::default()
+        };
+        feats.push(analyse(&mut i, &pr, &Steps::default()).unwrap().0);
+        ix.push(i);
+    }
+    (ix, feats)
+}
+
 #[test]
 fn targeted_pass_is_deterministic_capped_and_counted() {
     let Some(dir) = series() else { return };
@@ -69,24 +92,7 @@ fn targeted_pass_is_deterministic_capped_and_counted() {
             mass: Some(i["mz"].as_f64().unwrap() - PROTON),
         })
         .collect();
-    let mut paths: Vec<_> = std::fs::read_dir(&dir)
-        .unwrap()
-        .map(|e| e.unwrap().path())
-        .filter(|p| p.extension().is_some_and(|e| e == "mzidx"))
-        .collect();
-    paths.sort();
-    let (mut ix, mut feats) = (Vec::new(), Vec::<FileFeatures>::new());
-    for p in &paths {
-        let f = File::open(p).unwrap();
-        let size = f.metadata().unwrap().len();
-        let mut i = Index::open(f, size).unwrap();
-        let pr = Params {
-            polarity: Some(1),
-            ..Default::default()
-        };
-        feats.push(analyse(&mut i, &pr, &Steps::default()).unwrap().0);
-        ix.push(i);
-    }
+    let (mut ix, feats) = load(&dir);
     let rules =
         Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
     let inp = Inputs {
