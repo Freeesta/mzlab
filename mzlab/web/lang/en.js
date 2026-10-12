@@ -408,6 +408,7 @@ I18N.add("en", {
   "unopen.err.many": "{n} files could not be read ({names}): {message}",
   "err.file.notWiff": "{name} is not a valid .wiff file.",
   "err.file.wiffNoScan": "The .wiff.scan file of {name} is missing: both are needed, with the same name.",
+  "err.file.wiffEngine": "The calculation engine is not ready to read the .wiff: reload the page (Ctrl+Shift+R) and try again.",
   "err.file.wiff": "The SCIEX .wiff file cannot be read ({detail}).",
   "err.file.mzmlWrite": "The mzML could not be written.",
   "err.file.raw": "The Thermo .raw file cannot be read ({detail}).",
