@@ -11,6 +11,7 @@ Stato attuale. Il metodo di UN campione (strumento, sorgente, esperimenti, LC, r
 ## Adattatori
 - `.dam`: `from_dam` (metodo dell'esperimento; LC e rivelatori dall'XML del metodo LC).
 - `.wiff`: `from_wiff(&Ole, campione, &Source)`. Da `SampleSubtree/SampleN/{Log, SampleDABE/DATA, SampleDABE/CFR_INFO}` e da `SummaryInformation` (proprietà 12 = creazione, FILETIME).
+  Il tipo di sorgente (`ms.sorgente.tipo`, p. es. «Turbo Spray») è il «Source Type» del Log del `.wiff`; un `.dam` da solo non lo dice, quindi manca. Produttore e modello dello strumento si leggono dal Log («Config Table»), mai da un valore scritto nel codice: se il file non li dà, il campo è assente.
   Misurato sui file del 3200: modello e seriale (record «Config Table» del Log), utente e computer (record `driver:User=`), pompe e campionatore (voci del driver), inizio/fine corsa.
   DA CONFERMARE (si ricavano dalla posizione nei flussi `DATA`/`CFR_INFO`, senza etichetta nel file): `campione.nome`, `campione.vial`, la versione di Analyst. Il DAD (`DADRealTimeData`) non è decodificato: avviso `meta.nonDecodificato`.
 - mzML: `userParam name="mzLab metodo/1"` nel `<run>` con il documento (XML escape); `from_userparam` lo rilegge. Senza di esso l'mzML non ha metodo.
