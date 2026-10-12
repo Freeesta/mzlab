@@ -3,6 +3,8 @@
 //! `family::build_families` joins isotopologues, adducts and in-source fragments of the same ion into families.
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 
+pub mod align;
+mod aligned;
 mod channels;
 pub mod family;
 pub mod isotopes;
@@ -11,6 +13,7 @@ pub mod pipeline;
 mod post;
 pub mod quality;
 pub mod resolve;
+pub mod rtmap;
 pub mod suspects;
 mod sweep;
 pub mod table;
