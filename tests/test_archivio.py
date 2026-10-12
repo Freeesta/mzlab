@@ -69,3 +69,17 @@ def test_cleaning_removes_old_part_files_and_week_old_orphan_indexes_never_a_sou
     feat: [{ name: "s.mzfeat.part", size: 1, lastModified: now - 3 * HOUR }, { name: "s.mzfeat", size: 1, lastModified: 0 }] };
   await out(async () => { const g = await limpia({ list: async k => lists[k], remove: async (k, n) => { gone.push(k + "/" + n); }, manifest: async () => [] }, now); return [g.sort(), gone.sort()]; });""")
     assert got[0] == ["feat/s.mzfeat.part", "files/x.mzML.part", "idx/old.mzML.mzidx"] and got[0] == got[1]
+
+
+def test_a_big_raw_without_room_is_refused_before_the_conversion_starts():
+    got = run("""
+  const { makeConvertRaw } = await import(%r);
+  nav({ storage: { estimate: async () => ({ usage: 100 << 20, quota: 400 << 20 }) } });
+  let rpc = 0;
+  const conv = makeConvertRaw({ current: () => null, rpc: async () => { rpc++; return { parts: [] }; }, base: n => n });
+  await out(async () => {
+    let err = null;
+    try { await conv({ name: "big.raw", size: 300 << 20 }, () => {}, null, {}); } catch (e) { err = e.json; }
+    return [err && err.error_key, err && err.params, rpc];
+  });""" % (WEB / "rust-raw.js").as_uri())
+    assert got == ["error.quota", {"serve_mb": 594, "libero_mb": 300}, 0]
