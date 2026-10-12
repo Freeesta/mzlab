@@ -53,7 +53,7 @@ try:
             v = pg.evaluate("(()=>{const t=" + TRIO + ";const x=E.panels.find(p=>p.id===t.s1.link),c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');return {type:x.type,follow:!!x.ddaFollow,ion:t.s2.ion,sid:t.s2.sid,tri:x._a.tri.map(q=>q.prec),y:[c.y,x.y,t.s1.y],h:[c.h,x.h],ms2tri:[c.ms2tri,x.ms2tri],prec:t.s2._scan&&t.s2._scan.prec,title:x.title}})()"); print(v)
             assert v["type"] == "xic" and v["follow"] and abs(v["ion"] - 305.0702) < 0.003 and v["sid"] is not None, v
             assert v["tri"] and all(abs(q - 305.0702) < 0.003 for q in v["tri"]), v                  # only the triangles of that ion
-            assert v["y"][1] == v["y"][0] + v["h"][0] + 10 and v["y"][2] == v["y"][1] + v["h"][1], v      # XIC under the TIC, the Full Scan touches the XIC
+            assert v["y"][1] == v["y"][0] + v["h"][0] + pg.evaluate("pnlGap()") and v["y"][2] == v["y"][1] + v["h"][1], v      # XIC under the TIC, the Full Scan touches the XIC
             assert abs(v["prec"] - 305.0702) < 0.003 and v["ms2tri"] == [False, True], v
         step("follow an ion: XIC under the chromatogram, Full Scan / MS2 follow it, only that ion's triangles, its most intense MS2 shown", follow)
         def arrows_ion():
