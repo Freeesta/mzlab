@@ -67,12 +67,44 @@ def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) ->
     return bad
 
 
+BYTE_API = indice.ROOT / "tools" / "api_byte_ammesse.txt"
+IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "TP_Mine/js/20_tpmine.js"}     # the schema point and the historical databases
+
+
+def regole_statiche() -> list[str]:
+    """Rules of memory that grep can keep true (docs/agenti/memoria.md): no exported WASM function returns a whole `Vec<u8>` unless it is in the list of
+    tools/api_byte_ammesse.txt (`file::function`; new outputs go to a `WriteAt` sink), and IndexedDB is opened only in the files of IDB_OK."""
+    import re
+    bad = []
+    allowed = {l.strip() for l in BYTE_API.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")} if BYTE_API.exists() else set()
+    sig = re.compile(r"pub fn (\w+)\s*(?:<[^>]*>)?\([^{;]*?\)\s*->\s*(?:std::result::Result<|Result<)?Vec<u8>", re.S)
+    for f in indice.tracked():
+        if f.startswith("crates/") and "-wasm/src/" in f and f.endswith(".rs"):
+            text = (indice.ROOT / f).read_text(encoding="utf-8", errors="replace")
+            for m in sig.finditer(text):
+                head = text[: m.start()].rstrip().split("\n")
+                attrs = []
+                for line in reversed(head):
+                    if line.strip().startswith(("#[", "///", "//")):
+                        attrs.append(line)
+                    else:
+                        break
+                exported = any("wasm_bindgen" in a for a in attrs)
+                in_impl = bool(re.search(r"#\[wasm_bindgen\]\s*\nimpl\b", text[: m.start()]))        # a method of an exported impl block (the last block before the function)
+                if (exported or in_impl) and f"{Path(f).name}::{m.group(1)}" not in allowed:
+                    bad.append(f"NEW exported WASM function that returns a whole Vec<u8>: {f}::{m.group(1)} (write to a WriteAt sink, or list it in tools/api_byte_ammesse.txt with a reason)")
+        elif f.endswith(".js") and f.startswith(("mzlab/web/", "TP_Mine/")) and f not in IDB_OK and "/vendor/" not in f:
+            if "indexedDB.open(" in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace"):
+                bad.append(f"indexedDB.open outside qqq-db.js: {f}")
+    return bad
+
+
 def main() -> int:
     now = misura()
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base)
+    bad = peggiori(now, base) + regole_statiche()
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
