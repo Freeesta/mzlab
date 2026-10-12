@@ -13,12 +13,15 @@ use opentfraw::RawFileReader;
 pub struct Ident {
     pub computer: String,
     pub paths: Vec<String>,
+    /// Other values that vanish from the texts (the serial number of an instrument).
+    pub names: Vec<String>,
 }
 
 impl Ident {
     fn needles(&self) -> impl Iterator<Item = &str> {
         std::iter::once(self.computer.as_str())
             .chain(self.paths.iter().map(String::as_str))
+            .chain(self.names.iter().map(String::as_str))
             .filter(|n| n.len() >= 4)
     }
 
@@ -37,6 +40,9 @@ impl Ident {
         }
         if self.computer.len() >= 4 {
             s = replace_nocase(&s, &self.computer, "");
+        }
+        for n in self.names.iter().filter(|n| n.len() >= 4) {
+            s = replace_nocase(&s, n, "");
         }
         s
     }
@@ -91,7 +97,7 @@ impl Campo {
         self.identita = true;
         self
     }
-    fn json(&self) -> Option<V> {
+    pub fn json(&self) -> Option<V> {
         obj(vec![
             ("origine", text(&self.origine)),
             ("chiave", text(&self.chiave)),
