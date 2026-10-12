@@ -11,6 +11,10 @@ No compound names: every ion is a number.
 
 writes `allinea_sintetico.json` (alignment and RT map of a synthetic series, see `tools/feat_allinea.py`).
 
+    python3 tools/feat_riferimento.py OUT --solo ipotesi [--golden]
+
+writes `ipotesi_regole.json`: the hypotheses (parent times the rules of mzFinder, 1-2 steps) of invented parent formulas, see `tools/feat_ipotesi.py`.
+
     python3 tools/feat_riferimento.py OUT --solo identita [--golden]
 
 writes only `iso_ms2_identita.json`: on one file of the synthetic identity series (isotopologues, co-isolated MS2) the features of `features.detect` with
@@ -271,6 +275,10 @@ def main(argv) -> int:
     golden = AQUI.parent / "tests" / "golden" / "feat" if "--golden" in argv else None
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "famiglie":
         print("famiglie", un_file_famiglie(out, golden))
+        return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "ipotesi":
+        import feat_ipotesi  # noqa: E402
+        print("ipotesi", feat_ipotesi.un_file_ipotesi(out, golden))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "allinea":
         import feat_allinea  # noqa: E402
