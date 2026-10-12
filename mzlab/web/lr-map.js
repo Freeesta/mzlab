@@ -19,6 +19,15 @@ async function subxicRoute(q, { rb, rpc }) {
   return r.info ? { status: 200, text: r.info } : null;
 }
 
+/** `api/qaqc` (QA/QC measures of one ion over the series) from the indexes of the files. null = Python's. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
+async function qaqcRoute(q, { rb, rpc }) {
+  const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
+  if (!ks.length || !ks.every(k => Number.isInteger(k) && k >= 0) || !(await rb.ready(ks))) return null;
+  const r = (await rpc({ op: "qaqc", query: q.toString() })).info;
+  if (!r) return null;
+  return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
+}
+
 /** The routes of the Rust engine that need an index or no file at all: undefined = not one of them, null = Python's, else { status, text }.
  * @param {string} path  @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>, items: any[] | null}} env */
 export async function engineRoute(path, q, env) {
@@ -27,6 +36,7 @@ export async function engineRoute(path, q, env) {
     return r ? { status: 200, text: r } : null;
   }
   if (path === "/api/subxic") return await subxicRoute(q, env);
+  if (path === "/api/qaqc") return await qaqcRoute(q, env);
   if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, q, env);
   return undefined;
 }
