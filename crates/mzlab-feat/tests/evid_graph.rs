@@ -99,29 +99,27 @@ fn rule_hyps(reg: &Registry) -> Vec<usize> {
     v
 }
 
-fn world() -> World {
-    let reg = registry();
-    let h = rule_hyps(&reg);
+fn spec(
+    mz: f64,
+    rt: f64,
+    members: Vec<(f64, f64, u8)>,
+    treated: Vec<f64>,
+    controls: [f64; 2],
+) -> Spec {
+    Spec {
+        mz,
+        rt,
+        members,
+        treated,
+        controls,
+    }
+}
+
+/// The seven rows of the world: the parent, a true product with an adduct, a false ISF, an isomer pair, a decoy without MS2 and an "against" one.
+fn rows_of(reg: &Registry) -> Vec<Spec> {
+    let h = rule_hyps(reg);
     let mz = |k: usize| reg.hyps[h[k]].mz;
-    let lib = |row, entropy, ppm| LibHit {
-        row,
-        name: format!("candidato {row}"),
-        library: "LIB".into(),
-        entropy,
-        shared: 8,
-        ppm,
-    };
-    let spec =
-        |mz: f64, rt: f64, members: Vec<(f64, f64, u8)>, treated: Vec<f64>, controls: [f64; 2]| {
-            Spec {
-                mz,
-                rt,
-                members,
-                treated,
-                controls,
-            }
-        };
-    let rows = vec![
+    vec![
         spec(
             168.1019,
             6.0,
@@ -171,7 +169,20 @@ fn world() -> World {
             forming(),
             [8e6, 9e6],
         ),
-    ];
+    ]
+}
+
+fn world() -> World {
+    let reg = registry();
+    let lib = |row, entropy, ppm| LibHit {
+        row,
+        name: format!("candidato {row}"),
+        library: "LIB".into(),
+        entropy,
+        shared: 8,
+        ppm,
+    };
+    let rows = rows_of(&reg);
     let arc = RowArc {
         row: 2,
         lo: 0,

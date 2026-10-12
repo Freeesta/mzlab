@@ -8,6 +8,7 @@ mod arcs;
 mod graph;
 mod out;
 pub mod points;
+mod proofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{

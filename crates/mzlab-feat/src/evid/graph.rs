@@ -3,11 +3,12 @@
 //! same tables give the same graph (stable sorts, no `HashMap`, sums in a fixed order).
 
 use super::arcs::{proof_evidence, RowArc};
+use super::proofs::{frequency, graded, kinetic_proofs, rt_proof};
 use super::*;
 use crate::aligned::Aligned;
 use crate::family::evidence::EdgeKind as FamilyEdge;
-use crate::hypo::{Dir, Registry, SRC_RULE};
-use crate::kinetic::{kinetic_report, Controls, Coupling, Setup};
+use crate::hypo::{Registry, SRC_RULE};
+use crate::kinetic::Setup;
 use crate::table::*;
 use mzlab_core::roles::PROTON;
 
@@ -204,108 +205,6 @@ fn separated(table: &PointsTable, a: Candidate, b: Candidate) -> bool {
     matches!((a.ms2, b.ms2), (Some(x), Some(y)) if (x - y).abs() >= table.ms2_margin)
 }
 
-fn graded(
-    inp: &Inputs,
-    kind: Kind,
-    value: f64,
-    support: Option<f64>,
-    opposed: bool,
-    params: Vec<(&'static str, f64)>,
-) -> Evidence {
-    Evidence::graded(
-        inp.table,
-        kind,
-        value,
-        support,
-        opposed,
-        SOURCE_FEATURES,
-        EVID_VERSION,
-        params,
-    )
-}
-
-fn frequency(inp: &Inputs, row: usize) -> (Evidence, usize, usize) {
-    let nf = inp.aligned.n_files.max(1);
-    let cells = &inp.aligned.state[row * nf..(row + 1) * nf];
-    let det = cells.iter().filter(|&&s| s == CELL_DETECTED).count();
-    let filled = cells.iter().filter(|&&s| s == CELL_FILLED).count();
-    let e = graded(
-        inp,
-        Kind::Frequency,
-        det as f64 / nf as f64,
-        None,
-        false,
-        vec![("detected", det as f64), ("files", nf as f64)],
-    );
-    (e, det, filled)
-}
-
-fn kinetic_proofs(inp: &Inputs, row: usize) -> Vec<Evidence> {
-    let Some(k) = &inp.kinetics else {
-        return vec![];
-    };
-    let nf = inp.aligned.n_files;
-    let area = |f: &usize| {
-        let a = inp.aligned.area[row * nf + f];
-        if a.is_finite() {
-            a
-        } else {
-            0.0
-        }
-    };
-    let (y, ctrl): (Vec<f64>, Vec<f64>) = (
-        k.treated.iter().map(area).collect(),
-        k.controls.iter().map(area).collect(),
-    );
-    if y.len() != k.setup.times.len() || y.iter().all(|&v| v <= 0.0) {
-        return vec![];
-    }
-    let rep = kinetic_report(k.setup, &y, &ctrl);
-    let ke = &rep.evidence;
-    let params: Vec<_> = ke.params.clone();
-    let kin = graded(
-        inp,
-        Kind::Kinetics,
-        ke.value,
-        None,
-        rep.coupling == Coupling::TooFast,
-        params,
-    );
-    let fc = if rep.controls == Controls::NoSignal {
-        f64::NAN
-    } else {
-        rep.log2fc
-    };
-    let ctl = graded(
-        inp,
-        Kind::Controls,
-        fc,
-        None,
-        rep.controls == Controls::Present,
-        vec![],
-    );
-    vec![kin, ctl]
-}
-
-fn rt_proof(inp: &Inputs, row: usize, hyp: Option<usize>) -> Option<Evidence> {
-    let (_, prt) = inp.parent?;
-    let dir = inp.registry.hyps[hyp?].dir;
-    let d = inp.aligned.rt[row] - prt;
-    let opposed = match dir {
-        Dir::MorePolar => d > RT_MARGIN,
-        Dir::LessPolar => d < -RT_MARGIN,
-        Dir::Free => return None,
-    };
-    Some(graded(
-        inp,
-        Kind::Rt,
-        d,
-        None,
-        opposed,
-        vec![("margin", RT_MARGIN)],
-    ))
-}
-
 fn area_max(t: &Aligned, row: usize) -> f64 {
     t.area[row * t.n_files..(row + 1) * t.n_files]
         .iter()
@@ -411,19 +310,25 @@ pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
     ids
 }
 
-fn identity_of(
+/// Everything that grades an identity: the proofs in a fixed order, the library MS2 proof apart, the detections and the filled cells.
+struct Gathered {
+    ev: Vec<Evidence>,
+    ms2: Option<Evidence>,
+    detected: usize,
+    filled: usize,
+}
+
+fn gather(
     inp: &Inputs,
     row: usize,
     hyp: Option<usize>,
     lib: Option<usize>,
-    n: usize,
-    parent: Option<usize>,
-    neutral: f64,
-) -> Identity {
+    is_parent: bool,
+) -> Gathered {
     let facts = inp.facts.get(row).cloned().unwrap_or_default();
-    let h = hyp.map(|i| &inp.registry.hyps[i]);
     let mut ev: Vec<Evidence> = Vec::new();
-    let ppm = h
+    let ppm = hyp
+        .map(|i| &inp.registry.hyps[i])
         .map(|h| (inp.aligned.mz[row] - h.mz) / h.mz * 1e6)
         .or(lib.map(|l| inp.libs[l].ppm));
     if let Some(p) = ppm {
@@ -449,28 +354,45 @@ fn identity_of(
     ev.extend(ms2.clone());
     ev.extend(opt(Kind::Fragments, facts.fragments));
     ev.extend(opt(Kind::Network, facts.network));
-    let is_parent = parent == Some(row);
     if !is_parent {
         ev.extend(kinetic_proofs(inp, row));
         ev.extend(rt_proof(inp, row, hyp));
     }
-    let (freq, det, filled) = frequency(inp, row);
+    let (freq, detected, filled) = frequency(inp, row);
     ev.push(freq);
-    let ext: Vec<&ExternalHit> = inp.external.iter().filter(|e| e.row == row).collect();
     ev.extend(
-        ext.iter()
+        inp.external
+            .iter()
+            .filter(|e| e.row == row)
             .map(|e| graded(inp, Kind::External, e.score, None, false, vec![])),
     );
-    let members = members_of(inp.aligned, row);
-    let mut edges = internal_edges(inp, row, &members);
+    Gathered {
+        ev,
+        ms2,
+        detected,
+        filled,
+    }
+}
+
+/// The arcs that leave an identity: from the parent, to the library entry, to the external results.
+fn link_edges(
+    inp: &Inputs,
+    row: usize,
+    hyp: Option<usize>,
+    lib: Option<usize>,
+    parent: Option<usize>,
+    g: &Gathered,
+) -> Vec<Edge> {
     let id = row as u32;
-    if let (Some(p), Some(h), false) = (parent, h, is_parent) {
-        if h.sources & SRC_RULE != 0 {
-            let proofs = ev
-                .iter()
-                .filter(|e| matches!(e.kind, Kind::Network | Kind::Kinetics | Kind::Rt))
-                .cloned()
-                .collect();
+    let mut edges = Vec::new();
+    if let (Some(p), Some(i)) = (parent, hyp) {
+        let h = &inp.registry.hyps[i];
+        if p != row && h.sources & SRC_RULE != 0 {
+            let proofs =
+                g.ev.iter()
+                    .filter(|e| matches!(e.kind, Kind::Network | Kind::Kinetics | Kind::Rt))
+                    .cloned()
+                    .collect();
             edges.push(Edge {
                 kind: EdgeKind::ParentProduct,
                 from: Node::Identity(p as u32),
@@ -480,20 +402,18 @@ fn identity_of(
             });
         }
     }
-    if let (Some(l), Some(e)) = (lib, ms2) {
+    if let (Some(l), Some(e)) = (lib, &g.ms2) {
         let hit = &inp.libs[l];
         edges.push(Edge {
             kind: EdgeKind::Library,
             from: Node::Identity(id),
             to: Node::Library(hit.name.clone()),
             label: hit.library.clone(),
-            proofs: vec![e],
+            proofs: vec![e.clone()],
         });
     }
-    for (x, e) in ext
-        .iter()
-        .zip(ev.iter().filter(|e| e.kind == Kind::External))
-    {
+    let ext = inp.external.iter().filter(|e| e.row == row);
+    for (x, e) in ext.zip(g.ev.iter().filter(|e| e.kind == Kind::External)) {
         edges.push(Edge {
             kind: EdgeKind::External,
             from: Node::Identity(id),
@@ -502,8 +422,27 @@ fn identity_of(
             proofs: vec![e.clone()],
         });
     }
-    let has_ms2 = ev.iter().any(|e| e.kind == Kind::Ms2 && !e.value.is_nan());
-    let mut breakdown = breakdown(inp.table, ev, n);
+    edges
+}
+
+fn identity_of(
+    inp: &Inputs,
+    row: usize,
+    hyp: Option<usize>,
+    lib: Option<usize>,
+    n: usize,
+    parent: Option<usize>,
+    neutral: f64,
+) -> Identity {
+    let h = hyp.map(|i| &inp.registry.hyps[i]);
+    let g = gather(inp, row, hyp, lib, parent == Some(row));
+    let members = members_of(inp.aligned, row);
+    let mut edges = internal_edges(inp, row, &members);
+    edges.extend(link_edges(inp, row, hyp, lib, parent, &g));
+    let has_ms2 =
+        g.ev.iter()
+            .any(|e| e.kind == Kind::Ms2 && !e.value.is_nan());
+    let mut breakdown = breakdown(inp.table, g.ev, n);
     let undetermined = edges
         .iter()
         .filter(|e| e.kind == EdgeKind::Undetermined)
@@ -514,14 +453,14 @@ fn identity_of(
             numbers: vec![("arcs", undetermined as f64)],
         });
     }
-    if det == 0 && filled > 0 {
+    if g.detected == 0 && g.filled > 0 {
         breakdown.reasons.push(Reason {
             code: R_ONLY_FILLED,
-            numbers: vec![("filled", filled as f64)],
+            numbers: vec![("filled", g.filled as f64)],
         });
     }
     Identity {
-        id,
+        id: row as u32,
         hypothesis: h.map(|h| h.id),
         neutral,
         formula: h.map(|h| h.formula.clone()),
