@@ -315,7 +315,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 .pnl canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 /* map (mappa.js): grid with the map, the overlay of the sight and the two plots at the margins */
 .pnl.map .leg{max-height:none;padding-right:0;gap:2px 12px}.pnl.map .leg span.mzhelp{display:block;flex-basis:100%;padding-right:260px;font-size:11px}
-.pnl .mzgrid>.mznav{grid-area:1/1;align-self:start;justify-self:end;z-index:3;display:flex;gap:2px;margin:6px 8px 0 0;padding:2px;background:var(--panel);border:1px solid var(--line);border-radius:6px;opacity:.88}.mznav:hover,.mznav:focus-within{opacity:1}.mznav button{width:26px;height:26px;min-width:0;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ink);border-radius:4px;cursor:pointer}.mznav button:hover{background:var(--sel)}.mznav button.mznx{width:auto;padding:0 8px;gap:5px;font-size:12px;white-space:nowrap}.mznav button.mznx span{font-weight:600}.mzex-d{margin:0 0 6px;color:var(--muted)}details.mzcol{margin-top:6px}details.mzcol summary{cursor:pointer;color:var(--muted)}details.mzcol label{display:flex;margin:4px 0}.mznav button.on,.mznav button[aria-pressed=true]{background:var(--sel);color:var(--accent)}.mznav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}table.mzhelp{border-collapse:collapse;width:100%;font-size:13px}.mzhelp th,.mzhelp td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.mzhelp thead th{position:sticky;top:0;background:var(--panel)}.mzhelp tbody th{white-space:nowrap}@media (pointer:coarse){.mznav button{width:44px;height:44px}.mznav button.mznx{width:auto}}@media (max-width:700px){.mzhelp{font-size:12px}}
+.mznav button:not(.bt){width:26px;height:26px;min-width:0;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ink);border-radius:4px;cursor:pointer}.mznav button:not(.bt):hover{background:var(--sel)}.mzex-d{margin:0 0 6px;color:var(--muted)}details.mzcol{margin-top:6px}details.mzcol summary{cursor:pointer;color:var(--muted)}details.mzcol label{display:flex;margin:4px 0}.mznav button.on,.mznav button[aria-pressed=true]{background:var(--sel);color:var(--accent)}.mznav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}table.mzhelp{border-collapse:collapse;width:100%;font-size:13px}.mzhelp th,.mzhelp td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.mzhelp thead th{position:sticky;top:0;background:var(--panel)}.mzhelp tbody th{white-space:nowrap}@media (pointer:coarse){.mznav button:not(.bt){width:44px;height:44px}}@media (max-width:700px){.mzhelp{font-size:12px}}
 .pnl .mzex{flex:none;border-top:1px solid var(--line);font-size:12px;padding:6px 4px}.mzex-n{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 16px;margin:0}.mzex-r{display:flex;gap:6px;align-items:baseline}.mzex-r dt{color:var(--muted)}.mzex-r dd{margin:0;font-variant-numeric:tabular-nums}.mzex-f{margin:6px 0 2px;color:var(--muted)}.mzex-b{margin:4px 0 0}
 .mzex-found{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}.mzex-found h4{margin:0 0 4px;font-size:13px}.mzex-found p{margin:3px 0}.mzex-prof{width:100%;height:96px;display:block}.mzex-flt{border-collapse:collapse;font-size:12px;margin:4px 0}.mzex-flt caption{text-align:left;color:var(--muted);padding-bottom:2px}.mzex-flt th,.mzex-flt td{padding:2px 8px;text-align:left;border-bottom:1px solid var(--line)}
 #resetdlg{max-width:min(520px,92vw)}#resetdlg h3{margin:0 0 6px}.rs-opt{display:grid;gap:4px;margin:10px 0}.rs-opt .sm{color:var(--muted)}.rs-opt button.danger{border-color:var(--bad,#b3261e);color:var(--bad,#b3261e)}.rs-end{text-align:right;margin-top:10px}#resetnote{position:fixed;right:14px;bottom:14px;z-index:60;display:flex;gap:8px;align-items:center;max-width:min(460px,90vw);padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.15);font-size:13px}
@@ -406,7 +406,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), turning round the centre.
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), advancing and weaving together.
 // The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
 const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
 let ldIonRaf = 0, ldAnLoad = null;
@@ -424,8 +424,10 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions turning round the centre (depth z sets size and brightness)
-    n: 22, dt: 0.035, at(j, t) { const a = TAU * 0.55 * t + j * TAU / 3; return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(a), z: Math.sin(a) }; } } };
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions 120° apart, their trails advancing and weaving together (depth z sets size and brightness)
+    n: 26, dt: 0.045, step: 9,
+    at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
+    shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; } } };
   if (LD_ANALYSERS) for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
   const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
@@ -677,7 +679,7 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
   return out}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
-async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
   if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
@@ -690,12 +692,17 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
     try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>{const j={e,n,several:s.length>1};j.nm=wiffName(e.stem,n,j.several,taken);taken.push(j.nm);jobs.push(j);CONVROWS.add(j.nm,"wait")})}
     catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
     CONVROWS.drop(e.row)}
-  const g=ConvUI.group(box,jobs.map(j=>j.e.scan.size));let i=0;
-  for(const j of jobs){if(g.signal.aborted){CONVROWS.drop(j.nm);continue}      // cancelled: the samples still to convert are left out
-    const ui=g.start(++i,j.nm);CONVROWS.set(j.nm,"run",0);
-    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{ui.update(p);CONVROWS.set(j.nm,"run",convPercent(p))});CONV.add(j.nm,blob);res.files.push(new File([blob],j.nm));ui.done();CONVROWS.set(j.nm,"conv")}
-    catch(x){CONVROWS.drop(j.nm);ui.fail(x.json?I18N.err(x.json).message:x.message)}}
-  g.end();
+  // the samples are converted a few at a time by the engine (they all go to it now and queue there); each is handed to `onFile` (the indexing) as soon as it is converted
+  if(!jobs.length)return res;
+  const g=ConvUI.group(box,[1]),ui=g.start(1,""),part=j=>j.e.scan.size/Math.max(1,jobs.filter(x=>x.e===j.e).length),all=jobs.reduce((a,j)=>a+part(j),0)||1;let nDone=0;
+  const title=()=>ui.title(T("conv.wiff.batch",{done:nDone,n:jobs.length})),total=()=>{let f=0,w=0;for(const j of jobs){f+=part(j)*(j.fr||0);w+=j.written||0}return{scans:Math.round(1000*f/all),scansTotal:1000,written:w,several:true}};
+  title();g.signal.addEventListener("abort",()=>jobs.forEach(j=>{if(!j.over)rb.cancelWiff(j.nm)}));
+  await Promise.all(jobs.map(async j=>{
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{j.fr=convFraction(p);j.written=p.written;ui.update(total());CONVROWS.set(j.nm,"run",convPercent(p))},j.nm);
+      j.over=true;j.fr=1;nDone++;title();ui.update(total());CONV.add(j.nm,blob);const f=new File([blob],j.nm);CONVROWS.set(j.nm,"conv");if(onFile)onFile(f);else res.files.push(f)}
+    catch(x){j.over=true;CONVROWS.drop(j.nm);if(!x.cancelled){const d=document.createElement("div");d.className="fail";d.textContent=j.nm+": "+(x.json?I18N.err(x.json).message:x.message);box.appendChild(d)}}}));
+  ui.done();g.end();
+  if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=T("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
@@ -734,10 +741,8 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
-async function upload(files,into){const box=$("#up");fail();const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
-  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
-  if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
+async function upload(files,into){const box=$("#up");fail();
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
@@ -746,8 +751,12 @@ async function upload(files,into){const box=$("#up");fail();const wr=await wiffT
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
+  const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
+  const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
+  if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  reportLoad(rep)}
+  await Promise.all(early);reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
