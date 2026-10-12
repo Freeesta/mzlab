@@ -75,13 +75,6 @@ function movePanel(p, dir) {
   if (window.DDA) DDA.sync();
   E.panels.sort((a, b2) => a.y - b2.y || a.id - b2.id); front(p.el); uiSave();
 }
-function tile() {
-  const w = hostWidth(); let y = 0;
-  tabPanels().filter(p => !dockedP(p)).forEach(p => { Object.assign(p, { x: 0, y, w, h: p.h || 310, full: true }); y += p.h + 10; apply(p); });
-  if (window.DDA) DDA.sync();
-  tabPanels().forEach(draw);
-  fitHost(); uiSave();
-}
 const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; p.el.style.width = p.w + "px"; p.el.style.height = p.h + "px"; };
 
 // a panel the student has just asked for may be below the fold: the page scrolls to it and its border flashes for a second (only a scroll if the system asks for less motion)

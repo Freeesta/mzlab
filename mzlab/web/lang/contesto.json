@@ -167,6 +167,8 @@
   "ctx.map.where": "Prima riga (grigia) del menu del clic destro sulla mappa; {rt} = RT, {mz} = m/z, {file} = campione.",
   "ctx.map.xic": "Menu del clic destro sulla mappa; {mz} = m/z.",
   "ctx.map.addTo": "Menu del clic destro sulla mappa; {mz} = m/z, {panel} = titolo del pannello XIC.",
+  "ctx.spec.copy.aria": "Voce «Copia valore» del menu del clic destro sullo spettro; {mz} = m/z del picco.",
+  "mappa.tab.ref.pick": "Pulsante della tabella dei punti segnati nella mappa; {n} = numero del punto.",
   "ctx.spec.xic": "Menu del clic destro sullo spettro; {mz} = m/z del picco.",
   "ctx.spec.knownMore": "Coda della voce «Contaminante noto»; {n} = quanti altri contaminanti corrispondono.",
   "ctx.spec.formulas": "Menu del clic destro su un picco ad alta risoluzione; {mz} = m/z. Il programma propone candidati, non identifica.",

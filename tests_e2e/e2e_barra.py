@@ -34,10 +34,9 @@ try:
         step("a very long name is cut in the middle, full name in the tooltip", long)
         def gone():
             assert pg.evaluate("['np-more','np-merge','morepop'].every(i => !document.getElementById(i))")
-            assert pg.is_visible("#np-tile"); pg.click("#np-tile"); pg.wait_for_timeout(500)
-            assert pg.evaluate("E.panels.filter(p => p.tab === E.tab).every(p => p.full)")
+            assert not pg.evaluate("!!document.getElementById('np-tile')")
             assert "Altro" not in pg.inner_text("#tools") and "Unisci" not in pg.inner_text("#tools")
-        step("no Altro / Unisci; Ordina is a small icon that still works", gone)
+        step("no Altro / Unisci; no Ordina button", gone)
         def fold():
             b = "#stbar [data-cmd=file]"
             assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Elenco dei file caricati: scegli, nascondi, rinomina, colora"
