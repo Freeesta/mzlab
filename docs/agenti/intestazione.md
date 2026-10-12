@@ -1,6 +1,7 @@
 # Intestazione e tabella di caricamento
 
 - **Schermo intero**: `#fs-btn` nell'header (Fullscreen API sull'intera app, `aria-pressed`, testi `header.fullscreen*`); nascosto dove il browser non ha l'API (iPhone).
+- **Focus dei pulsanti dell'header** (regole `header button:focus-visible` in `index.html`): anello di 2 px solo da tastiera, disegnato DENTRO il pulsante (`#stbar` ha `overflow:hidden` e taglierebbe un anello esterno), mai l'anello doppio del browser; dopo il mouse nessun anello (`:focus:not(:focus-visible)`). Prova: `e2e_focus_intestazione`.
 - **Finestra «quasi a schermo intero» movibile**: sul web non esiste un modo per averla senza la barra delle schede. `window.open` con `popup`/`width`/`height` apre una finestra con la barra del browser.
   Document Picture-in-Picture accetta solo contenuto già in pagina, non l'app intera. La Window Management API (`getScreenDetails`) è solo Chromium, con permesso, e non toglie la barra. Solo la Fullscreen API la toglie.
 - **Logo** (`logo-piccone.js`, caricato dall'elenco `L`; `tests_e2e/e2e_logo_piccone.py`): ogni colpo (clic o Invio/Spazio, il logo ha `tabindex=0 role=button`, alt e title invariati) fa battere un piccone SVG e scuote il logo, con 4 stadi di crepe; senza colpi per 3 s le crepe si chiudono. Il 5º colpo chiama `QTOOLS.flip()` (accende/spegne mzFinder), rompe il logo in 6 cocci e lo lascia DORATO (`html[data-logo-gold]`, localStorage `qqq.logo.gold`). Con `prefers-reduced-motion` o `data-a11y-reduce`: solo gli stadi di crepe, niente scossa né cocci.
