@@ -139,6 +139,8 @@ fn rust_routes_match_python() {
             };
             let want = if path == "/api/xic" {
                 r["body"]["traces"][0].clone()
+            } else if path == "/api/ms2tr" {
+                r["body"]["files"][0]["transitions"].clone()
             } else {
                 r["body"].clone()
             };

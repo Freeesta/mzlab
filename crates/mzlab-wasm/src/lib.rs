@@ -3,7 +3,7 @@
 //! Every answer is written into a `Float64Array` the caller provides (the worker recycles them, so no allocation per frame):
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
-mod diff; mod stat;
+mod info; mod diff; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};

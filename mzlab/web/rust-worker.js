@@ -159,6 +159,7 @@ onmessage = async ev => {
       case "mzmlroute": case "specbg": case "scanbin": return scanOp(m, id);                            // api/spectra, scan, scanavg, scanbin, spectrum with a background: see scanOp
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML
       case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
+      case "fileinfo": info = engine.fileinfo(m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
       case "map": info = engine.map_route(m.path, m.items, m.query); break;             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
@@ -182,7 +183,6 @@ onmessage = async ev => {
   } catch (e) {
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else
-    // (RuntimeError: unreachable, out of memory) means the instance is lost
     const fatal = !(typeof e === "string" && e.startsWith("{"));
     postMessage({ id, op: m.op, error: text, fatal });
   }
