@@ -8,11 +8,7 @@ use mzlab_core::statmat::{eigh, svd};
 use serde_json::Value;
 
 fn nums(v: &Value) -> Vec<f64> {
-    v.as_array()
-        .unwrap()
-        .iter()
-        .map(|x| x.as_f64().unwrap())
-        .collect()
+    v.as_array().unwrap().iter().map(|x| x.as_f64().unwrap()).collect()
 }
 
 fn close(got: f64, want: f64, scale: f64) -> bool {
@@ -23,25 +19,15 @@ fn close(got: f64, want: f64, scale: f64) -> bool {
 fn statmat_like_numpy() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab-statmat-{}.json", std::process::id()));
-    let run = Command::new("python3")
-        .current_dir(&root)
-        .arg("tools/statmat_riferimento.py")
-        .arg(&out)
-        .output();
+    let run = Command::new("python3").current_dir(&root).arg("tools/statmat_riferimento.py").arg(&out).output();
     if !matches!(&run, Ok(o) if o.status.success()) {
-        assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "the reference did not run: {run:?}"
-        );
+        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
     let j: Value = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
     for c in j["svd"].as_array().unwrap() {
-        let (m, n) = (
-            c["m"].as_u64().unwrap() as usize,
-            c["n"].as_u64().unwrap() as usize,
-        );
+        let (m, n) = (c["m"].as_u64().unwrap() as usize, c["n"].as_u64().unwrap() as usize);
         let want = nums(&c["s"]);
         let got = svd(&nums(&c["a"]), m, n).s;
         assert_eq!(got.len(), want.len());
@@ -50,22 +36,14 @@ fn statmat_like_numpy() {
         }
     }
     for c in j["eigh2"].as_array().unwrap() {
-        let (a, b, d) = (
-            c["a"].as_f64().unwrap(),
-            c["b"].as_f64().unwrap(),
-            c["c"].as_f64().unwrap(),
-        );
+        let (a, b, d) = (c["a"].as_f64().unwrap(), c["b"].as_f64().unwrap(), c["c"].as_f64().unwrap());
         let (w, v) = eigh(&[a, b, b, d], 2);
         let (want_w, want_v) = (nums(&c["w"]), nums(&c["v"]));
         let scale = want_w[1].abs().max(want_w[0].abs());
         for i in 0..2 {
-            assert!(
-                close(w[i], want_w[i], scale),
-                "w {a} {b} {d}: {w:?} vs {want_w:?}"
-            );
+            assert!(close(w[i], want_w[i], scale), "w {a} {b} {d}: {w:?} vs {want_w:?}");
         }
-        for (g, x) in v.iter().zip(&want_v).skip(1).step_by(2) {
-            // the eigenvector of the larger value (column 1), sign included
+        for (g, x) in v.iter().zip(&want_v).skip(1).step_by(2) {      // the eigenvector of the larger value (column 1), sign included
             assert!((g - x).abs() < 1e-9, "v {a} {b} {d}: {v:?} vs {want_v:?}");
         }
     }
@@ -74,10 +52,7 @@ fn statmat_like_numpy() {
         let want = nums(&c["w"]);
         let (w, _) = eigh(&nums(&c["a"]), n);
         for (g, x) in w.iter().zip(&want) {
-            assert!(
-                close(*g, *x, want[n - 1].abs().max(want[0].abs())),
-                "eigh {n}: {g} vs {x}"
-            );
+            assert!(close(*g, *x, want[n - 1].abs().max(want[0].abs())), "eigh {n}: {g} vs {x}");
         }
     }
 }

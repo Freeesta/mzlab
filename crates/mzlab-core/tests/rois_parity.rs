@@ -28,11 +28,7 @@ fn canon(mz: &[f64], x: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
     let mut o: Vec<usize> = (0..m).collect();
     let key = |r: usize| {
         let row = &x[r * n..(r + 1) * n];
-        (
-            (mz[r] * 1e9).round() as i64,
-            row.iter().sum::<f64>().to_bits(),
-            row.iter().position(|v| *v != 0.0).unwrap_or(n),
-        )
+        ((mz[r] * 1e9).round() as i64, row.iter().sum::<f64>().to_bits(), row.iter().position(|v| *v != 0.0).unwrap_or(n))
     };
     o.sort_by_key(|&r| key(r));
     (
@@ -49,21 +45,8 @@ fn same(what: &str, got: &[f64], want: &[f64]) {
         if let Ok(n) = std::env::var("ROI_DEBUG") {
             let n: usize = n.parse().unwrap_or(1);
             let r = i / n;
-            let row = |a: &[f64]| {
-                a[r * n..(r + 1) * n]
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, v)| **v != 0.0)
-                    .map(|(c, v)| format!("{c}:{v:.1}"))
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            };
-            eprintln!(
-                "row {r} col {}\n got  {}\n want {}",
-                i % n,
-                row(got),
-                row(want)
-            );
+            let row = |a: &[f64]| a[r * n..(r + 1) * n].iter().enumerate().filter(|(_, v)| **v != 0.0).map(|(c, v)| format!("{c}:{v:.1}")).collect::<Vec<_>>().join(" ");
+            eprintln!("row {r} col {}\n got  {}\n want {}", i % n, row(got), row(want));
         }
         panic!("{what}: element {i}: {} against {}", got[i], want[i]);
     }

@@ -3,22 +3,15 @@
 //! the peak table of a high-resolution file is single precision).
 
 use crate::error::Result;
-use crate::hrscans::read_scan;
 use crate::idxread::ReadAt;
+use crate::hrscans::read_scan;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
 use crate::spectrum::{binned_json, Binned, EMPTY};
 
 impl<R: ReadAt> Routes<R> {
-    pub(crate) fn hr_spectrum(
-        &mut self,
-        level: u8,
-        win: (f64, f64),
-        precursor: Option<f64>,
-        filt: Option<&str>,
-        hr: &HrProfile,
-    ) -> Result<Option<String>> {
+    pub(crate) fn hr_spectrum(&mut self, level: u8, win: (f64, f64), precursor: Option<f64>, filt: Option<&str>, hr: &HrProfile) -> Result<Option<String>> {
         Ok(match self.hr_window(level, win, precursor, filt, hr)? {
             None => Some(EMPTY.into()),
             Some(m) if m.n == 1 => None,
@@ -34,21 +27,11 @@ impl<R: ReadAt> Routes<R> {
         };
         let level = q.level();
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
-        if q.some("bgk").is_some()
-            || !hr.on
-            || self.idx.scans.iter().any(|s| s.level == level && s.profile)
-        {
+        if q.some("bgk").is_some() || !hr.on || self.idx.scans.iter().any(|s| s.level == level && s.profile) {
             return Ok(None);
         }
         let precursor = q.num("precursor")?;
-        let Some(mut m) = self.hr_window(
-            level,
-            (rt0.min(rt1), rt0.max(rt1)),
-            precursor,
-            q.some("filt"),
-            &hr,
-        )?
-        else {
+        let Some(mut m) = self.hr_window(level, (rt0.min(rt1), rt0.max(rt1)), precursor, q.some("filt"), &hr)? else {
             return Ok(None);
         };
         if m.n != 1 || m.in_win.len() != 1 {
@@ -66,22 +49,13 @@ impl<R: ReadAt> Routes<R> {
 
     /// The mean spectrum of a window of a high-resolution file: cells of 3 ppm, the precursor within the tolerance of the profile (ppm of the
     /// precursor, at least 1 mDa, as `Item.ptol`). `None` = the file has no scans of this level.
-    fn hr_window(
-        &mut self,
-        level: u8,
-        (lo, hi): (f64, f64),
-        precursor: Option<f64>,
-        filt: Option<&str>,
-        hr: &HrProfile,
-    ) -> Result<Option<Binned>> {
+    fn hr_window(&mut self, level: u8, (lo, hi): (f64, f64), precursor: Option<f64>, filt: Option<&str>, hr: &HrProfile) -> Result<Option<Binned>> {
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 => (p * hr.ppm * 1e-6).max(1e-3),
             _ => 0.6,
         };
         let cell = (3e-6f64).ln_1p();
-        self.binned_cells(level, lo, hi, (precursor, tol), filt, |m| {
-            (m.max(1e-9).ln() / cell).floor() as i64
-        })
+        self.binned_cells(level, lo, hi, (precursor, tol), filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)
     }
 
     /// `/api/dda`: every MS2 of the file with its parent, isolation window and activation, in columns, plus the survey scans.
@@ -94,8 +68,7 @@ impl<R: ReadAt> Routes<R> {
         let col = |o: &mut Out, key: &str, f: &dyn Fn(usize) -> Option<f64>, nd: Option<usize>| {
             o.raw(key).raw("[");
             for (n, &i) in ms2.iter().enumerate() {
-                o.raw(if n > 0 { "," } else { "" })
-                    .opt(f(i).map(|v| nd.map_or(v, |nd| round(v, nd))));
+                o.raw(if n > 0 { "," } else { "" }).opt(f(i).map(|v| nd.map_or(v, |nd| round(v, nd))));
             }
             o.raw("]");
         };
@@ -110,19 +83,9 @@ impl<R: ReadAt> Routes<R> {
             o.raw(if n > 0 { "," } else { "" }).int(scans[i].number(i));
         }
         o.raw("],");
-        col(
-            &mut o,
-            "\"prec\":",
-            &|i| scans[i].precursor.filter(|p| *p != 0.0),
-            Some(d),
-        );
+        col(&mut o, "\"prec\":", &|i| scans[i].precursor.filter(|p| *p != 0.0), Some(d));
         o.raw(",");
-        col(
-            &mut o,
-            "\"tgt\":",
-            &|i| scans[i].iso.map(|(a, b)| (a + b) / 2.0),
-            Some(d),
-        );
+        col(&mut o, "\"tgt\":", &|i| scans[i].iso.map(|(a, b)| (a + b) / 2.0), Some(d));
         o.raw(",\"parent\":[");
         for (n, &i) in ms2.iter().enumerate() {
             o.raw(if n > 0 { "," } else { "" });
@@ -132,27 +95,12 @@ impl<R: ReadAt> Routes<R> {
             };
         }
         o.raw("],");
-        let parent_rt = |i: usize| {
-            scans[i]
-                .parent
-                .filter(|&p| p >= 0 && (p as usize) < scans.len())
-                .map(|p| scans[p as usize].rt)
-        };
+        let parent_rt = |i: usize| scans[i].parent.filter(|&p| p >= 0 && (p as usize) < scans.len()).map(|p| scans[p as usize].rt);
         col(&mut o, "\"prt\":", &parent_rt, Some(4));
         o.raw(",");
-        col(
-            &mut o,
-            "\"lo\":",
-            &|i| scans[i].iso.map(|(a, _)| a),
-            Some(d),
-        );
+        col(&mut o, "\"lo\":", &|i| scans[i].iso.map(|(a, _)| a), Some(d));
         o.raw(",");
-        col(
-            &mut o,
-            "\"hi\":",
-            &|i| scans[i].iso.map(|(_, b)| b),
-            Some(d),
-        );
+        col(&mut o, "\"hi\":", &|i| scans[i].iso.map(|(_, b)| b), Some(d));
         o.raw(",\"act\":[");
         for (n, &i) in ms2.iter().enumerate() {
             o.raw(if n > 0 { "," } else { "" });
@@ -171,22 +119,9 @@ impl<R: ReadAt> Routes<R> {
         }
         o.raw("],\"rt\":[");
         for (n, &i) in ms1.iter().enumerate() {
-            o.raw(if n > 0 { "," } else { "" })
-                .num(round(scans[i].rt, 4));
+            o.raw(if n > 0 { "," } else { "" }).num(round(scans[i].rt, 4));
         }
-        o.raw("]},\"nce\":").raw(
-            if self
-                .idx
-                .run
-                .get("nce")
-                .and_then(|v| v.bool())
-                .unwrap_or(false)
-            {
-                "true"
-            } else {
-                "false"
-            },
-        );
+        o.raw("]},\"nce\":").raw(if self.idx.run.get("nce").and_then(|v| v.bool()).unwrap_or(false) { "true" } else { "false" });
         o.raw("}");
         Ok(Some(o.0))
     }

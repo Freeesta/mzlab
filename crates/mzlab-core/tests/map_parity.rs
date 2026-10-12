@@ -22,43 +22,27 @@ fn root() -> PathBuf {
 /// Compares two answers; arrays of cells (base64) must be identical. Returns the number of values compared.
 fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
     match (got, want) {
-        (Value::Object(g), Value::Object(w))
-            if w.contains_key("rt")
-                && w.get("total")
-                    .is_some_and(|t| t.as_i64() > w.get("n").and_then(Value::as_i64)) =>
-        {
+        (Value::Object(g), Value::Object(w)) if w.contains_key("rt") && w.get("total").is_some_and(|t| t.as_i64() > w.get("n").and_then(Value::as_i64)) => {
             let mut rest = (g.clone(), w.clone());
             for k in ["rt", "mz", "inten"] {
                 rest.0.remove(k);
                 rest.1.remove(k);
             }
-            compare(path, &Value::Object(rest.0), &Value::Object(rest.1), bad)
-                + same_sticks(got, want, bad)
+            compare(path, &Value::Object(rest.0), &Value::Object(rest.1), bad) + same_sticks(got, want, bad)
         }
         (Value::Object(g), Value::Object(w)) => {
             let mut n = 0;
             for (k, wv) in w {
                 match g.get(k) {
-                    Some(gv) if ARRAYS.contains(&k.as_str()) && wv.is_string() => {
-                        n += same_bytes(&format!("{path}.{k}"), gv, wv, bad)
-                    }
+                    Some(gv) if ARRAYS.contains(&k.as_str()) && wv.is_string() => n += same_bytes(&format!("{path}.{k}"), gv, wv, bad),
                     Some(gv) => n += compare(&format!("{path}.{k}"), gv, wv, bad),
                     None => bad.push(format!("{path}.{k}: missing")),
                 }
             }
-            bad.extend(
-                g.keys()
-                    .filter(|k| !w.contains_key(*k))
-                    .map(|k| format!("{path}.{k}: extra")),
-            );
+            bad.extend(g.keys().filter(|k| !w.contains_key(*k)).map(|k| format!("{path}.{k}: extra")));
             n
         }
-        (Value::Array(g), Value::Array(w)) if g.len() == w.len() => g
-            .iter()
-            .zip(w)
-            .enumerate()
-            .map(|(i, (a, b))| compare(&format!("{path}[{i}]"), a, b, bad))
-            .sum(),
+        (Value::Array(g), Value::Array(w)) if g.len() == w.len() => g.iter().zip(w).enumerate().map(|(i, (a, b))| compare(&format!("{path}[{i}]"), a, b, bad)).sum(),
         (Value::Number(g), Value::Number(w)) => {
             let (a, b) = (g.as_f64().unwrap(), w.as_f64().unwrap());
             if !(a == b || (a - b).abs() <= 1e-9 * a.abs().max(b.abs())) {
@@ -79,37 +63,21 @@ fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usiz
 /// be the same set, except at the weakest kept intensity, where only their number is compared.
 fn same_sticks(got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
     let dec = |v: &Value, k: &str, w: usize| -> Vec<Vec<u8>> {
-        let b = base64::engine::general_purpose::STANDARD
-            .decode(v[k].as_str().unwrap_or(""))
-            .unwrap_or_default();
+        let b = base64::engine::general_purpose::STANDARD.decode(v[k].as_str().unwrap_or("")).unwrap_or_default();
         b.chunks(w).map(|c| c.to_vec()).collect()
     };
     let by_intensity = |v: &Value| {
         let (rt, mz, y) = (dec(v, "rt", 4), dec(v, "mz", 8), dec(v, "inten", 4));
-        let mut m: std::collections::BTreeMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>> =
-            Default::default();
+        let mut m: std::collections::BTreeMap<Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>> = Default::default();
         for i in 0..y.len().min(rt.len()).min(mz.len()) {
-            m.entry(y[i].clone())
-                .or_default()
-                .push((rt[i].clone(), mz[i].clone()));
+            m.entry(y[i].clone()).or_default().push((rt[i].clone(), mz[i].clone()));
         }
         m.values_mut().for_each(|p| p.sort());
         (m, y)
     };
     let ((g, gy), (w, wy)) = (by_intensity(got), by_intensity(want));
-    let weakest = wy
-        .iter()
-        .map(|b| f32::from_le_bytes(b[..4].try_into().unwrap()))
-        .fold(f32::INFINITY, f32::min);
-    if gy
-        .iter()
-        .map(|b| f32::from_le_bytes(b[..4].try_into().unwrap()))
-        .collect::<Vec<_>>()
-        != wy
-            .iter()
-            .map(|b| f32::from_le_bytes(b[..4].try_into().unwrap()))
-            .collect::<Vec<_>>()
-    {
+    let weakest = wy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).fold(f32::INFINITY, f32::min);
+    if gy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).collect::<Vec<_>>() != wy.iter().map(|b| f32::from_le_bytes(b[..4].try_into().unwrap())).collect::<Vec<_>>() {
         bad.push("sticks: intensities differ".into());
     }
     for (k, pts) in &w {
@@ -124,11 +92,7 @@ fn same_sticks(got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
 }
 
 fn same_bytes(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
-    let dec = |v: &Value| {
-        base64::engine::general_purpose::STANDARD
-            .decode(v.as_str().unwrap_or(""))
-            .unwrap_or_default()
-    };
+    let dec = |v: &Value| base64::engine::general_purpose::STANDARD.decode(v.as_str().unwrap_or("")).unwrap_or_default();
     let (g, w) = (dec(got), dec(want));
     if g.len() != w.len() {
         bad.push(format!("{path}: {} bytes against {}", g.len(), w.len()));
@@ -144,16 +108,10 @@ fn same_bytes(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> u
 #[test]
 fn rust_maps_match_python() {
     let ready = std::env::var("MZLAB_MAP_DIR").ok().map(PathBuf::from);
-    let out = ready
-        .clone()
-        .unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-map-{}", std::process::id())));
+    let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-map-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3")
-            .current_dir(root())
-            .arg("tools/mappa_riferimento.py")
-            .arg(&out)
-            .output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/mappa_riferimento.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
@@ -162,65 +120,28 @@ fn rust_maps_match_python() {
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
-    let sets = [
-        ("mappa.json", "s"),
-        ("mappa-prof.json", "p"),
-        ("mappa-hr.json", "h"),
-    ];
+    let sets = [("mappa.json", "s"), ("mappa-prof.json", "p"), ("mappa-hr.json", "h")];
     let (mut failures, mut compared) = (Vec::new(), 0);
     for (json, stem) in sets {
-        let cases: Vec<Value> =
-            serde_json::from_slice(&std::fs::read(out.join(json)).unwrap()).unwrap();
-        let order: Vec<Value> = std::fs::read(out.join(format!("{stem}-ordine.json")))
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-            .unwrap_or_else(|| {
-                (0..3)
-                    .map(|i| serde_json::json!({"stem": format!("{stem}{i}"), "full": true}))
-                    .collect()
-            });
+        let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join(json)).unwrap()).unwrap();
+        let order: Vec<Value> = std::fs::read(out.join(format!("{stem}-ordine.json"))).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_else(|| (0..3).map(|i| serde_json::json!({"stem": format!("{stem}{i}"), "full": true})).collect());
         let mut routes: HashMap<u32, Routes<std::fs::File>> = order
             .iter()
             .enumerate()
             .map(|(i, o)| {
                 let p = out.join(format!("{}.mzidx", o["stem"].as_str().unwrap()));
-                (
-                    i as u32,
-                    Routes::new(
-                        Index::open(
-                            std::fs::File::open(&p).unwrap(),
-                            std::fs::metadata(&p).unwrap().len(),
-                        )
-                        .unwrap(),
-                    ),
-                )
+                (i as u32, Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap()))
             })
             .collect();
-        let items: Vec<ItemMeta> = order
-            .iter()
-            .enumerate()
-            .map(|(i, o)| ItemMeta {
-                slot: i as u32,
-                label: format!("{stem}{i}"),
-                time: None,
-                full: o["full"].as_bool().unwrap_or(true),
-            })
-            .collect();
+        let items: Vec<ItemMeta> = order.iter().enumerate().map(|(i, o)| ItemMeta { slot: i as u32, label: format!("{stem}{i}"), time: None, full: o["full"].as_bool().unwrap_or(true) }).collect();
         for c in &cases {
             let (path, query) = (c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
             let t = std::time::Instant::now();
             let got = map_route(path, &items, &mut routes, &Query::parse(query)).unwrap();
-            eprintln!(
-                "{stem}: {path}?{}: rust {:.1} ms, python {:.1} ms",
-                &query[..query.len().min(60)],
-                t.elapsed().as_secs_f64() * 1e3,
-                c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3
-            );
+            eprintln!("{stem}: {path}?{}: rust {:.1} ms, python {:.1} ms", &query[..query.len().min(60)], t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
             if c["status"] != 200 {
                 if got.is_some() {
-                    failures.push(format!(
-                        "{stem}: {path}?{query}: Python refuses, Rust answers"
-                    ));
+                    failures.push(format!("{stem}: {path}?{query}: Python refuses, Rust answers"));
                 }
                 continue;
             }
@@ -231,18 +152,9 @@ fn rust_maps_match_python() {
             let got: Value = serde_json::from_str(&got).unwrap();
             let mut bad = Vec::new();
             compared += compare("", &got, &c["result"], &mut bad);
-            failures.extend(
-                bad.iter()
-                    .take(8)
-                    .map(|b| format!("{stem}: {path}?{query}: {b}")),
-            );
+            failures.extend(bad.iter().take(8).map(|b| format!("{stem}: {path}?{query}: {b}")));
         }
     }
     assert!(compared > 300_000, "only {compared} values compared");
-    assert!(
-        failures.is_empty(),
-        "{} differences:\n{}",
-        failures.len(),
-        failures.join("\n")
-    );
+    assert!(failures.is_empty(), "{} differences:\n{}", failures.len(), failures.join("\n"));
 }

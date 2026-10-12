@@ -24,21 +24,10 @@ fn kinds_and_units() {
         chrom(4, "UV 254", r#"<cvParam cvRef="MS" accession="MS:1000812" name="x" value=""/>"#, ""),
     ]
     .join("");
-    let xml = format!(
-        r#"<mzML><run id="r"><chromatogramList count="5">{cl}</chromatogramList></run></mzML>"#
-    );
+    let xml = format!(r#"<mzML><run id="r"><chromatogramList count="5">{cl}</chromatogramList></run></mzML>"#);
     let run = read(xml.as_bytes()).unwrap();
     let k: Vec<ChromKind> = run.chromatograms.iter().map(|c| c.kind).collect();
-    assert_eq!(
-        k,
-        [
-            ChromKind::Tic,
-            ChromKind::Pda,
-            ChromKind::Pressure,
-            ChromKind::Analog,
-            ChromKind::Pda
-        ]
-    );
+    assert_eq!(k, [ChromKind::Tic, ChromKind::Pda, ChromKind::Pressure, ChromKind::Analog, ChromKind::Pda]);
     assert_eq!(run.chromatograms[2].unit, "pascal");
     assert_eq!(run.chromatograms[3].unit, "degree Celsius");
 }

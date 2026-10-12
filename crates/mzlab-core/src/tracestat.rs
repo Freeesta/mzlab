@@ -8,11 +8,7 @@ use crate::stats::psum;
 
 /// `ionfamily._prep`: baseline-corrected trace, its smoothed copy and the noise level of the corrected trace.
 pub fn prep(y: &[f64]) -> (Vec<f64>, Vec<f64>, f64) {
-    let base = if y.len() >= 7 {
-        asls_baseline(y, 1e5, 0.01, 10, 160)
-    } else {
-        vec![0.0; y.len()]
-    };
+    let base = if y.len() >= 7 { asls_baseline(y, 1e5, 0.01, 10, 160) } else { vec![0.0; y.len()] };
     let yc: Vec<f64> = y.iter().zip(&base).map(|(a, b)| (a - b).max(0.0)).collect();
     let ys = savgol(&yc, 5, 2).into_iter().map(|v| v.max(0.0)).collect();
     let noise = noise_level(&yc);
@@ -29,13 +25,7 @@ pub struct PeakX {
 /// `ionfamily.detect_peaks(rt, y)["peaks"]`, highest first.
 pub fn detect(rt: &[f64], y: &[f64]) -> Vec<PeakX> {
     let d = detect_full(rt, y, Params::default());
-    d.peaks
-        .iter()
-        .map(|p| PeakX {
-            p: p.clone(),
-            e: extras(rt, &d.ys, p),
-        })
-        .collect()
+    d.peaks.iter().map(|p| PeakX { p: p.clone(), e: extras(rt, &d.ys, p) }).collect()
 }
 
 /// `ionfamily._pick_peak`: the peak closest to `near_i` (within `tol_scans`) or the highest one.
@@ -45,11 +35,9 @@ pub fn pick_peak(ps: &[PeakX], near_i: Option<usize>, tol_scans: Option<f64>) ->
         None => return Some(first),
         Some(n) => n as f64,
     };
-    let best = ps.iter().min_by(|a, b| {
-        (a.p.apex_i as f64 - near)
-            .abs()
-            .total_cmp(&(b.p.apex_i as f64 - near).abs())
-    })?;
+    let best = ps
+        .iter()
+        .min_by(|a, b| (a.p.apex_i as f64 - near).abs().total_cmp(&(b.p.apex_i as f64 - near).abs()))?;
     match tol_scans {
         Some(t) if (best.p.apex_i as f64 - near).abs() > t => None,
         _ => Some(best),
@@ -111,10 +99,7 @@ pub fn linspace(a: f64, b: f64, n: usize) -> Vec<f64> {
 
 /// `np.geomspace(a, b, n)` for positive `a`, `b`.
 pub fn geomspace(a: f64, b: f64, n: usize) -> Vec<f64> {
-    let mut v: Vec<f64> = linspace(a.log10(), b.log10(), n)
-        .into_iter()
-        .map(|e| 10f64.powf(e))
-        .collect();
+    let mut v: Vec<f64> = linspace(a.log10(), b.log10(), n).into_iter().map(|e| 10f64.powf(e)).collect();
     v[0] = a;
     v[n - 1] = b;
     v

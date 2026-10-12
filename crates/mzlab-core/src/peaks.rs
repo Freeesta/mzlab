@@ -20,6 +20,7 @@ pub const MIN_SCANS_RELIABLE: usize = 6;
 use crate::signal::{asls_baseline, cwt_ricker, median, snip_baseline, solve};
 pub use crate::signal::{noise_level, savgol};
 
+
 /// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
 pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
     let n = y.len();
@@ -172,13 +173,7 @@ fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
 }
 
 /// The apexes `(index, ridge SNR, width)` that the ridges support, in order of position.
-fn ridge_apexes(
-    ridges: &[Ridge],
-    widths: &[f64],
-    ys: &[f64],
-    noise: f64,
-    snr: f64,
-) -> Vec<(usize, f64, f64)> {
+fn ridge_apexes(ridges: &[Ridge], widths: &[f64], ys: &[f64], noise: f64, snr: f64) -> Vec<(usize, f64, f64)> {
     let n = ys.len();
     let mut found: Vec<(usize, f64, f64)> = Vec::new();
     let mut taken: Vec<usize> = Vec::new();
@@ -225,13 +220,7 @@ fn ridge_apexes(
 }
 
 /// Borders, area and height of each apex; the peaks with fewer scans than `min_scans` are dropped; by decreasing height.
-fn peaks_of(
-    found: Vec<(usize, f64, f64)>,
-    rt: &[f64],
-    yc: &[f64],
-    ys: &[f64],
-    params: &Params,
-) -> Vec<Peak> {
+fn peaks_of(found: Vec<(usize, f64, f64)>, rt: &[f64], yc: &[f64], ys: &[f64], params: &Params) -> Vec<Peak> {
     let n = ys.len();
     let mut peaks = Vec::new();
     for (apex, rsn, _w) in found {
@@ -292,10 +281,5 @@ pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
     let ridges = ridge_lines(&c, &widths);
     let found = ridge_apexes(&ridges, &widths, &ys, noise, params.snr);
     let peaks = peaks_of(found, rt, &yc, &ys, &params);
-    Detection {
-        yc,
-        ys,
-        noise,
-        peaks,
-    }
+    Detection { yc, ys, noise, peaks }
 }

@@ -24,11 +24,7 @@ pub fn parabola_apex(rt: &[f64], y: &[f64], i: usize) -> (f64, f64, f64) {
     let n = y.len();
     let (a, b) = (i.saturating_sub(2), (i + 3).min(n));
     if b - a < 3 {
-        let mean_dt = if n > 1 {
-            (rt[n - 1] - rt[0]) / (n - 1) as f64
-        } else {
-            0.0
-        };
+        let mean_dt = if n > 1 { (rt[n - 1] - rt[0]) / (n - 1) as f64 } else { 0.0 };
         return (rt[i], mean_dt, y[i]);
     }
     let xs: Vec<f64> = rt[a..b].iter().map(|t| t - rt[i]).collect();

@@ -47,10 +47,7 @@ fn attrs(body: &str) -> Vec<(String, String)> {
         }
         if j + 1 < s.len() && s[j] == '=' && s[j + 1] == '"' {
             if let Some(k) = s[j + 2..].iter().position(|&c| c == '"') {
-                out.push((
-                    s[i..j].iter().collect(),
-                    s[j + 2..j + 2 + k].iter().collect(),
-                ));
+                out.push((s[i..j].iter().collect(), s[j + 2..j + 2 + k].iter().collect()));
                 i = j + 2 + k + 1;
                 continue;
             }
@@ -66,9 +63,7 @@ fn pairs(head: &str) -> Vec<(String, String, String)> {
     let mut rest = head;
     while let Some(p) = rest.find('<') {
         let tail = &rest[p + 1..];
-        let tag = ["cvParam", "userParam"]
-            .into_iter()
-            .find(|t| tail.starts_with(t));
+        let tag = ["cvParam", "userParam"].into_iter().find(|t| tail.starts_with(t));
         let boundary = tag.is_some_and(|t| !tail[t.len()..].chars().next().is_some_and(is_word));
         let Some(end) = tail.find('>').filter(|_| boundary) else {
             rest = tail;
@@ -79,11 +74,7 @@ fn pairs(head: &str) -> Vec<(String, String, String)> {
         let a = attrs(body);
         let get = |k: &str| a.iter().rev().find(|(n, _)| n == k).map(|(_, v)| v.clone());
         if let Some(name) = get("name").filter(|n| !n.is_empty()) {
-            out.push((
-                name,
-                get("value").unwrap_or_default(),
-                get("unitName").unwrap_or_default(),
-            ));
+            out.push((name, get("value").unwrap_or_default(), get("unitName").unwrap_or_default()));
         }
         rest = &tail[end + 1..];
     }
@@ -92,28 +83,17 @@ fn pairs(head: &str) -> Vec<(String, String, String)> {
 
 /// The JSON of `/api/scaninfo` for scan `sid` of `scans` (the rows of the index); the header comes from the mzML.
 pub fn scaninfo<M: ReadAt>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<String> {
-    let sc = scans
-        .get(sid)
-        .ok_or_else(|| Error::new("err.scan.outside"))?;
+    let sc = scans.get(sid).ok_or_else(|| Error::new("err.scan.outside"))?;
     let head = header(mzml, sc.start, sc.end)?;
     let mut o = Out::default();
-    o.raw("{\"sid\":")
-        .int(sid as i64)
-        .raw(",\"no\":")
-        .int(sc.number(sid))
-        .raw(",\"filter\":")
-        .str(&sc.filter);
-    o.raw(",\"rt\":")
-        .num(round(sc.rt, 4))
-        .raw(",\"level\":")
-        .int(sc.level as i64);
+    o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(sc.number(sid)).raw(",\"filter\":").str(&sc.filter);
+    o.raw(",\"rt\":").num(round(sc.rt, 4)).raw(",\"level\":").int(sc.level as i64);
     o.raw(",\"polarity\":").str(match sc.polarity {
         1 => "positive",
         -1 => "negative",
         _ => "?",
     });
-    o.raw(",\"profile\":")
-        .raw(if sc.profile { "true" } else { "false" });
+    o.raw(",\"profile\":").raw(if sc.profile { "true" } else { "false" });
     let prec = match (sc.iso, sc.precursor) {
         (Some((a, b)), _) => Some((a + b) / 2.0),
         (None, Some(p)) if p != 0.0 => Some(p),
@@ -121,12 +101,7 @@ pub fn scaninfo<M: ReadAt>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<S
     };
     o.raw(",\"prec\":").opt(prec.map(|p| round(p, 5)));
     match sc.iso {
-        Some((a, b)) => o
-            .raw(",\"iso\":[")
-            .num(round(a, 4))
-            .raw(",")
-            .num(round(b, 4))
-            .raw("]"),
+        Some((a, b)) => o.raw(",\"iso\":[").num(round(a, 4)).raw(",").num(round(b, 4)).raw("]"),
         None => o.raw(",\"iso\":null"),
     };
     o.raw(",\"act\":");
@@ -134,29 +109,14 @@ pub fn scaninfo<M: ReadAt>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<S
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
-    o.raw(",\"ce\":")
-        .opt(sc.collision_energy)
-        .raw(",\"res\":")
-        .opt(sc.res)
-        .raw(",\"analyzer\":");
+    o.raw(",\"ce\":").opt(sc.collision_energy).raw(",\"res\":").opt(sc.res).raw(",\"analyzer\":");
     match &sc.an {
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
-    o.raw(",\"tic\":")
-        .num(sc.tic)
-        .raw(",\"key\":")
-        .str(&sc.key())
-        .raw(",\"pairs\":[");
+    o.raw(",\"tic\":").num(sc.tic).raw(",\"key\":").str(&sc.key()).raw(",\"pairs\":[");
     for (i, (n, v, u)) in pairs(&head).iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"name\":")
-            .str(n)
-            .raw(",\"value\":")
-            .str(v)
-            .raw(",\"unit\":")
-            .str(u)
-            .raw("}");
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(n).raw(",\"value\":").str(v).raw(",\"unit\":").str(u).raw("}");
     }
     o.raw("]}");
     Ok(o.0)
@@ -170,20 +130,11 @@ mod tests {
     fn reads_pairs() {
         let h = r#"<spectrum><cvParam cvRef="MS" accession="MS:1" name="ms level" value="1"/><userParam name="x" value="a" unitName="s" /><cvParamX name="no"/><cvParam name=""/></spectrum>"#;
         let p = pairs(h);
-        assert_eq!(
-            p,
-            vec![
-                ("ms level".into(), "1".into(), "".into()),
-                ("x".into(), "a".into(), "s".into())
-            ]
-        );
+        assert_eq!(p, vec![("ms level".into(), "1".into(), "".into()), ("x".into(), "a".into(), "s".into())]);
     }
 
     #[test]
     fn outside() {
-        assert_eq!(
-            scaninfo(&[], 0, &mut Vec::<u8>::new()).unwrap_err().key,
-            "err.scan.outside"
-        );
+        assert_eq!(scaninfo(&[], 0, &mut Vec::<u8>::new()).unwrap_err().key, "err.scan.outside");
     }
 }

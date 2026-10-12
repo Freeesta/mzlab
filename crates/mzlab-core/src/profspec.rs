@@ -15,8 +15,7 @@ impl<R: ReadAt> Routes<R> {
     /// m/z and intensity of the scans at the section positions `positions`, each in table order (m/z ascending).
     fn scan_points(&mut self, si: usize, positions: &[usize]) -> Result<Vec<(Vec<f64>, Vec<f64>)>> {
         let mut out = vec![(Vec::new(), Vec::new()); positions.len()];
-        let at: std::collections::HashMap<usize, usize> =
-            positions.iter().enumerate().map(|(k, &p)| (p, k)).collect();
+        let at: std::collections::HashMap<usize, usize> = positions.iter().enumerate().map(|(k, &p)| (p, k)).collect();
         let n = self.idx.sections[si].n_peaks;
         self.idx.each_peak(si, 0, n, |p, mz, y| {
             if let Some(&k) = at.get(&p) {
@@ -34,12 +33,7 @@ impl<R: ReadAt> Routes<R> {
         let positions: Vec<usize> = (mid..ids.len().min(mid + 20)).collect();
         for pts in self.scan_points(si, &positions)? {
             if pts.0.len() > 20 {
-                let gap = pts
-                    .0
-                    .windows(2)
-                    .map(|w| w[1] - w[0])
-                    .filter(|d| *d > 1e-4)
-                    .fold(f64::INFINITY, f64::min);
+                let gap = pts.0.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
                 if !gap.is_finite() {
                     return Ok(None);
                 }
@@ -53,20 +47,11 @@ impl<R: ReadAt> Routes<R> {
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
     pub(crate) fn profile_level(&mut self, level: u8) -> Result<Option<(usize, f64)>> {
         let of_level: Vec<&Scan> = self.idx.scans.iter().filter(|s| s.level == level).collect();
-        let pool: Vec<&Scan> = if of_level.is_empty() {
-            self.idx.scans.iter().collect()
-        } else {
-            of_level
-        };
-        if pool.is_empty()
-            || pool.iter().any(|s| !s.profile)
-            || of_level_count(&self.idx.scans, level) == 0
-        {
+        let pool: Vec<&Scan> = if of_level.is_empty() { self.idx.scans.iter().collect() } else { of_level };
+        if pool.is_empty() || pool.iter().any(|s| !s.profile) || of_level_count(&self.idx.scans, level) == 0 {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else {
-            return Ok(None);
-        };
+        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
         if self.idx.sections[si].n_scans != of_level_count(&self.idx.scans, level) {
             return Ok(None);
         }
@@ -88,35 +73,18 @@ impl<R: ReadAt> Routes<R> {
         levels.sort_unstable();
         levels.dedup();
         for level in levels {
-            let all_profile = self
-                .idx
-                .scans
-                .iter()
-                .filter(|s| s.level == level)
-                .all(|s| s.profile);
-            let f4 = self
-                .idx
-                .section_of(level, None)
-                .is_some_and(|si| self.idx.sections[si].f4);
+            let all_profile = self.idx.scans.iter().filter(|s| s.level == level).all(|s| s.profile);
+            let f4 = self.idx.section_of(level, None).is_some_and(|si| self.idx.sections[si].f4);
             if !all_profile || !f4 || self.steps.iter().any(|(l, _)| *l == level) {
                 continue;
             }
-            let ids: Vec<usize> = (0..self.idx.scans.len())
-                .filter(|&i| self.idx.scans[i].level == level)
-                .collect();
+            let ids: Vec<usize> = (0..self.idx.scans.len()).filter(|&i| self.idx.scans[i].level == level).collect();
             let mut step = None;
             for &i in ids.iter().skip(ids.len() / 2).take(20) {
                 let (mz, _) = crate::hrscans::read_scan(&self.idx.scans[i], mzml)?;
                 if mz.len() > 20 {
-                    let gap = mz
-                        .windows(2)
-                        .map(|w| w[1] - w[0])
-                        .filter(|d| *d > 1e-4)
-                        .fold(f64::INFINITY, f64::min);
-                    step = gap
-                        .is_finite()
-                        .then(|| (gap * 1e4).round_ties_even() / 1e4)
-                        .filter(|s| *s > 0.0);
+                    let gap = mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
+                    step = gap.is_finite().then(|| (gap * 1e4).round_ties_even() / 1e4).filter(|s| *s > 0.0);
                     break;
                 }
             }
@@ -126,26 +94,11 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/spectrum` on a window of a profile file.
-    pub(crate) fn profile_spectrum(
-        &mut self,
-        q: &Query,
-        level: u8,
-        (lo, hi): (f64, f64),
-        step: f64,
-    ) -> Result<String> {
-        let b = self.binned_cells(
-            level,
-            lo,
-            hi,
-            (q.num("precursor")?, 0.6),
-            q.some("filt"),
-            rint(step),
-        )?;
+    pub(crate) fn profile_spectrum(&mut self, q: &Query, level: u8, (lo, hi): (f64, f64), step: f64) -> Result<String> {
+        let b = self.binned_cells(level, lo, hi, (q.num("precursor")?, 0.6), q.some("filt"), rint(step))?;
         let mut o = Out::default();
         o.raw("{");
-        let (mz, y, n) = b
-            .as_ref()
-            .map_or((vec![], vec![], 0), |b| (b.mz.clone(), b.y.clone(), b.n));
+        let (mz, y, n) = b.as_ref().map_or((vec![], vec![], 0), |b| (b.mz.clone(), b.y.clone(), b.n));
         spec_json(&mut o, &mz, &y, step);
         o.raw(",\"scans\":").int(n as i64);
         match &b {
@@ -165,64 +118,36 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `spectra_profile` of a level of single-precision peaks: the points of each scan come from the mzML.
-    pub(crate) fn spectra_profile_exact<M: ReadAt>(
-        &mut self,
-        q: &Query,
-        mzml: &mut M,
-    ) -> Result<Option<String>> {
+    pub(crate) fn spectra_profile_exact<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         self.spectra_profile_in(q, Some(mzml))
     }
 
-    fn spectra_profile_in<M: ReadAt>(
-        &mut self,
-        q: &Query,
-        mut mzml: Option<&mut M>,
-    ) -> Result<Option<String>> {
-        let (Some(i0), Some(i1)) = (index(q, "i0"), index(q, "i1")) else {
-            return Ok(None);
-        };
+    fn spectra_profile_in<M: ReadAt>(&mut self, q: &Query, mut mzml: Option<&mut M>) -> Result<Option<String>> {
+        let (Some(i0), Some(i1)) = (index(q, "i0"), index(q, "i1")) else { return Ok(None) };
         let level = q.level();
         let bin = q.num("bin")?.unwrap_or(0.1);
-        let Some((si, step)) = self.profile_level(level)? else {
-            return Ok(None);
-        };
+        let Some((si, step)) = self.profile_level(level)? else { return Ok(None) };
         if self.idx.sections[si].f4 != mzml.is_some() {
             return Ok(None);
         }
         let precursor = q.num("prec")?.or(q.num("precursor")?);
         let sel = self.selected(level, si, precursor, 0.6, q.some("filt"))?;
-        if !(bin > 0.0)
-            || i0 > i1
-            || i1 - i0 + 1 > MAX_SCANS as i64
-            || i0 < 0
-            || i0 as usize >= sel.len()
-        {
+        if !(bin > 0.0) || i0 > i1 || i1 - i0 + 1 > MAX_SCANS as i64 || i0 < 0 || i0 as usize >= sel.len() {
             return Ok(None);
         }
         let i1 = (i1 as usize).min(sel.len() - 1);
         let ar = self.idx.arrays(si)?.clone();
         let positions: Vec<usize> = sel[i0 as usize..=i1].to_vec();
         let pts = match mzml.as_mut() {
-            Some(m) => positions
-                .iter()
-                .map(|&p| {
-                    crate::hrscans::read_scan(&self.idx.scans[ar.scan_ids[p] as usize], &mut **m)
-                })
-                .collect::<Result<Vec<_>>>()?,
+            Some(m) => positions.iter().map(|&p| crate::hrscans::read_scan(&self.idx.scans[ar.scan_ids[p] as usize], &mut **m)).collect::<Result<Vec<_>>>()?,
             None => self.scan_points(si, &positions)?,
         };
         let mut o = Out::default();
         o.raw("{\"n\":").int(sel.len() as i64).raw(",\"scans\":[");
         for (k, (mz, y)) in pts.iter().enumerate() {
             let (mz, y) = merge_cells(mz, y, step);
-            o.raw(if k > 0 { "," } else { "" })
-                .raw("{\"i\":")
-                .int(i0 + k as i64)
-                .raw(",\"sid\":")
-                .int(ar.scan_ids[positions[k]]);
-            o.raw(",\"rt\":")
-                .num(round(ar.rt[positions[k]], 4))
-                .raw(",");
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(i0 + k as i64).raw(",\"sid\":").int(ar.scan_ids[positions[k]]);
+            o.raw(",\"rt\":").num(round(ar.rt[positions[k]], 4)).raw(",");
             spec_json(&mut o, &mz, &y, step);
             o.raw("}");
         }
@@ -285,12 +210,6 @@ pub(crate) fn rint(step: f64) -> impl Fn(f64) -> i64 {
 fn spec_json(o: &mut Out, mz: &[f64], y: &[f64], step: f64) {
     let (pm, py) = profile_peaks(mz, y, 0.002);
     let (lm, ly) = pad_zeros(mz, y, step);
-    o.raw("\"mode\":\"profile\",\"mz\":")
-        .rounded(&pm, 3)
-        .raw(",\"y\":")
-        .rounded(&py, 1);
-    o.raw(",\"pmz\":")
-        .rounded(&lm, 3)
-        .raw(",\"py\":")
-        .rounded(&ly, 1);
+    o.raw("\"mode\":\"profile\",\"mz\":").rounded(&pm, 3).raw(",\"y\":").rounded(&py, 1);
+    o.raw(",\"pmz\":").rounded(&lm, 3).raw(",\"py\":").rounded(&ly, 1);
 }

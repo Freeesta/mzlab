@@ -11,8 +11,8 @@ pub const PROTON: f64 = 1.00727646688;
 const ELECTRON: f64 = 0.000548579909;
 const ISO_STEP: f64 = 1.003355;
 pub(crate) const NEUTRAL_LOSSES: [&str; 20] = [
-    "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",
-    "HCl", "HBr", "SO2", "SO3", "H2S", "CH3", "NO2", "C6H6",
+    "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF", "HCl", "HBr", "SO2", "SO3", "H2S", "CH3",
+    "NO2", "C6H6",
 ];
 /// Adducts of the neutral M: name, shift of the m/z from the neutral mass, multiplier of M.
 pub(crate) const ADDUCTS: [(&str, f64, f64); 7] = [
@@ -60,18 +60,14 @@ impl Losses {
             }
         }
         out.sort_by(|a, b| {
-            (delta - a.1)
-                .abs()
-                .total_cmp(&(delta - b.1).abs())
-                .then(a.0.matches('+').count().cmp(&b.0.matches('+').count()))
+            (delta - a.1).abs().total_cmp(&(delta - b.1).abs()).then(a.0.matches('+').count().cmp(&b.0.matches('+').count()))
         });
         out
     }
 
     /// The fragment formula `parent - losses` if it is a chemical subset of the parent (H may be exchanged by one).
     fn subformula(&self, parent: &Formula, parts: &[&str]) -> (bool, Formula) {
-        let mut frag: Vec<(String, i64)> =
-            parent.iter().map(|(e, n)| (e.clone(), *n as i64)).collect();
+        let mut frag: Vec<(String, i64)> = parent.iter().map(|(e, n)| (e.clone(), *n as i64)).collect();
         for part in parts {
             for (el, k) in parse_formula(part).unwrap_or_default() {
                 match frag.iter_mut().find(|(e, _)| *e == el) {
@@ -80,15 +76,8 @@ impl Losses {
                 }
             }
         }
-        let ok = frag.iter().all(|(e, v)| e == "H" || *v >= 0)
-            && frag.iter().find(|(e, _)| e == "H").map_or(0, |x| x.1) >= -1;
-        (
-            ok,
-            frag.into_iter()
-                .filter(|(_, v)| *v > 0)
-                .map(|(e, v)| (e, v as u64))
-                .collect(),
-        )
+        let ok = frag.iter().all(|(e, v)| e == "H" || *v >= 0) && frag.iter().find(|(e, _)| e == "H").map_or(0, |x| x.1) >= -1;
+        (ok, frag.into_iter().filter(|(_, v)| *v > 0).map(|(e, v)| (e, v as u64)).collect())
     }
 }
 
@@ -126,10 +115,7 @@ impl Losses {
                 out.push(
                     Obj::new()
                         .put("role", text("isotope"))
-                        .put(
-                            "label",
-                            text(&format!("X is M+{k} (P is the isotope of X)")),
-                        )
+                        .put("label", text(&format!("X is M+{k} (P is the isotope of X)")))
                         .put("label_key", text("of.role.isoX"))
                         .put("params", Obj::new().i("k", k).done())
                         .n("delta_obs", d)
@@ -144,15 +130,7 @@ impl Losses {
             let exp = mult * m + shift - (m + PROTON);
             if (d - exp).abs() <= tol {
                 let role = if *mult == 2.0 { "dimer" } else { "adduct" };
-                out.push(
-                    Obj::new()
-                        .put("role", text(role))
-                        .put("label", text(name))
-                        .n("delta_obs", d)
-                        .n("delta_exp", exp)
-                        .n("err", d - exp)
-                        .done(),
-                );
+                out.push(Obj::new().put("role", text(role)).put("label", text(name)).n("delta_obs", d).n("delta_exp", exp).n("err", d - exp).done());
             }
         }
         if d < -0.5 {
@@ -166,9 +144,7 @@ impl Losses {
                 if let Some(f) = &fp {
                     let parts: Vec<&str> = loss.split('+').collect();
                     let (ok, frag) = self.subformula(f, &parts);
-                    row = row
-                        .b("formula_ok", ok)
-                        .put("fragment_formula", text(&fmt(&frag)));
+                    row = row.b("formula_ok", ok).put("fragment_formula", text(&fmt(&frag)));
                 }
                 out.push(row.done());
             }
@@ -188,11 +164,7 @@ fn window_area(w: &Window, m: f64, a: usize, b: usize) -> f64 {
     }
     let row = &w.x[j * w.n_scans..(j + 1) * w.n_scans];
     let (a, b) = (a.min(row.len()), b.min(row.len()));
-    if a < b {
-        crate::stats::psum(&row[a..b])
-    } else {
-        0.0
-    }
+    if a < b { crate::stats::psum(&row[a..b]) } else { 0.0 }
 }
 
 impl Default for Losses {
@@ -200,3 +172,4 @@ impl Default for Losses {
         Losses::new()
     }
 }
+

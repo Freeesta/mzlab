@@ -50,15 +50,9 @@ fn crossing(rt: &[f64], c: &[f64], level: f64, from: usize, to: usize) -> Option
 pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quality {
     let n = y.len().min(rt.len());
     if n < 3 || lo >= hi || hi >= n {
-        return Quality {
-            gaussian: 0.0,
-            asymmetry: None,
-            noise_score: 0.0,
-        };
+        return Quality { gaussian: 0.0, asymmetry: None, noise_score: 0.0 };
     }
-    let c: Vec<f64> = (lo..=hi)
-        .map(|i| y[i] - base_at(rt, y, lo, hi, i))
-        .collect();
+    let c: Vec<f64> = (lo..=hi).map(|i| y[i] - base_at(rt, y, lo, hi, i)).collect();
     let t = &rt[lo..=hi];
     let m = c.len();
     let mut k = 0;
@@ -69,34 +63,19 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
     }
     let h = c[k];
     if h <= 0.0 {
-        return Quality {
-            gaussian: 0.0,
-            asymmetry: None,
-            noise_score: 0.0,
-        };
+        return Quality { gaussian: 0.0, asymmetry: None, noise_score: 0.0 };
     }
     // full width at half maximum; a side that does not come down inside the limits counts as its mirror image
-    let (l, r) = (
-        crossing(t, &c, h / 2.0, k, 0),
-        crossing(t, &c, h / 2.0, k, m - 1),
-    );
+    let (l, r) = (crossing(t, &c, h / 2.0, k, 0), crossing(t, &c, h / 2.0, k, m - 1));
     let fwhm = match (l, r) {
         (Some(a), Some(b)) => b - a,
         (Some(a), None) => 2.0 * (t[k] - a),
         (None, Some(b)) => 2.0 * (b - t[k]),
         (None, None) => t[m - 1] - t[0],
     };
-    let sigma = (fwhm / 2.354_820_045)
-        .max((t[m - 1] - t[0]) * 1e-6)
-        .max(1e-12);
-    let g: Vec<f64> = t
-        .iter()
-        .map(|x| h * (-((x - t[k]).powi(2)) / (2.0 * sigma * sigma)).exp())
-        .collect();
-    let (mc, mg) = (
-        c.iter().sum::<f64>() / m as f64,
-        g.iter().sum::<f64>() / m as f64,
-    );
+    let sigma = (fwhm / 2.354_820_045).max((t[m - 1] - t[0]) * 1e-6).max(1e-12);
+    let g: Vec<f64> = t.iter().map(|x| h * (-((x - t[k]).powi(2)) / (2.0 * sigma * sigma)).exp()).collect();
+    let (mc, mg) = (c.iter().sum::<f64>() / m as f64, g.iter().sum::<f64>() / m as f64);
     let (mut sxy, mut sxx, mut syy) = (0.0, 0.0, 0.0);
     for j in 0..m {
         let (a, b) = (c[j] - mc, g[j] - mg);
@@ -104,24 +83,13 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
         sxx += a * a;
         syy += b * b;
     }
-    let gaussian = if sxx > 0.0 && syy > 0.0 {
-        (sxy / (sxx * syy).sqrt()).clamp(-1.0, 1.0)
-    } else {
-        0.0
-    };
-    let asymmetry = match (
-        crossing(t, &c, 0.1 * h, k, 0),
-        crossing(t, &c, 0.1 * h, k, m - 1),
-    ) {
+    let gaussian = if sxx > 0.0 && syy > 0.0 { (sxy / (sxx * syy).sqrt()).clamp(-1.0, 1.0) } else { 0.0 };
+    let asymmetry = match (crossing(t, &c, 0.1 * h, k, 0), crossing(t, &c, 0.1 * h, k, m - 1)) {
         (Some(a), Some(b)) if t[k] - a > 0.0 => Some((b - t[k]) / (t[k] - a)),
         _ => None,
     };
     // turning points: steps smaller than the noise do not change the direction
-    let sigma_n = if noise > 0.0 {
-        noise
-    } else {
-        noise_level(&y[lo..=hi])
-    };
+    let sigma_n = if noise > 0.0 { noise } else { noise_level(&y[lo..=hi]) };
     let (mut dir, mut turns) = (0i8, 0usize);
     for j in 1..m {
         let d = y[lo + j] - y[lo + j - 1];
@@ -135,11 +103,7 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
         dir = s;
     }
     let noise_score = (turns.saturating_sub(1)) as f64 / (m - 2).max(1) as f64;
-    Quality {
-        gaussian,
-        asymmetry,
-        noise_score,
-    }
+    Quality { gaussian, asymmetry, noise_score }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -157,13 +121,7 @@ pub struct ProminenceParams {
 
 impl Default for ProminenceParams {
     fn default() -> Self {
-        ProminenceParams {
-            snr: 5.0,
-            rel_prominence: 0.01,
-            min_scans: 3,
-            frac: 0.05,
-            smooth: 5,
-        }
+        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5 }
     }
 }
 
@@ -175,10 +133,7 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     if n < 7 || !y.iter().any(|&v| v > 0.0) {
         return Vec::new();
     }
-    let ys: Vec<f64> = savgol(&y[..n], p.smooth, 2)
-        .into_iter()
-        .map(|v| v.max(0.0))
-        .collect();
+    let ys: Vec<f64> = savgol(&y[..n], p.smooth, 2).into_iter().map(|v| v.max(0.0)).collect();
     let noise = noise_level(&y[..n]).max(1e-9);
     let top = ys.iter().cloned().fold(0.0, f64::max);
     let need = (p.snr * noise).max(p.rel_prominence * top);
@@ -208,32 +163,16 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     for (idx, &(apex, prom)) in cand.iter().enumerate() {
         let h = ys[apex];
         let mut lo = apex;
-        let left_stop = if idx > 0 {
-            Some(valley(&ys, cand[idx - 1].0, apex))
-        } else {
-            None
-        };
-        while lo > 0
-            && ys[lo - 1] > p.frac * h
-            && ys[lo - 1] <= ys[lo] + 1e-12
-            && left_stop.is_none_or(|v| lo > v)
-        {
+        let left_stop = if idx > 0 { Some(valley(&ys, cand[idx - 1].0, apex)) } else { None };
+        while lo > 0 && ys[lo - 1] > p.frac * h && ys[lo - 1] <= ys[lo] + 1e-12 && left_stop.is_none_or(|v| lo > v) {
             lo -= 1;
         }
         if let Some(v) = left_stop {
             lo = lo.max(v);
         }
         let mut hi = apex;
-        let right_stop = if idx + 1 < cand.len() {
-            Some(valley(&ys, apex, cand[idx + 1].0))
-        } else {
-            None
-        };
-        while hi < n - 1
-            && ys[hi + 1] > p.frac * h
-            && ys[hi + 1] <= ys[hi] + 1e-12
-            && right_stop.is_none_or(|v| hi < v)
-        {
+        let right_stop = if idx + 1 < cand.len() { Some(valley(&ys, apex, cand[idx + 1].0)) } else { None };
+        while hi < n - 1 && ys[hi + 1] > p.frac * h && ys[hi + 1] <= ys[hi] + 1e-12 && right_stop.is_none_or(|v| hi < v) {
             hi += 1;
         }
         if let Some(v) = right_stop {
@@ -256,34 +195,12 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         }
         let span = rt[hi2] - rt[lo2];
         let seg: Vec<f64> = (lo2..=hi2)
-            .map(|i| {
-                (y[i]
-                    - if span > 0.0 {
-                        yl + (yh - yl) * (rt[i] - rt[lo2]) / span
-                    } else {
-                        yl
-                    })
-                .max(0.0)
-            })
+            .map(|i| (y[i] - if span > 0.0 { yl + (yh - yl) * (rt[i] - rt[lo2]) / span } else { yl }).max(0.0))
             .collect();
-        let area = (1..seg.len())
-            .map(|i| (seg[i] + seg[i - 1]) / 2.0 * (rt[lo2 + i] - rt[lo2 + i - 1]))
-            .sum();
-        out.push(Peak {
-            apex_i: apex,
-            height: parabola_height(rt, &ys, apex),
-            area,
-            lo: lo2,
-            hi: hi2,
-            n_scans: hi2 - lo2 + 1,
-            snr: prom / noise,
-        });
+        let area = (1..seg.len()).map(|i| (seg[i] + seg[i - 1]) / 2.0 * (rt[lo2 + i] - rt[lo2 + i - 1])).sum();
+        out.push(Peak { apex_i: apex, height: parabola_height(rt, &ys, apex), area, lo: lo2, hi: hi2, n_scans: hi2 - lo2 + 1, snr: prom / noise });
     }
-    out.sort_by(|a, b| {
-        b.height
-            .partial_cmp(&a.height)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    out.sort_by(|a, b| b.height.partial_cmp(&a.height).unwrap_or(std::cmp::Ordering::Equal));
     out
 }
 
@@ -305,9 +222,7 @@ mod tests {
 
     /// Deterministic noise in [-1, 1).
     fn lcg(seed: &mut u64) -> f64 {
-        *seed = seed
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
+        *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         ((*seed >> 33) as f64 / (1u64 << 31) as f64) * 2.0 - 1.0
     }
 
@@ -315,15 +230,7 @@ mod tests {
     fn trace(parts: &[(f64, f64, f64)], tail: f64, noise: f64) -> (Vec<f64>, Vec<f64>) {
         let rt: Vec<f64> = (0..400).map(|i| i as f64 * 0.015).collect();
         let mut seed = 7u64;
-        let mut y: Vec<f64> = rt
-            .iter()
-            .map(|t| {
-                parts
-                    .iter()
-                    .map(|(c, s, h)| h * (-((t - c).powi(2)) / (2.0 * s * s)).exp())
-                    .sum::<f64>()
-            })
-            .collect();
+        let mut y: Vec<f64> = rt.iter().map(|t| parts.iter().map(|(c, s, h)| h * (-((t - c).powi(2)) / (2.0 * s * s)).exp()).sum::<f64>()).collect();
         if tail > 0.0 {
             let src = y.clone();
             for i in 0..y.len() {
@@ -368,30 +275,14 @@ mod tests {
     #[test]
     fn partly_resolved_double_is_split_at_the_valley() {
         // two peaks 3.4 sigma apart, heights 1 : 0.7: the trace has a valley between them
-        let (rt, y) = trace(
-            &[(2.5, 0.06, 1.0e5), (2.5 + 3.4 * 0.06, 0.06, 0.7e5)],
-            0.0,
-            50.0,
-        );
+        let (rt, y) = trace(&[(2.5, 0.06, 1.0e5), (2.5 + 3.4 * 0.06, 0.06, 0.7e5)], 0.0, 50.0);
         let two = detect_prominence(&rt, &y, ProminenceParams::default());
         assert_eq!(two.len(), 2, "{two:?}");
-        let (a, b) = if two[0].apex_i < two[1].apex_i {
-            (&two[0], &two[1])
-        } else {
-            (&two[1], &two[0])
-        };
+        let (a, b) = if two[0].apex_i < two[1].apex_i { (&two[0], &two[1]) } else { (&two[1], &two[0]) };
         assert_eq!(a.hi, b.lo, "the limits meet at the valley");
         let mid = 2.5 + 1.7 * 0.06;
-        assert!(
-            (a.hi as f64 * 0.015 - mid).abs() < 0.06,
-            "valley at {}",
-            a.hi as f64 * 0.015
-        );
-        assert!(
-            (a.area / (1.0e5 * 0.06 * (2.0 * std::f64::consts::PI).sqrt()) - 1.0).abs() < 0.35,
-            "area {}",
-            a.area
-        );
+        assert!((a.hi as f64 * 0.015 - mid).abs() < 0.06, "valley at {}", a.hi as f64 * 0.015);
+        assert!((a.area / (1.0e5 * 0.06 * (2.0 * std::f64::consts::PI).sqrt()) - 1.0).abs() < 0.35, "area {}", a.area);
         // the CWT finds two peaks here as well, but its limits overlap (the same points are integrated twice); the valley limits of the new mode do not
         let mut c = detect_peaks(&rt, &y, Params::default());
         assert_eq!(c.len(), 2, "{c:?}");
@@ -402,11 +293,7 @@ mod tests {
 
     #[test]
     fn shoulder_stays_one_peak() {
-        let (rt, y) = trace(
-            &[(2.5, 0.06, 1.0e5), (2.5 + 1.4 * 0.06, 0.06, 0.4e5)],
-            0.0,
-            50.0,
-        );
+        let (rt, y) = trace(&[(2.5, 0.06, 1.0e5), (2.5 + 1.4 * 0.06, 0.06, 0.4e5)], 0.0, 50.0);
         let pk = detect_prominence(&rt, &y, ProminenceParams::default());
         assert_eq!(pk.len(), 1, "{pk:?}");
     }
@@ -420,9 +307,7 @@ mod tests {
     #[test]
     fn zigzag_raises_the_noise_score() {
         let rt: Vec<f64> = (0..21).map(|i| i as f64 * 0.02).collect();
-        let clean: Vec<f64> = (0..21)
-            .map(|i| 1000.0 * (-((i as f64 - 10.0).powi(2)) / 18.0).exp())
-            .collect();
+        let clean: Vec<f64> = (0..21).map(|i| 1000.0 * (-((i as f64 - 10.0).powi(2)) / 18.0).exp()).collect();
         let mut jag = clean.clone();
         for (i, v) in jag.iter_mut().enumerate() {
             *v += if i % 2 == 0 { 120.0 } else { -120.0 };
@@ -432,3 +317,4 @@ mod tests {
         assert!(b.noise_score > a.noise_score + 0.3, "{a:?} {b:?}");
     }
 }
+

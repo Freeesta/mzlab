@@ -133,13 +133,7 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     let nom: Vec<i64> = mzs.iter().map(|&m| nominal(m)).collect();
     let (starts, _g) = groups(&nom);
     // np.add.reduceat takes the first element of a run and adds the pairwise sum of the others to it
-    let ra = |v: &[f64]| {
-        if v.len() > 1 {
-            v[0] + crate::stats::psum(&v[1..])
-        } else {
-            v[0]
-        }
-    };
+    let ra = |v: &[f64]| if v.len() > 1 { v[0] + crate::stats::psum(&v[1..]) } else { v[0] };
     let mut sy = Vec::with_capacity(starts.len());
     let mut sx = Vec::with_capacity(starts.len());
     for (k, &a) in starts.iter().enumerate() {
