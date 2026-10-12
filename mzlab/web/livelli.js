@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by «Cos'è?», «Identifica tutte le MS2» and mzFinder (same words, same colours).
 // The rules and the thresholds are in the data file livelli-1.js (format «livelli/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
