@@ -82,23 +82,6 @@ def gradient_model(source: str, points: list[dict], run_time: float | None = Non
     return out
 
 
-def gradient_at(model: dict, t: float) -> dict | None:
-    """%B (and flow) at time t by linear ramps; None outside the programmed time."""
-    pts = model["points"]
-    if not pts or t < pts[0]["t"] or t > pts[-1]["t"]:
-        return None
-    res = None
-    for a, b in zip(pts, pts[1:]):
-        if a["t"] <= t <= b["t"]:
-            w = 0.0 if b["t"] == a["t"] else (t - a["t"]) / (b["t"] - a["t"])
-            res = {"b": a["b"] + w * (b["b"] - a["b"])}
-            if "flow" in a and "flow" in b:
-                res["flow"] = a["flow"] + w * (b["flow"] - a["flow"])
-            if t == b["t"] and b["t"] == a["t"]:
-                continue
-    return res
-
-
 def from_dam(lc: dict | None) -> dict | None:
     """The gradient of an Analyst method (already read by methodinfo._lc)."""
     if not lc or not lc.get("gradient") or len(lc["gradient"]) < 2:

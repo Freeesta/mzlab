@@ -113,10 +113,6 @@ def _cache_put(key, v):
         _CACHE.popitem(last=False)
 
 
-def clear_cache():
-    _CACHE.clear()
-
-
 def _scan_sorted(table, lo: int, hi: int):
     """Peaks of scans lo..hi-1 sorted by scan (then m/z): (mz, inten, pos, offsets) with offsets[i] = first peak of scan lo+i."""
     sel = (table.pos >= lo) & (table.pos < hi)
@@ -1290,18 +1286,6 @@ def nndsvd(D: np.ndarray, k: int):
         W[:, j] = math.sqrt(s[j] * sg) * uu
         H[j] = math.sqrt(s[j] * sg) * vv
     return W, H
-
-
-def nmf(D: np.ndarray, k: int, n_iter: int = 300, seed: int = 0) -> dict:
-    """Non-negative matrix factorisation D ~ C S^T (multiplicative updates) from an NNDSVD start. Fast alternative to MCR-ALS."""
-    D = np.maximum(D, 0)
-    W, H = nndsvd(D, k)
-    eps = 1e-12
-    W, H = W + eps, H + eps
-    for _ in range(n_iter):
-        H *= (W.T @ D) / (W.T @ W @ H + eps)
-        W *= (D @ H.T) / (W @ H @ H.T + eps)
-    return {"C": W, "S": H.T, "lof": _lof(D, W, H.T)}
 
 
 def _lof(D, C, S) -> float:
