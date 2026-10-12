@@ -184,6 +184,10 @@ Stesso container prima della correzione: Rust 6.5 s di apertura, classico 1.2 s.
 Senza `indexList` (i file sintetici) lo scorrimento rileggeva 1 MB per ogni spettro e ogni lettura sincrona di `Blob` in OPFS costa circa 1 ms; ora `idxread::Windowed` serve le letture piccole da una finestra di 1 MB e lo scorrimento tiene il suo buffer (688 letture da 1 MB → 5). 
 Resta ~0.7 s per la costruzione dell'indice (avvio del worker, 0.2 s di calcolo a file, in parallelo). Con file veri (centinaia di MB, di norma con `indexList`) la misura non è stata fatta.
 
+## Famiglie di ioni per file (`cargo run --release -p mzlab-feat --example famiglie -- FILE.mzidx [--truth verita.json]`, 4 CPU, solo `analyse_families`)
+Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 98,9 % (basi con la famiglia giusta 181/183), ISF 12/13, addotti 31/31, falsi ISF dichiarati ISF 0/13, NH4 lasciati aperti 8/8. Tre file Orbitrap da circa 80 MB (indice 54-56 MB): 141 208 feature → 119 317 famiglie in 0,76 s (il file con più rumore), 77 197 → 65 645 in 0,32 s, 79 560 → 67 594 in 0,32 s. Il tempo è per due terzi nella lettura delle tracce (`traces::gather` scorre quasi tutta la tabella dei picchi) e nelle finestre di m/z dei candidati.
+
+
 ## «Da dove viene questo ione?» (`api/origin`, `cargo test --release -p mzlab-core --test origin_parity` e `tools/origin_riferimento.py`, nativo, dati LR veri e sintetici, un report con 200 bootstrap, 400 spostamenti, 25 candidati)
 | Motore | Tempo per rapporto (ms) |
 |---|---|
