@@ -1,5 +1,5 @@
 """Write mzlab/web/contaminanti.json: the answer of /api/contaminants (built-in list of known contaminants expanded into ions), served as a static file
-by the flow without Pyodide (web/lr.js). tests/test_contaminanti_json.py keeps it equal to mzlab.chem.contaminants.builtin().
+by the flow without Pyodide (web/lr.js). tests/test_contaminanti.py keeps it equal to mzlab.chem.contaminants.builtin().
 
     python3 tools/genera_contaminanti.py
 """
