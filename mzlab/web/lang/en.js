@@ -531,7 +531,7 @@ I18N.add("en", {
   "files.addPair.title": "Adds (or closes) a second pair of charts to compare this precursor with the one shown",
   "files.precGo.title": "Click: the charts switch to this precursor.",
   "files.showHideGroup": "Show or hide the whole group",
-  "files.rename.prompt": "Sample name <span class='muted sm'>(it is only a label: the file on disk does not change)</span>",
+  "files.rename.prompt": "Sample name",
   "files.color.of": "Color of {label}",
   "files.color.custom": "Custom",
   "files.remove.confirm": "Remove <b>{label}</b> from the session? The file on your computer is not touched; to get it back you have to load it again.",
