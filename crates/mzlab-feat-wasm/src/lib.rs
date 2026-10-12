@@ -270,6 +270,7 @@ pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue>
 /// L7: hypotheses of `parent` (formula) from the rules (`regole_tp_2.json` bytes), searched in every file. `structure` is the `grafo/1` JSON of the SMILES of the parent
 /// (with `"profile"` to choose the profile of the rules), or empty text. `parent_rt` NaN = the whole run.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn run_hypotheses(
     files: Array,
     read: Function,
