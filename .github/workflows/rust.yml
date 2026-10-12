@@ -1,13 +1,11 @@
 # Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
-# Not a required check of the protected main branch. fmt and clippy only warn.
+# The only check of the protected main branch for the Rust engine is the always-on job `rust-ok`. fmt, clippy and deny block this workflow (clippy and fmt against tools/clippy_base.json, which can only shrink).
 name: rust
 
 on:
   push:
     branches: [main]
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml", "deny.toml"]
 
 permissions:
   contents: read
@@ -17,7 +15,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides from the changed paths whether the Rust jobs run (the workflow itself has no path filter, so `rust-ok` always reports).
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.diff.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/clippy_base\.json)'; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+          fi
+
   rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,9 +70,10 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat -p mzlab-feat-grafo-wasm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
       - name: No native dependencies in the WASM graph
         run: |
-          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-grafo-wasm; do
+          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
             tree=$(cargo tree --locked -e no-dev --target wasm32-unknown-unknown -p $p)
             if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
               echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
@@ -62,18 +85,30 @@ jobs:
           wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
-      - name: fmt (warning only)
-        run: cargo fmt --all --check || echo "::warning::cargo fmt differences"
-      - name: clippy (warning only)
-        run: cargo clippy --locked --all-targets || echo "::warning::cargo clippy warnings"
+      - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
+        run: python3 tools/controlla_rust.py
 
-  # Advisories and licences of the dependencies. NOT blocking at the start (continue-on-error): the first runs will show which
-  # licences of the Tauri graph are missing from deny.toml; make it blocking when the job is green.
+  # Advisories, licences and sources of the dependencies (deny.toml).
   deny:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check advisories licenses sources
+
+  # The one name for the protection of main: green when rust and deny passed, or were skipped because no Rust path changed.
+  rust-ok:
+    if: always()
+    needs: [changes, rust, deny]
+    runs-on: ubuntu-latest
+    steps:
+      - name: rust and deny passed or were skipped
+        env:
+          RESULTS: ${{ needs.changes.result }} ${{ needs.rust.result }} ${{ needs.deny.result }}
+        run: |
+          echo "changes rust deny: $RESULTS"
+          case "$RESULTS" in *failure*|*cancelled*) exit 1;; esac
+          [ "${{ needs.changes.result }}" = "success" ]

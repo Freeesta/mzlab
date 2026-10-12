@@ -118,7 +118,10 @@ fn rule_of(v: &Value) -> Result<Rule> {
     let delta =
         parse_delta(&delta_text).map_err(|_| Error::new("error.hypo.rule").with("id", &id))?;
     let source = text("fonte")?;
-    if source != "transformation_table" && !source.starts_with("lit:") && !source.starts_with("classe:") {
+    if source != "transformation_table"
+        && !source.starts_with("lit:")
+        && !source.starts_with("classe:")
+    {
         return Err(bad("fonte"));
     }
     let num = |k: &str| {
@@ -130,7 +133,12 @@ fn rule_of(v: &Value) -> Result<Rule> {
     let need = v.get("richiede");
     let list = |k: &str| -> Vec<String> {
         need.and_then(|n| n.get(k))
-            .map(|a| a.arr().iter().filter_map(|x| x.str().map(String::from)).collect())
+            .map(|a| {
+                a.arr()
+                    .iter()
+                    .filter_map(|x| x.str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default()
     };
     Ok(Rule {
@@ -151,7 +159,12 @@ fn rule_of(v: &Value) -> Result<Rule> {
 }
 
 fn rules_of(v: &Value, key: &str) -> Result<Vec<Rule>> {
-    v.get(key).map(Value::arr).unwrap_or(&[]).iter().map(rule_of).collect()
+    v.get(key)
+        .map(Value::arr)
+        .unwrap_or(&[])
+        .iter()
+        .map(rule_of)
+        .collect()
 }
 
 impl Rules {
@@ -169,23 +182,41 @@ impl Rules {
         }
         let found = v.get("version").and_then(Value::f64).unwrap_or(0.0) as u32;
         if found == 1 && profile.is_none() {
-            return Ok(Rules { rules: rules_of(&v, "regole")?, version: 1, profile: String::new() });
+            return Ok(Rules {
+                rules: rules_of(&v, "regole")?,
+                version: 1,
+                profile: String::new(),
+            });
         }
         if found != VERSION {
-            return Err(Error::new("error.hypo.rulesVersion").with("found", found).with("need", VERSION));
+            return Err(Error::new("error.hypo.rulesVersion")
+                .with("found", found)
+                .with("need", VERSION));
         }
-        let name = profile.or_else(|| v.get("predefinito").and_then(Value::str)).unwrap_or("");
-        let prof = v.get("profili").and_then(|p| p.get(name)).ok_or_else(|| Error::new("error.hypo.profile").with("profile", name))?;
+        let name = profile
+            .or_else(|| v.get("predefinito").and_then(Value::str))
+            .unwrap_or("");
+        let prof = v
+            .get("profili")
+            .and_then(|p| p.get(name))
+            .ok_or_else(|| Error::new("error.hypo.profile").with("profile", name))?;
         if prof.get("congelato").and_then(Value::bool) == Some(true) {
             return Err(Error::new("error.hypo.profileFrozen").with("profile", name));
         }
         let mut rules = Vec::new();
         if let Some(base) = prof.get("eredita").and_then(Value::str) {
-            let b = v.get("profili").and_then(|p| p.get(base)).ok_or_else(|| Error::new("error.hypo.profile").with("profile", base))?;
+            let b = v
+                .get("profili")
+                .and_then(|p| p.get(base))
+                .ok_or_else(|| Error::new("error.hypo.profile").with("profile", base))?;
             rules = rules_of(b, "regole")?;
         }
         rules.extend(rules_of(prof, "regole")?);
-        Ok(Rules { rules, version: found, profile: name.to_string() })
+        Ok(Rules {
+            rules,
+            version: found,
+            profile: name.to_string(),
+        })
     }
 
     /// Does the parent have what the class rule needs? Its elements, and its functional groups when the structure is known (`groups`): a rule with

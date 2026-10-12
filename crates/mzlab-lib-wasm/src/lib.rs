@@ -2,6 +2,7 @@
 //! is fetched only when the libraries are opened or searched. Files are never held whole: the worker gives callbacks for the bytes it has
 //! (`read(offset, length) -> Uint8Array` on a Blob read synchronously, or on an OPFS sync handle) and for the ones the builder writes
 //! (`write(offset, Uint8Array)`). Errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
+#![forbid(unsafe_code)]
 use js_sys::{Function, Uint8Array};
 use mzlab_lib::build::{BuildOpts, Builder};
 use mzlab_lib::error::{Error, Result};

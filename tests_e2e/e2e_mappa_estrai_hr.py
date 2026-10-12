@@ -36,7 +36,7 @@ try:
         step("HR without a provider: no switch, nothing on the map", no_provider)
         def box_ppm():
             x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
-            pg.click(".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); pg.wait_for_timeout(600)
+            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); pg.wait_for_timeout(600)
             n = win(); assert 0 < n["win"]["mz1"] - n["win"]["mz0"] < 0.05, n["win"]
             o = pg.evaluate(CHECK)
             for k in ["area", "height", "rtMax", "mzMax"]:

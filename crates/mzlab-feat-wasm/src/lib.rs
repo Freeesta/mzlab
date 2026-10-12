@@ -2,6 +2,7 @@
 //! imported only when mzFinder is on. The `.mzidx` files are never held whole: the worker gives `read(k, offset, length) -> Uint8Array` for file `k` (an OPFS
 //! sync handle). Outputs are byte arrays (`.mzfeatf`, `.mzfeat`); errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key).
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
+#![forbid(unsafe_code)]
 use js_sys::{Array, Function, Uint8Array};
 use mzlab_core::budget::{Hashing, MemBudget, WriteAt};
 use mzlab_core::error::{Error, Result};
@@ -102,7 +103,11 @@ struct JsSink {
 impl WriteAt for JsSink {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
         self.write
-            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(data))
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &Uint8Array::from(data),
+            )
             .map(|_| ())
             .map_err(|_| Error::new("error.io"))
     }
@@ -201,7 +206,9 @@ pub fn align_series_to(
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let open = |k| open_one(&read, k, sizes[k]);
-    to_sink(write, |sink| run::align_to(&mut src, &budget, &r, open, sink))
+    to_sink(write, |sink| {
+        run::align_to(&mut src, &budget, &r, open, sink)
+    })
 }
 
 #[cfg(feature = "detect")]
@@ -277,7 +284,8 @@ pub fn run_hypotheses(
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
     let mut src = JsStored { files };
-    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r).map_err(js_err)?;
+    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r)
+        .map_err(js_err)?;
     Ok(Hypotheses { inner })
 }
 
@@ -306,7 +314,16 @@ pub fn build_evidence_to(
     };
     to_sink(write, |sink| {
         let size = table_size as u64;
-        run::evidence_to(&mut table, size, &hypotheses.inner, &minutes, parent, &r, &budget, sink)
+        run::evidence_to(
+            &mut table,
+            size,
+            &hypotheses.inner,
+            &minutes,
+            parent,
+            &r,
+            &budget,
+            sink,
+        )
     })
 }
 
@@ -326,7 +343,16 @@ pub fn build_evidence(
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut at = mzlab_feat::store::Slice(table);
-    run::evidence_to(&mut at, table.len() as u64, &hypotheses.inner, &minutes, parent, &r, &budget, &mut out)
-        .map_err(js_err)?;
+    run::evidence_to(
+        &mut at,
+        table.len() as u64,
+        &hypotheses.inner,
+        &minutes,
+        parent,
+        &r,
+        &budget,
+        &mut out,
+    )
+    .map_err(js_err)?;
     Ok(out)
 }

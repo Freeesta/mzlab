@@ -11,7 +11,9 @@ use mzlab_feat::family::evidence::EdgeKind as FamEdge;
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, SRC_RULE};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::Recipe;
-use mzlab_feat::store::{read_evid, read_table, write_table_to, write_table_with_evid, Origin, Section};
+use mzlab_feat::store::{
+    read_evid, read_table, write_table_to, write_table_with_evid, Origin, Section,
+};
 use mzlab_feat::table::*;
 
 const TIMES: [f64; 8] = [0.0, 2.0, 5.0, 10.0, 20.0, 40.0, 60.0, 90.0];
@@ -464,7 +466,17 @@ fn the_stream_of_the_graph_is_the_same_bytes_in_pieces() {
         assert_eq!(all, json.as_bytes());
         assert!(pieces >= 1);
         let mut streamed = Vec::new();
-        write_table_to(&mut streamed, &w.aligned, &r, &o, &mut GraphStream::new(inp)).unwrap();
-        assert_eq!(streamed, write_table_with_evid(&w.aligned, &r, &o, json.as_bytes()));
+        write_table_to(
+            &mut streamed,
+            &w.aligned,
+            &r,
+            &o,
+            &mut GraphStream::new(inp),
+        )
+        .unwrap();
+        assert_eq!(
+            streamed,
+            write_table_with_evid(&w.aligned, &r, &o, json.as_bytes())
+        );
     });
 }

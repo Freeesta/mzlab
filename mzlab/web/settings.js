@@ -75,14 +75,14 @@ function uipArchivio(d) {
 // --- popup of the gear
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
-  const d = document.createElement("div"); d.id = "uipset";
+  const d = document.createElement("div"); d.id = "uipset"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", I18N.t("settings.title"));
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">${I18N.t("settings.title")}</div>
     <div class="row"><span>${I18N.t("settings.language.label")}</span> <select id="uip-lang" title="${I18N.t("settings.language.title")}" aria-label="${I18N.t("settings.language.label")}"><option value="it">Italiano</option><option value="en">English</option></select></div>
-    <div class="row">${I18N.t("settings.theme")} <select id="uip-th"><option value="auto">${I18N.t("settings.theme.auto")}</option><option value="light">${I18N.t("settings.theme.light")}</option><option value="dark">${I18N.t("settings.theme.dark")}</option></select></div>
-    <div class="row"><span>${I18N.t("settings.font.label")}</span> <select id="uip-font"><option value="">${I18N.t("settings.font.default")}</option><option value="atkinson">${I18N.t("settings.font.atkinson")}</option><option value="dyslexic">${I18N.t("settings.font.dyslexic")}</option></select></div>
+    <div class="row">${I18N.t("settings.theme")} <select id="uip-th" aria-label="${I18N.t("settings.theme")}"><option value="auto">${I18N.t("settings.theme.auto")}</option><option value="light">${I18N.t("settings.theme.light")}</option><option value="dark">${I18N.t("settings.theme.dark")}</option></select></div>
+    <div class="row"><span>${I18N.t("settings.font.label")}</span> <select id="uip-font" aria-label="${I18N.t("settings.font.label")}"><option value="">${I18N.t("settings.font.default")}</option><option value="atkinson">${I18N.t("settings.font.atkinson")}</option><option value="dyslexic">${I18N.t("settings.font.dyslexic")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${Object.keys(PALS).map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
-    <div class="row">${I18N.t("settings.etich")} <select id="uip-etich"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
+    <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
     ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.together.title")}"><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>${I18N.t("settings.together")}</span></label>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || (f.ms2_exps && f.ms2_exps.length))) ? `
@@ -157,6 +157,7 @@ function uipOpen(btn) {
     if (typeof paintFiles === "function" && typeof E !== "undefined") { paintFiles(); if (E.files.length) { renderFileList(); } }
     uipApply();
   };
+  document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { d.remove(); btn.focus(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
   setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 

@@ -97,7 +97,12 @@ fn path_of(rules: &[&Rule], combo: &[usize]) -> Option<(Counts, Path)> {
 }
 
 /// (a) the parent times the rules, up to `max_steps` reactions, one hypothesis per net change of formula (fewest steps, then first label).
-pub fn from_rules(rules: &Rules, parent: &Counts, groups: Option<&[String]>, p: &HypoParams) -> Vec<Hypothesis> {
+pub fn from_rules(
+    rules: &Rules,
+    parent: &Counts,
+    groups: Option<&[String]>,
+    p: &HypoParams,
+) -> Vec<Hypothesis> {
     let ok: Vec<&Rule> = rules
         .rules
         .iter()

@@ -45,7 +45,11 @@ fn number(b: &[char], i: &mut usize, smiles: &str) -> Result<Option<i32>> {
     if s == *i {
         return Ok(None);
     }
-    let n = b[s..*i].iter().collect::<String>().parse().map_err(|_| bad(smiles))?;
+    let n = b[s..*i]
+        .iter()
+        .collect::<String>()
+        .parse()
+        .map_err(|_| bad(smiles))?;
     Ok(Some(n))
 }
 
