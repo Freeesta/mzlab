@@ -100,7 +100,11 @@ pub fn centroids(mz: &[f64], y: &[f64], p: &Params, buf: &mut Buf) -> Vec<Centro
     }
     smooth::smooth(buf, p.sg_len());
     smooth::background(buf, p.wb(), p.mode == Mode::Counts);
-    let sigma = if p.mode == Mode::Continuous { smooth::noise(buf, p.wb()) } else { 0.0 };
+    let sigma = if p.mode == Mode::Continuous {
+        smooth::noise(buf, p.wb())
+    } else {
+        0.0
+    };
     let groups = detect::groups(buf, p, sigma);
     let mut out = emit::emit(buf, p, sigma, &groups);
     out.sort_by(|a, b| a.mz.total_cmp(&b.mz));

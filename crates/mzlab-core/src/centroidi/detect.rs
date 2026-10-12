@@ -16,8 +16,16 @@ fn candidates(buf: &Buf) -> Vec<usize> {
     let n = buf.s.len();
     (0..n)
         .filter(|&j| {
-            let l = if j > 0 { buf.s[j - 1] } else { f64::NEG_INFINITY };
-            let r = if j + 1 < n { buf.s[j + 1] } else { f64::NEG_INFINITY };
+            let l = if j > 0 {
+                buf.s[j - 1]
+            } else {
+                f64::NEG_INFINITY
+            };
+            let r = if j + 1 < n {
+                buf.s[j + 1]
+            } else {
+                f64::NEG_INFINITY
+            };
             buf.s[j] >= l && buf.s[j] > r && buf.s[j] > buf.b[j] && buf.s[j] > 0.0
         })
         .collect()
@@ -29,11 +37,21 @@ fn bounds(buf: &Buf, apex: usize, wb: usize) -> (usize, usize) {
     let ext = (1.5 * wb as f64).ceil() as usize;
     let n = buf.s.len();
     let mut lo = apex;
-    while lo > 0 && apex - lo < ext && buf.s[lo - 1] <= buf.s[lo] && buf.s[lo - 1] > buf.b[lo - 1] && !(buf.v[lo - 1] == 0.0 && buf.v[lo] == 0.0 && lo != apex) {
+    while lo > 0
+        && apex - lo < ext
+        && buf.s[lo - 1] <= buf.s[lo]
+        && buf.s[lo - 1] > buf.b[lo - 1]
+        && !(buf.v[lo - 1] == 0.0 && buf.v[lo] == 0.0 && lo != apex)
+    {
         lo -= 1;
     }
     let mut hi = apex;
-    while hi + 1 < n && hi - apex < ext && buf.s[hi + 1] <= buf.s[hi] && buf.s[hi + 1] > buf.b[hi + 1] && !(buf.v[hi + 1] == 0.0 && buf.v[hi] == 0.0 && hi != apex) {
+    while hi + 1 < n
+        && hi - apex < ext
+        && buf.s[hi + 1] <= buf.s[hi]
+        && buf.s[hi + 1] > buf.b[hi + 1]
+        && !(buf.v[hi + 1] == 0.0 && buf.v[hi] == 0.0 && hi != apex)
+    {
         hi += 1;
     }
     (lo, hi)
@@ -77,9 +95,17 @@ pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
     let mut out: Vec<Group> = Vec::new();
     for c in candidates(buf) {
         let (lo, hi) = bounds(buf, c, wb);
-        let g = Group { apex: c, lo, hi, members: 1 };
+        let g = Group {
+            apex: c,
+            lo,
+            hi,
+            members: 1,
+        };
         let merge = match out.last() {
-            Some(last) => ((c - last.apex) as f64) < 0.5 * wb as f64 || insignificant(buf, p, sigma, last.apex, c),
+            Some(last) => {
+                ((c - last.apex) as f64) < 0.5 * wb as f64
+                    || insignificant(buf, p, sigma, last.apex, c)
+            }
             None => false,
         };
         if merge {

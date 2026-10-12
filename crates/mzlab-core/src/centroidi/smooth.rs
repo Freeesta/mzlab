@@ -54,7 +54,12 @@ pub(super) fn background(buf: &mut Buf, wb: usize, mean: bool) {
         buf.tmp.extend_from_slice(&buf.s[lo..=hi]);
         cen.push(c);
         let q = lower(&mut buf.tmp, 0.25);
-        val.push(if mean { let k = ((buf.tmp.len() - 1) as f64 * 0.75).floor() as usize; buf.tmp[..=k].iter().sum::<f64>() / (k + 1) as f64 } else { q });
+        val.push(if mean {
+            let k = ((buf.tmp.len() - 1) as f64 * 0.75).floor() as usize;
+            buf.tmp[..=k].iter().sum::<f64>() / (k + 1) as f64
+        } else {
+            q
+        });
     }
     buf.b.clear();
     let mut b = 0;

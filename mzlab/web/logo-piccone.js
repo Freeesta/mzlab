@@ -1,5 +1,6 @@
 // Easter egg of the header logo: five hits with a small pickaxe switch mzFinder on (or off, see tpmine-loader.js). Each hit shakes the logo and adds a
-// stage of cracks (1-4); the fifth shatters it into pieces, flips the switch and leaves the logo GOLDEN for good (localStorage, as a trophy).
+// stage of cracks (1-4); the fifth shatters it into pieces and flips the switch: mzFinder ON = the logo stays GOLDEN (localStorage, as a trophy), the next round
+// of five hits switches mzFinder OFF and gives the original logo back.
 // No hit for a few seconds: the cracks close again. Reduced motion: no shake, no pickaxe, no shards, only the stages of cracks. Enter / Space on the focused logo = a hit.
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
@@ -10,11 +11,14 @@
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
   const still = () => document.documentElement.hasAttribute("data-a11y-reduce") || !logo.animate || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const root = document.documentElement;
-  const store = { get() { try { return localStorage.getItem(GOLD_KEY) === "1"; } catch (_) { return false; } }, set() { try { localStorage.setItem(GOLD_KEY, "1"); } catch (_) { /* private mode: golden for this page only */ } } };
+  const store = { get() { try { return localStorage.getItem(GOLD_KEY) === "1"; } catch (_) { return false; } }, set(on) { try { if (on) localStorage.setItem(GOLD_KEY, "1"); else localStorage.removeItem(GOLD_KEY); } catch (_) { /* private mode: for this page only */ } } };
 
   const st = document.createElement("style");
   st.textContent = `:root{--gold:#c9a227}
 html[data-logo-gold] header img.logo{filter:sepia(1) saturate(3.5) hue-rotate(-12deg) brightness(1.12) drop-shadow(0 0 3px var(--gold))}
+/* dark theme (also the high-contrast one): the same gold, brighter, so the glyph keeps >= 4.5:1 on the header (measured 7:1 or more) */
+@media (prefers-color-scheme:dark){html[data-logo-gold]:not([data-theme=light]) header img.logo{filter:sepia(1) saturate(3) hue-rotate(-12deg) brightness(2.3) drop-shadow(0 0 3px var(--gold))}}
+html[data-theme=dark][data-logo-gold] header img.logo{filter:sepia(1) saturate(3) hue-rotate(-12deg) brightness(2.3) drop-shadow(0 0 3px var(--gold))}
 header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #lg-fx{position:fixed;z-index:6100;pointer-events:none;overflow:visible}#lg-fx svg{position:absolute;left:0;top:0;overflow:visible}
 #lg-fx .lg-cr{fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s}#lg-fx .lg-cr.on{opacity:1}
@@ -59,8 +63,8 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
     const k = 1 + stage * 0.35;                                     // the more damaged, the harder it shakes
     logo.animate([{ transform: "translate(0,0)" }, { transform: `translate(${-1.6 * k}px,${0.6 * k}px)`, offset: 0.2 }, { transform: `translate(${1.6 * k}px,${-0.6 * k}px)`, offset: 0.45 }, { transform: `translate(${-1 * k}px,0)`, offset: 0.7 }, { transform: "translate(0,0)" }], { duration: 260 });
   }
-  function shatter() {
-    const gold = () => { store.set(); root.setAttribute("data-logo-gold", ""); live.textContent = t("logo.gold.live", "Logo turned gold"); };
+  function shatter(on) {
+    const gold = () => { store.set(on); root.toggleAttribute("data-logo-gold", on); live.textContent = on ? t("logo.gold.live", "Logo turned gold") : t("logo.normal.live", "Logo back to normal"); };
     if (still()) { showStage(0); gold(); return; }
     const f = overlay(), pk = f.querySelector(".lg-pk"); pk.remove();
     f.querySelectorAll(".lg-cr").forEach(g => g.classList.remove("on"));
@@ -83,7 +87,7 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
   function hit() {
     if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
     const n = stage + 1;
-    if (n >= HITS) { if (window.QTOOLS && QTOOLS.flip) QTOOLS.flip(); shatter(); return; }
+    if (n >= HITS) { shatter(window.QTOOLS && QTOOLS.flip ? !!QTOOLS.flip() : !root.hasAttribute("data-logo-gold")); return; }
     showStage(n); swing();
   }
   document.addEventListener("click", ev => { if (ev.target && ev.target.closest && ev.target.closest("header img.logo")) hit(); }, true);

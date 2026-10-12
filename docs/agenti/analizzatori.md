@@ -1,6 +1,6 @@
 # Analizzatori animati della schermata di caricamento
 
-- **Sviluppi futuri, spenti di default**: durante il caricamento compare solo l'animazione base (`base` in `ldIon`: tre ioni che ruotano, punto con scia). Le schermate degli analizzatori restano nel codice ma non sono incluse in `index.html`, non si scaricano e non c'è alcuna voce nell'interfaccia. Per riattivarle: `LD_ANALYSERS = true` in `index.html` (le carica a richiesta da `LD_AN` e ne sceglie una a caso).
+- **Sviluppi futuri, spenti di default**: durante il caricamento compare solo l'animazione base (`base` in `ldIon`: tre ioni sfasati di 120° le cui scie avanzano e si intrecciano, punto con scia). Le schermate degli analizzatori restano nel codice ma non sono incluse in `index.html`, non si scaricano e non c'è alcuna voce nell'interfaccia. Per riattivarle: `LD_ANALYSERS = true` in `index.html` (le carica a richiesta da `LD_AN` e ne sceglie una a caso).
 - Ogni analizzatore è in un file `an-*.js` che registra `window.LDAN.<nome>(ctx)` → `{n, dt, T?, at(j, t), draw?(t), mid?}` (`an-util.js`: aiuti). Un file nuovo si aggiunge al nome in `LD_AN` (`index.html`) e con una riga qui; i test pytest lo trovano da soli.
 - `quad`: 4 barre, RF/DC, oscillazione secolare di Mathieu.
 - `paul`: trappola di Paul 3D, anello r²=r0²+2z² e calotte z²=z0²+r²/2 (z0=r0/√2), ω_z=2ω_r, micromoto a frequenza RF; forma d'onda RF in un riquadro.
