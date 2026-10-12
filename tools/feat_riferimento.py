@@ -13,7 +13,7 @@ writes `allinea_sintetico.json` (alignment and RT map of a synthetic series, see
 
     python3 tools/feat_riferimento.py OUT --solo cinetica [--golden]
 
-writes `cinetica_forme.json` and `cinetica_generazione.json` (shapes and generation of synthetic profiles, see `tools/feat_cinetica.py`).
+writes `cinetica_forme.json`, `cinetica_generazione.json` (shapes and generation of synthetic profiles) and `cinetica_v1.json` (areas of the identity series with known kinetics, noise and random-kinetics decoys), see `tools/feat_cinetica.py`.
 
     python3 tools/feat_riferimento.py OUT --solo identita [--golden]
 
@@ -282,7 +282,7 @@ def main(argv) -> int:
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "cinetica":
         import feat_cinetica  # noqa: E402
-        print("cinetica", feat_cinetica.scrivi(out, golden))
+        print("cinetica", feat_cinetica.scrivi(out, golden), feat_cinetica.scrivi_v1(out, golden))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
         print("identita", un_file_identita(out, golden))
