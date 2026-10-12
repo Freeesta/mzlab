@@ -15,6 +15,7 @@ pub mod hypo;
 pub mod isotopes;
 pub mod kinetic;
 pub mod ms2;
+pub mod params;
 pub mod pipeline;
 mod post;
 pub mod quality;
@@ -32,3 +33,6 @@ pub mod trace;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).
 pub const FEAT_VERSION: u32 = 3;
+
+/// Version of this crate (the one the gate of quality `cancello.json` names): it changes when the output of the pipeline may change.
+pub const CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");

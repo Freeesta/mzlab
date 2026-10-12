@@ -11,3 +11,22 @@ Stato attuale; il nucleo di mzFinder è in `mzfinder.md`. Prove: `tests/test_val
   - `verita.csv` e `verita.json` (formato di `timolol_truth.json`: `parent`, `tps` = tp1/tp2/isomero, più `ioni` con tutte le righe): colonne `id, ruolo, mz, rt_obs, ion, famiglia, progenitore, generazione, forma, purezza, isf_in_ms2, presente, k_form, k_dec, note`; ruoli e cinetiche (progenitore saturo, monotona, bateman, ritardo, piatto, decrescente) nel docstring del modulo.
   - La verità è il criterio di accettazione dei pacchetti F2P, N1, F3P, K1, H1, E1: le colonne non cambiano.
   - `sintetici_numeri.py --serie DIR`: V0 sui file (richiamo per ruolo, righe, candidati, esche con segnale, coincidenze attese/osservate); numeri di partenza in `studio/validazione/V1_sintetici.md` (repository dei dati). `sintetici_mzml.py` scrive i file.
+
+## Cancello di qualità (`tools/valida/cancello.py`, `cancello_misure.py`, `nativo.py`; prove `tests/test_cancello.py`)
+- **Comando**: `python3 tools/valida_feat.py --cancello [--serie CARTELLA --verita V.json] [--mzmine T.csv] [--sintetico piccolo|completo] [--seme N] [--debole F] [--data AAAA-MM-GG] [--lavoro DIR] [--cancello-json FILE] [--senza-wasm]`.
+  - Costruisce `mzlab-feat-wasm --example nativo` (la pipeline del sito) su ogni serie e scrive `TP_Mine/data/cancello.json` (`cancello/1`: `crate_version`, `data`, `vista_candidati`, `concordanza_mzmine`, `criteri[] {id, valore, soglia, ok}`).
+  - In `--lavoro` scrive `cancello_rapporto.json` e `.md` con tutti i numeri: il rapporto con la serie vera resta in `.verifica/`, nel pubblico solo numeri aggregati e versioni.
+  - Il file è deterministico (chiavi ordinate: stessa versione, stessi dati e stessa `--data`, stessi byte); `valido(c, crate)` è la regola di `PIPE.gateState`.
+- **Regola**: `vista_candidati` è vero solo se tutti i criteri di `ID_RICHIESTI` sono presenti e `ok`.
+  - `ok` nullo = non misurato: chiude il cancello per i richiesti, non per `mzmine_*` (facoltativi: manca il CSV) né per `prestazioni_*` (velocità e memoria non si misurano, per decisione del progetto).
+  - Senza serie vera i quattro `timololo_*` restano non misurati e il cancello resta chiuso.
+- **Serie vera** (13 file e verità; il genitore è quello della verità): soglie da V0, ≥ 21 TP trovati, ≥ 19 fra i candidati, ≤ 494 candidati, ≤ 25 606 righe.
+  - Trovato = riga a ±5 ppm e ±0,15 min **oppure** membro dell'identità di una riga (la tabella allineata tiene gli ioni di una famiglia in una sola riga).
+  - Candidato = identità con almeno una prova a favore (`totale` > 0: l'elenco che il pannello mostra, il resto è «scartato»); nei dettagli `candidati_con_ipotesi` conta quelle che confermano un'ipotesi del genitore.
+- **Sintetici** (costruiti nel processo da `sintetici_identita`: la verità ha così altezze e picchi di rumore):
+  - richiamo sopra 10× il rumore (2e5) e fra 3× e 10× (variante `--debole F`, altezze dei prodotti × F); conta la riga o un membro d'identità, e un isomero fuso col compagno (valle ≥ 50 %) conta tramite la riga del compagno;
+  - isomeri con valle < 50 % su due righe; errore d'area mediano fra file (l'area segue l'altezza); righe nel bianco che non sono rumore né fondo; famiglie (isotopi e addotti nell'identità della base); ISF senza MS2 dichiarati; esche con livello migliore di 4;
+  - cinetica via l'identità: forma («piatto» accetta la formazione irrisolvibile) e generazione o indecidibile; purezza: errore mediano ≤ 0,05.
+- **Determinismo**: stesso SHA-256 di ogni `.mzfeat` e `.mzfeatf` in due esecuzioni native e fra nativo e `.wasm` via Node (serve `wasm-bindgen` della versione del `Cargo.lock`; senza strumenti il criterio resta non misurato).
+- **mzmine** (facoltativo): righe di mzmine con area ≥ 10× la soglia, abbinamento a ±5 ppm e ±0,1 min; richiamo ≥ 0,90, precisione ≥ 0,80, Spearman dei log delle aree ≥ 0,9, mediana di |log2 rapporto| ≤ 0,25 dopo un solo fattore di scala.
+- **Dopo un nuovo `.wasm`** la versione del crate o il comportamento cambiano: rigenerare `cancello.json` (il pannello lo chiude se `crate_version` non coincide).

@@ -3121,5 +3121,12 @@ I18N.add("en", {
   "rep.level": "Level",
   "rep.proposed": "Proposed",
   "rep.decided": "Decided",
-  "rep.evidence": "Evidence"
+  "rep.evidence": "Evidence",
+  "tpmine.feat.restarted": "A worker of the pipeline stopped and was restarted: the step runs again.",
+  "tpmine.feat.cancelled": "The pipeline was stopped.",
+  "error.featWorker": "A worker of the pipeline stopped working. Try again; if it happens again, close other tabs to free memory.",
+  "error.featWasmHash": "The pipeline engine did not download correctly (its checksum is wrong). Reload the page.",
+  "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
+  "error.featFailed": "The pipeline failed.",
+  "error.badRecipe": "The parameters of the pipeline are not valid."
 });

@@ -193,6 +193,61 @@ try:
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs8), (pyodide(reqs8)[:3], why(pg8))
         step("profile spectra (window and single scans): Rust equals Python's, still without Pyodide", profile_same)
+        def stat_same():
+            import numpy as np
+            rng = np.random.default_rng(12)
+            roles = ["blank", "blank"] + ["sample"] * 9
+            times = [None, None, 0, 0, 0, 15, 15, 15, 60, 60, 60]
+            m = np.round(rng.lognormal(10, 1.2, (40, 11)) * np.array([0.05, 0.05] + [1] * 9)).tolist()
+            post = """async a => { const r = await fetch(a[0], { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(a[1]) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
+            ctxa, pga, reqsa = context(); pga.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pga.wait_for_selector("#drop", timeout=120000)
+            ctxb, pgb, reqsb = context(); pgb.goto(f"http://127.0.0.1:{PORT}/?motore=python"); pgb.wait_for_selector("#drop", timeout=120000)
+            pts = [{"file": f"f{k}", "time": t, "rt": 5.0, "area": 100.0 * (k + 1), "height": 9.0 * k} for k, t in enumerate([30, 0, 60, 15])]
+            for u, body in [("api/stat/profile", {"points": pts, "metric": "area"}), ("api/stat/blank", {"matrix": m, "roles": roles, "factor": 3, "min_detect": 2}),
+                            ("api/stat/reference", {"matrix": m, "roles": roles, "times": times}), ("api/stat/pca", {"matrix": m, "roles": roles, "groups": [None, None] + ["a"] * 3 + ["b"] * 3 + ["c"] * 3}),
+                            ("api/stat/blank", {"matrix": m, "roles": ["sample"] * 11})]:
+                a = pga.evaluate(post, [u, body]); b2 = pgb.evaluate(post, [u, body])
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pga))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqsa), (pyodide(reqsa)[:3], why(pga))
+        step("statistics (profile, blank, reference, PCA): Rust equals Python's, without Pyodide", stat_same)
+        def diff_same():
+            full = ["api/chrom?k=1&ref=0", "api/chrom?k=1&ref=0&norm=tic&kind=bpc", "api/chrom?k=1&ref=0&norm=istd&istd=364.4&factor=0.5&clip=1&mz0=100&mz1=300",
+                    "api/xic?k=0,1&ref=0&mz=364.4&tol=0.35", "api/xic?k=1&ref=0&mz=305.3&tol=0.5&norm=istd&istd=364.4&rttol=0.3", "api/xic?k=1&ref=0&mz=364.4&norm=foo",
+                    "api/xic?k=1&ref=0&mz=364.4&factor=200"]
+            for u in full:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pg3))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds
+            d = Path(tempfile.mkdtemp())
+            ds.mrm(d / "m1.mzML", 1.0, np.random.default_rng(3), 1); ds.mrm(d / "m2.mzML", 0.5, np.random.default_rng(13), 2)
+            ctxm, pgm, reqsm = context(); pgm.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+            ctxn, pgn, reqsn = context(); pgn.goto(f"http://127.0.0.1:{PORT}/?motore=python")
+            for g in (pgm, pgn):
+                g.wait_for_selector("#drop", timeout=120000)
+                g.set_input_files("#pick", [str(d / "m1.mzML"), str(d / "m2.mzML")])
+                g.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+                g.click("#opbtn"); g.wait_for_selector("canvas", timeout=120000)
+                g.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
+            for u in ["api/mrm?k=1&ref=0", "api/mrm?k=0,1&ref=1&norm=tic&factor=0.7&clip=1", "api/mrm?k=1&ref=0&norm=istd&istd=364.1&rttol=0.4", "api/mrm?k=1&ref=0&norm=foo"]:
+                a = pgm.evaluate(JSON, u); b2 = pgn.evaluate(JSON, u)
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pgm))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqsm), (pyodide(reqsm)[:3], why(pgm))
+        step("reference difference (chrom, xic, mrm with ref): Rust equals Python's, without Pyodide", diff_same)
+        def qaqc_same():
+            for u in ["api/qaqc?k=0,1&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/qaqc?k=1,0&roles=qc,qc&mz=194.2&rt=14.3&unit=ppm&tol=700&win=1",
+                      "api/qaqc?k=0,1&roles=sample&mz=364.4&rt=14.3", "api/qaqc?k=0,1&roles=sample,dark&mz=305.3&rt=14.7&thr=10&ratio=1"]:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pg3))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("QA/QC of an ion (api/qaqc): Rust equals Python's, without Pyodide", qaqc_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")

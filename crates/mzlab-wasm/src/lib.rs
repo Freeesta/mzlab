@@ -3,7 +3,7 @@
 //! Every answer is written into a `Float64Array` the caller provides (the worker recycles them, so no allocation per frame):
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
-mod info;
+mod info; mod diff; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -11,6 +11,8 @@ use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
+
+mod scans;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -530,7 +532,7 @@ fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, 
 #[wasm_bindgen]
 impl Engine {
     /// `api/origin` over the session `items` for the item `k`; `query` = `mz`, `parent`, `rt0`, `rt1`, `formula`.
-    /// Empty = Python's (profile or high-resolution files).
+    /// Empty = Python's (a file without index).
     pub fn origin(&mut self, items: &str, k: i32, query: &str) -> Result<String, JsValue> {
         use mzlab_core::originroute::{origin_route, Ask};
         let metas = session_items(items)?;
@@ -554,7 +556,7 @@ impl Engine {
     }
 
     /// `api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d` over the session `items`; `query` is the query string of the route.
-    /// Empty = Python's (profile or high-resolution files, parameters Python must reject).
+    /// Empty = Python's (a file without index, parameters Python must reject).
     pub fn map_route(&mut self, path: &str, items: &str, query: &str) -> Result<String, JsValue> {
         let metas = session_items(items)?;
         let r = mzlab_core::maproute::map_route(path, &metas, &mut self.idx, &Query::parse(query)).map_err(|e| error_json(&e))?;

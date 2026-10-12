@@ -19,7 +19,7 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 }[k] || k);
 
 import { originRoute } from "./lr-origin.js";
-import { engineRoute } from "./lr-map.js";
+import { engineRoute, statRoute } from "./lr-map.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
@@ -169,8 +169,8 @@ export function createLr({ rb }) {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
-        if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items, hr });
-        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items, hr }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = Python)
+        if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
+        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = Python)
         if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
@@ -181,6 +181,7 @@ export function createLr({ rb }) {
       const t = text();
       if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space", free: true })).info };
       if (t === null) return null;
+      { const r = await statRoute(path, t, { rpc }); if (r !== undefined) return r; }                       // the statistics of the series: the Rust engine, no file needed
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }
       const body = JSON.parse(t || "{}");
       if (path === "/api/explore") return await explore(body);

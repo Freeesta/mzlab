@@ -31,7 +31,39 @@ pub fn recipe_from_json(text: &str) -> Result<Recipe> {
         Some("family") | None => {}
         Some(_) => return Err(Error::new("error.badRecipe")),
     }
+    apply_params(&mut r, &v);
     Ok(r)
+}
+
+/// The numbers of the panel "Pipeline" (`floor`, `min_height`, `min_points`, `ppm`, `rt_tol`, `fill`); a missing key keeps the default.
+fn apply_params(r: &mut Recipe, v: &Value) {
+    let num = |k: &str| {
+        v.get(k)
+            .and_then(Value::f64)
+            .filter(|x| x.is_finite() && *x > 0.0)
+    };
+    if let Some(x) = num("floor") {
+        r.detect.floor = x;
+        r.fill.floor = x;
+    }
+    if let Some(x) = num("min_height") {
+        r.detect.min_height = x;
+    }
+    if let Some(x) = num("min_points") {
+        r.detect.min_points = x as u32;
+        r.fill.min_points = x as usize;
+    }
+    if let Some(x) = num("ppm") {
+        r.align.ion.ppm = x;
+        r.fill.ppm = x;
+    }
+    if let Some(x) = num("rt_tol") {
+        r.align.ion.rt_gap = x;
+        r.fill.rt_tol = x;
+    }
+    if let Some(b) = v.get("fill").and_then(Value::bool) {
+        r.fill_gaps = b;
+    }
 }
 
 /// Layer L1-L3 of one file: the `.mzfeatf` bytes (the name and SHA-256 of the source go in the meta; no times, so the bytes repeat).
@@ -188,4 +220,23 @@ fn nearest_row(t: &mzlab_feat::table::Aligned, mz: f64, rt: f64) -> Option<usize
     (0..t.len())
         .filter(|&r| (t.mz[r] - mz).abs() <= mz * 5e-6 && (t.rt[r] - rt).abs() <= 0.3)
         .max_by(|&a, &b| area(a).total_cmp(&area(b)))
+}
+
+/// Preview of one file (see `mzlab_feat::params`): the floor of the recipe is used if it was given, else the one estimated from the intensities.
+pub fn preview<R: ReadAt>(index: &mut Index<R>, r: &Recipe, floor_given: bool) -> Result<String> {
+    let mut p = r.detect.clone();
+    if !floor_given {
+        if let Some(si) = index.section_of(1, p.polarity) {
+            let h = mzlab_feat::params::intensity_hist(index, si)?;
+            if let Some(n) = mzlab_feat::params::noise_from_hist(&h) {
+                p.floor = n.floor;
+            }
+        }
+    }
+    mzlab_feat::params::preview(index, &p)
+}
+
+/// True if the recipe text names a `floor` (else the preview estimates it).
+pub fn floor_given(text: &str) -> bool {
+    json::parse(text.as_bytes()).is_ok_and(|v| v.get("floor").and_then(Value::f64).is_some())
 }

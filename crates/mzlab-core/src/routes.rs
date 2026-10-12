@@ -109,8 +109,14 @@ impl<R: ReadAt> Routes<R> {
 
     /// The trace of one file: `{"rt":[...],"y":[...]}` (the multi-file wrapper of `api/xic` is the page's job).
     pub fn xic(&mut self, mz: f64, tol: f64, level: u8) -> Result<String> {
+        let (rt, y) = self.xic_raw(mz, tol, level)?;
+        Ok(trace(&rt, &y))
+    }
+
+    /// The XIC of one level as the arrays Python works on (not rounded): the reference difference subtracts these.
+    pub fn xic_raw(&mut self, mz: f64, tol: f64, level: u8) -> Result<(Vec<f64>, Vec<f64>)> {
         let Some(si) = self.idx.section_of(level, None) else {
-            return Ok(trace(&[], &[]));
+            return Ok((Vec::new(), Vec::new()));
         };
         let (lo, hi) = (mz - tol, mz + tol);
         let a = self.idx.search(si, lo, false)?;
@@ -122,19 +128,28 @@ impl<R: ReadAt> Routes<R> {
             self.idx.sum_window(si, a, b)?
         };
         let rt = self.idx.arrays(si)?.rt.clone();
-        Ok(trace(&rt, &y))
+        Ok((rt, y))
     }
 
     fn chrom(&mut self, q: &Query) -> Result<Option<String>> {
+        if q.some("ref").is_some() {
+            return Ok(None);
+        }
+        Ok(self.chrom_raw(q)?.map(|(rt, y)| trace(&rt, &y)))
+    }
+
+    /// The TIC or base peak chromatogram of one file (the window, the scan type and the precursor of the query applied), not rounded;
+    /// `None` = another kind of trace (Python's).
+    pub fn chrom_raw(&mut self, q: &Query) -> Result<Option<(Vec<f64>, Vec<f64>)>> {
         let kind = q.get("kind").unwrap_or("tic");
-        if (kind != "tic" && kind != "bpc") || q.some("ref").is_some() {
+        if kind != "tic" && kind != "bpc" {
             return Ok(None);
         }
         let level = q.level();
         let (mz0, mz1, prec) = (q.num("mz0")?, q.num("mz1")?, q.num("prec")?);
         let filt = q.some("filt");
         let Some(si) = self.idx.section_of(level, None) else {
-            return Ok(Some(trace(&[], &[])));
+            return Ok(Some((Vec::new(), Vec::new())));
         };
         let y = if mz0.is_some() || mz1.is_some() {
             let a = match mz0 {
@@ -184,7 +199,7 @@ impl<R: ReadAt> Routes<R> {
                 .map(|(x, _)| *x)
                 .collect()
         };
-        Ok(Some(trace(&pick(&rt), &pick(&y))))
+        Ok(Some((pick(&rt), pick(&y))))
     }
 
     pub fn filters(&mut self) -> Result<String> {

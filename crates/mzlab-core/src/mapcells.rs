@@ -1,6 +1,6 @@
 //! The ion map (RT × m/z) of one unit-resolution file from its index: `ionmap`, `ionmap_region`, `map_stretch`, `map_background`,
 //! `map_points`, `map_snap` and `map_measure` of `mzlab/explore.py`. The peaks are read in table order (sorted by m/z), so every sum is
-//! added in the order numpy's `bincount` adds it. Sections stored in single precision are Python's (the caller refuses them).
+//! added in the order numpy's `bincount` adds it. The m/z axis of a region is linear or logarithmic (cells of equal ppm, high resolution).
 
 use std::sync::Arc;
 
@@ -34,7 +34,8 @@ impl<R: ReadAt> Routes<R> {
         Ok(acc)
     }
 
-    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six are kept).
+    /// `ionmap`: the map of the level on the common grid of the session, `nrt × nmz` (the last six are kept). A section in single precision
+    /// puts its peaks in the cells with float32 arithmetic, as numpy does on a float32 array.
     pub(crate) fn ion_map(&mut self, level: u8, g: &Grid, mean: bool) -> Result<Arc<Vec<f32>>> {
         let key = format!("{level}|{mean}|{:?}", g);
         if let Some(i) = self.maps.iter().position(|(k, _)| *k == key) {
@@ -53,12 +54,14 @@ impl<R: ReadAt> Routes<R> {
         let bins = scan_bins(&rt, g.rt0, (g.rt1 - g.rt0).max(1e-9), g.nrt);
         let n_scans = counts(bins.iter().cloned(), g.nrt);
         let n = self.idx.sections[si].n_peaks;
-        let acc = self.accumulate(si, (0, n), g.nrt * g.nmz, mean, |p, mz| cell_of(bins[p], (mz - g.mz0) / g.dmz, g.nmz))?;
+        let f4 = self.idx.sections[si].f4;
+        let at = |mz: f64| if f4 { ((mz as f32 - g.mz0 as f32) / g.dmz as f32) as f64 } else { (mz - g.mz0) / g.dmz };
+        let acc = self.accumulate(si, (0, n), g.nrt * g.nmz, mean, |p, mz| cell_of(bins[p], at(mz), g.nmz))?;
         Ok(finish(acc, mean, &n_scans, g.nmz))
     }
 
     /// `ionmap_region`: a region on bins of its own (RT bins of `(rt1 - rt0) / nrt`, m/z bins of `(mz1 - mz0) / nmz`).
-    pub(crate) fn region_map(&mut self, level: u8, (rt0, rt1): (f64, f64), nrt: usize, (mz0, mz1): (f64, f64), nmz: usize, mean: bool) -> Result<Vec<f32>> {
+    pub(crate) fn region_map(&mut self, level: u8, (rt0, rt1): (f64, f64), nrt: usize, (mz0, mz1): (f64, f64), (nmz, log): (usize, bool), mean: bool) -> Result<Vec<f32>> {
         let zeros = vec![0.0f32; nrt * nmz];
         let Some((si, rt)) = self.map_level(level)? else { return Ok(zeros) };
         if rt1 <= rt0 || mz1 <= mz0 {
@@ -68,23 +71,23 @@ impl<R: ReadAt> Routes<R> {
         let bins = scan_bins(&rt, rt0, rt1 - rt0, nrt);
         let inside: Vec<bool> = rt.iter().map(|&r| r >= rt0 && r < rt1).collect();
         let n_scans = counts((0..rt.len()).filter(|&p| inside[p]).map(|p| bins[p]), nrt);
-        let acc = self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], (mz - mz0) / (mz1 - mz0) * nmz as f64, nmz)))?;
+        let acc = self.accumulate(si, (a, b.max(a)), nrt * nmz, mean, |p, mz| inside[p].then(|| clipped_cell(bins[p], frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?;
         Ok(finish(acc, mean, &n_scans, nmz))
     }
 
     /// `map_stretch`: for each m/z cell of a region the mean over the scans of the stretch `[rt0, rt1]`.
-    pub(crate) fn stretch_background(&mut self, level: u8, (rt0, rt1): (f64, f64), (mz0, mz1): (f64, f64), nmz: usize) -> Result<Vec<f32>> {
-        if !(rt1 > rt0 && mz1 > mz0) {
+    pub(crate) fn stretch_background(&mut self, level: u8, (rt0, rt1): (f64, f64), (mz0, mz1): (f64, f64), (nmz, log): (usize, bool)) -> Result<Vec<f32>> {
+        if !(rt1 > rt0 && mz1 > mz0) || (log && mz0 <= 0.0) {
             return Ok(vec![0.0; nmz]);
         }
-        self.region_map(level, (rt0, rt1), 1, (mz0, mz1), nmz, true)
+        self.region_map(level, (rt0, rt1), 1, (mz0, mz1), (nmz, log), true)
     }
 
     /// `map_background`: for each cell the median over the whole run of the groups of consecutive scans (at most 1500 groups).
-    pub(crate) fn run_background(&mut self, level: u8, (mz0, mz1): (f64, f64), nmz: usize, mean: bool) -> Result<Vec<f32>> {
+    pub(crate) fn run_background(&mut self, level: u8, (mz0, mz1): (f64, f64), (nmz, log): (usize, bool), mean: bool) -> Result<Vec<f32>> {
         let zeros = vec![0.0f32; nmz];
         let Some((si, rt)) = self.map_level(level)? else { return Ok(zeros) };
-        if !(mz1 > mz0) {
+        if !(mz1 > mz0) || (log && mz0 <= 0.0) {
             return Ok(zeros);
         }
         let ns = rt.len();
@@ -92,7 +95,7 @@ impl<R: ReadAt> Routes<R> {
         let ng = ns.div_ceil(grp);
         let (a, b) = (self.idx.search(si, mz0, false)?, self.idx.search(si, mz1, false)?);
         let n_scans = counts((0..ns).map(|p| p / grp), ng);
-        let acc = self.accumulate(si, (a, b.max(a)), ng * nmz, mean, |p, mz| Some(clipped_cell(p / grp, (mz - mz0) / (mz1 - mz0) * nmz as f64, nmz)))?;
+        let acc = self.accumulate(si, (a, b.max(a)), ng * nmz, mean, |p, mz| Some(clipped_cell(p / grp, frac(mz, mz0, mz1, log) * nmz as f64, nmz)))?;
         Ok(median_cols(&finish(acc, mean, &n_scans, nmz), ng, nmz))
     }
 
@@ -158,6 +161,15 @@ pub struct Sticks {
     pub mz: Vec<f64>,
     pub inten: Vec<f32>,
     pub total: usize,
+}
+
+/// Fraction of the m/z axis `[mz0, mz1]` at `mz`: linear, or by ln(m/z) for cells of equal ppm.
+fn frac(mz: f64, mz0: f64, mz1: f64, log: bool) -> f64 {
+    if log {
+        (mz / mz0).ln() / (mz1 / mz0).ln()
+    } else {
+        (mz - mz0) / (mz1 - mz0)
+    }
 }
 
 /// Map cell of the scan position `p` (`scan_bin[p] * nmz + j`) from the fraction `f` of the m/z axis, or None outside the axis.

@@ -22,8 +22,10 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Perimetro**: ogni chat tocca solo ciò che dice il suo prompt; a fine lavoro UN messaggio al Coordinatore (max 5 righe: PR, CI, pages, cosa resta). Rosso o decisione da prendere: PR aperta con la spiegazione, niente merge.
 - **Commit**: titolo breve in italiano + 1-3 righe + attribuzione dell'ambiente. Mai nomi di modelli.
 - **Documenti**: AGENTS.md e `docs/agenti/` descrivono solo lo stato attuale. Quando cambi un comportamento, RISCRIVI la riga che lo descrive (niente «ora…», «prima era…», numeri di PR, date); una funzione nuova = una riga nel file della sua area; una riga di documento ≤ 600 caratteri, un file d'area ≤ 25 KB (oltre si divide per argomento).
-- **Consumo di token**: ogni turno rilegge tutto il contesto, quindi una chat lunga costa più di due chat corte. Una sessione per pacchetto; leggi solo il file d'area che ti serve; `grep -n` e letture a intervalli; niente screenshot nel contesto salvo un giudizio visivo; raggruppa le modifiche e prova una volta alla fine. **Consegna**: alla fine della PR in corso, se il contesto supera 200k token (sempre sopra 300k), manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, da fare con il prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati.
-- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare il predefinito Explore (gira sul modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat. Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
+- **Consumo di token**: ogni turno rilegge tutto il contesto, quindi una chat lunga costa più di due chat corte. Una sessione per pacchetto; leggi solo il file d'area che ti serve; `grep -n` e letture a intervalli; niente screenshot nel contesto salvo un giudizio visivo; raggruppa le modifiche e prova una volta alla fine.
+  **Consegna**: alla fine della PR in corso, se il contesto supera 200k token (sempre sopra 300k), manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, da fare con il prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati.
+- **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, lanciati insieme in un solo messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Non usare il predefinito Explore (gira sul modello principale): usa `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
+  Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico, `~/mzLab/`): può fare commit e push su `main`; non cancella file, li sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
 - Un front end non provato nel browser è rotto. Niente `pkill -f` con parole presenti nel comando: ferma i server con il PID.
 
@@ -55,12 +57,13 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
+| statistica in HR: tabella delle feature, bianco, differenza dal riferimento, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (e `teoria/LEGGIMI.md` se scrivi capitoli) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
-| mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (validazione delle feature: `mzfinder-validazione.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
-| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`) | `docs/agenti/mzfeat-wasm.md` |
+| mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
+| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
