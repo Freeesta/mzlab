@@ -151,6 +151,7 @@ impl AgilentD {
             instrument: Some(("MS:1000490".into(), name)),
             components,
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            centroided: false,
         }
     }
 

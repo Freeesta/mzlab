@@ -29,7 +29,8 @@ impl<W: Write> MzmlWriter<W> {
         if let Some((id, name)) = &h.sample {
             s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
         }
-        s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.extra_software.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)), h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>());
+        s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
+            h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() });
         s += "<instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">";
         if let Some((acc, name)) = &h.instrument {
             s += &cv(acc, name, "");
@@ -44,6 +45,9 @@ impl<W: Write> MzmlWriter<W> {
         s += "</componentList><softwareRef ref=\"mzlab\"/></instrumentConfiguration></instrumentConfigurationList>\n";
         s += "<dataProcessingList count=\"1\"><dataProcessing id=\"conversion\"><processingMethod order=\"0\" softwareRef=\"mzlab\">";
         s += &cv("MS:1000544", "Conversion to mzML", "");
+        if h.centroided {
+            s += &format!("</processingMethod><processingMethod order=\"1\" softwareRef=\"mzlab-centroidi\">{}", cv("MS:1000035", "peak picking", ""));
+        }
         s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\"{}>\n", esc(&h.run), h.acquired.as_ref().map(|t| format!(" startTimeStamp=\"{}\"", esc(t))).unwrap_or_default());
         for (k, v) in &h.run_params {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
@@ -173,6 +177,8 @@ pub struct Header {
     pub content: Vec<(String, String)>,
     /// More software (the acquisition program of the maker): (accession, name, version).
     pub extra_software: Vec<(String, String, String)>,
+    /// The spectra were reduced to one point per peak by mzLab (adds the `MS:1000035` processing step).
+    pub centroided: bool,
 }
 
 /// What a spectrum has besides `Spectrum`: kept apart so that the readers that do not need it do not change.
