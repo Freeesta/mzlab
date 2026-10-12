@@ -11,6 +11,7 @@ mod prepared;
 pub mod points;
 pub mod producers;
 mod proofs;
+pub mod rowproofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{

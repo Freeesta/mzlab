@@ -361,6 +361,10 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
+    if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
+        rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
+        if rc:
+            results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
     # the site tests (they build or serve the site on fixed ports) always run alone, after the others
     alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
     from concurrent.futures import ThreadPoolExecutor

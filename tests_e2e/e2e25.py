@@ -15,7 +15,7 @@ def hexof(c):                                               # "rgb(r, g, b)" or 
     c = c.strip()
     if c.startswith("#"): return c.lower()
     m = re.findall(r"\d+", c)[:3]; return "#%02x%02x%02x" % tuple(int(v) for v in m)
-r = Run(port=8825, wd="/tmp/wd25")
+r = Run(port=8825, wd="/tmp/wd25", motore="python")
 COLORS = "E.files.filter(f=>f.kind==='full'&&f.type==='sample'&&f.time!=null).sort((a,b)=>a.time-b.time).map(f=>[f.time,f.color,f.rank])"
 def load(pg, times, name):
     shutil.rmtree("/tmp/s25_" + name, ignore_errors=True)
