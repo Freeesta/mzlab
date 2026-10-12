@@ -10,12 +10,12 @@ use crate::rois::Window;
 pub const PROTON: f64 = 1.00727646688;
 const ELECTRON: f64 = 0.000548579909;
 const ISO_STEP: f64 = 1.003355;
-const NEUTRAL_LOSSES: [&str; 20] = [
+pub(crate) const NEUTRAL_LOSSES: [&str; 20] = [
     "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF", "HCl", "HBr", "SO2", "SO3", "H2S", "CH3",
     "NO2", "C6H6",
 ];
 /// Adducts of the neutral M: name, shift of the m/z from the neutral mass, multiplier of M.
-const ADDUCTS: [(&str, f64, f64); 7] = [
+pub(crate) const ADDUCTS: [(&str, f64, f64); 7] = [
     ("[M+H]+", PROTON, 1.0),
     ("[M+NH4]+", 18.0338262, 1.0),
     ("[M+Na]+", 22.989769282 - ELECTRON, 1.0),
