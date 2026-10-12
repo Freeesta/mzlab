@@ -236,12 +236,9 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         .and_then(|s| s.rsplit('\\').next());
     let anon = src.anonymous;
 
+    let source_type = source_type(&log);
     let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
-    let autosampler: Vec<V> = entries
-        .iter()
-        .filter(|(s, ..)| s.starts_with("Autosampler"))
-        .filter_map(|(_, k, v)| kv(k, v))
-        .collect();
+    let autosampler = autosampler(&entries);
 
     let registro = run_records(&ms_rec);
     let raw = raw_log(&log, anon);
@@ -253,7 +250,12 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("campione", campione(&data, get("", "Injection Volume"))),
         ("strumento", strumento(cfg, version, anon)),
         ("operatore", operatore(user.or(domain_user), computer, anon)),
-        ("ms", method.as_ref().and_then(ms_section)),
+        (
+            "ms",
+            method
+                .as_ref()
+                .and_then(|m| ms_section(m, source_type.as_deref())),
+        ),
         ("lc", lc),
         (
             "campionatore",
@@ -337,14 +339,28 @@ fn campione(data: &[String], injection: Option<&str>) -> Option<V> {
     ])
 }
 
+/// The autosampler parameters of the driver entries.
+fn autosampler(entries: &[(String, String, String)]) -> Vec<V> {
+    entries
+        .iter()
+        .filter(|(s, ..)| s.starts_with("Autosampler"))
+        .filter_map(|(_, k, v)| kv(k, v))
+        .collect()
+}
+
+/// The kind of ion source as the instrument reported it («Source Type» of the log, e.g. «Turbo Spray»).
+fn source_type(log: &[String]) -> Option<String> {
+    log.iter()
+        .find_map(|r| field(r, "Source Type:"))
+        .map(String::from)
+}
+
 /// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
 fn strumento(cfg: Option<&String>, version: Option<&String>, anon: bool) -> Option<V> {
     obj(vec![
         (
             "produttore",
-            cfg.and_then(|r| field(r, "Manufacturer:"))
-                .and_then(text)
-                .or_else(|| Some(V::s("SCIEX"))),
+            cfg.and_then(|r| field(r, "Manufacturer:")).and_then(text),
         ),
         (
             "modello",

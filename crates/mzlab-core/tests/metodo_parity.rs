@@ -43,7 +43,13 @@ fn ms_of(doc: &str) -> String {
         match v {
             Value::Obj(f) => {
                 o.raw("{");
-                for (i, (k, x)) in f.iter().enumerate() {
+                // the kind of source (`tipo` of the source, which has only it and `parametri`) is said by the log of a .wiff, not by a .dam
+                let is_source = f.len() == 2 && f.iter().any(|(k, _)| k == "parametri");
+                let f: Vec<_> = f
+                    .iter()
+                    .filter(|(k, _)| !(is_source && k == "tipo"))
+                    .collect();
+                for (i, (k, x)) in f.into_iter().enumerate() {
                     o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
                     w(x, o);
                 }
