@@ -105,6 +105,23 @@ export function createBridge({ workerUrl, notify }) {
     }
     return Object.assign(new Blob(r.parts, { type: "application/xml" }), { mzlabId: r.tid ?? null });       // tid: the number of the mzML on the disk (desktop app only)
   };
+  // SCIEX .wiff + .wiff.scan: the sample numbers of the .wiff, and one sample as a Blob of mzML (same errors and progress as convertRaw)
+  const WIFF_ERRORS = ["err.file.notWiff", "err.file.wiffNoScan", "err.file.wiff", "err.file.mzmlWrite"];        // the keys the Rust reader gives
+  const fail = r => {
+    let e = { error_key: "err.file.wiff", params: { detail: "" } };
+    try { const j = JSON.parse(r.error); if (WIFF_ERRORS.includes(j.error_key)) e = j; } catch (_) { /* the worker was lost */ }
+    return Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
+  };
+  api.wiffSamples = async file => {
+    const r = await rpc({ op: "wiffsamples", name: base(file.name), blob: file });
+    if (r.dead || r.error) throw fail(r);
+    return JSON.parse(r.info);
+  };
+  api.convertWiff = async (file, scan, sample, onProgress) => {
+    const r = await rpc({ op: "wiff2mzml", name: base(file.name), blob: file, scan, sample }, onProgress);
+    if (r.dead || r.error) throw fail(r);
+    return new Blob(r.parts, { type: "application/xml" });
+  };
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

@@ -29,6 +29,20 @@ function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
+// the .wiff and .wiff.scan files of a loading, paired by name (any case): { pairs: [{ wiff, scan }], lonely: [.wiff without its .wiff.scan], rest: the other files }
+function wiffPlan(files) {
+  const key = n => String(n).replace(/\.wiff(\.scan)?$/i, "").toLowerCase(), scans = new Map(), rest = [], wiffs = [];
+  for (const f of files) { if (/\.wiff\.scan$/i.test(f.name)) scans.set(key(f.name), f); else if (/\.wiff$/i.test(f.name)) wiffs.push(f); else rest.push(f); }
+  const pairs = [], lonely = [];
+  for (const w of wiffs) { const s = scans.get(key(w.name)); if (s) { pairs.push({ wiff: w, scan: s }); scans.delete(key(w.name)); } else lonely.push(w); }
+  return { pairs, lonely, rest: rest.concat([...scans.values()]) };
+}
+// name of the mzML made from sample `sample` of a .wiff: "x.wiff" -> "x.mzML" when it has one sample, "x_s3.mzML" when it has several; a taken name keeps the extension ("x.wiff.mzML")
+function wiffName(file, sample, many, taken) {
+  const base = String(file).replace(/\.wiff$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+  const name = base + (many ? "_s" + sample : "");
+  return used.has((name + ".mzML").toLowerCase()) ? name + ".wiff.mzML" : name + ".mzML";
+}
 const convMB = b => (b / 1048576).toFixed(b >= 1.048576e7 ? 0 : 1);
 
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
@@ -84,4 +98,4 @@ const ConvUI = {
   },
 };
 
-if (typeof module !== "undefined") module.exports = { convName, convPhase, convPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { wiffPlan, wiffName, convName, convPhase, convPercent, convElapsed, convMB };

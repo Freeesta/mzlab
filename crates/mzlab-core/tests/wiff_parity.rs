@@ -63,6 +63,18 @@ fn synthetic_pairs_match_the_reference() {
                     assert!(close(g.mz[k], mz[k], 1e-9) && close(g.intensity_f64(k), it[k], 1e-9), "{} point {k}", g.id);
                 }
             }
+            // the mzML written from the sample reads back as the same run
+            let mut bytes = Vec::new();
+            w.to_mzml(&mut scan, &mut bytes, &format!("{name}.wiff")).unwrap();
+            let back = mzml::read(&bytes[..]).unwrap();
+            assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML spectra");
+            for (b, g) in back.spectra.iter().zip(&run.spectra) {
+                assert!(b.id == g.id && b.level == g.level && b.precursor == g.precursor && b.polarity == g.polarity && b.profile && b.mz == g.mz && b.wide == g.wide && b.rt == g.rt, "{}: mzML", g.id);
+            }
+            assert_eq!(back.chromatograms.len(), run.chromatograms.len(), "{name}/{s}: mzML chromatograms");
+            for (b, g) in back.chromatograms.iter().zip(&run.chromatograms) {
+                assert!(b.id == g.id && b.time == g.time && b.intensity == g.intensity, "{}: mzML", g.id);
+            }
             let ch = r["chromatograms"].as_array().unwrap();
             assert_eq!(run.chromatograms.len(), ch.len(), "{name}/{s}: chromatograms");
             for (g, e) in run.chromatograms.iter().zip(ch) {

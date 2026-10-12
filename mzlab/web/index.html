@@ -552,7 +552,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
     <li data-i18n-html="conv.help.step4">Premi <b>Start</b>: i file <code>.mzML</code> compaiono nella cartella di output.</li>
     <li data-i18n-html="conv.help.step5">Carica qui i <code>.mzML</code>.</li></ol>
    <p id="convdesk" class="muted sm" hidden data-i18n="conv.help.desktop">I file .raw non serve convertirli: trascinali nel riquadro qui sopra e l'app li converte.</p></details>
-  <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.dam" hidden>
+  <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.wiff,.scan,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
  <div class="card"><h3 data-i18n="load.step2.title">2. Metodo di acquisizione</h3>
   <div id="dropdam" tabindex="0" role="button"></div>
@@ -697,13 +697,23 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen()).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html","load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html",b.convertWiff?"load.dropWiff":"load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
     const ui=ConvUI.start(box,++i,n,f.name);
     try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+  return out}
+// SCIEX .wiff + .wiff.scan pairs (Rust engine): each sample of the .wiff becomes an mzML, as for a .raw; a .wiff without its .wiff.scan is listed in `lonely`
+async function wiffToMzml(files,box,lonely){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertWiff||window.MZLAB_DESKTOP||!files.some(f=>/\.wiff(\.scan)?$/i.test(f.name)))return files;
+  const plan=wiffPlan(files),out=plan.rest.concat(plan.lonely),jobs=[];lonely.push(...plan.lonely.map(f=>f.name));
+  for(const p of plan.pairs){try{const ss=await rb.wiffSamples(p.wiff);ss.forEach(s=>jobs.push({...p,s,many:ss.length>1}))}catch(e){const ui=ConvUI.start(box,1,1,p.wiff.name);ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+  let i=0;
+  for(const {wiff,scan,s,many} of jobs){
+    const ui=ConvUI.start(box,++i,jobs.length,wiff.name+(many?" ("+s+")":""));
+    try{const name=wiffName(wiff.name,s,many,[...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertWiff(wiff,scan,s,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
     catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
   return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -726,6 +736,7 @@ function reportLoad(rep){
     const types=Object.keys(by).join(", "),n=rep.unopen.length,names=rep.unopen.map(x=>x.name);
     L.push(`<p><b>${T(n===1?"unopen.head.one":"unopen.head",{n,types})}</b></p>`);
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
+  if(rep.lonely.length)L.push(`<p>${T("conv.wiff.noScan",{names:namesCut(rep.lonely,3)})}</p>`);
   if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
   for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
@@ -743,8 +754,8 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
-async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
+async function upload(files,into){const box=$("#up");fail();const lonely=[];files=await rawToMzml(await wiffToMzml(files,box,lonely),box);
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],lonely},rejected=[];
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   const one=async f=>{const isDam=isMethodFile(f.name);

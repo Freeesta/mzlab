@@ -105,6 +105,16 @@ pub fn read_scan<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> R
     Ok(Some(Points { mz, intensity }))
 }
 
+/// The number of points of the scan block at `at`, `None` when the block is not a scan.
+pub fn point_count<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Option<u32>> {
+    if at + HEAD as u64 > end.min(scan_len) {
+        return Ok(None);
+    }
+    let mut head = [0u8; HEAD];
+    scan.read_at(at, &mut head)?;
+    Ok((head[..8] == MARKER).then(|| u32::from_le_bytes([head[72], head[73], head[74], head[75]])))
+}
+
 /// The cps of each of `n` transitions of an MRM block starting at `at`.
 pub fn read_mrm<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, n: usize) -> Result<Option<Vec<f64>>> {
     if at + 4 * n as u64 > scan_len {

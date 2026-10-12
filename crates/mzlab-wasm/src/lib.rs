@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
+mod wiff;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -97,9 +98,9 @@ impl Seek for BlockReader {
 }
 
 /// Sends what is written to JS in blocks: `sink(Uint8Array)`; the page keeps the pieces as Blob parts (outside the WASM memory).
-struct BlockWriter {
-    sink: Function,
-    buf: Vec<u8>,
+pub(crate) struct BlockWriter {
+    pub(crate) sink: Function,
+    pub(crate) buf: Vec<u8>,
 }
 
 impl BlockWriter {
@@ -129,7 +130,7 @@ impl Write for BlockWriter {
     }
 }
 
-fn error_json(e: &mzlab_core::Error) -> JsValue {
+pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
     let params: Vec<String> = e
         .params
         .iter()
@@ -163,8 +164,8 @@ pub struct Engine {
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
-struct JsReader {
-    read: Function,
+pub(crate) struct JsReader {
+    pub(crate) read: Function,
 }
 
 impl ReadAt for JsReader {

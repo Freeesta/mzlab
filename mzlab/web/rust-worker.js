@@ -150,6 +150,15 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
         return;
       }
+      case "wiffsamples": info = engine.wiff_samples(m.name, m.blob.size, readerFor(m.blob)); break;           // the sample numbers of a .wiff (JSON list)
+      case "wiff2mzml": {                                                              // one sample of a .wiff + .wiff.scan -> mzML pieces (the .wiff.scan is read by offset, never held)
+        const parts = [], total = m.scan.size, rd = readerFor(m.scan);
+        let read = 0, written = 0, last = 0;
+        const tick = () => { const t = performance.now(); if (t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written }); } };
+        engine.wiff_to_mzml(m.name, m.blob.size, readerFor(m.blob), total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, m.sample, piece => { parts.push(piece); written += piece.length; tick(); });
+        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        return;
+      }
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
