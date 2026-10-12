@@ -14,3 +14,8 @@ Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 25
 - Passo 3:  riempie il manifesto dai file già in OPFS (`files/`, `idx/`, `feat/`).
 - `archivio.js` avvisa  di ogni scrittura e rimozione (`watch`) e il manifesto le segue.
 - Le librerie stanno già  in OPFS (radice di `mzlab/`, il ripiego IndexedDB `mzlab-libs` solo senza OPFS): non sono spostate in `lib/`.
+- Motore (`mzlab-wasm`): `Engine.set_cache_budget(mb)` / `cache_bytes()`: le mappe intere dei file stanno in una cache unica a byte (`routes::trim_map_cache`, uso più vecchio fuori per primo, dopo ogni `map_route`). `rust-worker.js` risponde con `mem` (byte della memoria lineare); `rust-bridge.js` ricicla il worker (`stats.recycled`) quando `mem` supera 192 MB e il motore è fermo da 30 s, o la pagina passa in secondo piano, e riapre i file come dopo un guasto ma senza contarlo né avvisare.
+- Indice: `idxpool.js` compila il `.wasm` una volta (`compileStreaming`) e passa il `WebAssembly.Module` a ogni worker con `{op:"module"}` (`null` = compila da sé); `idx-worker.js` aspetta quel messaggio.
+- Strato debole di `align`: le tabelle deboli di tutti i file sono contate sul budget (`series::finish`); oltre metà dello spazio libero la fase è rifiutata con `error.memoryBudget` (fase `align`).
+- Limite noto: l'mzML di un `.raw` grande resta in memoria come Blob durante la conversione.
+- Mappe e XIC: le regioni hanno al massimo 1024×1024 celle; i bastoncini 3D al massimo 200 000 punti, scelti in Rust (`sticks`); `subxic` non carica più la tabella dei picchi di una sopravvista (decine di milioni di picchi): per ogni finestra di ppm legge dall'indice solo i suoi picchi (`each_peak`), stesso JSON.

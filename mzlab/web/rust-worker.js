@@ -9,7 +9,7 @@ import { createPool, poolSize } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
 
-let engine = null;
+let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
 const blobs = new Map();               // slot -> Blob (read synchronously, block by block, by the WASM reader)
 
@@ -18,7 +18,7 @@ const take = len => {
   const i = pool.findIndex(b => b.byteLength >= need);
   return new Float64Array(i >= 0 ? pool.splice(i, 1)[0] : new ArrayBuffer(Math.max(need, 64 << 10)), 0, len);
 };
-const ready = init().then(() => { engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
+const ready = init().then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
 ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
 function readerFor(blob) {
@@ -34,7 +34,7 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -146,6 +146,8 @@ async function lrOp(m) {
   return null;
 }
 
+// linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js)
+const memNow = () => (wasmMem ? wasmMem.buffer.byteLength : 0);
 onmessage = async ev => {
   const m = ev.data;
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
@@ -155,7 +157,7 @@ onmessage = async ev => {
     let out = null, n = 0, info = null;
     if (m.op.startsWith("lr_")) {
       const r = await labOp(m) || await lrOp(m);
-      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null });
+      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null, mem: memNow() });
       return;
     }
     switch (m.op) {
@@ -199,7 +201,7 @@ onmessage = async ev => {
       }
       default: throw new Error("unknown operation " + m.op);
     }
-    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0 }, out ? [out.buffer] : []);
+    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow() }, out ? [out.buffer] : []);
   } catch (e) {
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else

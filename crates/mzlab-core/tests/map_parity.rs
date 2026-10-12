@@ -154,6 +154,15 @@ fn rust_maps_match_python() {
             compared += compare("", &got, &c["result"], &mut bad);
             failures.extend(bad.iter().take(8).map(|b| format!("{stem}: {path}?{query}: {b}")));
         }
+        // the byte-budgeted cache of the engine: it holds maps, drops the least recently used first and can be emptied
+        let held = mzlab_core::routes::map_cache_bytes(&routes);
+        if held > 0 {
+            let half = held / 2;
+            assert!(mzlab_core::routes::trim_map_cache(&mut routes, half) > 0);
+            assert!(mzlab_core::routes::map_cache_bytes(&routes) <= half);
+            mzlab_core::routes::trim_map_cache(&mut routes, 0);
+            assert_eq!(mzlab_core::routes::map_cache_bytes(&routes), 0);
+        }
     }
     assert!(compared > 300_000, "only {compared} values compared");
     assert!(failures.is_empty(), "{} differences:\n{}", failures.len(), failures.join("\n"));

@@ -68,7 +68,8 @@ fn decode(s: &str) -> String {
 pub struct Routes<R: ReadAt> {
     pub idx: Index<R>,
     /// The last whole-file maps of the session grid (the grid, the cells): a difference asks for the same map of a file up to three times.
-    pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>)>,
+    /// Each map carries the tick of its last use (`next_tick`), so that the engine can drop the least recently used one of all the files.
+    pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>, u64)>,
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
 }
@@ -365,4 +366,30 @@ fn trace(rt: &[f64], y: &[f64]) -> String {
         .rounded(y, 1)
         .raw("}");
     o.0
+}
+
+/// The clock of the use of cached maps, one for the whole engine.
+pub(crate) fn next_tick() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static TICK: AtomicU64 = AtomicU64::new(0);
+    TICK.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Total bytes of the cached maps of the files, and the removal of the least recently used one among them (the byte-budgeted cache of the engine).
+pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+    files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
+}
+
+/// Drops maps, oldest use first, until the cache holds at most `cap` bytes. Returns how many were dropped.
+pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+    let mut dropped = 0;
+    while map_cache_bytes(files) > cap {
+        let oldest = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
+        let Some((_, k, i)) = oldest else { break };
+        if let Some(r) = files.get_mut(&k) {
+            r.maps.remove(i);
+        }
+        dropped += 1;
+    }
+    dropped
 }

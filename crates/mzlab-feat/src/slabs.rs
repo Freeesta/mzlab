@@ -117,7 +117,7 @@ pub fn align_and_fill_stored<R: ReadAt>(
         slabs(src, n, &cuts, budget, r)?
     };
     drop(s);
-    finish(table, &mut |k| lean(src, k, None), n, r, open)
+    finish(table, &mut |k| lean(src, k, None), n, r, Some(budget), open)
 }
 
 fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
