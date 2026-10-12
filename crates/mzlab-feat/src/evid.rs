@@ -7,6 +7,7 @@
 mod arcs;
 mod graph;
 mod out;
+mod prepared;
 pub mod points;
 pub mod producers;
 mod proofs;
@@ -16,7 +17,7 @@ pub use graph::{
     build_graph, Edge, EdgeKind, ExternalHit, Facts, Identity, Inputs, Kinetics, LibHit, Member,
     Node,
 };
-pub use out::{graph_json, EVID_GRAPH_FORMAT};
+pub use out::{graph_json, GraphStream, EVID_GRAPH_FORMAT};
 
 use mzlab_core::json::{round, Out};
 pub use points::{Grade, PointsTable};
