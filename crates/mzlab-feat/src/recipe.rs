@@ -2,6 +2,7 @@
 //! The fingerprint (FNV-1a over the text, two 64-bit lanes) names the per-file cache and tells whether a stored table is still the answer to the
 //! current parameters; changing only the alignment does not change the fingerprint of the per-file part.
 
+use crate::align::AlignParams;
 use crate::famalign::FamAlignParams;
 use crate::family::evidence::PROOF_VERSION;
 use crate::family::{FamParams, FAMILY_VERSION};
@@ -38,6 +39,8 @@ pub struct Recipe {
 
 /// The weak tier goes down to this fraction of the minimum height (3 times the noise when the minimum is 10 times).
 pub const WEAK_RATIO: f64 = 0.3;
+/// Gap of RT, minutes, where the groups with two features of one file are cut (close isomers).
+pub const SPLIT_GAP: f64 = 0.03;
 /// Files in an unbroken run that must show a weak peak.
 pub const WEAK_FILES: usize = 5;
 
@@ -48,7 +51,13 @@ impl Default for Recipe {
             steps: Steps::default(),
             fam: FamParams::default(),
             mode: Mode::Family,
-            align: FamAlignParams::default(),
+            align: FamAlignParams {
+                ion: AlignParams {
+                    split_gap: Some(SPLIT_GAP),
+                    ..AlignParams::default()
+                },
+                ..FamAlignParams::default()
+            },
             rt: RtParams::default(),
             fill: FillParams::default(),
             fill_gaps: true,

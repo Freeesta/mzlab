@@ -56,7 +56,7 @@ PUT = """async (names) => {
   for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
   for (const n of names) { const w = await (await d.getFileHandle(n, { create: true })).createWritable(); await (await fetch("static/dati_pipeline/" + n)).body.pipeTo(w); }
 }"""
-GATE = {"format": "cancello/1", "crate_version": "", "data": "2026-10-12", "vista_candidati": True, "concordanza_mzmine": "passa", "criteri": [{"id": "c1", "valore": 1, "soglia": 1, "ok": True}]}
+GATE = {"format": "cancello/2", "crate_version": "", "data": "2026-10-12", "vista_candidati": True, "vista_tabella": True, "concordanza_mzmine": "passa", "criteri": [{"id": "c1", "valore": 1, "soglia": 1, "ok": True}]}
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
@@ -80,6 +80,10 @@ try:
             assert g(ok, crate)["ok"] is True
             assert g(dict(ok, crate_version="0.0.0"), crate)["why"] == "stale"
             assert g(dict(ok, vista_candidati=False), crate)["why"] == "closed"
+            assert g(ok, crate)["table"] is True
+            r = g(dict(ok, vista_candidati=False), crate); assert r["table"] is True and r["ok"] is False        # table view independent of the candidates
+            assert g(dict(ok, vista_tabella=False, vista_candidati=False), crate)["table"] is False
+            assert g(dict(ok, format="cancello/1"), crate)["ok"] is True and g(dict(ok, format="cancello/1", vista_candidati=False), crate)["table"] is False
             assert g(dict(ok, format="x/9"), crate)["why"] == "format"
             assert g(None, crate)["why"] == "absent"
         step("gate: open only with vista_candidati and the crate version of the .wasm", gate_states)

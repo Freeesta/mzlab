@@ -95,7 +95,7 @@ ESITO = {True: "PASS", False: "FAIL", None: "not measured"}
 def cancello_markdown(c: dict, det: dict) -> str:
     """Summary of the gate: the table of the criteria with PASS / FAIL, the result and the details of the measures."""
     L = [f"# Gate of quality: crate {c['crate_version']}, {c['data']}", "",
-         f"Candidate view: **{'open' if c['vista_candidati'] else 'closed'}**. Agreement with mzmine: {c['concordanza_mzmine']}.", "",
+         f"Table view: **{'open' if c.get('vista_tabella') else 'closed'}**. Candidate view: **{'open' if c['vista_candidati'] else 'closed'}**. Agreement with mzmine: {c['concordanza_mzmine']}.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
     L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
     if det.get("timololo"):

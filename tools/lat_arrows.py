@@ -1,5 +1,5 @@
 """Measurement (not a test): latency of scan-by-scan navigation with the arrow keys (local server)."""
-import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, json; sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests_e2e"))
 from lib import *
 r = Run(port=int(os.environ.get("LAT_PORT", 8821)), wd=os.environ.get("LAT_WD", "/tmp/wd21"))
 try:
