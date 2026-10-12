@@ -325,34 +325,6 @@ impl Engine {
         Ok(format!("[{}]", body.join(",")))
     }
 
-    /// `api/origin` over the session `items` (`[{slot, label, time, full}]`, session order) for the item `k`; `query` = `mz`, `parent`, `rt0`, `rt1`, `formula`.
-    /// Empty = Python's (profile or high-resolution files).
-    pub fn origin(&mut self, items: &str, k: i32, query: &str) -> Result<String, JsValue> {
-        use mzlab_core::json::{self, Value};
-        use mzlab_core::originroute::{origin_route, Ask, ItemMeta};
-        let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
-        let metas: Vec<ItemMeta> = v
-            .arr()
-            .iter()
-            .map(|i| ItemMeta {
-                slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
-                label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
-                time: i.get("time").and_then(Value::f64),
-                full: matches!(i.get("full"), Some(Value::Bool(true))),
-            })
-            .collect();
-        let q = Query::parse(query);
-        let num = |n: &str| q.num(n).map_err(|e| error_json(&e));
-        let (Some(mz), Some(parent)) = (num("mz")?, num("parent")?) else {
-            return Ok(String::new());
-        };
-        let ask = Ask { k: k as i64, mz, parent, rt0: num("rt0")?, rt1: num("rt1")?, formula: q.some("formula") };
-        match origin_route(&metas, &mut self.idx, &ask).map_err(|e| error_json(&e))? {
-            Some(rep) => Ok(mzlab_core::jsonb::write(&rep)),
-            None => Ok(String::new()),
-        }
-    }
-
     /// `{"rt": [...], "y": [...]}` of the XIC of one level from the index.
     pub fn index_xic(
         &mut self,
@@ -530,6 +502,50 @@ fn f64s(b: &[u8]) -> Vec<f64> {
     b.chunks_exact(8)
         .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
         .collect()
+}
+
+/// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
+fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
+    use mzlab_core::json::{self, Value};
+    let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
+    Ok(v.arr()
+        .iter()
+        .map(|i| mzlab_core::originroute::ItemMeta {
+            slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
+            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
+            time: i.get("time").and_then(Value::f64),
+            full: matches!(i.get("full"), Some(Value::Bool(true))),
+        })
+        .collect())
+}
+
+/// The routes over the files of the session (evidence of origin, maps).
+#[wasm_bindgen]
+impl Engine {
+    /// `api/origin` over the session `items` for the item `k`; `query` = `mz`, `parent`, `rt0`, `rt1`, `formula`.
+    /// Empty = Python's (profile or high-resolution files).
+    pub fn origin(&mut self, items: &str, k: i32, query: &str) -> Result<String, JsValue> {
+        use mzlab_core::originroute::{origin_route, Ask};
+        let metas = session_items(items)?;
+        let q = Query::parse(query);
+        let num = |n: &str| q.num(n).map_err(|e| error_json(&e));
+        let (Some(mz), Some(parent)) = (num("mz")?, num("parent")?) else {
+            return Ok(String::new());
+        };
+        let ask = Ask { k: k as i64, mz, parent, rt0: num("rt0")?, rt1: num("rt1")?, formula: q.some("formula") };
+        match origin_route(&metas, &mut self.idx, &ask).map_err(|e| error_json(&e))? {
+            Some(rep) => Ok(mzlab_core::jsonb::write(&rep)),
+            None => Ok(String::new()),
+        }
+    }
+
+    /// `api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d` over the session `items`; `query` is the query string of the route.
+    /// Empty = Python's (profile or high-resolution files, parameters Python must reject).
+    pub fn map_route(&mut self, path: &str, items: &str, query: &str) -> Result<String, JsValue> {
+        let metas = session_items(items)?;
+        let r = mzlab_core::maproute::map_route(path, &metas, &mut self.idx, &Query::parse(query)).map_err(|e| error_json(&e))?;
+        Ok(r.unwrap_or_default())
+    }
 }
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with

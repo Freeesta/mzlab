@@ -144,6 +144,7 @@ onmessage = async ev => {
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
       case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (profile or high resolution)
+      case "map": info = engine.map_route(m.path, m.items, m.query); break;             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;
       case "reset": engine.close_all(); blobs.clear(); break;
