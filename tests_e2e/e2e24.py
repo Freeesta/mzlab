@@ -1,6 +1,6 @@
 # e2e24: scheda Disegno without data files. The student's drawing is never erased (2.0), properties with the charge excluded (2.1),
 # default ion (2.2), SMILES of a selection, logP, the four exports (name, transparent background, JPEG state) (2.3).
-# Runs against the local server; with SITE=<built site dir> (tools/build_site.py) it runs on the browser version (Pyodide) instead.
+# Runs against the local server; with SITE=<built site dir> (tools/build_site.py) it runs on the browser version instead.
 import os, sys, subprocess, time, re, io, zipfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

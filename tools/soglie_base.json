@@ -36,7 +36,6 @@
   "mzlab/web/pannelli.js": 865,
   "mzlab/web/picchi.js": 557,
   "mzlab/web/tour.js": 719,
-  "tools/bench.py": 811,
   "tools/genera_ei.py": 751
  },
  "funzioni": {
@@ -179,7 +178,6 @@
   "mzlab/web/visualizza.js::DISP": 99,
   "mzlab/web/workflow.js::WORKFLOW": 379,
   "mzlab/web/workflow.js::applyWorkflow": 83,
-  "tools/bench.py::main": 84,
   "tools/bench_mirino.py::run": 85,
   "tools/controlla_teoria.py::public_errors": 96,
   "tools/dati_sintetici.py::hr_dda": 103

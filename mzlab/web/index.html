@@ -5,7 +5,7 @@
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} · Analisi MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
-<script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
+<script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script><script src="static/an-util.js"></script><script src="static/an-quad.js"></script><script src="static/an-tof.js"></script><script src="static/an-orbi.js"></script><script src="static/an-esi.js"></script><script src="static/an-trappola.js"></script><script src="static/an-fticr.js"></script><script src="static/an-qqq.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
 <style>
@@ -80,7 +80,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 
 .cont{margin-top:5px;padding-top:4px;border-top:1px solid var(--line);max-width:300px}.cont-h{color:var(--accent)}.cont-row{margin-top:3px}#convhelp{margin-top:8px}#convhelp summary{cursor:pointer;color:var(--accent)}#convhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}#convhelp a{color:var(--accent)}#unopen{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--ink)}#unopen p{margin:4px 0}#unopen ul{margin:4px 0 0 18px;padding:0}#unopen .row{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
 .go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
-.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
+.cp-head{display:flex;gap:8px;align-items:center;justify-content:space-between}.cp-phase{margin-top:4px}.cp-spin{display:inline-block;width:.8em;height:.8em;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;vertical-align:-.1em;animation:cpspin 1s linear infinite}@keyframes cpspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.cp-spin{animation:none;border-top-color:var(--accent);border-right-color:var(--accent)}}.cp-total{margin-top:8px}.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
@@ -406,7 +406,7 @@ const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... loa
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
 // data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), in one of three analysers chosen at random:
-// a quadrupole (helix), a reflectron TOF (packet leaves, turns in the mirror, arrives separated), an Orbitrap (orbits round the spindle and swings along it).
+// an-*.js: quadrupole, reflectron TOF, Orbitrap, electrospray source, linear ion trap, FT-ICR cell, triple quadrupole (Q1-q2-Q3).
 let ldIonRaf = 0;
 function ldIon(on, mode) {
   if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
@@ -418,60 +418,18 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const A = {
-    quad: {
-      n: 26, dt: 0.045, step: 9,
-      at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
-      shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; },
-    },
-    tof: {
-      n: 14, dt: 0.03, T: 4.6, v: [260, 205, 165],
-      at(j, t) {
-        const u = ((t % this.T) + this.T) % this.T, vj = this.v[j], L = 290, t1 = L / vj, tr = 0.0026 * vj, p = vj * tr / Math.PI;
-        if (u < t1) { const f = u / t1; return { x: 40 + L * f, y: 34 + 26 * f }; }
-        if (u < t1 + tr) { const f = (u - t1) / tr; return { x: 330 + p * Math.sin(Math.PI * f), y: 60 + 4 * f }; }
-        const f = (u - t1 - tr) / t1; if (f > 1) return null;
-        return { x: 330 - L * f, y: 64 + 26 * f };
-      },
-      draw() {
-        cx.strokeStyle = line; cx.lineWidth = 2;
-        for (let i = 0; i < 6; i++) { const x = 338 + i * 12; cx.beginPath(); cx.moveTo(x, 22); cx.lineTo(x, 102); cx.stroke(); }
-        cx.beginPath(); cx.moveTo(26, 24); cx.lineTo(26, 44); cx.stroke();
-        cx.lineWidth = 4; cx.beginPath(); cx.moveTo(30, 80); cx.lineTo(30, 100); cx.stroke();
-      },
-    },
-    orbi: {
-      n: 22, dt: 0.035, w: [1.0, 0.82, 0.68],
-      at(j, t) {                                                  // harmonic oscillation along z (horizontal) while turning round the spindle
-        const a = TAU * 0.55 * this.w[j] * t + j * 1.7, r = TAU * 1.3 * t + j * TAU / 3;
-        return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(r), z: Math.sin(r) };
-      },
-      draw() {                                                     // outer electrode: a barrel in two symmetrical halves with a slit in the middle, the ends closing towards the axis
-        cx.strokeStyle = v("--muted") || line; cx.globalAlpha = 0.55; cx.lineWidth = 3; cx.lineJoin = "round";
-        const c = W / 2, m = H / 2, g = 5, Rr = 50, L = 96;
-        for (const d of [-1, 1]) for (const e of [-1, 1]) {
-          cx.beginPath(); cx.moveTo(c + d * g, m + e * Rr);
-          cx.bezierCurveTo(c + d * 56, m + e * (Rr + 1), c + d * L, m + e * 40, c + d * (L + 4), m + e * 10); cx.stroke();
-        }
-        cx.globalAlpha = 1;
-      },
-      mid() {                                                      // central electrode: a short, stout spindle, widest in the middle
-        const c = W / 2, m = H / 2, Lh = 72, th = 17;
-        cx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || line;
-        cx.beginPath(); cx.moveTo(c - Lh, m); cx.quadraticCurveTo(c, m - 2 * th, c + Lh, m); cx.quadraticCurveTo(c, m + 2 * th, c - Lh, m); cx.closePath(); cx.fill();
-      },
-    },
-  };
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = {};         // the analysers live in an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);
   const keys = Object.keys(A), an = A[mode in A ? mode : keys[Math.floor(Math.random() * keys.length)]];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
   const frame = ms => {
     const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
-    cx.clearRect(0, 0, W, H); cx.globalAlpha = 1; if (an.draw) an.draw();
+    cx.clearRect(0, 0, W, H); cx.globalAlpha = 1; if (an.draw) an.draw(t);
     for (let j = 0; j < 3; j++) for (let k = 0; k < an.n; k++) {
       const tk = t - k * an.dt; if (an.T && tk < 0) continue;
       const q = an.at(j, tk); if (!q) continue;
       const z = q.z ?? 0, x = an.shift ? an.shift(k) : q.x;
-      pts.push({ x, y: q.y, z, r: (5.5 + 2 * z) * (1 - k / an.n * 0.7), a: (1 - k / an.n) * (0.6 + 0.4 * (z + 1) / 2), c: col[j] });
+      pts.push({ x, y: q.y, z, r: (5.5 + 2 * z) * (1 - k / an.n * 0.7) * (q.s ?? 1), a: (1 - k / an.n) * (0.6 + 0.4 * (z + 1) / 2), c: col[j] });
     }
     pts.sort((p, q) => p.z - q.z);
     let midDone = !an.mid;
@@ -552,7 +510,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(tr
     <li data-i18n-html="conv.help.step4">Premi <b>Start</b>: i file <code>.mzML</code> compaiono nella cartella di output.</li>
     <li data-i18n-html="conv.help.step5">Carica qui i <code>.mzML</code>.</li></ol>
    <p id="convdesk" class="muted sm" hidden data-i18n="conv.help.desktop">I file .raw non serve convertirli: trascinali nel riquadro qui sopra e l'app li converte.</p></details>
-  <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.dam" hidden>
+  <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.wiff,.scan,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
  <div class="card"><h3 data-i18n="load.step2.title">2. Metodo di acquisizione</h3>
   <div id="dropdam" tabindex="0" role="button"></div>
@@ -697,15 +655,35 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen()).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html","load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html",b.convertWiff?"load.dropWiff":"load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
+  const raws=files.filter(f=>/\.raw$/i.test(f.name)),out=[];let i=0;const g=ConvUI.group(box,raws.map(f=>f.size));
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
-    const ui=ConvUI.start(box,++i,n,f.name);
-    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
-    catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+    if(g.signal.aborted)continue;       // cancelled: the .raw files still to convert are left out
+    const ui=g.start(++i,f.name);
+    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal);CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    catch(e){if(e.cancelled){ui.done();continue}ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+  g.end();if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return out}
+const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
+// SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
+async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+  if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
+  res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
+  for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
+  const jobs=[];
+  for(const [k,e] of [...WIFF_WAIT]){
+    if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
+    WIFF_WAIT.delete(k);
+    try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>jobs.push({e,n,several:s.length>1}))}catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}}
+  const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],g=ConvUI.group(box,jobs.map(j=>j.e.scan.size));let i=0;
+  for(const j of jobs){if(g.signal.aborted)break;      // cancelled: the samples still to convert are left out
+    const nm=wiffName(j.e.stem,j.n,j.several,taken),ui=g.start(++i,nm);
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>ui.update(p));taken.push(nm);CONV.add(nm,blob);res.files.push(new File([blob],nm));ui.done();renderFiles()}
+    catch(x){ui.fail(x.json?I18N.err(x.json).message:x.message)}}
+  g.end();
+  return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
 function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
@@ -743,13 +721,13 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
-async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
+async function upload(files,into){const box=$("#up");fail();const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
-    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
+    const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
       if(j.error)throw I18N.err(j);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}

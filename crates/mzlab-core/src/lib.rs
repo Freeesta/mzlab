@@ -1,6 +1,7 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 pub mod analog;
+pub mod budget;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;
@@ -31,6 +32,7 @@ pub mod mapgrid;
 pub mod maproute;
 pub mod ms2sim;
 pub mod ole;
+pub mod wiff;
 pub mod origin;
 pub mod originroute;
 pub mod mzidx;
@@ -41,6 +43,7 @@ pub mod methodinfo;
 pub mod methodjson;
 pub mod mzml;
 pub mod mzmlhead;
+pub mod mzmlwrite;
 pub mod peakq;
 pub mod peaktable;
 pub mod peaks;

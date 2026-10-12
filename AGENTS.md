@@ -9,7 +9,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, `pages.yml` a ogni push su `main`). Tutto gira nel browser; i file degli studenti non lasciano il computer.
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** nel mondo LR (niente «ecco i TP», niente rette di taratura o tabelle della relazione: gli studenti le fanno in Excel). Il mondo HR è uno strumento di ricerca: librerie, formule e analoghi come candidati con punteggio e prove, mai come verità. Eccezione: mzFinder (nascosto, solo per Federico).
-  2. Leggero: il calcolo pesante vive in Rust (`crates/`: `.wasm` nel sito, nativo nell'app desktop); Python ≥ 3.11 + numpy (Pyodide) serve solo ciò che Rust non fa (HR, Banco, mzFinder, mappe HR, `.dam`) ed è il RIFERIMENTO dei test di parità (`tools/golden.py`); HTML/JS semplice, nessun bundler né dipendenza pesante.
+  2. Leggero: il programma servito è Rust (`crates/`: `.wasm` nel sito, nativo nell'app desktop) + HTML/JS semplice, senza bundler né dipendenze pesanti. Python ≥ 3.11 + numpy è solo RIFERIMENTO dei test di parità (`tools/golden.py`, `tools/*_riferimento.py`) e strumento (`tools/`): mai nel sito (per ora solo mzFinder, nascosto, tiene il suo Pyodide in `static/mzfinder/`) e nessuna funzione nuova nasce in Python.
   3. Interfaccia in italiano e inglese; Teoria e Pratica solo in italiano; codice e commenti in inglese. Sempre «m/z», «RT», «XIC», «TIC», «MRM», «MS2».
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
@@ -35,9 +35,9 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Struttura e test nuovi**: `tests/` = pytest, `tests_e2e/` = script Playwright (uno per argomento, `lib.py` → `Run`); regole e aiuti in `docs/agenti/test.md`.
 
 ## 4. Architettura
-- **Un codice Python per due «server»**: `mzlab/api.py` (`dispatch`: tutte le rotte `/api/...`, errori sempre JSON `{error, error_key, params}`) sopra `App` (`mzlab/app.py`: file aperti, sessione, taccuino). Lo usano `tools/dev_server.py` (solo test e sviluppo) e `mzlab/browser.py` (nel sito, dentro Pyodide). Un endpoint nuovo si aggiunge solo in `api.py`, con un test.
-- **Nel sito**: `tools/build_site.py` copia `mzlab/web` in `site/static` e scarica Pyodide; `browser.js` passa `fetch("api/...")` al motore Rust/WASM (`rust-bridge.js`, `rust-worker.js`, `lr.js`; predefinito, `?motore=python` e `?lr=0` tornano al percorso classico), che per i file a bassa risoluzione risponde a file, sessione, taccuino, TIC, XIC, spettri, MRM e formule senza Pyodide (mzML e `.mzidx` in OPFS).
-  Pyodide (`browser-worker.js`: Python + `mzlab.zip`) parte una volta, con un avviso, alla prima richiesta che solo Python serve (HR, Banco, mzFinder, mappe HR, `.dam`). Dettagli in `docs/agenti/dati.md` e `docs/agenti/rust-rotte.md`.
+- **Python = riferimento**: `mzlab/api.py` (`dispatch`: tutte le rotte `/api/...`, errori sempre JSON `{error, error_key, params}`) sopra `App` (`mzlab/app.py`: file aperti, sessione, taccuino). Lo usano `tools/dev_server.py` (solo test e sviluppo) e `tests_e2e/pyref.py` (il riferimento nel processo del test). Una rotta nuova nasce in Rust (`crates/mzlab-core`) con la sua parità; `api.py` si tocca solo per correggere bug trovati dalla parità.
+- **Nel sito**: `tools/build_site.py` copia `mzlab/web` in `site/static`; `browser.js` passa `fetch("api/...")` al motore Rust/WASM (`rust-bridge.js`, `rust-worker.js`, `lr.js`), che risponde a tutte le rotte (file, sessione, taccuino, cromatogrammi, spettri, MRM, formule, mappe, HR; mzML e `.mzidx` in OPFS).
+  Un solo motore e nessun ripiego: se il worker muore due volte in un minuto la pagina chiede di ricaricare (`error.engineFallback`); una richiesta che il motore non sa servire risponde `err.route.unavailable` e finisce in `window.MZLAB_LR_MISS` (i test la vogliono vuota). Pyodide (`tpmine-worker.js`) resta solo per mzFinder. Dettagli in `docs/agenti/dati.md` e `docs/agenti/rust-rotte.md`.
 - **App desktop** (`crates/mzlab-desktop`, Tauri v2): la stessa pagina web con un motore nativo Rust dietro `mzlab://`; dettagli in `docs/agenti/rust-desktop.md`.
 - **Python** (`mzlab/`): `reader/` (mzML senza librerie, profilo, `.dam`, `mzidx.py`: formato in `docs/agenti/mzidx.md`), `explore.py`, `peaks.py`, `project.py`, `chem/` (masse, formule, addotti, albero MSn), `ionfamily.py` (senza verdetti), `demo.py` (file per file: la mappa). `tools/converti.py`: `.raw` con ThermoRawFileParser, `.wiff`/`.d` con MSConvert in Docker.
 - **Indirizzi**: `#/dati` e `#/disegno` nell'app; `#/teoria`, `#/teoria/N` e `#/pratica` portano alla Teoria autonoma `static/teoria/` (senza motore; `docs/agenti/teoria.md`).
@@ -51,6 +51,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, barra laterale, tour | `docs/agenti/dati.md` |
+| analizzatori animati (quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ) nella schermata di caricamento (`an-*.js`) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
@@ -63,8 +64,10 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
+| lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`) |
+| contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |

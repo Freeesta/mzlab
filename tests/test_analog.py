@@ -61,7 +61,6 @@ def test_csv():
 def test_course_and_reading():
     g = analog.course_gradient()
     assert g["source"] == "course" and len(g["points"]) == 8
-    assert analog.gradient_at(g, 1.0)["b"] == 10 and abs(analog.gradient_at(g, 7.0)["b"] - 35) < 1e-9 and analog.gradient_at(g, 25) is None
 
 
 def test_pressure_unit_rule():

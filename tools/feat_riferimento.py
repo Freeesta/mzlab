@@ -4,7 +4,7 @@
 
 Writes in OUT/ the synthetic mzML files of `tools/dati_sintetici.py` (Orbitrap-like MS1 series with invented ions: weak, intense, wobbling in
 m/z, side lobes, continuous background), their `.mzidx` built by the Python builder and `detect_<name>.json`: the features of
-`features.detect` with the first and last scan of every trace. With --golden the JSON files go to tests/golden/feat/ as well.
+`features.detect` with the first and last scan of every trace. The detect files stay in OUT/; the other reference files go to tests/golden/feat/ with --golden.
 No compound names: every ion is a number.
 
     python3 tools/feat_riferimento.py OUT --solo allinea [--golden]
@@ -251,7 +251,7 @@ def piani() -> dict[str, tuple[int, list[tuple], float]]:
             "vicini": (24, vicini, 10.0), "vuoto": (25, [], 3.0)}
 
 
-def un_file(out: Path, nome: str, seed: int, ioni: list, fine: float, golden: Path | None) -> int:
+def un_file(out: Path, nome: str, seed: int, ioni: list, fine: float) -> int:
     mz = out / f"{nome}.mzML"
     ds.hr_series(mz, np.random.default_rng(seed), ioni, rt_end=fine, cyc=0.008 if nome == "fondo" else 0.04)   # "fondo": > 400 scans
     ix = out / f"{nome}.mzidx"
@@ -269,9 +269,6 @@ def un_file(out: Path, nome: str, seed: int, ioni: list, fine: float, golden: Pa
            "background": f.background.astype(int).tolist(), "artefact": f.artefact.astype(int).tolist()}
     txt = json.dumps(doc, separators=(",", ":"))
     (out / f"detect_{nome}.json").write_text(txt, encoding="utf-8")
-    if golden is not None:
-        golden.mkdir(parents=True, exist_ok=True)
-        (golden / f"detect_{nome}.json").write_text(txt, encoding="utf-8")
     run.close()
     return len(f)
 
@@ -303,7 +300,7 @@ def main(argv) -> int:
         print("identita", un_file_identita(out, golden))
         return 0
     for nome, (seed, ioni, fine) in piani().items():
-        print(nome, un_file(out, nome, seed, ioni, fine, golden))
+        print(nome, un_file(out, nome, seed, ioni, fine))
     return 0
 
 

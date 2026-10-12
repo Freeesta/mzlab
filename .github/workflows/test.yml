@@ -36,6 +36,8 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[test]"
       - name: Unit tests
+        env:
+          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
         run: python -m pytest -q tests
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
@@ -91,7 +93,7 @@ jobs:
           for f in mzlab/web/*.js; do
             b=$(basename "$f" .js)
             case "$b" in
-              browser-worker|archivio|qqq-db|draw|sw|rust-worker|rust-bridge|mappa3d|workflow|perf|qualita|peaks-worker) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
+              archivio|qqq-db|draw|sw|rust-worker|rust-bridge|mappa3d|workflow|perf|qualita|peaks-worker) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
               *) node --check "$f" ;;
             esac
           done

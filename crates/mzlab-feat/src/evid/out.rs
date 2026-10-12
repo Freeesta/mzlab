@@ -1,7 +1,10 @@
 //! `evid/1` as JSON: the graph of the identities with their proofs (schema `docs/schemi/evid-1.json`). The bytes depend only on the graph: they are the
 //! `evid` section of the `.mzfeat` and the base of the SHA-256 that compares two runs.
 
-use super::graph::{Edge, Identity, Node};
+use super::graph::{Edge, Identity, Inputs, Node};
+use super::prepared::{order as graph_order, Key, Prepared};
+use crate::store::Section;
+use mzlab_core::error::Result;
 use super::{breakdown_fields, evidence_json, PointsTable};
 use crate::table::*;
 use mzlab_core::json::{round, Out};
@@ -85,15 +88,84 @@ fn identity_json(o: &mut Out, x: &Identity) {
     o.raw("]}");
 }
 
-/// The document `evid/1`: identities in the order of the graph (the order of the candidates).
-pub fn graph_json(ids: &[Identity], table: &PointsTable) -> String {
+fn head_json(table: &PointsTable) -> String {
     let mut o = Out::default();
     o.raw("{\"formato\":").str(EVID_GRAPH_FORMAT);
     o.raw(",\"versione\":").int(i64::from(super::EVID_VERSION));
     o.raw(",\"versione_punti\":")
         .int(i64::from(table.version))
         .raw(",\"identita\":[");
+    o.0
+}
+
+/// The document `evid/1`: identities in the order of the graph (the order of the candidates).
+pub fn graph_json(ids: &[Identity], table: &PointsTable) -> String {
+    let mut o = Out(head_json(table));
     list(&mut o, ids, identity_json);
     o.raw("]}");
     o.0
+}
+
+/// The same document written in pieces, so that it never exists as one string. Pass 1 makes every identity once for its place in the order and the length
+/// of its JSON (an identity is a pure function of its row); pass 2, in `emit`, makes them again in order. Same bytes as `graph_json`, memory of one identity.
+pub struct GraphStream<'a, 'b> {
+    inp: &'b Inputs<'a>,
+    prep: Prepared,
+    order: Vec<u32>,
+    head: String,
+    len: usize,
+}
+
+impl<'a, 'b> GraphStream<'a, 'b> {
+    pub fn new(inp: &'b Inputs<'a>) -> GraphStream<'a, 'b> {
+        let prep = Prepared::new(inp);
+        let n = inp.aligned.len();
+        let head = head_json(inp.table);
+        let (mut keys, mut body, mut o) = (Vec::with_capacity(n), 0usize, Out::default());
+        for r in 0..n {
+            let id = prep.identity(inp, r);
+            keys.push(Key::of(&id));
+            o.0.clear();
+            identity_json(&mut o, &id);
+            body += o.0.len();
+        }
+        let mut order: Vec<u32> = (0..n as u32).collect();
+        order.sort_by(|&a, &b| graph_order(&keys[a as usize], &keys[b as usize]));
+        let commas = n.saturating_sub(1);
+        GraphStream {
+            inp,
+            prep,
+            order,
+            len: head.len() + body + commas + 2,
+            head,
+        }
+    }
+
+    /// Bytes this stream will give an estimate of what `new` holds: keys, order and the shared vectors of the rows.
+    pub fn bytes_per_row() -> usize {
+        std::mem::size_of::<Key>() + 4 + 48
+    }
+}
+
+impl Section for GraphStream<'_, '_> {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()> {
+        const FLUSH: usize = 1 << 16;
+        let mut o = Out(self.head.clone());
+        for (i, &r) in self.order.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            identity_json(&mut o, &self.prep.identity(self.inp, r as usize));
+            if o.0.len() >= FLUSH {
+                put(o.0.as_bytes())?;
+                o.0.clear();
+            }
+        }
+        o.raw("]}");
+        put(o.0.as_bytes())
+    }
 }

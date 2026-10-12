@@ -315,6 +315,17 @@ pub fn run<R: ReadAt>(
     p: &TargetParams,
 ) -> Result<TargetResult> {
     let n = index.len().min(feats.len());
+    run_loading(index, n, &mut |k| Ok(feats[k].clone()), reg, p)
+}
+
+/// `run` with the detection table of file `k` given by `load(k)` when its turn comes: one table is held at a time.
+pub fn run_loading<R: ReadAt>(
+    index: &mut [Index<R>],
+    n: usize,
+    load: &mut dyn FnMut(usize) -> Result<FileFeatures>,
+    reg: &mut Registry,
+    p: &TargetParams,
+) -> Result<TargetResult> {
     let mut per: Vec<Vec<Cell>> = vec![vec![absent(); n]; reg.hyps.len()];
     let (mut files, mut rate) = (Vec::with_capacity(n), Vec::with_capacity(n));
     let masses: Vec<f64> = reg
@@ -324,7 +335,7 @@ pub fn run<R: ReadAt>(
         .map(|h| h.mz)
         .collect();
     for k in 0..n {
-        let (seen, fp) = search_file(&mut index[k], feats[k], reg, p)?;
+        let (seen, fp) = search_file(&mut index[k], &load(k)?, reg, p)?;
         for s in seen {
             per[s.hyp as usize][k] = s.cell;
         }

@@ -42,7 +42,8 @@ fn null_component(v: &mut Value) {
 #[test]
 fn stat_routes_like_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let ready = std::env::var("MZLAB_STAT_JSON").ok().map(std::path::PathBuf::from);
+    let golden = root.join("tests/golden/ref/statistica.json");           // the answers of Python for the invented tables are committed: no python3 needed
+    let ready = std::env::var("MZLAB_STAT_JSON").ok().map(std::path::PathBuf::from).or_else(|| golden.exists().then_some(golden));
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-stat-{}.json", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),

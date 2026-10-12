@@ -1,7 +1,7 @@
 """The endpoints of the program, independent of the transport.
 
-`dispatch` is used by the test server (tools/dev_server.py) and by the browser version (Pyodide, web/browser-worker.js):
-same routes, same answers, one implementation.
+`dispatch` is used by the test server (tools/dev_server.py) and by the references of the tests (tests_e2e/pyref.py); the site and the desktop
+app answer with the Rust engine, which the parity tests compare with this one.
 """
 from __future__ import annotations
 
