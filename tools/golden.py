@@ -7,7 +7,7 @@
 Sources: the anonymous example files of mzlab/web/esempi (Full Scan, MS2, MRM) and two synthetic files written by
 tools/dati_sintetici.py with a fixed seed (a Full Scan and an MRM, peaks of known shape). No compound names.
 Per file: TIC, XIC of 5 fixed m/z (window [n-0.2, n+0.8], written in the JSON), limits and areas of the XIC peaks,
-spectral entropy similarity (Li & Fiehn 2021) of 5 MS2 pairs. Comparison order: peak limits (identical indices), then
+spectral entropy similarity (Li & Fiehn 2021) of 5 MS2 pairs; pressure: unit -> bar for 13 units x 4 sets of values (note key included) and the reduced analog trace of a synthetic file. Comparison order: peak limits (identical indices), then
 areas (1e-4 relative), m/z (1e-6), entropy (1e-9).
 """
 from __future__ import annotations
@@ -164,6 +164,28 @@ def _mrm(path: Path) -> dict:
     return {"kind": "mrm", "chromatograms": chroms}
 
 
+PRESSURE_UNITS = ["pascal", "Pa", "PASCAL", "kPa", "kilopascal", "MPa", "megapascal", "psi", "pound per square inch", "bar", "", None, "unknown"]
+PRESSURE_VALUES = {"normal": [0.0, 120.5, 250.0, 399.9], "x10": [2.78e7, 1.0e8, 2.78e8], "empty": [], "negative": [-5.0, 3.0]}
+
+
+def _pressure(folder: Path) -> dict:
+    """Pressure: unit -> bar for every unit x value set (values, note key), and the analog trace of a synthetic file declaring pascal (reduced to about 2 n points)."""
+    import dati_sintetici as ds
+    from mzlab.analog import pressure_to_bar
+    cases = []
+    for unit in PRESSURE_UNITS:
+        for name, vals in PRESSURE_VALUES.items():
+            y, note = pressure_to_bar(vals, unit)
+            cases.append({"unit": unit, "set": name, "bar": [float(v) for v in y], "note": note["key"] if note else None})
+    p = folder / "sintetico_Pressione.mzML"
+    ds.full_scan(p, 0, np.random.default_rng(2026), pressure=True)
+    it = _item(p)
+    meta = it.analog_list()
+    a = it.analog(meta[0]["i"], 200)
+    return {"kind": "pressure", "cases": cases, "list": meta,
+            "analog": {"unit": a["unit"], "note": (a.get("unit_note") or {}).get("key"), "t": a["t"], "y": a["y"]}}
+
+
 def write_synthetic(out: Path) -> dict[str, Path]:
     """The three synthetic files of the golden data (fixed seeds), for the tests of other engines."""
     import dati_sintetici as ds
@@ -212,6 +234,7 @@ def compute(skip_missing: bool = False) -> dict[str, dict]:
         res["sintetico_MS2"] = _ms2(files["sintetico_MS2"])
         res["sintetico_MRM"] = _mrm(files["sintetico_MRM"])
         res["sintetico_Differenza"] = _diff(Path(d) / "sub")
+        res["sintetico_Pressione"] = _pressure(Path(d))
     return res
 
 
@@ -236,6 +259,20 @@ def _cmp_trace(name, new, old, bad: list[str]) -> None:
         bad.append(f"{name}: RT differs")
 
 
+def _cmp_pressure(name, a, b, bad: list[str]) -> None:
+    if len(a["cases"]) != len(b["cases"]):
+        bad.append(f"{name}: {len(a['cases'])} cases instead of {len(b['cases'])}"); return
+    for ca, cb in zip(a["cases"], b["cases"]):
+        tag = f"{name}/{cb['unit']!r}/{cb['set']}"
+        if ca["note"] != cb["note"] or len(ca["bar"]) != len(cb["bar"]) or any(not _close(x, y, 1e-12, 1e-12) for x, y in zip(ca["bar"], cb["bar"])):
+            bad.append(f"{tag}: {ca['bar']} {ca['note']} vs {cb['bar']} {cb['note']}")
+    if a["list"] != b["list"]:
+        bad.append(f"{name}/list: {a['list']} vs {b['list']}")
+    ta, tb = a["analog"], b["analog"]
+    if (ta["unit"], ta["note"], len(ta["t"])) != (tb["unit"], tb["note"], len(tb["t"])) or any(not _close(x, y, 1e-9, 1e-9) for k in "ty" for x, y in zip(ta[k], tb[k])):
+        bad.append(f"{name}/analog: unit, note, points or values differ")
+
+
 def controlla(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = False) -> list[str]:
     bad: list[str] = []
     keys = (set(old) & set(new)) if skip_missing else (set(old) | set(new))
@@ -244,6 +281,8 @@ def controlla(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = F
             bad.append(f"{name}: missing in {'golden' if name not in old else 'engine'}")
             continue
         a, b = new[name], old[name]
+        if b.get("kind") == "pressure":
+            _cmp_pressure(name, a, b, bad); continue
         for k in ("tic",):
             if k in b:
                 _cmp_trace(f"{name}/{k}", a[k], b[k], bad)

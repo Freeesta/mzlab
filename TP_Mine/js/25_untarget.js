@@ -326,6 +326,16 @@
     t.stats.features = t.features.length; return t;
   }
 
+  // ------------------------------------------------------------ mzFinder pipeline (crates/mzlab-feat): the rows of an aligned series {id, mz, rt, areas[], detected[]} (indices of samples), program «mzlab»
+  function fromRows(rows, samples, o = {}) {
+    const t = newTable("mzlab", o.name || "mzFinder pipeline", polOf(o.pol)); t.samples = samples.slice();
+    for (const r of rows) {
+      const f = addFeature(t, r.id, r.mz, r.rt); r.areas.forEach((a, i) => { if (a > 0) f.areas[samples[i] || "file" + i] = a; });
+      f.detected = (r.detected || []).map(i => samples[i] || "file" + i);
+    }
+    t.stats.features = t.features.length; return t;
+  }
+
   // ------------------------------------------------------------ SHA-256 of the file of the table (hex)
   async function sha256Hex(data) {
     const buf = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -383,7 +393,7 @@
   }
 
   const UNT = { eachRow, num, formulaMass, normAdduct, checkStructure, cleanName, isPropagated, polOf, keyOf, detect, readMzmineFull, mergeMzmineAnnotations, readMgf, attachMs2, readMzmineQuant, readEdges, readMsdial, parseSpectrumText,
-    readGnpsLibrary, readGnpsNetwork, fromMzfinder, sha256Hex, build, assessExternal, assessAllExternal, ADDUCTS, ANALOG_PPM, MAIN };
+    readGnpsLibrary, readGnpsNetwork, fromMzfinder, fromRows, sha256Hex, build, assessExternal, assessAllExternal, ADDUCTS, ANALOG_PPM, MAIN };
   G.UNT = UNT;
   if (typeof module !== "undefined") module.exports = UNT;
 })();
