@@ -270,6 +270,18 @@ window.MAPPA = (() => {
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }      // resizing reallocates the bitmap: only when the panel changed size
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
   }
+  // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
+  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8). s.lbls keeps the boxes.
+  function sideLabels(g, W, order, get, x0, s) {
+    const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
+    for (const i of order) {
+      if (out.length >= 8) break; const q = get(i);
+      const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + 4 : q.y - 3, bx = { x, y: by - 9, w, h: 11 };
+      if (out.some(o => bx.x < o.x + o.w + 2 && o.x < bx.x + bx.w + 2 && bx.y < o.y + o.h + 1 && o.y < bx.y + bx.h + 1)) continue;
+      g.strokeText(q.t, x, by); g.fillText(q.t, x, by); out.push({ t: q.t, ...bx, ly: q.y, tip: q.tip, right });
+    }
+    g.lineWidth = 1;
+  }
   function drawSide(p, pt, sp, prev) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
@@ -283,9 +295,8 @@ window.MAPPA = (() => {
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke(); g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), used = [];
-    g.fillStyle = css("--ink"); g.textAlign = "left";
-    for (const i of top) { if (used.length >= 8 || sp.y[i] < ymax * 0.05) break; const y = Y(sp.mz[i]); if (used.some(u => Math.abs(u - y) < 12)) continue; used.push(y); g.fillText(sp.mz[i].toFixed(mzd(p)), Math.min(x1 - 40, x0 + 4 + (x1 - x0) * sp.y[i] / ymax), y + 4); }
+    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]);
+    sideLabels(g, W, top.filter(i => sp.y[i] >= ymax * 0.05), i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
