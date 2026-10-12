@@ -19,11 +19,11 @@ try:
         pg.set_input_files("#pick", synth.make_series("/tmp/s22", [0, 15, 60])); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         def legacy():
-            assert pg.evaluate("UIP.font") is None and not pg.evaluate("'tips' in UIP") and pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1
+            assert pg.evaluate("UIP.font") is None and pg.evaluate("fz()") == 1 and not pg.evaluate("'tips' in UIP") and pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1
         step("an old saved value (font, tips/num false) is read: the removed options are ignored", legacy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.is_visible("#uipset")
-            assert pg.locator("#uipset [data-f]").count() == 0, "no text size buttons any more"
+            assert pg.locator("#uipset [data-f]").count() == 0 and "Dimensione testo" not in pg.inner_text("#uipset"), "no text size buttons any more"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))"); print(saved)

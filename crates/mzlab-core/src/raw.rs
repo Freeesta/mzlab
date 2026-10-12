@@ -1,10 +1,11 @@
 //! Thermo `.raw` reader (OpenTFRaw, Apache-2.0) over any `Read + Seek`: the browser seeks in a `File` (blocks), the desktop in a file.
 //! `read` gives the same `Spectrum` values as the mzML reader; `to_mzml` writes the mzML that the rest of the program already reads.
-//! Spectra are the centroid peak lists, as in msconvert's default.
+//! Spectra are what the file holds, as in msconvert's default: the centroid peak list of a scan, or its profile when it has no other (`Spectrum::profile`);
+//! nothing is peak-picked here.
 
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use opentfraw::{iter_spectra, Polarity, RawFileReader, SpectrumRecord};
+use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord};
 
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
@@ -28,7 +29,7 @@ fn spectrum(r: SpectrumRecord) -> Spectrum {
             Some(Polarity::Negative) => -1,
             None => 0,
         },
-        profile: false,
+        profile: r.scan_mode == Some(ScanMode::Profile),
         filter: r.filter.unwrap_or_default(),
         precursor,
         mz: r.mz,

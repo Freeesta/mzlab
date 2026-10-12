@@ -18,6 +18,8 @@ pub struct AlignParams {
     pub max_ppm_span: f64,
     pub max_rt_span: Option<f64>,
     pub drop_artefacts: bool,
+    /// A group with two features of the same file (two close isomers) is cut at the RT gaps above this, minutes (None: never).
+    pub split_gap: Option<f64>,
 }
 
 impl Default for AlignParams {
@@ -28,9 +30,13 @@ impl Default for AlignParams {
             max_ppm_span: 10.0,
             max_rt_span: None,
             drop_artefacts: true,
+            split_gap: None,
         }
     }
 }
+
+/// Files that must show two features on both sides of a cut for `split_duplicates`.
+const MIN_SPLIT_FILES: i32 = 9;
 
 /// A feature of the slab: (file, row in the file).
 type Item = (u32, u32);
@@ -159,6 +165,9 @@ fn split_slab(
         }
     }
     *items = sorted.iter().map(|x| x.1).collect();
+    if let Some(gap) = p.split_gap {
+        groups = split_duplicates(files.len(), &sorted, groups, gap);
+    }
     match p.max_rt_span {
         None => groups,
         Some(span) => {
@@ -166,6 +175,45 @@ fn split_slab(
             limit_span(&xr, groups, span)
         }
     }
+}
+
+/// Cuts the groups where an RT gap above `gap` lies between two features of one file in at least `MIN_SPLIT_FILES` files: two ions (close
+/// isomers) that the RT gap of the alignment fused; a double peak seen in one or two files only is not a second ion.
+fn split_duplicates(
+    nf: usize,
+    sorted: &[(f64, Item)],
+    groups: Vec<(usize, usize)>,
+    gap: f64,
+) -> Vec<(usize, usize)> {
+    let mut out = Vec::with_capacity(groups.len());
+    for (a, b) in groups {
+        let mut by_file: Vec<(u32, usize)> = (a..b).map(|i| (sorted[i].1 .0, i)).collect();
+        by_file.sort_unstable();
+        let mut straddle = vec![0i32; b - a + 1];
+        for w in by_file.chunk_by(|x, y| x.0 == y.0) {
+            let (lo, hi) = (w[0].1, w[w.len() - 1].1);
+            if hi > lo {
+                straddle[lo + 1 - a] += 1;
+                straddle[hi + 1 - a] -= 1;
+            }
+        }
+        let (mut open, mut cuts) = (0, Vec::new());
+        for i in a + 1..b {
+            open += straddle[i - a];
+            if open >= MIN_SPLIT_FILES && sorted[i].0 - sorted[i - 1].0 > gap {
+                cuts.push(i);
+            }
+        }
+        // one cut = two ions; more cuts are a chain of noise, left fused
+        if cuts.len() != 1 || b - a > 2 * nf {
+            out.push((a, b));
+            continue;
+        }
+        out.push((a, cuts[0]));
+        let from = cuts[0];
+        out.push((from, b));
+    }
+    out
 }
 
 /// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).

@@ -41,7 +41,7 @@ impl Default for ResolveParams {
             pad: 15,
             max_shape: 0.9,
             valley_frac: 0.5,
-            min_sep: 0.1,
+            min_sep: 0.04,
             prom: ProminenceParams::default(),
             bin: 0.05,
             mix_cosine: 0.7,
