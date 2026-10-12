@@ -220,6 +220,7 @@ impl AgilentD {
             extra_names: Vec::new(),
             file_sha1: hashes(f),
             inline: Some(inline),
+            anonymous: false,
         })
     }
 }

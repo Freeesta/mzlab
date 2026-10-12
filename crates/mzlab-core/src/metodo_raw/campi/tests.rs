@@ -16,6 +16,7 @@ fn identity_is_found_and_scrubbed_in_any_case() {
     let id = Ident {
         computer: "LAB-PC-7".into(),
         paths: vec!["C:\\Data\\Rossi\\run1".into()],
+        ..Default::default()
     };
     assert!(id.names("Instrument on lab-pc-7") && id.names("file c:\\data\\rossi\\run1\\a.raw"));
     assert!(!id.names("Orbitrap Fusion"));

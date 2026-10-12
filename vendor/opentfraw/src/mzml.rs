@@ -755,6 +755,40 @@ fn build_chromatograms(raw: &RawFileReader) -> Vec<msc::ChromatogramRecord> {
     out
 }
 
+/// Pascals in one unit of a pressure channel (`psi`, `bar`, ...); `None` when the unit is not a pressure.
+fn pascal_per(unit: &str) -> Option<f64> {
+    match unit.to_ascii_lowercase().as_str() {
+        "psi" => Some(6894.757_293_168),
+        "bar" => Some(1e5),
+        "mbar" => Some(1e2),
+        "pa" => Some(1.0),
+        "kpa" => Some(1e3),
+        "mpa" => Some(1e6),
+        _ => None,
+    }
+}
+
+/// The pressure channels of the analog controllers as `pressure chromatogram` records (MS:1003019) in pascal, which is the unit the mzML
+/// states for them; `first` is the index of the first record. Channels in another unit are not written (they stay in `metodo/1.campi`).
+fn analog_records(traces: &[crate::AnalogTrace], first: usize) -> Vec<msc::ChromatogramRecord> {
+    let mut out = Vec::new();
+    for t in traces {
+        let Some(k) = pascal_per(&t.unit) else {
+            continue;
+        };
+        out.push(msc::ChromatogramRecord {
+            index: first + out.len(),
+            id: format!("{} {}", t.name.replace('_', " "), out.len() + 1),
+            chromatogram_type: Some(msc::CvTerm::new("MS:1003019", "pressure chromatogram")),
+            precursor_mz: None,
+            product_mz: None,
+            time_sec: t.time_min.iter().map(|m| (m * 60.0) as f32).collect(),
+            intensity: t.values.iter().map(|v| (v * k) as f32).collect(),
+        });
+    }
+    out
+}
+
 /// `SpectrumSource` adapter over a Thermo RAW reader.
 ///
 /// Use this when you want to feed Thermo data into any
@@ -924,7 +958,13 @@ impl<'a, R: Read + Seek> msc::SpectrumSource for OpenTfRawSource<'a, R> {
     fn iter_chromatograms<'s>(
         &'s mut self,
     ) -> Box<dyn Iterator<Item = msc::ChromatogramRecord> + 's> {
-        Box::new(build_chromatograms(self.raw).into_iter())
+        let mut recs = build_chromatograms(self.raw);
+        let traces = self
+            .raw
+            .analog_traces(&mut *self.source)
+            .unwrap_or_default();
+        recs.extend(analog_records(&traces, recs.len()));
+        Box::new(recs.into_iter())
     }
 }
 

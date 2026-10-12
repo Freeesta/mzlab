@@ -13,12 +13,15 @@ use opentfraw::RawFileReader;
 pub struct Ident {
     pub computer: String,
     pub paths: Vec<String>,
+    /// Other values that vanish from the texts (the serial number of an instrument).
+    pub names: Vec<String>,
 }
 
 impl Ident {
     fn needles(&self) -> impl Iterator<Item = &str> {
         std::iter::once(self.computer.as_str())
             .chain(self.paths.iter().map(String::as_str))
+            .chain(self.names.iter().map(String::as_str))
             .filter(|n| n.len() >= 4)
     }
 
@@ -37,6 +40,9 @@ impl Ident {
         }
         if self.computer.len() >= 4 {
             s = replace_nocase(&s, &self.computer, "");
+        }
+        for n in self.names.iter().filter(|n| n.len() >= 4) {
+            s = replace_nocase(&s, n, "");
         }
         s
     }
@@ -91,7 +97,7 @@ impl Campo {
         self.identita = true;
         self
     }
-    fn json(&self) -> Option<V> {
+    pub fn json(&self) -> Option<V> {
         obj(vec![
             ("origine", text(&self.origine)),
             ("chiave", text(&self.chiave)),
@@ -276,6 +282,21 @@ fn instid(raw: &RawFileReader) -> Vec<Campo> {
         .collect()
 }
 
+/// The analog controllers (pump pressure ...): the channel, its unit and the device it comes from.
+fn analog(traces: &[opentfraw::AnalogTrace]) -> Vec<Campo> {
+    let mut v = Vec::new();
+    for t in traces {
+        let from = format!("thermo-raw:Controller{}", t.controller);
+        v.push(Campo::new(&from, "ChannelName", &t.name));
+        v.push(Campo::new(&from, "Unit", &t.unit));
+        v.push(Campo::new(&from, "Samples", t.values.len()));
+        v.push(Campo::new(&from, "DeviceDriver", &t.driver));
+        v.push(Campo::new(&from, "DeviceModel", &t.model));
+        v.push(Campo::new(&from, "DeviceSerialNumber", &t.serial).id());
+    }
+    v
+}
+
 fn run_header(raw: &RawFileReader) -> Vec<Campo> {
     let i = &raw.run_header.sample_info;
     let q = "thermo-raw:RunHeader/SampleInfo";
@@ -304,6 +325,7 @@ fn script_map(key: &str) -> Option<&'static str> {
 /// All the fields of the file, in a stable order (origin, key); in an anonymous document the ones that identify a person or a computer are left out.
 pub fn fields(
     raw: &RawFileReader,
+    traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
     ident: &Ident,
@@ -312,6 +334,7 @@ pub fn fields(
     let mut all = container(raw);
     all.extend(instid(raw));
     all.extend(run_header(raw));
+    all.extend(analog(traces));
     all.extend(trailer(raw));
     for (t, k, v, u) in pairs {
         let from = t.map_or("thermo-raw:InstrumentMethod/Script".to_string(), |t| {

@@ -79,3 +79,15 @@ fn personal_data_are_left_out_only_when_asked() {
     );
     assert!(got.contains("raw_version") && got.contains("label.0.heading"));
 }
+
+#[test]
+fn the_intensity_array_of_a_pressure_chromatogram_gets_the_pascal_unit() {
+    let array =
+        "<cvParam cvRef=\"MS\" accession=\"MS:1000515\" name=\"intensity array\" value=\"\"/>\n";
+    let tic = format!("<chromatogram id=\"TIC\">\n<cvParam cvRef=\"MS\" accession=\"MS:1000235\" name=\"tic\" value=\"\"/>\n{array}</chromatogram>\n");
+    let pressure = format!("<chromatogram id=\"Pump Pressure 1\">\n<cvParam cvRef=\"MS\" accession=\"MS:1003019\" name=\"pressure chromatogram\" value=\"\"/>\n{array}</chromatogram>\n");
+    let got = run(&format!("{tic}{pressure}"), false);
+    assert_eq!(got.matches("unitName=\"pascal\"").count(), 1);
+    assert!(got.find("unitName=\"pascal\"").unwrap() > got.find("Pump Pressure 1").unwrap());
+    assert!(got.contains("unitAccession=\"UO:0000110\""));
+}
