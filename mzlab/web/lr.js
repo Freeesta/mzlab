@@ -1,10 +1,8 @@
-// The flow of the low-resolution files WITHOUT Pyodide (opt-in: ?lr=1 or localStorage qqq.lr = "1", with the Rust engine). browser.js asks this module
-// first: upload, the list of the files, the session (explore, meta, remove, new), the state and the notebook are answered here, from the
+// The files and the session of the browser version, answered by the Rust engine. browser.js asks this module: upload, the list of the files, the session (explore, meta, remove, new), the state and the notebook are answered here, from the
 // scan table and the index that the Rust engine reads (rust-worker.js, `lr_*` operations; files and indexes live in OPFS, archivio.js).
-// What this module cannot answer it returns null for: browser.js then starts Pyodide (once), replays the session into it (`replay()`)
-// and from then on everything goes the classic way. Python and this module never answer for the same session at the same time.
+// What this module cannot answer it returns null for: browser.js then answers with the error `err.route.unavailable`.
 //
-// The answers have the JSON of mzlab/api.py (tests_e2e/e2e_lr.py compares them with Python's).
+// The answers have the JSON of mzlab/api.py, the reference of the tests (tests_e2e/e2e_lr.py, tests/golden/).
 const VERSION = "0.1.0";                 // mzlab.__version__ (tests/test_lr_version.py keeps the two equal)
 const WORKDIR = "/work/sessione";
 const ACCEPT = /\.(mzml|dam)$/i;
@@ -24,12 +22,10 @@ import { createMethodRoutes } from "./lr-method.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
-  let samples = [];                      // the session as the page asked for it, with the later edits (what replay() sends to Python)
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
-  let foreign = false;                   // something in OPFS that only Python reads (a file without index): every request goes to Python
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items, hr: () => hr });      // the methods (.dam) and how the items were acquired
-  const api = { files, get foreign() { return foreign; }, session: () => ({ samples }), freeze: () => { foreign = true; } };
+  const api = { files };
   const rpc = async (msg) => {
     const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg);
@@ -51,24 +47,27 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
-  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; samples = []; hr = lr = false; foreign = false; };
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; };
 
-  api.boot = async () => {
-    const r = await rpc({ op: "lr_boot" });
+  api.boot = async (fresh) => {                                          // fresh: «start from scratch» (the database may be held by another tab: it is not read)
+    const r = await rpc({ op: "lr_boot", fresh });
     const list = JSON.parse(r.info);
     for (const [name, file] of r.files || []) rb.noteUpload(name, file);
     for (const f of list) {
       if (/\.dam$/i.test(f.name)) continue;                                           // a method: read on demand
-      if (!/\.mzml$/i.test(f.name) || !f.indexed) { foreign = true; continue; }
-      try { files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info)); } catch (_) { foreign = true; }
+      if (!/\.mzml$/i.test(f.name)) continue;
+      try {                                                                           // a file whose index was lost (a stopped upload) is indexed again
+        if (!f.indexed) await rpc({ op: "lr_index", name: f.name });
+        files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info));
+      } catch (_) { /* unreadable: it is left out of the list */ }
     }
-    if (foreign) return;
     await mr.refresh();
+    if (fresh) return;
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
       const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));
       if (list.length) await explore({ samples: list });
-    } catch (_) { items = null; samples = []; hr = lr = false; }                    // a broken notebook never stops the program
+    } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
   };
 
   async function upload(name, blob) {
@@ -80,7 +79,10 @@ export function createLr({ rb }) {
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
       else { await rpc({ op: "lr_index", name: n }); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
-    } catch (e) { foreign = true; return null; }                         // any trouble: Python takes the file as it always did
+    } catch (e) {
+      let key = "err.engine.index"; try { key = JSON.parse(e.raw).error_key || key; } catch (_) { /* not an engine error */ }
+      return fail(key, { name: n }, `cannot read the file: ${n}`);
+    }
     return json({ files: sorted(), methods: mr.list() });
   }
 
@@ -102,7 +104,7 @@ export function createLr({ rb }) {
       if (out.some(it => it.hr)) h = true; else l = true;
       if (h && l) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
     }
-    if (appended) { items = items.concat(add); samples = samples.concat(rows); } else { items = add; samples = rows; }
+    items = appended ? items.concat(add) : add;
     hr = h; lr = l;
     rb.noteExplore({ append: appended, samples: (appended ? add : items).map(it => ({ file: it.file })) });     // one slot per ITEM (a mixed file has several), in the order of the session; a file added keeps the open indexes of the others
     return json(session());
@@ -122,14 +124,6 @@ export function createLr({ rb }) {
         if ("rep" in e) it.rep = String(e.rep || "").trim() || null;
         n++;
       }
-      for (const s of samples) {
-        if (name !== s.file && name !== s.file.split("#")[0]) continue;
-        if (["sample", "blank", "standard"].includes(e.type)) s.type = e.type;
-        if ("time" in e) s.time = num(e.time);
-        if ("conc" in e) s.conc = num(e.conc);
-        if ("cunit" in e) s.cunit = e.cunit || null;
-        if ("rep" in e) s.rep = String(e.rep || "").trim() || null;
-      }
     }
     return json({ changed: n });
   }
@@ -141,7 +135,6 @@ export function createLr({ rb }) {
     files.delete(n); await mr.refresh();
     if (items) {
       items = items.filter(it => base(it.file) !== n);
-      samples = samples.filter(s => s.file !== n);
       if (!items.length) { items = null; hr = lr = false; }
     }
     rb.noteRemove(n); rb.noteExplore(null);
@@ -149,15 +142,14 @@ export function createLr({ rb }) {
   }
 
   async function fresh(body) {
-    items = null; samples = []; hr = lr = false;
-    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); foreign = false; }
+    items = null; hr = lr = false;
+    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); }
     rb.noteNew();
     return json(state());
   }
 
   // Returns { status, text } or null (Python answers).
   api.handle = async (method, url, init) => {
-    if (foreign) return null;
     const u = new URL(url, "http://x/"), path = u.pathname.replace(/^\/?(\.\/)?/, "/");
     const text = () => (typeof init.body === "string" ? init.body : null);
     try {
@@ -189,7 +181,10 @@ export function createLr({ rb }) {
       if (path === "/api/remove") return await remove(body);
       if (path === "/api/new") return await fresh(body);
       return null;
-    } catch (e) { foreign = true; return null; }
+    } catch (e) {
+      let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
+      return j && j.error_key ? json({ error: j.error || j.error_key, error_key: j.error_key, params: j.params || {} }, 400) : fail("err.route.unavailable", {}, String(e && e.message || e), 500);
+    }
   };
   return api;
 }

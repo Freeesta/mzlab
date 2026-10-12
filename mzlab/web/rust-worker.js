@@ -32,7 +32,7 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const idxPool = () => lrPool || (lrPool = createPool({ needSimd: true, workerUrl: new URL("./idx-worker.js", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -45,12 +45,13 @@ async function lrOpen(name) {                                             // ope
   return true;
 }
 // IndexedDB of the page ("qqq_lab", the same one as browser-worker.js): the notebook and, without OPFS, the files
-const idb = lab();
+const idb = lab(() => postMessage({ op: "blocked" }));      // another tab holds the database: the page says so
 const tx = async (store, mode, fn) => {
   const db = await idb();
   return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
+const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
   const files = await safe(() => ARCH.list("files")) || [], idx = await safe(() => ARCH.list("idx")) || [];
   const names = new Set(files.map(f => f.name)), gone = idx.filter(e => !names.has(e.name.replace(/\.mzidx$/, "")));
@@ -75,10 +76,17 @@ function scanOp({ op, id, slot, path, query, blob }) {
 }
 
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
+async function lrMigrate() {                                              // what an earlier visit left in IndexedDB passes to OPFS
+  for (const n of (await safe(() => tx("files", "readonly", s => s.getAllKeys()))) || []) {
+    const buf = await safe(() => tx("files", "readonly", s => s.get(n)));
+    if (!buf) continue;
+    try { await ARCH.put("files", n, buf instanceof Blob ? buf : new Uint8Array(buf)); await safe(() => tx("files", "readwrite", s => s.delete(n))); } catch (e) { /* it stays where it is */ }
+  }
+}
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
-      const out = [];
+      if (!m.fresh) await lrMigrate(); const out = [];
       for (const e of await ARCH.list("files")) {
         if (/\.part$/.test(e.name)) continue;
         const f = await ARCH.get("files", e.name); if (!f) continue;
@@ -121,7 +129,7 @@ async function lrOp(m) {
       for (const n of [...lrFile.keys()]) engine.close(slotOf(n));
       lrFile.clear();
       await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); });
-      await safe(() => tx("files", "readwrite", s => s.clear())); await safe(() => tx("kv", "readwrite", s => s.clear()));
+      await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000);
       return { info: "{}" };
     }
   }
@@ -144,9 +152,9 @@ onmessage = async ev => {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
       case "raw2mzml": {                                                              // Thermo .raw -> mzML pieces (the .raw is read block by block, never held)
         const parts = [], total = m.blob.size, rd = readerFor(m.blob);
-        let read = 0, written = 0, last = 0;
-        const tick = () => { const t = performance.now(); if (t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written }); } };     // the page shows how far the conversion has got
-        engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { parts.push(piece); written += piece.length; tick(); });
+        let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
+        const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
+        engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { parts.push(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });      // scans: converted / in the file, from the scan index
         postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
         return;
       }
