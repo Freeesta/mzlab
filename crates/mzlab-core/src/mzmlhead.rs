@@ -581,13 +581,13 @@ fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
             .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
         raw = out;
     }
-    Ok(if head.contains("accession=\"MS:1000521\"") {
-        raw.chunks_exact(4)
-            .map(|c| f32::from_le_bytes(c.try_into().unwrap()) as f64)
-            .collect()
-    } else {
-        raw.chunks_exact(8)
-            .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
-            .collect()
-    })
+    let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
+        .iter()
+        .find(|a| head.contains(&format!("accession=\"{a}\"")))
+        .and_then(|a| crate::numarray::Num::of_accession(a))
+        .unwrap_or(crate::numarray::Num::F64);
+    Ok(raw
+        .chunks_exact(num.width())
+        .map(|c| num.value(c))
+        .collect())
 }
