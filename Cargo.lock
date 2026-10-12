@@ -2267,8 +2267,6 @@ dependencies = [
 [[package]]
 name = "opentfraw"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcaaa47960c32c13ba50f7570d1a420a3d0d62866f1486d4b3400b1fce193030"
 dependencies = [
  "openmassspec-core",
  "thiserror 2.0.21",

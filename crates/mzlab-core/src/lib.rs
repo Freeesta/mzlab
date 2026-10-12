@@ -1,9 +1,11 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 #![forbid(unsafe_code)]
+pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
 pub mod budget;
+pub mod centroidi;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;
@@ -51,10 +53,13 @@ pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
+pub mod metodo;
+pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzml;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+pub mod numarray;
 pub mod mzmlwrite;
 pub mod peakq;
 pub mod peaks;
@@ -65,6 +70,7 @@ pub mod project;
 pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod raw;
+pub mod rawfilter;
 pub mod rng;
 pub mod rois;
 pub mod roles;

@@ -9,7 +9,7 @@ def step(name, fn):
 def pt(pg, idx, x=None):
     return pg.evaluate("""([i,x])=>{const p=E.panels[i],r=p.cv.getBoundingClientRect(),a=p._a;
         return {px:r.left+(x==null?(M.l+(a.W-M.r))/2:a.X(x)), py:r.top+r.height/2}}""", [idx, x])
-r = Run(port=8818, wd="/tmp/wd8", motore="python")
+r = Run(port=8818, wd="/tmp/wd8")
 try:
     with sync_playwright() as p:
         pg = r.page(p)

@@ -1,4 +1,4 @@
-# cargo-deny: known advisories and allowed licences (job `deny` of .github/workflows/rust.yml).
+# cargo-deny: known advisories and allowed licences (job `deny` of .github/workflows/rust.yml for licences and sources, daily job of .github/workflows/advisories.yml for advisories).
 [advisories]
 version = 2
 yanked = "warn"

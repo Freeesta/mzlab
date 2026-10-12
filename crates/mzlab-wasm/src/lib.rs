@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod info; mod diff; mod items; mod stat;
+mod info; mod diff; mod items; mod metodo; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -15,6 +15,7 @@ use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
 mod wiff;
+mod agilent;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -362,11 +363,11 @@ impl Engine {
         read: Function,
         sink: Function,
         scans: Function, // scans(done, total): scans converted / scans in the file (first done = 0, last done = total)
-        profile: bool,   // true: profile data as stored; false: the vendor centroids
+        flags: u32, // bit 0: profile data as stored (else the vendor centroids); bit 1: leave the computer, user folders, paths and user-label values out of the mzML
     ) -> Result<(), JsValue> {
         let mut out = BlockWriter { sink, buf: Vec::new() };
         let mut on_scan = |d: u32, t: u32| drop(scans.call2(&JsValue::NULL, &d.into(), &t.into()));
-        raw::to_mzml_progress(BlockReader::new(read, size as u64), &mut out, name, profile, &mut on_scan)
+        raw::to_mzml_with(BlockReader::new(read, size as u64), &mut out, name, raw::Convert { profile: flags & 1 != 0, anonymous: flags & 2 != 0 }, &mut on_scan)
             .map_err(|e| error_json(&e))?;
         out.flush().map_err(|_| {
             error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/mzlab-core", "crates/mzlab-wasm", "crates/mzlab-desktop", "crates/mzlab-lib", "crates/mzlab-lib-wasm", "crates/mzlab-feat", "crates/mzlab-feat-wasm", "crates/mzlab-feat-table-wasm", "crates/mzlab-feat-grafo-wasm"]
+exclude = ["vendor/opentfraw"]
 
 [workspace.package]
 version = "0.1.0"

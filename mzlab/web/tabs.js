@@ -15,7 +15,8 @@ function modeSchema(t) {
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
   if (window.BANCO) { BANCO.bar(); if (BANCO.on()) return; }       // high-resolution bench: the toolbar of the bench takes the place of the tabs
-  el.innerHTML = TABS.map(([t, n]) => {
+  const together = lrTog();       // «all experiments together»: no distinction between tabs, only the panels of every type on one page (the overview button stays)
+  el.innerHTML = (together ? [] : TABS).map(([t, n]) => {
     const c = tabFiles(t).length;
     return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
   }).join("") + `<span class="sp"></span><button id="ovbtn" title="${I18N.t("tabs.overview.button.title")}">${I18N.t("tabs.overview.title")}</button>`;
@@ -74,10 +75,20 @@ function ensureBlocks() {
     if (!shift() && t === "mrm") { let i = 0; const iv = setInterval(() => { if (shift() || ++i > 80) clearInterval(iv); }, 150); }
   });
 }
+// The blocks of the tabs one under the other, in the order of the tabs. Panels made while the files arrived one by one share the space of the first block: they are moved down here.
+function stackBlocks() {
+  let y = null;
+  TABS.forEach(([t]) => {
+    const ps = E.panels.filter(p => p.tab === t); if (!ps.length) return;
+    const top = Math.min(...ps.map(p => p.y)), off = y === null ? 0 : y - top;
+    ps.forEach(p => { p._sh = 1; if (off) { p.y += off; apply(p); } });
+    y = Math.max(...ps.map(p => p.y + p.h)) + 24;
+  });
+}
 // the gear checkbox: all the blocks on the page, or only the ones of the current tab again
 function setTogether(on) {
   UIP.tog = !!on; if (typeof uipSave === "function") uipSave();
-  if (lrTog()) ensureBlocks(); else E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === E.tab ? "" : "none"; });
+  if (lrTog()) { ensureBlocks(); stackBlocks(); } else E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === E.tab ? "" : "none"; });
   E.panels.forEach(p => { if (p.el && allTabs()) p.el.style.display = ""; });
   renderTabs(); relayout(); fitHost(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }

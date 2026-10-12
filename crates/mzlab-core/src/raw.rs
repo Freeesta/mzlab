@@ -9,6 +9,7 @@ use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord}
 
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
+use crate::rawfilter::MzmlFilter;
 
 fn raw_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.raw").with("detail", e)
@@ -69,7 +70,9 @@ pub fn read<R: Read + Seek>(source: R) -> Result<Run> {
 /// Writes the file as mzML to `out` without holding the `.raw` in memory; `name` is the source file name.
 pub fn to_mzml<R: Read + Seek, W: Write>(mut source: R, out: &mut W, name: &str) -> Result<()> {
     let raw = open(&mut source)?;
-    opentfraw::write_mzml(&raw, &mut source, out, name, false).map_err(raw_error)
+    let mut filter = MzmlFilter::new(out, false);
+    opentfraw::write_mzml(&raw, &mut source, &mut filter, name, false).map_err(raw_error)?;
+    filter.flush().map_err(raw_error)
 }
 
 /// A source that counts the scans already read: the packets of the scans lie in the file in scan order, so the scans whose packet
@@ -107,10 +110,29 @@ impl<R: Seek> Seek for Counted<'_, R> {
 /// then `on_scan(done, total)` as the scans go by (never backwards), and `on_scan(total, total)` at the end.
 /// `profile` keeps the profile data of the file (much larger); otherwise the vendor centroids are written.
 pub fn to_mzml_progress<R: Read + Seek, W: Write>(
-    mut source: R,
+    source: R,
     out: &mut W,
     name: &str,
     profile: bool,
+    on_scan: &mut dyn FnMut(u32, u32),
+) -> Result<()> {
+    to_mzml_with(source, out, name, Convert { profile, anonymous: false }, on_scan)
+}
+
+/// What `to_mzml_with` does besides the conversion: `profile` as above; `anonymous` leaves the personal data of the acquisition
+/// (computer, user folders, paths, the values of the user labels) out of the mzML (`rawfilter`): they stay in the `.raw`.
+#[derive(Clone, Copy, Default)]
+pub struct Convert {
+    pub profile: bool,
+    pub anonymous: bool,
+}
+
+/// `to_mzml_progress` with the options of `Convert`.
+pub fn to_mzml_with<R: Read + Seek, W: Write>(
+    mut source: R,
+    out: &mut W,
+    name: &str,
+    opt: Convert,
     on_scan: &mut dyn FnMut(u32, u32),
 ) -> Result<()> {
     let raw = open(&mut source)?;
@@ -119,7 +141,9 @@ pub fn to_mzml_progress<R: Read + Seek, W: Write>(
     let total = starts.len() as u32;
     on_scan(0, total);
     let mut counted = Counted { inner: source, starts, pos: 0, done: 0, on_scan };
-    opentfraw::write_mzml(&raw, &mut counted, out, name, profile).map_err(raw_error)?;
+    let mut filter = MzmlFilter::new(&mut *out, opt.anonymous);
+    opentfraw::write_mzml(&raw, &mut counted, &mut filter, name, opt.profile).map_err(raw_error)?;
+    filter.flush().map_err(raw_error)?;
     (counted.on_scan)(total, total);
     Ok(())
 }
