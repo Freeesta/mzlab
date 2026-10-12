@@ -8,7 +8,7 @@ const COMP = (() => {
   const IONS = [["[M+H]+", "[M+H]⁺"], ["[M+NH4]+", "[M+NH₄]⁺"], ["[M+Na]+", "[M+Na]⁺"], ["[M+K]+", "[M+K]⁺"], ["[M]+", I18N.t("comp.ion.plus")], ["M+.", I18N.t("comp.ion.radical")],
     ["[M-H]-", "[M−H]⁻"], ["[M+Cl]-", "[M+Cl]⁻"], ["[M+HCOO]-", "[M+HCOO]⁻"], ["[M]-", I18N.t("comp.ion.minus")]];
   const RULES = [["HC", I18N.t("comp.rule.HC")], ["NC", I18N.t("comp.rule.NC")], ["OC", I18N.t("comp.rule.OC")], ["PC", I18N.t("comp.rule.PC")], ["SC", I18N.t("comp.rule.SC")], ["FC", I18N.t("comp.rule.FC")], ["ClC", I18N.t("comp.rule.ClC")], ["BrC", I18N.t("comp.rule.BrC")], ["LEWIS", "Lewis"], ["SENIOR", "Senior"]];
-  const rd = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } };
+  const rd = () => { return lsObj(KEY); };
   const wr = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
   const num = v => { const x = numIt(v); return Number.isFinite(x) ? x : null; };
   // M+1/M and M+2/M seen in a spectrum d = {mz, y} around the peak at m/z `mz` (null when the peaks are not there)

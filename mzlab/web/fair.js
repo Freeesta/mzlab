@@ -94,7 +94,7 @@ const FAIR = (() => {
   const T = (k, p) => I18N.t(k, p);
   const MSG = { lr: "fair.err.lr", peaks: "fair.err.peaks", prec: "fair.err.prec", name: "fair.err.name", smiles: "fair.err.smiles", smilesBad: "fair.err.smilesBad", inchikey: "fair.err.inchikey", authors: "fair.err.authors", license: "fair.err.license", contributor: "fair.err.contributor", id: "fair.err.id", instrument: "fair.err.instrument", itype: "fair.err.itype", precType: "fair.err.precType", polarity: "fair.err.polarity", precMismatch: "fair.warn.precMismatch", noCe: "fair.warn.noCe" };   // literal keys, so that tools/controlla_i18n.py sees them
   const EHt = s => EH(s == null ? "" : s);
-  const mem = { get: () => { try { return JSON.parse(localStorage.getItem("qqq.fair") || "{}"); } catch (_) { return {}; } }, set: v => { try { localStorage.setItem("qqq.fair", JSON.stringify(v)); } catch (_) { /* storage blocked */ } } };
+  const mem = { get: () => { return lsObj("qqq.fair"); }, set: v => { try { localStorage.setItem("qqq.fair", JSON.stringify(v)); } catch (_) { /* storage blocked */ } } };
 
   async function ocl() {
     if (window.OCL) return window.OCL;

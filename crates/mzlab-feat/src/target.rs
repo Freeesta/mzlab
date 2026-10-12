@@ -8,6 +8,7 @@
 //! come from `pipeline::analyse` (its MS2 links are counted).
 
 mod extract;
+pub mod join;
 pub mod null;
 
 use crate::sortc;

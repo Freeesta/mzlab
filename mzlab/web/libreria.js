@@ -36,7 +36,7 @@ const LIB = (() => {
   // for the tests: which engine answers, and a way to kill it
   const engine = { info: () => call1("engine"), async crash() { try { await call1("crash"); } catch (e) { if (e && e.fatal) restart(); else throw e; } }, get fallback() { return forceJs; } };
   const EHt = t => (typeof EH === "function" ? EH(t) : String(t));
-  const loc = () => (I18N.lang === "it" ? "it-IT" : "en-US"), fmtN = n => Number(n).toLocaleString(loc());
+  const fmtN = n => I18N.num(+n);
   const dlgCss = `<style>#libdlg,#libres{max-width:min(1100px,96vw);width:min(1100px,96vw)}#libdlg{width:min(720px,96vw)}#libdlg .drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;margin:8px 0}#libdlg .drop.over{border-color:var(--accent);background:var(--sel)}
     #libdlg table,#libres table{border-collapse:collapse;width:100%}#libdlg td,#libdlg th,#libres td,#libres th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}#libres td.num,#libres th.num,#libdlg td.num,#libdlg th.num{text-align:right;font-variant-numeric:tabular-nums}
     #libres tr.row{cursor:pointer}#libres tr.row.sel{background:var(--sel)}#libres tr.row:hover{background:var(--sel)}#libres .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}#libres .qbar input{width:90px}#libres canvas{width:100%;height:300px;display:block;border:1px solid var(--line);border-radius:6px;margin-top:8px}
@@ -376,7 +376,7 @@ const LIB = (() => {
     const table = () => { const h = colHead, rs = st.res ? rowsOf(st.res.results) : []; return { h, rs }; };
     d.querySelector("#lr-copy").onclick = async () => {
       const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));
-      const it = /^it/i.test(navigator.language || ""), f = (v, k) => typeof v === "number" ? String(k === 5 ? +v.toFixed(st.unit === "ppm" ? 1 : 4) : +v.toFixed(3)).replace(".", it ? "," : ".") : String(v ?? "");
+      const f = (v, k) => typeof v === "number" ? String(k === 5 ? +v.toFixed(st.unit === "ppm" ? 1 : 4) : +v.toFixed(3)) : String(v ?? "");
       const tsv = h.join("\t") + "\n" + rs.map(r => r.map((v, k) => f(v, k)).join("\t")).join("\n");
       const html = `<table><tr>${h.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map((v, k) => `<td>${EHt(f(v, k))}</td>`).join("")}</tr>`).join("")}</table>`;
       try { if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]); else await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); }
@@ -428,7 +428,7 @@ const LIB = (() => {
       st.groups = groupsOf(R.results);
       st.lv = assess(R.results, { nScans: st.n, analogs: A && A.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
       const cvs = st.sel.k === "id" && R.results[st.sel.i] && st.lo != null ? cosVis({ it: R.query.it }, R.results[st.sel.i], st.lo) : null;
-      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2).replace(".", I18N.lang === "it" ? "," : ".") })]);       // a proof only: it never changes the level
+      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);       // a proof only: it never changes the level
       window.RAPPORTO && RAPPORTO.note(st.lv, q); vd.innerHTML = levelHtml(st.lv); levelBind(vd, st.lv, () => { st.decided = st.lv.decided || ""; show(); });
       body.innerHTML = `<h4 style="margin:8px 0 2px">${I18N.t("lib.what.cand")}</h4>` + (R.results.length ? `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.reverse")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.explained")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.pol")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.col.license")}</th></tr>
         ${st.groups.map((g, gi) => g.map((r, k) => idRow(r, gi, k)).join("")).join("")}</table></div>` : `<p>${I18N.t("lib.what.none")}</p>`)
@@ -468,7 +468,7 @@ const LIB = (() => {
     const rowsOf = () => { const [pr, de] = lvTxt(); return st.res ? st.res.results.map((r, i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
     d.querySelector("#lr-copy").onclick = async () => {
       const rs = rowsOf(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));
-      const it = /^it/i.test(navigator.language || ""), f = v => typeof v === "number" ? String(+v.toFixed(3)).replace(".", it ? "," : ".") : String(v ?? "");
+      const f = v => typeof v === "number" ? String(+v.toFixed(3)) : String(v ?? "");
       const tsv = head.join("\t") + "\n" + rs.map(r => r.map(f).join("\t")).join("\n");
       const html = `<table><tr>${head.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map(r => `<tr>${r.map(v => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
       try { if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]); else await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); }

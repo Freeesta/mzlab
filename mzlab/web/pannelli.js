@@ -75,13 +75,6 @@ function movePanel(p, dir) {
   if (window.DDA) DDA.sync();
   E.panels.sort((a, b2) => a.y - b2.y || a.id - b2.id); front(p.el); uiSave();
 }
-function tile() {
-  const w = hostWidth(); let y = 0;
-  tabPanels().filter(p => !dockedP(p)).forEach(p => { Object.assign(p, { x: 0, y, w, h: p.h || 310, full: true }); y += p.h + 10; apply(p); });
-  if (window.DDA) DDA.sync();
-  tabPanels().forEach(draw);
-  fitHost(); uiSave();
-}
 const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; p.el.style.width = p.w + "px"; p.el.style.height = p.h + "px"; };
 
 // a panel the student has just asked for may be below the fold: the page scrolls to it and its border flashes for a second (only a scroll if the system asks for less motion)
@@ -222,8 +215,8 @@ function addPanel(type, o, after) {
     const go = `<span class="tbg"><button class="bt" data-a="tab" title="${I18N.t("tdati.btn.title")}" aria-label="${I18N.t("tdati.btn.title")}">${IC_DATA}</button><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
-  })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
-  p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
+  })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "chrom" || type === "xic" || type === "mrm" ? '<div class="corrbar"></div>' : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
+  p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
