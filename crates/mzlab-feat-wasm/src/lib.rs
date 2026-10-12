@@ -2,6 +2,7 @@
 //! imported only when mzFinder is on. The `.mzidx` files are never held whole: the worker gives `read(k, offset, length) -> Uint8Array` for file `k` (an OPFS
 //! sync handle). Outputs are byte arrays (`.mzfeatf`, `.mzfeat`); errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key).
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
+#![forbid(unsafe_code)]
 use js_sys::{Array, Function, Uint8Array};
 use mzlab_core::budget::{Hashing, MemBudget, WriteAt};
 use mzlab_core::error::{Error, Result};
