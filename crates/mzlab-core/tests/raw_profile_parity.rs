@@ -338,7 +338,6 @@ fn raw_profile_totals_and_precursors_match_msconvert() {
 }
 
 #[test]
-#[ignore = "known gaps with this Tribrid file: opentfraw reads the scan events of the DIA windows wrongly (fixed by the vendored copy of opentfraw)"]
 fn raw_profile_matches_msconvert_mzml_scan_by_scan() {
     if let Some(r) = compare() {
         assert_eq!((r.header_differences, r.point_differences), (0, 0));
