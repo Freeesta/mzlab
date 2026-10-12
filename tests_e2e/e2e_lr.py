@@ -40,6 +40,7 @@ def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mz
 def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_ERR || null"))
 
 TIMES = {}
+MAPMS = {}
 def open_files(pg, label=None):
     t0 = time.time()
     pg.wait_for_selector("#drop", timeout=120000)
@@ -130,6 +131,18 @@ try:
                 json_close(a["j"], b2["j"], 1e-6, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
         step("origin: the evidence of Rust equals Python's, still without Pyodide", origin_same)
+        def map_same():
+            clock = "async u => { const t = performance.now(); await fetch(u); return performance.now() - t; }"
+            for u in ["api/map?k=0", "api/map?k=1&bg=1", "api/map?k=0&ref=1&norm=max", "api/map?k=0&rt0=13&rt1=16&mz0=140&mz1=400&nrt=120&nmz=100", "api/mapsnap?k=0&rt=14.25&mz=364.4",
+                      "api/mappunti?k=0&ref=1&pts=14.3,364.3;14.32,194.2", "api/mappunti3d?k=0&rt0=13&rt1=16&mz0=150&mz1=370&max=300"]:
+                ta, tb = round(pg3.evaluate(clock, u)), round(pg2.evaluate(clock, u))
+                MAPMS[u[4:40]] = (ta, tb)
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
+                assert a["eng"] == "rust", (u, a["eng"])
+                json_close(a["j"], b2["j"], 1e-6, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("map, snap, marked points and 3D sticks: Rust equals Python's, still without Pyodide", map_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
@@ -163,6 +176,7 @@ try:
             assert not errs, errs[:3]
         step("five files (Full Scan, MS2, MRM): the reload resumes the session without Pyodide", five_files)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
+        print("   MISURA map (ms, Rust flow, classic engine in Pyodide, first request):", MAPMS)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

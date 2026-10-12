@@ -19,6 +19,7 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 }[k] || k);
 
 import { originRoute } from "./lr-origin.js";
+import { mapRoute } from "./lr-map.js";
 
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
@@ -169,6 +170,7 @@ export function createLr({ rb }) {
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items, hr });
+        if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, u.searchParams, { rb, rpc, items, hr });
         if (path === "/api/method_warnings") return json({ warnings: [] });                // no .dam in OPFS (foreign would be set): nothing to compare
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };

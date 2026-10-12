@@ -195,3 +195,14 @@ Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 
 | Rust (`origin::origin_report`) | 80-90 |
 
 Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazione, rapporto con bootstrap, cinetica, ruoli e candidati. Nel browser (WebAssembly) non misurato qui. Parità: stessi indici e conteggi, numeri uguali entro 1e-9, p-value Monte Carlo identici (stesso `default_rng`).
+
+## Mappa RT×m/z e punti segnati (`api/map`, `mapsnap`, `mappunti`, `mappunti3d`; `cargo test --release -p mzlab-core --test map_parity -- --nocapture` e `tools/mappa_riferimento.py`, nativo, tre file Full Scan veri)
+| Richiesta | Python (ms) | Rust (ms) |
+|---|---|---|
+| mappa intera (prima richiesta, a freddo) | 216 | 12 |
+| mappa intera con sfondo (mediana lungo la corsa) | 20 | 22 |
+| differenza con `ref` e `norm=max` | 6 (mappe già in memoria) | 12 |
+| regione con zoom 120 × 100 | 3,6 | 2,7 |
+| aggancio, misure dei punti, punti del 3D (300 punti) | 0,3-5 | 0,1-6 |
+
+Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_lr`): mappa intera 54 ms in Rust contro 46 in Pyodide già avviato, con sfondo 102 contro 73, regione 36 contro 24, aggancio 7 contro 2, punti 26 contro 3, punti 3D 22 contro 37. Il guadagno non è la velocità della singola richiesta (Pyodide ha già la tabella in memoria) ma che Pyodide non parte: avvio della pagina 1,3 s contro 5,0 s. Parità: celle e punti uguali bit a bit; dei punti 3D tagliati a `max` si confrontano gli insiemi per intensità (numpy sceglie a caso fra intensità uguali).
