@@ -3,18 +3,26 @@
 //! with a Pade matrix exponential) plus the four shapes. Numbers to sort and weigh, never a verdict. `libm` for `exp`/`ln`, fixed order sums.
 
 mod bank;
+mod evidence;
 mod expm;
 mod forms;
 mod generation;
 mod resample;
+mod saturation;
 
 pub use bank::{aicc, grid};
+pub use evidence::{
+    evidence_from_kinetics, kinetic_report, parent_kinetics, Controls, Coupling, Evidence,
+    ParentKinetics, ParentSource, Report, Setup, Sign, COUPLING_FACTOR, POINTS_IF_WEIGHED,
+    POINTS_MAX,
+};
 pub use forms::{bateman, choice, fit_forms, Form, FormBank, FormFit};
 pub use generation::{generation, ChainBank, Gen, Generation, K_PARENT_MIN, MARGIN};
 pub use resample::{Resample, SplitMix64, Stability};
+pub use saturation::{parent_saturation, Saturation};
 
 /// Version of the rules of this module (changes when its output changes).
-pub const KINETIC_VERSION: u32 = 1;
+pub const KINETIC_VERSION: u32 = 2;
 
 /// Concentration of the third species of A -> I -> B -> sink, for the parity tests with the Python reference.
 pub use expm::chain3;

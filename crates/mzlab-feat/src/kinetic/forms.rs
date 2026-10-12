@@ -61,14 +61,14 @@ pub struct FormBank {
 impl FormBank {
     pub fn new(times: &[f64]) -> FormBank {
         let g = grid();
-        let mut rows = Vec::with_capacity(g.len() * g.len() + 2 * g.len() + 1);
+        let mut rows = Vec::with_capacity(g.len() * (g.len() + 1) / 2 + 2 * g.len() + 1);
         let row = |group: u8, a: f64, b: f64| Row {
             group,
             p: [a, b, 0.0],
         };
         rows.extend(g.iter().map(|&k| row(0, k, 0.0)));
-        for &a in &g {
-            rows.extend(g.iter().map(|&b| row(1, a, b)));
+        for (i, &a) in g.iter().enumerate() {
+            rows.extend(g[i..].iter().map(|&b| row(1, a, b))); // the shape is symmetric in its two rates: ascending pairs
         }
         rows.push(row(2, 0.0, 0.0));
         rows.extend(g.iter().map(|&k| row(3, k, 0.0)));
