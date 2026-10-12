@@ -11,6 +11,9 @@ No compound names: every ion is a number.
 
 writes `allinea_sintetico.json` (alignment and RT map of a synthetic series, see `tools/feat_allinea.py`).
 
+    python3 tools/feat_riferimento.py OUT --solo riempimento
+
+writes `riempimento.json` and the `.mzidx` of a small series (alignment, RT map and `fill_gaps` with and without the map, see `tools/feat_riempimento.py`).
     python3 tools/feat_riferimento.py OUT --solo ipotesi [--golden]
 
 writes `ipotesi_regole.json`: the hypotheses (parent times the rules of mzFinder, 1-2 steps) of invented parent formulas, see `tools/feat_ipotesi.py`.
@@ -279,6 +282,10 @@ def main(argv) -> int:
     golden = AQUI.parent / "tests" / "golden" / "feat" if "--golden" in argv else None
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "famiglie":
         print("famiglie", un_file_famiglie(out, golden))
+        return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "riempimento":
+        import feat_riempimento  # noqa: E402
+        print("riempimento", feat_riempimento.un_file_riempimento(out, golden))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "ipotesi":
         import feat_ipotesi  # noqa: E402
