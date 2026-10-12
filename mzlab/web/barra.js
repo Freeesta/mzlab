@@ -146,7 +146,7 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- state
   function loadState() {
     let s = {};
-    try { s = JSON.parse(localStorage.getItem(storageKey()) || "{}") || {}; } catch (_) { s = {}; }
+    s = lsObj(storageKey());
     _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === true;
