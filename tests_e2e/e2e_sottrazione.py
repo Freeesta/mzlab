@@ -10,7 +10,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_sottrazione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 files = make_subtraction("/tmp/wd_sottrazione_files", blank=False)
-r = Run(port=8967, wd="/tmp/wd_sottrazione")
+r = Run(port=8967, wd="/tmp/wd_sottrazione", motore="python")
 MINS = "(()=>{const p=E.panels.find(q=>q.type==='%s'); return p&&p._a&&p._a.sr?Object.fromEntries(p._a.sr.map(s=>[E.files[s.k].file,Math.min(...s.y)])):null})()"
 try:
     with sync_playwright() as p:
