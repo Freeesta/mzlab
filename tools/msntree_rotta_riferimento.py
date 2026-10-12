@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import dati_sintetici as ds  # noqa: E402
+import dati_sintetici_msn as ds  # noqa: E402
 from mzlab.api import dispatch  # noqa: E402
 from mzlab.app import App  # noqa: E402
 from mzlab.explore import Session  # noqa: E402

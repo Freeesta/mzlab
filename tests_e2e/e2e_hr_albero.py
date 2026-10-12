@@ -15,7 +15,7 @@ def step(name, fn):
 
 if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
-import dati_sintetici as ds  # noqa: E402
+import dati_sintetici_msn as ds  # noqa: E402
 FILE = Path(tempfile.mkdtemp(prefix="e2e_albero_")) / "MSN_infusion.mzML"
 ds.msn_infusion(FILE, np.random.default_rng(5))
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
