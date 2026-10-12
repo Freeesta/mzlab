@@ -372,6 +372,7 @@ I18N.add("en", {
   "conv.stall": "No news for over 30 seconds: a big file can take a long time. Keep this tab open and close other heavy ones; if it does not restart you can cancel and try again.",
   "conv.profile": "Thermo .raw: keep the profile data (default: centroids)",
   "conv.profile.title": "Profile: the data as the instrument recorded it (much larger files, slower conversion). Centroid: the peaks the instrument already computed.",
+  "load.note.wiffMethod": "{name}: the method was read from the .wiff for {n} files ({files}).",
   "conv.total": "Total: {pc}%",
   "conv.cancel": "Cancel",
   "conv.cancel.title": "Cancel the conversion of the .raw files",

@@ -683,7 +683,7 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
   const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],pairs=[];
   for(const [k,e] of [...WIFF_WAIT]){      // a pair is in the list as soon as its two files are together, before anything is read
-    if(!(e.wiff&&e.scan)){if(dropped.has(k))res.errs.push([e.wiff?T("err.file.wiffNoScan",{name:e.wiff.name}):T("load.wiffWait",{name:e.scan.name}),(e.wiff||e.scan).name]);continue}
+    if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}      // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open")}
   const jobs=[];
   for(const e of pairs){
@@ -721,6 +721,7 @@ function reportLoad(rep){
   for(const [msg,names] of Object.entries(rep.errs))L.push(`<p class="fail">${names.length===1?T("unopen.err.one",{name:esc(names[0]),message:esc(msg)}):T("unopen.err.many",{n:names.length,names:namesCut(names,3),message:esc(msg)})}</p>`);
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
+  for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
   if(rep.big.length)L.push(`<p>${T("load.note.big",{n:rep.big.length})}</p>`);
   if(!L.length)return;
   const needHelp=rep.unopen.length||rep.other.length;
@@ -734,8 +735,11 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
+async function loneWiffs(wr,rep){      // a .wiff without its .scan is the method of the mzML files made from it (same SHA-1): else it waits for its .scan
+  for(const {e,rb} of wr.lone||[]){try{const r=await rb.metodoWiff(e.wiff);if(r.matched.length){WIFF_WAIT.delete(e.stem.toLowerCase());rep.notes.push(I18N.t("load.note.wiffMethod",{name:e.wiff.name,n:r.matched.length,files:namesCut(r.matched.map(x=>x.name),3)}));continue}}catch(_){}
+    const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 async function upload(files,into){const box=$("#up");fail();const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   const one=async f=>{const isDam=isMethodFile(f.name);
@@ -747,7 +751,7 @@ async function upload(files,into){const box=$("#up");fail();const wr=await wiffT
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  reportLoad(rep)}
+  await loneWiffs(wr,rep);reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};

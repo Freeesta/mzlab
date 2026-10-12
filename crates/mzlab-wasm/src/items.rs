@@ -89,7 +89,7 @@ impl Engine {
 }
 
 impl Engine {
-    fn labs(&self) -> Vec<Lab> {
+    pub(crate) fn labs(&self) -> Vec<Lab> {
         self.labs.iter().map(|(l, _)| l.clone()).collect()
     }
 
@@ -102,7 +102,7 @@ impl Engine {
     }
 
     /// `Item.method()` as JSON.
-    fn item_data(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub(crate) fn item_data(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let r = self.idx.get(&slot).ok_or_else(no_index)?;
         let mut m = Mzml::new(JsReader { read }, size as u64);
         mzlab_core::itemroutes::item_method(&r.idx, &mut m, item).map_err(|e| error_json(&e))

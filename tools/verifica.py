@@ -38,7 +38,7 @@ E2E = ROOT / "tests_e2e"
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
+    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
@@ -148,7 +148,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-opfs.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-opfs.js", "rust-metodo.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:

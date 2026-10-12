@@ -41,6 +41,8 @@ pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
+pub mod metodo;
+pub mod metodo_wiff;
 pub mod mzml;
 pub mod mzmlhead;
 pub mod mzmlwrite;

@@ -14,6 +14,12 @@ export function wiffApi(rpc, base) {
       if (r.dead || r.error) throw fail(r, "err.file.notWiff");
       return JSON.parse(r.info);
     },
+    // a .wiff alone: the open mzML files it was made from (same SHA-1) get its method -> { sha1, matched: [{ name, sample }] }; the .wiff is read, not converted
+    async metodoWiff(file) {
+      const r = await rpc({ op: "lr_metodo_wiff", blob: file });
+      if (r.dead || r.error) throw fail(r, "err.file.notWiff");
+      return JSON.parse(r.info);
+    },
     // one sample of a .wiff (+ its .wiff.scan, null when missing) -> Blob of mzML
     async convertWiff(wiff, scan, sample, onProgress) {
       const r = await rpc({ op: "wiff2mzml", name: base(wiff.name), blob: wiff, scan: scan || null, sample }, onProgress);
