@@ -160,7 +160,7 @@ Peso: 0,9 KB gzip il CSS + 2,2 KB gzip il JS (3,1 KB in tutto, soglia 4 KB). Ape
 | Misura | Dopo |
 |---|---|
 | `golden.py --controlla` | uguale |
-| `verifica.py` completa | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
+| `verifica.py` completa | 137 OK, e2e16 e e2e25 NOTO |
 | `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 2 |
 | `prototipi/` | cancellata |
 | `bench.py --velocita` / `--mzidx` | non eseguiti |
