@@ -24,7 +24,7 @@
    "id": "timololo_gruppi",
    "ok": true,
    "soglia": 25606,
-   "valore": 25524
+   "valore": 25597
   },
   {
    "id": "mzmine_richiamo",
@@ -58,9 +58,9 @@
   },
   {
    "id": "sintetici_richiamo_3x_10x",
-   "ok": false,
+   "ok": true,
    "soglia": 0.8,
-   "valore": 0.0292
+   "valore": 0.848
   },
   {
    "id": "sintetici_isomeri_separati",
