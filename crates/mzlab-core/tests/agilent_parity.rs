@@ -139,6 +139,51 @@ fn read(d: &Path, f: &str) -> Option<Vec<u8>> {
     std::fs::read(d.join(f)).ok()
 }
 
+/// The index and the points of one real run against the numbers the files carry.
+fn check_index_and_points(d: &AgilentD, run: &mzlab_core::mzml::Run, peak_len: u64, label: &str) {
+    assert!(d.records.iter().enumerate().all(|(k, r)| r.id == k as i32 + 1 && r.cycle == r.id), "{label}: ids");
+    assert!(d.records.windows(2).all(|w| w[0].time_min < w[1].time_min), "{label}: times");
+    let mut at = 68;
+    for r in &d.records {
+        assert_eq!(r.offset, at, "{label}: scan {} is not where the previous one ends", r.id);
+        at += r.bytes as u64;
+    }
+    assert_eq!(at, peak_len, "{label}: MSPeak.bin has bytes no scan owns");
+    // MSTS.xml counts by time, the records by segment: the totals agree, a segment can differ by the scan on the boundary
+    assert_eq!(d.segments.iter().map(|s| s.scans).sum::<usize>(), d.records.len(), "{label}: scans of MSTS.xml");
+    for s in &d.segments {
+        let n = d.records.iter().filter(|r| r.time_min >= s.start_min && r.time_min <= s.end_min).count();
+        assert_eq!(n, s.scans, "{label}: segment {} by time", s.id);
+    }
+    let tree = d.tree.as_ref().unwrap();
+    assert_eq!((tree.scans, tree.device.as_str(), tree.polarity.as_str()), (d.records.len(), "SingleQuad", "Positive"), "{label}: MSTree2.bin");
+    // the points: TIC of the record = sum of the intensities, base peak = their maximum, m/z ascending
+    assert_eq!(run.spectra.len(), d.records.iter().filter(|r| r.points > 0).count());
+    for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
+        let sum: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+        assert!((sum - r.tic).abs() <= 3e-3 * r.tic + 1.0, "{label} scan {}: sum {sum} TIC {}", r.id, r.tic);
+        let top = (0..s.mz.len()).map(|i| s.intensity_f64(i)).fold(0.0, f64::max);
+        assert!((top - r.base_value).abs() <= 1e-3 * top + 1.0, "{label} scan {}: base peak", r.id);
+        assert!(s.mz.windows(2).all(|w| w[0] < w[1]) && s.polarity == 1 && s.level == 1, "{label} scan {}", r.id);
+    }
+}
+
+/// A SIM run holds only the ions of its group, a scan run stays in its range.
+fn check_method(d: &AgilentD, run: &mzlab_core::mzml::Run, label: &str) {
+    let m = d.method.as_ref().unwrap();
+    for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
+        if m.mode == "SIM" {
+            // the scan time is the end of the scan: the group a scan belongs to is the one running at the time of the scan before it
+            let before = d.records.iter().rev().find(|p| p.id < r.id).map_or(r.time_min, |p| p.time_min);
+            let g = m.groups.iter().rev().find(|g| before >= g.start_min).unwrap();
+            let ions: Vec<f64> = g.ions.iter().map(|i| i.0).collect();
+            assert!(s.mz.len() == ions.len() && s.mz.iter().zip(&ions).all(|(a, b)| (a - b).abs() < 0.05), "{label} scan {}: ions {:?} of the group {:?}", r.id, s.mz, ions);
+        } else {
+            assert!(s.mz[0] >= m.low_mass.unwrap() - 1.0 && *s.mz.last().unwrap() <= m.high_mass.unwrap() + 1.0, "{label} scan {}: range", r.id);
+        }
+    }
+}
+
 #[test]
 fn real_runs_agree_with_their_own_numbers() {
     let Some(data) = dati() else {
@@ -150,54 +195,16 @@ fn real_runs_agree_with_their_own_numbers() {
     assert!(!folders.is_empty());
     for f in folders {
         let acq = f.join("AcqData");
-        let (scan, peak_file) = (read(&acq, "MSScan.bin").unwrap(), acq.join("MSPeak.bin"));
-        let mut peak = std::fs::read(&peak_file).unwrap();
-        let xsd = read(&acq, "MSScan.xsd").unwrap();
-        assert_eq!(Layout::from_xsd(&String::from_utf8_lossy(&xsd)).unwrap(), Layout::builtin(), "{}: the xsd of the folder and the built-in layout agree", f.display());
+        let (scan, xsd) = (read(&acq, "MSScan.bin").unwrap(), read(&acq, "MSScan.xsd").unwrap());
+        let mut peak = std::fs::read(acq.join("MSPeak.bin")).unwrap();
+        let label = f.display().to_string();
+        assert_eq!(Layout::from_xsd(&String::from_utf8_lossy(&xsd)).unwrap(), Layout::builtin(), "{label}: the xsd of the folder and the built-in layout agree");
         let (ts, dev, contents, tree, meth) = (read(&acq, "MSTS.xml"), read(&acq, "Devices.xml"), read(&acq, "Contents.xml"), read(&acq, "MSTree2.bin"), read(&f, "acqmeth.txt"));
         let files = Files { ms_scan: &scan, ms_scan_xsd: Some(&xsd), ms_peak_len: peak.len() as u64, ms_ts: ts.as_deref(), devices: dev.as_deref(), contents: contents.as_deref(), ms_tree: tree.as_deref(), acqmeth: meth.as_deref() };
         let d = AgilentD::open(&f.file_name().unwrap().to_string_lossy(), &files).unwrap();
-        let label = f.display().to_string();
-        // the index: numbering, time, the spectra tile MSPeak.bin from byte 68 to its end
-        assert!(d.records.iter().enumerate().all(|(k, r)| r.id == k as i32 + 1 && r.cycle == r.id), "{label}: ids");
-        assert!(d.records.windows(2).all(|w| w[0].time_min < w[1].time_min), "{label}: times");
-        let mut at = 68;
-        for r in &d.records {
-            assert_eq!(r.offset, at, "{label}: scan {} is not where the previous one ends", r.id);
-            at += r.bytes as u64;
-        }
-        assert_eq!(at, peak.len() as u64, "{label}: MSPeak.bin has bytes no scan owns");
-        // MSTS.xml counts by time, the records by segment: the totals agree, a segment can differ by the scan on the boundary
-        assert_eq!(d.segments.iter().map(|s| s.scans).sum::<usize>(), d.records.len(), "{label}: scans of MSTS.xml");
-        for s in &d.segments {
-            let n = d.records.iter().filter(|r| r.time_min >= s.start_min && r.time_min <= s.end_min).count();
-            assert_eq!(n, s.scans, "{label}: segment {} by time", s.id);
-        }
-        let tree = d.tree.as_ref().unwrap();
-        assert_eq!((tree.scans, tree.device.as_str(), tree.polarity.as_str()), (d.records.len(), "SingleQuad", "Positive"), "{label}: MSTree2.bin");
-        // the points: TIC of the record = sum of the intensities, base peak = their maximum, m/z within the range
         let run = d.run(&mut peak).unwrap();
-        assert_eq!(run.spectra.len(), d.records.iter().filter(|r| r.points > 0).count());
-        for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
-            let sum: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
-            assert!((sum - r.tic).abs() <= 3e-3 * r.tic + 1.0, "{label} scan {}: sum {sum} TIC {}", r.id, r.tic);
-            let top = (0..s.mz.len()).map(|i| s.intensity_f64(i)).fold(0.0, f64::max);
-            assert!((top - r.base_value).abs() <= 1e-3 * top + 1.0, "{label} scan {}: base peak", r.id);
-            assert!(s.mz.windows(2).all(|w| w[0] < w[1]) && s.polarity == 1 && s.level == 1, "{label} scan {}", r.id);
-        }
-        // the method: a SIM run holds only the ions of its group at the scan time, a scan run stays in its range
-        let m = d.method.as_ref().unwrap();
-        for (s, r) in run.spectra.iter().zip(d.records.iter().filter(|r| r.points > 0)) {
-            if m.mode == "SIM" {
-                // the scan time is the end of the scan: the group a scan belongs to is the one running at the time of the scan before it
-                let before = d.records.iter().rev().find(|p| p.id < r.id).map_or(r.time_min, |p| p.time_min);
-                let g = m.groups.iter().rev().find(|g| before >= g.start_min).unwrap();
-                let ions: Vec<f64> = g.ions.iter().map(|i| i.0).collect();
-                assert!(s.mz.len() == ions.len() && s.mz.iter().zip(&ions).all(|(a, b)| (a - b).abs() < 0.05), "{label} scan {}: ions {:?} of the group {:?}", r.id, s.mz, ions);
-            } else {
-                assert!(s.mz[0] >= m.low_mass.unwrap() - 1.0 && *s.mz.last().unwrap() <= m.high_mass.unwrap() + 1.0, "{label} scan {}: range", r.id);
-            }
-        }
+        check_index_and_points(&d, &run, peak.len() as u64, &label);
+        check_method(&d, &run, &label);
         // mzML written and read back
         let mut out = Vec::new();
         let n = peak.len() as u64;
@@ -207,7 +214,7 @@ fn real_runs_agree_with_their_own_numbers() {
         for (a, b) in back.spectra.iter().zip(&run.spectra) {
             assert!(a.mz == b.mz && (0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)) && a.id == b.id && (a.rt - b.rt).abs() < 1e-12, "{label} {}", b.id);
         }
-        eprintln!("{label}: {} scans, {} segments, {}", d.records.len(), d.segments.len(), m.mode);
+        eprintln!("{label}: {} scans, {} segments, {}", d.records.len(), d.segments.len(), d.method.as_ref().unwrap().mode);
     }
 }
 
