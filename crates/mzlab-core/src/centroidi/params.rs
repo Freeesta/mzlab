@@ -34,7 +34,15 @@ fn mode_of(v: &mut [f64]) -> f64 {
 
 /// Unit and mode: u = most frequent smallest positive intensity of a scan; counts when 99.5 % of the points are whole multiples of u (within 0.01).
 fn unit_and_mode(scans: &[(&[f64], &[f64])]) -> (f64, Mode) {
-    let mut mins: Vec<f64> = scans.iter().filter_map(|(_, y)| y.iter().cloned().filter(|&v| v > 0.0).fold(None, |m: Option<f64>, v| Some(m.map_or(v, |m| m.min(v))))).collect();
+    let mut mins: Vec<f64> = scans
+        .iter()
+        .filter_map(|(_, y)| {
+            y.iter()
+                .cloned()
+                .filter(|&v| v > 0.0)
+                .fold(None, |m: Option<f64>, v| Some(m.map_or(v, |m| m.min(v))))
+        })
+        .collect();
     if mins.is_empty() {
         return (1.0, Mode::Continuous);
     }
@@ -49,12 +57,23 @@ fn unit_and_mode(scans: &[(&[f64], &[f64])]) -> (f64, Mode) {
             }
         }
     }
-    (u, if all > 0 && ok as f64 >= 0.995 * all as f64 { Mode::Counts } else { Mode::Continuous })
+    (
+        u,
+        if all > 0 && ok as f64 >= 0.995 * all as f64 {
+            Mode::Counts
+        } else {
+            Mode::Continuous
+        },
+    )
 }
 
 /// Step: the smallest distance between two points; regular when every distance is a whole multiple of it (within 1 %). Irregular: the median distance.
 fn step_and_grid(scans: &[(&[f64], &[f64])]) -> (f64, bool) {
-    let mut d: Vec<f64> = scans.iter().flat_map(|(mz, _)| mz.windows(2).map(|w| w[1] - w[0])).filter(|&x| x > 0.0).collect();
+    let mut d: Vec<f64> = scans
+        .iter()
+        .flat_map(|(mz, _)| mz.windows(2).map(|w| w[1] - w[0]))
+        .filter(|&x| x > 0.0)
+        .collect();
     if d.is_empty() {
         return (1.0, false);
     }
@@ -78,12 +97,20 @@ fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
             continue;
         }
         let h = s - buf.b[j];
-        let sn = if p.mode == Mode::Counts { h / u / (s / u).max(1.0).sqrt() } else { h / sigma };
+        let sn = if p.mode == Mode::Counts {
+            h / u / (s / u).max(1.0).sqrt()
+        } else {
+            h / sigma
+        };
         if sn < 20.0 {
             continue;
         }
         let (lo, hi) = (j.saturating_sub(3 * wb), (j + 3 * wb).min(n - 1));
-        let isolated = (lo..=hi).all(|i| i == j || !(buf.s[i] >= buf.s[i.saturating_sub(1)] && buf.s[i] > buf.s[(i + 1).min(n - 1)]) || buf.s[i] <= 0.2 * s);
+        let isolated = (lo..=hi).all(|i| {
+            i == j
+                || !(buf.s[i] >= buf.s[i.saturating_sub(1)] && buf.s[i] > buf.s[(i + 1).min(n - 1)])
+                || buf.s[i] <= 0.2 * s
+        });
         if !isolated {
             continue;
         }
@@ -98,8 +125,10 @@ fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
         if buf.s[l] > half || buf.s[r] > half {
             continue;
         }
-        let xl = buf.x[l] + (half - buf.s[l]) / (buf.s[l + 1] - buf.s[l]) * (buf.x[l + 1] - buf.x[l]);
-        let xr = buf.x[r - 1] + (buf.s[r - 1] - half) / (buf.s[r - 1] - buf.s[r]) * (buf.x[r] - buf.x[r - 1]);
+        let xl =
+            buf.x[l] + (half - buf.s[l]) / (buf.s[l + 1] - buf.s[l]) * (buf.x[l + 1] - buf.x[l]);
+        let xr = buf.x[r - 1]
+            + (buf.s[r - 1] - half) / (buf.s[r - 1] - buf.s[r]) * (buf.x[r] - buf.x[r - 1]);
         out.push(xr - xl);
     }
 }
@@ -108,8 +137,19 @@ fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
 pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
     let (unit, mode) = unit_and_mode(scans);
     let (step, regular) = step_and_grid(scans);
-    let vmax = scans.iter().flat_map(|(_, y)| y.iter().cloned()).fold(0.0, f64::max);
-    let mut p = Params { mode, unit, step, w: fallback_w.max(3.0 * step), k: 3.0, vmax, area: true };
+    let vmax = scans
+        .iter()
+        .flat_map(|(_, y)| y.iter().cloned())
+        .fold(0.0, f64::max);
+    let mut p = Params {
+        mode,
+        unit,
+        step,
+        w: fallback_w.max(3.0 * step),
+        k: 3.0,
+        vmax,
+        area: true,
+    };
     let mut buf = Buf::default();
     let mut widths = Vec::new();
     for (mz, y) in scans {
@@ -119,7 +159,11 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
         }
         smooth::smooth(&mut buf, 5);
         smooth::background(&mut buf, p.wb(), p.mode == Mode::Counts);
-        let sigma = if mode == Mode::Continuous { smooth::noise(&mut buf, p.wb()) } else { 1.0 };
+        let sigma = if mode == Mode::Continuous {
+            smooth::noise(&mut buf, p.wb())
+        } else {
+            1.0
+        };
         fwhms(&buf, &p, sigma, &mut widths);
     }
     let peaks = if widths.len() >= 8 { widths.len() } else { 0 };
@@ -128,5 +172,9 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
         p.w = widths[(widths.len() - 1) / 2].max(3.0 * step);
     }
     p.area = !p.hr();
-    Estimate { params: p, regular, peaks }
+    Estimate {
+        params: p,
+        regular,
+        peaks,
+    }
 }

@@ -39,7 +39,14 @@ fn residual(buf: &Buf, p: &Params, j: usize, x0: f64, h: f64) -> Option<(f64, f6
 }
 
 /// The shoulders of the peak of group `g` (at most one on each side).
-pub(super) fn find(buf: &Buf, p: &Params, sigma: f64, g: &Group, x0: f64, area: f64) -> Vec<Centroid> {
+pub(super) fn find(
+    buf: &Buf,
+    p: &Params,
+    sigma: f64,
+    g: &Group,
+    x0: f64,
+    area: f64,
+) -> Vec<Centroid> {
     let l = p.sg_len();
     let dist = (0.6 * p.wb() as f64).ceil() as usize;
     let h = buf.s[g.apex] - buf.b[g.apex];
@@ -59,7 +66,9 @@ pub(super) fn find(buf: &Buf, p: &Params, sigma: f64, g: &Group, x0: f64, area: 
             d += 1;
         }
         let Some((_, j)) = best else { continue };
-        let Some((a, mz, top, f)) = residual(buf, p, j, x0, h) else { continue };
+        let Some((a, mz, top, f)) = residual(buf, p, j, x0, h) else {
+            continue;
+        };
         let ok = match p.mode {
             Mode::Counts => {
                 let (ac, fc) = (a / p.unit, f / p.unit);
@@ -68,7 +77,13 @@ pub(super) fn find(buf: &Buf, p: &Params, sigma: f64, g: &Group, x0: f64, area: 
             Mode::Continuous => top >= (p.k + 1.0) * sigma,
         };
         if ok && a >= 0.10 * area && (mz - x0).abs() >= 0.5 * p.w {
-            out.push(Centroid { mz, value: if p.area { a } else { top }, area: a, height: top, flags: SHOULDER });
+            out.push(Centroid {
+                mz,
+                value: if p.area { a } else { top },
+                area: a,
+                height: top,
+                flags: SHOULDER,
+            });
         }
     }
     out

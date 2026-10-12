@@ -11,7 +11,11 @@ fn passes(buf: &Buf, p: &Params, sigma: f64, g: &Group) -> bool {
     let nz = buf.v[g.lo..=g.hi].iter().filter(|&&v| v > 0.0).count();
     match p.mode {
         Mode::Counts => {
-            let z = if area + back > 0.0 { (area - back) / (area + back).sqrt() } else { 0.0 };
+            let z = if area + back > 0.0 {
+                (area - back) / (area + back).sqrt()
+            } else {
+                0.0
+            };
             z >= p.k && area - back >= 3.0 && nz >= 2
         }
         Mode::Continuous => buf.s[g.apex] - buf.b[g.apex] >= p.k * sigma,
@@ -21,7 +25,10 @@ fn passes(buf: &Buf, p: &Params, sigma: f64, g: &Group) -> bool {
 /// Raw sum and background sum of the region (counts mode: in counts, otherwise in intensity).
 fn sums(buf: &Buf, p: &Params, g: &Group) -> (f64, f64) {
     let u = if p.mode == Mode::Counts { p.unit } else { 1.0 };
-    (buf.v[g.lo..=g.hi].iter().sum::<f64>() / u, buf.b[g.lo..=g.hi].iter().sum::<f64>() / u)
+    (
+        buf.v[g.lo..=g.hi].iter().sum::<f64>() / u,
+        buf.b[g.lo..=g.hi].iter().sum::<f64>() / u,
+    )
 }
 
 /// Apex by a parabola through the three smoothed points around the maximum.
@@ -34,12 +41,23 @@ pub(super) fn apex_x(buf: &Buf, j: usize) -> f64 {
         return buf.x[j];
     }
     let d = (0.5 * (buf.s[j - 1] - buf.s[j + 1]) / den).clamp(-1.0, 1.0);
-    buf.x[j] + d * if d > 0.0 { buf.x[j + 1] - buf.x[j] } else { buf.x[j] - buf.x[j - 1] }
+    buf.x[j]
+        + d * if d > 0.0 {
+            buf.x[j + 1] - buf.x[j]
+        } else {
+            buf.x[j] - buf.x[j - 1]
+        }
 }
 
 /// Weighted centroid of (y - background)+ over the symmetric window [c - w/2, c + w/2], bins cut by the border count in proportion; `skip` leaves out
 /// the bins at the saturation level.
-pub(super) fn centroid_at(buf: &Buf, p: &Params, c: f64, skip: Option<f64>, half: f64) -> Option<f64> {
+pub(super) fn centroid_at(
+    buf: &Buf,
+    p: &Params,
+    c: f64,
+    skip: Option<f64>,
+    half: f64,
+) -> Option<f64> {
     let (lo, hi) = (c - half, c + half);
     let (mut sw, mut swm) = (0.0, 0.0);
     for i in 0..buf.x.len() {
@@ -57,8 +75,20 @@ pub(super) fn centroid_at(buf: &Buf, p: &Params, c: f64, skip: Option<f64>, half
 
 /// Gaussian interpolation through the three raw points around the highest one (high resolution), when all three are positive and S/N >= 10.
 fn gaussian(buf: &Buf, sigma: f64, apex: usize) -> Option<f64> {
-    let m = (apex.saturating_sub(1)..=(apex + 1).min(buf.v.len() - 1)).fold(apex, |m, i| if buf.v[i] > buf.v[m] { i } else { m });
-    if m == 0 || m + 1 >= buf.v.len() || buf.v[m - 1] <= 0.0 || buf.v[m] <= 0.0 || buf.v[m + 1] <= 0.0 || (buf.v[m] - buf.b[m]) / sigma < 10.0 {
+    let m = (apex.saturating_sub(1)..=(apex + 1).min(buf.v.len() - 1)).fold(apex, |m, i| {
+        if buf.v[i] > buf.v[m] {
+            i
+        } else {
+            m
+        }
+    });
+    if m == 0
+        || m + 1 >= buf.v.len()
+        || buf.v[m - 1] <= 0.0
+        || buf.v[m] <= 0.0
+        || buf.v[m + 1] <= 0.0
+        || (buf.v[m] - buf.b[m]) / sigma < 10.0
+    {
         return None;
     }
     let (a, b, c) = (buf.v[m - 1].ln(), buf.v[m].ln(), buf.v[m + 1].ln());
@@ -67,7 +97,14 @@ fn gaussian(buf: &Buf, sigma: f64, apex: usize) -> Option<f64> {
         return None;
     }
     let d = 0.5 * (a - c) / den;
-    Some(buf.x[m] + d * if d > 0.0 { buf.x[m + 1] - buf.x[m] } else { buf.x[m] - buf.x[m - 1] })
+    Some(
+        buf.x[m]
+            + d * if d > 0.0 {
+                buf.x[m + 1] - buf.x[m]
+            } else {
+                buf.x[m] - buf.x[m - 1]
+            },
+    )
 }
 
 /// True when three or more consecutive raw bins of the region are within 1 % of the highest intensity of the file.
@@ -116,7 +153,9 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
         flags |= SATURATED;
         saturated_centre(buf, p, g).unwrap_or(x0)
     } else if p.hr() {
-        gaussian(buf, sigma, g.apex).or_else(|| centroid_at(buf, p, x0, None, 0.5 * p.w)).unwrap_or(x0)
+        gaussian(buf, sigma, g.apex)
+            .or_else(|| centroid_at(buf, p, x0, None, 0.5 * p.w))
+            .unwrap_or(x0)
     } else {
         centroid_at(buf, p, x0, None, 0.5 * p.w).unwrap_or(x0)
     };
@@ -130,7 +169,13 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
         shoulders = shoulder::find(buf, p, sigma, g, x0, area);
     }
     area -= shoulders.iter().map(|s| s.area).sum::<f64>();
-    out.push(Centroid { mz, value: if p.area || sat { area } else { height }, area, height, flags });
+    out.push(Centroid {
+        mz,
+        value: if p.area || sat { area } else { height },
+        area,
+        height,
+        flags,
+    });
     out.extend(shoulders);
 }
 
