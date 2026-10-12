@@ -52,6 +52,7 @@ pub mod window;
 pub mod similarity;
 pub mod ratio;
 pub mod pca;
+pub mod qaqc;
 pub mod statistica;
 pub mod statmat;
 pub mod statref;

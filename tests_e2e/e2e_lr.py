@@ -239,6 +239,14 @@ try:
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqsm), (pyodide(reqsm)[:3], why(pgm))
         step("reference difference (chrom, xic, mrm with ref): Rust equals Python's, without Pyodide", diff_same)
+        def qaqc_same():
+            for u in ["api/qaqc?k=0,1&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/qaqc?k=1,0&roles=qc,qc&mz=194.2&rt=14.3&unit=ppm&tol=700&win=1",
+                      "api/qaqc?k=0,1&roles=sample&mz=364.4&rt=14.3", "api/qaqc?k=0,1&roles=sample,dark&mz=305.3&rt=14.7&thr=10&ratio=1"]:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pg3))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("QA/QC of an ion (api/qaqc): Rust equals Python's, without Pyodide", qaqc_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")

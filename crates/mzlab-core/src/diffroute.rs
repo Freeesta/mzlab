@@ -97,14 +97,9 @@ pub fn plan(path: &str, q: &Query) -> Option<std::result::Result<Plan, String>> 
     let level: u8 = q.get("level").map_or(Some(1), |v| v.parse().ok())?;
     let tol = number(q, "tol", 0.35)?;
     let (ks, mz) = match path {
-        "/api/xic" => {
-            let ks = q.get("k")?.split(',').filter(|x| !x.is_empty()).map(|x| x.parse().ok()).collect::<Option<Vec<u32>>>()?;
-            (ks, Some(q.get("mz")?.parse().ok()?))
-        }
+        "/api/xic" => (q.get("k")?.split(',').filter(|x| !x.is_empty()).map(|x| x.parse().ok()).collect::<Option<Vec<u32>>>()?, Some(q.get("mz")?.parse().ok()?)),
         "/api/chrom" => {
-            for k in ["mz0", "mz1", "prec"] {
-                q.num(k).ok()?;
-            }
+            ["mz0", "mz1", "prec"].iter().try_for_each(|k| q.num(k).ok().map(drop))?;
             (vec![q.get("k")?.parse().ok()?], None)
         }
         _ => return None,

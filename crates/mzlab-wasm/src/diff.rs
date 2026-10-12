@@ -1,8 +1,9 @@
-//! `ref=` on `api/chrom`, `api/xic` and `api/mrm`: the traces come from the indexes of the slots (the sample files and the reference), the
+//! `ref=` and `api/qaqc`: `ref=` on `api/chrom`, `api/xic` and `api/mrm`: the traces come from the indexes of the slots (the sample files and the reference), the
 //! subtraction is `mzlab_core::diffroute`. "" = Python's; "E" + JSON = the error of the user's setting (status 400).
 
 use super::{error_json, Engine};
 use mzlab_core::diffroute::{mrm_diff, plan, Tr};
+use mzlab_core::qaqc;
 use mzlab_core::routes::Query;
 use wasm_bindgen::prelude::*;
 
@@ -30,6 +31,24 @@ impl Engine {
             }
         }
         Ok(p.finish(&reference, &files))
+    }
+
+    /// `api/qaqc` for the files at the slots of the query: "" = Python's, "E" + JSON = the user's error.
+    pub fn qaqc_ion(&mut self, query: &str) -> Result<String, JsValue> {
+        let p = match qaqc::plan(&Query::parse(query)) {
+            None => return Ok(String::new()),
+            Some(Err(e)) => return Ok(format!("E{e}")),
+            Some(Ok(p)) => p,
+        };
+        let mut rows = Vec::new();
+        for &k in &p.ks {
+            let Some(r) = self.idx.get_mut(&k) else { return Ok(String::new()) };
+            match p.measure(k, r).map_err(|e| error_json(&e))? {
+                Some(row) => rows.push(row),
+                None => return Ok(String::new()),
+            }
+        }
+        Ok(p.finish(&rows))
     }
 }
 

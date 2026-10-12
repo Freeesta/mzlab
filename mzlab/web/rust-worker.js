@@ -151,6 +151,7 @@ onmessage = async ev => {
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
       case "map": info = engine.map_route(m.path, m.items, m.query); break;             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
+      case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;

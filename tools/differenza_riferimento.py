@@ -58,8 +58,8 @@ def queries() -> list[tuple[str, dict]]:
     return out
 
 
-def main(argv) -> int:
-    out = Path(argv[0])
+def session(out: Path) -> tuple[list[Path], App]:
+    """The files in OUT (with their `.mzidx`) and an app whose session holds them in that order."""
     out.mkdir(parents=True, exist_ok=True)
     paths = files(out)
     items = []
@@ -70,6 +70,12 @@ def main(argv) -> int:
         items.append(Item(f.name, None, None, "x", f))
     app = App()
     app.session = type("S", (), {"items": items})()
+    return paths, app
+
+
+def main(argv) -> int:
+    out = Path(argv[0])
+    paths, app = session(out)
     rows = []
     for path, q in queries():
         status, _ctype, body, _h = dispatch(app, "GET", path, q)
