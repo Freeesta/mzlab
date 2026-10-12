@@ -14,6 +14,13 @@ writes `allinea_sintetico.json` (alignment and RT map of a synthetic series, see
     python3 tools/feat_riferimento.py OUT --solo riempimento
 
 writes `riempimento.json` and the `.mzidx` of a small series (alignment, RT map and `fill_gaps` with and without the map, see `tools/feat_riempimento.py`).
+    python3 tools/feat_riferimento.py OUT --solo ipotesi [--golden]
+
+writes `ipotesi_regole.json`: the hypotheses (parent times the rules of mzFinder, 1-2 steps) of invented parent formulas, see `tools/feat_ipotesi.py`.
+
+    python3 tools/feat_riferimento.py OUT --solo cinetica [--golden]
+
+writes `cinetica_forme.json` and `cinetica_generazione.json` (shapes and generation of synthetic profiles, see `tools/feat_cinetica.py`).
 
     python3 tools/feat_riferimento.py OUT --solo identita [--golden]
 
@@ -280,9 +287,17 @@ def main(argv) -> int:
         import feat_riempimento  # noqa: E402
         print("riempimento", feat_riempimento.un_file_riempimento(out, golden))
         return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "ipotesi":
+        import feat_ipotesi  # noqa: E402
+        print("ipotesi", feat_ipotesi.un_file_ipotesi(out, golden))
+        return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "allinea":
         import feat_allinea  # noqa: E402
         print("allinea", feat_allinea.un_file_allinea(out, golden))
+        return 0
+    if "--solo" in argv and argv[argv.index("--solo") + 1] == "cinetica":
+        import feat_cinetica  # noqa: E402
+        print("cinetica", feat_cinetica.scrivi(out, golden))
         return 0
     if "--solo" in argv and argv[argv.index("--solo") + 1] == "identita":
         print("identita", un_file_identita(out, golden))

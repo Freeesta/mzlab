@@ -1,0 +1,253 @@
+{
+ "format": "regole_tp",
+ "version": 1,
+ "regole": [
+  {
+   "id": "hydroxylation",
+   "nome": "hydroxylation",
+   "delta_formula": "+O",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "dehydrogenation",
+   "nome": "dehydrogenation",
+   "delta_formula": "-H2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera"
+  },
+  {
+   "id": "oxidation_to_carbonyl",
+   "nome": "oxidation to carbonyl",
+   "delta_formula": "-H2+O",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera"
+  },
+  {
+   "id": "loss_of_c4h8",
+   "nome": "loss of C4H8",
+   "delta_formula": "-C4-H8",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "loss_of_c2h2",
+   "nome": "loss of C2H2",
+   "delta_formula": "-C2-H2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera"
+  },
+  {
+   "id": "loss_of_co",
+   "nome": "loss of CO",
+   "delta_formula": "-C-O",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera"
+  },
+  {
+   "id": "hydration",
+   "nome": "hydration",
+   "delta_formula": "+H2+O",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "dehydration",
+   "nome": "dehydration",
+   "delta_formula": "-H2-O",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "meno_polare"
+  },
+  {
+   "id": "loss_of_c2h4",
+   "nome": "loss of C2H4",
+   "delta_formula": "-C2-H4",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "demethylation",
+   "nome": "demethylation",
+   "delta_formula": "-C-H2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "dihydroxylation",
+   "nome": "dihydroxylation",
+   "delta_formula": "+O2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "trihydroxylation",
+   "nome": "trihydroxylation",
+   "delta_formula": "+O3",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "methylation",
+   "nome": "methylation",
+   "delta_formula": "+C+H2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "meno_polare"
+  },
+  {
+   "id": "loss_of_propene_n_deisopropylation",
+   "nome": "loss of propene (N-deisopropylation)",
+   "delta_formula": "-C3-H6",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare",
+   "richiede": {
+    "tutti": {
+     "N": 1
+    },
+    "almeno_uno": []
+   }
+  },
+  {
+   "id": "decarboxylation",
+   "nome": "decarboxylation",
+   "delta_formula": "-C-O2",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare",
+   "richiede": {
+    "tutti": {
+     "O": 2
+    },
+    "almeno_uno": []
+   }
+  },
+  {
+   "id": "carboxylation",
+   "nome": "carboxylation",
+   "delta_formula": "+C+O2",
+   "passi_max": 2,
+   "livello_previsione": 4,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare"
+  },
+  {
+   "id": "loss_of_so2",
+   "nome": "loss of SO2",
+   "delta_formula": "-O2-S",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera",
+   "richiede": {
+    "tutti": {
+     "S": 1,
+     "O": 2
+    },
+    "almeno_uno": []
+   }
+  },
+  {
+   "id": "oxidative_deamination",
+   "nome": "oxidative deamination",
+   "delta_formula": "-H3-N+O",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "libera",
+   "richiede": {
+    "tutti": {
+     "N": 1
+    },
+    "almeno_uno": []
+   }
+  },
+  {
+   "id": "reductive_dechlorination",
+   "nome": "reductive dechlorination",
+   "delta_formula": "-Cl+H",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "meno_polare",
+   "richiede": {
+    "tutti": {},
+    "almeno_uno": [
+     "Cl"
+    ]
+   }
+  },
+  {
+   "id": "hydrolytic_dechlorination",
+   "nome": "hydrolytic dechlorination",
+   "delta_formula": "-Cl+H+O",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare",
+   "richiede": {
+    "tutti": {},
+    "almeno_uno": [
+     "Cl"
+    ]
+   }
+  },
+  {
+   "id": "reductive_debromination",
+   "nome": "reductive debromination",
+   "delta_formula": "-Br+H",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "meno_polare",
+   "richiede": {
+    "tutti": {},
+    "almeno_uno": [
+     "Br"
+    ]
+   }
+  },
+  {
+   "id": "hydrolytic_defluorination",
+   "nome": "hydrolytic defluorination",
+   "delta_formula": "-F+H+O",
+   "passi_max": 2,
+   "livello_previsione": 3,
+   "fonte": "transformation_table",
+   "direzione_rt": "piu_polare",
+   "richiede": {
+    "tutti": {},
+    "almeno_uno": [
+     "F"
+    ]
+   }
+  }
+ ]
+}
