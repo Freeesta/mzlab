@@ -478,7 +478,7 @@ function reorderFiles(fromK, toK, isBefore) {
 const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { return lsObj("qqq.flgrp"); }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
-// the rows of the list: a click selects the file, a double click renames it (called by renderFileList)
+// the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
   Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
@@ -492,6 +492,7 @@ function bindFileRows() {
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
+    const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
   });
 }
 
@@ -690,6 +691,13 @@ function renderFileList() {
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
 const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];   // Okabe-Ito + 2: distinguishable with colour-blindness
 async function renameFile(f) { const v = await ask(I18N.t("files.rename.prompt"), f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } }
+// double click on the colour square: the colour picker opens straight away
+function pickFileColor(f) {
+  const i = document.createElement("input"); i.type = "color"; i.value = /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#0072B2"; i.setAttribute("aria-label", I18N.t("files.color.custom")); i.style.cssText = "position:fixed;left:-99px;opacity:0";
+  i.onchange = () => { f.color = i.value; f.colorSet = true; renderFileList(); redrawAll(); uiSave(); };
+  i.addEventListener("change", () => i.remove()); document.body.appendChild(i);
+  try { i.showPicker(); } catch (_) { i.click(); }
+}
 function colorFile(f, ev) {
   Q("#colpop")?.remove();
   const d = document.createElement("div"); d.id = "colpop";
