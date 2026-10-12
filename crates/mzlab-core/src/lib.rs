@@ -48,6 +48,7 @@ pub mod upload;
 pub mod window;
 pub mod similarity;
 pub mod ratio;
+pub mod statmat;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
