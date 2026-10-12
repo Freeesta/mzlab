@@ -104,27 +104,3 @@ def test_high_resolution_table_is_float32_and_xic_agrees(d, tmp_path):
     ms2 = Run(d / "ms2.mzML", index_path=tmp_path / "c.mzidx")
     ms2.hr1 = True                                       # only level 1 is float32
     assert ms2.table(2).mz.dtype == np.float64
-
-
-def test_browser_links_a_mounted_file_like_an_upload(d, tmp_path, monkeypatch):
-    """browser.link_big: the worker mounted a Blob under /big (here: a plain folder), Python links it into the work folder."""
-    from mzlab import browser
-    from mzlab.app import App
-    work = tmp_path / "sessione"
-    mount = tmp_path / "big" / "1"
-    mount.mkdir(parents=True)
-    (mount / "data").write_bytes((d / "full.mzML").read_bytes())
-    monkeypatch.setattr(browser, "WORK", work)
-    monkeypatch.setattr(mzml, "WORKERFS_ROOT", str(tmp_path / "big"))
-    browser.start()
-    code, text = browser.link_big("C:\\dati\\Esempio_t0.mzML", str(mount / "data"))
-    import json
-    out = json.loads(code == 200 and text)
-    assert [f["name"] for f in out["files"]] == ["Esempio_t0.mzML"] and out["files"][0]["kind"] == "full" and out["files"][0]["hr_profile"] is False
-    browser.app.open_session({"samples": [{"file": "Esempio_t0.mzML", "time": 0, "type": "sample"}]})
-    run = browser.app.session.items[0].run
-    assert run.mode == "file" and len(run.scans) == 1111
-    code, text = browser.link_big("x.txt", str(mount / "data"))      # same checks as an upload
-    assert code == 400 and "error" in json.loads(text)
-    browser.app.remove_file("Esempio_t0.mzML")
-    assert not (work / "Esempio_t0.mzML").exists() and (mount / "data").exists()    # the link goes to the bin, never the mounted file

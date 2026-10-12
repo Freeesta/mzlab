@@ -1,5 +1,6 @@
-# Misure dei motori (`python3 tools/bench.py --memoria --scrivi`)
+# Misure dei motori
 Chromium Linux, sito costruito con il motore Rust, 2026-10-10, commit eb6c6f1, stessa macchina, un giro. «open» = caricamento + primo TIC disegnato; «TIC+XIC» = TIC e 5 XIC di ogni file. Con `?motore=rust` il motore Python resta caricato e legge comunque i file (Rust risponde solo a TIC, XIC e scansioni): la memoria è la somma dei due.
+Le righe «motore Python» sono dell'ultimo sito che aveva Pyodide nelle pagine degli studenti: gli strumenti che le producevano (`bench.py --memoria|--velocita|--mzidx|--indici`) non esistono più.
 Memoria dopo l'apertura dei file e le richieste di TIC e XIC: heap WASM = somma delle `WebAssembly.Memory` del worker; IndexedDB = byte dei file salvati; heap JS della pagina da `performance.memory` (nei worker non c'è); RSS = somma dei processi Chromium. Rifare la misura: `python3 tools/build_site.py`, costruire il Rust come in `pages.yml`, poi `python3 tools/bench.py --memoria --scrivi` (file LR: `MZLAB_MZML`; Chromium: `MZLAB_CHROMIUM`).
 
 ## Tempi (6 file Full Scan, 31.9 MB)

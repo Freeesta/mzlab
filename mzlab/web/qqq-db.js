@@ -1,5 +1,5 @@
 // The IndexedDB of the page ("qqq_lab": the name is kept, renaming it would lose the users' data): its schema and one way to open it.
-// Used by browser-worker.js, rust-worker.js and (with a dynamic import) liste.js.
+// Used by rust-worker.js and (with a dynamic import) liste.js.
 export const DB_NAME = "qqq_lab", DB_VER = 2;
 
 // stores: the files kept without OPFS, the notebook and the settings (kv), the user's lists of the Liste panel

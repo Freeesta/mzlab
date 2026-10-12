@@ -1,7 +1,7 @@
 """Very large and high-resolution profile files: how to recognise them and what to tell the user.
 
 The recipe is the one for Thermo .raw files (ProteoWizard MSConvert); the same text is in the loading screen and in the guide
-(web/help.js, key "filegrandi") and, shortened, in web/browser-worker.js.
+(web/help.js, key "filegrandi").
 """
 from __future__ import annotations
 

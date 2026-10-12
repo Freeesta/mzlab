@@ -19,8 +19,10 @@ fn near(got: f64, want: f64, scale: f64) -> bool {
 #[test]
 fn components_like_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let out = std::env::temp_dir().join(format!("mzlab-components-{}.json", std::process::id()));
-    let run = Command::new("python3").current_dir(&root).arg("tools/componenti_riferimento.py").arg(&out).output();
+    let golden = root.join("tests/golden/ref/componenti.json");
+    let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
+    let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab-components-{}.json", std::process::id())) };
+    let run = if committed { Command::new("true").output() } else { Command::new("python3").current_dir(&root).arg("tools/componenti_riferimento.py").arg(&out).output() };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
         eprintln!("python3/numpy not available: test skipped");

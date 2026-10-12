@@ -33,15 +33,17 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) {
 
 #[test]
 fn composition_route_like_python() {
-    let out = std::env::temp_dir().join(format!("mzlab-comp-route-{}.json", std::process::id()));
-    let ok = Command::new("python3").current_dir(root()).arg("tools/composizione_rotta_riferimento.py").arg(&out).output().map(|o| o.status.success()).unwrap_or(false);
+    let golden = root().join("tests/golden/ref/composizione_rotta.json");
+    let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
+    let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab-comp-route-{}.json", std::process::id())) };
+    let ok = committed || Command::new("python3").current_dir(root()).arg("tools/composizione_rotta_riferimento.py").arg(&out).output().map(|o| o.status.success()).unwrap_or(false);
     if !ok {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 or numpy missing");
         eprintln!("skipped: python3/numpy not available");
         return;
     }
     let rows: Vec<Value> = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
-    let _ = std::fs::remove_file(&out);
+    if !committed { let _ = std::fs::remove_file(&out); }
     let (mut bad, mut answered) = (Vec::new(), 0);
     for r in &rows {
         let query = r["query"].as_str().unwrap();

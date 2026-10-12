@@ -1,4 +1,4 @@
-// Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). Used by browser-worker.js, the engine's worker.
+// Pool of short-lived Rust workers that build the .mzidx of the uploaded mzML files (idx-worker.js). Used by rust-worker.js, the engine's worker.
 //  - N workers at most (min(cores - 1, 4); 2 on Safari/iPad; at least 1), one file each, started in the order of the queue (prioritize() puts the list's order first);
 //  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
 //  - memory: a builder that cannot reserve memory (error.memoryBudget) halves the pool and the budget and retries once; the page is told (notice);

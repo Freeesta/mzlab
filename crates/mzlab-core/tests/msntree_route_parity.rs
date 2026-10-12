@@ -36,8 +36,10 @@ fn same(path: &str, got: &Value, want: &Value) -> usize {
 
 #[test]
 fn msntree_route_like_python() {
+    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/ref/msntree_rotta");           // the answers of Python for the synthetic infusion are committed: no python3 needed
     let out = match std::env::var("MZLAB_MSN_DIR") {
         Ok(d) => PathBuf::from(d),
+        Err(_) if golden.exists() => golden,
         Err(_) => {
             let out = std::env::temp_dir().join(format!("mzlab-msntree-route-{}", std::process::id()));
             let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
