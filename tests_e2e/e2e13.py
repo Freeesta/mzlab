@@ -18,6 +18,7 @@ time.sleep(1)
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1500, "height": 2200}); pg = ctx.new_page()
+        ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")      # first-visit hint and tour invitation would cover the tab bar
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: errs.append(("console." + m.type, m.text)) if m.type == "error" else None)
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
