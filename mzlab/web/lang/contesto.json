@@ -55,6 +55,8 @@
   "load.wiffWait": "{name} = nome del file della coppia .wiff/.wiff.scan arrivato senza l'altro.",
   "err.file.notAccepted": "{name} = nome del file.",
   "err.engine.index": "{name} = nome del file.",
+  "err.engine.indexWhy": "L'indice di un file non si è costruito. {name} = nome del file, {detail} = causa tecnica.",
+  "err.engine.indexCrash": "Il lavoratore che costruisce l'indice è morto (di solito memoria). {name} = nome del file.",
   "err.file.notMzml": "{name} = nome del file.",
   "err.file.notDam": "{name} = nome del file.",
   "err.dam.unreadable": "Mostrato nella finestra del metodo; {message} = testo tecnico (inglese).",

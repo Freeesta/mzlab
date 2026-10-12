@@ -500,6 +500,8 @@ I18N.add("it", {
   "err.route.unavailable": "Questa operazione non è disponibile per questi dati.",
   "error.memoryBudget": "Il file è troppo grande per la memoria che il browser concede al motore di calcolo.",
   "err.engine.index": "Non riesco a leggere questo file: {name}",
+  "err.engine.indexWhy": "Non riesco a leggere questo file: {name} (indicizzazione fallita: {detail}).",
+  "err.engine.indexCrash": "L'indicizzazione di {name} si è interrotta (probabile memoria esaurita del browser). Chiudi le altre schede e riprova.",
   "err.memory.tooBig": "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "err.memory.over4gb": "file oltre 4 GB: troppo grande. Riducilo con MSConvert: msconvert file.raw --mzML --zlib --filter \"peakPicking vendor msLevel=1-\"  (per alleggerire: --filter \"scanTime [600,1500]\" in secondi, --filter \"threshold count 300 most-intense\")",
   "tabs.overview.title": "Tempi ed esperimenti",
