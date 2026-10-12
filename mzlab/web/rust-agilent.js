@@ -1,15 +1,15 @@
 // Agilent MassHunter .D folder -> mzML, done in the engine's worker (rust-worker.js, case "agilent2mzml") like the Thermo .raw (rust-raw.js): the mzML goes to a file of OPFS
 // (rust-opfs.js), MSPeak.bin is read by offset (Blob.slice, synchronously) and never held, the small files of the folder are read whole. `files` = { scan, xsd, peak, ts, devices, contents,
-// tree, acqmeth }: Blobs (File) of AcqData/MSScan.bin, AcqData/MSScan.xsd, AcqData/MSPeak.bin, AcqData/MSTS.xml, AcqData/Devices.xml, AcqData/Contents.xml, AcqData/MSTree2.bin and acqmeth.txt; only the
-// first two are required (a missing one is null).
+// tree, acqmeth, datams }: Blobs (File) of AcqData/MSScan.bin, AcqData/MSScan.xsd, AcqData/MSPeak.bin, AcqData/MSTS.xml, AcqData/Devices.xml, AcqData/Contents.xml, AcqData/MSTree2.bin, acqmeth.txt and data.ms; scan and peak are required unless
+// there is a data.ms (an older run), the others may be missing (null).
 
 // worker side: `readerFor(blob)` gives (offset, length) => Uint8Array; `rawSink` is rust-opfs.js::rawSink
 export async function agilentOp(engine, m, id, readerFor, rawSink) {
-  const f = m.files, small = b => (b && b.size ? readerFor(b)(0, b.size) : new Uint8Array(0)), total = f.peak.size, rd = readerFor(f.peak), sink = await rawSink(m.dest);
+  const f = m.files, small = b => (b && b.size ? readerFor(b)(0, b.size) : new Uint8Array(0)), total = f.peak ? f.peak.size : 0, rd = f.peak ? readerFor(f.peak) : () => new Uint8Array(0), sink = await rawSink(m.dest);
   let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
   const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };
   try {
-    engine.agilent_to_mzml(m.name, small(f.scan), small(f.xsd), small(f.ts), small(f.devices), small(f.contents), small(f.tree), small(f.acqmeth), total,
+    engine.agilent_to_mzml(m.name, small(f.scan), small(f.xsd), small(f.ts), small(f.devices), small(f.contents), small(f.tree), small(f.acqmeth), small(f.datams), total,
       (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(false); return b; }, piece => { sink.write(piece); written += piece.length; tick(false); },
       (done, all) => { scans = done; scansTotal = all; tick(done === 0 || done === all); });
   } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }          // q: the disk is full (error.quota)

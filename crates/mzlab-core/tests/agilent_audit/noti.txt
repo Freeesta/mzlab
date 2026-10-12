@@ -40,4 +40,7 @@ IndexedDataConverter.log|1
 PRE_POST.INI|102
 acqmeth.txt|18
 checksum.xml|5
+data.ms|9
+data.ms#after-records|2
+data.ms#header|2
 runstart.txt|1

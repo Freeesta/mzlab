@@ -43,7 +43,10 @@ impl AgilentD {
         on: &mut dyn FnMut(Spectrum) -> Result<()>,
     ) -> Result<Vec<Chromatogram>> {
         for (n, r) in self.records.iter().filter(|r| r.points > 0).enumerate() {
-            let (mz, it) = read_points(peak, r)?;
+            let (mz, it) = match &self.inline {
+                Some(v) => v.get(r.id as usize - 1).cloned().unwrap_or_default(),
+                None => read_points(peak, r)?,
+            };
             let level = r.level.clamp(1, 255) as u8;
             let filter = self.filter_of(r.scan_type, &mz);
             let exact = it.iter().all(|&v| v as f32 as f64 == v);
@@ -118,10 +121,12 @@ impl AgilentD {
             add("detector", "MS:1000253", "electron multiplier");
         }
         let mut sources: Vec<(String, String)> = self.file_sha1.clone();
-        sources.insert(
-            1.min(sources.len()),
-            ("AcqData/MSPeak.bin".into(), peak_sha1.into()),
-        );
+        if self.inline.is_none() {
+            sources.insert(
+                1.min(sources.len()),
+                ("AcqData/MSPeak.bin".into(), peak_sha1.into()),
+            );
+        }
         Header {
             run: base.to_string(),
             sources: sources.iter().map(|s| s.0.clone()).collect(),
@@ -169,7 +174,11 @@ impl AgilentD {
         progress: &mut dyn FnMut(usize, usize),
     ) -> Result<()> {
         let mut peak = Windowed::new(peak, peak_len);
-        let sha = sha1_of(&mut peak, peak_len)?;
+        let sha = if self.inline.is_some() {
+            String::new()
+        } else {
+            sha1_of(&mut peak, peak_len)?
+        };
         let mut w = MzmlWriter::new(out, &self.header(&sha))?;
         let count = self.spectrum_count();
         if count > 0 {
