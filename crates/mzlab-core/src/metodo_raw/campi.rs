@@ -276,6 +276,21 @@ fn instid(raw: &RawFileReader) -> Vec<Campo> {
         .collect()
 }
 
+/// The analog controllers (pump pressure ...): the channel, its unit and the device it comes from.
+fn analog(traces: &[opentfraw::AnalogTrace]) -> Vec<Campo> {
+    let mut v = Vec::new();
+    for t in traces {
+        let from = format!("thermo-raw:Controller{}", t.controller);
+        v.push(Campo::new(&from, "ChannelName", &t.name));
+        v.push(Campo::new(&from, "Unit", &t.unit));
+        v.push(Campo::new(&from, "Samples", t.values.len()));
+        v.push(Campo::new(&from, "DeviceDriver", &t.driver));
+        v.push(Campo::new(&from, "DeviceModel", &t.model));
+        v.push(Campo::new(&from, "DeviceSerialNumber", &t.serial).id());
+    }
+    v
+}
+
 fn run_header(raw: &RawFileReader) -> Vec<Campo> {
     let i = &raw.run_header.sample_info;
     let q = "thermo-raw:RunHeader/SampleInfo";
@@ -304,6 +319,7 @@ fn script_map(key: &str) -> Option<&'static str> {
 /// All the fields of the file, in a stable order (origin, key); in an anonymous document the ones that identify a person or a computer are left out.
 pub fn fields(
     raw: &RawFileReader,
+    traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
     ident: &Ident,
@@ -312,6 +328,7 @@ pub fn fields(
     let mut all = container(raw);
     all.extend(instid(raw));
     all.extend(run_header(raw));
+    all.extend(analog(traces));
     all.extend(trailer(raw));
     for (t, k, v, u) in pairs {
         let from = t.map_or("thermo-raw:InstrumentMethod/Script".to_string(), |t| {

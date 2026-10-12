@@ -400,6 +400,25 @@ impl ControllerType {
     }
 }
 
+/// One trace of an analog controller (pump pressure, ...), see [`RawFileReader::analog_traces`].
+#[derive(Debug, Clone)]
+pub struct AnalogTrace {
+    /// Index of the controller in the file.
+    pub controller: usize,
+    /// Channel name as the file gives it (`Pump_Pressure`).
+    pub name: String,
+    /// Unit as the file gives it (`psi`, `bar`); empty when the file has none.
+    pub unit: String,
+    /// Driver, model and serial number of the device; empty when the file has none.
+    pub driver: String,
+    pub model: String,
+    pub serial: String,
+    /// Time of each sample in minutes.
+    pub time_min: Vec<f64>,
+    /// Value of each sample, in `unit`.
+    pub values: Vec<f64>,
+}
+
 /// Minimal metadata about one controller in a multi-controller RAW file.
 #[derive(Debug, Clone)]
 pub struct ControllerInfo {
@@ -893,6 +912,83 @@ impl RawFileReader {
             });
         }
         Ok(infos)
+    }
+
+    /// The traces of the analog controllers of the file (pump pressure, ...): one value per sample as `f64`, evenly spaced from the start to
+    /// the end time of the controller. The channel name, the unit and the device (driver, model, serial number) come from the InstID strings that
+    /// follow the controller's RunHeader (`name`, `device`, then `"<name> <unit>"` as the ninth string); the data are the `f64` values just
+    /// before the RunHeader, which is how the files read so far are laid out - a controller whose samples do not end exactly at its RunHeader is skipped.
+    pub fn analog_traces<R: Read + Seek>(&self, source: &mut R) -> Result<Vec<AnalogTrace>> {
+        const MAX_SAMPLES: u64 = 20_000_000;
+        let mut r = BinaryReader::new(source);
+        let mut out = Vec::new();
+        for (controller, &addr) in self
+            .raw_file_info
+            .preamble
+            .run_header_addrs
+            .iter()
+            .enumerate()
+        {
+            if addr == 0 {
+                continue;
+            }
+            r.seek_to(addr)?;
+            let rh = RunHeader::read(&mut r, self.version)?;
+            let info = &rh.sample_info;
+            let n = u64::from(info.last_scan_number)
+                .saturating_sub(u64::from(info.first_scan_number))
+                + 1;
+            let is_ms = rh.ntrailer > 0 || rh.data_addr == self.data_addr;
+            if is_ms
+                || info.last_scan_number < info.first_scan_number
+                || n > MAX_SAMPLES
+                || rh.data_addr.checked_add(8 * n) != Some(rh.own_addr)
+            {
+                continue;
+            }
+            let at = r.position();
+            let strings = read_inst_id_strings(&mut r, at, 9);
+            let name = strings
+                .first()
+                .map(|t| t.trim().to_string())
+                .unwrap_or_default();
+            if name.is_empty() {
+                continue;
+            }
+            let unit = strings
+                .get(8)
+                .and_then(|t| t.trim().strip_prefix(name.as_str()))
+                .map(|t| t.trim().to_string())
+                .unwrap_or_default();
+            r.seek_to(rh.data_addr)?;
+            r.check_count(n, 8)?;
+            let mut values = Vec::with_capacity(n as usize);
+            for _ in 0..n {
+                values.push(r.read_f64()?);
+            }
+            let step = if n > 1 {
+                (info.end_time - info.start_time) / (n - 1) as f64
+            } else {
+                0.0
+            };
+            let text = |i: usize| {
+                strings
+                    .get(i)
+                    .map(|t| t.trim().to_string())
+                    .unwrap_or_default()
+            };
+            out.push(AnalogTrace {
+                controller,
+                name,
+                unit,
+                driver: text(1),
+                model: text(2),
+                serial: text(3),
+                time_min: (0..n).map(|i| info.start_time + i as f64 * step).collect(),
+                values,
+            });
+        }
+        Ok(out)
     }
 
     /// Look up the [`ScanIndexEntry`] for a 1-based scan number, bounds- and

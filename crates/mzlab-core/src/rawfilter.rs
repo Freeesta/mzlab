@@ -22,6 +22,8 @@ pub struct MzmlFilter<W: Write> {
     anonymous: bool,
     /// Lines written right after the `<run ...>` tag (the `metodo/1` document as a `userParam`).
     run_extra: Option<String>,
+    /// Inside a `pressure chromatogram` (MS:1003019): its intensity array gets the unit.
+    pressure: bool,
     /// Scan number of the spectrum being written, and the last scan seen at each level (index = level).
     current: u32,
     last: [u32; 8],
@@ -42,6 +44,7 @@ impl<W: Write> MzmlFilter<W> {
             line: Vec::new(),
             anonymous,
             run_extra: None,
+            pressure: false,
             current: 0,
             last: [0; 8],
         }
@@ -96,6 +99,17 @@ impl<W: Write> MzmlFilter<W> {
             if let Some(extra) = self.run_extra.take() {
                 return Some(format!("{l}\n{extra}\n"));
             }
+        } else if t.starts_with("<chromatogram ") {
+            self.pressure = false;
+        } else if t.contains("accession=\"MS:1003019\"") {
+            self.pressure = true;
+        } else if self.pressure && t.contains("accession=\"MS:1000515\"") {
+            // the writer gives no unit to an intensity array; the pressures are written in pascal
+            let unit = "unitCvRef=\"UO\" unitAccession=\"UO:0000110\" unitName=\"pascal\"";
+            return Some(format!(
+                "{}\n",
+                l.replacen("value=\"\"", &format!("value=\"\" {unit}"), 1)
+            ));
         } else if t.starts_with("<spectrum ") {
             self.current = number_after(t, "scan=").unwrap_or(0);
         } else if t.contains("accession=\"MS:1000511\"") && !t.contains("<precursor") {

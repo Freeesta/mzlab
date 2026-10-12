@@ -149,6 +149,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             .collect(),
     };
     let blocks = raw.instrument_method_blocks(source);
+    let traces = raw.analog_traces(source).unwrap_or_default();
     let by = |b: Block| blocks.iter().find(|t| script::classify(t) == b);
     let script_text = by(Block::Script).map(String::as_str).unwrap_or("");
     let pairs = script::script_pairs(script_text);
@@ -196,7 +197,9 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         ("campionatore", sampler(&pairs)),
         (
             "campi",
-            Some(V::Arr(campi::fields(raw, &pairs, &items, &ident, anon))),
+            Some(V::Arr(campi::fields(
+                raw, &traces, &pairs, &items, &ident, anon,
+            ))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks, &ident, anon)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
