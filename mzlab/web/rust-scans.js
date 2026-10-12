@@ -35,7 +35,7 @@ async function scanBinRoute({ slots, rpc, stats }, k, query) {
   return r.buf;
 }
 
-const SCAN_ROUTES = /^\/api\/(spectra|scan|scanavg|scanbin)$/;
+const SCAN_ROUTES = /^\/api\/(spectra|scan|scanavg|scanbin|msntree)$/;
 // true for the routes of single scans (and of a spectrum with a background) that do not point to a reference file
 export const hasScan = (path, q) => !q.get("ref") && (SCAN_ROUTES.test(path) || (path === "/api/spectrum" && !!q.get("bgk")));
 

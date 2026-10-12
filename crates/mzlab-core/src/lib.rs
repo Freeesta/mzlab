@@ -28,6 +28,7 @@ pub mod ms2sim;
 pub mod origin;
 pub mod originroute;
 pub mod mzidx;
+pub mod msnroute;
 pub mod msntree;
 pub mod mzml;
 pub mod mzmlhead;
