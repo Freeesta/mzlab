@@ -70,15 +70,33 @@ impl Ord for Head {
     }
 }
 
-/// Rows of each file in m/z order (stable), without the artefacts when asked.
-fn order(f: &FileFeatures, drop: bool) -> Vec<u32> {
-    let mut v: Vec<u32> = (0..f.len() as u32)
-        .filter(|&i| !drop || f.flags[i as usize] & FLAG_FT_LOBE == 0)
-        .collect();
-    if !f.mz.windows(2).all(|w| w[0] <= w[1]) {
-        v.sort_by(|&a, &b| f.mz[a as usize].total_cmp(&f.mz[b as usize]));
+/// Walk through the rows of a file in m/z order (stable), skipping the artefacts when asked. A table that is already sorted is walked in place.
+struct Cursor {
+    order: Option<Vec<u32>>,
+    at: usize,
+}
+
+impl Cursor {
+    fn new(f: &FileFeatures) -> Cursor {
+        let sorted = f.mz.windows(2).all(|w| w[0] <= w[1]);
+        let order = (!sorted).then(|| {
+            let mut v: Vec<u32> = (0..f.len() as u32).collect();
+            v.sort_by(|&a, &b| f.mz[a as usize].total_cmp(&f.mz[b as usize]));
+            v
+        });
+        Cursor { order, at: 0 }
     }
-    v
+
+    fn next(&mut self, f: &FileFeatures, drop: bool) -> Option<u32> {
+        while self.at < f.len() {
+            let i = self.order.as_ref().map_or(self.at as u32, |o| o[self.at]);
+            self.at += 1;
+            if !drop || f.flags[i as usize] & FLAG_FT_LOBE == 0 {
+                return Some(i);
+            }
+        }
+        None
+    }
 }
 
 /// Cuts every run of `x` (sorted inside the run) wider than `max_span` at its largest internal gap, repeatedly (at most 32 passes, as Python).
@@ -119,28 +137,29 @@ fn split_slab(
     adj: Option<&RtMap>,
 ) -> Vec<(usize, usize)> {
     let mz = |t: &Item| files[t.0 as usize].mz[t.1 as usize];
-    let rt = |t: &Item| rt_of(files, adj, t);
     let x: Vec<f64> = items.iter().map(|t| libm::log(mz(t)) * 1e6).collect();
     let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span);
+    // the RT of every feature of the slab, computed once (the corrected RT interpolates a curve)
+    let rts: Vec<f64> = items.iter().map(|t| rt_of(files, adj, t)).collect();
     let mut groups = Vec::new();
-    let mut sorted: Vec<Item> = Vec::with_capacity(items.len());
+    let mut sorted: Vec<(f64, Item)> = Vec::with_capacity(items.len());
     for (a, b) in runs.drain(..) {
         let start = sorted.len();
-        sorted.extend_from_slice(&items[a..b]);
-        sorted[start..].sort_by(|s, t| rt(s).total_cmp(&rt(t)));
+        sorted.extend((a..b).map(|i| (rts[i], items[i])));
+        sorted[start..].sort_by(|s, t| s.0.total_cmp(&t.0));
         let mut from = start;
         for i in start + 1..=sorted.len() {
-            if i == sorted.len() || rt(&sorted[i]) - rt(&sorted[i - 1]) > p.rt_gap {
+            if i == sorted.len() || sorted[i].0 - sorted[i - 1].0 > p.rt_gap {
                 groups.push((from, i));
                 from = i;
             }
         }
     }
-    *items = sorted;
+    *items = sorted.iter().map(|x| x.1).collect();
     match p.max_rt_span {
         None => groups,
         Some(span) => {
-            let xr: Vec<f64> = items.iter().map(rt).collect();
+            let xr: Vec<f64> = sorted.iter().map(|x| x.0).collect();
             limit_span(&xr, groups, span)
         }
     }
@@ -192,22 +211,39 @@ pub fn align_grouped(
     adj: Option<&RtMap>,
     record: bool,
 ) -> Grouped {
+    let mut n = 0usize;
+    merge_groups(files, p, adj, &mut |_| n += 1);
     let mut out = Grouped {
-        table: Aligned {
-            n_files: files.len(),
-            ..Aligned::default()
-        },
+        table: Aligned::with_capacity(files.len(), n),
         group_of: if record {
             files.iter().map(|f| vec![u32::MAX; f.len()]).collect()
         } else {
             Vec::new()
         },
     };
-    let ord: Vec<Vec<u32>> = files.iter().map(|f| order(f, p.drop_artefacts)).collect();
-    let mut at = vec![0usize; files.len()];
+    merge_groups(files, p, adj, &mut |items| {
+        if record {
+            let g = out.table.len() as u32;
+            for &(k, i) in items {
+                out.group_of[k as usize][i as usize] = g;
+            }
+        }
+        push_group(files, items, &mut out.table, adj);
+    });
+    out
+}
+
+/// Calls `sink` with the features of every group, in the order of the table (the slabs are made one at a time).
+fn merge_groups(
+    files: &[&FileFeatures],
+    p: &AlignParams,
+    adj: Option<&RtMap>,
+    sink: &mut dyn FnMut(&[Item]),
+) {
+    let mut cur: Vec<Cursor> = files.iter().map(|f| Cursor::new(f)).collect();
     let mut heap: BinaryHeap<Head> = BinaryHeap::new();
-    let push = |heap: &mut BinaryHeap<Head>, k: usize, at: &[usize]| {
-        if let Some(&i) = ord[k].get(at[k]) {
+    let refill = |heap: &mut BinaryHeap<Head>, cur: &mut [Cursor], k: usize| {
+        if let Some(i) = cur[k].next(files[k], p.drop_artefacts) {
             heap.push(Head {
                 mz: files[k].mz[i as usize],
                 file: k as u32,
@@ -216,21 +252,19 @@ pub fn align_grouped(
         }
     };
     for k in 0..files.len() {
-        push(&mut heap, k, &at);
+        refill(&mut heap, &mut cur, k);
     }
     let mut slab: Vec<Item> = Vec::new();
     let mut last = f64::NAN;
     while let Some(h) = heap.pop() {
         if !slab.is_empty() && h.mz - last > h.mz * p.ppm * 1e-6 {
-            flush(files, &mut slab, p, adj, &mut out);
+            flush(files, &mut slab, p, adj, sink);
         }
         last = h.mz;
         slab.push((h.file, h.pos));
-        at[h.file as usize] += 1;
-        push(&mut heap, h.file as usize, &at);
+        refill(&mut heap, &mut cur, h.file as usize);
     }
-    flush(files, &mut slab, p, adj, &mut out);
-    out
+    flush(files, &mut slab, p, adj, sink);
 }
 
 fn flush(
@@ -238,19 +272,13 @@ fn flush(
     slab: &mut Vec<Item>,
     p: &AlignParams,
     adj: Option<&RtMap>,
-    out: &mut Grouped,
+    sink: &mut dyn FnMut(&[Item]),
 ) {
     if slab.is_empty() {
         return;
     }
     for (a, b) in split_slab(files, slab, p, adj) {
-        if !out.group_of.is_empty() {
-            let g = out.table.len() as u32;
-            for &(k, i) in &slab[a..b] {
-                out.group_of[k as usize][i as usize] = g;
-            }
-        }
-        push_group(files, &slab[a..b], &mut out.table, adj);
+        sink(&slab[a..b]);
     }
     slab.clear();
 }

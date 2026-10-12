@@ -196,9 +196,8 @@ fn main_role(v: &[u16; 7]) -> u8 {
     )
 }
 
-/// One row per set of groups, in the order of the reference ions; the cells are the ones of the reference ion.
-fn rows(ions: &Aligned, sets: &mut Sets, votes: &Votes) -> Aligned {
-    let nf = ions.n_files;
+/// The sets of groups with their reference ion, ordered by reference.
+fn runs(ions: &Aligned, sets: &mut Sets, votes: &Votes) -> Vec<(u32, Vec<u32>)> {
     let mut by_root: Vec<(u32, u32)> = (0..ions.len() as u32).map(|g| (sets.root(g), g)).collect();
     by_root.sort();
     let mut runs: Vec<(u32, Vec<u32>)> = Vec::new();
@@ -207,28 +206,54 @@ fn rows(ions: &Aligned, sets: &mut Sets, votes: &Votes) -> Aligned {
         runs.push((reference(ions, votes, &set), set));
     }
     runs.sort_by_key(|r| r.0);
-    let mut out = Aligned {
-        n_files: nf,
-        member_start: vec![0],
-        ..Aligned::default()
-    };
-    for (g, set) in runs {
-        let c = g as usize * nf..(g as usize + 1) * nf;
-        out.mz.push(ions.mz[g as usize]);
-        out.rt.push(ions.rt[g as usize]);
-        out.area.extend_from_slice(&ions.area[c.clone()]);
-        out.height.extend_from_slice(&ions.height[c.clone()]);
-        out.apex_rt.extend_from_slice(&ions.apex_rt[c.clone()]);
-        out.width.extend_from_slice(&ions.width[c.clone()]);
-        out.state.extend_from_slice(&ions.state[c]);
-        for m in std::iter::once(g).chain(set.into_iter().filter(|&m| m != g)) {
-            out.member_mz.push(ions.mz[m as usize]);
-            out.member_rt.push(ions.rt[m as usize] as f32);
-            out.member_role.push(main_role(&votes.role[m as usize]));
+    runs
+}
+
+/// One row per set of groups, in the order of the reference ions; the cells are the ones of the reference ion. The table of ions is compacted in
+/// place (a row never moves to a higher position), so the peak of memory is that of the table of ions.
+fn rows(mut t: Aligned, sets: &mut Sets, votes: &Votes) -> Aligned {
+    let nf = t.n_files;
+    let runs = runs(&t, sets, votes);
+    t.member_start.reserve_exact(runs.len() + 1);
+    t.member_start.push(0);
+    t.member_mz.reserve_exact(t.mz.len());
+    t.member_rt.reserve_exact(t.mz.len());
+    t.member_role.reserve_exact(t.mz.len());
+    for (g, set) in &runs {
+        for &m in std::iter::once(g).chain(set.iter().filter(|&m| m != g)) {
+            t.member_mz.push(t.mz[m as usize]);
+            t.member_rt.push(t.rt[m as usize] as f32);
+            t.member_role.push(main_role(&votes.role[m as usize]));
         }
-        out.member_start.push(out.member_mz.len() as u32);
+        t.member_start.push(t.member_mz.len() as u32);
     }
-    out
+    for (r, (g, _)) in runs.iter().enumerate() {
+        let g = *g as usize;
+        t.mz[r] = t.mz[g];
+        t.rt[r] = t.rt[g];
+        let c = g * nf..(g + 1) * nf;
+        t.area.copy_within(c.clone(), r * nf);
+        t.height.copy_within(c.clone(), r * nf);
+        t.apex_rt.copy_within(c.clone(), r * nf);
+        t.width.copy_within(c.clone(), r * nf);
+        t.state.copy_within(c, r * nf);
+    }
+    let n = runs.len();
+    t.mz.truncate(n);
+    t.rt.truncate(n);
+    t.area.truncate(n * nf);
+    t.height.truncate(n * nf);
+    t.apex_rt.truncate(n * nf);
+    t.width.truncate(n * nf);
+    t.state.truncate(n * nf);
+    for v in [&mut t.mz, &mut t.rt, &mut t.area] {
+        v.shrink_to_fit();
+    }
+    for v in [&mut t.height, &mut t.apex_rt, &mut t.width] {
+        v.shrink_to_fit();
+    }
+    t.state.shrink_to_fit();
+    t
 }
 
 /// Aligns the files in "per family" mode (each file must carry `family_id`, `role` and `charge`).
@@ -243,5 +268,6 @@ pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Aligned {
     let adj = map.ok().then_some(&map);
     let g = align_grouped(files, &p.ion, adj, true);
     let (mut sets, votes) = link(files, &g.table, &g.group_of, p);
-    rows(&g.table, &mut sets, &votes)
+    drop(g.group_of);
+    rows(g.table, &mut sets, &votes)
 }
