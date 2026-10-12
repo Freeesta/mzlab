@@ -23,6 +23,8 @@ with sync_playwright() as p:
             load(pg); pg.wait_for_timeout(2000)
             v = vis(pg); assert v and v["w"] > 100 and v["below"] and v["inside"] and v["live"] == "polite" and v["role"] == "status", v
             assert pg.inner_text("#bar-hint").startswith("Gli strumenti sono qui")
+            ar = pg.evaluate("(() => { const h = document.getElementById('bar-hint'), t = document.getElementById('sb-toggle').getBoundingClientRect(); const x = parseFloat(getComputedStyle(h).getPropertyValue('--ha')) + 5 + h.getBoundingClientRect().left; return [x, t.left, t.right]; })()")
+            assert ar[1] - 2 <= ar[0] <= ar[2] + 2, ("the arrow does not point at the Panel button", ar)
             pg.click("#bar-hint button"); pg.wait_for_timeout(300); assert vis(pg) is None
             assert pg.evaluate("localStorage.getItem('qqq.barra.hint')") == "1"
             pg.reload(); pg.wait_for_timeout(1500); assert vis(pg) is None      # once per browser
