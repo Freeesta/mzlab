@@ -13,10 +13,11 @@ D = Path("/tmp/wd_conv_files"); D.mkdir(parents=True, exist_ok=True)
 write_full(D / "x.mzML", 0, seed=3); XML = (D / "x.mzML").read_text(encoding="utf-8")
 write_full(D / "dup.mzML", 0, seed=4); (D / "dup.raw").write_bytes(b"RAW" * 10)
 for n in ("irr_t5.raw", "irr_t10.raw"): (D / n).write_bytes(b"RAW" * 10)
-FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp, signal) => {
+FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp, signal, opts) => {
   const xml = %s;
   const wait = () => new Promise((r, j) => { window.__go = r; if (signal) signal.addEventListener('abort', () => j(Object.assign(new Error('cancelled'), { cancelled: true })), { once: true }); });
   window.__log = (window.__log || []).concat([f.name]);
+  window.__prof = (window.__prof || []).concat([!!(opts && opts.profile)]);
   onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: null });      // the container is open (its tail was read: read = total) but no scan has been converted
   await wait();
   onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: 10 });
@@ -105,6 +106,24 @@ try:
             assert pg.evaluate("window.__log") == ["c1.raw"], pg.evaluate("window.__log")      # the second .raw was not started
             assert "annullata" in pg.evaluate("document.getElementById('up').textContent")
         step("Annulla stops the conversion and leaves the other .raw out", cancel)
+        def profile():
+            assert pg.evaluate("document.getElementById('rawprof').hidden") is False
+            assert pg.evaluate("document.getElementById('rawprofile').checked") is False      # not implicit: the default is the centroids
+            pg.evaluate("window.__prof=[]; window.__log=[]")
+            (D / "p1.raw").write_bytes(b"RAW" * 10)
+            pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
+            assert pg.evaluate("window.__prof") == [False]
+            pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")
+            pg.wait_for_function("document.querySelectorAll('.convprog').length==0", timeout=10000)
+            pg.evaluate("document.getElementById('rawprofile').click()")
+            assert pg.evaluate("localStorage.getItem('qqq.rawprofile')") == "1"
+            pg.reload(); pg.wait_for_timeout(800)
+            assert pg.evaluate("document.getElementById('rawprofile').checked") is True      # remembered
+            pg.evaluate("window.__prof=[]")
+            pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
+            assert pg.evaluate("window.__prof") == [True]
+            pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")
+        step("Profilo / Centroide: centroids by default, the choice is remembered and reaches the converter", profile)
 finally:
     r.close()
 for s in steps: print(s)

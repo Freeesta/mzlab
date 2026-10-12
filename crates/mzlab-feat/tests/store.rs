@@ -61,7 +61,7 @@ fn origin() -> Origin {
             ("a.mzML".into(), "ab".repeat(32)),
             ("b.mzML".into(), "cd".repeat(32)),
         ],
-        times: Vec::new(),
+        ..Origin::default()
     }
 }
 

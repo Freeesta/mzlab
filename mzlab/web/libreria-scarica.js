@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page (the worker loads this file with importScripts; node loads it in
 // tests/test_libreria_scarica.py). The desktop app does the same in Rust (crates/mzlab-desktop/src/scarica.rs): same catalog, same pieces, same checks.

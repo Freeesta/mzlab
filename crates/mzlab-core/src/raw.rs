@@ -105,10 +105,12 @@ impl<R: Seek> Seek for Counted<'_, R> {
 
 /// `to_mzml` that reports the real progress: `on_scan(0, total)` once the container is open (the scans are about to be converted),
 /// then `on_scan(done, total)` as the scans go by (never backwards), and `on_scan(total, total)` at the end.
+/// `profile` keeps the profile data of the file (much larger); otherwise the vendor centroids are written.
 pub fn to_mzml_progress<R: Read + Seek, W: Write>(
     mut source: R,
     out: &mut W,
     name: &str,
+    profile: bool,
     on_scan: &mut dyn FnMut(u32, u32),
 ) -> Result<()> {
     let raw = open(&mut source)?;
@@ -117,7 +119,7 @@ pub fn to_mzml_progress<R: Read + Seek, W: Write>(
     let total = starts.len() as u32;
     on_scan(0, total);
     let mut counted = Counted { inner: source, starts, pos: 0, done: 0, on_scan };
-    opentfraw::write_mzml(&raw, &mut counted, out, name, false).map_err(raw_error)?;
+    opentfraw::write_mzml(&raw, &mut counted, out, name, profile).map_err(raw_error)?;
     (counted.on_scan)(total, total);
     Ok(())
 }
