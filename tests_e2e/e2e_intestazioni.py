@@ -13,7 +13,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
 
 D = synth("intestazioni")
-r = Run(port=8958, wd="/tmp/wd_intestazioni")
+r = Run(port=8958, wd="/tmp/wd_intestazioni", motore="python")
 
 # every panel header: one row, every control inside it, no scrolling content, a chart at least 100 px high
 CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {

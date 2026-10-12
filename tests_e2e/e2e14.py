@@ -13,7 +13,7 @@ def overflow(pg):
     return pg.evaluate("[document.documentElement.scrollWidth, innerWidth]")
 
 with sync_playwright() as p:
-    run = Run(port=8814, wd="/tmp/wd14")
+    run = Run(port=8814, wd="/tmp/wd14", motore="python")
     pg = run.page(p)
     pg.set_viewport_size({"width": 1500, "height": 900})
     pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")])
