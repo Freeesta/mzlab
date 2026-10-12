@@ -11,3 +11,15 @@ export async function scanRoute({ slots, rpc, stats }, k, path, query) {
   stats.rust++;
   return r.info;
 }
+
+// `api/spectrum` with a background (`bgk`): the window minus the window of another file (or of the same one), both from their indexes.
+export async function bgRoute({ slots, rpc, stats }, k, bgk, query) {
+  const ks = [k, bgk];
+  if (!ks.every(x => Number.isInteger(x) && slots[x])) return null;
+  await Promise.all(ks.map(x => slots[x].opening));
+  if (!ks.every(x => slots[x].idx && !slots[x].bad)) return null;
+  const r = await rpc({ op: "specbg", slot: k, query });
+  if (r.dead || r.error || !r.info) return null;
+  stats.rust++;
+  return r.info;
+}

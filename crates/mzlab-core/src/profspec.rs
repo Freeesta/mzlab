@@ -138,7 +138,7 @@ fn merge_cells(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
 }
 
 /// `"i0":..,"i1":..,"n":..,"sid":..` of `window_scans`, the part both kinds of spectrum share.
-fn window_tail(o: &mut Out, b: &crate::spectrum::Binned) {
+pub(crate) fn window_tail(o: &mut Out, b: &crate::spectrum::Binned) {
     o.raw(",\"i0\":");
     match b.in_win.first() {
         Some(i) => o.int(*i as i64),
@@ -156,7 +156,7 @@ fn window_tail(o: &mut Out, b: &crate::spectrum::Binned) {
 }
 
 /// `np.rint(mz / step)`.
-fn rint(step: f64) -> impl Fn(f64) -> i64 {
+pub(crate) fn rint(step: f64) -> impl Fn(f64) -> i64 {
     move |m| (m / step).round_ties_even() as i64
 }
 

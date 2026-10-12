@@ -6,7 +6,7 @@
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches Rust off for the rest of the session
 // (everything goes to Pyodide, `error.engineFallback`).
 import { simdSupported } from "./idxpool.js";
-import { scanRoute } from "./rust-scans.js";
+import { bgRoute, scanRoute } from "./rust-scans.js";
 
 export function createBridge({ workerUrl, notify }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -135,6 +135,10 @@ export function createBridge({ workerUrl, notify }) {
     const k0 = num(q, "k", -1);
     if (SCAN_ROUTES.test(path) && !hasRef(q) && slots[k0]) {
       const r = await scanRoute({ slots, rpc, stats }, k0, path, u.search);
+      if (r) return { status: 200, text: r, ms: performance.now() - t0 };
+    }
+    if (path === "/api/spectrum" && q.get("bgk") && !hasRef(q)) {
+      const r = await bgRoute({ slots, rpc, stats }, k0, num(q, "bgk", NaN), u.search);
       if (r) return { status: 200, text: r, ms: performance.now() - t0 };
     }
     // routes the index answers by itself
