@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def label_hover():
             pg.wait_for_timeout(800)
             sp = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='spec');p.el.scrollIntoView({block:'center'});return p.id})()"); pg.wait_for_timeout(500)
@@ -30,7 +30,7 @@ try:
             assert nums == ["1", "2"], nums
             pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("2"); pg.wait_for_timeout(300)
             assert pg.evaluate("E.active&&E.active.num") == 2
-            assert pg.evaluate("[...document.querySelectorAll('.pnum')].every(n=>!n.hidden)"), "numbers are always shown"
+            assert pg.evaluate("E.panels.filter(p=>p.tab===E.tab).every(p=>!p.el.querySelector('.pnum').hidden)"), "numbers are always shown"
         step("panels are numbered from the top; key 2 activates the second", numbering)
         def files():
             drawer(pg); nm = pg.locator("#flst .fl:not(.ghost) .nm").first

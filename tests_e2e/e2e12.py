@@ -22,7 +22,7 @@ with sync_playwright() as p:
         assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
         assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # the list is opened file by file: the view starts on the first file of the list, whatever its experiment
     pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
     pg.screenshot(path=SH + "121_data.png")
     def side():
