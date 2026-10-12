@@ -3146,5 +3146,6 @@ I18N.add("en", {
   "error.featMemory": "Not enough memory for the «{fase}» phase on {files} files (about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
-  "error.badRecipe": "The parameters of the pipeline are not valid."
+  "error.badRecipe": "The parameters of the pipeline are not valid.",
+  "logo.gold.live": "The logo has turned gold"
 });
