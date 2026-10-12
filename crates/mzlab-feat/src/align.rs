@@ -3,6 +3,7 @@
 //! features whose consecutive m/z gaps are below `ppm` is one slab (no group crosses its edges): it is cut where it spans more than
 //! `max_ppm_span`, sorted by RT and cut where the RT gap is above `rt_gap`; so one slab is held at a time.
 
+use crate::sortc;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -81,7 +82,9 @@ impl Cursor {
         let sorted = f.mz.windows(2).all(|w| w[0] <= w[1]);
         let order = (!sorted).then(|| {
             let mut v: Vec<u32> = (0..f.len() as u32).collect();
-            v.sort_by(|&a, &b| f.mz[a as usize].total_cmp(&f.mz[b as usize]));
+            sortc::by(&mut v, |&a, &b| {
+                f.mz[a as usize].total_cmp(&f.mz[b as usize])
+            });
             v
         });
         Cursor { order, at: 0 }
@@ -146,7 +149,7 @@ fn split_slab(
     for (a, b) in runs.drain(..) {
         let start = sorted.len();
         sorted.extend((a..b).map(|i| (rts[i], items[i])));
-        sorted[start..].sort_by(|s, t| s.0.total_cmp(&t.0));
+        sortc::by(&mut sorted[start..], |s, t| s.0.total_cmp(&t.0));
         let mut from = start;
         for i in start + 1..=sorted.len() {
             if i == sorted.len() || sorted[i].0 - sorted[i - 1].0 > p.rt_gap {

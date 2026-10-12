@@ -8,6 +8,7 @@
 //! The links are a CSR over the rows of the table: scans of the peak `start[i]..start[i + 1]` in `scan` (positions in `Index::scans`),
 //! in scan order, with the purity of each in `purity`.
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -134,7 +135,7 @@ fn pairs(f: &FileFeatures, cands: &[Cand], nscan: usize) -> Result<Vec<(u32, u32
             }
         }
     }
-    out.sort_by_key(|&(c, _)| c);
+    sortc::by_key(&mut out, |&(c, _)| c);
     Ok(out)
 }
 
@@ -158,7 +159,7 @@ fn purities<R: ReadAt>(
         used.push((prs[k].0, k, e));
         k = e;
     }
-    used.sort_by(|a, b| {
+    sortc::by(&mut used, |a, b| {
         let (ca, cb) = (&cands[a.0 as usize], &cands[b.0 as usize]);
         ca.lo.total_cmp(&cb.lo).then(a.0.cmp(&b.0))
     });
@@ -213,7 +214,7 @@ pub fn link<R: ReadAt>(
     let prs = pairs(f, &cands, ids.len())?;
     let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
     let mut tri = purities(index, si, f, &cands, &prs, q, max_peaks)?;
-    tri.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+    sortc::by(&mut tri, |a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     for &(i, scan, pur, est) in &tri {
         let i = i as usize;
         links.start[i + 1] += 1;

@@ -7,6 +7,7 @@
 //! A peak is good when its shape, S/N and number of points reach the limits of `QParams`; a row of the aligned table stays when at
 //! least one file has a good peak (`keep_row`) and the reasons of the files that did not are written as a code (`reason_text`).
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::peakq;
@@ -50,7 +51,7 @@ fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
-    v.sort_by(|a, b| a.total_cmp(b));
+    sortc::by(v, |a, b| a.total_cmp(b));
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]

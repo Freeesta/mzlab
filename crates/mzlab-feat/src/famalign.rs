@@ -8,6 +8,7 @@
 
 use crate::align::{align_grouped, AlignParams};
 use crate::rtmap::{build, RtMap, RtParams};
+use crate::sortc;
 use crate::table::{Aligned, FileFeatures, ROLE_M, ROLE_NONE};
 
 /// Parameters of `align_families`.
@@ -129,7 +130,7 @@ fn collect(
             }
         }
     }
-    links.sort_unstable();
+    sortc::ord(&mut links);
     (votes, links)
 }
 
@@ -199,13 +200,13 @@ fn main_role(v: &[u16; 7]) -> u8 {
 /// The sets of groups with their reference ion, ordered by reference.
 fn runs(ions: &Aligned, sets: &mut Sets, votes: &Votes) -> Vec<(u32, Vec<u32>)> {
     let mut by_root: Vec<(u32, u32)> = (0..ions.len() as u32).map(|g| (sets.root(g), g)).collect();
-    by_root.sort();
+    sortc::ord(&mut by_root);
     let mut runs: Vec<(u32, Vec<u32>)> = Vec::new();
     for chunk in by_root.chunk_by(|a, b| a.0 == b.0) {
         let set: Vec<u32> = chunk.iter().map(|x| x.1).collect();
         runs.push((reference(ions, votes, &set), set));
     }
-    runs.sort_by_key(|r| r.0);
+    sortc::any_by_key(&mut runs, |r| r.0);
     runs
 }
 

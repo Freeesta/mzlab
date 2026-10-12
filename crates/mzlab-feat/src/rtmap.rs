@@ -3,6 +3,7 @@
 //! anchor in a file minus its median apex over the files is the RT shift of that file; the curve of a file is piecewise linear between the
 //! medians of consecutive groups of anchors. It only tells where a feature is expected in a file; no signal is moved.
 
+use crate::sortc;
 use crate::table::Aligned;
 
 /// Parameters of `build` (defaults of `rtalign` and of `features.MIN_HEIGHT`).
@@ -61,7 +62,7 @@ fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
     if a.is_empty() {
         return f64::NAN;
     }
-    a.sort_by(f64::total_cmp);
+    sortc::by(&mut a, f64::total_cmp);
     let n = a.len();
     if n % 2 == 1 {
         a[n / 2]
@@ -99,7 +100,7 @@ impl RtMap {
 pub fn isolated(al: &Aligned, ppm: f64, rt: f64) -> Vec<bool> {
     let n = al.len();
     let mut ord: Vec<usize> = (0..n).collect();
-    ord.sort_by(|&a, &b| al.mz[a].total_cmp(&al.mz[b]));
+    sortc::by(&mut ord, |&a, &b| al.mz[a].total_cmp(&al.mz[b]));
     let mz: Vec<f64> = ord.iter().map(|&i| al.mz[i]).collect();
     let mut out = vec![false; n];
     let tol = ppm * 1e-6;
@@ -182,7 +183,7 @@ pub fn build(al: &Aligned, p: &RtParams) -> RtMap {
         .iter()
         .map(|&r| (nanmedian((0..nf).map(|k| apex(r, k))), r))
         .collect();
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    sortc::by(&mut rows, |a, b| a.0.total_cmp(&b.0));
     let m = rows.len();
     let d = |i: usize, k: usize| apex(rows[i].1, k) - rows[i].0;
     let edges = node_edges(m);

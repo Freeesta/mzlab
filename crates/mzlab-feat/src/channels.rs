@@ -1,6 +1,7 @@
 //! Channels and segments: runs of scans in one log-ppm channel and the stitching of the pieces of one ion across neighbouring channels
 //! (`_segments` and `_stitch` of `features.py`).
 
+use crate::sortc;
 use mzlab_core::error::Result;
 
 use crate::trace::{reserve, Params, TOUCH_HEIGHT};
@@ -46,7 +47,7 @@ pub(crate) fn segments(
             order.clear();
             reserve(&mut order, e - s)?;
             order.extend((s..e).map(|i| (pos[i], i as u32)));
-            order.sort_by_key(|&(p, _)| p); // stable: ties keep the table order
+            sortc::by_key(&mut order, |&(p, _)| p); // stable: ties keep the table order
             let mut k = 0;
             // current segment
             let mut cur: Option<(u32, u32, f64, f64, u32, f64, f64, u32)> = None; // (a, last, tot, mzw, n, mx, apexI, apex)

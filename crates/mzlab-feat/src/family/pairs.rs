@@ -4,6 +4,7 @@
 
 use super::evidence::{Rules, Spec};
 use super::rel::Tables;
+use crate::sortc;
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE, FLAG_GOOD, FLAG_ISOTOPE};
 
 /// Peaks that can be members: good quality, neither background nor a lobe of the Fourier transform, not already an isotopologue.
@@ -69,7 +70,7 @@ pub fn candidate_pairs(
             }
         }
     }
-    out.sort_unstable_by_key(|&(i, j)| (j, i));
+    sortc::by_key(&mut out, |&(i, j)| (j, i));
     out.dedup();
     out
 }
@@ -100,7 +101,7 @@ pub fn ms2_pairs<'a>(
             }
         }
     }
-    out.sort_unstable_by_key(|&(i, j)| (j, i));
+    sortc::by_key(&mut out, |&(i, j)| (j, i));
     out.dedup();
     out
 }

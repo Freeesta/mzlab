@@ -3,6 +3,7 @@
 //! the peak is expected (from the RT map, or from the files where the row was seen). One file is open at a time; the cells of a file are served
 //! in slabs of m/z (`sweep::windows`). A filled cell gets `CELL_FILLED`: it is never counted as detected.
 
+use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -39,7 +40,7 @@ impl Default for FillParams {
 
 /// `np.median` of values already sorted by the caller's `total_cmp` (mean of the two middle ones for an even count).
 fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(f64::total_cmp);
+    sortc::by(&mut v, f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
@@ -50,7 +51,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 
 /// The same in `f32` (numpy keeps the dtype of the array).
 fn median32(mut v: Vec<f32>) -> f32 {
-    v.sort_by(f32::total_cmp);
+    sortc::by(&mut v, f32::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
@@ -154,7 +155,9 @@ fn todo(al: &Aligned, file: usize, rt: &[f64], map: Option<&RtMap>, p: &FillPara
             });
         }
     }
-    out.sort_by(|a, b| a.mz.total_cmp(&b.mz).then(a.row.cmp(&b.row)));
+    sortc::any_by(&mut out, |a, b| {
+        a.mz.total_cmp(&b.mz).then(a.row.cmp(&b.row))
+    });
     out
 }
 
