@@ -14,8 +14,8 @@ mod proofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{
-    build_graph, Edge, EdgeKind, ExternalHit, Facts, Identity, Inputs, Kinetics, LibHit, Member,
-    Node,
+    build_graph, match_hypotheses, Edge, EdgeKind, ExternalHit, Facts, Identity, Inputs, Kinetics,
+    LibHit, Member, Node,
 };
 pub use out::{graph_json, GraphStream, EVID_GRAPH_FORMAT};
 
