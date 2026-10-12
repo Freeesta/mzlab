@@ -4,7 +4,7 @@
 const T = (k, p) => I18N.t(k, p);
 const KINDS = ["chrom", "xic", "mrm", "spec", "map"];
 const R = () => S.ref;
-const num = v => (+v).toLocaleString(typeof LOCALE === "string" ? LOCALE : undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = v => I18N.fix(v, 2);
 const fileOf = k => (k != null && k !== "" && E.files[+k] && !E.files[+k].gone ? E.files[+k] : null);
 
 // the file chosen by "auto" in a tab: the only blank of the tab, otherwise the first by time (files without a time come after those with one)

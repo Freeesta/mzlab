@@ -184,21 +184,58 @@ function loading(on, msg) {
 })();
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
-let nbTimer = null, nbLast = "";
+let nbTimer = null, nbLast = "", nbBase = {}, nbRemote = null;
+const NB_V = 1;                                                          // schema of the notebook: bump it when a field changes meaning and migrate in nbClean
+const nbPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
+// what comes back from the storage can be old, empty or damaged: only a plain object is accepted and the fields the program iterates over must have the right type
+function nbClean(j) {
+  if (!nbPlain(j) || j.error) return {};
+  const o = { ...j };
+  if ("session" in o && o.session != null && !Array.isArray(o.session)) delete o.session;
+  if ("ui" in o && o.ui != null && !nbPlain(o.ui)) delete o.ui;
+  if (o.session) o.session = o.session.filter(f => nbPlain(f) && typeof f.file === "string");
+  if (o.ui && !Array.isArray(o.ui.panels)) o.ui.panels = [];
+  if (o.ui && !Array.isArray(o.ui.files)) o.ui.files = [];
+  return o;
+}
+// two tabs (or a stale tab after the browser was closed and reopened) must not overwrite each other: only the fields THIS tab changed since it read the notebook win over the stored copy
+function nbMerge(remote) {
+  const out = { ...nbClean(remote) }, same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const k of new Set([...Object.keys(NB), ...Object.keys(nbBase)])) {
+    if (same(NB[k], nbBase[k])) continue;
+    if (NB[k] === undefined) delete out[k]; else out[k] = NB[k];
+  }
+  out._v = NB_V; return out;
+}
 function nbSave(now = false) {
   clearTimeout(nbTimer);
-  const go = () => {
-    const body = JSON.stringify(NB); if (body === nbLast) return;      // nothing changed: no request (fewer aborted saves on reload)
-    nbLast = body; fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
+  const go = async () => {
+    if (!nbEverLoaded || JSON.stringify(NB) === nbLast) return;        // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
+    let remote = nbRemote;
+    if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
+    const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
+    nbLast = JSON.stringify(NB); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = out;
+    fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
   };
   if (now) go(); else nbTimer = setTimeout(go, 500);
 }
 let nbEverLoaded = false;
 async function nbLoad() {
-  try { Object.assign(NB, await (await fetch("api/notebook")).json()); } catch (_) { /* prima volta */ }
+  let j = {};
+  try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
+  Object.assign(NB, j); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = j; nbLast = JSON.stringify(NB);
   nbEverLoaded = true;
   document.dispatchEvent(new Event("nbloaded"));
 }
+// back in the tab (after another tab or the browser was closed) the fields it did not change are refreshed from the stored notebook: the next save never undoes the other tab
+async function nbSync() {
+  if (!nbEverLoaded) return;
+  try {
+    const r = nbClean(await (await fetch("api/notebook")).json()); nbRemote = r;
+    for (const k of Object.keys(r)) if (JSON.stringify(NB[k]) === JSON.stringify(nbBase[k]) && k !== "ui" && k !== "session") { NB[k] = r[k]; nbBase[k] = JSON.parse(JSON.stringify(r[k])); }
+  } catch (_) { /* offline engine: nothing to refresh */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") nbSync(); });
 // the Disegno tab can be opened before any data file is loaded: the notebook (with the drawing) must be read first, otherwise the first save
 // would overwrite the saved drawing with an empty one
 window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
@@ -439,9 +476,9 @@ function reorderFiles(fromK, toK, isBefore) {
 }
 
 const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
-function flGrpGet() { try { return JSON.parse(localStorage.getItem("qqq.flgrp") || "{}") || {}; } catch (_) { return E._flgrp || {}; } }
+function flGrpGet() { return lsObj("qqq.flgrp"); }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
-// the rows of the list: a click selects the file, a double click renames it (called by renderFileList)
+// the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
   Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
@@ -455,6 +492,7 @@ function bindFileRows() {
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
+    const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
   });
 }
 
@@ -653,6 +691,13 @@ function renderFileList() {
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
 const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];   // Okabe-Ito + 2: distinguishable with colour-blindness
 async function renameFile(f) { const v = await ask(I18N.t("files.rename.prompt"), f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } }
+// double click on the colour square: the colour picker opens straight away
+function pickFileColor(f) {
+  const i = document.createElement("input"); i.type = "color"; i.value = /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#0072B2"; i.setAttribute("aria-label", I18N.t("files.color.custom")); i.style.cssText = "position:fixed;left:-99px;opacity:0";
+  i.onchange = () => { f.color = i.value; f.colorSet = true; renderFileList(); redrawAll(); uiSave(); };
+  i.addEventListener("change", () => i.remove()); document.body.appendChild(i);
+  try { i.showPicker(); } catch (_) { i.click(); }
+}
 function colorFile(f, ev) {
   Q("#colpop")?.remove();
   const d = document.createElement("div"); d.id = "colpop";

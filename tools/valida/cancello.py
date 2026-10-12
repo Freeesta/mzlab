@@ -1,5 +1,5 @@
 """The gate of quality: the pipeline of the site is run natively on real and synthetic series, measured with the metrics of V0 / V1 and the result is written as
-`cancello.json` (format `cancello/1`, read by the panel Pipeline): `vista_candidati` is true only if every criterion that has to be measured passes, and the file
+`cancello.json` (format `cancello/2`, `cancello/1` also read, read by the panel Pipeline): `vista_candidati` is true only if every criterion that has to be measured passes, and the file
 is valid only for the version of the crate that was run (`crate_version`). Aggregated numbers and versions only: no names, no data.
 
     criteria: {id, valore, soglia, ok}, `ok` null when the criterion was not measured (no data, or by decision: speed and memory are not measured).
@@ -19,7 +19,8 @@ import numpy as np
 from . import ROOT, cancello_misure as M, nativo
 from .sintetici_mzml import scrivi_file
 
-FORMATO = "cancello/1"
+FORMATO = "cancello/2"
+FORMATI_LETTI = ("cancello/1", "cancello/2")
 BASE_TIMOLOLO = {"tp": 21, "tp_candidati": 19, "candidati": 494, "gruppi": 25606}      # V0: mzFinder Python (21/23 found, 19 among the candidates, 494, 32 008 - 20 %)
 PRESTAZIONI = ("prestazioni_13_file", "prestazioni_wasm_file", "prestazioni_memoria_worker")
 
@@ -93,6 +94,11 @@ ID_RICHIESTI = ("timololo_tp_trovati", "timololo_tp_nei_candidati", "timololo_ca
                 "determinismo_due_esecuzioni", "determinismo_nativo_wasm")
 
 
+# the table view (rows L1-L7 and exports): the criteria on the aligned rows, their recall and area, and the determinism; the candidate view needs every required criterion
+ID_TABELLA = ("timololo_tp_trovati", "timololo_gruppi", "sintetici_richiamo_sopra_10x", "sintetici_richiamo_3x_10x", "sintetici_isomeri_separati", "sintetici_errore_area_mediano",
+              "sintetici_righe_false_rumore", "determinismo_due_esecuzioni", "determinismo_nativo_wasm")
+
+
 def concordanza(criteri: list[dict]) -> str:
     z = [c for c in criteri if c["id"].startswith("mzmine_")]
     if any(c["ok"] is False for c in z):
@@ -101,10 +107,11 @@ def concordanza(criteri: list[dict]) -> str:
 
 
 def cancello(criteri: list[dict], data: str, crate: str) -> dict:
-    """The document `cancello/1`: the candidate view opens only if every required criterion was measured and passes."""
+    """The document `cancello/2`: the table view opens if the `ID_TABELLA` criteria were measured and pass; the candidate view only if every required criterion did (so it implies the table)."""
     esito = {c["id"]: c["ok"] for c in criteri}
+    tabella = all(esito.get(i) is True for i in ID_TABELLA)
     vista = all(esito.get(i) is True for i in ID_RICHIESTI)
-    return {"concordanza_mzmine": concordanza(criteri), "crate_version": crate, "criteri": criteri, "data": data, "format": FORMATO, "vista_candidati": vista}
+    return {"concordanza_mzmine": concordanza(criteri), "crate_version": crate, "criteri": criteri, "data": data, "format": FORMATO, "vista_candidati": vista, "vista_tabella": tabella}
 
 
 def a_json(c: dict) -> str:
@@ -112,8 +119,15 @@ def a_json(c: dict) -> str:
 
 
 def valido(c: dict | None, crate: str) -> bool:
-    """The test of the panel (`PIPE.gateState`): open only with `vista_candidati` true and the version of the engine that was run."""
-    return bool(c) and c.get("format") == FORMATO and c.get("vista_candidati") is True and str(c.get("crate_version")) == str(crate)
+    """The test of the panel (`PIPE.gateState`) for the candidate view: `cancello/1` or `/2`, `vista_candidati` true and the version of the engine that was run."""
+    return bool(c) and c.get("format") in FORMATI_LETTI and c.get("vista_candidati") is True and str(c.get("crate_version")) == str(crate)
+
+
+def valido_tabella(c: dict | None, crate: str) -> bool:
+    """The test of the panel for the table view: `cancello/2` with `vista_tabella` true; a `cancello/1` has no table of its own and follows `vista_candidati`."""
+    if not c or c.get("format") not in FORMATI_LETTI or str(c.get("crate_version")) != str(crate):
+        return False
+    return (c.get("vista_tabella") if c["format"] == FORMATO else c.get("vista_candidati")) is True
 
 
 # ---------------------------------------------------------------------------------------------------------------- synthetic series
@@ -160,8 +174,8 @@ def nativo_contro_wasm(idx: list[str], parent: tuple, cartella: Path, prima: nat
 
 
 # ---------------------------------------------------------------------------------------------------------------- the whole measure
-def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | None = None):
-    """Runs the native pipeline on a real series (the parent is the one of the truth) and measures it. Returns (criteria, details)."""
+def esegui_reale(cartella: Path, ioni: list[dict], lavoro: Path):
+    """Runs the native pipeline on a real series (the parent is the one of the truth). Returns (serie of files, run, columns of the treated samples)."""
     from . import tabelle
     serie = tabelle.trova_serie(cartella)
     file_ = {x["nome"]: Path(cartella) / (x["nome"] + ".mzML") for x in serie}
@@ -170,6 +184,12 @@ def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | No
     padre = next(x for x in ioni if x.get("parent"))
     run = nativo.esegui(idx, nativo.neutra_da_ione(padre["ion"]), padre["mz"], (padre["rt_obs"] or [None])[0], lavoro / "nativo")
     trattate = [k for k, x in enumerate(serie) if x["time"] and x["time"] > 0 and x["type"] == "sample"]
+    return serie, run, trattate
+
+
+def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | None = None):
+    """Runs the native pipeline on a real series and measures it. Returns (criteria, details)."""
+    serie, run, trattate = esegui_reale(cartella, ioni, lavoro)
     tp = M.tp_timololo(ioni, run, trattate)
     crit_, det = criteri_timololo(tp), {"timololo": tp, "crate": run.versione_crate}
     if mzmine:

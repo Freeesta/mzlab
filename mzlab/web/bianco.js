@@ -9,7 +9,7 @@ const BIANCO = (() => {
   const eh = s => EH(s == null ? "" : s);
   let st = { factor: 3, stat: "max", min: 1 };
   let res = null;                                              // {r (server answer), features (the rows of the table it was computed on)}
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (_) { /* none */ }
+  Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const fmt = (v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
   const num = v => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(1));

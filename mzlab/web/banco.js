@@ -285,7 +285,7 @@ const BANCO = (() => {
     ["idn", I18N.t("bn.i9.idn"), ICON.lib],
     ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')]];
   const IK = "qqq.banco.info";
-  const ist = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(IK) || "{}"); } catch (e) { /* none */ } return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
+  const ist = (() => { const o = lsObj(IK); return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
   const num = (v, d = 4) => (v == null || !Number.isFinite(+v) ? "" : String(+(+v).toFixed(d)));
   const esc = EH;

@@ -7,7 +7,7 @@ const cache = new Map();                                     // file name -> mod
 const nameOf = f => f.file.split("#")[0];
 const T = (k, p) => I18N.t(k, p);
 
-const lastRead = () => { try { return JSON.parse(localStorage.getItem(LAST_KEY) || "null"); } catch (_) { return null; } };
+const lastRead = () => { const o = lsObj(LAST_KEY); return Array.isArray(o.points) ? o : null; };
 const lastWrite = m => { try { localStorage.setItem(LAST_KEY, JSON.stringify({ points: m.points, run_time: m.run_time })); } catch (_) { /* not saved */ } };
 
 // The gradient of file f: .dam first (the server), then what was entered; one that the notebook remembers is given back to the server first.

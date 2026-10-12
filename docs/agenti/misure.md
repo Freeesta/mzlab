@@ -252,3 +252,6 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 | `api/spectrum` MS2, tutto il file | 0,9 | 1,7 |
 | `api/spectrum` MS2 con precursore | 0,2 | 0,5 |
 | `api/spectrum` MS1, una sola scansione (legge l'mzML) | 1,5 | 1,7 |
+
+## Rilevamento delle feature (`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx...`, nativo, 13 file reali Orbitrap da circa 80 MB con 3,8 M picchi MS1 ciascuno)
+1 259 216 feature in totale, le stesse di `features.detect` file per file; 0,5-0,7 s e 62-78 MB di picco per file (Python: 3,5 s e 565 MB); due esecuzioni e budget di 8 MB (picco 42-43 MB) danno lo stesso SHA-256.
