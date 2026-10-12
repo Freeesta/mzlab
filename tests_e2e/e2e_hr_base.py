@@ -9,7 +9,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_base.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("hrbase")
-r = Run(port=8890, wd="/tmp/wdhr1", motore="python")
+r = Run(port=8890, wd="/tmp/wdhr1")
 FILES = lambda: "E.files.map(f=>[f.file,f.kind,f.prof1.hr,f.prof1.an,f.prof1.dec,f.prof2.hr,f.prof2.an,f.prof2.dec,f.instrument,f.dda,f.nce,f.hr_err||null])"
 try:
     with sync_playwright() as p:
@@ -52,10 +52,10 @@ try:
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
             pg.click("#opbtn")
-            pg.wait_for_timeout(1500)
+            pg.wait_for_selector("#hrmix-replace", timeout=30000)
             assert pg.is_visible("#hrmix-replace") and pg.is_visible("#hrmix-cancel")
             pg.click("#hrmix-replace")
-            pg.wait_for_timeout(6000)
+            pg.wait_for_function("E.files.length === 1 && E.files[0].file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
             v = pg.evaluate("E.files.map(f=>f.file)")
             assert len(v) == 1 and "B_FullMass-t0.mzML" in v[0]
         step("mix LR and HR: shows choice dialog and replaces files", test_mix)
@@ -64,7 +64,7 @@ try:
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real Orbitrap cuttings (private data repository), in a clean session
-        r = Run(port=8891, wd="/tmp/wdhr2", motore="python")
+        r = Run(port=8891, wd="/tmp/wdhr2")
         with sync_playwright() as p:
             pg = r.page(p)
             def real():
