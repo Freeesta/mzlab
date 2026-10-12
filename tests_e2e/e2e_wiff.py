@@ -54,10 +54,25 @@ try:
             assert names(pg) == ["one.mzML"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
         def several():
+            pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#flist tr[aria-busy=true]').forEach(tr => window.__rows.add(tr.children[1].textContent.trim()))).observe(document.getElementById('flist'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
             shown(pg, 4)
             assert sorted(names(pg)) == ["one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"], names(pg)
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
+        def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
+            seen = set(pg.evaluate("Array.from(window.__rows)"))
+            assert {"two.wiff", "serie.wiff", "two_s1.mzML", "two_s2.mzML", "serie.mzML"} <= seen, seen
+            assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
+        step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
+        def rows_progress():                             # the bar of a row moves without drawing the list again
+            pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
+            bar = pg.locator("#flist [data-cvrow='x_s1.mzML'] [role=progressbar]")
+            pg.evaluate("CONVROWS.set('x_s1.mzML', 'run', 40)")
+            assert bar.get_attribute("aria-valuenow") == "40" and "40" in pg.locator("#flist [data-cvrow='x_s1.mzML'] [data-cvtxt]").inner_text()
+            assert pg.locator("#flist [data-cvrow='x_s2.mzML'] [data-cvtxt]").inner_text().strip() != ""
+            pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
+            assert pg.locator("#flist tr[aria-busy=true]").count() == 0
+        step("a row of the list shows its state and a bar that moves", rows_progress)
         def downloads():
             assert pg.locator("#flist [data-dl]").count() == 4 and pg.locator("#dlall").count() == 1
         step("the converted mzML can be saved", downloads)
