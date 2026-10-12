@@ -3,6 +3,7 @@ TIC are answered by the Rust engine, Pyodide is not downloaded (the requests are
 engine (Pyodide); the files are still there after a reload (OPFS); the first request only Python can answer starts Pyodide and the session is replayed into it.
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
 import shutil, subprocess, sys, time
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
 
@@ -41,15 +42,15 @@ def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("win
 
 TIMES = {}
 MAPMS = {}
-def open_files(pg, label=None):
+def open_files(pg, label=None, files=None, n=2):
     t0 = time.time()
     pg.wait_for_selector("#drop", timeout=120000)
     if label: TIMES[label + " start→page ready"] = round(pg.evaluate("performance.now()") / 1000, 2)
     t0 = time.time()
-    pg.set_input_files("#pick", FILES)
-    pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+    pg.set_input_files("#pick", files or FILES)
+    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-    pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
+    pg.wait_for_function(f"E.files.length >= {n} && E.pending.length === 0", timeout=120000)
     if label: TIMES[label + " open"] = round(time.time() - t0, 2)
 def snap(pg): return {"state": pg.evaluate(JSON, "api/state")["j"], "session": pg.evaluate(JSON, "api/session")["j"]}
 
@@ -143,6 +144,35 @@ try:
                 json_close(a["j"], b2["j"], 1e-6, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
         step("map, snap, marked points and 3D sticks: Rust equals Python's, still without Pyodide", map_same)
+        def composition_same():
+            obs = "233.0243:100;234.0276:7.5;235.0310:3.2"
+            for u in ["api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8%2CS%3A0-2&tol=5&unit=ppm&max=10",
+                      "api/composition?mz=233.0243&tol=3&unit=mda&rdb=0,20&n=even&rules=HC,LEWIS,SENIOR&ion=%5BM%2BNa%5D%2B&max=5",
+                      f"api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8%2CS%3A0-2&obs={obs.replace(':', '%3A').replace(';', '%3B')}&frags=215.0137%3A50%3B189.0243%3A100"]:
+                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
+                assert a["eng"] == "rust", (u, a["eng"])
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
+        step("composition: the formulas of Rust equal Python's, still without Pyodide", composition_same)
+        def subxic_same():
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds
+            hrf = Path(tempfile.mkdtemp()) / "hr.mzML"
+            sys.path.insert(0, str(ROOT))
+            from mzlab.chem.elements import ion_mz, mass, parse_formula
+            par = ion_mz(mass(parse_formula(ds.HR_PARENT)), "[M+H]+")
+            ds.hr_series(hrf, np.random.default_rng(5), [(par, 6.0, 0.07, 3e7), (par - 61.9896, 6.0, 0.07, 1e7), (par - 97.9765, 6.1, 0.07, 4e6)])
+            ctx6, pg6, reqs6 = context(); pg6.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pg6, files=[str(hrf)], n=1)
+            ctx7, pg7, reqs7 = context(); pg7.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pg7, files=[str(hrf)], n=1)
+            clock = """async q => { const rb = window.MZLAB_RUST; if (!(await rb.ready([0]))) return null; return JSON.parse((await rb.rpc({ op: "subxic", slot: 0, k: 0, query: q })).info || "null"); }"""
+            for q in ["f=C14H14F4N3O2S&ppm=5&min=150", "f=C14H14F4N3O2S&ppm=2&min=300&z=1"]:        # the engine of the page, asked directly: the page itself goes to Python at its first high-resolution spectrum
+                a = pg6.evaluate(clock, q); b2 = pg7.evaluate(JSON, "api/subxic?k=0&" + q)
+                assert a is not None and a["n_hit"] > 0 and b2["status"] == 200, (q, a and a["n_hit"], b2["status"])
+                json_close(a, b2["j"], 1e-9, q)
+        step("subxic: the sub-formulas of a high-resolution survey from the index, Rust equals Python's", subxic_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
