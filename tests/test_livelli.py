@@ -80,7 +80,7 @@ def test_evidence_has_one_line_per_gate_with_value_threshold_and_outcome():
     r = lv("return L.assess({cands: [c(.62, 8, 2)], nScans: 3})")
     assert len(r["gates"]) == 5 and len(r["lines"]) == 5
     assert "entropia 0.62 vs 0.75 ✗" in r["lines"], r["lines"]
-    assert any(x.startswith("|Δ precursore| 2,0 vs 5,0 ppm ✓") for x in r["lines"]), r["lines"]
+    assert any(x.startswith("|Δ precursore| 2.0 vs 5.0 ppm ✓") for x in r["lines"]), r["lines"]
     assert r["decisive"].startswith("3: provvisorio")
 
 
