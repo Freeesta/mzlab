@@ -6,18 +6,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} · Analisi MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
-<script src="static/an-util.js"></script>
-<script src="static/an-quad.js"></script>
-<script src="static/an-paul.js"></script>
-<script src="static/an-tof.js"></script>
-<script src="static/an-settore.js"></script>
-<script src="static/an-orbi.js"></script>
-<script src="static/an-ims.js"></script>
-<script src="static/an-esi.js"></script>
-<script src="static/an-maldi.js"></script>
-<script src="static/an-trappola.js"></script>
-<script src="static/an-fticr.js"></script>
-<script src="static/an-qqq.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
 <style>
@@ -418,10 +406,15 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), in one of three analysers chosen at random:
-// an-*.js: quadrupole, reflectron TOF, Orbitrap, electrospray source, linear ion trap, FT-ICR cell, triple quadrupole (Q1-q2-Q3).
-let ldIonRaf = 0;
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), turning round the centre.
+// The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
+const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
+let ldIonRaf = 0, ldAnLoad = null;
+function ldAnLoaded() {                                          // plain scripts, in order (an-util first); resolves once they have all run
+  return ldAnLoad || (ldAnLoad = LD_AN.reduce((p, n) => p.then(() => new Promise(ok => { const s = document.createElement("script"); s.src = "static/an-" + n + ".js"; s.onload = s.onerror = ok; document.head.appendChild(s); })), Promise.resolve()));
+}
 function ldIon(on, mode) {
+  if (on && LD_ANALYSERS && !window.LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
   if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
   const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
   cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
@@ -431,9 +424,10 @@ function ldIon(on, mode) {
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
   const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = {};         // the analysers live in an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
-  for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);
-  const keys = Object.keys(A), an = A[mode in A ? mode : keys[Math.floor(Math.random() * keys.length)]];
+  const ctx = { cx, W, H, TAU, line, muted: v("--muted") || line }, A = { base: {   // the plain animation: three ions turning round the centre (depth z sets size and brightness)
+    n: 22, dt: 0.035, at(j, t) { const a = TAU * 0.55 * t + j * TAU / 3; return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(a), z: Math.sin(a) }; } } };
+  if (LD_ANALYSERS) for (const k of Object.keys(window.LDAN || {})) A[k] = window.LDAN[k](ctx);   // an-*.js: window.LDAN.<name>(ctx) -> { n, dt, T?, at(j, t), draw?(t), mid? }
+  const keys = Object.keys(A), an = A[mode in A ? mode : LD_ANALYSERS ? keys[1 + Math.floor(Math.random() * (keys.length - 1))] : "base"];
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
   const frame = ms => {
     const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
