@@ -4,6 +4,7 @@
 //! so the same code serves the browser (files picked from a folder) and the desktop.
 
 pub mod info;
+pub mod meta;
 pub mod method;
 mod peak;
 mod run;
@@ -30,6 +31,8 @@ pub struct Files<'a> {
     pub contents: Option<&'a [u8]>,
     pub ms_tree: Option<&'a [u8]>,
     pub acqmeth: Option<&'a [u8]>,
+    /// Other small files of the folder, (path relative to the `.D`, bytes): `sample_info.xml`, `sequence.xml`, audit trail, `GC.ini`, `runstart.txt`... kept in `AgilentD::metadata`.
+    pub others: &'a [(&'a str, &'a [u8])],
 }
 
 /// One run (one `.D` folder).
@@ -41,6 +44,10 @@ pub struct AgilentD {
     pub contents: Option<Contents>,
     pub tree: Option<Tree>,
     pub method: Option<AcqMethod>,
+    /// Every name/value of the side files, with its origin (`meta::collect`), `Devices.xml`, `Contents.xml`, `MSTS.xml` and the method report included.
+    pub metadata: Vec<meta::Item>,
+    /// Names of `ScanRec::extra`.
+    pub extra_names: Vec<String>,
 }
 
 impl AgilentD {
@@ -67,6 +74,8 @@ impl AgilentD {
             contents: f.contents.and_then(info::contents),
             tree: f.ms_tree.and_then(info::tree),
             method: f.acqmeth.map(method::parse),
+            metadata: metadata(f),
+            extra_names: layout.extra_names(),
         })
     }
 
@@ -83,4 +92,20 @@ impl AgilentD {
     pub fn is_gc(&self) -> bool {
         self.contents.as_ref().is_some_and(|c| c.separation == 2)
     }
+}
+
+fn metadata(f: &Files) -> Vec<meta::Item> {
+    let named: [(&str, Option<&[u8]>); 5] = [
+        ("AcqData/MSTS.xml", f.ms_ts),
+        ("AcqData/Devices.xml", f.devices),
+        ("AcqData/Contents.xml", f.contents),
+        ("acqmeth.txt", f.acqmeth),
+        ("AcqData/MSScan.xsd", f.ms_scan_xsd),
+    ];
+    let mut list: Vec<(&str, &[u8])> = named
+        .iter()
+        .filter_map(|(n, b)| b.map(|b| (*n, b)))
+        .collect();
+    list.extend(f.others.iter().copied());
+    meta::collect(&list)
 }

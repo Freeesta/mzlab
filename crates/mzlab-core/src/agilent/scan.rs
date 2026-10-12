@@ -99,10 +99,6 @@ pub struct Layout {
     pub record_len: usize,
 }
 
-fn bad(detail: String) -> Error {
-    Error::new("err.file.agilent").with("detail", detail)
-}
-
 impl Layout {
     fn new(scan: &[(String, Kind)], spectrum: &[(String, Kind)]) -> Result<Layout> {
         let mut at = 0;
@@ -137,7 +133,13 @@ impl Layout {
         Layout::new(&own(SCAN_FIELDS), &own(SPECTRUM_FIELDS))
             .expect("the built-in layout is complete")
     }
+}
 
+fn bad(detail: String) -> Error {
+    Error::new("err.file.agilent").with("detail", detail)
+}
+
+impl Layout {
     /// The layout `MSScan.xsd` describes: the elements of `ScanRecordType` in order (the `SpectrumParamValues` element stands for the elements of
     /// `SpectrumParamsType`), commented-out elements left out. One spectrum per scan only.
     pub fn from_xsd(xsd: &str) -> Result<Layout> {
@@ -179,6 +181,27 @@ impl Layout {
         }
         Layout::new(&head, &tail)
     }
+}
+
+fn strip_comments(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(a) = rest.find("<!--") {
+        out.push_str(&rest[..a]);
+        rest = rest[a..].find("-->").map_or("", |e| &rest[a + e + 3..]);
+    }
+    out + rest
+}
+
+impl Layout {
+    /// Names of the fields that `ScanRec::extra` holds, in order.
+    pub fn extra_names(&self) -> Vec<String> {
+        self.fields
+            .iter()
+            .filter(|f| !MAPPED.contains(&f.name.as_str()))
+            .map(|f| f.name.clone())
+            .collect()
+    }
 
     fn at(&self, name: &str) -> Option<&Field> {
         self.fields.iter().find(|f| f.name == name)
@@ -208,16 +231,6 @@ impl Layout {
     }
 }
 
-fn strip_comments(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut rest = s;
-    while let Some(a) = rest.find("<!--") {
-        out.push_str(&rest[..a]);
-        rest = rest[a..].find("-->").map_or("", |e| &rest[a + e + 3..]);
-    }
-    out + rest
-}
-
 fn attr(tag: &str, name: &str) -> Option<String> {
     let k = format!("{name}=\"");
     let a = tag.find(&k)? + k.len();
@@ -241,6 +254,31 @@ fn elements(xsd: &str, type_name: &str) -> Result<Vec<(String, String)>> {
     }
     Ok(out)
 }
+
+/// Fields that have a member in `ScanRec`; all the others go to `extra`.
+const MAPPED: &[&str] = &[
+    "ScanID",
+    "ScanMethodID",
+    "TimeSegmentID",
+    "ScanTime",
+    "MSLevel",
+    "ScanType",
+    "TIC",
+    "BasePeakMZ",
+    "BasePeakValue",
+    "CycleNumber",
+    "IonMode",
+    "IonPolarity",
+    "Fragmentor",
+    "CollisionEnergy",
+    "MzOfInterest",
+    "SpectrumFormatID",
+    "SpectrumOffset",
+    "ByteCount",
+    "UncompressedByteCount",
+    "PointCount",
+    "MaxY",
+];
 
 /// A scan record. Times are in minutes; `offset`/`bytes` locate the points in `MSPeak.bin`. A field the layout does not have is 0.
 #[derive(Debug, Clone, PartialEq)]
@@ -268,6 +306,45 @@ pub struct ScanRec {
     pub uncompressed: Option<u32>,
     pub points: u32,
     pub max_y: f64,
+    /// The fields of the layout that have no member above (`Layout::extra_names`, same order), so that no value of the record is lost.
+    pub extra: Vec<f64>,
+}
+
+/// One record of the file read by the layout.
+fn record(layout: &Layout, r: &[u8]) -> ScanRec {
+    let i = |name: &str| layout.int(r, name).unwrap_or(0);
+    let f = |name: &str| layout.real(r, name).unwrap_or(0.0);
+    ScanRec {
+        id: i("ScanID") as i32,
+        method_id: i("ScanMethodID") as i32,
+        segment: i("TimeSegmentID") as i32,
+        time_min: f("ScanTime"),
+        level: i("MSLevel") as i32,
+        scan_type: i("ScanType") as i32,
+        tic: f("TIC"),
+        base_mz: f("BasePeakMZ"),
+        base_value: f("BasePeakValue"),
+        cycle: i("CycleNumber") as i32,
+        ion_mode: i("IonMode") as i32,
+        polarity: i("IonPolarity") as i32,
+        fragmentor: f("Fragmentor"),
+        collision_energy: f("CollisionEnergy"),
+        mz_of_interest: f("MzOfInterest"),
+        format: i("SpectrumFormatID") as i32,
+        offset: i("SpectrumOffset").max(0) as u64,
+        bytes: i("ByteCount").max(0) as u32,
+        uncompressed: layout
+            .at("UncompressedByteCount")
+            .map(|_| i("UncompressedByteCount").max(0) as u32),
+        points: i("PointCount").max(0) as u32,
+        max_y: f("MaxY"),
+        extra: layout
+            .fields
+            .iter()
+            .filter(|x| !MAPPED.contains(&x.name.as_str()))
+            .map(|x| f(&x.name))
+            .collect(),
+    }
 }
 
 /// The records of an `MSScan.bin`. `peak_len`: size of `MSPeak.bin`, to check that every spectrum lies inside it. `scans`: how many scans the other files
@@ -308,33 +385,7 @@ pub fn parse(
     out.try_reserve_exact((bytes.len() - start) / n)
         .map_err(|_| Error::memory_budget())?;
     for (k, r) in bytes[start..].chunks_exact(n).enumerate() {
-        let i = |name: &str| layout.int(r, name).unwrap_or(0);
-        let f = |name: &str| layout.real(r, name).unwrap_or(0.0);
-        let rec = ScanRec {
-            id: i("ScanID") as i32,
-            method_id: i("ScanMethodID") as i32,
-            segment: i("TimeSegmentID") as i32,
-            time_min: f("ScanTime"),
-            level: i("MSLevel") as i32,
-            scan_type: i("ScanType") as i32,
-            tic: f("TIC"),
-            base_mz: f("BasePeakMZ"),
-            base_value: f("BasePeakValue"),
-            cycle: i("CycleNumber") as i32,
-            ion_mode: i("IonMode") as i32,
-            polarity: i("IonPolarity") as i32,
-            fragmentor: f("Fragmentor"),
-            collision_energy: f("CollisionEnergy"),
-            mz_of_interest: f("MzOfInterest"),
-            format: i("SpectrumFormatID") as i32,
-            offset: i("SpectrumOffset").max(0) as u64,
-            bytes: i("ByteCount").max(0) as u32,
-            uncompressed: layout
-                .at("UncompressedByteCount")
-                .map(|_| i("UncompressedByteCount").max(0) as u32),
-            points: i("PointCount").max(0) as u32,
-            max_y: f("MaxY"),
-        };
+        let rec = record(layout, r);
         if !rec.time_min.is_finite()
             || rec
                 .offset
