@@ -195,7 +195,7 @@
     "contro": {
      "type": "integer",
      "minimum": 0,
-     "description": "number of proofs 'contro'; with any, the identity goes after the others"
+     "description": "number of proofs 'contro'; with the same total the identity with fewer goes first"
     },
     "n": {
      "type": "integer",

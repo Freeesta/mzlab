@@ -539,6 +539,13 @@ impl Engine {
         }
     }
 
+    /// `api/subxic` of the high-resolution survey in `slot` (the item `k` of the session): empty = Python's (not high resolution, a request Python refuses).
+    pub fn subxic(&mut self, slot: u32, k: i32, query: &str) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
+        let out = mzlab_core::subxic::subxic(r, k as i64, &Query::parse(query)).map_err(|e| error_json(&e))?;
+        Ok(out.unwrap_or_default())
+    }
+
     /// `api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d` over the session `items`; `query` is the query string of the route.
     /// Empty = Python's (profile or high-resolution files, parameters Python must reject).
     pub fn map_route(&mut self, path: &str, items: &str, query: &str) -> Result<String, JsValue> {
@@ -596,6 +603,12 @@ pub fn build_mzidx(
 #[wasm_bindgen]
 pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
     mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
+}
+
+/// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
+#[wasm_bindgen]
+pub fn composition(query: &str) -> String {
+    mzlab_core::comproute::composition_route(&Query::parse(query)).unwrap_or_default()
 }
 
 /// What the index builder and the loading table need of an uploaded mzML, without Python (`mzlab-core::upload`): the scan table as the eight inputs of
