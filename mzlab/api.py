@@ -364,29 +364,6 @@ def _p_new(app, body):
     return _json(app.state())
 
 
-@_post("/api/workflow/validate")
-def _p_workflow_validate(app, body):
-    from .workflow import unknown_operations, validate_workflow, verify_file_hashes
-    ok, msg = validate_workflow(body)
-    actual_hashes = {f["name"]: f.get("sha256", "") for f in app.files()}
-    mismatches = verify_file_hashes(body, actual_hashes) if ok else []
-    return _json({"valid": ok, "message": msg, "mismatches": mismatches, "unknown_ops": unknown_operations(body) if ok else []})
-
-
-@_post("/api/export/mgf")
-def _p_export_mgf(app, body):
-    from .workflow import format_mgf
-    text = format_mgf(body.get("spectra", []), lr=bool(body.get("lr")))
-    return 200, "text/plain; charset=utf-8", text.encode("utf-8"), {"Content-Disposition": 'attachment; filename="export.mgf"'}
-
-
-@_post("/api/export/msp")
-def _p_export_msp(app, body):
-    from .workflow import format_msp
-    text = format_msp(body.get("spectra", []), lr=bool(body.get("lr")))
-    return 200, "text/plain; charset=utf-8", text.encode("utf-8"), {"Content-Disposition": 'attachment; filename="export.msp"'}
-
-
 def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0):
     """(status, content type, body bytes, extra headers) for one request. stream/length: body of a POST."""
     if method == "POST":

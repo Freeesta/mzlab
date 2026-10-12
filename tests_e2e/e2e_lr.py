@@ -104,8 +104,8 @@ try:
         def late_python():
             open_files(pg) if not pg.evaluate("typeof S !== 'undefined' && !!S.sess") else None
             before = pg.evaluate(JSON, "api/session")["j"]["session"]
-            r = pg.evaluate(JSON, "api/fileinfo?k=0")                   # a route only Python knows (the header of the file)
-            assert r["status"] == 200, r
+            r = pg.evaluate(JSON, "api/method?k=0")                     # a route only Python knows (the method of the file: a .dam)
+            assert r["status"] in (200, 400), r
             assert pyodide(reqs), "Pyodide did not start"
             assert pg.evaluate("window.MZLAB_LR_DONE === true")
             after = pg.evaluate(JSON, "api/session")["j"]["session"]
@@ -113,6 +113,7 @@ try:
         step("the first request only Python can answer starts Pyodide and the session is replayed into it", late_python)
         def same_as_classic():
             urls = ["api/spectrum?k=0&rt0=0&rt1=1000&level=1&precursor=&merge=1", "api/spectrum?k=1&rt0=1&rt1=2.5&level=1&bin=0.5", "api/spectrum?k=0&rt0=3&rt1=3&level=1",
+                    "api/fileinfo?k=0", "api/fileinfo?k=1", "api/ms2tr?k=0", "api/ms2tr?k=0,1", "api/scan_axis?k=0&level=1", "api/scan_axis?k=1&level=2", "api/contaminants",
                     "api/formula?f=C6H12O6", "api/formula?f=c9h10cl2n2o&adduct=%5BM%2BNa%5D%2B", "api/formula?f=Xx2", "api/gradient?k=0", "api/method_warnings"]
             for u in urls:
                 a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)

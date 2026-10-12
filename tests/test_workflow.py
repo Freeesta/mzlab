@@ -193,41 +193,18 @@ def test_lr_export_principle():
     assert "XYZ" not in msp_lr
 
 
-def test_api_workflow_and_export(tmp_path):
-    from io import BytesIO
+def test_workflow_validate_and_export_without_route():
+    # the three POST routes (workflow/validate, export/mgf, export/msp) are gone: the functions stay as a reference
+    wf = {"formato": FORMAT_VERSION, "file": [], "parametri": {"ppm": 5}}
+    assert validate_workflow(wf)[0] is True
+    spectra = [{"sid": 1, "rt": 1.0, "prec": 100.0, "peaks": [[50.0, 10.0]]}]
+    assert "BEGIN IONS" in format_mgf(spectra, lr=True)
+    assert "PRECURSORMZ: 100.0" in format_msp(spectra, lr=True)
     from mzlab.api import dispatch
     from mzlab.app import App
-
-    app = App(tmp_path)
-    wf_payload = json.dumps({
-        "formato": FORMAT_VERSION,
-        "file": [],
-        "parametri": {"ppm": 5},
-    }).encode("utf-8")
-
-    code, ctype, body, _ = dispatch(app, "POST", "/api/workflow/validate", {}, BytesIO(wf_payload), len(wf_payload))
-    assert code == 200
-    res = json.loads(body)
-    assert res["valid"] is True
-
-    # Test MGF endpoint
-    mgf_payload = json.dumps({
-        "spectra": [{"sid": 1, "rt": 1.0, "prec": 100.0, "peaks": [[50.0, 10.0]]}],
-        "lr": True,
-    }).encode("utf-8")
-    code, ctype, body, hdr = dispatch(app, "POST", "/api/export/mgf", {}, BytesIO(mgf_payload), len(mgf_payload))
-    assert code == 200
-    assert "BEGIN IONS" in body.decode("utf-8")
-
-    # Test MSP endpoint
-    msp_payload = json.dumps({
-        "spectra": [{"sid": 1, "rt": 1.0, "prec": 100.0, "peaks": [[50.0, 10.0]]}],
-        "lr": True,
-    }).encode("utf-8")
-    code, ctype, body, hdr = dispatch(app, "POST", "/api/export/msp", {}, BytesIO(msp_payload), len(msp_payload))
-    assert code == 200
-    assert "PRECURSORMZ: 100.0" in body.decode("utf-8")
-
+    from io import BytesIO
+    code, *_ = dispatch(App(), "POST", "/api/export/mgf", {}, BytesIO(b"{}"), 2)
+    assert code == 404
 
 
 def test_mzflow_format_and_legacy_name():

@@ -26,6 +26,8 @@ export async function engineRoute(path, q, env) {
     const r = (await env.rpc({ op: "lr_composition", query: "?" + q.toString() })).info;
     return r ? { status: 200, text: r } : null;
   }
+  if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };                  // the ?perf meter lists how Python read each file: Python reads none here
+  if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };   // a built-in list: data, not a calculation
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, q, env);
   return undefined;
