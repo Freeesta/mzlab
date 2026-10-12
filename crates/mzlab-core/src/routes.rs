@@ -69,11 +69,13 @@ pub struct Routes<R: ReadAt> {
     pub idx: Index<R>,
     /// The last whole-file maps of the session grid (the grid, the cells): a difference asks for the same map of a file up to three times.
     pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>)>,
+    /// The spacing of the points of a profile level, worked out once (`Item._step`).
+    pub(crate) steps: Vec<(u8, Option<f64>)>,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -92,6 +94,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scanlist" => self.scanlist(q),
             "/api/nearest_scan" => self.nearest_scan(q),
             "/api/spectrum" => self.spectrum(q),
+            "/api/spectra" => self.spectra_profile(q),
             _ => Ok(None),
         }
     }

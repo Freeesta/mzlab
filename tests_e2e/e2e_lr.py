@@ -42,6 +42,7 @@ def why(pg): return (pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("win
 
 TIMES = {}
 MAPMS = {}
+CLOCK = "async u => { const t = performance.now(); await fetch(u); return performance.now() - t; }"
 def open_files(pg, label=None, files=None, n=2):
     t0 = time.time()
     pg.wait_for_selector("#drop", timeout=120000)
@@ -133,10 +134,9 @@ try:
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
         step("origin: the evidence of Rust equals Python's, still without Pyodide", origin_same)
         def map_same():
-            clock = "async u => { const t = performance.now(); await fetch(u); return performance.now() - t; }"
             for u in ["api/map?k=0", "api/map?k=1&bg=1", "api/map?k=0&ref=1&norm=max", "api/map?k=0&rt0=13&rt1=16&mz0=140&mz1=400&nrt=120&nmz=100", "api/mapsnap?k=0&rt=14.25&mz=364.4",
                       "api/mappunti?k=0&ref=1&pts=14.3,364.3;14.32,194.2", "api/mappunti3d?k=0&rt0=13&rt1=16&mz0=150&mz1=370&max=300"]:
-                ta, tb = round(pg3.evaluate(clock, u)), round(pg2.evaluate(clock, u))
+                ta, tb = round(pg3.evaluate(CLOCK, u)), round(pg2.evaluate(CLOCK, u))
                 MAPMS[u[4:40]] = (ta, tb)
                 a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
                 assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
@@ -173,6 +173,25 @@ try:
                 assert a is not None and a["n_hit"] > 0 and b2["status"] == 200, (q, a and a["n_hit"], b2["status"])
                 json_close(a, b2["j"], 1e-9, q)
         step("subxic: the sub-formulas of a high-resolution survey from the index, Rust equals Python's", subxic_same)
+        def profile_same():
+            import tempfile
+            import numpy as np
+            sys.path.insert(0, str(ROOT / "tools"))
+            import dati_sintetici as ds
+            pf = Path(tempfile.mkdtemp()) / "prof.mzML"
+            ds.full_scan_profile(pf, 10.0, np.random.default_rng(6))
+            ctx8, pg8, reqs8 = context(); pg8.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pg8, files=[str(pf)], n=1)
+            ctx9, pg9, reqs9 = context(); pg9.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pg9, files=[str(pf)], n=1)
+            for u in ["api/spectrum?k=0&rt0=14&rt1=14.7&level=1&precursor=&bin=0.1", "api/spectrum?k=0&rt0=0&rt1=1000&level=1&merge=1", "api/spectra?k=0&i0=150&i1=160&level=1&bin=0.1",
+                      "api/spectra?k=0&i0=100&i1=159&level=1&merge=1"]:
+                ta, tb = round(pg8.evaluate(CLOCK, u)), round(pg9.evaluate(CLOCK, u))
+                MAPMS[u[4:44]] = (ta, tb)
+                a = pg8.evaluate(JSON, u); b2 = pg9.evaluate(JSON, u)
+                assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
+                assert a["eng"] == "rust" and (a["j"]["mode"] if "mode" in a["j"] else a["j"]["scans"][0]["mode"]) == "profile", (u, a["eng"], why(pg8))
+                json_close(a["j"], b2["j"], 1e-9, u)
+            assert not pyodide(reqs8), (pyodide(reqs8)[:3], why(pg8))
+        step("profile spectra (window and single scans): Rust equals Python's, still without Pyodide", profile_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
             pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
@@ -206,7 +225,7 @@ try:
             assert not errs, errs[:3]
         step("five files (Full Scan, MS2, MRM): the reload resumes the session without Pyodide", five_files)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
-        print("   MISURA map (ms, Rust flow, classic engine in Pyodide, first request):", MAPMS)
+        print("   MISURA map and profile spectra (ms, Rust flow, classic engine in Pyodide, first request):", MAPMS)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

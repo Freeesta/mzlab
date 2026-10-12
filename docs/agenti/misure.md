@@ -218,3 +218,14 @@ Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_
 | XIC da formula, 480 sottoformule | 9-21 | 9-45 (il tempo è quello di caricare la tabella dei picchi) |
 
 Parità: stessi candidati nello stesso ordine e numeri entro 1e-9 per `composition`; righe, ordine e numeri identici per `subxic` (anche sui file veri). Nel browser non misurato: la pagina HR passa a Python alla prima richiesta di spettro, quindi `subxic` ci arriva solo da un motore già avviato; `composition` non ha bisogno di file.
+
+## Spettri in profilo (`api/spectrum` e `api/spectra` di un file LR in profilo; `cargo test --release -p mzlab-core --test profile_parity -- --nocapture` e `tools/profilo_riferimento.py`, nativo; `e2e_lr` nel browser, file sintetico di 400 scansioni)
+| Richiesta | Python (ms) | Rust (ms) | Browser: Pyodide già avviato / Rust (ms) |
+|---|---|---|---|
+| spettro di una finestra di 14 scansioni | 7-11 | 4-9 | 84 / 38 |
+| spettro medio di tutta la corsa | 15-20 | 4-5 | 58 / 27 |
+| 11 scansioni singole | 14-20 | 8-9 | 38 / 31 |
+| 60 scansioni singole | 92 | 29-30 | 220 / 85 |
+| una scansione singola | 1,6-2,7 | 4-5 (una lettura dell'indice intero) | – |
+
+Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i punti sono sommati sulla griglia `rint(m/z / passo)` con il passo letto da venti scansioni a metà corsa, come `Item._step`.

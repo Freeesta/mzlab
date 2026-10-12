@@ -130,6 +130,15 @@ export function createBridge({ workerUrl, notify }) {
     const level = num(q, "level", 1), px = Math.max(0, num(q, "px", 0) | 0);
     const t0 = performance.now();
     const k0 = num(q, "k", -1);
+    // single scans of a PROFILE file come from the index; the others (centroids) from the spectra of the mzML below
+    if (path === "/api/spectra" && !hasRef(q) && slots[k0]) {
+      const s = slots[k0];
+      await s.opening;
+      if (s.idx && !s.bad) {
+        const r = await rpc({ op: "route", slot: k0, path, query: u.search });
+        if (!r.dead && !r.error && r.info) { stats.rust++; return { status: 200, text: r.info, ms: performance.now() - t0 }; }
+      }
+    }
     // routes the index answers by itself
     if (INDEX_ROUTES.test(path) && !hasRef(q)) {
       const s = slots[k0];
