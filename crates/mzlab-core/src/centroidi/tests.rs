@@ -332,3 +332,104 @@ fn the_estimate_finds_counts_the_unit_the_step_and_the_width() {
     assert!((e.params.unit - 2.5).abs() < 1e-9 && (e.params.step - STEP).abs() < 1e-9 && e.regular);
     assert!(e.peaks >= 8 && (e.params.w - 0.7).abs() < 0.12, "{e:?}");
 }
+
+fn profile_file(n: usize, profile: bool) -> Vec<u8> {
+    use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+    use crate::mzmlwrite::{Header, MzmlWriter};
+    let mut rng = Rng(5);
+    let h = Header {
+        run: "demo".into(),
+        sources: vec!["demo.mzML".into()],
+        software: ("mzLab".into(), "0".into()),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::new(Vec::new(), &h).unwrap();
+    w.open_spectra(n).unwrap();
+    for t in 0..n {
+        let (mz, y) = scan(
+            &mut rng,
+            297.0,
+            200,
+            &[
+                (300.0, 900.0, 0.7),
+                (304.0, 700.0, 0.7),
+                (306.0, 500.0, 0.7),
+            ],
+            0.3,
+            2.5,
+        );
+        let s = Spectrum {
+            index: t,
+            id: format!("scan={}", t + 1),
+            level: 1,
+            rt: t as f64 * 0.1,
+            polarity: 1,
+            profile,
+            intensity: y.iter().map(|&v| v as f32).collect(),
+            mz,
+            ..Default::default()
+        };
+        w.spectrum(&s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.open_chromatograms(1).unwrap();
+    let tic = Chromatogram {
+        index: 0,
+        id: "TIC".into(),
+        kind: ChromKind::Tic,
+        q1: None,
+        q3: None,
+        unit: String::new(),
+        time: vec![0.0, 1.0],
+        intensity: vec![5.0, 6.0],
+    };
+    w.chromatogram(&tic).unwrap();
+    w.close_chromatograms().unwrap();
+    w.finish().unwrap()
+}
+
+#[test]
+fn a_profile_mzml_becomes_a_centroid_mzml_with_its_chromatograms() {
+    let src = profile_file(40, true);
+    let mut out = Vec::new();
+    let (mut last, mut calls) = ((0, 0), 0);
+    let did = mzml_to_centroids(|| Ok(src.as_slice()), &mut out, "demo.mzML", &mut |d, t| {
+        last = (d, t);
+        calls += 1;
+    })
+    .unwrap();
+    assert!(did && last == (40, 40) && calls >= 2);
+    let text = String::from_utf8(out.clone()).unwrap();
+    assert!(text.contains("MS:1000035") && text.contains("mzlab-centroidi"));
+    let run = crate::mzml::read(out.as_slice()).unwrap();
+    assert_eq!(run.spectra.len(), 40);
+    assert_eq!(run.chromatograms.len(), 1);
+    for s in &run.spectra {
+        assert!(
+            !s.profile && (3..=6).contains(&s.mz.len()),
+            "{}",
+            s.mz.len()
+        );
+        for c in [300.0, 304.0, 306.0] {
+            assert!(
+                s.mz.iter().any(|&m| (m - c).abs() < 0.1),
+                "{c} in {:?}",
+                s.mz
+            );
+        }
+    }
+    let again = {
+        let mut o = Vec::new();
+        mzml_to_centroids(|| Ok(src.as_slice()), &mut o, "demo.mzML", &mut |_, _| {}).unwrap();
+        o
+    };
+    assert_eq!(again, out);
+}
+
+#[test]
+fn a_file_that_is_already_centroided_writes_nothing() {
+    let src = profile_file(5, false);
+    let mut out = Vec::new();
+    assert!(!mzml_to_centroids(|| Ok(src.as_slice()), &mut out, "c.mzML", &mut |_, _| {}).unwrap());
+    assert!(out.is_empty());
+}
