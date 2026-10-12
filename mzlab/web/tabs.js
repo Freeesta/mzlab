@@ -15,7 +15,8 @@ function modeSchema(t) {
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
   if (window.BANCO) { BANCO.bar(); if (BANCO.on()) return; }       // high-resolution bench: the toolbar of the bench takes the place of the tabs
-  el.innerHTML = TABS.map(([t, n]) => {
+  const together = lrTog();       // «all experiments together»: no distinction between tabs, only the panels of every type on one page (the overview button stays)
+  el.innerHTML = (together ? [] : TABS).map(([t, n]) => {
     const c = tabFiles(t).length;
     return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
   }).join("") + `<span class="sp"></span><button id="ovbtn" title="${I18N.t("tabs.overview.button.title")}">${I18N.t("tabs.overview.title")}</button>`;

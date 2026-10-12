@@ -59,6 +59,21 @@ export const available = () => {
 const root = () => rootP || (rootP = navigator.storage.getDirectory().then(d => d.getDirectoryHandle(ROOT, { create: true })).catch(e => { rootP = null; throw e; }));
 const dir = async kind => (await root()).getDirectoryHandle(kind, { create: true });
 
+// Writes all of `data` at `at` into a sync handle. A full disk (or the quota of the origin) does not always throw: write() can return fewer bytes than asked, and a file silently
+// cut short is unreadable later ("this file cannot be read"). A short write or a QuotaExceededError is the error.quota of the page, with the room needed and left.
+export function writeFull(ah, data, at) {                  // bytes really written (less than data.length: the disk or the quota is full)
+  let done = 0;
+  try { while (done < data.length) { const n = ah.write(data.subarray(done), { at: at + done }); if (!(n > 0)) break; done += n; } }
+  catch (e) { if (!(e && e.name === "QuotaExceededError")) throw e; }
+  return done;
+}
+// the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
+export async function quotaError(needed) {
+  const e = await estimate(), free = e && e.quota ? Math.max(0, e.quota - e.usage) : 0;
+  return fail("error.quota", { serve_mb: Math.ceil(needed / 1048576), libero_mb: Math.floor(free / 1048576) });
+}
+export async function writeAll(ah, data, at) { if (writeFull(ah, data, at) < data.length) throw await quotaError(at + data.length); }
+
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
 function write(kind, name, size, chunk) { return locked(kind, name, () => writeNow(kind, name, size, chunk)); }
 async function writeNow(kind, name, size, chunk) {
@@ -67,7 +82,7 @@ async function writeNow(kind, name, size, chunk) {
   const ah = await fh.createSyncAccessHandle();
   try {
     ah.truncate(0);
-    for (let off = 0; off < size; off += STEP) ah.write(await chunk(off, Math.min(STEP, size - off)), { at: off });
+    for (let off = 0; off < size; off += STEP) await writeAll(ah, await chunk(off, Math.min(STEP, size - off)), off);
     ah.flush();
   } catch (e) {
     try { ah.close(); } catch (_) { /* already closed */ }
