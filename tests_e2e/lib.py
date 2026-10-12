@@ -18,9 +18,11 @@ from playwright.sync_api import Page as _Page
 _Page.wait_for_function = _wff
 # Every page counts its fetches in flight (window.__qqF) and the time of the last start/end (window.__qqT): ready() below waits for them
 # instead of a fixed pause (the fixed pauses were more than half of the time of the e2e).
-_TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();const f=window.fetch;"
-          "window.fetch=function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
-          "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})}})()")
+# A page that replaces window.fetch (browser.js answers `api/...` itself, with the Rust engine) is counted too: the assignment goes through a setter that wraps it.
+_TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();"
+          "const wrap=f=>function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
+          "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})};let cur=wrap(window.fetch);"
+          "Object.defineProperty(window,'fetch',{configurable:true,get:()=>cur,set:f=>{cur=wrap(f)}})})()")
 # Short timers pending (<= 0.4 s: debounces, redraws, toasts) and the time of the last DOM change are tracked as well: pg.wait_for_timeout(ms) below returns
 # as soon as the page has been quiet for a moment (no fetch, no pending short timer, no DOM change) instead of sleeping for the whole `ms`.
 _TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=new Map(),st=window.setTimeout,ct=window.clearTimeout;"
@@ -30,7 +32,7 @@ _TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=ne
            "new MutationObserver(()=>{window.__qqT=Date.now()}).observe(document,{subtree:true,childList:true,attributes:true,characterData:true})})()")
 _TRACK = _TRACK + ";" + _TRACK2
 _QUIET = ("(idle)=>{const k=document.getElementById('kframe');if(k&&k.getBoundingClientRect().width>0)return false;"
-          "return document.getAnimations().length===0&&(window.__qqF||0)===0&&(window.__qqP||0)===0&&Date.now()-(window.__qqT||0)>=idle}")
+          "return document.getAnimations().length===0&&(window.__qqF||0)===0&&(typeof E==='undefined'||!E.pending||E.pending.length===0)&&(window.__qqP||0)===0&&Date.now()-(window.__qqT||0)>=idle}")
 _real_wft = _Page.wait_for_timeout
 _STAT = [0, 0]          # milliseconds asked for and really waited by the quiet pauses (MZLAB_E2E_STATS=1 prints them at the end)
 import atexit
@@ -88,7 +90,7 @@ def ready(pg, timeout=90000, settle=400):
     import time as _t
     t0 = _t.time()
     while True:
-        q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 ? Date.now() - (window.__qqT || 0) : -1; }")
+        q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 && (typeof E === 'undefined' || !E.pending || E.pending.length === 0) ? Date.now() - (window.__qqT || 0) : -1; }")
         if q >= settle: return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
