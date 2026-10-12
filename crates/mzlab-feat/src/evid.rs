@@ -8,6 +8,7 @@ mod arcs;
 mod graph;
 mod out;
 pub mod points;
+pub mod producers;
 mod proofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
@@ -161,7 +162,7 @@ pub struct Reason {
     pub numbers: Vec<(&'static str, f64)>,
 }
 
-/// A proof against stays open: the identity goes after the others and the proof in red.
+/// A proof against stays open: it is flagged in the column, takes no point away and is never offset by the points of another.
 pub const R_AGAINST_OPEN: &str = "EV_AGAINST_OPEN";
 /// N > 1 candidates that the proofs do not tell apart: the probability is 1/N.
 pub const R_INDISTINGUISHABLE: &str = "EV_INDISTINGUISHABLE";
@@ -273,8 +274,7 @@ pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Brea
     let total = rows
         .iter()
         .filter(|e| e.sign == Sign::For)
-        .map(|e| e.points.max(0.0))
-        .sum();
+        .fold(0.0, |s, e| s + e.points.max(0.0));
     let against = rows.iter().filter(|e| e.sign == Sign::Against).count();
     let reasons = reasons_of(&rows, against, n, table);
     Breakdown {
@@ -288,11 +288,14 @@ pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Brea
 }
 
 impl Breakdown {
-    /// Order of the candidates: those with no proof against first, then by total, higher first; equal ones keep their place (stable sort).
+    /// Order of the candidates: by total, higher first; with the same total the one with fewer proofs against; equal ones keep their place (stable sort).
+    /// A proof against takes no point away, never lowers the level (that stays the cascade of `LIVELLI.assess`) and is always flagged. Revocable decision:
+    /// "proofs against last" is the order `(against > 0).cmp(..)` first, then the total.
     pub fn rank(&self, other: &Breakdown) -> Ordering {
-        (self.against > 0)
-            .cmp(&(other.against > 0))
-            .then_with(|| other.total.total_cmp(&self.total))
+        other
+            .total
+            .total_cmp(&self.total)
+            .then_with(|| self.against.cmp(&other.against))
     }
 }
 

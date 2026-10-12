@@ -1,5 +1,5 @@
 //! The graph of the proofs on a table built by hand: every identity has its table of contributions, an undetermined reading is said, the decoys without
-//! an MS2 stay under level 4, the candidates the proofs do not tell apart share 1/N, a proof against puts the identity last whatever its total, two
+//! an MS2 stay under level 4, the candidates the proofs do not tell apart share 1/N, a proof against stays in the column and breaks ties, two
 //! runs give the same bytes, and the `evid` section of the `.mzfeat` is read back.
 
 use std::path::{Path, PathBuf};
@@ -337,7 +337,7 @@ fn candidates_the_proofs_do_not_tell_apart_share_one_over_n() {
 }
 
 #[test]
-fn a_proof_against_puts_the_identity_last_even_with_a_high_total() {
+fn a_proof_against_keeps_its_total_and_is_flagged() {
     let t = PointsTable::bundled().unwrap();
     let ids = graph(&world(), &t);
     let blank = by_row(&ids, 6);
@@ -359,10 +359,6 @@ fn a_proof_against_puts_the_identity_last_even_with_a_high_total() {
         "its total ({}) is not low",
         blank.breakdown.total
     );
-    assert_eq!(ids.last().unwrap().id, 6, "last in the order");
-    assert!(ids[..ids.len() - 1]
-        .iter()
-        .all(|i| i.breakdown.against == 0));
     assert!(ids
         .windows(2)
         .all(|p| p[0].breakdown.rank(&p[1].breakdown) != std::cmp::Ordering::Greater));

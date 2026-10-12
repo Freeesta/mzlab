@@ -9,15 +9,21 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::idxread::Index;
+use mzlab_feat::evid::producers::{isotope_score, network_share, neutral_of, FeatIndex, Peaks};
 use mzlab_feat::evid::*;
 use mzlab_feat::family::{analyse_families, FamParams, Families};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
+use mzlab_feat::ms2::Ms2Links;
 use mzlab_feat::pipeline::analyse;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::series::{align_and_fill, source_sha256};
 use mzlab_feat::store::{read_evid, write_table_with_evid, Origin};
-use mzlab_feat::table::{Aligned, FileFeatures};
+use mzlab_feat::table::{Aligned, FileFeatures, CELL_DETECTED};
+use mzlab_lib::build::{build_in_memory, BuildOpts};
+use mzlab_lib::parse::{parse_all, Format};
+use mzlab_lib::read::{cache_budget, Library};
+use mzlab_lib::search::{identity, IdentityOpts, Query, Tol};
 use serde_json::Value;
 
 type Idx = Index<std::fs::File>;
@@ -28,16 +34,18 @@ fn open(path: &str) -> Idx {
     Index::open(f, size).unwrap_or_else(|e| panic!("{path}: {e}"))
 }
 
-/// Minutes of `...t030min...`; `None` for a control.
+/// Minutes of `...t030min...` or `..._t0.mzidx`; `None` for a control.
 fn minutes(name: &str) -> Option<f64> {
     let k = name.rfind("_t")? + 2;
-    name[k..].split("min").next()?.parse().ok()
+    let d: String = name[k..].chars().take_while(char::is_ascii_digit).collect();
+    d.parse().ok()
 }
 
 struct Series {
     names: Vec<String>,
     feats: Vec<FileFeatures>,
     fams: Vec<Families>,
+    links: Vec<Ms2Links>,
     origin: Origin,
 }
 
@@ -46,6 +54,7 @@ fn analyse_all(files: &[String], r: &Recipe) -> Series {
         names: vec![],
         feats: vec![],
         fams: vec![],
+        links: vec![],
         origin: Origin::default(),
     };
     for path in files {
@@ -58,6 +67,7 @@ fn analyse_all(files: &[String], r: &Recipe) -> Series {
         s.names.push(name);
         s.feats.push(f);
         s.fams.push(fam);
+        s.links.push(links);
     }
     s
 }
@@ -125,12 +135,189 @@ fn registry(formula: &str, neg: bool) -> Registry {
     generate(&rules, &inp, &p).expect("hypotheses")
 }
 
+/// The strongest file of a row and the peak that holds it (position in that file).
+fn best_peak(aligned: &Aligned, idx: &[FeatIndex], row: usize) -> Option<(usize, usize)> {
+    let n = aligned.n_files;
+    let k = (0..n)
+        .filter(|&k| {
+            aligned.state[row * n + k] == CELL_DETECTED && aligned.area[row * n + k].is_finite()
+        })
+        .max_by(|&a, &b| {
+            aligned.area[row * n + a]
+                .total_cmp(&aligned.area[row * n + b])
+                .then(b.cmp(&a))
+        })?;
+    idx[k]
+        .find(aligned.mz[row], aligned.rt[row], 0.3)
+        .map(|p| (k, p))
+}
+
+/// The MS2 of every row (the linked scan with the best purity, in the strongest file) and its purity: one pass over the MS2 section of each file.
+fn row_spectra(
+    files: &[String],
+    s: &Series,
+    aligned: &Aligned,
+    idx: &[FeatIndex],
+    pol: Option<i8>,
+) -> Vec<Option<(Peaks, f32)>> {
+    let mut out: Vec<Option<(Peaks, f32)>> = vec![None; aligned.len()];
+    let mut want: Vec<Vec<(usize, u32, f32)>> = vec![vec![]; files.len()];
+    for row in 0..aligned.len() {
+        let Some((k, p)) = best_peak(aligned, idx, row) else {
+            continue;
+        };
+        let (scans, pur) = s.links[k].of(p);
+        let best = (0..scans.len()).max_by(|&a, &b| pur[a].total_cmp(&pur[b]).then(b.cmp(&a)));
+        if let Some(b) = best {
+            want[k].push((row, scans[b], pur[b]));
+        }
+    }
+    for (k, path) in files.iter().enumerate() {
+        let mut ix = open(path);
+        let Some(si) = ix.section_of(2, pol) else {
+            continue;
+        };
+        let ids = ix.arrays(si).expect("arrays").scan_ids.clone();
+        let mut slot: Vec<Option<usize>> = vec![None; ids.len()];
+        for (j, w) in want[k].iter().enumerate() {
+            if let Some(pos) = ids.iter().position(|&g| g == i64::from(w.1)) {
+                slot[pos] = Some(j);
+            }
+        }
+        let mut peaks = vec![Peaks::default(); want[k].len()];
+        let n = ix.sections[si].n_peaks;
+        ix.each_peak(si, 0, n, |pos, mz, it| {
+            if let Some(Some(j)) = slot.get(pos) {
+                peaks[*j].mz.push(mz);
+                peaks[*j].it.push(it);
+            }
+        })
+        .expect("peaks");
+        for (w, p) in want[k].iter().zip(peaks) {
+            out[w.0] = Some((p, w.2));
+        }
+    }
+    out
+}
+
+/// The library of the MSP file, built in memory.
+fn load_library(path: &str) -> Library<Vec<u8>> {
+    let data = std::fs::read(path).expect("library");
+    let (spectra, _) = parse_all(Format::Msp, &data);
+    let (bytes, _) = build_in_memory(&spectra, BuildOpts::default()).expect("build");
+    Library::open(bytes, cache_budget(false)).expect("open")
+}
+
+/// The best library match of the MS2 of every row (precursor within 10 ppm, fragments within 0.01).
+fn library_hits(
+    lib: &Library<Vec<u8>>,
+    aligned: &Aligned,
+    spec: &[Option<(Peaks, f32)>],
+    pol: i8,
+) -> Vec<LibHit> {
+    let opts = IdentityOpts {
+        prec_tol: Tol::Ppm(10.0),
+        frag_da: 0.01,
+        pol,
+        top: 1,
+    };
+    let mut out = Vec::new();
+    for (row, s) in spec.iter().enumerate() {
+        let Some((p, _)) = s else { continue };
+        let Some(q) = Query::new(aligned.mz[row], pol, &p.mz, &p.it) else {
+            continue;
+        };
+        if let Some(h) = identity(lib, &q, &opts).expect("search").first() {
+            let name = lib.meta(h.index).map(|m| m.name).unwrap_or_default();
+            out.push(LibHit {
+                row,
+                name,
+                library: "library".into(),
+                entropy: h.entropy,
+                shared: h.shared as u32,
+                ppm: h.dprec,
+            });
+        }
+    }
+    out
+}
+
+/// The measured facts of every row: isotope pattern against the formula of the hypothesis, purity, share of the MS2 explained by the parent.
+fn facts_of(
+    files: &[String],
+    s: &Series,
+    aligned: &Aligned,
+    reg: &Registry,
+    parent: Option<(f64, f64)>,
+    r: &Recipe,
+) -> (Vec<Facts>, Vec<Option<(Peaks, f32)>>) {
+    let pol = r.detect.polarity;
+    let sign = pol.unwrap_or(1);
+    let idx: Vec<FeatIndex> = s.feats.iter().map(FeatIndex::new).collect();
+    let spec = row_spectra(files, s, aligned, &idx, pol);
+    let parent_row = parent.and_then(|(mz, rt)| row_near(aligned, mz, rt, 0.3));
+    let parent_spec = parent_row.and_then(|r| spec[r].as_ref().map(|x| x.0.clone()));
+    let parent_neutral = parent.map(|p| neutral_of(p.0, sign));
+    let facts = (0..aligned.len())
+        .map(|row| {
+            let mz = aligned.mz[row];
+            let hyp = reg.hyps.iter().find(|h| (h.mz - mz).abs() <= mz * 5e-6);
+            let isotope =
+                hyp.and_then(|h| isotope_score(&idx, mz, aligned.rt[row], &h.formula, sign));
+            let network = match (hyp, &parent_spec, &spec[row], parent_neutral) {
+                (Some(h), Some(ps), Some((cs, _)), Some(pn)) if parent_row != Some(row) => {
+                    network_share(cs, ps, h.neutral - pn, 0.01)
+                }
+                _ => None,
+            };
+            Facts {
+                isotope,
+                fragments: None,
+                purity: spec[row].as_ref().map(|x| f64::from(x.1)),
+                network,
+            }
+        })
+        .collect();
+    (facts, spec)
+}
+
+/// Treated files (with a time), controls and the times in minutes, from the names.
+fn groups(names: &[String]) -> (Vec<usize>, Vec<usize>, Vec<f64>) {
+    let treated: Vec<usize> = (0..names.len())
+        .filter(|&k| minutes(&names[k]).is_some())
+        .collect();
+    let controls = (0..names.len())
+        .filter(|&k| minutes(&names[k]).is_none())
+        .collect();
+    let times = treated.iter().filter_map(|&k| minutes(&names[k])).collect();
+    (treated, controls, times)
+}
+
+/// Areas of the parent in the treated files (ones when the parent is not known).
+fn parent_series(
+    aligned: &Aligned,
+    treated: &[usize],
+    parent: Option<(f64, f64)>,
+    n: usize,
+) -> Vec<f64> {
+    parent
+        .and_then(|(mz, rt)| row_near(aligned, mz, rt, 0.3))
+        .map(|row| {
+            treated
+                .iter()
+                .map(|&k| aligned.area[row * aligned.n_files + k])
+                .collect()
+        })
+        .unwrap_or_else(|| vec![1.0; n])
+}
+
 /// Builds the graph of the series; returns the table, the identities and the `.mzfeat` bytes.
 fn build(
     files: &[String],
     r: &Recipe,
     formula: &str,
     truth: Option<&Truth>,
+    lib: Option<&Library<Vec<u8>>>,
 ) -> (Aligned, Vec<Identity>, Vec<u8>) {
     let s = analyse_all(files, r);
     let (aligned, _) = align_and_fill(&s.feats, r, |k| Ok(open(&files[k]))).expect("align");
@@ -144,27 +331,14 @@ fn build(
     );
     let reg = registry(formula, r.detect.polarity == Some(-1));
     let table = PointsTable::bundled().unwrap();
-    let treated: Vec<usize> = (0..files.len())
-        .filter(|&k| minutes(&s.names[k]).is_some())
-        .collect();
-    let controls: Vec<usize> = (0..files.len())
-        .filter(|&k| minutes(&s.names[k]).is_none())
-        .collect();
-    let times: Vec<f64> = treated
-        .iter()
-        .map(|&k| minutes(&s.names[k]).unwrap())
-        .collect();
+    let (facts, spec) = facts_of(files, &s, &aligned, &reg, truth.map(|t| t.parent), r);
+    let libs = lib.map_or(vec![], |l| {
+        library_hits(l, &aligned, &spec, r.detect.polarity.unwrap_or(1))
+    });
+    let (treated, controls, times) = groups(&s.names);
     let (forms, chain) = (FormBank::new(&times), ChainBank::new(&times, K_PARENT_MIN));
     let parent_at = truth.map(|t| t.parent);
-    let y: Vec<f64> = parent_at
-        .and_then(|(mz, rt)| row_near(&aligned, mz, rt, 0.3))
-        .map(|row| {
-            treated
-                .iter()
-                .map(|&k| aligned.area[row * aligned.n_files + k])
-                .collect()
-        })
-        .unwrap_or_else(|| vec![1.0; times.len()]);
+    let y = parent_series(&aligned, &treated, parent_at, times.len());
     let setup = Setup {
         times: &times,
         forms: &forms,
@@ -172,13 +346,20 @@ fn build(
         parent: parent_kinetics(&forms, &times, &y, None),
         pseudo: 2e4 * 3.0,
     };
+    let cnt = |f: fn(&Facts) -> bool| facts.iter().filter(|x| f(x)).count();
+    println!(
+        "facts: isotope {}, network {}, purity {}",
+        cnt(|x| x.isotope.is_some()),
+        cnt(|x| x.network.is_some()),
+        cnt(|x| x.purity.is_some())
+    );
     let inp = Inputs {
         table: &table,
         aligned: &aligned,
-        facts: &[],
+        facts: &facts,
         arcs: &arcs,
         registry: &reg,
-        libs: &[],
+        libs: &libs,
         external: &[],
         kinetics: Some(Kinetics {
             setup: &setup,
@@ -212,7 +393,22 @@ fn report(aligned: &Aligned, ids: &[Identity], truth: &Truth) {
     for (id, mz, rts) in &truth.tps {
         let row = rts.iter().find_map(|&rt| row_near(aligned, *mz, rt, 0.3));
         let (a, g) = row.map_or((None, None), |r| (pos(&by_area, r), pos(&by_graph, r)));
-        println!("{id:>8}: row {row:?} rank by area {a:?}, by graph {g:?}");
+        let why = row
+            .and_then(|r| ids.iter().find(|i| i.id as usize == r))
+            .map(|i| {
+                let ag: Vec<_> = i
+                    .breakdown
+                    .rows
+                    .iter()
+                    .filter(|e| e.sign == Sign::Against)
+                    .map(|e| e.kind.name())
+                    .collect();
+                format!("total {} against {ag:?}", i.breakdown.total)
+            });
+        println!(
+            "{id:>8}: row {row:?} rank by area {a:?}, by graph {g:?} {}",
+            why.unwrap_or_default()
+        );
         found += usize::from(row.is_some());
         ra.extend(a);
         rg.extend(g);
@@ -245,6 +441,7 @@ fn main() {
         None::<String>,
     );
     let (mut twice, mut r) = (false, Recipe::default());
+    let (mut json_out, mut lib_path) = (None::<PathBuf>, None::<String>);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -253,18 +450,21 @@ fn main() {
             "--truth" => truth_path = args.next(),
             "--out" => out = args.next().map(PathBuf::from),
             "--twice" => twice = true,
+            "--library" => lib_path = args.next(),
+            "--json" => json_out = args.next().map(PathBuf::from),
             _ => files.push(a),
         }
     }
     let truth = truth_path.as_deref().map(load_truth);
-    let (aligned, ids, bytes) = build(&files, &r, &formula, truth.as_ref());
+    let lib = lib_path.as_deref().map(load_library);
+    let (aligned, ids, bytes) = build(&files, &r, &formula, truth.as_ref(), lib.as_ref());
     assert_eq!(read_evid(&bytes).expect("evid").is_empty(), false);
     println!("{} bytes of .mzfeat", bytes.len());
     if let Some(t) = &truth {
         report(&aligned, &ids, t);
     }
     if twice {
-        let again = build(&files, &r, &formula, truth.as_ref()).2;
+        let again = build(&files, &r, &formula, truth.as_ref(), lib.as_ref()).2;
         println!(
             "second run: {}",
             if again == bytes {
@@ -273,6 +473,9 @@ fn main() {
                 "DIFFERENT"
             }
         );
+    }
+    if let Some(p) = json_out {
+        std::fs::write(p, read_evid(&bytes).expect("evid")).expect("write");
     }
     if let Some(p) = out {
         std::fs::write(p, &bytes).expect("write");
