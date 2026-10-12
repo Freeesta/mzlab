@@ -30,6 +30,11 @@ try:
             assert pg.evaluate(f"{KJ}.editor.struct().atoms.size") == 3, "the drawing is back"
             assert pg.evaluate(LAB) == 1, pg.evaluate(LAB)                   # one structure, one line (formula only)
         step("reload on #/disegno: editor, drawing, saved options and labels are back", drawing_back)
+        def quick_draw_labels():
+            pg.evaluate(f"{KJ}.setMolecule('')"); pg.wait_for_timeout(800)
+            pg.check("#lb-m"); pg.fill("#ex-smi", "CCO"); pg.click("#ex-load"); pg.wait_for_timeout(1500)
+            assert pg.evaluate(LAB) == 2, pg.evaluate(LAB)                   # formula and mass appear at once, without clicking the options again
+        step("Quick draw: the labels under the new structure appear by themselves", quick_draw_labels)
         def damaged_keys():
             n = 0
             for bad in BAD:

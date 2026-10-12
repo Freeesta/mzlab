@@ -1,4 +1,4 @@
-# The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_pool, e2e_mzidx, e2e_progressivo.
+# The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
 # Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
 name: sito-rust
 
@@ -9,7 +9,7 @@ on:
     inputs:
       solo:
         description: "e2e to run (comma separated)"
-        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_pool,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline"
 
 permissions:
   contents: read
@@ -50,9 +50,9 @@ jobs:
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm --config 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1572864 engine --enable-simd
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1572864 engine
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
@@ -60,7 +60,7 @@ jobs:
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_pool,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline' }}"
+          python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline' }}"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

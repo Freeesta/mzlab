@@ -1,6 +1,6 @@
 // The routes of lr.js about the methods (.dam) and how an item was acquired, answered by the Rust engine: /api/method, /api/method_warnings, /api/analog,
 // /api/delay, /api/chrom?kind=pda, /api/gradient (GET and POST), /api/gradient_parse. `get` and `post` return { status, text }, or undefined when the route is
-// not theirs, or null when Python must answer (a high-resolution session, a part of a mixed file for the delay).
+// not theirs, or null when it is not served (a high-resolution session with a method, a part of a mixed file for the delay).
 export function createMethodRoutes({ rpc, json, items, hr }) {
   let methods = [];                       // App.methods(): [{name, size, info}], oldest first
   const gradients = new Map();            // item file -> the gradient typed, pasted or imported for it (the model)
@@ -20,7 +20,8 @@ export function createMethodRoutes({ rpc, json, items, hr }) {
     if (path === "/api/method_warnings") {
       const its = items();
       if (!its) return json({ warnings: [] });
-      return hr() ? null : raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
+      if (hr()) return methods.length ? null : json({ warnings: [] });                   // no method loaded: nothing to compare
+      return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
     if (!["/api/method", "/api/analog", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda")) return undefined;
     const it = item(q), name = it && it.file;
@@ -35,7 +36,7 @@ export function createMethodRoutes({ rpc, json, items, hr }) {
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
-      return name.includes("#") ? null : raw(await rpc({ op: "lr_delay", name }));     // a part of a mixed file reads its own scans: Python's
+      return name.includes("#") ? null : raw(await rpc({ op: "lr_delay", name }));     // a part of a mixed file reads its own scans: not served
     } catch (e) { return fail(e, 500); }
   };
 

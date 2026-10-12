@@ -1,10 +1,11 @@
-"""High-resolution files with the flow without Pyodide (?motore=rust&lr=1) on the built site: the maps (api/map in the grid of the session, in a region
+"""High-resolution files with the browser version on the built site: the maps (api/map in the grid of the session, in a region
 with cells of equal ppm, minus a reference; api/mapsnap, api/mappunti, api/mappunti3d) and the evidence of origin (api/origin) come from the Rust engine,
-no request of those routes is left to Python (window.MZLAB_LR_MISS) and Pyodide is not downloaded; the JSON equals the classic engine's (Pyodide).
+no request of those routes is left to Python (window.MZLAB_LR_MISS) and Pyodide is not downloaded; the JSON equals the Python reference's (pyref.py).
 Needs the site and the .wasm (python tools/build_site.py)."""
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
+from pyref import PyRef
 from lib_hr import synth
 
 sys.path.insert(0, str(ROOT))
@@ -35,10 +36,6 @@ def json_close(a, b, tol=1e-6, path=""):
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
         assert abs(a - b) <= tol * max(1.0, abs(a), abs(b)), f"{path}: {a} against {b}"
     else: assert a == b, f"{path}: {a!r} against {b!r}"
-# api/contaminants (the built-in lists of the "Lists" tool) is still Python's and would start Pyodide when the files open: it is answered empty here, so that the
-# routes under test are the only ones that could
-NO_LISTS = """(() => { const nf = window.fetch.bind(window); let cur = nf;
-  Object.defineProperty(window, "fetch", { configurable: true, get: () => cur, set: f => { cur = (u, i) => String((u && u.url) || u).includes("api/contaminants") ? Promise.resolve(new Response('{"lists":[]}', { headers: { "Content-Type": "application/json" } })) : f(u, i); } }); })();"""
 def pyodide(reqs): return [u for u in reqs if "/pyodide/" in u or u.endswith("mzlab.zip")]
 def left(pg): return [m for m in pg.evaluate("window.MZLAB_LR_MISS || []") if "api/map" in m or "api/origin" in m]
 def open_files(pg):
@@ -56,8 +53,8 @@ try:
             c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             return pg, reqs
-        pg, reqs = context(); pg.add_init_script(NO_LISTS); pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pg)
-        pg2, reqs2 = context(); pg2.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pg2)
+        pg, reqs = context(); pg.goto(f"http://127.0.0.1:{PORT}/"); open_files(pg)
+        pg2 = PyRef([str(f) for f in FILES])
         items = pg.evaluate(JSON, "api/session")["j"]["session"]
         ms1 = [k for k, it in enumerate(items) if "MS1" in it["label"] or it.get("kind") == "full"]
         assert len(ms1) == 2, [(it["label"], it.get("kind")) for it in items]
@@ -77,14 +74,14 @@ try:
             same([f"api/map?k={a}", f"api/map?k={c}&bg=1&agg=mean", f"api/map?k={a}&ref={c}&norm=max", f"api/map?k={a}&{R}&nrt=100&nmz=800",
                   f"api/map?k={a}&{R}&nrt=100&nmz=600&mzscale=log&bg=1", f"api/map?k={a}&ref={c}&{R}&nrt=80&nmz=600&mzscale=log&mztol=5",
                   f"api/map?k={a}&rt0=14.2&rt1=14.4&mz0={PARENT - 0.02}&mz1={PARENT + 0.02}&nrt=40&nmz=400&mzscale=log&ref={c}&mztol=20"])
-        step("high-resolution maps (grid of the session, region, equal ppm, minus a reference) from Rust, equal to Python's, without Pyodide", maps)
+        step("high-resolution maps (grid of the session, region, equal ppm, minus a reference) from Rust, equal to the reference's, without Pyodide", maps)
         def points():
             same([f"api/mapsnap?k={a}&rt=14.3&mz={PARENT}", f"api/mappunti?k={a}&ref={c}&pts=14.3,{PARENT};9.0,305.0702&ppm=5",
                   f"api/mappunti3d?k={a}&rt0=14&rt1=14.6&mz0={PARENT - 1}&mz1={PARENT + 3}&max=300"])
-        step("snap, marked points and 3D sticks of high-resolution files from Rust, equal to Python's", points)
+        step("snap, marked points and 3D sticks of high-resolution files from Rust, equal to the reference's", points)
         def origin():
             same([f"api/origin?k={a}&mz=305.0702&parent={PARENT}", f"api/origin?k={c}&mz={PARENT + 1.00335}&parent={PARENT}&rt0=13.8&rt1=14.8&formula={ds.HR_PARENT}"], 1e-6)
-        step("the evidence of origin of high-resolution files from Rust, equal to Python's, without Pyodide", origin)
+        step("the evidence of origin of high-resolution files from Rust, equal to the reference's, without Pyodide", origin)
         b.close()
 finally:
     srv.terminate()

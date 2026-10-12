@@ -57,6 +57,14 @@ impl FileFeatures {
         );
     }
 
+    /// Append the columns that `align` reads of row `i` of `src` (m/z, RT, limits, area, height, flags): the weak tier needs no more.
+    pub fn push_lean(&mut self, src: &FileFeatures, i: usize) {
+        macro_rules! cp {
+            ($($c:ident),*) => { $( self.$c.push(src.$c[i]); )* };
+        }
+        cp!(mz, rt, left, right, area, height, flags);
+    }
+
     /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut b = Vec::with_capacity(self.len() * 91 + 16);

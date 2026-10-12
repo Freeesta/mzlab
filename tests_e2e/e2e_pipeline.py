@@ -32,6 +32,7 @@ if not reuse:
     cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)]
     if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
     subprocess.run(cmd, check=True)
+    from lib_sito import add_wasm; add_wasm(site)
     subprocess.run(["tools/build_feat_wasm.sh", str(site / "static")], cwd=ROOT, check=True, env=env, capture_output=True)
 else:                                                      # fresh sources of mzFinder over the site that was built
     for sub in ("js", "files"):

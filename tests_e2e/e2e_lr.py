@@ -1,11 +1,12 @@
-"""Flow of the low-resolution files WITHOUT Pyodide (?motore=rust&lr=1) on the built site: opening Full Scan files, the list of the files, the session and the
-TIC are answered by the Rust engine, Pyodide is not downloaded (the requests are counted); the JSON of api/state and api/session equals the one of the classic
-engine (Pyodide); the files are still there after a reload (OPFS); the first request only Python can answer starts Pyodide and the session is replayed into it.
+"""The files and the session of the browser version on the built site: opening Full Scan files, the list of the files, the session, the TIC and all the other routes
+are answered by the Rust engine, Pyodide is never downloaded (the requests are counted, `MZLAB_LR_MISS` stays empty); the JSON equals the one of the Python reference
+(pyref.py: mzlab/api.py in this process); the files are still there after a reload (OPFS).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
 import shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
+from pyref import PyRef
 
 PORT = 8834
 errs = []
@@ -18,7 +19,7 @@ if not (ROOT / "site" / "index.html").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py")); sys.exit(0)
 if not wasm.exists():
     if shutil.which("cargo") and shutil.which("wasm-bindgen"):
-        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm", "--config", 'target.wasm32-unknown-unknown.rustflags=["-C","target-feature=+simd128"]'], cwd=ROOT, check=True)
+        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm"], cwd=ROOT, check=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(wasm.parent), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm"], cwd=ROOT, check=True)
     else:
         print("  ", ("wasm", "FAIL site/static/wasm missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
@@ -64,7 +65,7 @@ try:
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             return c, pg, reqs
         ctx, pg, reqs = context()
-        pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         def boot():
             pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
@@ -90,72 +91,59 @@ try:
             json_close(pg.evaluate(JSON, "api/session")["j"]["session"], lr_snap["session"]["session"], path="resumed session")
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
-        # the classic engine on the same files: the JSON must be the same
-        ctx2, pg2, reqs2 = context()
-        pg2.goto(f"http://127.0.0.1:{PORT}/?motore=python")
+        # the Python reference on the same files: the JSON must be the same
+        ref = PyRef(FILES, pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"])         # the same samples as the page posted
         def classic():
-            open_files(pg2, "classic")
-            assert pyodide(reqs2), "the counter does not see Pyodide in the classic flow"
-            py = snap(pg2)
+            py = {"state": ref.get("api/state")["j"], "session": ref.get("api/session")["j"]}
             json_close(lr_snap["state"]["files"], py["state"]["files"], path="state.files")
-            json_close({k: v for k, v in lr_snap["state"].items() if k != "files"}, {k: v for k, v in py["state"].items() if k != "files"}, path="state")
-            json_close(lr_snap["session"], py["session"], path="session")
-        step("the JSON of state and session equals the classic engine's (Pyodide)", classic)
-        def late_python():
-            open_files(pg) if not pg.evaluate("typeof S !== 'undefined' && !!S.sess") else None
-            before = pg.evaluate(JSON, "api/session")["j"]["session"]
-            r = pg.evaluate(JSON, "api/method?k=0")                     # a route only Python knows (the method of the file: a .dam)
-            assert r["status"] in (200, 400), r
-            assert pyodide(reqs), "Pyodide did not start"
-            assert pg.evaluate("window.MZLAB_LR_DONE === true")
-            after = pg.evaluate(JSON, "api/session")["j"]["session"]
-            json_close(before, after, path="session")
-        step("the first request only Python can answer starts Pyodide and the session is replayed into it", late_python)
+            json_close({k: v for k, v in lr_snap["state"].items() if k not in ("files", "workdir")}, {k: v for k, v in py["state"].items() if k not in ("files", "workdir")}, path="state")
+            json_close({k: v for k, v in lr_snap["session"].items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+        step("the JSON of state and session equals the Python reference", classic)
         def same_as_classic():
             urls = ["api/spectrum?k=0&rt0=0&rt1=1000&level=1&precursor=&merge=1", "api/spectrum?k=1&rt0=1&rt1=2.5&level=1&bin=0.5", "api/spectrum?k=0&rt0=3&rt1=3&level=1",
                     "api/fileinfo?k=0", "api/fileinfo?k=1", "api/ms2tr?k=0", "api/ms2tr?k=0,1", "api/scan_axis?k=0&level=1", "api/scan_axis?k=1&level=2", "api/contaminants",
                     "api/formula?f=C6H12O6", "api/formula?f=c9h10cl2n2o&adduct=%5BM%2BNa%5D%2B", "api/formula?f=Xx2", "api/gradient?k=0", "api/method_warnings"]
             for u in urls:
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"], (u, a["status"], b2["status"])
                 json_close(a["j"], b2["j"], path=u)
                 if not u.startswith("api/gradient") and not u.startswith("api/method_warn"): assert a["eng"] == "rust", (u, a["eng"])
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
         ctx3, pg3, reqs3 = context()
-        pg3.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+        pg3.goto(f"http://127.0.0.1:{PORT}/")
         open_files(pg3)
-        step("spectrum, formula, gradient: same answers as the classic engine, still without Pyodide", same_as_classic)
+        step("spectrum, formula, gradient: same answers as the reference, still without Pyodide", same_as_classic)
         def origin_same():
             for u in ["api/origin?k=0&mz=194.2&parent=364.37", "api/origin?k=1&mz=305.3&parent=364.37&rt0=13.5&rt1=15.2", "api/origin?k=0&mz=152.2&parent=364.37&formula=C9H10Cl2N2O"]:
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
                 assert a["eng"] == "rust", (u, a["eng"])
                 for r in (a["j"], b2["j"]): r.pop("timing", None)                    # seconds of each stage: they differ by nature
                 json_close(a["j"], b2["j"], 1e-6, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
-        step("origin: the evidence of Rust equals Python's, still without Pyodide", origin_same)
+        step("origin: the evidence of Rust equals the reference's, still without Pyodide", origin_same)
         def map_same():
             for u in ["api/map?k=0", "api/map?k=1&bg=1", "api/map?k=0&ref=1&norm=max", "api/map?k=0&rt0=13&rt1=16&mz0=140&mz1=400&nrt=120&nmz=100", "api/mapsnap?k=0&rt=14.25&mz=364.4",
                       "api/mappunti?k=0&ref=1&pts=14.3,364.3;14.32,194.2", "api/mappunti3d?k=0&rt0=13&rt1=16&mz0=150&mz1=370&max=300"]:
-                ta, tb = round(pg3.evaluate(CLOCK, u)), round(pg2.evaluate(CLOCK, u))
+                ta, tb = round(pg3.evaluate(CLOCK, u)), round(ref.evaluate(CLOCK, u))
                 MAPMS[u[4:40]] = (ta, tb)
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
                 assert a["eng"] == "rust", (u, a["eng"])
                 json_close(a["j"], b2["j"], 1e-6, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
-        step("map, snap, marked points and 3D sticks: Rust equals Python's, still without Pyodide", map_same)
+        step("map, snap, marked points and 3D sticks: Rust equals the reference's, still without Pyodide", map_same)
         def composition_same():
             obs = "233.0243:100;234.0276:7.5;235.0310:3.2"
             for u in ["api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8%2CS%3A0-2&tol=5&unit=ppm&max=10",
                       "api/composition?mz=233.0243&tol=3&unit=mda&rdb=0,20&n=even&rules=HC,LEWIS,SENIOR&ion=%5BM%2BNa%5D%2B&max=5",
                       f"api/composition?mz=233.0243&elements=C%3A0-20%2CH%3A0-40%2CN%3A0-5%2CO%3A0-8%2CS%3A0-2&obs={obs.replace(':', '%3A').replace(';', '%3B')}&frags=215.0137%3A50%3B189.0243%3A100"]:
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"] == 200, (u, a["status"], b2["status"])
                 assert a["eng"] == "rust", (u, a["eng"])
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
-        step("composition: the formulas of Rust equal Python's, still without Pyodide", composition_same)
+        step("composition: the formulas of Rust equal the reference's, still without Pyodide", composition_same)
         def subxic_same():
             import tempfile
             import numpy as np
@@ -166,14 +154,14 @@ try:
             from mzlab.chem.elements import ion_mz, mass, parse_formula
             par = ion_mz(mass(parse_formula(ds.HR_PARENT)), "[M+H]+")
             ds.hr_series(hrf, np.random.default_rng(5), [(par, 6.0, 0.07, 3e7), (par - 61.9896, 6.0, 0.07, 1e7), (par - 97.9765, 6.1, 0.07, 4e6)])
-            ctx6, pg6, reqs6 = context(); pg6.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pg6, files=[str(hrf)], n=1)
-            ctx7, pg7, reqs7 = context(); pg7.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pg7, files=[str(hrf)], n=1)
+            ctx6, pg6, reqs6 = context(); pg6.goto(f"http://127.0.0.1:{PORT}/"); open_files(pg6, files=[str(hrf)], n=1)
+            pg7 = PyRef([str(hrf)])
             clock = """async q => { const rb = window.MZLAB_RUST; if (!(await rb.ready([0]))) return null; return JSON.parse((await rb.rpc({ op: "subxic", slot: 0, k: 0, query: q })).info || "null"); }"""
             for q in ["f=C14H14F4N3O2S&ppm=5&min=150", "f=C14H14F4N3O2S&ppm=2&min=300&z=1"]:        # the engine of the page, asked directly: the page itself goes to Python at its first high-resolution spectrum
                 a = pg6.evaluate(clock, q); b2 = pg7.evaluate(JSON, "api/subxic?k=0&" + q)
                 assert a is not None and a["n_hit"] > 0 and b2["status"] == 200, (q, a and a["n_hit"], b2["status"])
                 json_close(a, b2["j"], 1e-9, q)
-        step("subxic: the sub-formulas of a high-resolution survey from the index, Rust equals Python's", subxic_same)
+        step("subxic: the sub-formulas of a high-resolution survey from the index, Rust equals the reference's", subxic_same)
         def profile_same():
             import tempfile
             import numpy as np
@@ -181,8 +169,8 @@ try:
             import dati_sintetici as ds
             pf = Path(tempfile.mkdtemp()) / "prof.mzML"
             ds.full_scan_profile(pf, 10.0, np.random.default_rng(6))
-            ctx8, pg8, reqs8 = context(); pg8.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pg8, files=[str(pf)], n=1)
-            ctx9, pg9, reqs9 = context(); pg9.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pg9, files=[str(pf)], n=1)
+            ctx8, pg8, reqs8 = context(); pg8.goto(f"http://127.0.0.1:{PORT}/"); open_files(pg8, files=[str(pf)], n=1)
+            pg9 = PyRef([str(pf)])
             for u in ["api/spectrum?k=0&rt0=14&rt1=14.7&level=1&precursor=&bin=0.1", "api/spectrum?k=0&rt0=0&rt1=1000&level=1&merge=1", "api/spectra?k=0&i0=150&i1=160&level=1&bin=0.1",
                       "api/spectra?k=0&i0=100&i1=159&level=1&merge=1"]:
                 ta, tb = round(pg8.evaluate(CLOCK, u)), round(pg9.evaluate(CLOCK, u))
@@ -192,7 +180,7 @@ try:
                 assert a["eng"] == "rust" and (a["j"]["mode"] if "mode" in a["j"] else a["j"]["scans"][0]["mode"]) == "profile", (u, a["eng"], why(pg8))
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs8), (pyodide(reqs8)[:3], why(pg8))
-        step("profile spectra (window and single scans): Rust equals Python's, still without Pyodide", profile_same)
+        step("profile spectra (window and single scans): Rust equals the reference's, still without Pyodide", profile_same)
         def stat_same():
             import numpy as np
             rng = np.random.default_rng(12)
@@ -200,8 +188,8 @@ try:
             times = [None, None, 0, 0, 0, 15, 15, 15, 60, 60, 60]
             m = np.round(rng.lognormal(10, 1.2, (40, 11)) * np.array([0.05, 0.05] + [1] * 9)).tolist()
             post = """async a => { const r = await fetch(a[0], { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(a[1]) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
-            ctxa, pga, reqsa = context(); pga.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pga.wait_for_selector("#drop", timeout=120000)
-            ctxb, pgb, reqsb = context(); pgb.goto(f"http://127.0.0.1:{PORT}/?motore=python"); pgb.wait_for_selector("#drop", timeout=120000)
+            ctxa, pga, reqsa = context(); pga.goto(f"http://127.0.0.1:{PORT}/"); pga.wait_for_selector("#drop", timeout=120000)
+            pgb = PyRef()
             pts = [{"file": f"f{k}", "time": t, "rt": 5.0, "area": 100.0 * (k + 1), "height": 9.0 * k} for k, t in enumerate([30, 0, 60, 15])]
             for u, body in [("api/stat/profile", {"points": pts, "metric": "area"}), ("api/stat/blank", {"matrix": m, "roles": roles, "factor": 3, "min_detect": 2}),
                             ("api/stat/reference", {"matrix": m, "roles": roles, "times": times}), ("api/stat/pca", {"matrix": m, "roles": roles, "groups": [None, None] + ["a"] * 3 + ["b"] * 3 + ["c"] * 3}),
@@ -210,13 +198,13 @@ try:
                 assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pga))
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqsa), (pyodide(reqsa)[:3], why(pga))
-        step("statistics (profile, blank, reference, PCA): Rust equals Python's, without Pyodide", stat_same)
+        step("statistics (profile, blank, reference, PCA): Rust equals the reference's, without Pyodide", stat_same)
         def diff_same():
             full = ["api/chrom?k=1&ref=0", "api/chrom?k=1&ref=0&norm=tic&kind=bpc", "api/chrom?k=1&ref=0&norm=istd&istd=364.4&factor=0.5&clip=1&mz0=100&mz1=300",
                     "api/xic?k=0,1&ref=0&mz=364.4&tol=0.35", "api/xic?k=1&ref=0&mz=305.3&tol=0.5&norm=istd&istd=364.4&rttol=0.3", "api/xic?k=1&ref=0&mz=364.4&norm=foo",
                     "api/xic?k=1&ref=0&mz=364.4&factor=200"]
             for u in full:
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pg3))
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
@@ -226,9 +214,9 @@ try:
             import dati_sintetici as ds
             d = Path(tempfile.mkdtemp())
             ds.mrm(d / "m1.mzML", 1.0, np.random.default_rng(3), 1); ds.mrm(d / "m2.mzML", 0.5, np.random.default_rng(13), 2)
-            ctxm, pgm, reqsm = context(); pgm.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
-            ctxn, pgn, reqsn = context(); pgn.goto(f"http://127.0.0.1:{PORT}/?motore=python")
-            for g in (pgm, pgn):
+            ctxm, pgm, reqsm = context(); pgm.goto(f"http://127.0.0.1:{PORT}/")
+            pgn = PyRef([str(d / "m1.mzML"), str(d / "m2.mzML")])
+            for g in (pgm,):
                 g.wait_for_selector("#drop", timeout=120000)
                 g.set_input_files("#pick", [str(d / "m1.mzML"), str(d / "m2.mzML")])
                 g.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
@@ -239,18 +227,18 @@ try:
                 assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pgm))
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqsm), (pyodide(reqsm)[:3], why(pgm))
-        step("reference difference (chrom, xic, mrm with ref): Rust equals Python's, without Pyodide", diff_same)
+        step("reference difference (chrom, xic, mrm with ref): Rust equals the reference's, without Pyodide", diff_same)
         def qaqc_same():
             for u in ["api/qaqc?k=0,1&roles=sample,blank&mz=364.4&rt=14.3&ratio=1", "api/qaqc?k=1,0&roles=qc,qc&mz=194.2&rt=14.3&unit=ppm&tol=700&win=1",
                       "api/qaqc?k=0,1&roles=sample&mz=364.4&rt=14.3", "api/qaqc?k=0,1&roles=sample,dark&mz=305.3&rt=14.7&thr=10&ratio=1"]:
-                a = pg3.evaluate(JSON, u); b2 = pg2.evaluate(JSON, u)
+                a = pg3.evaluate(JSON, u); b2 = ref.evaluate(JSON, u)
                 assert a["status"] == b2["status"] and a["eng"] == "rust", (u, a["status"], b2["status"], a["eng"], why(pg3))
                 json_close(a["j"], b2["j"], 1e-9, u)
             assert not pyodide(reqs3), (pyodide(reqs3)[:3], why(pg3))
-        step("QA/QC of an ion (api/qaqc): Rust equals Python's, without Pyodide", qaqc_same)
+        step("QA/QC of an ion (api/qaqc): Rust equals the reference's, without Pyodide", qaqc_same)
         def mrm_alone():
             ctx4, pg4, reqs4 = context()
-            pg4.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+            pg4.goto(f"http://127.0.0.1:{PORT}/")
             pg4.wait_for_selector("#drop", timeout=120000)
             pg4.set_input_files("#pick", [mz("B_MRM-t0")])
             pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
@@ -264,7 +252,7 @@ try:
             # the flow of e2e13 in the Rust default: five files (Full Scan, MS2, MRM), reload, panels
             ctx5, pg5, reqs5 = context()
             ctx5.add_init_script("window.MZLAB_TRACE = [];")
-            pg5.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
+            pg5.goto(f"http://127.0.0.1:{PORT}/")
             pg5.wait_for_selector("#drop", timeout=120000)
             five = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")]
             pg5.set_input_files("#pick", five)
@@ -287,12 +275,12 @@ try:
             import dati_sintetici as ds, dam_riferimento as dr
             d = Path(tempfile.mkdtemp()); ds.full_scan(d / "press.mzML", 0, np.random.default_rng(9), pressure=True)
             dr.build(d)
-            ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); open_files(pa, files=[str(d / "press.mzML")], n=1)
-            cb, pb, rb_ = context(); pb.goto(f"http://127.0.0.1:{PORT}/?motore=python"); open_files(pb, files=[str(d / "press.mzML")], n=1)
+            ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/"); open_files(pa, files=[str(d / "press.mzML")], n=1)
+            pb = PyRef([str(d / "press.mzML")])
             for i, n in enumerate(["Q1 full scan.dam", "MRM prova.dam", "garbage.dam"], 1):         # one at a time: the order of the methods is the order of the uploads
-                for pg_ in (pa, pb):
-                    pg_.set_input_files("#pick", [str(d / n)])
-                    pg_.wait_for_function(f"fetch('api/state').then(r => r.json()).then(s => s.methods.length >= {i})", timeout=60000)
+                pb.upload(str(d / n))
+                pa.set_input_files("#pick", [str(d / n)])
+                pa.wait_for_function(f"fetch('api/state').then(r => r.json()).then(s => s.methods.length >= {i})", timeout=60000)
             POST = """async ([u, b]) => { const r = await fetch(u, { method: "POST", body: JSON.stringify(b) }); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
             sa, sb = pa.evaluate(JSON, "api/state")["j"], pb.evaluate(JSON, "api/state")["j"]
             assert len(sa["methods"]) == 3, sa["methods"]
@@ -322,9 +310,8 @@ try:
             assert len(pa.evaluate(JSON, "api/state")["j"]["methods"]) == 3 and not pyodide(ra), why(pa)
             pa.evaluate(POST, ["api/remove", {"name": "garbage.dam"}])
             assert len(pa.evaluate(JSON, "api/state")["j"]["methods"]) == 2
-        step("methods (.dam), analog traces, PDA, delay and gradient: Rust equals Python's, without Pyodide", methods_same)
+        step("methods (.dam), analog traces, PDA, delay and gradient: Rust equals the reference's, without Pyodide", methods_same)
         print("   MISURA (s, CI runner, 2 Full Scan files):", TIMES)
-        print("   MISURA map and profile spectra (ms, Rust flow, classic engine in Pyodide, first request):", MAPMS)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

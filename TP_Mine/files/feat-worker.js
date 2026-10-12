@@ -14,7 +14,7 @@ const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof Wo
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 
-// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... } }, size, notify(key, params), onProgress(info), WorkerClass }
+// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
 // the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
 function createCore(opts) {
@@ -63,9 +63,12 @@ function createCore(opts) {
     slot.busy = true;
     try {
       const value = await job.run(slot, which => ensure(slot, which));
-      slot.busy = false; job.resolve(value);
+      slot.busy = false;
+      if (slot.recycle) kill(slot);               // a worker of one heavy phase: its memory goes back by closing it
+      job.resolve(value);
     } catch (e) {
       slot.busy = false;
+      if (slot.recycle) kill(slot);
       if (e && e.fatal) {                         // the worker is lost: a new one, and the job once more
         kill(slot);
         if (!job.tried && !st.cancelled) { job.tried = true; notify("tpmine.feat.restarted", { reason: e.key || "" }); queue.unshift(job); }
@@ -99,11 +102,40 @@ function previewOps(submit, call, opts) {
   };
 }
 
+function proofOps(submit, call, copy, opts) {
+  return {
+    // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
+    // when it has answered (its memory goes back) and the state it leaves (small) is loaded by the worker of the proofs. Each can be refused with `error.featMemory`.
+    // `hypotheses(...)` resolves with { state, tried, found, registry, ms }; `evidence(...)` with { table }.
+    hypotheses({ stored, paths, rules, parent, parentRt, recipe }) {
+      return submit(async (slot, load) => {
+        await load("proofs");
+        const t0 = performance.now();
+        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe });
+        slot.recycle = true;                    // the memory of the .wasm is not given back: the worker is closed
+        if (opts.onProgress) opts.onProgress({ phase: "hypotheses", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: h.mem / 1048576 });
+        return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
+      });
+    },
+    evidence({ table, state, minutes, parentMz, parentRt, recipe }) {
+      return submit(async (slot, load) => {
+        await load("proofs");
+        const t0 = performance.now();
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: opts.budgetMb || 0 });
+        slot.recycle = true;
+        if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
+        return { table: e.bytes };
+      });
+    },
+  };
+}
+
 export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, kill, copy } = createCore(opts);
 
 
   return {
+    notify: (k, p) => (opts.notify || (() => {}))(k, p),
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
     async detectAll(files, recipe) {
       let done = 0;
@@ -116,27 +148,22 @@ export function createFeatPool(opts) {
       })));
     },
     ...previewOps(submit, call, opts),
+    ...proofOps(submit, call, copy, opts),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe });
+        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: opts.budgetMb || 0 });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
     },
-    // L7-L9 in one worker: hypotheses of the parent searched in every file, then the graph of the proofs on the table. Resolves with { table, tried, found, registry }.
-    proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
-      return submit(async (slot, load) => {
-        await load("proofs");
-        const t0 = performance.now();
-        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe });
-        const t1 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), minutes, parentMz, parentRt, recipe });
-        if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), msHypotheses: Math.round(t1 - t0), memMB: Math.max(h.mem, e.mem) / 1048576 });
-        return { table: e.bytes, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: Math.round(t1 - t0) };
-      });
+    // both phases in a row (hypotheses worker, then proofs worker). Resolves with { table, tried, found, registry, msHypotheses }.
+    async proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
+      const h = await this.hypotheses({ stored, paths, rules, parent, parentRt, recipe });
+      const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
+      return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
     fs: {
@@ -166,6 +193,7 @@ export function createFeatPool(opts) {
 }
 
 // ---------------------------------------------------------------- worker side
+const WASM_KEYS = ["error.featState"];                  // keys that only the .wasm returns (the page translates them)
 const mods = {}, mems = {};                              // { feat, proofs }: the wasm-bindgen modules
 let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
 let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
@@ -216,32 +244,46 @@ async function init(m) {
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 
+// the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
+function memSink() {
+  let buf = new Uint8Array(1 << 20), n = 0;
+  return {
+    write: (off, b) => {
+      if (off + b.length > buf.length) { const g = new Uint8Array(Math.max(off + b.length, buf.length * 2)); g.set(buf.subarray(0, n)); buf = g; }
+      buf.set(b, off); n = Math.max(n, off + b.length);
+    },
+    bytes: () => buf.slice(0, n),
+  };
+}
 const OPS = {
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async detect(m) {
-    const f = await openAll([m.path]);
-    try { const bytes = mods.feat.detect_file(f.read, f.sizes[0], m.name, m.recipe); return { bytes }; } finally { f.close(); }
+    const f = await openAll([m.path]), out = memSink();
+    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async preview(m) {
     const f = await openAll([m.path]);
     try { return { json: mods.feat.preview_file(f.read, f.sizes[0], m.recipe || "") }; } finally { f.close(); }
   },
   async align(m) {
-    const f = await openAll(m.paths);
-    try { return { bytes: mods.feat.align_series(arrays(m.files), f.read, f.sizes, m.recipe) }; } finally { f.close(); }
+    const f = await openAll(m.paths), out = memSink();
+    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async hypotheses(m) {
     if (hypo) { hypo.free(); hypo = null; }
     const f = await openAll(m.paths);
     try {
       hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
-      return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json() };
+      return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json(), state: hypo.state() };
     } finally { f.close(); }
   },
   async evidence(m) {
-    if (!hypo) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
-    const nan = v => (v == null ? NaN : v);
-    return { bytes: mods.proofs.build_evidence(m.table, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe) };
+    if (!m.state) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
+    if (hypo) hypo.free();
+    hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
+    const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
+    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0);
+    return { bytes: out.bytes() };
   },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {
@@ -260,7 +302,7 @@ const OPS = {
 // JSON { error_key, params } of the .wasm, or a JavaScript error
 function describe(e) {
   const text = String(e && e.message || e);
-  try { const j = JSON.parse(typeof e === "string" ? e : text); if (j && j.error_key) return { key: j.error_key, params: j.params || {}, text }; } catch (_) { /* not JSON */ }
+  try { const j = JSON.parse(typeof e === "string" ? e : text); if (j && j.error_key) return { key: j.error_key === "error.memoryBudget" ? "error.featMemory" : j.error_key, params: j.params || {}, text }; } catch (_) { /* not JSON */ }
   return { key: (e && e.key) || (e instanceof WebAssembly.RuntimeError ? "error.featWorker" : "error.featFailed"), params: {}, text };
 }
 if (IN_WORKER) self.onmessage = async ev => {

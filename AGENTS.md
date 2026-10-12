@@ -36,8 +36,8 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 
 ## 4. Architettura
 - **Un codice Python per due «server»**: `mzlab/api.py` (`dispatch`: tutte le rotte `/api/...`, errori sempre JSON `{error, error_key, params}`) sopra `App` (`mzlab/app.py`: file aperti, sessione, taccuino). Lo usano `tools/dev_server.py` (solo test e sviluppo) e `mzlab/browser.py` (nel sito, dentro Pyodide). Un endpoint nuovo si aggiunge solo in `api.py`, con un test.
-- **Nel sito**: `tools/build_site.py` copia `mzlab/web` in `site/static` e scarica Pyodide; `browser.js` passa `fetch("api/...")` al motore Rust/WASM (`rust-bridge.js`, `rust-worker.js`, `lr.js`; predefinito, `?motore=python` e `?lr=0` tornano al percorso classico), che per i file a bassa risoluzione risponde a file, sessione, taccuino, TIC, XIC, spettri, MRM e formule senza Pyodide (mzML e `.mzidx` in OPFS).
-  Pyodide (`browser-worker.js`: Python + `mzlab.zip`) parte una volta, con un avviso, alla prima richiesta che solo Python serve (HR, Banco, mzFinder, mappe HR, `.dam`). Dettagli in `docs/agenti/dati.md` e `docs/agenti/rust-rotte.md`.
+- **Nel sito**: `tools/build_site.py` copia `mzlab/web` in `site/static`; `browser.js` passa `fetch("api/...")` al motore Rust/WASM (`rust-bridge.js`, `rust-worker.js`, `lr.js`), che risponde a tutte le rotte (file, sessione, taccuino, cromatogrammi, spettri, MRM, formule, mappe, HR; mzML e `.mzidx` in OPFS).
+  Un solo motore e nessun ripiego: se il worker muore due volte in un minuto la pagina chiede di ricaricare (`error.engineFallback`); una richiesta che il motore non sa servire risponde `err.route.unavailable` e finisce in `window.MZLAB_LR_MISS` (i test la vogliono vuota). Pyodide (`tpmine-worker.js`) resta solo per mzFinder. Dettagli in `docs/agenti/dati.md` e `docs/agenti/rust-rotte.md`.
 - **App desktop** (`crates/mzlab-desktop`, Tauri v2): la stessa pagina web con un motore nativo Rust dietro `mzlab://`; dettagli in `docs/agenti/rust-desktop.md`.
 - **Python** (`mzlab/`): `reader/` (mzML senza librerie, profilo, `.dam`, `mzidx.py`: formato in `docs/agenti/mzidx.md`), `explore.py`, `peaks.py`, `project.py`, `chem/` (masse, formule, addotti, albero MSn), `ionfamily.py` (senza verdetti), `demo.py` (file per file: la mappa). `tools/converti.py`: `.raw` con ThermoRawFileParser, `.wiff`/`.d` con MSConvert in Docker.
 - **Indirizzi**: `#/dati` e `#/disegno` nell'app; `#/teoria`, `#/teoria/N` e `#/pratica` portano alla Teoria autonoma `static/teoria/` (senza motore; `docs/agenti/teoria.md`).
@@ -67,6 +67,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`) |
+| contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |

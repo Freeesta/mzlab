@@ -7,23 +7,18 @@
 //! the bytes must be reproducible) and the directory of the arrays (`name`, `dtype`, `count`, `offset`). `evid` holds the graph of the proofs (`evid/1`, JSON): empty in
 //! the file of one sample and when no graph was built. The bytes depend only on the table and on the meta given: no clock, no path.
 
+use mzlab_core::budget::WriteAt;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::json::Out;
 
 use crate::recipe::Recipe;
 use crate::table::{Aligned, FileFeatures};
 
-const MAGIC: &[u8; 8] = b"MZFEAT01";
-const ALIGN: usize = 64;
+pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
+pub(crate) const ALIGN: usize = 64;
 
-fn bad() -> Error {
+pub(crate) fn bad() -> Error {
     Error::new("error.badMzfeat")
-}
-
-fn pad_to(v: &mut Vec<u8>, n: usize) {
-    while !v.len().is_multiple_of(n) {
-        v.push(0);
-    }
 }
 
 /// What the meta says about the origin of a table.
@@ -35,41 +30,128 @@ pub struct Origin {
     pub times: Vec<(String, f64)>,
 }
 
-/// The arrays of a container, in order of writing.
-#[derive(Default)]
-struct Arrays {
-    dir: Vec<(&'static str, &'static str, usize, usize)>,
-    data: Vec<u8>,
+/// A column of a container: a slice of one of the types of the format.
+#[derive(Clone, Copy)]
+enum Col<'a> {
+    F64(&'a [f64]),
+    F32(&'a [f32]),
+    U32(&'a [u32]),
+    U16(&'a [u16]),
+    U8(&'a [u8]),
+    I8(&'a [i8]),
 }
 
-impl Arrays {
-    fn add(&mut self, name: &'static str, dtype: &'static str, count: usize, bytes: Vec<u8>) {
-        pad_to(&mut self.data, ALIGN);
-        self.dir.push((name, dtype, count, self.data.len()));
-        self.data.extend_from_slice(&bytes);
-    }
-}
+/// Elements converted and written at a time (the buffer of a write is at most `PIECE * 8` bytes).
+pub(crate) const PIECE: usize = 8192;
 
-macro_rules! adders {
-    ($($fn:ident, $t:ty, $name:literal);*) => { $(
-        fn $fn(&mut self, name: &'static str, v: &[$t]) {
-            self.add(name, $name, v.len(), v.iter().flat_map(|x| x.to_le_bytes()).collect());
+macro_rules! put_le {
+    ($seq:expr, $v:expr) => {
+        for part in $v.chunks(PIECE) {
+            $seq.buf.clear();
+            $seq.buf.extend(part.iter().flat_map(|x| x.to_le_bytes()));
+            $seq.flush()?;
         }
-    )* };
+    };
 }
 
-impl Arrays {
-    adders!(f64s, f64, "f64"; f32s, f32, "f32"; u32s, u32, "u32"; u16s, u16, "u16");
-    fn u8s(&mut self, name: &'static str, v: &[u8]) {
-        self.add(name, "u8", v.len(), v.to_vec());
+impl Col<'_> {
+    /// `(dtype, count, bytes per element)`.
+    fn shape(&self) -> (&'static str, usize, usize) {
+        match self {
+            Col::F64(v) => ("f64", v.len(), 8),
+            Col::F32(v) => ("f32", v.len(), 4),
+            Col::U32(v) => ("u32", v.len(), 4),
+            Col::U16(v) => ("u16", v.len(), 2),
+            Col::U8(v) => ("u8", v.len(), 1),
+            Col::I8(v) => ("i8", v.len(), 1),
+        }
     }
-    fn i8s(&mut self, name: &'static str, v: &[i8]) {
-        self.add(name, "i8", v.len(), v.iter().map(|&x| x as u8).collect());
+
+    fn put<W: WriteAt>(&self, seq: &mut Seq<W>) -> Result<()> {
+        match self {
+            Col::F64(v) => put_le!(seq, v),
+            Col::F32(v) => put_le!(seq, v),
+            Col::U32(v) => put_le!(seq, v),
+            Col::U16(v) => put_le!(seq, v),
+            Col::U8(v) => seq.bytes(v)?,
+            Col::I8(v) => {
+                for part in v.chunks(PIECE) {
+                    seq.buf.clear();
+                    seq.buf.extend(part.iter().map(|&x| x as u8));
+                    seq.flush()?;
+                }
+            }
+        }
+        Ok(())
     }
+}
+
+/// A section that is written in pieces and whose length is known beforehand (the `evid` graph: tens of MB that never exist as one buffer).
+pub trait Section {
+    fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// Gives the bytes, in order, to `put`; they must add up to `len()`.
+    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()>;
+}
+
+impl Section for &[u8] {
+    fn len(&self) -> usize {
+        <[u8]>::len(self)
+    }
+    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()> {
+        put(self)
+    }
+}
+
+/// Sequential writer over a `WriteAt` with a reusable conversion buffer.
+struct Seq<'a, W: WriteAt> {
+    sink: &'a mut W,
+    pos: u64,
+    buf: Vec<u8>,
+}
+
+impl<W: WriteAt> Seq<'_, W> {
+    fn bytes(&mut self, b: &[u8]) -> Result<()> {
+        self.sink.write_at(self.pos, b)?;
+        self.pos += b.len() as u64;
+        Ok(())
+    }
+
+    /// Writes the conversion buffer.
+    fn flush(&mut self) -> Result<()> {
+        self.sink.write_at(self.pos, &self.buf)?;
+        self.pos += self.buf.len() as u64;
+        Ok(())
+    }
+
+    fn pad_to(&mut self, n: usize) -> Result<()> {
+        let k = (n - (self.pos as usize) % n) % n;
+        self.bytes(&[0u8; ALIGN][..k])
+    }
+}
+
+/// Directory of the arrays: `(name, dtype, count, offset from the start of the data)` and the length of the data.
+fn plan(cols: &[(&'static str, Col)], evid: usize) -> (Vec<(&'static str, &'static str, usize, usize)>, usize) {
+    let (mut dir, mut at) = (Vec::with_capacity(cols.len() + 1), 0usize);
+    let items = cols.iter().map(|(n, c)| (*n, c.shape()));
+    for (name, (dtype, count, size)) in items.chain([("evid", ("u8", evid, 1))]) {
+        at = at.div_ceil(ALIGN) * ALIGN;
+        dir.push((name, dtype, count, at));
+        at += count * size;
+    }
+    (dir, at)
 }
 
 /// The JSON meta: format, versions, recipe, fingerprints, inputs, times, shape and directory of the arrays.
-fn meta_json(kind: &str, r: &Recipe, o: &Origin, shape: &[(&str, usize)], a: &Arrays) -> String {
+fn meta_json(
+    kind: &str,
+    r: &Recipe,
+    o: &Origin,
+    shape: &[(&str, usize)],
+    dir: &[(&'static str, &'static str, usize, usize)],
+) -> String {
     let mut j = Out::default();
     let text = if kind == "file" {
         r.file_text()
@@ -106,7 +188,7 @@ fn meta_json(kind: &str, r: &Recipe, o: &Origin, shape: &[(&str, usize)], a: &Ar
         j.raw(",").str(k).raw(":").int(*n as i64);
     }
     j.raw(",\"arrays\":[");
-    for (i, (name, dtype, count, off)) in a.dir.iter().enumerate() {
+    for (i, (name, dtype, count, off)) in dir.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
             .str(name)
             .raw(",\"dtype\":")
@@ -121,47 +203,81 @@ fn meta_json(kind: &str, r: &Recipe, o: &Origin, shape: &[(&str, usize)], a: &Ar
     j.0
 }
 
-fn container(meta: &str, a: &Arrays) -> Vec<u8> {
-    let mut b = Vec::with_capacity(a.data.len() + meta.len() + 128);
-    b.extend_from_slice(MAGIC);
-    b.extend_from_slice(&(meta.len() as u64).to_le_bytes());
-    b.extend_from_slice(meta.as_bytes());
-    pad_to(&mut b, ALIGN);
-    b.extend_from_slice(&a.data);
-    b
+/// Writes a whole container to `sink`, in order: header, meta, the columns and the `evid` section (never held as one buffer).
+fn write_container<W: WriteAt>(
+    sink: &mut W,
+    kind: &str,
+    r: &Recipe,
+    o: &Origin,
+    shape: &[(&str, usize)],
+    cols: &[(&'static str, Col)],
+    evid: &mut dyn Section,
+) -> Result<()> {
+    let (dir, _) = plan(cols, evid.len());
+    let meta = meta_json(kind, r, o, shape, &dir);
+    let mut seq = Seq {
+        sink,
+        pos: 0,
+        buf: Vec::with_capacity(PIECE * 8),
+    };
+    seq.bytes(MAGIC)?;
+    seq.bytes(&(meta.len() as u64).to_le_bytes())?;
+    seq.bytes(meta.as_bytes())?;
+    seq.pad_to(ALIGN)?;
+    let start = seq.pos;
+    for ((_, col), (_, _, _, off)) in cols.iter().zip(&dir) {
+        seq.bytes(&vec![0u8; (start as usize + off) - seq.pos as usize])?;
+        col.put(&mut seq)?;
+    }
+    let off = dir[cols.len()].3;
+    seq.bytes(&vec![0u8; (start as usize + off) - seq.pos as usize])?;
+    let seq = std::cell::RefCell::new(seq);
+    evid.emit(&mut |b| seq.borrow_mut().bytes(b))
+}
+
+fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
+    vec![
+        ("mz", Col::F64(&f.mz)),
+        ("rt", Col::F32(&f.rt)),
+        ("left", Col::F32(&f.left)),
+        ("right", Col::F32(&f.right)),
+        ("apex", Col::U32(&f.apex)),
+        ("scan_lo", Col::U32(&f.scan_lo)),
+        ("scan_hi", Col::U32(&f.scan_hi)),
+        ("area", Col::F64(&f.area)),
+        ("height", Col::F32(&f.height)),
+        ("npts", Col::U16(&f.npts)),
+        ("flags", Col::U8(&f.flags)),
+        ("iso_group", Col::U32(&f.iso_group)),
+        ("charge", Col::I8(&f.charge)),
+        ("shape", Col::F32(&f.shape)),
+        ("snr", Col::F32(&f.snr)),
+        ("fwhm", Col::F32(&f.fwhm)),
+        ("asym", Col::F32(&f.asym)),
+        ("gaps", Col::U16(&f.gaps)),
+        ("qreason", Col::U8(&f.qreason)),
+        ("ms2_n", Col::U16(&f.ms2_n)),
+        ("purity", Col::F32(&f.purity)),
+        ("area_win", Col::F64(&f.area_win)),
+        ("family_id", Col::U32(&f.family_id)),
+        ("role", Col::U8(&f.role)),
+        ("alt", Col::U8(&f.alt)),
+    ]
+}
+
+/// Writes the `.mzfeatf` of one file to `sink`.
+pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: &Origin) -> Result<()> {
+    let mut cols = file_cols(f);
+    let dt = [f.dt];
+    cols.push(("dt", Col::F64(&dt)));
+    write_container(sink, "file", r, o, &[("rows", f.len())], &cols, &mut (&[][..]))
 }
 
 /// Bytes of the `.mzfeatf` of one file.
 pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
-    let mut a = Arrays::default();
-    a.f64s("mz", &f.mz);
-    a.f32s("rt", &f.rt);
-    a.f32s("left", &f.left);
-    a.f32s("right", &f.right);
-    a.u32s("apex", &f.apex);
-    a.u32s("scan_lo", &f.scan_lo);
-    a.u32s("scan_hi", &f.scan_hi);
-    a.f64s("area", &f.area);
-    a.f32s("height", &f.height);
-    a.u16s("npts", &f.npts);
-    a.u8s("flags", &f.flags);
-    a.u32s("iso_group", &f.iso_group);
-    a.i8s("charge", &f.charge);
-    a.f32s("shape", &f.shape);
-    a.f32s("snr", &f.snr);
-    a.f32s("fwhm", &f.fwhm);
-    a.f32s("asym", &f.asym);
-    a.u16s("gaps", &f.gaps);
-    a.u8s("qreason", &f.qreason);
-    a.u16s("ms2_n", &f.ms2_n);
-    a.f32s("purity", &f.purity);
-    a.f64s("area_win", &f.area_win);
-    a.u32s("family_id", &f.family_id);
-    a.u8s("role", &f.role);
-    a.u8s("alt", &f.alt);
-    a.f64s("dt", &[f.dt]);
-    a.u8s("evid", &[]);
-    container(&meta_json("file", r, o, &[("rows", f.len())], &a), &a)
+    let mut v = Vec::new();
+    write_file_to(&mut v, f, r, o).expect("a Vec grows");
+    v
 }
 
 /// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
@@ -169,163 +285,36 @@ pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
     write_table_with_evid(t, r, o, &[])
 }
 
+/// Writes the `.mzfeat` of a series to `sink` with `evid` (the graph of the proofs, `evid/1` JSON) as its last section.
+pub fn write_table_to<W: WriteAt>(
+    sink: &mut W,
+    t: &Aligned,
+    r: &Recipe,
+    o: &Origin,
+    evid: &mut dyn Section,
+) -> Result<()> {
+    let cols = [
+        ("mz", Col::F64(&t.mz)),
+        ("rt", Col::F64(&t.rt)),
+        ("area", Col::F64(&t.area)),
+        ("height", Col::F32(&t.height)),
+        ("apex_rt", Col::F32(&t.apex_rt)),
+        ("width", Col::F32(&t.width)),
+        ("state", Col::U8(&t.state)),
+        ("member_start", Col::U32(&t.member_start)),
+        ("member_mz", Col::F64(&t.member_mz)),
+        ("member_rt", Col::F32(&t.member_rt)),
+        ("member_role", Col::U8(&t.member_role)),
+    ];
+    let shape = [("rows", t.len()), ("files", t.n_files)];
+    write_container(sink, "table", r, o, &shape, &cols, evid)
+}
+
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
 pub fn write_table_with_evid(t: &Aligned, r: &Recipe, o: &Origin, evid: &[u8]) -> Vec<u8> {
-    let mut a = Arrays::default();
-    a.f64s("mz", &t.mz);
-    a.f64s("rt", &t.rt);
-    a.f64s("area", &t.area);
-    a.f32s("height", &t.height);
-    a.f32s("apex_rt", &t.apex_rt);
-    a.f32s("width", &t.width);
-    a.u8s("state", &t.state);
-    a.u32s("member_start", &t.member_start);
-    a.f64s("member_mz", &t.member_mz);
-    a.f32s("member_rt", &t.member_rt);
-    a.u8s("member_role", &t.member_role);
-    a.u8s("evid", evid);
-    container(
-        &meta_json(
-            "table",
-            r,
-            o,
-            &[("rows", t.len()), ("files", t.n_files)],
-            &a,
-        ),
-        &a,
-    )
+    let mut v = Vec::new();
+    write_table_to(&mut v, t, r, o, &mut { evid }).expect("a Vec grows");
+    v
 }
 
-/// A container read back: the meta and the directory of the arrays.
-struct Opened<'a> {
-    meta: Value,
-    data: &'a [u8],
-}
-
-fn open<'a>(bytes: &'a [u8], kind: &str) -> Result<Opened<'a>> {
-    if bytes.len() < 16 || &bytes[..8] != MAGIC {
-        return Err(bad());
-    }
-    let n = u64::from_le_bytes(bytes[8..16].try_into().unwrap()) as usize;
-    let end = 16usize
-        .checked_add(n)
-        .filter(|&e| e <= bytes.len())
-        .ok_or_else(bad)?;
-    let meta = parse(&bytes[16..end])?;
-    if meta.get("format").and_then(|v| v.str()) != Some(kind) {
-        return Err(bad());
-    }
-    let start = end.div_ceil(ALIGN) * ALIGN;
-    Ok(Opened {
-        meta,
-        data: bytes.get(start..).unwrap_or(&[]),
-    })
-}
-
-impl Opened<'_> {
-    /// The bytes of the array `name` when it has `dtype` and `size` bytes per element.
-    fn array(&self, name: &str, dtype: &str, size: usize) -> Result<&[u8]> {
-        let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
-        let e = e
-            .iter()
-            .find(|x| x.get("name").and_then(|v| v.str()) == Some(name))
-            .ok_or_else(bad)?;
-        let get = |k: &str| {
-            e.get(k)
-                .and_then(|v| v.f64())
-                .map(|v| v as usize)
-                .ok_or_else(bad)
-        };
-        if e.get("dtype").and_then(|v| v.str()) != Some(dtype) {
-            return Err(bad());
-        }
-        let (count, off) = (get("count")?, get("offset")?);
-        let len = count.checked_mul(size).ok_or_else(bad)?;
-        self.data
-            .get(off..off.checked_add(len).ok_or_else(bad)?)
-            .ok_or_else(bad)
-    }
-}
-
-macro_rules! readers {
-    ($($fn:ident, $t:ty, $name:literal);*) => { $(
-        fn $fn(&self, name: &str) -> Result<Vec<$t>> {
-            let b = self.array(name, $name, std::mem::size_of::<$t>())?;
-            Ok(b.chunks_exact(std::mem::size_of::<$t>()).map(|c| <$t>::from_le_bytes(c.try_into().unwrap())).collect())
-        }
-    )* };
-}
-
-impl Opened<'_> {
-    readers!(f64s, f64, "f64"; f32s, f32, "f32"; u32s, u32, "u32"; u16s, u16, "u16");
-    fn u8s(&self, name: &str) -> Result<Vec<u8>> {
-        Ok(self.array(name, "u8", 1)?.to_vec())
-    }
-    fn i8s(&self, name: &str) -> Result<Vec<i8>> {
-        Ok(self
-            .array(name, "i8", 1)?
-            .iter()
-            .map(|&x| x as i8)
-            .collect())
-    }
-}
-
-/// Reads a `.mzfeatf`: the table and its meta.
-pub fn read_file(bytes: &[u8]) -> Result<(FileFeatures, Value)> {
-    let o = open(bytes, "file")?;
-    let f = FileFeatures {
-        mz: o.f64s("mz")?,
-        rt: o.f32s("rt")?,
-        left: o.f32s("left")?,
-        right: o.f32s("right")?,
-        apex: o.u32s("apex")?,
-        scan_lo: o.u32s("scan_lo")?,
-        scan_hi: o.u32s("scan_hi")?,
-        area: o.f64s("area")?,
-        height: o.f32s("height")?,
-        npts: o.u16s("npts")?,
-        flags: o.u8s("flags")?,
-        iso_group: o.u32s("iso_group")?,
-        charge: o.i8s("charge")?,
-        shape: o.f32s("shape")?,
-        snr: o.f32s("snr")?,
-        fwhm: o.f32s("fwhm")?,
-        asym: o.f32s("asym")?,
-        gaps: o.u16s("gaps")?,
-        qreason: o.u8s("qreason")?,
-        ms2_n: o.u16s("ms2_n")?,
-        purity: o.f32s("purity")?,
-        area_win: o.f64s("area_win")?,
-        family_id: o.u32s("family_id")?,
-        role: o.u8s("role")?,
-        alt: o.u8s("alt")?,
-        dt: o.f64s("dt")?.first().copied().ok_or_else(bad)?,
-    };
-    Ok((f, o.meta))
-}
-
-/// Reads a `.mzfeat`: the table and its meta.
-pub fn read_table(bytes: &[u8]) -> Result<(Aligned, Value)> {
-    let o = open(bytes, "table")?;
-    let n_files = o.meta.get("files").and_then(|v| v.f64()).ok_or_else(bad)? as usize;
-    let t = Aligned {
-        n_files,
-        mz: o.f64s("mz")?,
-        rt: o.f64s("rt")?,
-        area: o.f64s("area")?,
-        height: o.f32s("height")?,
-        apex_rt: o.f32s("apex_rt")?,
-        width: o.f32s("width")?,
-        state: o.u8s("state")?,
-        member_start: o.u32s("member_start")?,
-        member_mz: o.f64s("member_mz")?,
-        member_rt: o.f32s("member_rt")?,
-        member_role: o.u8s("member_role")?,
-    };
-    Ok((t, o.meta))
-}
-
-/// The `evid` section of a `.mzfeat` of a series: the JSON bytes of the graph of the proofs (empty when none was written).
-pub fn read_evid(bytes: &[u8]) -> Result<Vec<u8>> {
-    open(bytes, "table")?.u8s("evid")
-}
+pub use crate::store_read::*;

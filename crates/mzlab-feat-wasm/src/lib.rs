@@ -3,14 +3,16 @@
 //! sync handle). Outputs are byte arrays (`.mzfeatf`, `.mzfeat`); errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key).
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 use js_sys::{Array, Function, Uint8Array};
+use mzlab_core::budget::{Hashing, MemBudget, WriteAt};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
-#[cfg(feature = "proofs")]
-use mzlab_feat::store::read_file;
+use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
 pub mod run;
+#[cfg(feature = "proofs")]
+pub mod state;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
@@ -79,9 +81,51 @@ fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<JsReader>>> {
         .collect()
 }
 
-/// The byte arrays of a JS list, copied one at a time: the caller parses and drops each before the next is copied (peak memory = the largest, not the sum).
-fn arrays(list: &Array) -> impl Iterator<Item = Vec<u8>> + '_ {
-    list.iter().map(|v| Uint8Array::new(&v).to_vec())
+/// Where an output goes: `write(offset, bytes: Uint8Array)` in JavaScript (an OPFS sync handle), called in order.
+struct JsSink {
+    write: Function,
+}
+
+impl WriteAt for JsSink {
+    fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
+        self.write
+            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(data))
+            .map(|_| ())
+            .map_err(|_| Error::new("error.io"))
+    }
+}
+
+/// `{"bytes": N, "sha256": "..."}`: what a step that wrote to a sink returns instead of the bytes.
+fn written(bytes: u64, sha256: &str) -> String {
+    let mut o = Out::default();
+    o.raw("{\"bytes\":").int(bytes as i64);
+    o.raw(",\"sha256\":").str(sha256).raw("}");
+    o.0
+}
+
+/// Runs `step` on a hashing sink over `write` and gives back `{bytes, sha256}`.
+fn to_sink(
+    write: Function,
+    step: impl FnOnce(&mut Hashing<JsSink>) -> Result<()>,
+) -> std::result::Result<String, JsValue> {
+    let mut sink = Hashing::new(JsSink { write });
+    step(&mut sink).map_err(js_err)?;
+    let (_, n, sha) = sink.finish();
+    Ok(written(n, &sha))
+}
+
+/// The `.mzfeatf` of a series held in JavaScript (an `Array` of `Uint8Array`): a copy of one file is made when it is asked for and dropped after use.
+struct JsStored {
+    files: Array,
+}
+
+impl Stored for JsStored {
+    fn count(&self) -> usize {
+        self.files.length() as usize
+    }
+    fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
+        Ok(Uint8Array::new(&self.files.get(k as u32)).to_vec())
+    }
 }
 
 #[cfg(feature = "detect")]
@@ -99,6 +143,21 @@ pub fn detect_file(
 }
 
 #[cfg(feature = "detect")]
+/// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`.
+#[wasm_bindgen]
+pub fn detect_file_to(
+    read: Function,
+    size: f64,
+    name: &str,
+    recipe: &str,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    to_sink(write, |sink| run::detect_to(&mut ix, name, &r, sink))
+}
+
+#[cfg(feature = "detect")]
 /// Preview of one file: detection with the numbers of `recipe`, the estimated noise floor, tolerance and peak width with their proofs, the histogram of
 /// the heights and three example traces, as JSON (`mzlab_feat::params::preview_json`). Without `floor` in the recipe the floor is the estimated one.
 #[wasm_bindgen]
@@ -113,7 +172,27 @@ pub fn preview_file(
 }
 
 #[cfg(feature = "detect")]
-/// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes): the bytes of the `.mzfeat`.
+/// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
+/// `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`. The same bytes whatever `budget_mb` (0/NaN = 192): in memory, in slabs of m/z, or
+/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`.
+#[wasm_bindgen]
+pub fn align_series_to(
+    files: Array,
+    read: Function,
+    sizes: Vec<f64>,
+    recipe: &str,
+    write: Function,
+    budget_mb: f64,
+) -> std::result::Result<String, JsValue> {
+    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let budget = MemBudget::from_request(budget_mb);
+    let mut src = JsStored { files };
+    let open = |k| open_one(&read, k, sizes[k]);
+    to_sink(write, |sink| run::align_to(&mut src, &budget, &r, open, sink))
+}
+
+#[cfg(feature = "detect")]
+/// L4-L6 with the bytes of the `.mzfeat` returned (they are in memory as a whole: for small series and tests; the page uses `align_series_to`).
 #[wasm_bindgen]
 pub fn align_series(
     files: Array,
@@ -122,8 +201,12 @@ pub fn align_series(
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let (feats, origin) = run::read_files(arrays(&files)).map_err(js_err)?;
-    run::align(&feats, &origin, &r, |k| open_one(&read, k, sizes[k])).map_err(js_err)
+    let budget = MemBudget::from_request(f64::NAN);
+    let mut out = Vec::new();
+    let mut src = JsStored { files };
+    let open = |k| open_one(&read, k, sizes[k]);
+    run::align_to(&mut src, &budget, &r, open, &mut out).map_err(js_err)?;
+    Ok(out)
 }
 
 #[cfg(feature = "proofs")]
@@ -140,6 +223,10 @@ impl Hypotheses {
     pub fn registry_json(&self) -> String {
         self.inner.registry.to_json()
     }
+    /// The state the proofs need, as bytes (`load_hypotheses` gives the object back in another worker).
+    pub fn state(&self) -> Vec<u8> {
+        state::dump(&self.inner)
+    }
     /// Hypotheses searched.
     pub fn tried(&self) -> u32 {
         self.inner.result.tried
@@ -148,6 +235,15 @@ impl Hypotheses {
     pub fn found(&self) -> u32 {
         self.inner.result.found
     }
+}
+
+#[cfg(feature = "proofs")]
+/// The hypotheses of a run made in another worker, from `Hypotheses.state()`: all that `build_evidence_to` reads.
+#[wasm_bindgen]
+pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue> {
+    Ok(Hypotheses {
+        inner: state::load(state).map_err(js_err)?,
+    })
 }
 
 #[cfg(feature = "proofs")]
@@ -163,20 +259,44 @@ pub fn run_hypotheses(
     recipe: &str,
 ) -> std::result::Result<Hypotheses, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let feats = arrays(&files)
-        .map(|b| read_file(&b).map(|x| x.0))
-        .collect::<Result<Vec<_>>>()
-        .map_err(js_err)?;
-    let refs: Vec<&_> = feats.iter().collect();
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
-    let inner = run::hypotheses(&mut ix, &refs, rules, parent, rt, &r).map_err(js_err)?;
+    let mut src = JsStored { files };
+    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, parent, rt, &r).map_err(js_err)?;
     Ok(Hypotheses { inner })
 }
 
 #[cfg(feature = "proofs")]
-/// L8-L9: the graph of the proofs on the `.mzfeat` of the series; `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN =
-/// no parent in the table. Returns the `.mzfeat` bytes with the `evid` section.
+/// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
+/// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
+/// parent in the table. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
+#[wasm_bindgen]
+pub fn build_evidence_to(
+    table_read: Function,
+    table_size: f64,
+    hypotheses: &Hypotheses,
+    minutes: Vec<f64>,
+    parent_mz: f64,
+    parent_rt: f64,
+    recipe: &str,
+    write: Function,
+    budget_mb: f64,
+) -> std::result::Result<String, JsValue> {
+    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
+    let budget = MemBudget::from_request(budget_mb);
+    let mut table = JsReader {
+        read: table_read,
+        k: 0,
+    };
+    to_sink(write, |sink| {
+        let size = table_size as u64;
+        run::evidence_to(&mut table, size, &hypotheses.inner, &minutes, parent, &r, &budget, sink)
+    })
+}
+
+#[cfg(feature = "proofs")]
+/// L8-L9 with the bytes in and out as wholes (small series and tests; the page uses `build_evidence_to`).
 #[wasm_bindgen]
 pub fn build_evidence(
     table: &[u8],
@@ -188,5 +308,10 @@ pub fn build_evidence(
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
-    run::evidence(table, &hypotheses.inner, &minutes, parent, &r).map_err(js_err)
+    let budget = MemBudget::from_request(f64::NAN);
+    let mut out = Vec::new();
+    let mut at = mzlab_feat::store::Slice(table);
+    run::evidence_to(&mut at, table.len() as u64, &hypotheses.inner, &minutes, parent, &r, &budget, &mut out)
+        .map_err(js_err)?;
+    Ok(out)
 }
