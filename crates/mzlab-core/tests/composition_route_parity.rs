@@ -21,8 +21,14 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) {
                 bad.push(format!("{path}: {a} against {b}"));
             }
         }
-        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a.iter().zip(b).enumerate().for_each(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad)),
-        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b.iter().for_each(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad)),
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a
+            .iter()
+            .zip(b)
+            .enumerate()
+            .for_each(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad)),
+        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b
+            .iter()
+            .for_each(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad)),
         (a, b) => {
             if a != b {
                 bad.push(format!("{path}: {a} against {b}"));
@@ -34,9 +40,18 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) {
 #[test]
 fn composition_route_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-comp-route-{}.json", std::process::id()));
-    let ok = Command::new("python3").current_dir(root()).arg("tools/composizione_rotta_riferimento.py").arg(&out).output().map(|o| o.status.success()).unwrap_or(false);
+    let ok = Command::new("python3")
+        .current_dir(root())
+        .arg("tools/composizione_rotta_riferimento.py")
+        .arg(&out)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
     if !ok {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 or numpy missing");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 or numpy missing"
+        );
         eprintln!("skipped: python3/numpy not available");
         return;
     }
@@ -47,7 +62,12 @@ fn composition_route_like_python() {
         let query = r["query"].as_str().unwrap();
         let t = std::time::Instant::now();
         let got = composition_route(&Query::parse(query));
-        eprintln!("composition {}: rust {:.1} ms, python {:.1} ms", &query[..query.len().min(70)], t.elapsed().as_secs_f64() * 1e3, r["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
+        eprintln!(
+            "composition {}: rust {:.1} ms, python {:.1} ms",
+            &query[..query.len().min(70)],
+            t.elapsed().as_secs_f64() * 1e3,
+            r["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3
+        );
         if r["status"] != 200 {
             if got.is_some() {
                 bad.push(format!("{query}: Python refuses, Rust answers"));
@@ -60,9 +80,21 @@ fn composition_route_like_python() {
         };
         answered += 1;
         let before = bad.len();
-        same("", &serde_json::from_str(&got).unwrap(), &r["result"], &mut bad);
-        bad[before..].iter_mut().for_each(|b| *b = format!("{query}: {b}"));
+        same(
+            "",
+            &serde_json::from_str(&got).unwrap(),
+            &r["result"],
+            &mut bad,
+        );
+        bad[before..]
+            .iter_mut()
+            .for_each(|b| *b = format!("{query}: {b}"));
     }
     assert!(answered >= 40, "only {answered} requests answered");
-    assert!(bad.is_empty(), "{} differences:\n{}", bad.len(), bad.iter().take(15).cloned().collect::<Vec<_>>().join("\n"));
+    assert!(
+        bad.is_empty(),
+        "{} differences:\n{}",
+        bad.len(),
+        bad.iter().take(15).cloned().collect::<Vec<_>>().join("\n")
+    );
 }

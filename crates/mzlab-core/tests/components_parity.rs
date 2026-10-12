@@ -9,7 +9,11 @@ use mzlab_core::components::estimate_components;
 use serde_json::Value;
 
 fn nums(v: &Value) -> Vec<f64> {
-    v.as_array().unwrap().iter().map(|x| x.as_f64().unwrap()).collect()
+    v.as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_f64().unwrap())
+        .collect()
 }
 
 fn near(got: f64, want: f64, scale: f64) -> bool {
@@ -20,21 +24,42 @@ fn near(got: f64, want: f64, scale: f64) -> bool {
 fn components_like_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab-components-{}.json", std::process::id()));
-    let run = Command::new("python3").current_dir(&root).arg("tools/componenti_riferimento.py").arg(&out).output();
+    let run = Command::new("python3")
+        .current_dir(&root)
+        .arg("tools/componenti_riferimento.py")
+        .arg(&out)
+        .output();
     if !matches!(&run, Ok(o) if o.status.success()) {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "the reference did not run: {run:?}"
+        );
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
     let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
     let mut ks = std::collections::BTreeSet::new();
     for c in &cases {
-        let (n, m) = (c["n"].as_u64().unwrap() as usize, c["m"].as_u64().unwrap() as usize);
-        let (max_k, min_var) = (c["max_k"].as_u64().unwrap() as usize, c["min_var"].as_f64().unwrap());
-        let (got, want) = (estimate_components(&nums(&c["d"]), n, m, max_k, min_var), &c["result"]);
+        let (n, m) = (
+            c["n"].as_u64().unwrap() as usize,
+            c["m"].as_u64().unwrap() as usize,
+        );
+        let (max_k, min_var) = (
+            c["max_k"].as_u64().unwrap() as usize,
+            c["min_var"].as_f64().unwrap(),
+        );
+        let (got, want) = (
+            estimate_components(&nums(&c["d"]), n, m, max_k, min_var),
+            &c["result"],
+        );
         let tag = format!("{n}x{m} max_k {max_k}");
         assert_eq!(got.k as u64, want["k"].as_u64().unwrap(), "{tag}: k");
-        let efa: Vec<usize> = want["efa_start"].as_array().unwrap().iter().map(|x| x.as_u64().unwrap() as usize).collect();
+        let efa: Vec<usize> = want["efa_start"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_u64().unwrap() as usize)
+            .collect();
         assert_eq!(got.efa_start, efa, "{tag}: efa_start");
         let sv = nums(&want["sv"]);
         assert_eq!(got.sv.len(), sv.len(), "{tag}: sv");
@@ -43,12 +68,28 @@ fn components_like_python() {
         }
         match want.get("sigma") {
             Some(s) => {
-                assert!(near(got.sigma.unwrap(), s.as_f64().unwrap(), s.as_f64().unwrap()), "{tag}: sigma");
-                assert!(near(got.edge.unwrap(), want["edge"].as_f64().unwrap(), want["edge"].as_f64().unwrap()), "{tag}: edge");
+                assert!(
+                    near(got.sigma.unwrap(), s.as_f64().unwrap(), s.as_f64().unwrap()),
+                    "{tag}: sigma"
+                );
+                assert!(
+                    near(
+                        got.edge.unwrap(),
+                        want["edge"].as_f64().unwrap(),
+                        want["edge"].as_f64().unwrap()
+                    ),
+                    "{tag}: edge"
+                );
             }
-            None => assert!(got.sigma.is_none() && got.edge.is_none(), "{tag}: too small"),
+            None => assert!(
+                got.sigma.is_none() && got.edge.is_none(),
+                "{tag}: too small"
+            ),
         }
         ks.insert((got.k, got.efa_start.len()));
     }
-    assert!(ks.len() >= 4, "the cases must cover several answers: {ks:?}");
+    assert!(
+        ks.len() >= 4,
+        "the cases must cover several answers: {ks:?}"
+    );
 }

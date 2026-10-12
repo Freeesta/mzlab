@@ -22,8 +22,12 @@ struct Case {
 }
 
 fn load() -> BTreeMap<String, Case> {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/golden/picchi_qualita.json");
-    serde_json::from_str(&std::fs::read_to_string(path).expect("tests/golden/picchi_qualita.json")).unwrap()
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/golden/picchi_qualita.json"
+    );
+    serde_json::from_str(&std::fs::read_to_string(path).expect("tests/golden/picchi_qualita.json"))
+        .unwrap()
 }
 
 fn by_apex(mut v: Vec<Peak>) -> Vec<Peak> {
@@ -38,7 +42,12 @@ fn cwt_keeps_the_limits_of_the_python_engine() {
         assert_eq!(got.len(), c.cwt.len(), "{name}: {got:?}");
         for (g, e) in got.iter().zip(&c.cwt) {
             assert_eq!((g.apex_i, g.lo, g.hi), (e.apex_i, e.lo, e.hi), "{name}");
-            assert!((g.area / e.area - 1.0).abs() < 1e-4, "{name}: area {} vs {}", g.area, e.area);
+            assert!(
+                (g.area / e.area - 1.0).abs() < 1e-4,
+                "{name}: area {} vs {}",
+                g.area,
+                e.area
+            );
         }
     }
 }
@@ -52,7 +61,10 @@ fn prominence_finds_the_expected_peaks_and_limits() {
             "singolo" | "coda" | "spalla" => assert_eq!(got.len(), 1, "{name}: {got:?}"),
             "doppio" | "doppio_stretto" => {
                 assert_eq!(got.len(), 2, "{name}: {got:?}");
-                assert_eq!(got[0].hi, got[1].lo, "{name}: the limits meet at the valley");
+                assert_eq!(
+                    got[0].hi, got[1].lo,
+                    "{name}: the limits meet at the valley"
+                );
                 // the CWT integrates the points between the two valleys twice, the valley limits never do
                 assert!(cwt.len() == 2 && cwt[0].hi > cwt[1].lo, "{name}: {cwt:?}");
                 let total: f64 = got.iter().map(|p| p.area).sum();

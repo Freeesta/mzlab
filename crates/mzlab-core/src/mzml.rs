@@ -387,7 +387,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             match acc {
                                 "MS:1000812" | "MS:1000813" => c.pda = true,
                                 "MS:1003019" => c.pressure = true,
-                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473" | "MS:1001472" => c.ms_term = true,
+                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473"
+                                | "MS:1001472" => c.ms_term = true,
                                 _ => {}
                             }
                         }

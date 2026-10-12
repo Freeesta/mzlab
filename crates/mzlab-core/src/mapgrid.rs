@@ -25,7 +25,14 @@ pub fn py_round(x: f64) -> f64 {
 /// `Session.grid` from the RT limits (min and max of every file) and the m/z limits of the tables; `hr` = some file is read as high resolution.
 pub fn session_grid(rts: &[f64], mzs: &[f64], hr: bool) -> Grid {
     if rts.is_empty() || mzs.is_empty() {
-        return Grid { rt0: 0.0, rt1: 1.0, nrt: 1, mz0: 0.0, dmz: 1.0, nmz: 1 };
+        return Grid {
+            rt0: 0.0,
+            rt1: 1.0,
+            nrt: 1,
+            mz0: 0.0,
+            dmz: 1.0,
+            nmz: 1,
+        };
     }
     let lo = |v: &[f64]| v.iter().cloned().fold(f64::INFINITY, f64::min);
     let hi = |v: &[f64]| v.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -33,7 +40,14 @@ pub fn session_grid(rts: &[f64], mzs: &[f64], hr: bool) -> Grid {
     let nrt = py_round((rt1 - rt0) / 0.04).clamp(50.0, 600.0) as usize;
     let mz0 = lo(mzs).floor() - if hr { 0.0 } else { 0.2 };
     let nmz = ((hi(mzs) - mz0) / 1.0 + 1e-9).ceil().max(1.0) as usize;
-    Grid { rt0, rt1, nrt, mz0, dmz: 1.0, nmz }
+    Grid {
+        rt0,
+        rt1,
+        nrt,
+        mz0,
+        dmz: 1.0,
+        nmz,
+    }
 }
 
 /// `map_cells` for low resolution: when the cells are wider than 0.5 Da they are whole numbers of nominal masses `[n - 0.2; n + 0.8]`.
@@ -51,13 +65,20 @@ pub fn map_cells(mz0: f64, mz1: f64, nmz: usize) -> (f64, f64, usize) {
 
 /// `map_cells` for high resolution: never more cells than the instrument tells apart (cells of 3 ppm); returns the number of cells.
 pub fn map_cells_hr(mz0: f64, mz1: f64, nmz: usize, log: bool) -> usize {
-    let top = if log && mz0 > 0.0 { (mz1 / mz0).ln() / 3e-6f64.ln_1p() } else { (mz1 - mz0) / (mz1 * 3e-6) };
+    let top = if log && mz0 > 0.0 {
+        (mz1 / mz0).ln() / 3e-6f64.ln_1p()
+    } else {
+        (mz1 - mz0) / (mz1 * 3e-6)
+    };
     (top.ceil().max(1.0) as usize).min(nmz.max(1)).max(1)
 }
 
 /// `subtract_constant`: the background of each m/z column taken away from a map (rows = RT), what is below it stays 0.
 pub fn subtract_constant(m: &[f32], nmz: usize, bg: &[f32]) -> Vec<f32> {
-    m.iter().enumerate().map(|(i, &v)| (v - bg[i % nmz]).max(0.0)).collect()
+    m.iter()
+        .enumerate()
+        .map(|(i, &v)| (v - bg[i % nmz]).max(0.0))
+        .collect()
 }
 
 /// `B` replaced by its local maximum over ±`width` cells along the rows (RT) or the columns (m/z), the edges repeated.
@@ -65,20 +86,33 @@ fn widen(b: &[f32], nrt: usize, nmz: usize, width: usize, along_mz: bool) -> Vec
     if width == 0 || (if along_mz { nmz } else { nrt }) <= 1 {
         return b.to_vec();
     }
-    let (n, step, outer) = if along_mz { (nmz, 1, nrt) } else { (nrt, nmz, nmz) };
+    let (n, step, outer) = if along_mz {
+        (nmz, 1, nrt)
+    } else {
+        (nrt, nmz, nmz)
+    };
     let mut out = vec![0.0f32; b.len()];
     for o in 0..outer {
         let base = if along_mz { o * nmz } else { o };
         for i in 0..n {
             let (lo, hi) = (i.saturating_sub(width), (i + width).min(n - 1));
-            out[base + i * step] = (lo..=hi).map(|r| b[base + r * step]).fold(f32::NEG_INFINITY, f32::max);
+            out[base + i * step] = (lo..=hi)
+                .map(|r| b[base + r * step])
+                .fold(f32::NEG_INFINITY, f32::max);
         }
     }
     out
 }
 
 /// `diff_tolerant`: A − B where B is replaced by its local maximum over ±`w` rows (RT) and ±`wm` columns (m/z; high resolution only).
-pub fn diff_tolerant(a: &[f32], b: &[f32], nrt: usize, nmz: usize, w: usize, wm: usize) -> Vec<f32> {
+pub fn diff_tolerant(
+    a: &[f32],
+    b: &[f32],
+    nrt: usize,
+    nmz: usize,
+    w: usize,
+    wm: usize,
+) -> Vec<f32> {
     let b = widen(&widen(b, nrt, nmz, w, false), nrt, nmz, wm, true);
     a.iter().zip(&b).map(|(x, y)| x - y).collect()
 }
@@ -151,7 +185,10 @@ pub fn rt_groups(points: &mut [Point], tol: f64) {
     }
     for k in 1..=g {
         let mem: Vec<usize> = (0..points.len()).filter(|&i| points[i].g == k).collect();
-        let top = mem.iter().fold(mem[0], |t, &i| if points[i].ia > points[t].ia { i } else { t });
+        let top = mem.iter().fold(
+            mem[0],
+            |t, &i| if points[i].ia > points[t].ia { i } else { t },
+        );
         let tmz = points[top].mz;
         for &i in &mem {
             points[i].dm = points[i].mz - tmz;
@@ -165,13 +202,19 @@ mod tests {
 
     #[test]
     fn rounding_goes_to_even() {
-        assert_eq!([0.5, 1.5, 2.5, -2.5, 2.4].map(py_round), [0.0, 2.0, 2.0, -2.0, 2.0]);
+        assert_eq!(
+            [0.5, 1.5, 2.5, -2.5, 2.4].map(py_round),
+            [0.0, 2.0, 2.0, -2.0, 2.0]
+        );
     }
 
     #[test]
     fn nominal_cells_cover_whole_masses() {
         let (lo, hi, n) = map_cells(100.0, 500.0, 100);
-        assert_eq!((n, (lo * 10.0).round(), (hi * 10.0).round()), (81, 998.0, 5048.0));
+        assert_eq!(
+            (n, (lo * 10.0).round(), (hi * 10.0).round()),
+            (81, 998.0, 5048.0)
+        );
         assert_eq!(map_cells(150.0, 151.0, 4), (150.0, 151.0, 4));
     }
 

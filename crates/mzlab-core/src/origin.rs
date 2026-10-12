@@ -52,7 +52,11 @@ fn upper(a: &[f64], v: f64) -> usize {
 }
 fn sum_range(v: &[f64], a: usize, b: usize) -> f64 {
     let (a, b) = (a.min(v.len()), b.min(v.len()));
-    if a < b { psum(&v[a..b]) } else { 0.0 }
+    if a < b {
+        psum(&v[a..b])
+    } else {
+        0.0
+    }
 }
 fn vmax(v: &[f64]) -> f64 {
     v.iter().cloned().fold(f64::MIN, f64::max)
@@ -61,11 +65,17 @@ fn vmax(v: &[f64]) -> f64 {
 /// `ionfamily._area_in`: trapezoid area of the baseline-corrected trace between two times.
 fn area_in(rt: &[f64], y: &[f64], t0: f64, t1: f64) -> f64 {
     let (yc, _, _) = prep(y);
-    let idx: Vec<usize> = (0..rt.len()).filter(|&i| rt[i] >= t0 && rt[i] <= t1).collect();
+    let idx: Vec<usize> = (0..rt.len())
+        .filter(|&i| rt[i] >= t0 && rt[i] <= t1)
+        .collect();
     if idx.len() < 2 {
         return 0.0;
     }
-    psum(&idx.windows(2).map(|w| (yc[w[1]] + yc[w[0]]) / 2.0 * (rt[w[1]] - rt[w[0]])).collect::<Vec<_>>())
+    psum(
+        &idx.windows(2)
+            .map(|w| (yc[w[1]] + yc[w[0]]) / 2.0 * (rt[w[1]] - rt[w[0]]))
+            .collect::<Vec<_>>(),
+    )
 }
 
 struct Ref {
@@ -88,21 +98,41 @@ fn find_reference<R: ReadAt>(samples: &mut [Sample<R>], r: &Request) -> Result<O
                 let (rt, y) = extract_trace(s.idx, s.si, r.parent_mz, 0.5, None)?;
                 tops.push(if rt.is_empty() { 0.0 } else { vmax(&y) });
             }
-            tops.iter().enumerate().fold(0, |b, (i, v)| if *v > tops[b] { i } else { b })
+            tops.iter()
+                .enumerate()
+                .fold(0, |b, (i, v)| if *v > tops[b] { i } else { b })
         }
     };
     let s = &mut samples[ix];
     let (rt, p) = extract_trace(s.idx, s.si, r.parent_mz, 0.5, None)?;
-    Ok(detect(&rt, &p).first().map(|pk| Ref { apex_rt: pk.e.apex_rt, fwhm_min: pk.e.fwhm_min, lo: pk.p.lo, hi: pk.p.hi, n_scans: pk.p.n_scans, idx: ix, rt }))
+    Ok(detect(&rt, &p).first().map(|pk| Ref {
+        apex_rt: pk.e.apex_rt,
+        fwhm_min: pk.e.fwhm_min,
+        lo: pk.p.lo,
+        hi: pk.p.hi,
+        n_scans: pk.p.n_scans,
+        idx: ix,
+        rt,
+    }))
 }
 
 /// Co-eluting ROIs ranked by profile correlation with P (the student chooses; nothing is picked for them).
-fn candidates(w: &Window, a: usize, b: usize, pw: &[f64], apex: f64, r: &Request, losses: &Losses) -> Result<Vec<Value>> {
+fn candidates(
+    w: &Window,
+    a: usize,
+    b: usize,
+    pw: &[f64],
+    apex: f64,
+    r: &Request,
+    losses: &Losses,
+) -> Result<Vec<Value>> {
     if w.mz.is_empty() {
         return Ok(Vec::new());
     }
     let n = w.n_scans;
-    let area: Vec<f64> = (0..w.n_roi()).map(|j| sum_range(&w.x[j * n..(j + 1) * n], a, b)).collect();
+    let area: Vec<f64> = (0..w.n_roi())
+        .map(|j| sum_range(&w.x[j * n..(j + 1) * n], a, b))
+        .collect();
     let mut order: Vec<usize> = (0..area.len()).collect();
     order.sort_by(|&i, &j| area[j].total_cmp(&area[i]));
     let pmax = vmax(&area);
@@ -111,16 +141,35 @@ fn candidates(w: &Window, a: usize, b: usize, pw: &[f64], apex: f64, r: &Request
         if area[j] < MIN_REL_AREA * pmax {
             continue;
         }
-        let s2 = profile_similarity(&w.rt, &w.x[j * n..(j + 1) * n], pw, Some(apex), 0, 100, 0).done();
+        let s2 =
+            profile_similarity(&w.rt, &w.x[j * n..(j + 1) * n], pw, Some(apex), 0, 100, 0).done();
         if s2.get("n_scans").and_then(|v| v.f64()).unwrap_or(0.0) == 0.0 {
             continue;
         }
-        let mut o = Obj::new().n("mz", w.mz[j]).n("area_rel", if pmax > 0.0 { area[j] / pmax } else { 0.0 });
-        for k in ["pearson", "spearman", "deriv_corr", "cosine", "apex_diff_s", "apex_diff_sigma_s", "fwhm_ratio", "p_shift", "lag_best", "reliable", "x_has_peak"] {
+        let mut o = Obj::new()
+            .n("mz", w.mz[j])
+            .n("area_rel", if pmax > 0.0 { area[j] / pmax } else { 0.0 });
+        for k in [
+            "pearson",
+            "spearman",
+            "deriv_corr",
+            "cosine",
+            "apex_diff_s",
+            "apex_diff_sigma_s",
+            "fwhm_ratio",
+            "p_shift",
+            "lag_best",
+            "reliable",
+            "x_has_peak",
+        ] {
             o = o.put(k, s2.get(k).cloned().unwrap_or(Value::Null));
         }
         o = o.put("roles", losses.annotate(w.mz[j], r.parent_mz, r.formula_p)?);
-        let key = s2.get("pearson").and_then(|v| v.f64()).filter(|v| v.is_finite()).unwrap_or(-2.0);
+        let key = s2
+            .get("pearson")
+            .and_then(|v| v.f64())
+            .filter(|v| v.is_finite())
+            .unwrap_or(-2.0);
         out.push((-key, o.done()));
     }
     out.sort_by(|x, y| x.0.total_cmp(&y.0));
@@ -142,9 +191,19 @@ fn neighbors(w: &Window, xw: &[f64], mz: f64, a: usize, b: usize) -> Vec<Value> 
         let n = w.n_scans;
         let row = &w.x[jn * n..(jn + 1) * n];
         let (an, ax) = (sum_range(row, a, b), sum_range(xw, a, b));
-        let (x_s, n_s) = (&xw[a.min(xw.len())..b.min(xw.len()).max(a.min(xw.len()))], &row[a.min(n)..b.min(n).max(a.min(n))]);
+        let (x_s, n_s) = (
+            &xw[a.min(xw.len())..b.min(xw.len()).max(a.min(xw.len()))],
+            &row[a.min(n)..b.min(n).max(a.min(n))],
+        );
         let rn = wpearson(x_s, n_s, None);
-        out.push(Obj::new().i("delta", kk).n("mz", w.mz[jn]).n("area_ratio", if an > 0.0 { ax / an } else { f64::NAN }).n("pearson", rn).done());
+        out.push(
+            Obj::new()
+                .i("delta", kk)
+                .n("mz", w.mz[jn])
+                .n("area_ratio", if an > 0.0 { ax / an } else { f64::NAN })
+                .n("pearson", rn)
+                .done(),
+        );
     }
     out
 }
@@ -158,29 +217,60 @@ struct Rows {
 }
 
 /// The same measures in every sample: areas of P and X in the peak of P, the ratio F/P and where P's apex is.
-fn across_samples<R: ReadAt>(samples: &mut [Sample<R>], r: &Request, win: (f64, f64), peak: (f64, f64), ref_apex: f64) -> Result<Rows> {
-    let mut o = Rows { rows: vec![], ratios: vec![], ses: vec![], labels: vec![], timed: vec![] };
+fn across_samples<R: ReadAt>(
+    samples: &mut [Sample<R>],
+    r: &Request,
+    win: (f64, f64),
+    peak: (f64, f64),
+    ref_apex: f64,
+) -> Result<Rows> {
+    let mut o = Rows {
+        rows: vec![],
+        ratios: vec![],
+        ses: vec![],
+        labels: vec![],
+        timed: vec![],
+    };
     for (k, s) in samples.iter_mut().enumerate() {
         let (rt, p) = extract_trace(s.idx, s.si, r.parent_mz, TOL_MZ, Some(win))?;
         let (_, x) = extract_trace(s.idx, s.si, r.mz, TOL_MZ, Some(win))?;
         if rt.len() < 7 {
             continue;
         }
-        let (ap, ax) = (area_in(&rt, &p, peak.0, peak.1), area_in(&rt, &x, peak.0, peak.1));
-        let mut row = Obj::new().i("k", k as i64).put("label", text(&s.label)).put("time", opt(s.time)).n("area_parent", ap).n("area_ion", ax);
+        let (ap, ax) = (
+            area_in(&rt, &p, peak.0, peak.1),
+            area_in(&rt, &x, peak.0, peak.1),
+        );
+        let mut row = Obj::new()
+            .i("k", k as i64)
+            .put("label", text(&s.label))
+            .put("time", opt(s.time))
+            .n("area_parent", ap)
+            .n("area_ion", ax);
         let (a0, a1) = (lower(&rt, peak.0), upper(&rt, peak.1));
         if ap > 0.0 && a1 as i64 - 1 - a0 as i64 >= 4 {
             let rf = ratio_fit(&x, &p, (a0, a1), 60, 0);
             if rf.get("ok").and_then(|v| v.bool()) == Some(true) {
-                let (rr, se) = (rf.get("r_tls").and_then(|v| v.f64()).unwrap_or(f64::NAN), rf.get("r_se").and_then(|v| v.f64()).unwrap_or(f64::NAN));
+                let (rr, se) = (
+                    rf.get("r_tls").and_then(|v| v.f64()).unwrap_or(f64::NAN),
+                    rf.get("r_se").and_then(|v| v.f64()).unwrap_or(f64::NAN),
+                );
                 row = row.n("ratio", rr).n("ratio_se", se);
                 o.ratios.push(rr);
                 o.ses.push(se);
                 o.labels.push(s.label.clone());
             }
         }
-        let near = detect(&rt, &p).into_iter().min_by(|a, b| (a.e.apex_rt - ref_apex).abs().total_cmp(&(b.e.apex_rt - ref_apex).abs()));
-        row = row.put("parent_apex_rt", near.filter(|k| (k.e.apex_rt - ref_apex).abs() < 0.3).map_or(Value::Null, |k| num(k.e.apex_rt)));
+        let near = detect(&rt, &p).into_iter().min_by(|a, b| {
+            (a.e.apex_rt - ref_apex)
+                .abs()
+                .total_cmp(&(b.e.apex_rt - ref_apex).abs())
+        });
+        row = row.put(
+            "parent_apex_rt",
+            near.filter(|k| (k.e.apex_rt - ref_apex).abs() < 0.3)
+                .map_or(Value::Null, |k| num(k.e.apex_rt)),
+        );
         if let Some(t) = s.time {
             o.timed.push((t, ap, ax));
         }
@@ -204,21 +294,38 @@ fn early(rep: Obj, warn: Value) -> Result<Value> {
 
 /// The warning that a neighbouring ion (0.4-1.0 away, more than 5 % of the area of the parent) may coincide in mass with X.
 fn coincidence_warning(cands: &[Value], mz: f64) -> Option<Value> {
-    let near: Vec<f64> = cands.iter().filter_map(|c| {
-        let m = c.get("mz")?.f64()?;
-        let ar = c.get("area_rel")?.f64()?;
-        ((m - mz).abs() > 0.4 && (m - mz).abs() <= 1.0 && ar > 0.05).then_some(m)
-    }).take(3).collect();
+    let near: Vec<f64> = cands
+        .iter()
+        .filter_map(|c| {
+            let m = c.get("mz")?.f64()?;
+            let ar = c.get("area_rel")?.f64()?;
+            ((m - mz).abs() > 0.4 && (m - mz).abs() <= 1.0 && ar > 0.05).then_some(m)
+        })
+        .take(3)
+        .collect();
     if near.is_empty() {
         return None;
     }
-    let list = near.iter().map(|m| format!("{m:.1}")).collect::<Vec<_>>().join(", ");
+    let list = near
+        .iter()
+        .map(|m| format!("{m:.1}"))
+        .collect::<Vec<_>>()
+        .join(", ");
     Some(msg("of.warn.massCoincidence", &[("mz", text(&list))]))
 }
 
 /// The evidence for the ion `r.mz` against `r.parent_mz` over `samples`, with the product-ion spectra `ms2` if the student loaded them.
-pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r: &Request) -> Result<Value> {
-    let base = Obj::new().n("mz", r.mz).n("parent_mz", r.parent_mz).put("samples", Value::Arr(vec![])).put("candidates", Value::Arr(vec![])).put("timing", Obj::new().done());
+pub fn origin_report<R: ReadAt>(
+    samples: &mut [Sample<R>],
+    ms2: Option<&Ms2>,
+    r: &Request,
+) -> Result<Value> {
+    let base = Obj::new()
+        .n("mz", r.mz)
+        .n("parent_mz", r.parent_mz)
+        .put("samples", Value::Arr(vec![]))
+        .put("candidates", Value::Arr(vec![]))
+        .put("timing", Obj::new().done());
     if samples.is_empty() {
         return early(base, msg("of.warn.noFull", &[]));
     }
@@ -242,10 +349,16 @@ pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r:
     let w = build_rois(s.idx, s.si, rt0, rt1, TOL_MZ, 4, 2, None, 0.0)?;
     rep = rep.i("n_rois", w.n_roi() as i64);
     if rf.n_scans < MIN_SCANS_RELIABLE {
-        warnings.push(msg("of.warn.parentFewScans", &[("n", int(rf.n_scans as i64))]));
+        warnings.push(msg(
+            "of.warn.parentFewScans",
+            &[("n", int(rf.n_scans as i64))],
+        ));
     }
     let (rtw, pw) = extract_trace(s.idx, s.si, r.parent_mz, TOL_MZ, Some((rt0, rt1)))?;
-    rep = rep.i("parent_flat_top_scans", flat_top_warning(&pw, &mut warnings));
+    rep = rep.i(
+        "parent_flat_top_scans",
+        flat_top_warning(&pw, &mut warnings),
+    );
     let (_, xw) = extract_trace(s.idx, s.si, r.mz, TOL_MZ, Some((rt0, rt1)))?;
     let sim = profile_similarity(&rtw, &xw, &pw, Some(rf.apex_rt), 200, 400, 0).done();
     for wv in sim.get("warnings").map_or(&[][..], |v| v.arr()) {
@@ -255,26 +368,42 @@ pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r:
     let ratio = ratio_fit(&xw, &pw, (a, b), 200, 0);
     let losses = Losses::new();
     let cands = candidates(&w, a, b, &pw, rf.apex_rt, r, &losses)?;
-    rep = rep.put("roles", losses.annotate(r.mz, r.parent_mz, r.formula_p)?).put("isotopes", isotope_check(&w, r.mz, a, b)).put("neighbors", Value::Arr(neighbors(&w, &xw, r.mz, a, b)));
+    rep = rep
+        .put("roles", losses.annotate(r.mz, r.parent_mz, r.formula_p)?)
+        .put("isotopes", isotope_check(&w, r.mz, a, b))
+        .put("neighbors", Value::Arr(neighbors(&w, &xw, r.mz, a, b)));
     warnings.extend(coincidence_warning(&cands, r.mz));
-    let nr = ratio.get("n").and_then(|v| v.f64()).unwrap_or(f64::INFINITY);
+    let nr = ratio
+        .get("n")
+        .and_then(|v| v.f64())
+        .unwrap_or(f64::INFINITY);
     if ratio.get("ok").and_then(|v| v.bool()) == Some(true) && nr < 6.0 {
         warnings.push(msg("of.warn.fewRatio", &[("n", int(nr as i64))]));
     }
-    if sim.get("x_snr").map_or(1.0, |v| v.f64().unwrap_or(f64::NAN)) < 5.0 {
+    if sim
+        .get("x_snr")
+        .map_or(1.0, |v| v.f64().unwrap_or(f64::NAN))
+        < 5.0
+    {
         warnings.push(msg("of.warn.weakIon", &[]));
     }
     let per = across_samples(samples, r, (rt0, rt1), (peak_t0, peak_t1), rf.apex_rt)?;
     if per.ratios.len() >= 2 {
-        rep = rep.put("ratio_constancy", ratio_constancy(&per.ratios, &per.ses, &per.labels));
+        rep = rep.put(
+            "ratio_constancy",
+            ratio_constancy(&per.ratios, &per.ses, &per.labels),
+        );
     }
     if per.timed.len() >= 3 {
-        let (t, p, x): (Vec<f64>, Vec<f64>, Vec<f64>) = per.timed.iter().fold((vec![], vec![], vec![]), |mut acc, (a, b, c)| {
-            acc.0.push(*a);
-            acc.1.push(*b);
-            acc.2.push(*c);
-            acc
-        });
+        let (t, p, x): (Vec<f64>, Vec<f64>, Vec<f64>) =
+            per.timed
+                .iter()
+                .fold((vec![], vec![], vec![]), |mut acc, (a, b, c)| {
+                    acc.0.push(*a);
+                    acc.1.push(*b);
+                    acc.2.push(*c);
+                    acc
+                });
         let kin = kinetics(&t, &p, &x);
         warnings.extend(kin.get("warnings").map_or(vec![], |v| v.arr().to_vec()));
         rep = rep.put("kinetics", kin);
@@ -283,10 +412,20 @@ pub fn origin_report<R: ReadAt>(samples: &mut [Sample<R>], ms2: Option<&Ms2>, r:
     }
     if let Some(m) = ms2 {
         let pv = (&m.p.0[..], &m.p.1[..]);
-        rep = rep.put("ms2", match &m.x {
-            Some(x) => ms2_similarity(r.mz, (&x.0[..], &x.1[..]), r.parent_mz, pv),
-            None => ms2_membership(r.mz, r.parent_mz, pv),
-        });
+        rep = rep.put(
+            "ms2",
+            match &m.x {
+                Some(x) => ms2_similarity(r.mz, (&x.0[..], &x.1[..]), r.parent_mz, pv),
+                None => ms2_membership(r.mz, r.parent_mz, pv),
+            },
+        );
     }
-    Ok(rep.put("profile", sim).put("ratio", ratio).put("candidates", Value::Arr(cands)).put("samples", Value::Arr(per.rows)).put("warnings", Value::Arr(warnings)).put("note", msg("of.note", &[])).done())
+    Ok(rep
+        .put("profile", sim)
+        .put("ratio", ratio)
+        .put("candidates", Value::Arr(cands))
+        .put("samples", Value::Arr(per.rows))
+        .put("warnings", Value::Arr(warnings))
+        .put("note", msg("of.note", &[]))
+        .done())
 }

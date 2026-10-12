@@ -383,12 +383,29 @@ impl Lib {
             },
         )
         .map_err(js_err)?;
-        let light = |h: &Hit| merge(meta_json(&self.inner, h.index), json!({"ent": h.entropy, "cos": h.cosine, "shared": h.shared, "dprec": h.dprec, "prec": h.prec, "nlib": h.spec.mz.len()}));
+        let light = |h: &Hit| {
+            merge(
+                meta_json(&self.inner, h.index),
+                json!({"ent": h.entropy, "cos": h.cosine, "shared": h.shared, "dprec": h.dprec, "prec": h.prec, "nlib": h.spec.mz.len()}),
+            )
+        };
         let key = |h: &Hit| {
             let m = self.inner.meta(h.index).unwrap_or_default();
-            let ik: String = m.inchikey.chars().take(14).collect::<String>().to_uppercase();
+            let ik: String = m
+                .inchikey
+                .chars()
+                .take(14)
+                .collect::<String>()
+                .to_uppercase();
             if ik.is_empty() {
-                format!("n:{}", m.name.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>())
+                format!(
+                    "n:{}",
+                    m.name
+                        .to_lowercase()
+                        .chars()
+                        .filter(|c| c.is_ascii_alphanumeric())
+                        .collect::<String>()
+                )
             } else {
                 ik
             }
@@ -397,7 +414,12 @@ impl Lib {
             None => "null".into(),
             Some(h) => {
                 let k = key(h);
-                let alt = hits.iter().skip(1).find(|x| key(x) != k).map(&light).unwrap_or(Value::Null);
+                let alt = hits
+                    .iter()
+                    .skip(1)
+                    .find(|x| key(x) != k)
+                    .map(&light)
+                    .unwrap_or(Value::Null);
                 merge(light(h), json!({"alt": alt})).to_string()
             }
         })

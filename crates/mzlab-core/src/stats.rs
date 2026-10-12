@@ -77,7 +77,7 @@ pub fn wpearson(x: &[f64], y: &[f64], w: Option<&[f64]>) -> f64 {
     let vx = col(&|i| w[i] * (x[i] - mx) * (x[i] - mx));
     let vy = col(&|i| w[i] * (y[i] - my) * (y[i] - my));
     if vx <= 1e-300 || vy <= 1e-300 || vx <= 1e-24 * sw * mx * mx || vy <= 1e-24 * sw * my * my {
-        return f64::NAN;                                          // constant up to rounding noise
+        return f64::NAN; // constant up to rounding noise
     }
     col(&|i| w[i] * (x[i] - mx) * (y[i] - my)) / (vx * vy).sqrt()
 }

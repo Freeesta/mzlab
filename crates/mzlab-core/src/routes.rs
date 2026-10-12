@@ -75,7 +75,11 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new() }
+        Routes {
+            idx,
+            maps: Vec::new(),
+            steps: Vec::new(),
+        }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).

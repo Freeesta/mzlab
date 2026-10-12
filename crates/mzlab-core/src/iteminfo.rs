@@ -235,8 +235,16 @@ pub struct HrProfile {
 
 pub fn hr_profile(scans: &[Scan], survey: bool, hr: bool) -> HrProfile {
     let g: Vec<&Scan> = scans.iter().filter(|s| (s.level == 1) == survey).collect();
-    let p = if hr { mass_profile(&g) } else { mass_profile(&[]) };
-    HrProfile { on: p.hr, dec: p.dec as usize, ppm: if p.unit == "ppm" { p.tol } else { 0.0 } }
+    let p = if hr {
+        mass_profile(&g)
+    } else {
+        mass_profile(&[])
+    };
+    HrProfile {
+        on: p.hr,
+        dec: p.dec as usize,
+        ppm: if p.unit == "ppm" { p.tol } else { 0.0 },
+    }
 }
 
 fn median(v: &mut [f64]) -> Option<f64> {

@@ -38,12 +38,21 @@ impl<R: ReadAt> Index<R> {
         if n > MAX_PEAKS {
             return Ok(None);
         }
-        let (mut mz, mut pos, mut inten) = (Vec::with_capacity(n as usize), Vec::with_capacity(n as usize), Vec::with_capacity(n as usize));
+        let (mut mz, mut pos, mut inten) = (
+            Vec::with_capacity(n as usize),
+            Vec::with_capacity(n as usize),
+            Vec::with_capacity(n as usize),
+        );
         self.each_peak(si, 0, n, |p, m, y| {
             pos.push(p as u32);
             mz.push(m);
             inten.push(y);
         })?;
-        Ok(Some(PeakTable { mz, pos, inten, f4: self.sections[si].f4 }))
+        Ok(Some(PeakTable {
+            mz,
+            pos,
+            inten,
+            f4: self.sections[si].f4,
+        }))
     }
 }

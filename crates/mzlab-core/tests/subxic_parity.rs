@@ -23,11 +23,23 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
             }
             1
         }
-        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a.iter().zip(b).enumerate().map(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad)).sum(),
-        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b.iter().map(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad)).sum(),
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a
+            .iter()
+            .zip(b)
+            .enumerate()
+            .map(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad))
+            .sum(),
+        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b
+            .iter()
+            .map(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad))
+            .sum(),
         (a, b) => {
             if a != b {
-                bad.push(format!("{path}: {} against {}", a.to_string().chars().take(60).collect::<String>(), b.to_string().chars().take(60).collect::<String>()));
+                bad.push(format!(
+                    "{path}: {} against {}",
+                    a.to_string().chars().take(60).collect::<String>(),
+                    b.to_string().chars().take(60).collect::<String>()
+                ));
             }
             1
         }
@@ -37,21 +49,37 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
 #[test]
 fn subxic_like_python() {
     let ready = std::env::var("MZLAB_SUBXIC_DIR").ok().map(PathBuf::from);
-    let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-subxic-{}", std::process::id())));
+    let out = ready.clone().unwrap_or_else(|| {
+        std::env::temp_dir().join(format!("mzlab-subxic-{}", std::process::id()))
+    });
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/subxic_riferimento.py").arg(&out).output(),
+        None => Command::new("python3")
+            .current_dir(root())
+            .arg("tools/subxic_riferimento.py")
+            .arg(&out)
+            .output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "the reference did not run: {run:?}"
+        );
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("subxic.json")).unwrap()).unwrap();
+    let cases: Vec<Value> =
+        serde_json::from_slice(&std::fs::read(out.join("subxic.json")).unwrap()).unwrap();
     let mut routes: Vec<Routes<std::fs::File>> = (0..2)
         .map(|i| {
             let p = out.join(format!("s{i}.mzidx"));
-            Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap())
+            Routes::new(
+                Index::open(
+                    std::fs::File::open(&p).unwrap(),
+                    std::fs::metadata(&p).unwrap().len(),
+                )
+                .unwrap(),
+            )
         })
         .collect();
     let (mut bad, mut compared) = (Vec::new(), 0);
@@ -59,7 +87,11 @@ fn subxic_like_python() {
         let (k, query) = (c["k"].as_i64().unwrap(), c["query"].as_str().unwrap());
         let t = std::time::Instant::now();
         let got = subxic(&mut routes[k as usize / 2], k, &Query::parse(query)).unwrap();
-        eprintln!("k={k} {query}: rust {:.0} ms, python {:.0} ms", t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
+        eprintln!(
+            "k={k} {query}: rust {:.0} ms, python {:.0} ms",
+            t.elapsed().as_secs_f64() * 1e3,
+            c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3
+        );
         if c["status"] != 200 {
             if got.is_some() {
                 bad.push(format!("k={k} {query}: Python refuses, Rust answers"));
@@ -71,9 +103,25 @@ fn subxic_like_python() {
             continue;
         };
         let before = bad.len();
-        compared += same("", &serde_json::from_str(&got).unwrap(), &c["result"], &mut bad);
-        bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {query}: {b}"));
+        compared += same(
+            "",
+            &serde_json::from_str(&got).unwrap(),
+            &c["result"],
+            &mut bad,
+        );
+        bad[before..]
+            .iter_mut()
+            .for_each(|b| *b = format!("k={k} {query}: {b}"));
     }
     assert!(compared > 20_000, "only {compared} values compared");
-    assert!(bad.is_empty(), "{} differences:\n{}", bad.len(), bad.iter().take(2000).cloned().collect::<Vec<_>>().join("\n"));
+    assert!(
+        bad.is_empty(),
+        "{} differences:\n{}",
+        bad.len(),
+        bad.iter()
+            .take(2000)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
 }

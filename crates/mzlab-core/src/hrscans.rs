@@ -17,7 +17,12 @@ const MAX_AVERAGE: usize = 200;
 
 impl<R: ReadAt> Routes<R> {
     /// The routes of this module; `None` = not answered here.
-    pub fn mzml_route<M: ReadAt>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    pub fn mzml_route<M: ReadAt>(
+        &mut self,
+        path: &str,
+        q: &Query,
+        mzml: &mut M,
+    ) -> Result<Option<String>> {
         if !self.has_scans() {
             return Ok(None);
         }
@@ -40,29 +45,55 @@ impl<R: ReadAt> Routes<R> {
     /// `/api/spectra` of a level with centroids only.
     fn spectra_centroids<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         let bin = q.num("bin")?.unwrap_or(0.1);
-        let Some(p) = self.picked_scans(q, mzml, bin, false)? else { return Ok(None) };
+        let Some(p) = self.picked_scans(q, mzml, bin, false)? else {
+            return Ok(None);
+        };
         let mut o = Out::default();
         o.raw("{\"n\":").int(p.n as i64).raw(",\"scans\":[");
         for (k, r) in p.rows.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(r.j as i64).raw(",\"sid\":").int(r.sid);
-            o.raw(",\"rt\":").num(round(r.rt, 4)).raw(",\"mode\":\"centroid\",\"mz\":").rounded(&r.mz, p.nd).raw(",\"y\":").rounded(&r.y, 1).raw("}");
+            o.raw(if k > 0 { "," } else { "" })
+                .raw("{\"i\":")
+                .int(r.j as i64)
+                .raw(",\"sid\":")
+                .int(r.sid);
+            o.raw(",\"rt\":")
+                .num(round(r.rt, 4))
+                .raw(",\"mode\":\"centroid\",\"mz\":")
+                .rounded(&r.mz, p.nd)
+                .raw(",\"y\":")
+                .rounded(&r.y, 1)
+                .raw("}");
         }
         o.raw("]}");
         Ok(Some(o.0))
     }
 
     /// The scans `i0..=i1` of a level of centroids as `App.spectra` / `App.scanbin` have them (`raw_filt`: with a filter the peaks are not binned).
-    pub(crate) fn picked_scans<M: ReadAt>(&mut self, q: &Query, mzml: &mut M, bin: f64, raw_filt: bool) -> Result<Option<Picked>> {
-        let (Some(i0), Some(i1)) = (int(q, "i0"), int(q, "i1")) else { return Ok(None) };
+    pub(crate) fn picked_scans<M: ReadAt>(
+        &mut self,
+        q: &Query,
+        mzml: &mut M,
+        bin: f64,
+        raw_filt: bool,
+    ) -> Result<Option<Picked>> {
+        let (Some(i0), Some(i1)) = (int(q, "i0"), int(q, "i1")) else {
+            return Ok(None);
+        };
         let level = q.level();
         let of_level = self.idx.scans.iter().filter(|s| s.level == level);
         let nscans = of_level.clone().count();
-        let pool_has_profile = if nscans > 0 { of_level.clone().any(|s| s.profile) } else { self.idx.scans.iter().any(|s| s.profile) };
+        let pool_has_profile = if nscans > 0 {
+            of_level.clone().any(|s| s.profile)
+        } else {
+            self.idx.scans.iter().any(|s| s.profile)
+        };
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
         if pool_has_profile || nscans == 0 || !(hr.on || bin > 0.0) {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, None) else {
+            return Ok(None);
+        };
         let precursor = q.num("prec")?.or(q.num("precursor")?);
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 && hr.on => (p * hr.ppm * 1e-6).max(1e-3),
@@ -87,12 +118,19 @@ impl<R: ReadAt> Routes<R> {
             }
             rows.push(PickedScan { j, sid, rt, mz, y });
         }
-        Ok(Some(Picked { n: sel.len(), nd: if hr.on { hr.dec + 1 } else { 3 }, rows }))
+        Ok(Some(Picked {
+            n: sel.len(),
+            nd: if hr.on { hr.dec + 1 } else { 3 },
+            rows,
+        }))
     }
 
     /// `/api/scan`: one scan with its own centroids and what the file says about it.
     fn scan_route<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
-        let Some(sid) = int(q, "sid").filter(|s| *s >= 0 && (*s as usize) < self.idx.scans.len()) else { return Ok(None) };
+        let Some(sid) = int(q, "sid").filter(|s| *s >= 0 && (*s as usize) < self.idx.scans.len())
+        else {
+            return Ok(None);
+        };
         let sid = sid as usize;
         let scans = &self.idx.scans;
         let s = &scans[sid];
@@ -103,21 +141,43 @@ impl<R: ReadAt> Routes<R> {
         let d = hr_profile(scans, s.level == 1, q.get("hr") != Some("0")).dec + 1;
         let (mz, y) = read_scan(s, mzml)?;
         let mut o = Out::default();
-        o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(s.number(sid)).raw(",\"parent_no\":");
+        o.raw("{\"sid\":")
+            .int(sid as i64)
+            .raw(",\"no\":")
+            .int(s.number(sid))
+            .raw(",\"parent_no\":");
         match parent {
             Some(p) => o.int(scans[p as usize].number(p as usize)),
             None => o.raw("null"),
         };
-        o.raw(",\"rt\":").num(round(s.rt, 4)).raw(",\"level\":").int(s.level as i64).raw(",\"mz\":").rounded(&mz, d).raw(",\"y\":").rounded(&y, 1);
+        o.raw(",\"rt\":")
+            .num(round(s.rt, 4))
+            .raw(",\"level\":")
+            .int(s.level as i64)
+            .raw(",\"mz\":")
+            .rounded(&mz, d)
+            .raw(",\"y\":")
+            .rounded(&y, 1);
         let at = |v: f64| round(v, d);
-        let prec = s.iso.map(|(a, b)| at((a + b) / 2.0)).or(s.precursor.filter(|p| *p != 0.0).map(at));
-        o.raw(",\"prec\":").opt(prec).raw(",\"lo\":").opt(s.iso.map(|i| at(i.0))).raw(",\"hi\":").opt(s.iso.map(|i| at(i.1)));
+        let prec = s
+            .iso
+            .map(|(a, b)| at((a + b) / 2.0))
+            .or(s.precursor.filter(|p| *p != 0.0).map(at));
+        o.raw(",\"prec\":")
+            .opt(prec)
+            .raw(",\"lo\":")
+            .opt(s.iso.map(|i| at(i.0)))
+            .raw(",\"hi\":")
+            .opt(s.iso.map(|i| at(i.1)));
         o.raw(",\"act\":");
         match &s.act {
             Some(a) => o.str(a),
             None => o.raw("null"),
         };
-        o.raw(",\"ce\":").opt(s.collision_energy).raw(",\"nce\":").raw(if self.nce() { "true" } else { "false" });
+        o.raw(",\"ce\":")
+            .opt(s.collision_energy)
+            .raw(",\"nce\":")
+            .raw(if self.nce() { "true" } else { "false" });
         o.raw(",\"res\":").opt(s.res).raw(",\"an\":");
         match &s.an {
             Some(a) => o.str(a),
@@ -128,16 +188,24 @@ impl<R: ReadAt> Routes<R> {
             Some(p) => o.int(p),
             None => o.raw("null"),
         };
-        o.raw(",\"filter\":").str(&s.filter).raw(",\"profile\":").raw(if s.profile { "true" } else { "false" }).raw("}");
+        o.raw(",\"filter\":")
+            .str(&s.filter)
+            .raw(",\"profile\":")
+            .raw(if s.profile { "true" } else { "false" })
+            .raw("}");
         Ok(Some(o.0))
     }
 
     /// `/api/scanavg`: the scans `sids` (at most 200, all of the level of the first) summed per cell, the intensity divided by the number of scans.
     fn scanavg_route<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
-        let Some(list) = q.get("sids") else { return Ok(None) };
+        let Some(list) = q.get("sids") else {
+            return Ok(None);
+        };
         let mut sids = Vec::new();
         for t in list.split(',').filter(|t| !t.is_empty()) {
-            let Ok(v) = t.trim().parse::<i64>() else { return Ok(None) };
+            let Ok(v) = t.trim().parse::<i64>() else {
+                return Ok(None);
+            };
             sids.push(v);
         }
         if sids.len() > MAX_AVERAGE {
@@ -145,7 +213,9 @@ impl<R: ReadAt> Routes<R> {
         }
         let n_all = self.idx.scans.len() as i64;
         sids.retain(|s| *s >= 0 && *s < n_all);
-        let Some(&first) = sids.first() else { return Ok(None) };
+        let Some(&first) = sids.first() else {
+            return Ok(None);
+        };
         let level = self.idx.scans[first as usize].level;
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
         let cell = cell_of(&hr);
@@ -160,22 +230,42 @@ impl<R: ReadAt> Routes<R> {
             }
         }
         let n = sids.len() as f64;
-        let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
-        let mz: Vec<f64> = cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect();
+        let rt = sids
+            .iter()
+            .map(|&s| self.idx.scans[s as usize].rt)
+            .sum::<f64>()
+            / n;
+        let mz: Vec<f64> = cells
+            .values()
+            .map(|(sy, smy)| smy / sy.max(1e-12))
+            .collect();
         let y: Vec<f64> = cells.values().map(|(sy, _)| sy / n).collect();
         let mut o = Out::default();
         o.raw("{\"sids\":[");
         for (k, s) in sids.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" }).int(*s);
         }
-        o.raw("],\"level\":").int(level as i64).raw(",\"n\":").int(sids.len() as i64).raw(",\"rt\":").num(round(rt, 4));
-        o.raw(",\"mz\":").rounded(&mz, hr.dec + 1).raw(",\"y\":").rounded(&y, 1).raw("}");
+        o.raw("],\"level\":")
+            .int(level as i64)
+            .raw(",\"n\":")
+            .int(sids.len() as i64)
+            .raw(",\"rt\":")
+            .num(round(rt, 4));
+        o.raw(",\"mz\":")
+            .rounded(&mz, hr.dec + 1)
+            .raw(",\"y\":")
+            .rounded(&y, 1)
+            .raw("}");
         Ok(Some(o.0))
     }
 
     /// The `nce` flag of the run (`Run.nce`), as `/api/dda` has it.
     fn nce(&self) -> bool {
-        self.idx.run.get("nce").and_then(|v| v.bool()).unwrap_or(false)
+        self.idx
+            .run
+            .get("nce")
+            .and_then(|v| v.bool())
+            .unwrap_or(false)
     }
 }
 
@@ -216,7 +306,13 @@ fn bin_cells(mz: &[f64], y: &[f64], bin: f64) -> (Vec<f64>, Vec<f64>) {
         e.0 += v;
         e.1 += v * m;
     }
-    (cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect(), cells.values().map(|(sy, _)| *sy).collect())
+    (
+        cells
+            .values()
+            .map(|(sy, smy)| smy / sy.max(1e-12))
+            .collect(),
+        cells.values().map(|(sy, _)| *sy).collect(),
+    )
 }
 
 /// Centroids of one scan as the mzML has them (`Run.read`): m/z and intensity, as many as the shorter array.
@@ -231,5 +327,8 @@ pub(crate) fn read_scan<M: ReadAt>(sc: &Scan, mzml: &mut M) -> Result<(Vec<f64>,
     })?;
     let s = found.ok_or_else(|| crate::error::Error::new("err.scan.outside"))?;
     let n = s.mz.len().min(s.intensity.len());
-    Ok((s.mz[..n].to_vec(), (0..n).map(|i| s.intensity_f64(i)).collect()))
+    Ok((
+        s.mz[..n].to_vec(),
+        (0..n).map(|i| s.intensity_f64(i)).collect(),
+    ))
 }

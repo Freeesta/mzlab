@@ -42,7 +42,11 @@ fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usiz
         (Value::Number(g), Value::Number(w)) => {
             n += 1;
             let (a, b) = (g.as_f64().unwrap(), w.as_f64().unwrap());
-            let ok = if w.is_i64() { a == b } else { a == b || (a - b).abs() <= 1e-6 * a.abs().max(b.abs()).max(1e-9) };
+            let ok = if w.is_i64() {
+                a == b
+            } else {
+                a == b || (a - b).abs() <= 1e-6 * a.abs().max(b.abs()).max(1e-9)
+            };
             if !ok {
                 bad.push(format!("{path}: {a} against {b}"));
             }
@@ -57,7 +61,13 @@ fn compare(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usiz
 }
 
 fn spec(v: &Value) -> (Vec<f64>, Vec<f64>) {
-    let f = |k: &str| v[k].as_array().unwrap().iter().map(|x| x.as_f64().unwrap()).collect();
+    let f = |k: &str| {
+        v[k].as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_f64().unwrap())
+            .collect()
+    };
     (f("mz"), f("int"))
 }
 
@@ -66,7 +76,11 @@ fn via_route(cases: &[Value], out: &Path, n_files: usize, failures: &mut Vec<Str
     let mut routes: std::collections::HashMap<u32, Routes<std::fs::File>> = (0..n_files)
         .map(|i| {
             let p = out.join(format!("s{i}.mzidx"));
-            let idx = Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap();
+            let idx = Index::open(
+                std::fs::File::open(&p).unwrap(),
+                std::fs::metadata(&p).unwrap().len(),
+            )
+            .unwrap();
             (i as u32, Routes::new(idx))
         })
         .collect();
@@ -74,10 +88,24 @@ fn via_route(cases: &[Value], out: &Path, n_files: usize, failures: &mut Vec<Str
     for c in cases.iter().filter(|c| c["params"]["ms2"].is_null()) {
         let pa = &c["params"];
         let items: Vec<ItemMeta> = (0..n_files)
-            .map(|i| ItemMeta { slot: i as u32, label: pa["labels"][i].as_str().unwrap().to_string(), time: pa["times"][i].as_f64(), full: true })
+            .map(|i| ItemMeta {
+                slot: i as u32,
+                label: pa["labels"][i].as_str().unwrap().to_string(),
+                time: pa["times"][i].as_f64(),
+                full: true,
+            })
             .collect();
-        let ask = Ask { k: pa["ref"].as_i64().unwrap_or(-1), mz: pa["mz"].as_f64().unwrap(), parent: pa["parent"].as_f64().unwrap(), rt0: pa["rt0"].as_f64(), rt1: pa["rt1"].as_f64(), formula: pa["formula"].as_str() };
-        let rep = origin_route(&items, &mut routes, &ask).unwrap().expect("unit-resolution centroids are answered by Rust");
+        let ask = Ask {
+            k: pa["ref"].as_i64().unwrap_or(-1),
+            mz: pa["mz"].as_f64().unwrap(),
+            parent: pa["parent"].as_f64().unwrap(),
+            rt0: pa["rt0"].as_f64(),
+            rt1: pa["rt1"].as_f64(),
+            formula: pa["formula"].as_str(),
+        };
+        let rep = origin_route(&items, &mut routes, &ask)
+            .unwrap()
+            .expect("unit-resolution centroids are answered by Rust");
         let mut got: Value = serde_json::from_str(&write(&rep)).unwrap();
         let g = got.as_object_mut().unwrap();
         assert_eq!(g.remove("hr"), Some(Value::Bool(false)));
@@ -87,20 +115,33 @@ fn via_route(cases: &[Value], out: &Path, n_files: usize, failures: &mut Vec<Str
         want.as_object_mut().unwrap().remove("timing");
         let mut bad = Vec::new();
         compare("", &got, &want, &mut bad);
-        failures.extend(bad.iter().take(10).map(|b| format!("route mz {}: {b}", pa["mz"])));
+        failures.extend(
+            bad.iter()
+                .take(10)
+                .map(|b| format!("route mz {}: {b}", pa["mz"])),
+        );
         via_route += 1;
     }
-    assert!(via_route > 0, "no case without MS2 to run through the route");
+    assert!(
+        via_route > 0,
+        "no case without MS2 to run through the route"
+    );
 }
 
 #[test]
 fn rust_origin_matches_python() {
     // MZLAB_ORIGIN_DIR: a folder already written by the reference script (e.g. from real files), to compare without regenerating
     let ready = std::env::var("MZLAB_ORIGIN_DIR").ok().map(PathBuf::from);
-    let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-origin-{}", std::process::id())));
+    let out = ready.clone().unwrap_or_else(|| {
+        std::env::temp_dir().join(format!("mzlab-origin-{}", std::process::id()))
+    });
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/origin_riferimento.py").arg(&out).output(),
+        None => Command::new("python3")
+            .current_dir(root())
+            .arg("tools/origin_riferimento.py")
+            .arg(&out)
+            .output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
@@ -109,35 +150,64 @@ fn rust_origin_matches_python() {
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("origin.json")).unwrap()).unwrap();
+    let cases: Vec<Value> =
+        serde_json::from_slice(&std::fs::read(out.join("origin.json")).unwrap()).unwrap();
     let n_files = cases[0]["params"]["labels"].as_array().unwrap().len();
     let mut idxs: Vec<Index<std::fs::File>> = (0..n_files)
         .map(|i| {
             let p = out.join(format!("s{i}.mzidx"));
-            Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap()
+            Index::open(
+                std::fs::File::open(&p).unwrap(),
+                std::fs::metadata(&p).unwrap().len(),
+            )
+            .unwrap()
         })
         .collect();
     let mut failures = Vec::new();
     let mut compared = 0;
     for c in &cases {
         let pa = &c["params"];
-        let si: Vec<usize> = idxs.iter().map(|i| i.section_of(1, None).unwrap()).collect();
+        let si: Vec<usize> = idxs
+            .iter()
+            .map(|i| i.section_of(1, None).unwrap())
+            .collect();
         let labels = pa["labels"].as_array().unwrap();
         let times = pa["times"].as_array().unwrap();
         let mut samples: Vec<Sample<std::fs::File>> = idxs
             .iter_mut()
             .enumerate()
-            .map(|(k, idx)| Sample { label: labels[k].as_str().unwrap().to_string(), time: times[k].as_f64(), idx, si: si[k] })
+            .map(|(k, idx)| Sample {
+                label: labels[k].as_str().unwrap().to_string(),
+                time: times[k].as_f64(),
+                idx,
+                si: si[k],
+            })
             .collect();
         let ms2 = match pa["ms2"].as_str() {
-            Some(kind) => Some(Ms2 { x: (kind == "xp").then(|| spec(&c["ms2_x"])), p: spec(&c["ms2_p"]) }),
+            Some(kind) => Some(Ms2 {
+                x: (kind == "xp").then(|| spec(&c["ms2_x"])),
+                p: spec(&c["ms2_p"]),
+            }),
             None => None,
         };
         let formula = pa["formula"].as_str();
-        let req = Request { mz: pa["mz"].as_f64().unwrap(), parent_mz: pa["parent"].as_f64().unwrap(), rt0: pa["rt0"].as_f64(), rt1: pa["rt1"].as_f64(), reference: pa["ref"].as_u64().map(|v| v as usize), formula_p: formula, top: 25 };
+        let req = Request {
+            mz: pa["mz"].as_f64().unwrap(),
+            parent_mz: pa["parent"].as_f64().unwrap(),
+            rt0: pa["rt0"].as_f64(),
+            rt1: pa["rt1"].as_f64(),
+            reference: pa["ref"].as_u64().map(|v| v as usize),
+            formula_p: formula,
+            top: 25,
+        };
         let t = std::time::Instant::now();
         let got = origin_report(&mut samples, ms2.as_ref(), &req).unwrap();
-        eprintln!("origin mz {}: rust {:.1} ms, python {:.1} ms", pa["mz"], t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
+        eprintln!(
+            "origin mz {}: rust {:.1} ms, python {:.1} ms",
+            pa["mz"],
+            t.elapsed().as_secs_f64() * 1e3,
+            c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3
+        );
         let got: Value = serde_json::from_str(&write(&got)).unwrap();
         let mut bad = Vec::new();
         let mut want = c["result"].clone();
@@ -151,5 +221,10 @@ fn rust_origin_matches_python() {
     }
     via_route(&cases, &out, n_files, &mut failures);
     assert!(compared > 1000, "only {compared} numbers compared");
-    assert!(failures.is_empty(), "{} differences:\n{}", failures.len(), failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "{} differences:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
 }

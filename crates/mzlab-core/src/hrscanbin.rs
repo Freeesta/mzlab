@@ -13,17 +13,36 @@ impl<R: ReadAt> Routes<R> {
         if !self.has_scans() {
             return Ok(None);
         }
-        let Some(p) = self.picked_scans(q, mzml, 0.1, true)? else { return Ok(None) };
+        let Some(p) = self.picked_scans(q, mzml, 0.1, true)? else {
+            return Ok(None);
+        };
         let mut o = Out::default();
         o.raw("{\"n\":").int(p.n as i64).raw(",\"scans\":[");
         let mut body: Vec<u8> = Vec::new();
         for (k, r) in p.rows.iter().enumerate() {
             let sc = &self.idx.scans[r.sid as usize];
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(r.j as i64).raw(",\"sid\":").int(r.sid).raw(",\"rt\":").num(round(r.rt, 4));
-            o.raw(",\"no\":").int(sc.number(r.sid as usize)).raw(",\"filter\":").str(&sc.filter).raw(",\"mode\":\"centroid\",\"n\":").int(r.mz.len() as i64);
-            o.raw(",\"np\":0,\"nl\":").num(r.y.iter().copied().fold(0.0, f64::max)).raw(",\"tic\":").num(r.y.iter().sum()).raw("}");
-            r.mz.iter().for_each(|v| body.extend_from_slice(&v.to_le_bytes()));
-            r.y.iter().for_each(|v| body.extend_from_slice(&(*v as f32).to_le_bytes()));
+            o.raw(if k > 0 { "," } else { "" })
+                .raw("{\"i\":")
+                .int(r.j as i64)
+                .raw(",\"sid\":")
+                .int(r.sid)
+                .raw(",\"rt\":")
+                .num(round(r.rt, 4));
+            o.raw(",\"no\":")
+                .int(sc.number(r.sid as usize))
+                .raw(",\"filter\":")
+                .str(&sc.filter)
+                .raw(",\"mode\":\"centroid\",\"n\":")
+                .int(r.mz.len() as i64);
+            o.raw(",\"np\":0,\"nl\":")
+                .num(r.y.iter().copied().fold(0.0, f64::max))
+                .raw(",\"tic\":")
+                .num(r.y.iter().sum())
+                .raw("}");
+            r.mz.iter()
+                .for_each(|v| body.extend_from_slice(&v.to_le_bytes()));
+            r.y.iter()
+                .for_each(|v| body.extend_from_slice(&(*v as f32).to_le_bytes()));
         }
         o.raw("]}");
         let mut out = (o.0.len() as u32).to_le_bytes().to_vec();
