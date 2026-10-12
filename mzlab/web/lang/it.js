@@ -374,6 +374,7 @@ I18N.add("it", {
   "conv.cancel": "Annulla",
   "conv.cancel.title": "Annulla la conversione dei file .raw",
   "conv.cancelling": "Annullamento…",
+  "conv.wiff.batch": "Campioni convertiti: {done} di {n}",
   "conv.row.group": "In conversione",
   "conv.row.open": "Lettura del file…",
   "conv.row.wait": "In coda",

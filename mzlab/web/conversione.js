@@ -91,7 +91,7 @@ const ConvUI = {
           let d;
           if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
           else if (ph === "converting") {
-            const eta = convEta(samples, now), parts = [pc + "%", T("conv.detail.scans", { done: I18N.fix(last.scans, 0), total: I18N.fix(last.scansTotal, 0) }),
+            const eta = convEta(samples, now), parts = [pc + "%", ...(last.several ? [] : [T("conv.detail.scans", { done: I18N.fix(last.scans, 0), total: I18N.fix(last.scansTotal, 0) })]),
               T("conv.detail.written", { mb: convMB(last.written) }), T("conv.detail.elapsed", { elapsed })];
             if (eta != null) parts.push(T("conv.detail.eta", { eta: convElapsed(eta * 1000) }));
             d = parts.join(" · ");
@@ -111,6 +111,7 @@ const ConvUI = {
             if (p.scansTotal) { const f = convFraction(p), z = samples[samples.length - 1]; if (!z || f !== z.f) { samples.push({ t: Date.now(), f }); if (samples.length > 60) samples.shift(); } }
             show();
           },
+          title(text) { q("file").textContent = text; },       // replaces "File i of n: name" (conversions running together: "Samples converted: 3 of 23")
           done() { clearInterval(timer); },
           fail(msg) { clearInterval(timer); el.remove(); const f = document.createElement("div"); f.className = "fail"; f.textContent = name + ": " + msg; box.appendChild(f); },
         };

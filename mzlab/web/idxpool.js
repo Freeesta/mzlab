@@ -3,7 +3,9 @@
 //  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
 //  - memory: a builder that cannot reserve memory (error.memoryBudget) halves the pool and the budget and retries once; the page is told (notice);
 //  - no WASM / no OPFS: unavailable() is true and every job answers { ok: false, reason: "unavailable" } (the upload fails with an error key).
-// A job's result: { ok: true, stats } or { ok: false, reason: "unavailable" | "cancelled" | "crash" | "memory" | "error", text }.
+// The same pool runs other short-lived workers (wiff-worker.js, the .wiff -> mzML conversion): a job may carry its own message to the worker (`msg`, with `transfer`), an `onProgress(m)`
+// for the { op: "progress" } messages of the worker, and the worker's `done` message may carry `parts` (the result's `parts`).
+// A job's result: { ok: true, stats, parts } or { ok: false, reason: "unavailable" | "cancelled" | "crash" | "memory" | "error", text }.
 export function poolSize(small, cores) {
   const n = Math.max(1, Math.min((cores || 2) - 1, 4));
   return small ? Math.min(n, 2) : n;
@@ -42,9 +44,10 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, Wo
     w.onmessage = ev => {
       const m = ev.data;
       if (job.done) return;
-      if (m.op === "ready") { job.inited = true; w.postMessage({ blob: job.blob, inputs: job.inputs, part: job.part, budget: job.budget || budget }, []); return; }
+      if (m.op === "ready") { job.inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, budget: job.budget || budget }, job.transfer || []); return; }
+      if (m.op === "progress") { if (job.onProgress) job.onProgress(m); return; }
       if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); pump(); return; }
-      if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms }); pump(); return; }
+      if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms, parts: m.parts }); pump(); return; }
       if (m.op === "error") {
         if (m.fatal) return retry("crash", m.text);
         end();
@@ -61,7 +64,7 @@ export function createPool({ workerUrl, size, budget = 64, notify = () => {}, Wo
   }
 
   return {
-    // job: { name, blob, inputs, part, budget? }
+    // job: { name, blob, inputs, part, budget? } or { name, msg, transfer?, onProgress? }
     build(job) {
       return new Promise(resolve => { queue.push({ ...job, resolve, tried: false, done: false }); pump(); });
     },
