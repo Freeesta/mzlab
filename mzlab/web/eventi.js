@@ -485,12 +485,8 @@ function loadDam() {
 Q("#np-method").onclick = () => showMethod();
 
 // ------------------------------------------------------------------ BioTransformer
-function openBT() {
-  window.open("https://biotransformer.ca/new", "_blank", "noopener");
-  Q("#bt").hidden = false;
-  try { if (window.TPDraw) window.TPDraw.smiles().then(s => { if (s) { navigator.clipboard.writeText(s); Q("#btcopy").textContent = I18N.t("bt.copied", { smiles: s.length > 40 ? s.slice(0, 40) + "…" : s }); } }).catch(() => {}); } catch (_) { /* appunti non disponibili */ }
-}
-window.openBT = openBT; Q("#bt-open").onclick = openBT; Q("#btx").onclick = () => { Q("#bt").hidden = true; };
+function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noopener"); }
+window.openBT = openBT;
 
 // ------------------------------------------------------------------ barra strumenti
 Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
