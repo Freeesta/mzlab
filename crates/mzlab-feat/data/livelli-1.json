@@ -169,12 +169,11 @@
       ]
      },
      "rete": {
-      "op": "<=",
-      "assoluto": true,
-      "unita": "ppm",
+      "op": ">=",
+      "provvisorio": true,
       "gradini": [
        {
-        "soglia": 5,
+        "soglia": 0.5,
         "punti": 1
        }
       ]

@@ -219,7 +219,15 @@ fn every_identity_has_its_table_of_contributions_and_it_follows_the_schema() {
     assert_eq!(strings(defs.get("tipo").unwrap().get("enum")), kinds);
     assert_eq!(strings(defs.get("segno").unwrap().get("enum")), signs);
     let required = strings(defs.get("prova").unwrap().get("required"));
-    let identity_required = strings(defs.get("identita").unwrap().get("required"));
+    let identity_required = [
+        "id",
+        "contributi",
+        "totale",
+        "contro",
+        "n",
+        "probabilita",
+        "motivi",
+    ];
     let cases = [
         vec![
             proof(&t, Kind::Rt, 1.0, None, false),
@@ -243,7 +251,7 @@ fn every_identity_has_its_table_of_contributions_and_it_follows_the_schema() {
         let mut o = Out::default();
         breakdown_json(&mut o, id as u32, &b);
         let v = json::parse(o.0.as_bytes()).unwrap();
-        for k in &identity_required {
+        for k in identity_required {
             assert!(v.get(k).is_some(), "identity without `{k}`");
         }
         assert_eq!(v.get("contributi").unwrap().arr().len(), n);

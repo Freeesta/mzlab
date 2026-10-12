@@ -4,7 +4,17 @@
 //! `LIVELLI.assess`; 2b and 1 only by the chemist), a proof "against" earns nothing and is never offset by the points of another, and the
 //! probability is 1/N (N = candidates the proofs cannot tell apart). Every automatic decision leaves a reason code with the numbers behind it.
 
+mod arcs;
+mod graph;
+mod out;
 pub mod points;
+
+pub use arcs::{arcs_from_families, FileFamilies, RowArc};
+pub use graph::{
+    build_graph, Edge, EdgeKind, ExternalHit, Facts, Identity, Inputs, Kinetics, LibHit, Member,
+    Node,
+};
+pub use out::{graph_json, EVID_GRAPH_FORMAT};
 
 use mzlab_core::json::{round, Out};
 pub use points::{Grade, PointsTable};
@@ -160,6 +170,10 @@ pub const R_NO_MS2: &str = "EV_NO_MS2";
 pub const R_WEAK_MS2: &str = "EV_WEAK_MS2";
 /// The kinetic proof is informative only (ceiling 0 in the table).
 pub const R_KINETICS_INFO: &str = "EV_KINETICS_INFO";
+/// An edge of the graph says the reading is not told from another (an adduct or a fragment, a loss or an ammonium): the identity keeps both.
+pub const R_UNDETERMINED_EDGE: &str = "EV_UNDETERMINED_EDGE";
+/// The row has peaks only where the gap filling put them: no file with a detected peak.
+pub const R_ONLY_FILLED: &str = "EV_ONLY_FILLED";
 pub const WEAK_PURITY: f64 = 0.5;
 
 /// What the interface shows for a candidate: the column of the contributions (always), the total, the number of proofs against, N, 1/N and the reasons.
@@ -230,7 +244,7 @@ fn reasons_of(rows: &[Evidence], against: usize, n: usize, table: &PointsTable) 
             numbers: vec![],
         }),
         Some(e) => {
-            if let Some(p) = param(e, "purity").filter(|&p| p >= 0.0 && p < WEAK_PURITY) {
+            if let Some(p) = param(e, "purity").filter(|&p| (0.0..WEAK_PURITY).contains(&p)) {
                 r.push(Reason {
                     code: R_WEAK_MS2,
                     numbers: vec![("purity", round(p, 3))],
@@ -310,7 +324,14 @@ pub fn evidence_json(o: &mut Out, e: &Evidence) {
 
 /// The part of an identity that this layer decides (`identita` of the schema, without its members and formula).
 pub fn breakdown_json(o: &mut Out, id: u32, b: &Breakdown) {
-    o.raw("{\"id\":").int(id as i64).raw(",\"contributi\":[");
+    o.raw("{");
+    breakdown_fields(o, id, b);
+    o.raw("}");
+}
+
+/// The fields of `breakdown_json` without the braces, to be completed by the graph.
+pub fn breakdown_fields(o: &mut Out, id: u32, b: &Breakdown) {
+    o.raw("\"id\":").int(id as i64).raw(",\"contributi\":[");
     for (i, e) in b.rows.iter().enumerate() {
         if i > 0 {
             o.raw(",");
@@ -339,5 +360,5 @@ pub fn breakdown_json(o: &mut Out, id: u32, b: &Breakdown) {
         }
         o.raw("}}");
     }
-    o.raw("]}");
+    o.raw("]");
 }

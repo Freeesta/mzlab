@@ -4,53 +4,302 @@
  "title": "evid/1: the graph of the proofs of the candidate identities",
  "description": "Format «evid/1» (crates/mzlab-feat/src/evid.rs). `prova` is a proof record, identical to an entry of `evidence[]` of mzid/1. The points come from the table `punti` of livelli/1 (mzlab/web/livelli-1.js): the total orders the candidates and never assigns the level. A proof 'contro' has 0 points and is never offset by the points of another.",
  "type": "object",
- "required": ["formato", "identita"],
+ "required": [
+  "formato",
+  "identita"
+ ],
  "properties": {
-  "formato": {"const": "evid/1"},
-  "versione_punti": {"type": "integer", "description": "version of the table `punti` of livelli/1 used"},
-  "identita": {"type": "array", "items": {"$ref": "#/$defs/identita"}}
+  "formato": {
+   "const": "evid/1"
+  },
+  "versione_punti": {
+   "type": "integer",
+   "description": "version of the table `punti` of livelli/1 used"
+  },
+  "identita": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/identita"
+   }
+  },
+  "versione": {
+   "type": "integer",
+   "description": "version of the rules that give the records and the reason codes"
+  }
  },
  "$defs": {
-  "tipo": {"enum": ["massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"]},
-  "segno": {"enum": ["a favore", "contro", "neutra"]},
+  "tipo": {
+   "enum": [
+    "massa",
+    "isotopi",
+    "MS2",
+    "frammenti",
+    "rete",
+    "cinetica",
+    "controlli",
+    "RT",
+    "frequenza",
+    "esterne"
+   ]
+  },
+  "segno": {
+   "enum": [
+    "a favore",
+    "contro",
+    "neutra"
+   ]
+  },
   "prova": {
    "type": "object",
-   "required": ["tipo", "valore", "soglia", "punti", "segno", "fonte", "versione", "parametri"],
+   "required": [
+    "tipo",
+    "valore",
+    "soglia",
+    "punti",
+    "segno",
+    "fonte",
+    "versione",
+    "parametri"
+   ],
    "properties": {
-    "tipo": {"$ref": "#/$defs/tipo"},
-    "valore": {"type": ["number", "null"], "description": "measured value (null when it could not be measured)"},
-    "soglia": {"type": ["number", "null"], "description": "threshold of the step reached, or the lowest step when none is reached"},
-    "punti": {"type": "number", "minimum": 0, "description": "points earned; always 0 for 'contro' and 'neutra'"},
-    "segno": {"$ref": "#/$defs/segno"},
-    "fonte": {"type": "string", "description": "module or tool that produced the proof (e.g. edge_evidence, mzlab-feat/kinetic)"},
-    "versione": {"type": "integer", "minimum": 0},
-    "parametri": {"type": "object", "additionalProperties": {"type": "number"}}
+    "tipo": {
+     "$ref": "#/$defs/tipo"
+    },
+    "valore": {
+     "type": [
+      "number",
+      "null"
+     ],
+     "description": "measured value (null when it could not be measured)"
+    },
+    "soglia": {
+     "type": [
+      "number",
+      "null"
+     ],
+     "description": "threshold of the step reached, or the lowest step when none is reached"
+    },
+    "punti": {
+     "type": "number",
+     "minimum": 0,
+     "description": "points earned; always 0 for 'contro' and 'neutra'"
+    },
+    "segno": {
+     "$ref": "#/$defs/segno"
+    },
+    "fonte": {
+     "type": "string",
+     "description": "module or tool that produced the proof (e.g. edge_evidence, mzlab-feat/kinetic)"
+    },
+    "versione": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "parametri": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "number"
+     }
+    }
    },
    "additionalProperties": false
   },
   "motivo": {
    "type": "object",
-   "required": ["codice", "numeri"],
+   "required": [
+    "codice",
+    "numeri"
+   ],
    "properties": {
-    "codice": {"type": "string", "description": "reason code of an automatic decision, e.g. EV_AGAINST_OPEN"},
-    "numeri": {"type": "object", "additionalProperties": {"type": "number"}}
+    "codice": {
+     "type": "string",
+     "description": "reason code of an automatic decision, e.g. EV_AGAINST_OPEN"
+    },
+    "numeri": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "number"
+     }
+    }
    },
    "additionalProperties": false
   },
   "identita": {
    "type": "object",
-   "required": ["id", "contributi", "totale", "contro", "n", "probabilita", "motivi"],
+   "required": [
+    "id",
+    "ipotesi",
+    "livello_max",
+    "contributi",
+    "totale",
+    "contro",
+    "n",
+    "probabilita",
+    "motivi",
+    "archi"
+   ],
    "properties": {
-    "id": {"type": "integer", "minimum": 0},
-    "massa_neutra": {"type": "number"},
-    "formula": {"type": "string"},
-    "membri": {"type": "array", "items": {"type": "object", "properties": {"mz": {"type": "number"}, "rt": {"type": "number"}, "ruolo": {"type": "string"}}, "required": ["mz", "ruolo"]}},
-    "contributi": {"type": "array", "items": {"$ref": "#/$defs/prova"}, "description": "the column of the contributions: always shown, one row per proof, in the order of `tipo`"},
-    "totale": {"type": "number", "minimum": 0, "description": "sum of the points of the proofs 'a favore'"},
-    "contro": {"type": "integer", "minimum": 0, "description": "number of proofs 'contro'; with any, the identity goes after the others"},
-    "n": {"type": "integer", "minimum": 1, "description": "candidates that the proofs cannot tell apart within the tolerances"},
-    "probabilita": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "1/n (Metz 2025)"},
-    "motivi": {"type": "array", "items": {"$ref": "#/$defs/motivo"}}
+    "id": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "massa_neutra": {
+     "type": "number"
+    },
+    "formula": {
+     "type": "string"
+    },
+    "membri": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "mz",
+       "rt",
+       "ruolo"
+      ],
+      "properties": {
+       "mz": {
+        "type": "number"
+       },
+       "rt": {
+        "type": "number"
+       },
+       "ruolo": {
+        "enum": [
+         "M",
+         "isotopo",
+         "addotto",
+         "isf",
+         "dimero",
+         "non determinato",
+         ""
+        ]
+       }
+      },
+      "additionalProperties": false
+     }
+    },
+    "contributi": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/prova"
+     },
+     "description": "the column of the contributions: always shown, one row per proof, in the order of `tipo`"
+    },
+    "totale": {
+     "type": "number",
+     "minimum": 0,
+     "description": "sum of the points of the proofs 'a favore'"
+    },
+    "contro": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "number of proofs 'contro'; with any, the identity goes after the others"
+    },
+    "n": {
+     "type": "integer",
+     "minimum": 1,
+     "description": "candidates that the proofs cannot tell apart within the tolerances"
+    },
+    "probabilita": {
+     "type": "number",
+     "exclusiveMinimum": 0,
+     "maximum": 1,
+     "description": "1/n (Metz 2025)"
+    },
+    "motivi": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/motivo"
+     }
+    },
+    "ipotesi": {
+     "type": [
+      "integer",
+      "null"
+     ],
+     "description": "id of the hypothesis (ipotesi/1) the row confirms"
+    },
+    "livello_max": {
+     "enum": [
+      "2a",
+      "4"
+     ],
+     "description": "the highest level the cascade can reach with these proofs: never above 4 without an MS2 proof"
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/arco"
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "nodo": {
+   "type": "object",
+   "required": [
+    "tipo"
+   ],
+   "properties": {
+    "tipo": {
+     "enum": [
+      "identita",
+      "membro",
+      "libreria",
+      "esterno"
+     ]
+    },
+    "id": {
+     "type": "integer"
+    },
+    "indice": {
+     "type": "integer"
+    },
+    "nome": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false
+  },
+  "arco": {
+   "type": "object",
+   "required": [
+    "tipo",
+    "da",
+    "a",
+    "etichetta",
+    "prove"
+   ],
+   "properties": {
+    "tipo": {
+     "enum": [
+      "addotto",
+      "isf",
+      "isotopo",
+      "non distinguibile",
+      "altro",
+      "progenitore-prodotto",
+      "libreria",
+      "esterno"
+     ]
+    },
+    "da": {
+     "$ref": "#/$defs/nodo"
+    },
+    "a": {
+     "$ref": "#/$defs/nodo"
+    },
+    "etichetta": {
+     "type": "string"
+    },
+    "prove": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/prova"
+     }
+    }
    },
    "additionalProperties": false
   }
