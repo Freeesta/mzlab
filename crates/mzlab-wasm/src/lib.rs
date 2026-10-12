@@ -359,12 +359,11 @@ impl Engine {
         size: f64,
         read: Function,
         sink: Function,
+        scans: Function, // scans(done, total): scans converted / scans in the file (first done = 0, last done = total)
     ) -> Result<(), JsValue> {
-        let mut out = BlockWriter {
-            sink,
-            buf: Vec::new(),
-        };
-        raw::to_mzml(BlockReader::new(read, size as u64), &mut out, name)
+        let mut out = BlockWriter { sink, buf: Vec::new() };
+        let mut on_scan = |d: u32, t: u32| drop(scans.call2(&JsValue::NULL, &d.into(), &t.into()));
+        raw::to_mzml_progress(BlockReader::new(read, size as u64), &mut out, name, &mut on_scan)
             .map_err(|e| error_json(&e))?;
         out.flush().map_err(|_| {
             error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))

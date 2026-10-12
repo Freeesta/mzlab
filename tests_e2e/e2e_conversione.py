@@ -1,4 +1,4 @@
-"""Conversion of .raw files with a simulated engine: the progress panel (file i of n, phase, progressbar), time filled from the .raw name, downloads of the mzML."""
+"""Conversion of .raw files with a simulated engine: the progress panel (file i of n, phases 1/3 and 2/3 in order, progressbar and total bar that move, heartbeat after 2 s, cancel), time filled from the .raw name, downloads of the mzML."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import write_full
@@ -13,16 +13,19 @@ D = Path("/tmp/wd_conv_files"); D.mkdir(parents=True, exist_ok=True)
 write_full(D / "x.mzML", 0, seed=3); XML = (D / "x.mzML").read_text(encoding="utf-8")
 write_full(D / "dup.mzML", 0, seed=4); (D / "dup.raw").write_bytes(b"RAW" * 10)
 for n in ("irr_t5.raw", "irr_t10.raw"): (D / n).write_bytes(b"RAW" * 10)
-FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp) => {
+FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp, signal) => {
   const xml = %s;
+  const wait = () => new Promise((r, j) => { window.__go = r; if (signal) signal.addEventListener('abort', () => j(Object.assign(new Error('cancelled'), { cancelled: true })), { once: true }); });
   window.__log = (window.__log || []).concat([f.name]);
-  onp({ total: 100, read: 0, written: 0 });
-  await new Promise(r => { window.__go = r; });
-  onp({ total: 100, read: 40, written: 5000 });
-  await new Promise(r => { window.__go = r; });
-  onp({ total: 100, read: 100, written: 9000 });
+  onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: null });      // the container is open (its tail was read: read = total) but no scan has been converted
+  await wait();
+  onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: 10 });
+  await wait();
+  onp({ total: 100, read: 100, written: 5000, scans: 4, scansTotal: 10 });
+  await wait();
+  onp({ total: 100, read: 100, written: 9000, scans: 10, scansTotal: 10 });
   onp({ total: 1, read: 1, written: 9000, copied: 4500, size: 9000 });
-  await new Promise(r => { window.__go = r; });
+  await wait();
   return new Blob([xml], { type: 'application/xml' });
 } });""" % json.dumps(XML)
 r = Run(port=8924, wd="/tmp/wd_conv")
@@ -35,21 +38,33 @@ try:
         pg.add_init_script(FAKE)
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         pg.set_input_files("#pick", [str(D / "irr_t5.raw"), str(D / "irr_t10.raw")])
+        def go(): pg.evaluate("window.__go(); window.__go=null"); 
         def progress():
             pg.wait_for_selector(".convprog"); pg.wait_for_function("!!window.__go")
-            assert "1 di 2: irr_t5.raw" in pg.inner_text(".convprog"), pg.inner_text(".convprog")
-            assert pg.get_attribute(".convprog [role=progressbar]", "aria-valuenow") == "0"
-            pg.evaluate("window.__go(); window.__go=null"); pg.wait_for_function("!!window.__go")
             t = pg.inner_text(".convprog")
-            assert "conversione in mzML" in t and "40%" in t and "MB" in t, t
-            assert pg.get_attribute(".convprog [role=progressbar]", "aria-valuenow") == "40"
-            pg.evaluate("window.__go(); window.__go=null"); pg.wait_for_function("!!window.__go")
-            assert "scrittura" in pg.inner_text(".convprog") and pg.get_attribute(".convprog [role=progressbar]", "aria-valuenow") == "50"
-            pg.evaluate("window.__go(); window.__go=null")
-        step("the panel says 1 di 2, the phase, the percent and the bar moves", progress)
+            assert "File 1 di 2: irr_t5.raw" in t and "1/3 Lettura" in t and "2/3" not in t, t       # read = total at once, yet still phase 1: the percent comes from the scans
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") is None
+            go(); pg.wait_for_function("!!window.__go")
+            t = pg.inner_text(".convprog")
+            assert "2/3 Conversione in mzML" in t and "0%" in t and "0 di 10 scansioni" in t, t
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "0"
+            go(); pg.wait_for_function("!!window.__go")
+            t = pg.inner_text(".convprog")
+            assert "40%" in t and "4 di 10 scansioni" in t and "MB scritti" in t and "trascorso" in t, t
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "40"
+            assert pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow") == "20", pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow")      # 0.4 of the first of two files of the same size
+            assert pg.locator(".cp-spin").count() == 0
+            pg.wait_for_function("document.querySelector('.cp-beat') && document.querySelector('.cp-beat').textContent.includes('Sto ancora convertendo')", timeout=8000)    # no news for 2 s: still working
+            assert pg.locator(".cp-spin").count() == 1 and pg.get_attribute("[data-r=beat]", "aria-live") == "polite"
+            go(); pg.wait_for_function("!!window.__go")
+            assert pg.get_attribute(".convprog [data-r=bar]", "aria-valuenow") == "50"      # the hand-over of the mzML
+            assert pg.locator(".cp-spin").count() == 0
+            go()
+        step("the panel says File 1 di 2, the phases in order, the real percent, the total bar and the heartbeat", progress)
         def second():
             pg.wait_for_function("document.querySelector('.convprog b') && document.querySelector('.convprog b').textContent.includes('2 di 2')")
-            for _ in range(3): pg.wait_for_function("!!window.__go"); pg.evaluate("window.__go(); window.__go=null")
+            pg.wait_for_function("!!window.__go"); assert pg.get_attribute(".convprog [data-r=tot]", "aria-valuenow") == "50"      # the first file is done
+            for _ in range(4): pg.wait_for_function("!!window.__go"); pg.evaluate("window.__go(); window.__go=null")
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=2", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('.convprog').length") == 0
         step("the second file follows and the panel goes away", second)
@@ -75,11 +90,21 @@ try:
         step("the file list has the buttons too", opened)
         def same_base():
             pg.set_input_files("#pick", [str(D / "dup.raw"), str(D / "dup.mzML")])
-            for _ in range(3): pg.wait_for_function("!!window.__go", timeout=60000); pg.evaluate("window.__go(); window.__go=null")
+            for _ in range(4): pg.wait_for_function("!!window.__go", timeout=60000); pg.evaluate("window.__go(); window.__go=null")
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=60000)
             names = pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0])")
             assert "dup.mzML" in names and "dup.raw.mzML" in names, names
         step("a .raw and an mzML with the same base name are both listed", same_base)
+        def cancel():
+            for n in ("c1.raw", "c2.raw"): (D / n).write_bytes(b"RAW" * 10)
+            pg.evaluate("window.__log=[]")
+            pg.set_input_files("#pick", [str(D / "c1.raw"), str(D / "c2.raw")])
+            pg.wait_for_selector(".convprog [data-r=cancel]", state="attached"); pg.wait_for_function("!!window.__go")
+            pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")      # the panel is on the loading screen, which the viewer hides
+            pg.wait_for_function("document.querySelectorAll('.convprog').length==0", timeout=10000)
+            assert pg.evaluate("window.__log") == ["c1.raw"], pg.evaluate("window.__log")      # the second .raw was not started
+            assert "annullata" in pg.evaluate("document.getElementById('up').textContent")
+        step("Annulla stops the conversion and leaves the other .raw out", cancel)
 finally:
     r.close()
 for s in steps: print(s)
