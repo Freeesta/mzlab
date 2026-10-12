@@ -982,6 +982,7 @@ I18N.add("en", {
   "int.xlsx.tail": "USP tailing (5%)",
   "spec.isMrm": "This file is MRM: it contains only transition chromatograms, no spectra.",
   "spec.pickRange": "Click or drag on the chromatogram to choose the time interval, or use ← → after placing the cursor.",
+  "spec.noPrec": "None of the files shown has the precursor m/z {v}: choose another precursor or file.",
   "spec.noScan": "No scan in this interval (for MS2: choose the precursor and the right level).",
   "axis.relPct": "Relative intensity (%)",
   "tip.peak": "<b>m/z {mz}</b><div>intensity <b>{y}</b>{abs}</div>",
