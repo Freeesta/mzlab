@@ -127,9 +127,6 @@ fn rust_routes_match_python() {
                     Some(mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head).unwrap_or_else(|e| panic!("{what}: {e}")))
                 }
             } else if matches!(path, "/api/method" | "/api/delay" | "/api/analog") || q.get("kind").is_some_and(|k| k == "pda") {
-                if r["body"].get("scan_params").is_some() {
-                    continue; // high resolution: Python's
-                }
                 item_answer(&mut routes, line, path, q, r, &what)
             } else if path == "/api/scaninfo" {
                 let sid = q["sid"].as_str().unwrap().parse().unwrap();

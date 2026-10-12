@@ -28,7 +28,7 @@ fn median(v: &mut [f64]) -> f64 {
 }
 
 /// The value of the first `<cvParam accession="acc" ... value="...">` of a scan header (`_cv` of `reader/mzml.py`).
-fn cv_value(h: &str, acc: &str) -> Option<String> {
+pub(crate) fn cv_value(h: &str, acc: &str) -> Option<String> {
     let key = format!("accession=\"{acc}\"");
     let mut from = 0;
     while let Some(p) = h[from..].find(&key) {
@@ -132,7 +132,9 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     for (i, c) in chroms.iter().filter(|c| c.kind == "srm").enumerate() {
         o.raw(if i > 0 { ",{\"q1\":" } else { "{\"q1\":" }).opt(c.q1).raw(",\"q3\":").opt(c.q3).raw(",\"ce\":").opt(c.ce).raw(",\"name\":").str(&c.name).raw(",\"dwell\":").opt(c.dwell).raw("}");
     }
-    o.raw("]}");
+    o.raw("]");
+    crate::scanparams::write(idx, &mut m.r, &md.instrument, &mut o)?;
+    o.raw("}");
     Ok(o.0)
 }
 
