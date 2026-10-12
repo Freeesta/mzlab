@@ -677,7 +677,7 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
   return out}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
-async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
   if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=stem.toLowerCase(),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
@@ -690,12 +690,17 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
     try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>{const j={e,n,several:s.length>1};j.nm=wiffName(e.stem,n,j.several,taken);taken.push(j.nm);jobs.push(j);CONVROWS.add(j.nm,"wait")})}
     catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
     CONVROWS.drop(e.row)}
-  const g=ConvUI.group(box,jobs.map(j=>j.e.scan.size));let i=0;
-  for(const j of jobs){if(g.signal.aborted){CONVROWS.drop(j.nm);continue}      // cancelled: the samples still to convert are left out
-    const ui=g.start(++i,j.nm);CONVROWS.set(j.nm,"run",0);
-    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{ui.update(p);CONVROWS.set(j.nm,"run",convPercent(p))});CONV.add(j.nm,blob);res.files.push(new File([blob],j.nm));ui.done();CONVROWS.set(j.nm,"conv")}
-    catch(x){CONVROWS.drop(j.nm);ui.fail(x.json?I18N.err(x.json).message:x.message)}}
-  g.end();
+  // the samples are converted a few at a time by the engine (they all go to it now and queue there); each is handed to `onFile` (the indexing) as soon as it is converted
+  if(!jobs.length)return res;
+  const g=ConvUI.group(box,[1]),ui=g.start(1,""),part=j=>j.e.scan.size/Math.max(1,jobs.filter(x=>x.e===j.e).length),all=jobs.reduce((a,j)=>a+part(j),0)||1;let nDone=0;
+  const title=()=>ui.title(T("conv.wiff.batch",{done:nDone,n:jobs.length})),total=()=>{let f=0,w=0;for(const j of jobs){f+=part(j)*(j.fr||0);w+=j.written||0}return{scans:Math.round(1000*f/all),scansTotal:1000,written:w,several:true}};
+  title();g.signal.addEventListener("abort",()=>jobs.forEach(j=>{if(!j.over)rb.cancelWiff(j.nm)}));
+  await Promise.all(jobs.map(async j=>{
+    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{j.fr=convFraction(p);j.written=p.written;ui.update(total());CONVROWS.set(j.nm,"run",convPercent(p))},j.nm);
+      j.over=true;j.fr=1;nDone++;title();ui.update(total());CONV.add(j.nm,blob);const f=new File([blob],j.nm);CONVROWS.set(j.nm,"conv");if(onFile)onFile(f);else res.files.push(f)}
+    catch(x){j.over=true;CONVROWS.drop(j.nm);if(!x.cancelled){const d=document.createElement("div");d.className="fail";d.textContent=j.nm+": "+(x.json?I18N.err(x.json).message:x.message);box.appendChild(d)}}}));
+  ui.done();g.end();
+  if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=T("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
@@ -734,10 +739,8 @@ function reportLoad(rep){
     if(CONVERT_RAW)$("#convdesk").hidden=false}
   else if(needHelp&&CONVERT_RAW)$("#convhelp").hidden=false}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidden&&$("#unopen").contains(document.activeElement)){e.preventDefault();closeUnopen()}});
-async function upload(files,into){const box=$("#up");fail();const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
-  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
-  if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
+async function upload(files,into){const box=$("#up");fail();
+  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
@@ -746,8 +749,12 @@ async function upload(files,into){const box=$("#up");fail();const wr=await wiffT
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}};
+  const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
+  const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
+  if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  reportLoad(rep)}
+  await Promise.all(early);reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};

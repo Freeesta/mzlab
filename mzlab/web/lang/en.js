@@ -376,6 +376,7 @@ I18N.add("en", {
   "conv.cancel": "Cancel",
   "conv.cancel.title": "Cancel the conversion of the .raw files",
   "conv.cancelling": "Cancelling…",
+  "conv.wiff.batch": "Samples converted: {done} of {n}",
   "conv.row.group": "Converting",
   "conv.row.open": "Reading the file…",
   "conv.row.wait": "Queued",

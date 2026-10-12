@@ -73,6 +73,9 @@ try:
             pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
             assert pg.locator("#flist tr[aria-busy=true]").count() == 0
         step("a row of the list shows its state and a bar that moves", rows_progress)
+        def pool_converts():                             # the samples are converted by short-lived workers (wiff-worker.js), not by the engine's own thread
+            assert any(u.endswith("wiff-worker.js") for u in reqs), [u for u in reqs if "worker" in u]
+        step("the conversion runs in the pool of workers", pool_converts)
         def downloads():
             assert pg.locator("#flist [data-dl]").count() == 4 and pg.locator("#dlall").count() == 1
         step("the converted mzML can be saved", downloads)

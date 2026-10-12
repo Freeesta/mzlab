@@ -3,6 +3,7 @@
 
 use std::io::Write;
 
+use super::window::Window;
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -77,6 +78,11 @@ impl Wiff {
 
     /// Writes the sample as mzML (`name`: the `.wiff`), one spectrum at a time; the `.wiff.scan` is read block by block.
     pub fn to_mzml<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str) -> Result<()> {
+        self.to_mzml_progress(scan, out, name, &mut |_, _| {})
+    }
+
+    /// As `to_mzml`; `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
+    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
         let header = Header {
             run: name.trim_end_matches(".wiff").to_string(),
             sources: vec![name.to_string(), format!("{name}.scan")],
@@ -87,12 +93,23 @@ impl Wiff {
                 .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
         };
+        let mut scan = Window::new(scan, self.scan_len);
         let mut w = MzmlWriter::new(out, &header)?;
-        let count = self.spectrum_count(scan)?;
+        let count = self.spectrum_count(&mut scan)?;
         if count > 0 {
             w.open_spectra(count)?;
         }
-        let chroms = self.visit(scan, &mut |s| w.spectrum(&s))?;
+        let mut done = 0;
+        progress(0, count);
+        let chroms = self.visit(&mut scan, &mut |s| {
+            w.spectrum(&s)?;
+            done += 1;
+            if done % 32 == 0 {
+                progress(done, count);
+            }
+            Ok(())
+        })?;
+        progress(count, count);
         if count > 0 {
             w.close_spectra()?;
         }
