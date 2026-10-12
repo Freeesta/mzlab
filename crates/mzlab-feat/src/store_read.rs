@@ -7,6 +7,7 @@ use mzlab_core::json::{parse, Value};
 use crate::store::{bad, ALIGN, MAGIC, PIECE};
 use crate::facts::FileFacts;
 use crate::store::Origin;
+use crate::tp::TpBlock;
 use crate::table::{Aligned, FileFeatures, RowIdent, RowMeta};
 
 /// Bytes in memory as a `ReadAt`.
@@ -200,6 +201,7 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         } else {
             RowMeta::default()
         },
+        tp: o.tp(r, size)?,
         ident: if o.meta.get("identity").and_then(|v| v.f64()) == Some(1.0) {
             RowIdent {
                 neutral: o.col(r, size, "neutral", "f64", rows, f64::from_le_bytes)?,
@@ -259,6 +261,13 @@ impl Opened {
             }
         }
         Ok(())
+    }
+
+    /// The block `tp/1` when the meta has it.
+    fn tp<R: ReadAt>(&self, r: &mut R, size: u64) -> Result<TpBlock> {
+        let Some(m) = self.meta.get("tp") else { return Ok(TpBlock::default()) };
+        let mut col = |name: &str| self.col(r, size, name, "u8", None, |b: [u8; 1]| b[0]);
+        Ok(TpBlock { status: col("tp_status")?, notes: col("tp_notes")?, via: col("tp_via")?, kinship: col("tp_kinship")?, ..TpBlock::from_meta(m) })
     }
 
     /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).

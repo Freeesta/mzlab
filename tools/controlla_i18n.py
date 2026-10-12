@@ -155,6 +155,22 @@ def used_keys(catalog_keys: set[str] = frozenset()) -> tuple[dict[str, set[str]]
     return keys, prefixes
 
 
+# ---------------------------------------------------------------- placeholders that nobody fills
+T_NOPARAM = re.compile(r"""(?<![\w$.])(?:I18N\.)?t\(\s*(["'`])([A-Za-z][\w]*(?:\.[\w]+)+)\1\s*\)""")
+
+
+def check_paramless_calls(it: dict, errs: list) -> None:
+    """`t("key")` with no parameters on a message that has {placeholders} other than {app} would show the braces to the user ({app} is filled in by i18n.js)."""
+    for p in source_files((".js", ".html")):
+        rel = p.relative_to(ROOT).as_posix()
+        for m in T_NOPARAM.finditer(p.read_text(encoding="utf-8", errors="replace")):
+            key = m.group(2)
+            if key in it:
+                names = {a for a, _ in icu_signature(it[key])[0]} - {"app"}
+                if names:
+                    errs.append(f"{rel}: t(\"{key}\") without parameters but the message needs {sorted(names)}")
+
+
 # ---------------------------------------------------------------- static HTML = it.js
 class _Static(HTMLParser):
     """Collects (key, attribute or None, text) for each element with data-i18n*."""
@@ -406,6 +422,7 @@ def run(listing: bool = False) -> list[str]:
     for k in sorted(set(it) | set(en)):
         if k not in used and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
+    check_paramless_calls(it, errs)
     check_static_html(it, errs)
     check_italian(errs, listing)
     check_glossary(it, en, errs)
