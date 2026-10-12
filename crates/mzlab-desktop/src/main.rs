@@ -365,6 +365,10 @@ fn main() {
                     .state::<Arc<State>>()
                     .set_index_folder(cache.join("mzidx"));
             }
+            // the list of the files, the notebook and the files the app makes itself: the data folder of the app
+            if let Ok(d) = data_dir(app.handle()) {
+                app.state::<Arc<State>>().set_data_folder(d.join("sessione"));
+            }
             if let Some(dir) = data_dir(app.handle())
                 .ok()
                 .and_then(|d| librerie::read_config(&d).cartella)
