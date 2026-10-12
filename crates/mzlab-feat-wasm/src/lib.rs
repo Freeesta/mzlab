@@ -31,6 +31,12 @@ pub fn version() -> String {
     format!("{BRIDGE} feat={}", mzlab_feat::FEAT_VERSION)
 }
 
+/// Version of the crate `mzlab-feat` inside this `.wasm` (`x.y.z`): the page compares it with the one the gate of quality was measured on.
+#[wasm_bindgen]
+pub fn crate_version() -> String {
+    mzlab_feat::CRATE_VERSION.to_string()
+}
+
 /// Bytes of file `k` held by JavaScript: `read(k, offset, length) -> Uint8Array`.
 struct JsReader {
     read: Function,
@@ -90,6 +96,20 @@ pub fn detect_file(
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     run::detect(&mut ix, name, &r).map_err(js_err)
+}
+
+#[cfg(feature = "detect")]
+/// Preview of one file: detection with the numbers of `recipe`, the estimated noise floor, tolerance and peak width with their proofs, the histogram of
+/// the heights and three example traces, as JSON (`mzlab_feat::params::preview_json`). Without `floor` in the recipe the floor is the estimated one.
+#[wasm_bindgen]
+pub fn preview_file(
+    read: Function,
+    size: f64,
+    recipe: &str,
+) -> std::result::Result<String, JsValue> {
+    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    run::preview(&mut ix, &r, run::floor_given(recipe)).map_err(js_err)
 }
 
 #[cfg(feature = "detect")]

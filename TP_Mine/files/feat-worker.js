@@ -6,7 +6,7 @@
 // One worker = one file at a time (detection) or one series (alignment, hypotheses, proofs: sequential, in the same worker); at most min(cores - 1, 4) workers (2 on iPad);
 // 256 MB of WebAssembly memory each (.cargo/config.toml). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
 // and the page is told (`notify`); a second death rejects the job. The OPFS files written here have the name of a finished file only when complete (written as `.part`).
-// Messages of the worker: { op, id, ... } -> { id, ok: true, ...result } | { id, error: { key, params, text }, fatal }. Errors of the .wasm are JSON { error_key, params }.
+// Messages of the worker: { op, id, ... } -> { id, ok: true, ...result } | { id, error: { key, params, text }, fatal }. Errors of the .wasm are JSON { error_key, params } (a recipe the engine refuses is "error.badRecipe").
 
 const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
 
@@ -45,7 +45,8 @@ function createCore(opts) {
   async function ensure(slot, which) {          // load the .wasm of `which` in the worker once
     if (slot.loaded.has(which)) return;
     const m = wasm[which];
-    await call(slot, { op: "init", which, jsUrl: m.jsUrl, wasmUrl: m.wasmUrl, sha256: m.sha256 || "" });
+    const r = await call(slot, { op: "init", which, jsUrl: m.jsUrl, wasmUrl: m.wasmUrl, sha256: m.sha256 || "" });
+    slot.crate = r.crate || slot.crate;
     slot.loaded.add(which);
   }
   function kill(slot) { slot.dead = true; slots.delete(slot); try { slot.w.terminate(); } catch (_) { /* gone */ } }
@@ -81,6 +82,23 @@ function createCore(opts) {
   return { st, slots, queue, spawn, call, submit, kill, copy };
 }
 
+// crateVersion(): the version of the crate mzlab-feat inside the .wasm (compared with cancello.json); preview(file, recipe): the estimates with their proofs, the histograms and three XIC
+// of one file (JSON of mzlab_feat::params::preview_json); `recipe` may carry the 6 numbers of the panel.
+function previewOps(submit, call, opts) {
+  return {
+    crateVersion() { return submit(async (slot, load) => { await load("feat"); return slot.crate; }); },
+    preview(file, recipe) {
+      return submit(async (slot, load) => {
+        await load("feat");
+        const t0 = performance.now();
+        const r = await call(slot, { op: "preview", path: file.path, recipe });
+        if (opts.onProgress) opts.onProgress({ phase: "preview", name: file.name, done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
+        return { ...JSON.parse(r.json), ms: Math.round(performance.now() - t0), crate: slot.crate };
+      });
+    },
+  };
+}
+
 export function createFeatPool(opts) {
   const { st, slots, queue, spawn, call, submit, kill, copy } = createCore(opts);
 
@@ -97,6 +115,7 @@ export function createFeatPool(opts) {
         return r.bytes;
       })));
     },
+    ...previewOps(submit, call, opts),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -198,10 +217,14 @@ const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, tran
 const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 
 const OPS = {
-  async init(m) { await init(m); return { version: mods[m.which].version() }; },
+  async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async detect(m) {
     const f = await openAll([m.path]);
     try { const bytes = mods.feat.detect_file(f.read, f.sizes[0], m.name, m.recipe); return { bytes }; } finally { f.close(); }
+  },
+  async preview(m) {
+    const f = await openAll([m.path]);
+    try { return { json: mods.feat.preview_file(f.read, f.sizes[0], m.recipe || "") }; } finally { f.close(); }
   },
   async align(m) {
     const f = await openAll(m.paths);

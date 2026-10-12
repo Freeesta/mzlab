@@ -95,7 +95,7 @@ def pack_mzfinder(static: Path) -> None:
     dst.mkdir()
     js = [f.name for f in sorted((src / "js").glob("*.js"))]
     files = [f.name for f in sorted((src / "files").glob("*"))] if (src / "files").is_dir() else []
-    data = [f.name for f in sorted((src / "data").glob("*.csv"))] if (src / "data").is_dir() else []      # curated lists, read by the scripts through QTOOLS.ctx.files
+    data = [f.name for f in sorted((src / "data").iterdir()) if f.suffix == ".csv" or f.name == "cancello.json"] if (src / "data").is_dir() else []      # curated lists and the gate of quality, read by the scripts through QTOOLS.ctx.files
     for n in data:
         shutil.copy2(src / "data" / n, dst / n)
     for n in js:

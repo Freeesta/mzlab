@@ -136,7 +136,8 @@ KEY_LITERAL = re.compile(r"""["'`]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)["'`]"""
 def used_keys(catalog_keys: set[str] = frozenset()) -> tuple[dict[str, set[str]], set[str]]:
     keys: dict[str, set[str]] = {}
     prefixes: set[str] = set()
-    for p in source_files((".js", ".html", ".py")):
+    extra = sorted((ROOT / "TP_Mine" / "js").glob("*.js")) + sorted((ROOT / "TP_Mine" / "files").glob("*.js"))      # mzFinder shows the messages of its worker through the catalogs
+    for p in source_files((".js", ".html", ".py")) + extra:
         rel = p.relative_to(ROOT).as_posix()
         text = p.read_text(encoding="utf-8", errors="replace")
         found = set()

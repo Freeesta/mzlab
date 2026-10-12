@@ -46,6 +46,9 @@ pub fn align_and_fill<R: ReadAt>(
     let map = map.ok().then_some(&map);
     let mut filled = 0;
     for k in 0..files.len() {
+        if !r.fill_gaps {
+            break;
+        }
         let mut index = open(k)?;
         filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
     }
