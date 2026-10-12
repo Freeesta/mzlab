@@ -3154,5 +3154,6 @@ I18N.add("it", {
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
   "error.badRecipe": "I parametri della pipeline non sono validi.",
-  "logo.gold.live": "Il logo è diventato dorato"
+  "logo.gold.live": "Il logo è diventato dorato",
+  "logo.normal.live": "Il logo è tornato normale"
 });
