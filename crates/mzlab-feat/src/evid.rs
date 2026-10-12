@@ -176,6 +176,9 @@ pub const R_KINETICS_INFO: &str = "EV_KINETICS_INFO";
 pub const R_UNDETERMINED_EDGE: &str = "EV_UNDETERMINED_EDGE";
 /// The row has peaks only where the gap filling put them: no file with a detected peak.
 pub const R_ONLY_FILLED: &str = "EV_ONLY_FILLED";
+/// The only proof in favour is the frequency (how many files show the peak): that proves nothing about the identity, so the total is 0 and the
+/// identity is discarded.
+pub const R_ONLY_FREQUENCY: &str = "EV_ONLY_FREQUENCY";
 pub const WEAK_PURITY: f64 = 0.5;
 
 /// What the interface shows for a candidate: the column of the contributions (always), the total, the number of proofs against, N, 1/N and the reasons.
@@ -268,15 +271,24 @@ fn reasons_of(rows: &[Evidence], against: usize, n: usize, table: &PointsTable) 
 }
 
 /// The contributions of a candidate: rows in the order of the types (stable inside a type), total = points of the proofs "for" (never reduced by the
-/// others), proofs against counted apart.
+/// others; 0 when the only one is the frequency), proofs against counted apart.
 pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Breakdown {
     rows.sort_by_key(|e| e.kind);
-    let total = rows
-        .iter()
-        .filter(|e| e.sign == Sign::For)
-        .fold(0.0, |s, e| s + e.points.max(0.0));
+    let points = |skip_frequency: bool| {
+        rows.iter()
+            .filter(|e| e.sign == Sign::For && !(skip_frequency && e.kind == Kind::Frequency))
+            .fold(0.0, |s, e| s + e.points.max(0.0))
+    };
+    let only_frequency = points(true) <= 0.0 && points(false) > 0.0;
+    let total = if only_frequency { 0.0 } else { points(false) };
     let against = rows.iter().filter(|e| e.sign == Sign::Against).count();
-    let reasons = reasons_of(&rows, against, n, table);
+    let mut reasons = reasons_of(&rows, against, n, table);
+    if only_frequency {
+        reasons.push(Reason {
+            code: R_ONLY_FREQUENCY,
+            numbers: vec![],
+        });
+    }
     Breakdown {
         rows,
         total,

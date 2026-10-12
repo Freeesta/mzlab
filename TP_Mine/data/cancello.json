@@ -12,13 +12,13 @@
    "id": "timololo_tp_nei_candidati",
    "ok": false,
    "soglia": 19,
-   "valore": 17
+   "valore": 12
   },
   {
    "id": "timololo_candidati",
-   "ok": false,
+   "ok": true,
    "soglia": 494,
-   "valore": 3094
+   "valore": 132
   },
   {
    "id": "timololo_gruppi",
@@ -102,7 +102,7 @@
    "id": "sintetici_cinetica_forma",
    "ok": true,
    "soglia": 0.9,
-   "valore": 0.9421
+   "valore": 0.9368
   },
   {
    "id": "sintetici_cinetica_generazione",
