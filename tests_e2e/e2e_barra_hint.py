@@ -35,7 +35,7 @@ with sync_playwright() as p:
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert vis(pg) is None
             assert pg.evaluate("BARRA.commands.every(c=>c.id!=='hint')"), "no palette command for the hint"
             pg.evaluate("BARRA.hintShow()"); pg.wait_for_timeout(500); assert vis(pg), "hintShow did not reopen it"
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(500); assert vis(pg) is None      # first tool closes it
+            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(500); assert vis(pg) is None      # first tool closes it
         finally: ctx.close(); r.close()
     step("Esc closes, hintShow reopens (no palette command), first tool closes", esc_tool)
     def with_tour():

@@ -44,6 +44,7 @@ try:
             if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
         step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), pg.wait_for_timeout(800)))
         def fold():
+            if pg.is_visible("#dfiles"): pg.click("#sb-x"); pg.wait_for_timeout(600)      # open at first start
             w0 = pg.evaluate("E.panels[0].w"); drawer(pg); pg.wait_for_timeout(600)
             w1 = pg.evaluate("E.panels[0].w"); assert w1 < w0 - 150 and pg.is_visible("#dfiles"), (w0, w1)         # pinned next to the charts: they narrow
             pg.screenshot(path=SH + "61_folded.png")
