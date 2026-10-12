@@ -81,3 +81,69 @@ def scrivi(out: Path, golden: Path | None) -> int:
             golden.mkdir(parents=True, exist_ok=True)
             (golden / nome).write_text(txt, encoding="utf-8")
     return len(pr)
+
+
+# ---------------------------------------------------------------------------------------------------------------- V1 series with known kinetics
+SIGMA_ADD, SIGMA_REL, PSEUDO = 3e5, 0.10, 1e6        # additive noise (area), relative noise, "3 x the noise" of reference_difference
+
+
+def _rumoroso(rng, v):
+    v = np.asarray(v, float)
+    return np.clip(v * (1 + rng.normal(0, SIGMA_REL, v.shape)) + rng.normal(0, SIGMA_ADD, v.shape), 0, None)
+
+
+def _esca_casuale(rng, t, n: int) -> list[dict]:
+    """Decoys that mimic a product: formation 1 - exp(-k t) with k drawn at random (log-uniform) with no relation to the parent."""
+    out = []
+    for i in range(n):
+        k = float(np.exp(rng.uniform(np.log(0.003), np.log(3.0))))
+        out.append({"id": f"DEC-{i:03d}", "ruolo": "esca_casuale", "forma": "monotona", "generazione": 1, "k_form": k, "true": (1e7 * (1 - np.exp(-k * t)) * rng.uniform(0.8, 3.0))})
+    return out
+
+
+def _accoppiato(si, rng, o, t, kd_padre: float) -> dict:
+    """The same product with the formation rate of a direct route: k_form = the decay rate of the parent (15 % scatter), the same amplitude."""
+    kf = float(kd_padre * np.exp(rng.normal(0, 0.15)))
+    p = {"kf": kf} if o.forma == "monotona" else {"kf": kf, "kd": o.k_dec}
+    old = np.asarray(o.amp[-len(t):], float)
+    scale = old.max() / max(float(si.curva(o.forma, t, {"kf": o.k_form, "kd": o.k_dec} if o.forma == "bateman" else {"kf": o.k_form}).max()), 1e-12)
+    return {"id": o.id, "ruolo": o.ruolo, "forma": o.forma, "generazione": 1, "k_form": kf, "true": scale * si.curva(o.forma, t, p)}
+
+
+def serie_v1(seme: int = 7, n_casuali: int = 200) -> dict:
+    """Areas per file of the true products, the isomers, the second generation, the noise coincidences and random-kinetics decoys of the 'completo'
+    profile of `tools/valida/sintetici_identita.py`, with noise; the parent saturated and its isotopic series (not clipped)."""
+    from valida import sintetici_identita as si
+    c = si.costruisci(seme, "completo")
+    rng = np.random.default_rng(seme + 100)
+    k0 = 2                                              # files: blank, dark, t0, then the treated ones
+    t = c.tempi[k0:]
+    padre = next(o for o in c.ioni if o.ruolo == "progenitore")
+    yp = np.minimum(padre.amp, padre.clip)
+    ions = []
+    for o in c.ioni:
+        if o.ruolo in ("tp1", "tp2", "isomero"):
+            ions.append({"id": o.id, "ruolo": o.ruolo, "forma": o.forma, "generazione": o.generazione, "k_form": o.k_form, "k_dec": o.k_dec, "true": o.amp[k0:]})
+        elif o.ruolo == "coincidenza":
+            ions.append({"id": o.id, "ruolo": o.ruolo, "forma": "rumore", "generazione": None, "true": np.full(len(c.tempi) - k0, float(rng.lognormal(np.log(6e5), 0.5)))})
+    acc = [_accoppiato(si, rng, o, t, padre.k_dec) for o in c.ioni if o.ruolo in ("tp1", "isomero") and o.forma in ("monotona", "bateman")]
+    ions += _esca_casuale(rng, t, n_casuali)
+    for d in ions:
+        full = np.concatenate([[0.0, 0.0], np.asarray(d["true"], float)]) if d["ruolo"] == "esca_casuale" else None
+        d["y"] = _rumoroso(rng, d.pop("true")).tolist()
+        d["ctrl"] = _rumoroso(rng, np.zeros(2) if full is not None or d["forma"] != "decrescente" else np.full(2, d["y"][0])).tolist()
+    for d in acc:
+        d["y"] = _rumoroso(rng, d.pop("true")).tolist()
+        d["ctrl"] = _rumoroso(rng, np.zeros(2)).tolist()
+    return {"times": t.tolist(), "pseudo": PSEUDO, "ions_coupled": acc, "t_sat": c.P["t_sat"], "parent": {"k_dec": padre.k_dec, "y": _rumoroso(rng, yp[k0:]).tolist(),
+            "y_isotope": _rumoroso(rng, 0.2 * padre.amp[k0:]).tolist()}, "ions": ions}
+
+
+def scrivi_v1(out: Path, golden: Path | None) -> int:
+    doc = serie_v1()
+    txt = json.dumps(doc, separators=(",", ":"))
+    (out / "cinetica_v1.json").write_text(txt, encoding="utf-8")
+    if golden is not None:
+        golden.mkdir(parents=True, exist_ok=True)
+        (golden / "cinetica_v1.json").write_text(txt, encoding="utf-8")
+    return len(doc["ions"])

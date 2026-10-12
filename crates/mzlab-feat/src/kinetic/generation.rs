@@ -33,7 +33,7 @@ pub struct Generation {
     pub rates_second: [f64; 3],
 }
 
-/// Curves of the chain with three rates (parent rate >= `k_parent_min`) on a fixed vector of times: about 12 000 matrix exponentials, built once.
+/// Curves of the chain with three rates (parent rate >= `k_parent_min`) on a fixed vector of times: about 3 700 matrix exponentials, built once.
 pub struct ChainBank {
     bank: Bank,
 }
@@ -42,14 +42,14 @@ impl ChainBank {
     pub fn new(times: &[f64], k_parent_min: f64) -> ChainBank {
         let g = grid();
         let mut rows = Vec::new();
-        for &a in g.iter().filter(|&&k| k >= k_parent_min) {
-            for &b in &g {
-                for &c in &g {
-                    rows.push(Row {
-                        group: 0,
-                        p: [a, b, c],
-                    });
-                }
+        // the curve is symmetric in the three rates (up to a factor that the normalisation removes): ascending triples whose largest rate is
+        // >= `k_parent_min` (the parent's decay)
+        for (i, &a) in g.iter().enumerate() {
+            for (j, &b) in g.iter().enumerate().skip(i) {
+                rows.extend(g[j..].iter().filter(|&&c| c >= k_parent_min).map(|&c| Row {
+                    group: 0,
+                    p: [a, b, c],
+                }));
             }
         }
         let t = times.to_vec();

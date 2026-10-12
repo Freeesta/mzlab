@@ -69,14 +69,23 @@ impl Bank {
     /// For every group the row with the smallest sum of squares on `cols` (first on ties, like `np.argmin`); the scale is solved in closed form.
     pub fn fit_groups(&self, cols: &[usize], yt: &[f64], groups: usize) -> Vec<Option<Hit>> {
         let yy: f64 = yt.iter().map(|v| v * v).sum();
+        let whole = cols.len() == self.t && cols.iter().enumerate().all(|(k, &j)| k == j);
         let mut best: Vec<Option<Hit>> = vec![None; groups];
         for (i, r) in self.rows.iter().enumerate() {
             let s = &self.s[i * self.t..(i + 1) * self.t];
             let (mut smax, mut ss, mut sy) = (0.0f64, 0.0f64, 0.0f64);
-            for (k, &j) in cols.iter().enumerate() {
-                smax = smax.max(s[j]);
-                ss += s[j] * s[j];
-                sy += s[j] * yt[k];
+            if whole {
+                for (&v, &w) in s.iter().zip(yt) {
+                    smax = smax.max(v);
+                    ss += v * v;
+                    sy += v * w;
+                }
+            } else {
+                for (k, &j) in cols.iter().enumerate() {
+                    smax = smax.max(s[j]);
+                    ss += s[j] * s[j];
+                    sy += s[j] * yt[k];
+                }
             }
             let hit = if smax > 0.0 {
                 let gg = (ss / (smax * smax)).max(1e-300);
