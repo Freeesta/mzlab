@@ -174,8 +174,8 @@ def nativo_contro_wasm(idx: list[str], parent: tuple, cartella: Path, prima: nat
 
 
 # ---------------------------------------------------------------------------------------------------------------- the whole measure
-def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | None = None):
-    """Runs the native pipeline on a real series (the parent is the one of the truth) and measures it. Returns (criteria, details)."""
+def esegui_reale(cartella: Path, ioni: list[dict], lavoro: Path):
+    """Runs the native pipeline on a real series (the parent is the one of the truth). Returns (serie of files, run, columns of the treated samples)."""
     from . import tabelle
     serie = tabelle.trova_serie(cartella)
     file_ = {x["nome"]: Path(cartella) / (x["nome"] + ".mzML") for x in serie}
@@ -184,6 +184,12 @@ def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | No
     padre = next(x for x in ioni if x.get("parent"))
     run = nativo.esegui(idx, nativo.neutra_da_ione(padre["ion"]), padre["mz"], (padre["rt_obs"] or [None])[0], lavoro / "nativo")
     trattate = [k for k, x in enumerate(serie) if x["time"] and x["time"] > 0 and x["type"] == "sample"]
+    return serie, run, trattate
+
+
+def serie_reale(cartella: Path, ioni: list[dict], lavoro: Path, mzmine: str | None = None):
+    """Runs the native pipeline on a real series and measures it. Returns (criteria, details)."""
+    serie, run, trattate = esegui_reale(cartella, ioni, lavoro)
     tp = M.tp_timololo(ioni, run, trattate)
     crit_, det = criteri_timololo(tp), {"timololo": tp, "crate": run.versione_crate}
     if mzmine:
