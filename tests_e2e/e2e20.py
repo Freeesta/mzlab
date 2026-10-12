@@ -7,12 +7,12 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e20.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
-r = Run(port=8820, wd="/tmp/wd20", motore="python")
+r = Run(port=8820, wd="/tmp/wd20")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15", "B_MS2-t45"]])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def cx(x):   # screen point of RT x on the first chromatogram of the current tab
             return pg.evaluate("""x=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='chrom');p.el.scrollIntoView({block:'start'});const r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height*0.4}}""", x)
         order = lambda: pg.evaluate("E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y).map(p=>p.type+(p.link?'*':'')+(p.type==='spec'?'@'+(+((p.r0+p.r1)/2).toFixed(1)):''))")
@@ -30,11 +30,11 @@ try:
             rt = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.rtl').textContent)"); assert all("RT" in t and "min" in t for t in rt), rt      # the time is written once, next to the title
         step("full scan: 3 double clicks -> newest on top and live, older frozen with the RT next to the title", triple)
         def single():
-            before = pg.evaluate("E.panels.filter(p=>p.type==='spec').map(p=>[p.id,p.r0])")
+            before = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab===E.tab).map(p=>[p.id,p.r0])")
             c = cx(11.0); pg.mouse.click(c["px"], c["py"]); pg.wait_for_timeout(900)
-            after = pg.evaluate("E.panels.filter(p=>p.type==='spec').map(p=>[p.id,p.r0])")
+            after = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab===E.tab).map(p=>[p.id,p.r0])")
             ch = [a for a, b in zip(after, before) if a != b]; assert len(ch) == 1, (before, after)
-            live = pg.evaluate("E.panels.find(p=>p.type==='spec'&&p.link).id"); assert ch[0][0] == live
+            live = pg.evaluate("E.panels.find(p=>p.type==='spec'&&p.tab===E.tab&&p.link).id"); assert ch[0][0] == live
         step("single click moves only the live spectrum", single)
         def group():
             pg.click("#np-chrom"); pg.wait_for_timeout(800)

@@ -9,7 +9,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_xic.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("hrxic")
-r = Run(port=8894, wd="/tmp/wdhr5", motore="python")
+r = Run(port=8894, wd="/tmp/wdhr5")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -69,7 +69,7 @@ try:
             assert s["at9"] < 1e4 or s["at12"] < 1e4, s                          # the ppm window is the only way: the two isobars are never in one window
         step("no «Alta risoluzione» switch any more: a high-resolution file is always read in ppm", no_switch)
         def reload():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(7000)
+            saved(pg); pg.reload(); pg.wait_for_function("typeof E!=='undefined'&&E.panels.some(p=>p.type==='xic'&&p.traces&&p.traces.length)", timeout=90000); ready(pg)
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].traces[0]"); print(tr)
             assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6, tr
         step("an ion trace comes back after a reload", reload)

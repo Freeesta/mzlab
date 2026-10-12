@@ -8,7 +8,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_scroll.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.link!=null)"
-r = Run(port=8860, wd="/tmp/wd60", motore="python")
+r = Run(port=8860, wd="/tmp/wd60")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
