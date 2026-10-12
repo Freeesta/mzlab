@@ -92,6 +92,7 @@ impl Wiff {
                 .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
                 .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            ..Default::default()
         };
         let mut scan = Window::new(scan, self.scan_len);
         let mut w = MzmlWriter::new(out, &header)?;

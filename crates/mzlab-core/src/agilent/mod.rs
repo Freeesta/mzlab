@@ -48,6 +48,8 @@ pub struct AgilentD {
     pub metadata: Vec<meta::Item>,
     /// Names of `ScanRec::extra`.
     pub extra_names: Vec<String>,
+    /// SHA-1 (hex) of each file given to `open`, by its path in the folder (`MSPeak.bin` is hashed while converting).
+    pub file_sha1: Vec<(String, String)>,
 }
 
 impl AgilentD {
@@ -76,6 +78,7 @@ impl AgilentD {
             method: f.acqmeth.map(method::parse),
             metadata: metadata(f),
             extra_names: layout.extra_names(),
+            file_sha1: hashes(f),
         })
     }
 
@@ -108,4 +111,67 @@ fn metadata(f: &Files) -> Vec<meta::Item> {
         .collect();
     list.extend(f.others.iter().copied());
     meta::collect(&list)
+}
+
+/// SHA-1 of the files given to `open` (path in the folder, hex).
+fn hashes(f: &Files) -> Vec<(String, String)> {
+    use sha1::{Digest as _, Sha1};
+    let named: [(&str, Option<&[u8]>); 7] = [
+        ("AcqData/MSScan.bin", Some(f.ms_scan)),
+        ("AcqData/MSScan.xsd", f.ms_scan_xsd),
+        ("AcqData/MSTS.xml", f.ms_ts),
+        ("AcqData/Devices.xml", f.devices),
+        ("AcqData/Contents.xml", f.contents),
+        ("AcqData/MSTree2.bin", f.ms_tree),
+        ("acqmeth.txt", f.acqmeth),
+    ];
+    let mut list: Vec<(&str, &[u8])> = named
+        .iter()
+        .filter_map(|(n, b)| b.map(|b| (*n, b)))
+        .collect();
+    list.extend(f.others.iter().copied());
+    list.iter()
+        .map(|(n, b)| {
+            (
+                n.to_string(),
+                Sha1::digest(b).iter().map(|x| format!("{x:02x}")).collect(),
+            )
+        })
+        .collect()
+}
+
+impl AgilentD {
+    /// The value of a field of a side file (`metadata`), by origin and name.
+    pub fn field(&self, origin: &str, name: &str) -> Option<&str> {
+        self.metadata
+            .iter()
+            .find(|i| i.origin == origin && i.name == name)
+            .map(|i| i.value.as_str())
+    }
+
+    /// Acquisition time as the instrument wrote it, with its UTC offset and without fractions of a second (`2025-05-15T16:00:45+01:00`).
+    pub fn acquired(&self) -> Option<String> {
+        let t = self.contents.as_ref()?.acquired.trim();
+        if t.len() < 19 {
+            return None;
+        }
+        let (head, tail) = t.split_at(19);
+        let zone = tail.trim_start_matches(|c: char| c == '.' || c.is_ascii_digit());
+        Some(format!("{head}{zone}"))
+    }
+
+    /// `Blank`, `Sample`, ... from `sequence.xml`.
+    pub fn sample_type(&self) -> Option<&str> {
+        self.field(
+            "AcqData/sequence.xml",
+            "SequenceTableDataSet/Sequence/SampleType",
+        )
+    }
+
+    pub fn sample_name(&self) -> Option<&str> {
+        self.field(
+            "AcqData/sequence.xml",
+            "SequenceTableDataSet/Sequence/SampleName",
+        )
+    }
 }

@@ -10,8 +10,44 @@ pub struct SimGroup {
     pub ions: Vec<(f64, f64)>,
 }
 
+/// One rate of the oven program.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct OvenRamp {
+    pub rate_c_min: f64,
+    pub to_c: f64,
+    pub hold_min: f64,
+}
+
+/// The GC part of the method report, in the units the report uses (what is not in the report stays `None`).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct GcMethod {
+    pub oven_initial_c: Option<f64>,
+    pub oven_hold_min: Option<f64>,
+    pub oven_ramps: Vec<OvenRamp>,
+    pub equilibration_min: Option<f64>,
+    pub run_time_min: Option<f64>,
+    /// "Front SSZ Inlet He": the inlet and its gas as the report names them.
+    pub inlet: String,
+    pub inlet_mode: String,
+    pub inlet_heater_c: Option<f64>,
+    pub inlet_pressure_psi: Option<f64>,
+    pub inlet_total_flow_ml_min: Option<f64>,
+    pub column_flow_ml_min: Option<f64>,
+    pub column_control_mode: String,
+    pub column_velocity_cm_s: Option<f64>,
+    pub column_holdup_min: Option<f64>,
+    /// The column description line (maker, model, and its serial number: an identity field) and the line under it.
+    pub column_info: String,
+    pub column_name: String,
+    pub column_dimensions: String,
+    pub transfer_line_c: Option<f64>,
+    pub injection_volume_ul: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct AcqMethod {
+    /// The GC part (oven, inlet, column, transfer line).
+    pub gc: GcMethod,
     /// The whole report, decoded.
     pub text: String,
     /// "Scan" or "SIM" as the method writes it.
@@ -69,6 +105,7 @@ fn pairs(line: &str) -> Vec<(f64, f64)> {
 pub fn parse(bytes: &[u8]) -> AcqMethod {
     let text = decode(bytes);
     let mut m = AcqMethod {
+        gc: parse_gc(&text),
         text: text.clone(),
         ..Default::default()
     };
@@ -119,4 +156,95 @@ pub fn parse(bytes: &[u8]) -> AcqMethod {
         }
     }
     m
+}
+
+/// "Key      value" lines of the GC report: the key and the value are apart by two spaces or more.
+fn spaced(line: &str) -> Option<(&str, &str)> {
+    let t = line.trim_end();
+    let i = t.find("  ")?;
+    let (k, v) = t.split_at(i);
+    (!k.trim().is_empty() && !v.trim().is_empty()).then(|| (k.trim(), v.trim()))
+}
+
+/// The first number of a value ("270 °C", "On    270 °C" → 270).
+fn first_number(v: &str) -> Option<f64> {
+    v.split_whitespace().find_map(|w| w.parse().ok())
+}
+
+/// Reads the GC part of the report: the lines before `MS Information`, by section.
+pub fn parse_gc(text: &str) -> GcMethod {
+    let mut g = GcMethod::default();
+    let mut sec = String::new();
+    let mut ramp = OvenRamp::default();
+    let mut ramp_open = false;
+    let mut after_column = 0;
+    for line in text.lines().take_while(|l| !l.contains("MS Information")) {
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        let Some((k, v)) = spaced(line) else {
+            match t {
+                "Oven" | "Column" | "MSD Transfer Line" | "ALS" => sec = t.to_string(),
+                _ if t.starts_with("Front SSZ Inlet") || t.starts_with("Back SSZ Inlet") => {
+                    sec = "Inlet".into();
+                    g.inlet = t.to_string();
+                }
+                _ if sec == "Column" && after_column == 1 => {
+                    g.column_name = t.to_string();
+                    after_column = 2;
+                }
+                _ => {}
+            }
+            continue;
+        };
+        match (sec.as_str(), k) {
+            ("Oven", "(Initial)") => g.oven_initial_c = first_number(v),
+            ("Oven", "Hold Time") => g.oven_hold_min = first_number(v),
+            ("Oven", "Equilibration Time") => g.equilibration_min = first_number(v),
+            ("Oven", k) if k.ends_with("Rate") => {
+                if ramp_open {
+                    g.oven_ramps.push(std::mem::take(&mut ramp));
+                }
+                ramp.rate_c_min = first_number(v).unwrap_or(0.0);
+                ramp_open = true;
+            }
+            ("Oven", k) if k.ends_with("Value") => ramp.to_c = first_number(v).unwrap_or(0.0),
+            ("Oven", k) if k.ends_with("Hold Time") => {
+                ramp.hold_min = first_number(v).unwrap_or(0.0)
+            }
+            ("Inlet", "Mode") => g.inlet_mode = v.to_string(),
+            ("Inlet", "Heater") => g.inlet_heater_c = first_number(v.trim_start_matches("On")),
+            ("Inlet", "Pressure") => {
+                g.inlet_pressure_psi = first_number(v.trim_start_matches("On"))
+            }
+            ("Inlet", "Total Flow") => {
+                g.inlet_total_flow_ml_min = first_number(v.trim_start_matches("On"))
+            }
+            ("ALS", "Injection Volume") => g.injection_volume_ul = first_number(v),
+            ("Column", "(Initial)") if g.column_flow_ml_min.is_none() => {
+                g.column_flow_ml_min = first_number(v)
+            }
+            ("Column", "Column Information") => {
+                g.column_info = v.to_string();
+                after_column = 1;
+            }
+            ("Column", "Dimensions") => g.column_dimensions = v.to_string(),
+            ("Column", "Average Velocity") => g.column_velocity_cm_s = first_number(v),
+            ("Column", "Holdup Time") => g.column_holdup_min = first_number(v),
+            ("Column", "Control Mode") => g.column_control_mode = v.to_string(),
+            ("Column", "Pressure") | ("Column", "Flow") => {}
+            ("MSD Transfer Line", "(Initial)") => g.transfer_line_c = first_number(v),
+            _ => {}
+        }
+    }
+    if ramp_open {
+        g.oven_ramps.push(ramp);
+    }
+    g.run_time_min = text.lines().find_map(|l| {
+        spaced(l)
+            .filter(|(k, _)| *k == "Run Time")
+            .and_then(|(_, v)| first_number(v))
+    });
+    g
 }
