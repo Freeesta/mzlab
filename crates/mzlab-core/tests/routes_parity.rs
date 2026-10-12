@@ -126,6 +126,28 @@ fn rust_routes_match_python() {
                     let name = PathBuf::from(line).file_name().unwrap().to_string_lossy().to_string();
                     Some(mzlab_core::fileroutes::fileinfo(&mut routes, &mut mz, &name, &head).unwrap_or_else(|e| panic!("{what}: {e}")))
                 }
+            } else if matches!(path, "/api/method" | "/api/delay" | "/api/analog") || q.get("kind").is_some_and(|k| k == "pda") {
+                if r["body"].get("scan_params").is_some() {
+                    continue; // high resolution: Python's
+                }
+                let size = std::fs::metadata(line).unwrap().len();
+                let mut mz = mzlab_core::mzmlhead::Mzml::new(std::fs::File::open(line).unwrap(), size);
+                let chroms = mz.chromatograms(routes.idx.scans.last().map_or(0, |s| s.end)).unwrap();
+                let name = r["file"].as_str().map_or_else(|| PathBuf::from(line).file_name().unwrap().to_string_lossy().to_string(), String::from);
+                let num = |k: &str| q[k].as_str().unwrap().parse::<i64>().unwrap();
+                let res = match path {
+                    "/api/method" => mzlab_core::itemroutes::item_method(&routes.idx, &mut mz, &name).and_then(|d| mzlab_core::labmethods::method_json(&d, &[], &name)),
+                    "/api/delay" => routes.delay(&mut mz, &chroms),
+                    "/api/analog" => mzlab_core::itemroutes::analog(&mut mz, &chroms, num("i"), q.get("n").map_or(2000, |_| num("n"))),
+                    _ => mzlab_core::itemroutes::pda_trace(&mut mz, &chroms),
+                };
+                match res {
+                    Ok(t) => Some(t),
+                    Err(e) => {
+                        assert!(r["status"] != 200, "{what}: {e}");
+                        None
+                    }
+                }
             } else if path == "/api/scaninfo" {
                 let sid = q["sid"].as_str().unwrap().parse().unwrap();
                 Some(routes.scaninfo(sid, &mut mzml).unwrap_or_else(|e| panic!("{what}: {e}")))

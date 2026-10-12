@@ -80,9 +80,19 @@ def main(argv) -> int:
         app = App()
         app.session = type("S", (), {"items": [item]})()
         rows = []
-        for path, q in (queries(item) if item.run.scans else []) + [("/api/fileinfo", {"k": "0"}), ("/api/mrm", {"k": "0"})]:
+        extra = [("/api/method", {"k": "0"}), ("/api/delay", {"k": "0"}), ("/api/chrom", {"k": "0", "kind": "pda"}), ("/api/analog", {"k": "0", "i": "99"})]
+        for a in item.analog_list():
+            extra += [("/api/analog", {"k": "0", "i": str(a["i"]), "n": n}) for n in ("2000", "50", "5")]
+        for path, q in (queries(item) if item.run.scans else []) + [("/api/fileinfo", {"k": "0"}), ("/api/mrm", {"k": "0"})] + extra:
             status, _ctype, body, _h = dispatch(app, "GET", path, q)
             rows.append({"path": path, "query": q, "status": status, "body": json.loads(body)})
+        from mzlab.explore import file_parts
+        for part in file_parts(item.run):        # the experiments of a mixed file: each one is an item of the session
+            pit = Item(f"{f.name}#{part['tag']}", None, None, "x", f, part=part, run=item.run)
+            papp = App()
+            papp.session = type("S", (), {"items": [pit]})()
+            status, _ctype, body, _h = dispatch(papp, "GET", "/api/method", {"k": "0"})
+            rows.append({"path": "/api/method", "query": {"k": "0"}, "file": pit.file, "status": status, "body": json.loads(body)})
         (out / (f.stem + ".rotte.json")).write_text(json.dumps(rows), encoding="utf-8")
         print(f)
     return 0
