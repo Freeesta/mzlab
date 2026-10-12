@@ -121,13 +121,33 @@ mod tests {
     fn list_is_recursive_skips_hidden_and_follows_changes() {
         let d = tempfile::tempdir().unwrap();
         let r = d.path();
-        for f in ["a.mzML", "note.txt", "sub/w.wiff", "sub/w.wiff.scan", "sub/m.dam", "sub/.git/x.mzML", ".cache/y.mzML", "a/b/c/d/deep.mzML"] {
+        for f in [
+            "a.mzML",
+            "note.txt",
+            "sub/w.wiff",
+            "sub/w.wiff.scan",
+            "sub/m.dam",
+            "sub/.git/x.mzML",
+            ".cache/y.mzML",
+            "a/b/c/d/deep.mzML",
+        ] {
             let p = r.join(f);
             fs::create_dir_all(p.parent().unwrap()).unwrap();
             fs::write(p, b"x").unwrap();
         }
-        let got: Vec<_> = list(r).into_iter().map(|i| format!("{}:{}", i.path, i.kind)).collect();
-        assert_eq!(got, ["a.mzML:data", "sub/m.dam:method", "sub/w.wiff:data", "sub/w.wiff.scan:scan"]);
+        let got: Vec<_> = list(r)
+            .into_iter()
+            .map(|i| format!("{}:{}", i.path, i.kind))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                "a.mzML:data",
+                "sub/m.dam:method",
+                "sub/w.wiff:data",
+                "sub/w.wiff.scan:scan"
+            ]
+        );
         fs::write(r.join("new.raw"), b"xy").unwrap();
         let again = list(r);
         assert_eq!(again.len(), 5);
@@ -138,7 +158,10 @@ mod tests {
     #[test]
     fn resolve_refuses_escapes() {
         let r = Path::new("/data");
-        assert_eq!(resolve(r, "sub/a.mzML"), Some(PathBuf::from("/data/sub/a.mzML")));
+        assert_eq!(
+            resolve(r, "sub/a.mzML"),
+            Some(PathBuf::from("/data/sub/a.mzML"))
+        );
         for bad in ["", "../x.mzML", "sub/../../x", "/etc/passwd"] {
             assert_eq!(resolve(r, bad), None, "{bad}");
         }
