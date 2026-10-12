@@ -1,0 +1,31 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "campioni/1",
+ "title": "campioni/1: metadata of the samples of a series",
+ "description": "One entry per file of the series, in the order of injection. Proposed from the file names by mzlab-feat (samples.rs, the rules of mzlab-core::project) and edited by the user. The SHA-256 of the canonical JSON (fixed order of the keys) is recorded by the `campioni` operation of the .mzflow. Changing a metadatum does not change the detection: only the views and the identities are recomputed.",
+ "type": "object",
+ "required": ["schema", "campioni"],
+ "properties": {
+  "schema": {"const": "campioni/1"},
+  "campioni": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["file", "sha256", "tipo", "tempo_min", "replica", "gruppo", "concentrazione", "unita", "ordine_iniezione", "istd", "note"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file (the one of its .mzidx)"},
+     "tipo": {"enum": ["sample", "blank", "dark", "t0", "qc", "std", "calibration"]},
+     "tempo_min": {"type": ["number", "null"], "description": "treatment time in minutes"},
+     "replica": {"type": "integer", "minimum": 1},
+     "gruppo": {"type": "string"},
+     "concentrazione": {"type": ["number", "null"]},
+     "unita": {"type": ["string", "null"]},
+     "ordine_iniezione": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean", "description": "the file is an internal standard"},
+     "note": {"type": "string"}
+    }
+   }
+  }
+ }
+}

@@ -117,7 +117,16 @@ pub fn align_and_fill_stored<R: ReadAt>(
         slabs(src, n, &cuts, budget, r)?
     };
     drop(s);
-    finish(table, &mut |k| lean(src, k, None), n, r, open)
+    let (mut table, filled) = finish(table, &mut |k| lean(src, k, None), n, r, open)?;
+    crate::rowmeta::compute(&mut table, &mut |k, range| {
+        let b = src.bytes(k)?;
+        let want = Want {
+            lean: false,
+            mz: Some(range),
+        };
+        Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
+    })?;
+    Ok((table, filled))
 }
 
 fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {

@@ -1,6 +1,6 @@
 //! Queries and the byte layout of `Aligned`.
 
-use crate::aligned::{Aligned, CELL_DETECTED};
+use crate::aligned::{Aligned, RowQ, CELL_DETECTED};
 use crate::table::ROLE_M;
 
 impl Aligned {
@@ -23,6 +23,7 @@ impl Aligned {
 
     /// Appends the rows of `other`, a table of the same files in "per ion" mode (the slabs of an alignment, one after the other).
     pub fn append(&mut self, other: &Aligned) {
+        debug_assert!(self.meta.is_empty() && other.meta.is_empty(), "the summaries are computed after the alignment");
         self.mz.extend_from_slice(&other.mz);
         self.rt.extend_from_slice(&other.rt);
         self.area.extend_from_slice(&other.area);
@@ -43,6 +44,9 @@ impl Aligned {
             self.mz.push(other.mz[r]);
             self.rt.push(other.rt[r]);
             self.push_cells(other, r);
+            if !self.meta.is_empty() {
+                self.meta.push(&if other.meta.len() == other.len() { other.meta.get(r) } else { RowQ::NONE });
+            }
             if !self.member_start.is_empty() {
                 self.member_mz.push(other.mz[r]);
                 self.member_rt.push(other.rt[r] as f32);
@@ -76,6 +80,45 @@ impl Aligned {
             out.mz.push(self.mz[r]);
             out.rt.push(self.rt[r]);
             out.push_cells(self, r);
+            if !self.meta.is_empty() {
+                out.meta.push(&self.meta.get(r));
+            }
+            for m in self.members(r) {
+                out.member_mz.push(self.member_mz[m]);
+                out.member_rt.push(self.member_rt[m]);
+                out.member_role.push(self.member_role[m]);
+            }
+            if had_members {
+                out.member_start.push(out.member_mz.len() as u32);
+            }
+        }
+        *self = out;
+    }
+
+    /// Puts the rows in the order that defines the ids: m/z ascending, ties by RT, then by the order they had (stable). The cells and the members follow their row.
+    pub fn sort_rows(&mut self) {
+        if self.is_id_ordered() {
+            return;
+        }
+        let mut order: Vec<u32> = (0..self.len() as u32).collect();
+        crate::sortc::by(&mut order, |&a, &b| {
+            let (a, b) = (a as usize, b as usize);
+            self.mz[a].total_cmp(&self.mz[b]).then(self.rt[a].total_cmp(&self.rt[b]))
+        });
+        let nf = self.n_files;
+        let mut out = Aligned::with_capacity(nf, self.len());
+        let had_members = !self.member_start.is_empty();
+        if had_members {
+            out.member_start.push(0);
+        }
+        for &r in &order {
+            let r = r as usize;
+            out.mz.push(self.mz[r]);
+            out.rt.push(self.rt[r]);
+            out.push_cells(self, r);
+            if !self.meta.is_empty() {
+                out.meta.push(&self.meta.get(r));
+            }
             for m in self.members(r) {
                 out.member_mz.push(self.member_mz[m]);
                 out.member_rt.push(self.member_rt[m]);
@@ -122,6 +165,17 @@ impl Aligned {
         );
         b.extend_from_slice(&self.state);
         b.extend_from_slice(&self.member_role);
+        let m = &self.meta;
+        for v in [&m.rt_lo, &m.rt_hi, &m.q_shape, &m.q_snr, &m.q_fwhm, &m.iso_m1, &m.ms2_purity] {
+            for x in v {
+                b.extend_from_slice(&x.to_le_bytes());
+            }
+        }
+        b.extend(m.charge.iter().map(|&c| c as u8));
+        b.extend_from_slice(&m.qreason);
+        for x in &m.ms2_file {
+            b.extend_from_slice(&x.to_le_bytes());
+        }
         b
     }
 }

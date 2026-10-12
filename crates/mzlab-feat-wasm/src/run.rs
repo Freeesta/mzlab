@@ -254,6 +254,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
     let (mut aligned, meta) = read_table_from(table, size)?;
     hypo.result
         .add_missing_to(&mut aligned, &JoinParams::default());
+    aligned.sort_rows();
     let origin = Origin {
         inputs: inputs_of(&meta),
         times: Vec::new(),

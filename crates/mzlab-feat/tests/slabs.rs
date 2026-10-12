@@ -112,9 +112,11 @@ fn slabs_give_the_bytes_of_the_alignment_in_memory() {
     let r = recipe(Mode::Ion);
     let mut whole = series();
     let reference = aligned_bytes(&mut whole, 1024.0, &r).unwrap();
-    assert_eq!(whole.1, 2 * FILES, "in memory: the survey and one read of each file");
-    let rows = mzlab_feat::store::read_table(&reference).unwrap().0.len();
+    assert_eq!(whole.1, 3 * FILES, "in memory: the survey, one read of each file to align and one for the summaries of the rows");
+    let table = mzlab_feat::store::read_table(&reference).unwrap().0;
+    let rows = table.len();
     assert!(rows > 300, "{rows} rows");
+    assert!(table.is_id_ordered(), "the rows come out in the order that defines the ids");
     for mb in [0.3, 0.4] {
         let mut s = series();
         let got = aligned_bytes(&mut s, mb, &r).unwrap();

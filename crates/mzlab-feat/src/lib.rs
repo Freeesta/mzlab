@@ -5,6 +5,7 @@
 
 pub mod align;
 mod aligned;
+mod aligned_meta;
 mod aligned_ops;
 mod channels;
 pub mod evid;
@@ -21,7 +22,9 @@ mod post;
 pub mod quality;
 pub mod recipe;
 pub mod resolve;
+pub mod rowmeta;
 pub mod rtmap;
+pub mod samples;
 pub mod series;
 pub mod slabs;
 pub mod sortc;

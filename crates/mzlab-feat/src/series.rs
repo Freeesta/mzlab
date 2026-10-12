@@ -88,7 +88,23 @@ pub fn align_and_fill<R: ReadAt>(
             ..FileFeatures::default()
         })
     };
-    finish(table, &mut { pos }, files.len(), r, open)
+    let (mut table, filled) = finish(table, &mut { pos }, files.len(), r, open)?;
+    crate::rowmeta::compute(&mut table, &mut |k, (lo, hi)| {
+        let mut part = FileFeatures {
+            dt: files[k].dt,
+            ..FileFeatures::default()
+        };
+        let a = files[k].mz.partition_point(|&m| m < lo);
+        let b = files[k].mz.partition_point(|&m| m <= hi);
+        for i in a..b {
+            part.push_row(&files[k], i);
+            part.family_id.push(files[k].family_id[i]);
+            part.role.push(files[k].role[i]);
+            part.alt.push(files[k].alt[i]);
+        }
+        Ok(part)
+    })?;
+    Ok((table, filled))
 }
 
 /// Weak tier, map of RT and gap filling on the aligned table of the strong peaks. `strong(k)` gives the table of file `k` (only its m/z and RT are read).
@@ -119,5 +135,6 @@ pub(crate) fn finish<R: ReadAt>(
         let mut index = open(k)?;
         filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
     }
+    table.sort_rows();
     Ok((table, filled))
 }

@@ -1,5 +1,7 @@
 //! Table of the features of a series aligned across files.
 
+pub use crate::aligned_meta::{RowMeta, RowQ, NO_FILE};
+
 /// Cell states of `Aligned::state` (one per row and file; never read `area > 0` as presence).
 /// A peak was found in the file by the detection.
 pub const CELL_DETECTED: u8 = 0;
@@ -28,6 +30,8 @@ pub struct Aligned {
     pub member_mz: Vec<f64>,
     pub member_rt: Vec<f32>,
     pub member_role: Vec<u8>,
+    /// The summaries of the rows (`rowmeta::compute`); empty when not computed.
+    pub meta: RowMeta,
 }
 
 impl Aligned {
@@ -68,6 +72,29 @@ impl Aligned {
         self.member_start[row] as usize..self.member_start[row + 1] as usize
     }
 
+    /// Stable id of `row`: its 1-based position in the final order of the table (m/z, then RT, then position). It is the `id` of the exports and of `mzid/1`;
+    /// it holds for one recipe and one set of inputs (the same bytes of the `.mzfeat`), not across recipes.
+    pub fn id(&self, row: usize) -> u32 {
+        row as u32 + 1
+    }
+
+    /// Row with the given `id` (None when out of range).
+    pub fn row_of_id(&self, id: u32) -> Option<usize> {
+        (id >= 1 && (id as usize) <= self.len()).then(|| id as usize - 1)
+    }
+
+    /// `(detected, targeted, filled)` cells of `row`; the rest of the files are `CELL_ABSENT`. Presence is read from `state`, never from `area > 0`.
+    pub fn state_counts(&self, row: usize) -> (u16, u16, u16) {
+        let cells = &self.state[row * self.n_files..(row + 1) * self.n_files];
+        let n = |s: u8| cells.iter().filter(|&&c| c == s).count() as u16;
+        (n(CELL_DETECTED), n(CELL_TARGETED), n(CELL_FILLED))
+    }
+
+    /// Whether the rows are in the order that defines the ids: m/z ascending, ties by RT ascending.
+    pub fn is_id_ordered(&self) -> bool {
+        (1..self.len()).all(|i| (self.mz[i - 1], self.rt[i - 1]) <= (self.mz[i], self.rt[i]))
+    }
+
     /// Bytes of the heap held by the columns.
     pub fn heap_bytes(&self) -> usize {
         self.mz.capacity() * 8
@@ -79,5 +106,6 @@ impl Aligned {
             + self.member_mz.capacity() * 8
             + self.member_rt.capacity() * 4
             + self.member_role.capacity()
+            + self.meta.heap_bytes()
     }
 }
