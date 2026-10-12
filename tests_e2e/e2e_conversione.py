@@ -110,6 +110,9 @@ try:
         def profile():
             assert pg.evaluate("document.getElementById('rawprof').hidden") is False
             assert pg.evaluate("document.getElementById('rawprofile').checked") is False      # not implicit: the default is the centroids
+            assert "Conserva i dati in profilo (predefinito: centroidi)" in pg.inner_text("#rawprof") and ".wiff" in pg.inner_text("#rawprofnote")      # one option for every format that has both
+            cs = pg.evaluate("(() => { const l = getComputedStyle(document.querySelector('#rawprof .convopt-l')), c = getComputedStyle(document.getElementById('rawprofile')); return [l.display, l.alignItems, c.width, c.height]; })()")
+            assert cs == ["inline-flex", "center", "16px", "16px"], cs      # the box is centred on the text and big enough to hit
             pg.evaluate("window.__prof=[]; window.__log=[]")
             (D / "p1.raw").write_bytes(b"RAW" * 10)
             pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
