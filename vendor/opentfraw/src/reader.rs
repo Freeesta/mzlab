@@ -261,6 +261,40 @@ fn read_inst_id_models<R: Read + Seek>(r: &mut BinaryReader<R>, addr: u64) -> Re
     Ok(models)
 }
 
+/// The pascal strings of the InstID block (after three `u32`) in file order, up to the first implausible length or `max` strings:
+/// model (twice), instrument name, serial number, software and hardware versions (positions measured on v66, `MODIFICHE-MZLAB.md`).
+fn read_inst_id_strings<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    addr: u64,
+    max: usize,
+) -> Vec<String> {
+    const MAX_CHARS: u32 = 256;
+    let mut out = Vec::new();
+    if r.seek_to(addr).is_err() {
+        return out;
+    }
+    for _ in 0..3 {
+        if r.read_u32().is_err() {
+            return out;
+        }
+    }
+    for _ in 0..max {
+        let start = r.position();
+        match r.read_u32() {
+            Ok(n) if n <= MAX_CHARS => {}
+            _ => break,
+        }
+        if r.seek_to(start).is_err() {
+            break;
+        }
+        match r.read_pascal_string() {
+            Ok(t) => out.push(t),
+            Err(_) => break,
+        }
+    }
+    out
+}
+
 /// Compute the number of scans from the run header's declared first/last
 /// scan numbers.
 ///
@@ -318,6 +352,9 @@ pub struct RawFileReader {
     /// metadata region (e.g. `"Orbitrap Fusion Lumos"`). `None` means only
     /// the coarse family could be inferred.
     pub instrument_model: Option<&'static str>,
+    /// The strings of the InstID block in file order (model, model, instrument name, serial number, software and hardware versions,
+    /// as far as the file has them). Empty for files older than v57.
+    pub inst_id_strings: Vec<String>,
     /// For SRM (flat-peak) files: maps scan_event index → Q1 precursor mass (m/z).
     ///
     /// Populated at open time by scanning the method/transition table stored
@@ -647,6 +684,11 @@ impl RawFileReader {
         // Only needed when the metadata window names no model (#59); a failed
         // read just leaves the model undetected, as before.
         // Layout confirmed on v57, v64, and v66 files.
+        let inst_id_strings = if version >= 57 {
+            read_inst_id_strings(&mut r, run_header_end, 12)
+        } else {
+            Vec::new()
+        };
         let inst_id_models = if version >= 57 {
             read_inst_id_models(&mut r, run_header_end).unwrap_or_default()
         } else {
@@ -795,6 +837,7 @@ impl RawFileReader {
             scan_format,
             device_family,
             instrument_model,
+            inst_id_strings,
             srm_q1_by_event,
             srm_q3_windows,
             srm_ce_by_event,
@@ -1145,28 +1188,35 @@ impl RawFileReader {
     /// Note: This is a best-effort extraction. The result is the raw text
     /// content; callers may wish to trim or parse it further.
     pub fn instrument_method_text<R: Read + Seek>(&self, source: &mut R) -> Option<String> {
-        if !self.raw_file_info.preamble.method_file_present {
-            return None;
-        }
-        // Read metadata region: from byte 0 up to (but not including) scan data. The method texts lie
-        // between 400 kB and 700 kB; capped at 4 MB to avoid reading very large files entirely.
-        const MAX_WINDOW: u64 = 4 * 1024 * 1024;
-        let window_len = MAX_WINDOW.min(self.data_addr) as usize;
-        if window_len < 4 {
-            return None;
-        }
-        source.seek(std::io::SeekFrom::Start(0)).ok()?;
-        let mut buf = vec![0u8; window_len];
-        source.read_exact(&mut buf).ok()?;
-
-        // Every UTF-16LE text block of at least 256 Latin characters, in file order, separated by a blank
-        // line: the LC method (overview, gradient), the instrument method text and its XML.
-        let blocks = extract_utf16le_texts(&buf, 256);
+        let blocks = self.instrument_method_blocks(source);
         if blocks.is_empty() {
             None
         } else {
             Some(blocks.join("\n\n"))
         }
+    }
+
+    /// The text blocks of the embedded instrument method, one string each, in file order (the LC method script, the instrument
+    /// method text, its XML); empty when the method is not embedded. `instrument_method_text` is these joined by a blank line.
+    pub fn instrument_method_blocks<R: Read + Seek>(&self, source: &mut R) -> Vec<String> {
+        if !self.raw_file_info.preamble.method_file_present {
+            return Vec::new();
+        }
+        // Read metadata region: from byte 0 up to (but not including) scan data. The method texts lie
+        // between 400 kB and 700 kB; capped at 4 MB to avoid reading very large files entirely.
+        const MAX_WINDOW: u64 = 4 * 1024 * 1024;
+        let window_len = MAX_WINDOW.min(self.data_addr) as usize;
+        if window_len < 4 || source.seek(std::io::SeekFrom::Start(0)).is_err() {
+            return Vec::new();
+        }
+        let mut buf = vec![0u8; window_len];
+        if source.read_exact(&mut buf).is_err() {
+            return Vec::new();
+        }
+
+        // Every UTF-16LE text block of at least 256 Latin characters, in file order, separated by a blank
+        // line: the LC method (overview, gradient), the instrument method text and its XML.
+        extract_utf16le_texts(&buf, 256)
     }
 }
 

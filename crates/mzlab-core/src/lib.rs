@@ -54,6 +54,7 @@ pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
 pub mod metodo;
+pub mod metodo_raw;
 pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzml;

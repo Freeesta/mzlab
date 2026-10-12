@@ -20,6 +20,8 @@ pub struct MzmlFilter<W: Write> {
     inner: W,
     line: Vec<u8>,
     anonymous: bool,
+    /// Lines written right after the `<run ...>` tag (the `metodo/1` document as a `userParam`).
+    run_extra: Option<String>,
     /// Scan number of the spectrum being written, and the last scan seen at each level (index = level).
     current: u32,
     last: [u32; 8],
@@ -39,9 +41,16 @@ impl<W: Write> MzmlFilter<W> {
             inner,
             line: Vec::new(),
             anonymous,
+            run_extra: None,
             current: 0,
             last: [0; 8],
         }
+    }
+
+    /// Writes `extra` (complete lines) after the `<run ...>` tag.
+    pub fn with_run_extra(mut self, extra: String) -> Self {
+        self.run_extra = Some(extra);
+        self
     }
 
     fn emit(&mut self) -> io::Result<()> {
@@ -83,7 +92,11 @@ impl<W: Write> MzmlFilter<W> {
     /// The line to write instead of `l` (with its end of line), or `None` to drop it.
     fn rewrite(&mut self, l: &str) -> Option<String> {
         let t = l.trim_start();
-        if t.starts_with("<spectrum ") {
+        if t.starts_with("<run ") {
+            if let Some(extra) = self.run_extra.take() {
+                return Some(format!("{l}\n{extra}\n"));
+            }
+        } else if t.starts_with("<spectrum ") {
             self.current = number_after(t, "scan=").unwrap_or(0);
         } else if t.contains("accession=\"MS:1000511\"") && !t.contains("<precursor") {
             if let Some(level) = value_of(t).and_then(|v| v.parse::<usize>().ok()) {
@@ -126,70 +139,4 @@ fn is_identity(name: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn run(xml: &str, anonymous: bool) -> String {
-        let mut out = Vec::new();
-        {
-            let mut f = MzmlFilter::new(&mut out, anonymous);
-            for part in xml.as_bytes().chunks(7) {
-                f.write_all(part).unwrap(); // pieces cut inside the lines
-            }
-            f.flush().unwrap();
-        }
-        String::from_utf8(out).unwrap()
-    }
-
-    fn spectrum(scan: u32, level: u32, parent: Option<u32>) -> String {
-        let p = parent.map_or(String::new(), |p| format!("<precursor spectrumRef=\"controllerType=0 controllerNumber=1 scan={p}\">\n<selectedIon/>\n</precursor>\n"));
-        format!("<spectrum id=\"controllerType=0 controllerNumber=1 scan={scan}\" index=\"0\">\n<cvParam cvRef=\"MS\" accession=\"MS:1000511\" name=\"ms level\" value=\"{level}\"/>\n{p}</spectrum>\n")
-    }
-
-    #[test]
-    fn a_precursor_that_points_to_scan_1_points_to_the_survey_scan_before_it() {
-        let xml = [
-            spectrum(1, 1, None),
-            spectrum(2, 2, Some(1)),
-            spectrum(3, 2, Some(1)),
-            spectrum(4, 1, None),
-            spectrum(5, 2, Some(1)),
-            spectrum(6, 3, Some(1)),
-        ]
-        .concat();
-        let got = run(&xml, false);
-        let refs: Vec<u32> = got
-            .lines()
-            .filter(|l| l.contains("spectrumRef"))
-            .map(|l| number_after(l, "scan=").unwrap())
-            .collect();
-        assert_eq!(refs, [1, 1, 4, 5]); // the MS2 of scan 5 follows the survey scan 4, the MS3 its MS2 (scan 5)
-    }
-
-    #[test]
-    fn a_real_reference_is_kept() {
-        let xml = [
-            spectrum(1, 1, None),
-            spectrum(2, 1, None),
-            spectrum(3, 1, None),
-            spectrum(4, 2, Some(2)),
-        ]
-        .concat();
-        let got = run(&xml, false);
-        assert!(got.contains("scan=2\">"), "a reference other than 1 stays");
-        assert_eq!(got.lines().count(), xml.lines().count());
-    }
-
-    #[test]
-    fn personal_data_are_left_out_only_when_asked() {
-        let xml = "<run>\n    <userParam name=\"opentfraw.computer_name\" value=\"X\"/>\n    <userParam name=\"opentfraw.raw_version\" value=\"66\"/>\n    <userParam name=\"opentfraw.original_file_path\" value=\"C:\\a\"/>\n    <userParam name=\"opentfraw.user_label.0.heading\" value=\"Study\"/>\n    <userParam name=\"opentfraw.user_label.0.value\" value=\"P\"/>\n</run>\n";
-        assert_eq!(run(xml, false), xml);
-        let got = run(xml, true);
-        assert!(
-            !got.contains("computer_name")
-                && !got.contains("original_file_path")
-                && !got.contains("label.0.value")
-        );
-        assert!(got.contains("raw_version") && got.contains("label.0.heading"));
-    }
-}
+mod tests;

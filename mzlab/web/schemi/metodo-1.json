@@ -66,6 +66,24 @@
         },
         "metodo_file": {
           "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "commento": {
+          "type": "string"
+        },
+        "diluizione": {
+          "type": "number"
+        },
+        "peso": {
+          "type": "number"
+        },
+        "volume": {
+          "type": "number"
+        },
+        "istd": {
+          "type": "number"
         }
       }
     },
@@ -99,6 +117,9 @@
           "type": "string"
         },
         "firmware": {
+          "type": "string"
+        },
+        "hardware": {
           "type": "string"
         }
       }
@@ -338,6 +359,41 @@
             "type": "string"
           }
         }
+      }
+    },
+    "campi": {
+      "type": "array",
+      "description": "Ogni campo del file che le sezioni non portano, con il posto da cui viene (nessuna perdita). Ordinati per (origine, chiave).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "origine": {
+            "type": "string",
+            "description": "<formato>:<flusso o file>[#chiave]"
+          },
+          "chiave": {
+            "type": "string"
+          },
+          "valore": {
+            "type": "string"
+          },
+          "unita": {
+            "type": "string"
+          },
+          "mappato": {
+            "type": "string",
+            "description": "Dove il valore è anche nel documento (es. campione.vial)."
+          },
+          "identita": {
+            "type": "boolean",
+            "description": "true: identifica una persona, un computer, un seriale o un percorso (tolto dal documento anonimo)."
+          }
+        },
+        "required": [
+          "origine",
+          "chiave",
+          "valore"
+        ]
       }
     }
   },
