@@ -94,7 +94,7 @@ jobs:
         env:
           MZLAB_GOLDEN_STRICT: "1"
         run: cargo test --locked -p mzlab-desktop
-      - name: The page of the program (no Python: the app has none)
+      - name: "The page of the program (no Python, the app has none)"
         run: python tools/build_site.py --no-pyodide
       - name: Libraries WASM engine in the page (the .mzlib files of the folder are read by it; built like in pages.yml, never committed)
         shell: bash
