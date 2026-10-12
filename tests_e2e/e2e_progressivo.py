@@ -10,7 +10,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_progressivo.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]
-r = Run(port=8931, wd="/tmp/wdprogressivo")
+r = Run(port=8931, wd="/tmp/wdprogressivo", motore="python")
 try:
     with sync_playwright() as p:
         pg = r.page(p)

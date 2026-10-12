@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Interface languages (Italian and English). Classic script, loaded FIRST by index.html (before the catalogs lang/it.js and lang/en.js).
 //  - Code uses semantic keys ("load.drop.title"); the texts live in the two catalogs, loaded as plain <script> tags (no fetch: CSP, offline).
@@ -72,11 +73,16 @@
     return out;
   }
 
+  // {app} is always the name of appname.js, even when the caller passes no parameters (an explicit `app` wins)
+  function withApp(m, params) {
+    const name = /** @type {any} */ (root).APP_NAME;
+    return m.indexOf("{app") < 0 || !name || (params && params.app !== undefined) ? params : Object.assign({ app: name }, params);
+  }
   function t(key, params) {
     let m = cat[lang][key];
     if (m === undefined) m = cat.it[key];
     if (m === undefined) { if (!missing.has(key)) { missing.add(key); try { console.warn("i18n: missing key " + key); } catch (_) { /* no console */ } } return key; }
-    return params === undefined && m.indexOf("{") < 0 ? m : format(m, params, lang);
+    return params === undefined && m.indexOf("{") < 0 ? m : format(m, withApp(m, params), lang);
   }
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
   // fixed decimals, always with the point (file sizes inside prose: "1.5 MB"); data values use num()
@@ -86,7 +92,7 @@
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
-    const e = new Error(t(j.error_key, j.params || {})); e.key = j.error_key; return e;
+    return Object.assign(new Error(t(j.error_key, j.params || {})), { key: j.error_key });
   }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js
@@ -119,7 +125,7 @@
   }
 
   const I18N = { add, t, apply, set, num, fix, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
-  root.I18N = I18N;
+  /** @type {any} */ (root).I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);
 

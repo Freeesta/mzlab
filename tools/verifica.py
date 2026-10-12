@@ -148,7 +148,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-opfs.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -277,7 +277,7 @@ AREE = [
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_mappa3d", "e2e_pannelli2", "e2e_mappa_mirino", "e2e_mappa_nav", "e2e_mappa_nav3d", "e2e_mappa_estrai", "e2e_mappa_estrai_hr", "e2e_mappa_correzione"}), ("mzlab/web/pannelli.js", {"e2e_mappa_correzione", "e2e_intestazioni"}), ("mzlab/web/mappa-estrai.js", {"e2e_mappa_estrai", "e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_estrai.py", {"e2e_mappa_estrai"}), ("tests_e2e/e2e_mappa_estrai_hr.py", {"e2e_mappa_estrai_hr"}), ("tests_e2e/e2e_mappa_correzione.py", {"e2e_mappa_correzione"}), ("tests_e2e/e2e_mappa3d_errori.py", {"e2e_mappa3d_errori"}), ("mzlab/web/reset.js", {"e2e_reset"}), ("tests_e2e/e2e_reset.py", {"e2e_reset"}), ("mzlab/web/settings.js", {"e2e_reset"}), ("tests_e2e/e2e_mappa_nav.py", {"e2e_mappa_nav"}), ("mzlab/web/mirino.js", {"e2e_mappa", "e2e_mappa_mirino"}), ("tests_e2e/e2e_mappa_mirino.py", {"e2e_mappa_mirino"}), ("mzlab/web/mappa3d.js", {"e2e_mappa3d", "e2e_mappa_nav3d", "e2e_mappa3d_errori"}), ("tests_e2e/e2e_mappa_nav3d.py", {"e2e_mappa_nav3d"}), ("tests_e2e/e2e_mappa3d.py", {"e2e_mappa3d"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8", "e2e_cursore", "e2e_asse_x"}), ("mzlab/web/spettro.js", {"e2e_asse_x", "e2e_spettro"}), ("tests_e2e/e2e_asse_x.py", {"e2e_asse_x"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/molui.js", {"e2e_molui", "e2e_tpmine2"}),
-    ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita", "e2e_pipeline", "e2e_tpmine_lr_reload"}),
+    ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2", "e2e_logo_piccone"}), ("mzlab/web/logo-piccone.js", {"e2e_logo_piccone", "e2e_tpmine1"}), ("tests_e2e/e2e_logo_piccone.py", {"e2e_logo_piccone"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem", "e2e_tpmine_albero", "e2e_tpmine_rtalign", "e2e_tpmine_ms2", "e2e_untarget", "e2e_identita", "e2e_pipeline", "e2e_tpmine_lr_reload"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust", "e2e_lr", "e2e_avvio", "e2e_mzidx"}), ("mzlab/web/lr", {"e2e_lr", "e2e_hr_mappa"}), ("mzlab/web/archivio", {"e2e_mzidx"}), ("mzlab/web/qqq-db", {"e2e13", "e2e_rust", "e2e_lr", "e2e_mzidx", "e2e_avvio", "e2e_lista_hr"}), ("mzlab/web/idx", {"e2e_lr", "e2e_mzidx"}), ("mzlab/reader/mzidx", {"e2e_mzidx"}), ("mzlab/web/rust-", {"e2e_rust", "e2e_lr", "e2e_wiff", "e2e_hr_rust", "e2e_hr_mappa", "e2e_hr_albero"}), ("tests_e2e/e2e_hr_mappa.py", {"e2e_hr_mappa"}), ("tests_e2e/e2e_wiff.py", {"e2e_wiff"}), ("tools/wiff_riferimento.py", {"e2e_wiff"}), ("tests_e2e/e2e_hr_albero.py", {"e2e_hr_albero"}), ("tests_e2e/e2e_hr_rust.py", {"e2e_hr_rust"}), ("mzlab/web/qualita", {"e2e_picchi_qualita"}), ("mzlab/web/peaks-worker", {"e2e_picchi_qualita"}), ("tests_e2e/e2e_picchi_qualita.py", {"e2e_picchi_qualita"}), ("crates/", {"e2e_wiff", "e2e_hr_rust", "e2e_hr_mappa", "e2e_hr_albero", "e2e_rust", "e2e_libreria_wasm", "e2e_feat_worker"}), ("TP_Mine/files/feat-", {"e2e_feat_worker", "e2e_feat_run"}), ("tests_e2e/feat_site.py", {"e2e_feat_worker", "e2e_feat_run"}), ("tests_e2e/e2e_feat_run.py", {"e2e_feat_run"}), ("tests_e2e/e2e_feat_worker.py", {"e2e_feat_worker"}), ("mzlab/web/sw.js", {"e2e13", "e2e_avvio"}), ("mzlab/browser.py", {"e2e13", "e2e_mzidx"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
     ("mzlab/web/tour.js", {"e2e_tour"}),
@@ -361,6 +361,10 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
+    if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
+        rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
+        if rc:
+            results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
     # the site tests (they build or serve the site on fixed ports) always run alone, after the others
     alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
     from concurrent.futures import ThreadPoolExecutor

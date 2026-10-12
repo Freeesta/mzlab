@@ -26,9 +26,9 @@ const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10
 const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4, tog: false };      // merge = join the centroids of the same nominal mass (centroid files only)
-// areas: at least 3 decimals in the label (2.243e+6), whole number with thousands separated by a thin space in the tooltip
+// areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
-const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009") : "";
+const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
 // ---- chart colours (settings: "Colori dei grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
 // files of the Full Scan tab that have a time get a SEQUENTIAL scale ordered by time (seqColor), see paintFiles.
 function isDark() {

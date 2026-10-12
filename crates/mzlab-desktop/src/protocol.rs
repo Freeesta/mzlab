@@ -129,7 +129,7 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             _ => bad(),
         },
         "raw2mzml" => match u("id") {
-            Some(id) => match state.raw_to_mzml(id) {
+            Some(id) => match state.raw_to_mzml(id, u("profile") == Some(1)) {
                 Ok((tid, size)) => json(200, format!("{{\"id\":{tid},\"size\":{size}}}")),
                 Err(e) => error(&e),
             },
