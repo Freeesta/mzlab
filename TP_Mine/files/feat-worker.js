@@ -16,11 +16,12 @@ const fail = (key, params, text) => Object.assign(new Error(text || key), { key,
 
 // opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... } }, size, notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
-export function createFeatPool(opts) {
+// the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
+function createCore(opts) {
   const { workerUrl, wasm, notify = () => {}, WorkerClass = Worker } = opts;
   const limit = Math.max(1, opts.size || 1);
   const slots = new Set();                      // every worker alive: { w, busy, loaded:Set, dead }
-  let archive = null, cancelled = false;
+  const st = { archive: null, cancelled: false };
   const queue = [];                             // jobs waiting for a worker: { run(slot), resolve, reject, tried }
 
   function spawn() {
@@ -66,17 +67,23 @@ export function createFeatPool(opts) {
       slot.busy = false;
       if (e && e.fatal) {                         // the worker is lost: a new one, and the job once more
         kill(slot);
-        if (!job.tried && !cancelled) { job.tried = true; notify("tpmine.feat.restarted", { reason: e.key || "" }); queue.unshift(job); }
+        if (!job.tried && !st.cancelled) { job.tried = true; notify("tpmine.feat.restarted", { reason: e.key || "" }); queue.unshift(job); }
         else job.reject(e);
       } else job.reject(e);
     }
     pump();
   }
   function submit(run) {
-    if (cancelled) return Promise.reject(fail("tpmine.feat.cancelled"));
+    if (st.cancelled) return Promise.reject(fail("tpmine.feat.cancelled"));
     return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
   }
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
+  return { st, slots, queue, spawn, call, submit, kill, copy };
+}
+
+export function createFeatPool(opts) {
+  const { st, slots, queue, spawn, call, submit, kill, copy } = createCore(opts);
+
 
   return {
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
@@ -115,8 +122,8 @@ export function createFeatPool(opts) {
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
     fs: {
       async _call(msg, transfer) {
-        if (!archive || archive.dead) archive = spawn();
-        return call(archive, msg, transfer);
+        if (!st.archive || st.archive.dead) st.archive = spawn();
+        return call(st.archive, msg, transfer);
       },
       write(path, bytes) { return this._call({ op: "fs.write", path, bytes }, [bytes.buffer]); },
       async read(path) { return (await this._call({ op: "fs.read", path })).bytes; },
@@ -124,12 +131,12 @@ export function createFeatPool(opts) {
       remove(path) { return this._call({ op: "fs.remove", path }); },
     },
     cancel() {                                  // everything stops: running jobs are lost with their workers, the queued ones are rejected
-      cancelled = true;
+      st.cancelled = true;
       for (const j of queue.splice(0)) j.reject(fail("tpmine.feat.cancelled"));
       for (const s of [...slots]) { s.lost("cancelled"); kill(s); }
-      if (archive) { try { archive.w.terminate(); } catch (_) { /* gone */ } archive = null; }
+      if (st.archive) { try { st.archive.w.terminate(); } catch (_) { /* gone */ } st.archive = null; }
     },
-    resume() { cancelled = false; },
+    resume() { st.cancelled = false; },
     get workers() { return slots.size; },
     // for the tests: the worker that is working dies as a crashed tab would
     _killBusy() { for (const s of slots) if (s.busy) { s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } },
@@ -138,110 +145,108 @@ export function createFeatPool(opts) {
 }
 
 // ---------------------------------------------------------------- worker side
-if (IN_WORKER) {
-  const mods = {};                              // { feat, proofs }: the wasm-bindgen modules
-  let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
-  let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
+const mods = {};                              // { feat, proofs }: the wasm-bindgen modules
+let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
+let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
 
-  async function dirOf(parts, create) {
-    let d = await navigator.storage.getDirectory();
-    for (const p of parts) d = await d.getDirectoryHandle(p, { create });
-    return d;
-  }
-  async function openSync(path) {
-    const parts = path.split("/").filter(Boolean), name = parts.pop();
-    const fh = await (await dirOf(parts, false)).getFileHandle(name);
-    for (let i = 0; ; i++) {   // a handle of a worker that has just died is released a moment later
-      try { const h = await fh.createSyncAccessHandle(); return { h, size: h.getSize() }; }
-      catch (e) { if (i >= 40 || e.name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
-    }
-  }
-  // the readers of a list of files: read(k, offset, length) -> Uint8Array (a view of a buffer that is reused: the .wasm copies it at once)
-  async function openAll(paths) {
-    const hs = [];
-    try { for (const p of paths) hs.push(await openSync(p)); } catch (e) { for (const x of hs) x.h.close(); throw e; }
-    const read = (k, off, len) => {
-      if (scratch.length < len) scratch = new Uint8Array(Math.max(len, scratch.length * 2));
-      const out = scratch.subarray(0, len);
-      if (hs[k].h.read(out, { at: off }) !== len) throw new Error("error.io");
-      return out;
-    };
-    return { read, sizes: Float64Array.from(hs, x => x.size), close: () => { for (const x of hs) { try { x.h.close(); } catch (_) { /* closed */ } } } };
-  }
-  async function writeFile(path, bytes) {
-    const parts = path.split("/").filter(Boolean), name = parts.pop();
-    const dir = await dirOf(parts, true);
-    const put = async n => { const h = await (await dir.getFileHandle(n, { create: true })).createSyncAccessHandle(); try { h.truncate(0); h.write(bytes, { at: 0 }); h.flush(); } finally { h.close(); } };
-    await put(name + ".part");
-    const part = await dir.getFileHandle(name + ".part");
-    if (typeof part.move === "function") await part.move(name);
-    else { await put(name); await dir.removeEntry(name + ".part"); }
-  }
-  const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
-  async function init(m) {
-    if (mods[m.which]) return;
-    const bytes = await (await fetch(m.wasmUrl)).arrayBuffer();
-    if (m.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== m.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
-    const mod = await import(m.jsUrl);
-    await mod.default({ module_or_path: bytes });
-    mods[m.which] = mod;
-  }
-  const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
-  const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
-
-  const OPS = {
-    async init(m) { await init(m); return { version: mods[m.which].version() }; },
-    async detect(m) {
-      const f = await openAll([m.path]);
-      try { const bytes = mods.feat.detect_file(f.read, f.sizes[0], m.name, m.recipe); return { bytes }; } finally { f.close(); }
-    },
-    async align(m) {
-      const f = await openAll(m.paths);
-      try { return { bytes: mods.feat.align_series(arrays(m.files), f.read, f.sizes, m.recipe) }; } finally { f.close(); }
-    },
-    async hypotheses(m) {
-      if (hypo) { hypo.free(); hypo = null; }
-      const f = await openAll(m.paths);
-      try {
-        hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
-        return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json() };
-      } finally { f.close(); }
-    },
-    async evidence(m) {
-      if (!hypo) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
-      const nan = v => (v == null ? NaN : v);
-      return { bytes: mods.proofs.build_evidence(m.table, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe) };
-    },
-    async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
-    async "fs.read"(m) {
-      const { h, size } = await openSync(m.path);
-      try { const b = new Uint8Array(size); h.read(b, { at: 0 }); return { bytes: b }; } finally { h.close(); }
-    },
-    async "fs.stat"(m) { try { const { h, size } = await openSync(m.path); h.close(); return { size }; } catch (_) { return { size: -1 }; } },
-    async "fs.remove"(m) {
-      const parts = m.path.split("/").filter(Boolean), name = parts.pop();
-      try { await (await dirOf(parts, false)).removeEntry(name); } catch (_) { /* not there */ }
-      return {};
-    },
-    async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
-  };
-
-  // JSON { error_key, params } of the .wasm, or a JavaScript error
-  function describe(e) {
-    const text = String(e && e.message || e);
-    try { const j = JSON.parse(typeof e === "string" ? e : text); if (j && j.error_key) return { key: j.error_key, params: j.params || {}, text }; } catch (_) { /* not JSON */ }
-    return { key: (e && e.key) || (e instanceof WebAssembly.RuntimeError ? "error.featWorker" : "error.featFailed"), params: {}, text };
-  }
-  self.onmessage = async ev => {
-    const m = ev.data;
-    try {
-      const r = await OPS[m.op](m);
-      const transfer = [];
-      if (r.bytes && r.bytes.buffer instanceof ArrayBuffer) transfer.push(r.bytes.buffer);
-      reply(m.id, r, transfer);
-    } catch (e) {
-      const trap = e instanceof WebAssembly.RuntimeError;      // a trap (or an abort for lack of memory) leaves the .wasm unusable: the supervisor replaces this worker
-      self.postMessage({ id: m.id, error: describe(e), fatal: trap });
-    }
-  };
+async function dirOf(parts, create) {
+  let d = await navigator.storage.getDirectory();
+  for (const p of parts) d = await d.getDirectoryHandle(p, { create });
+  return d;
 }
+async function openSync(path) {
+  const parts = path.split("/").filter(Boolean), name = parts.pop();
+  const fh = await (await dirOf(parts, false)).getFileHandle(name);
+  for (let i = 0; ; i++) {   // a handle of a worker that has just died is released a moment later
+    try { const h = await fh.createSyncAccessHandle(); return { h, size: h.getSize() }; }
+    catch (e) { if (i >= 40 || e.name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
+  }
+}
+// the readers of a list of files: read(k, offset, length) -> Uint8Array (a view of a buffer that is reused: the .wasm copies it at once)
+async function openAll(paths) {
+  const hs = [];
+  try { for (const p of paths) hs.push(await openSync(p)); } catch (e) { for (const x of hs) x.h.close(); throw e; }
+  const read = (k, off, len) => {
+    if (scratch.length < len) scratch = new Uint8Array(Math.max(len, scratch.length * 2));
+    const out = scratch.subarray(0, len);
+    if (hs[k].h.read(out, { at: off }) !== len) throw new Error("error.io");
+    return out;
+  };
+  return { read, sizes: Float64Array.from(hs, x => x.size), close: () => { for (const x of hs) { try { x.h.close(); } catch (_) { /* closed */ } } } };
+}
+async function writeFile(path, bytes) {
+  const parts = path.split("/").filter(Boolean), name = parts.pop();
+  const dir = await dirOf(parts, true);
+  const put = async n => { const h = await (await dir.getFileHandle(n, { create: true })).createSyncAccessHandle(); try { h.truncate(0); h.write(bytes, { at: 0 }); h.flush(); } finally { h.close(); } };
+  await put(name + ".part");
+  const part = await dir.getFileHandle(name + ".part");
+  if (typeof part.move === "function") await part.move(name);
+  else { await put(name); await dir.removeEntry(name + ".part"); }
+}
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+async function init(m) {
+  if (mods[m.which]) return;
+  const bytes = await (await fetch(m.wasmUrl)).arrayBuffer();
+  if (m.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== m.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
+  const mod = await import(m.jsUrl);
+  await mod.default({ module_or_path: bytes });
+  mods[m.which] = mod;
+}
+const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
+const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
+
+const OPS = {
+  async init(m) { await init(m); return { version: mods[m.which].version() }; },
+  async detect(m) {
+    const f = await openAll([m.path]);
+    try { const bytes = mods.feat.detect_file(f.read, f.sizes[0], m.name, m.recipe); return { bytes }; } finally { f.close(); }
+  },
+  async align(m) {
+    const f = await openAll(m.paths);
+    try { return { bytes: mods.feat.align_series(arrays(m.files), f.read, f.sizes, m.recipe) }; } finally { f.close(); }
+  },
+  async hypotheses(m) {
+    if (hypo) { hypo.free(); hypo = null; }
+    const f = await openAll(m.paths);
+    try {
+      hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
+      return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json() };
+    } finally { f.close(); }
+  },
+  async evidence(m) {
+    if (!hypo) throw Object.assign(new Error("error.featNoHypotheses"), { key: "error.featNoHypotheses" });
+    const nan = v => (v == null ? NaN : v);
+    return { bytes: mods.proofs.build_evidence(m.table, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe) };
+  },
+  async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
+  async "fs.read"(m) {
+    const { h, size } = await openSync(m.path);
+    try { const b = new Uint8Array(size); h.read(b, { at: 0 }); return { bytes: b }; } finally { h.close(); }
+  },
+  async "fs.stat"(m) { try { const { h, size } = await openSync(m.path); h.close(); return { size }; } catch (_) { return { size: -1 }; } },
+  async "fs.remove"(m) {
+    const parts = m.path.split("/").filter(Boolean), name = parts.pop();
+    try { await (await dirOf(parts, false)).removeEntry(name); } catch (_) { /* not there */ }
+    return {};
+  },
+  async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
+};
+
+// JSON { error_key, params } of the .wasm, or a JavaScript error
+function describe(e) {
+  const text = String(e && e.message || e);
+  try { const j = JSON.parse(typeof e === "string" ? e : text); if (j && j.error_key) return { key: j.error_key, params: j.params || {}, text }; } catch (_) { /* not JSON */ }
+  return { key: (e && e.key) || (e instanceof WebAssembly.RuntimeError ? "error.featWorker" : "error.featFailed"), params: {}, text };
+}
+if (IN_WORKER) self.onmessage = async ev => {
+  const m = ev.data;
+  try {
+    const r = await OPS[m.op](m);
+    const transfer = [];
+    if (r.bytes && r.bytes.buffer instanceof ArrayBuffer) transfer.push(r.bytes.buffer);
+    reply(m.id, r, transfer);
+  } catch (e) {
+    const trap = e instanceof WebAssembly.RuntimeError;      // a trap (or an abort for lack of memory) leaves the .wasm unusable: the supervisor replaces this worker
+    self.postMessage({ id: m.id, error: describe(e), fatal: trap });
+  }
+};
