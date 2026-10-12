@@ -4,10 +4,9 @@
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::idxread::Scan;
+use crate::hrscans::read_scan;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
-use crate::mzml::{self, Item};
 use crate::routes::{Query, Routes};
 use crate::spectrum::{binned_json, Binned, EMPTY};
 
@@ -126,19 +125,4 @@ impl<R: ReadAt> Routes<R> {
         o.raw("}");
         Ok(Some(o.0))
     }
-}
-
-/// Centroids of one scan as the mzML has them (`Run.read`): m/z and intensity, as many as the shorter array.
-fn read_scan<M: ReadAt>(sc: &Scan, mzml: &mut M) -> Result<(Vec<f64>, Vec<f64>)> {
-    let mut buf = vec![0u8; (sc.end - sc.start) as usize];
-    mzml.read_at(sc.start, &mut buf)?;
-    let mut found = None;
-    mzml::parse(&buf[..], |it| {
-        if let Item::Spectrum(s) = it {
-            found.get_or_insert(s);
-        }
-    })?;
-    let s = found.ok_or_else(|| crate::error::Error::new("err.scan.outside"))?;
-    let n = s.mz.len().min(s.intensity.len());
-    Ok((s.mz[..n].to_vec(), (0..n).map(|i| s.intensity_f64(i)).collect()))
 }

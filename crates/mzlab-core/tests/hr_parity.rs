@@ -1,4 +1,4 @@
-//! `/api/dda` and `/api/spectrum` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
+//! `/api/dda`, `/api/spectrum`, `/api/spectra`, `/api/scan` and `/api/scanavg` on HIGH-RESOLUTION centroid files answer from the index like `api.dispatch` (`tools/hr_riferimento.py`, two synthetic
 //! Orbitrap DDA files): the same columns and peaks, numbers within 1e-9; a window of one scan is read from the mzML (`spectrum_exact`; the index alone answers `None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_HR_DIR` = a folder already written by the script.
 
@@ -57,7 +57,13 @@ fn hr_routes_like_python() {
     for c in &cases {
         let (k, path, query) = (c["k"].as_u64().unwrap() as usize, c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
         let t = std::time::Instant::now();
-        let got = routes[k].handle(path, &Query::parse(query)).unwrap();
+        let from_mzml = ["/api/spectra", "/api/scan", "/api/scanavg"].contains(&path);
+        let got = if from_mzml {
+            let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
+            routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()
+        } else {
+            routes[k].handle(path, &Query::parse(query)).unwrap()
+        };
         eprintln!("k={k} {path}?{query}: rust {:.1} ms, python {:.1} ms", t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
         if c["single"] == true {
             if got.is_some() {

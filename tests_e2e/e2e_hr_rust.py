@@ -1,5 +1,5 @@
 """High-resolution DDA file with the flow without Pyodide (?motore=rust&lr=1) on the built site: opening the file, the DDA table (api/dda) and the mean
-spectrum of a window (api/spectrum: survey, product ions, one scan read from the mzML) come from the Rust engine and no request of those routes is left to
+spectrum of a window (api/spectrum, api/spectra, api/scan, api/scanavg: survey, product ions, one scan read from the mzML) come from the Rust engine and no request of those routes is left to
 Python (window.MZLAB_LR_MISS; api/contaminants, a static list, still is). Needs the site and the .wasm (python tools/build_site.py)."""
 import subprocess, sys, time
 from pathlib import Path
@@ -53,6 +53,17 @@ try:
             assert r["status"] == 200 and r["j"]["scans"] == 1 and r["eng"] == "rust" and len(r["j"]["mz"]) > 20, (r["status"], r["eng"])
             assert not missed(pg), missed(pg)
         step("a window of one scan is read from the mzML by Rust, still without a request left to Python", single)
+        def scans():
+            for q in ("api/spectra?k=0&level=1&i0=0&i1=2", "api/spectra?k=1&level=2&i0=0&i1=3"):
+                r = pg.evaluate(JSON, q)
+                assert r["status"] == 200 and r["eng"] == "rust" and len(r["j"]["scans"]) >= 3 and r["j"]["scans"][0]["mode"] == "centroid" and len(r["j"]["scans"][0]["mz"]) > 20, (q, r["status"], r["eng"])
+            d = pg.evaluate(JSON, "api/dda?k=0")["j"]
+            r = pg.evaluate(JSON, f"api/scan?k=0&sid={d['sid'][5]}")
+            assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["level"] == 2 and len(r["j"]["mz"]) > 5 and r["j"]["parent"] is not None, (r["status"], r["eng"])
+            r = pg.evaluate(JSON, "api/scanavg?k=0&sids=" + ",".join(str(x) for x in d["sid"][3:9]))
+            assert r["status"] == 200 and r["eng"] == "rust" and r["j"]["n"] == 6 and len(r["j"]["mz"]) > 5, (r["status"], r["eng"])
+            assert not missed(pg), missed(pg)
+        step("api/spectra, api/scan and api/scanavg come from the Rust engine (scans read from the mzML by offset), without a request left to Python", scans)
         b.close()
 finally:
     srv.terminate()

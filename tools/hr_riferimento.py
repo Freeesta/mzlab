@@ -34,6 +34,11 @@ QUERIES = [
     ("/api/spectrum", "rt0=0&rt1=1000&level=2&precursor=305.1066"), ("/api/spectrum", "rt0=0&rt1=1000&level=1&filt=FILT"),
 ]
 
+SPECTRA = [("/api/spectra", q) for q in (
+    "level=1&i0=0&i1=3", "level=1&i0=5&i1=70", "level=2&i0=0&i1=2", "level=2&i0=2&i1=1", "level=1&i0=0&i1=2&hr=0", "level=1&i0=0&i1=2&hr=0&merge=1",
+    "level=1&i0=1&i1=3&hr=0&bin=0.5", "level=2&i0=0&i1=4&prec=PREC", "level=2&i0=0&i1=2&prec=PREC&hr=0", "level=1&i0=0&i1=2&filt=FILT",
+    "level=2&i0=1&i1=3&precursor=PREC", "level=1&i0=100000&i1=100001", "level=1&i0=-1&i1=2", "level=1&i0=0&i1=59")]
+
 
 def main(argv) -> int:
     out = Path(argv[0])
@@ -63,7 +68,14 @@ def main(argv) -> int:
         rt1 = next(s.rt for s in item.run.scans if s.level == 1 and s.rt > 14.0)
         rt2 = next((s.rt for s in item.run.scans if s.level > 1), 1.0)
         one = [("/api/spectrum", f"rt0={rt1 - 1e-4}&rt1={rt1 + 1e-4}&level=1"), ("/api/spectrum", f"rt0={rt2 - 1e-4}&rt1={rt2 + 1e-4}&level=2")]
-        for path, query in [(p, q.replace("PREC", prec).replace("FILT", quote(filt))) for p, q in QUERIES] + one:
+        s1 = [s.index for s in item.run.scans if s.level == 1]
+        s2 = [s.index for s in item.run.scans if s.level > 1]
+        scans = [("/api/scan", f"sid={s1[3]}"), ("/api/scan", f"sid={s2[5]}"), ("/api/scan", f"sid={s2[5]}&hr=0"), ("/api/scan", f"sid={s1[0]}&hr=0"),
+                 ("/api/scan", "sid=-1"), ("/api/scan", "sid=99999999"),
+                 ("/api/scanavg", "sids=" + ",".join(map(str, s2[3:8]))), ("/api/scanavg", "sids=" + ",".join(map(str, s1[2:9])) + "&hr=0"),
+                 ("/api/scanavg", "sids=" + ",".join(map(str, s1[:3] + s1[:3]))), ("/api/scanavg", "sids="), ("/api/scanavg", "sids=-4,99999999"),
+                 ("/api/scanavg", "sids=" + ",".join(map(str, range(201))))]
+        for path, query in [(p, q.replace("PREC", prec).replace("FILT", quote(filt))) for p, q in QUERIES + SPECTRA] + one + scans:
             q = {"k": str(2 * k), **{a: unquote(b) for a, b in (p.split("=", 1) for p in query.split("&") if p)}}
             t = time.perf_counter()
             code, _, body = dispatch(app, "GET", path, q)[:3]
