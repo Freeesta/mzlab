@@ -14,10 +14,10 @@ Stato attuale; il nucleo di mzFinder è in `mzfinder.md`. Prove: `tests/test_val
 
 ## Cancello di qualità (`tools/valida/cancello.py`, `cancello_misure.py`, `nativo.py`; prove `tests/test_cancello.py`)
 - **Comando**: `python3 tools/valida_feat.py --cancello [--serie CARTELLA --verita V.json] [--mzmine T.csv] [--sintetico piccolo|completo] [--seme N] [--debole F] [--data AAAA-MM-GG] [--lavoro DIR] [--cancello-json FILE] [--senza-wasm]`.
-  - Costruisce `mzlab-feat-wasm --example nativo` (la pipeline del sito) su ogni serie e scrive `TP_Mine/data/cancello.json` (`cancello/1`: `crate_version`, `data`, `vista_candidati`, `concordanza_mzmine`, `criteri[] {id, valore, soglia, ok}`).
+  - Costruisce `mzlab-feat-wasm --example nativo` (la pipeline del sito) su ogni serie e scrive `TP_Mine/data/cancello.json` (`cancello/2`: `crate_version`, `data`, `vista_tabella`, `vista_candidati`, `concordanza_mzmine`, `criteri[] {id, valore, soglia, ok}`).
   - In `--lavoro` scrive `cancello_rapporto.json` e `.md` con tutti i numeri: il rapporto con la serie vera resta in `.verifica/`, nel pubblico solo numeri aggregati e versioni.
   - Il file è deterministico (chiavi ordinate: stessa versione, stessi dati e stessa `--data`, stessi byte); `valido(c, crate)` è la regola di `PIPE.gateState`.
-- **Regola**: `vista_candidati` è vero solo se tutti i criteri di `ID_RICHIESTI` sono presenti e `ok`.
+- **Regola**: `vista_candidati` è vero solo se tutti i criteri di `ID_RICHIESTI` sono presenti e `ok` (soglie invariate); `vista_tabella` (tabella L1-L7 ed esportazioni) solo se lo sono quelli di `ID_TABELLA` (righe, richiamo, area, falsi da rumore, isomeri, determinismo), sottoinsieme dei primi: i criteri su cinetica, famiglie, ISF, esche e purezza chiudono solo i candidati. `valido` e `valido_tabella` leggono anche `cancello/1` (la tabella segue `vista_candidati`).
   - `ok` nullo = non misurato: chiude il cancello per i richiesti, non per `mzmine_*` (facoltativi: manca il CSV) né per `prestazioni_*` (velocità e memoria non si misurano, per decisione del progetto).
   - Senza serie vera i quattro `timololo_*` restano non misurati e il cancello resta chiuso.
 - **Serie vera** (13 file e verità; il genitore è quello della verità): soglie da V0, ≥ 21 TP trovati, ≥ 19 fra i candidati, ≤ 494 candidati, ≤ 25 606 righe.
