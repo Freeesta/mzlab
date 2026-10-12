@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-feat-table-wasm"
+description = "wasm-bindgen bridge of the views, report and exports of the feature table of mzlab-feat; a .wasm of its own, loaded by mzFinder only when a table is shown or exported"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+mzlab-core = { path = "../mzlab-core" }
+mzlab-feat = { path = "../mzlab-feat" }
+wasm-bindgen = "0.2"
