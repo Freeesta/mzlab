@@ -20,13 +20,15 @@
 #pipe svg .ax{stroke:var(--line);fill:none}#pipe svg .bar{fill:var(--accent)}#pipe svg .mk{stroke:var(--warn);stroke-width:2;stroke-dasharray:5 3}#pipe svg .ln{stroke:var(--accent);fill:none;stroke-width:1.5}
 #pipe svg .eg{stroke:var(--ink);stroke-dasharray:2 3}#pipe svg text{fill:var(--muted);font-size:10px}#pipe .proof{margin:4px 0;font-size:12px}`;
 
-  /** state of the gate of quality: candidates are shown only with `vista_candidati: true` measured on the crate version of the .wasm loaded (cancello/1) */
+  /** state of the gate of quality: candidates are shown only with `vista_candidati: true` measured on the crate version of the .wasm loaded (cancello/2, cancello/1 also read); `table` is the same test for the table view (`vista_tabella`; a cancello/1 follows `vista_candidati`) */
   function gateState(c, crate) {
-    if (!c) return { ok: false, why: "absent" };
-    if (c.format !== "cancello/1") return { ok: false, why: "format" };
-    if (c.vista_candidati !== true) return { ok: false, why: "closed", c };
-    if (String(c.crate_version) !== String(crate)) return { ok: false, why: "stale", c };
-    return { ok: true, why: "open", c };
+    if (!c) return { ok: false, table: false, why: "absent" };
+    if (c.format !== "cancello/1" && c.format !== "cancello/2") return { ok: false, table: false, why: "format" };
+    const same = String(c.crate_version) === String(crate), cand = c.vista_candidati === true, tab = (c.format === "cancello/2" ? c.vista_tabella : c.vista_candidati) === true;
+    const table = tab && same;
+    if (!cand) return { ok: false, table, why: "closed", c };
+    if (!same) return { ok: false, table, why: "stale", c };
+    return { ok: true, table, why: "open", c };
   }
   const gateText = g => g.ok ? `Pipeline validated on ${esc(g.c.data || "?")} (version ${esc(g.c.crate_version)}): the candidate view is available.`
     : `Pipeline not validated${g.why === "stale" ? " for this version of the engine" : ""}: only traces and families are shown, no candidates.`;

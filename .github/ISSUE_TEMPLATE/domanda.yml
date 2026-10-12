@@ -1,0 +1,22 @@
+name: Domanda o richiesta / Question or request
+description: Una domanda d'uso, le date di un corso (per il congelamento) o una richiesta. / A usage question, course dates (for the version freeze) or a request.
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Non allegare dati di laboratorio né dati personali.** / **Do not attach laboratory or personal data.**
+        Prima guarda le [guide](https://github.com/Freeesta/mzlab/tree/main/docs/utenti). Supporto *best effort*. / First read the guides. Best-effort support.
+  - type: textarea
+    id: testo
+    attributes:
+      label: La tua domanda / Your question
+    validations:
+      required: true
+  - type: checkboxes
+    id: dati
+    attributes:
+      label: Conferma / Confirmation
+      options:
+        - label: Non ho allegato dati di laboratorio né dati personali. / I have not attached laboratory or personal data.
+          required: true

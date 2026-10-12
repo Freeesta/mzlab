@@ -1,6 +1,6 @@
 """Builds the two example drawings of the Disegno tab WITH the program itself (Ketcher + the automatic labels + the PNG export of the tab).
 
-    python3 tests_e2e/make_examples.py            # writes mzlab/web/esempio-trasformazione.png and esempio-frammentazione.png
+    python3 tools/make_examples.py            # writes mzlab/web/esempio-trasformazione.png and esempio-frammentazione.png
 
 Why a script: the pictures must be exactly what a student can export, so they are never drawn by hand. The structures are loaded into Ketcher as
 SMILES, placed on one canvas (.ket built in the page), the text objects above the structures are the ones a student writes with Ketcher's text
@@ -8,7 +8,8 @@ tool, and the export is the page's own `TPDraw.image("png")`.
 The drug is paracetamol (a common drug, not one of the pollutants of the course). Its masses are checked against /api/formula (server side
 element table) before drawing: nothing is typed by memory.
 """
-import base64, json, sys
+import base64, json, os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests_e2e"))
 from lib import *
 
 # (key, SMILES, centre x, centre y) in Ketcher units (bond length 1, y up); text above = (line with "m/z" in italics)

@@ -148,6 +148,7 @@
   }
  ],
  "data": "2026-10-12",
- "format": "cancello/1",
- "vista_candidati": false
+ "format": "cancello/2",
+ "vista_candidati": false,
+ "vista_tabella": true
 }
