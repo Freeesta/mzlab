@@ -46,7 +46,7 @@ jobs:
         run: cargo test --locked -p mzlab-desktop
       - run: python -m pip install playwright && python -m playwright install --with-deps chromium
       - name: Site
-        run: python tools/build_site.py
+        run: python tools/build_site.py --no-pyodide
       - name: Libraries WASM engine in the page (the .mzlib files of the folder are read by it; built like in pages.yml, never committed)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
@@ -99,8 +99,8 @@ jobs:
         env:
           MZLAB_GOLDEN_STRICT: "1"
         run: cargo test --locked -p mzlab-desktop
-      - name: The page of the program (downloads Pyodide from jsDelivr)
-        run: python tools/build_site.py
+      - name: The page of the program (no Python: the app has none)
+        run: python tools/build_site.py --no-pyodide
       - name: Libraries WASM engine in the page (the .mzlib files of the folder are read by it; built like in pages.yml, never committed)
         shell: bash
         run: |

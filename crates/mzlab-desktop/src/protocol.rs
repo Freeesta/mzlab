@@ -1,6 +1,7 @@
 //! The `mzlab://localhost/<route>?<query>` protocol: pure function of (path, query), so that the window (`main.rs`) and the tests call
 //! the same code. Answers are bytes: little-endian `f64` arrays (`tic`, `xic`, `spectra`), file chunks (`chunk`) or small JSON
-//! (`open`, `raw2mzml`, errors `{"error_key", "params"}` with status 400).
+//! (`open`, `raw2mzml`, errors `{"error_key", "params"}` with status 400). Everything else the page asks of its engine is `rpc` (POST, a JSON body with the
+//! operation `op` and its parameters, see `rpc.rs`) and `lr/upload` (a file that reaches the app as bytes).
 //!
 //! Routes (all GET): `open?slot&id`, `close?slot`, `reset`, `tic?slot&level&px`, `xic?slot&level&mz&tol&px`,
 //! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size), `raw2mzml?id`
@@ -196,6 +197,8 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             }
             None => bad(),
         },
+        "rpc" => rpc_route(state, body).unwrap_or_else(bad),
+        "lr/upload" => upload_route(state, &q, body).unwrap_or_else(bad),
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
         _ => json(404, "{}".into()),
     }
@@ -251,4 +254,24 @@ fn lib_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -
         },
         _ => json(404, "{}".into()),
     }
+}
+
+/// `rpc`: one operation of the page's engine (`rpc.rs`); None = the body is not a request.
+fn rpc_route(state: &State, body: &[u8]) -> Option<Response> {
+    let v: serde_json::Value = serde_json::from_slice(body).ok()?;
+    Some(match state.rpc(v["op"].as_str()?, &v, body) {
+        Ok(crate::rpc::Answer::Text(t)) => Response { status: 200, content_type: "text/plain; charset=utf-8", body: t.into_bytes() },
+        Ok(crate::rpc::Answer::Bytes(b)) => Response { status: 200, content_type: "application/octet-stream", body: b },
+        Err(e) => error(&e),
+    })
+}
+
+/// `lr/upload?name&off&total`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
+fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<Response> {
+    let (name, off, total) = (q.get("name")?, q.get("off")?.parse().ok()?, q.get("total")?.parse().ok()?);
+    Some(match state.upload_chunk(&decode(name), off, total, body) {
+        Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
+        Ok(None) => json(200, "{}".into()),
+        Err(e) => error(&e),
+    })
 }

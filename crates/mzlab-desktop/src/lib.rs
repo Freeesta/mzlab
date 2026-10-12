@@ -7,7 +7,9 @@ pub mod idxbuild;
 pub mod librerie;
 pub mod mapped;
 pub mod protocol;
+pub mod rpc;
 pub mod scarica;
+pub mod store;
 pub mod update;
 
 pub use engine::State;
