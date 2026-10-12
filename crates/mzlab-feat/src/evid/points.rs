@@ -64,44 +64,43 @@ fn threshold(v: &Value, soglie: &Value) -> Result<f64> {
     }
 }
 
+fn step_of(s: &Value, soglie: &Value) -> Result<Step> {
+    let thr = s.get("soglia").ok_or_else(|| bad("step"))?;
+    let points = s.get("punti").and_then(Value::f64);
+    Ok(Step {
+        threshold: threshold(thr, soglie)?,
+        points: points.ok_or_else(|| bad("points"))?,
+    })
+}
+
+fn require_of(v: &Value, soglie: &Value) -> Result<Option<(bool, f64)>> {
+    let Some(r) = v.get("richiede") else {
+        return Ok(None);
+    };
+    let thr = r.get("soglia").ok_or_else(|| bad("require"))?;
+    let le = r.get("op").and_then(Value::str) == Some("<=");
+    Ok(Some((le, threshold(thr, soglie)?)))
+}
+
 fn rule_of(v: &Value, soglie: &Value) -> Result<Rule> {
     let le = match v.get("op").and_then(Value::str) {
         Some("<=") => true,
         Some(">=") => false,
         _ => return Err(bad("op")),
     };
-    let steps = v
-        .get("gradini")
-        .map(Value::arr)
-        .unwrap_or(&[])
-        .iter()
-        .map(|s| {
-            Ok(Step {
-                threshold: threshold(s.get("soglia").ok_or_else(|| bad("step"))?, soglie)?,
-                points: s
-                    .get("punti")
-                    .and_then(Value::f64)
-                    .ok_or_else(|| bad("points"))?,
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let require = match v.get("richiede") {
-        Some(r) => Some((
-            r.get("op").and_then(Value::str) == Some("<="),
-            threshold(r.get("soglia").ok_or_else(|| bad("require"))?, soglie)?,
-        )),
-        None => None,
-    };
+    let steps = v.get("gradini").map(Value::arr).unwrap_or(&[]);
     Ok(Rule {
         le,
         abs: v.get("assoluto").and_then(Value::bool).unwrap_or(false),
-        steps,
-        require,
+        steps: steps
+            .iter()
+            .map(|s| step_of(s, soglie))
+            .collect::<Result<_>>()?,
+        require: require_of(v, soglie)?,
         cap: v.get("massimo").and_then(Value::f64),
         cap_if_weighed: v.get("massimo_se_pesata").and_then(Value::f64),
     })
 }
-
 impl PointsTable {
     /// Reads `livelli/1` (the whole data file or the JSON of the crate); a file without the section `punti` is refused.
     pub fn parse(bytes: &[u8]) -> Result<PointsTable> {
@@ -149,7 +148,14 @@ impl PointsTable {
     pub fn rule(&self, kind: Kind) -> Option<&Rule> {
         self.rules.iter().find(|(k, _)| *k == kind).map(|(_, r)| r)
     }
+}
 
+/// The lowest step of a rule: what is missing to earn points.
+fn lowest(rule: &Rule) -> Option<f64> {
+    rule.steps.last().map(|s| s.threshold)
+}
+
+impl PointsTable {
     /// Points of a measured `value` (NaN: not measured, no points); `support` is the second measurement of the types that need one.
     pub fn grade(&self, kind: Kind, value: f64, support: Option<f64>) -> Grade {
         let Some(rule) = self.rule(kind) else {
@@ -158,7 +164,7 @@ impl PointsTable {
                 threshold: None,
             };
         };
-        let lowest = rule.steps.last().map(|s| s.threshold);
+        let lowest = lowest(rule);
         let v = if rule.abs { value.abs() } else { value };
         let supported = rule
             .require
