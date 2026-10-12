@@ -89,7 +89,7 @@ try:
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='xic').length")
             pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_timeout(300); pg.click("#ctx [role^=menuitem]:has-text('XIC')"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.filter(q=>q.type==='xic').length") == n0 + 1, "the menu extracts from the difference map"
-            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.click(f".pnl.map [data-nav=mapexplain]"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
             assert pg.evaluate("MAPEX.numbers(" + M + ").height") is not None
             pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(300)
         step("the difference map works with the new menu and with «How it is extracted»", map_menu_and_explain)
