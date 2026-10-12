@@ -1,15 +1,19 @@
 //! The steps of the pipeline as plain Rust over any `ReadAt`: the bridge (`lib.rs`) gives them JavaScript readers, the native example gives them files, so the
 //! `.mzfeat` of the browser and the one of the desktop come from the same code and the same bytes.
 
+use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
-use mzlab_feat::evid::{build_graph, graph_json, Inputs, Kinetics, PointsTable};
+use mzlab_feat::evid::{build_graph, graph_json, GraphStream, Inputs, Kinetics, PointsTable};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
-use mzlab_feat::store::{read_file, read_table, write_file, write_table_with_evid, Origin};
+use mzlab_feat::slabs::{align_and_fill_stored, Stored};
+use mzlab_feat::store::{
+    read_file, read_meta_mz, read_table_from, write_file_to, write_table_to, write_table_with_evid, Origin, Slice,
+};
 use mzlab_feat::table::FileFeatures;
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
@@ -67,14 +71,26 @@ fn apply_params(r: &mut Recipe, v: &Value) {
     }
 }
 
-/// Layer L1-L3 of one file: the `.mzfeatf` bytes (the name and SHA-256 of the source go in the meta; no times, so the bytes repeat).
-pub fn detect<R: ReadAt>(index: &mut Index<R>, name: &str, r: &Recipe) -> Result<Vec<u8>> {
+/// Layer L1-L3 of one file written to `sink`: the `.mzfeatf` (the name and SHA-256 of the source go in the meta; no times, so the bytes repeat).
+pub fn detect_to<R: ReadAt, W: WriteAt>(
+    index: &mut Index<R>,
+    name: &str,
+    r: &Recipe,
+    sink: &mut W,
+) -> Result<()> {
     let f = analyse_file(index, r)?;
     let o = Origin {
         inputs: vec![(name.to_string(), source_sha256(index))],
         times: Vec::new(),
     };
-    Ok(write_file(&f, r, &o))
+    write_file_to(sink, &f, r, &o)
+}
+
+/// Layer L1-L3 of one file: the `.mzfeatf` bytes.
+pub fn detect<R: ReadAt>(index: &mut Index<R>, name: &str, r: &Recipe) -> Result<Vec<u8>> {
+    let mut v = Vec::new();
+    detect_to(index, name, r, &mut v)?;
+    Ok(v)
 }
 
 /// The per-file tables and the origin of a list of `.mzfeatf` (name and SHA-256 from their meta).
@@ -114,22 +130,43 @@ pub fn align<R: ReadAt>(
     Ok(write_table_with_evid(&table, r, origin, &[]))
 }
 
+/// The origin (name and SHA-256 of every input) of a stored series, from the meta of its files.
+pub fn origin_of(src: &mut dyn Stored) -> Result<Origin> {
+    let mut origin = Origin::default();
+    for k in 0..src.count() {
+        let (meta, _) = read_meta_mz(&src.bytes(k)?)?;
+        origin.inputs.extend(inputs_of(&meta));
+    }
+    Ok(origin)
+}
+
+/// Alignment and gap filling of a stored series under `budget`, written to `sink` as the `.mzfeat` with an empty `evid` section. The same bytes as
+/// `align` whatever the budget (in memory, in slabs of m/z) or an orderly `error.memoryBudget`.
+pub fn align_to<R: ReadAt, W: WriteAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    open: impl FnMut(usize) -> Result<Index<R>>,
+    sink: &mut W,
+) -> Result<()> {
+    let origin = origin_of(src)?;
+    let (table, _) = align_and_fill_stored(src, budget, r, open)?;
+    write_table_to(sink, &table, r, &origin, &mut (&[][..]))
+}
+
 /// What the targeted pass leaves for the proofs: the registry of the hypotheses with their outcomes and the rows found.
 pub struct HypoRun {
     pub registry: Registry,
     pub result: TargetResult,
 }
 
-/// Hypotheses of the parent (rules as the bytes of `regole_tp.json`) searched in every file. `parent_rt` narrows the windows of RT.
-pub fn hypotheses<R: ReadAt>(
-    indexes: &mut [Index<R>],
-    feats: &[&FileFeatures],
+/// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp.json`) and the parameters of the targeted pass.
+fn hypotheses_setup(
     rules: &[u8],
     parent: &str,
     parent_rt: Option<f64>,
-    r: &Recipe,
-) -> Result<HypoRun> {
-    let polarity = r.detect.polarity.unwrap_or(1);
+    polarity: i8,
+) -> Result<(Registry, TargetParams)> {
     let inp = HypoInputs {
         parent,
         suspects: None,
@@ -141,15 +178,48 @@ pub fn hypotheses<R: ReadAt>(
         polarity,
         ..HypoParams::default()
     };
-    let mut registry = generate(&Rules::parse(rules)?, &inp, &hp)?;
+    let registry = generate(&Rules::parse(rules)?, &inp, &hp)?;
     let tp = TargetParams {
         polarity,
         parent_rt,
         ..TargetParams::default()
     };
+    Ok((registry, tp))
+}
+
+/// Hypotheses of the parent searched in every file. `parent_rt` narrows the windows of RT.
+pub fn hypotheses<R: ReadAt>(
+    indexes: &mut [Index<R>],
+    feats: &[&FileFeatures],
+    rules: &[u8],
+    parent: &str,
+    parent_rt: Option<f64>,
+    r: &Recipe,
+) -> Result<HypoRun> {
+    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, r.detect.polarity.unwrap_or(1))?;
     let result = run(indexes, feats, &mut registry, &tp)?;
     Ok(HypoRun { registry, result })
 }
+
+/// `hypotheses` with the detection tables read from the stored files one at a time.
+pub fn hypotheses_stored<R: ReadAt>(
+    indexes: &mut [Index<R>],
+    src: &mut dyn Stored,
+    rules: &[u8],
+    parent: &str,
+    parent_rt: Option<f64>,
+    r: &Recipe,
+) -> Result<HypoRun> {
+    let polarity = r.detect.polarity.unwrap_or(1);
+    let (mut registry, tp) = hypotheses_setup(rules, parent, parent_rt, polarity)?;
+    let n = indexes.len().min(src.count());
+    let mut load = |k: usize| Ok(read_file(&src.bytes(k)?)?.0);
+    let result = mzlab_feat::target::run_loading(indexes, n, &mut load, &mut registry, &tp)?;
+    Ok(HypoRun { registry, result })
+}
+
+/// Bytes of the memory that an identity of the graph takes while the graph is built whole (its proofs, members and arcs), for the estimate.
+const IDENTITY_BYTES: usize = 2400;
 
 /// Graph of the proofs on the table of a series (`.mzfeat` bytes): `minutes[k]` is the treatment time of file `k` (NaN = a control).
 /// Returns the same table with the `evid/1` document in its `evid` section. The family arcs are not stored in the files, so the graph has none.
@@ -160,7 +230,28 @@ pub fn evidence(
     parent: Option<(f64, f64)>,
     r: &Recipe,
 ) -> Result<Vec<u8>> {
-    let (mut aligned, meta) = read_table(table_bytes)?;
+    let mut out = Vec::new();
+    let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+    let mut at = Slice(table_bytes);
+    let size = table_bytes.len() as u64;
+    evidence_to(&mut at, size, hypo, minutes, parent, r, &budget, &mut out)?;
+    Ok(out)
+}
+
+/// `evidence` over a table read by offsets and an output written to `sink`. The graph is built whole and written when its estimate fits in half of the
+/// budget; else its identities are made twice, once for the order and the length, once for the bytes (`GraphStream`), and only one is held. Same bytes.
+#[allow(clippy::too_many_arguments)]
+pub fn evidence_to<R: ReadAt, W: WriteAt>(
+    table: &mut R,
+    size: u64,
+    hypo: &HypoRun,
+    minutes: &[f64],
+    parent: Option<(f64, f64)>,
+    r: &Recipe,
+    budget: &MemBudget,
+    sink: &mut W,
+) -> Result<()> {
+    let (mut aligned, meta) = read_table_from(table, size)?;
     hypo.result
         .add_missing_to(&mut aligned, &JoinParams::default());
     let origin = Origin {
@@ -207,8 +298,16 @@ pub fn evidence(
         }),
         parent,
     };
-    let json = graph_json(&build_graph(&inp), &points);
-    Ok(write_table_with_evid(&aligned, r, &origin, json.as_bytes()))
+    let rows = aligned.len();
+    let held = aligned.heap_bytes();
+    if budget.in_memory(held + rows * IDENTITY_BYTES) {
+        let json = graph_json(&build_graph(&inp), &points);
+        return write_table_to(sink, &aligned, r, &origin, &mut json.as_bytes());
+    }
+    let need = held + rows * GraphStream::bytes_per_row();
+    let _g = budget.reserve("proofs", need)?;
+    let mut graph = GraphStream::new(&inp);
+    write_table_to(sink, &aligned, r, &origin, &mut graph)
 }
 
 /// The row within 5 ppm and 0.3 min of the parent with the largest area (the parent decay is read from it).

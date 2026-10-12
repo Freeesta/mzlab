@@ -11,7 +11,7 @@ use mzlab_feat::family::evidence::EdgeKind as FamEdge;
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, SRC_RULE};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
 use mzlab_feat::recipe::Recipe;
-use mzlab_feat::store::{read_evid, read_table, write_table_with_evid, Origin};
+use mzlab_feat::store::{read_evid, read_table, write_table_to, write_table_with_evid, Origin, Section};
 use mzlab_feat::table::*;
 
 const TIMES: [f64; 8] = [0.0, 2.0, 5.0, 10.0, 20.0, 40.0, 60.0, 90.0];
@@ -213,7 +213,7 @@ fn world() -> World {
     }
 }
 
-fn graph(w: &World, t: &PointsTable) -> Vec<Identity> {
+fn with_inputs<T>(w: &World, t: &PointsTable, f: impl FnOnce(&Inputs) -> T) -> T {
     let (forms, chain) = (FormBank::new(&TIMES), ChainBank::new(&TIMES, K_PARENT_MIN));
     let y = decay();
     let parent = parent_kinetics(&forms, &TIMES, &y, None);
@@ -240,7 +240,11 @@ fn graph(w: &World, t: &PointsTable) -> Vec<Identity> {
         }),
         parent: Some((168.1019, 6.0)),
     };
-    build_graph(&inp)
+    f(&inp)
+}
+
+fn graph(w: &World, t: &PointsTable) -> Vec<Identity> {
+    with_inputs(w, t, build_graph)
 }
 
 fn by_row(ids: &[Identity], row: u32) -> &Identity {
@@ -438,4 +442,28 @@ fn the_evid_section_of_the_mzfeat_is_written_and_read_back() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[test]
+fn the_stream_of_the_graph_is_the_same_bytes_in_pieces() {
+    let t = PointsTable::bundled().unwrap();
+    let w = world();
+    let (r, o) = (Recipe::default(), Origin::default());
+    let json = graph_json(&graph(&w, &t), &t);
+    with_inputs(&w, &t, |inp| {
+        let mut g = GraphStream::new(inp);
+        assert_eq!(Section::len(&g), json.len());
+        let (mut all, mut pieces) = (Vec::new(), 0);
+        g.emit(&mut |b| {
+            all.extend_from_slice(b);
+            pieces += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(all, json.as_bytes());
+        assert!(pieces >= 1);
+        let mut streamed = Vec::new();
+        write_table_to(&mut streamed, &w.aligned, &r, &o, &mut GraphStream::new(inp)).unwrap();
+        assert_eq!(streamed, write_table_with_evid(&w.aligned, &r, &o, json.as_bytes()));
+    });
 }

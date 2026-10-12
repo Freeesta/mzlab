@@ -21,6 +21,17 @@ impl Aligned {
             .any(|&i| (self.rt[i] - rt).abs() <= rt_tol)
     }
 
+    /// Appends the rows of `other`, a table of the same files in "per ion" mode (the slabs of an alignment, one after the other).
+    pub fn append(&mut self, other: &Aligned) {
+        self.mz.extend_from_slice(&other.mz);
+        self.rt.extend_from_slice(&other.rt);
+        self.area.extend_from_slice(&other.area);
+        self.height.extend_from_slice(&other.height);
+        self.apex_rt.extend_from_slice(&other.apex_rt);
+        self.width.extend_from_slice(&other.width);
+        self.state.extend_from_slice(&other.state);
+    }
+
     /// Appends the rows of `other` (a table of ions of the same files) that no row of `self` holds; returns how many. In "per family" mode the
     /// ion of the new row is its own member.
     pub fn append_unheld(&mut self, other: &Aligned, ppm: f64, rt_tol: f64) -> usize {
