@@ -660,7 +660,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       if (m.cmd === "folder") { FOLD.tried = true; FOLD.pending = (FOLD.pending || Promise.resolve()).then(() => setFolder(m)); }      // in order, and set at once: the messages that follow wait for it
       else if (m.cmd !== "config" && FOLD.pending) await FOLD.pending;
       const run = Object.hasOwn(COMMANDS, m.cmd) ? COMMANDS[m.cmd] : null;
-      if (!run) throw new Error("comando sconosciuto: " + m.cmd);
+      if (!run) throw new Error("unknown command: " + m.cmd);
       const r = await run(m, reqId);
       postMessage({ type: "done", reqId, ...r });
     } catch (err) {
