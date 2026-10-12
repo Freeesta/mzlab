@@ -45,7 +45,7 @@ async function lrOpen(name) {                                             // ope
   engine.open_index(slotOf(name), ix.size, readerFor(ix));
   return true;
 }
-// IndexedDB of the page ("qqq_lab", the same one as browser-worker.js): the notebook and, without OPFS, the files
+// IndexedDB of the page ("qqq_lab"): the notebook and, without OPFS, the files
 const idb = lab(() => postMessage({ op: "blocked" }));      // another tab holds the database: the page says so
 const tx = async (store, mode, fn) => {
   const db = await idb();

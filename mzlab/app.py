@@ -1,4 +1,4 @@
-"""The engine behind the page: the files the student opened, the session and the notebook. Runs inside Pyodide in the browser (see browser.py)."""
+"""The engine behind the page: the files the student opened, the session and the notebook. The Python reference of the Rust engine (dispatch in api.py)."""
 from __future__ import annotations
 
 import base64

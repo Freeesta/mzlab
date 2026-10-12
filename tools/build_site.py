@@ -1,10 +1,12 @@
 """Builds the static site (the whole program running in the browser) into site/.
 
-    python tools/build_site.py                      # downloads Pyodide from the jsDelivr CDN (needs internet)
+    python tools/build_site.py                      # downloads Pyodide (for mzFinder only) from the jsDelivr CDN (needs internet)
     python tools/build_site.py --pyodide-dir DIR    # uses an already downloaded copy (tests)
+    python tools/build_site.py --no-pyodide         # without the Python of mzFinder (the program of the students never has any)
 
-site/index.html + site/static/ (the web folder as is) + site/static/mzlab.zip (the Python code) + site/static/pyodide/
-(Python + numpy compiled to WebAssembly). GitHub Pages serves it as it is (.github/workflows/pages.yml).
+site/index.html + site/static/ (the web folder as is). The engine of the program is Rust (static/wasm/, built by the workflow); no Python
+runs in the pages of the students. Only mzFinder (hidden) still has its own Pyodide: static/mzfinder/pyodide/ and static/mzfinder/mzlab.zip.
+GitHub Pages serves the site as it is (.github/workflows/pages.yml).
 """
 from __future__ import annotations
 
@@ -86,6 +88,22 @@ def fetch(name: str, dest: Path, src_dir: Path | None) -> None:
         shutil.copyfileobj(r, fh)
 
 
+def python_files(out: Path) -> list[str]:
+    """The Python the site carries outside mzFinder's folder: any `pyodide*` file or folder and any zip with a `.py` inside (there must be none)."""
+    found = []
+    for f in sorted(out.rglob("*")):
+        rel = f.relative_to(out)
+        if rel.parts[:2] == ("static", "mzfinder"):
+            continue
+        if "pyodide" in f.name.lower():
+            found.append(rel.as_posix())
+        elif f.is_file() and f.suffix == ".zip":
+            with zipfile.ZipFile(f) as z:
+                if any(n.endswith(".py") for n in z.namelist()):
+                    found.append(rel.as_posix())
+    return found
+
+
 def pack_mzfinder(static: Path) -> None:
     """mzFinder (sources in TP_Mine/) in plain text in static/mzfinder/: the loader fetches it only after the 5 clicks on the logo."""
     src = ROOT / "TP_Mine"
@@ -139,6 +157,7 @@ def teoria_entry() -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path)
+    ap.add_argument("--no-pyodide", action="store_true", help="do not add the Python of mzFinder (tests that need no mzFinder)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
     a = ap.parse_args()
     out = a.out
@@ -175,23 +194,26 @@ def main() -> None:
     ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "__init__.py").read_text(encoding="utf-8"))
     ver = ver_match.group(1) if ver_match else "0.1.0"
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
-    # the Python code (mzlab package)
-    with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
-            rel = f.relative_to(ROOT)
-            if "web" in rel.parts or "__pycache__" in rel.parts:
-                continue
-            z.write(f, rel.as_posix())
     pack_mzfinder(static)
-    # Pyodide: core + numpy
-    py = static / "pyodide"
-    py.mkdir()
-    for n in CORE:
-        fetch(n, py, a.pyodide_dir)
-        check_sha256(py / n, SHA256[n])
-    lock = json.loads((py / "pyodide-lock.json").read_text(encoding="utf-8"))
-    fetch(lock["packages"]["numpy"]["file_name"], py, a.pyodide_dir)
-    check_sha256(py / lock["packages"]["numpy"]["file_name"], lock["packages"]["numpy"]["sha256"])
+    mf = static / "mzfinder"
+    if mf.is_dir() and not a.no_pyodide:                       # mzFinder's own Python (hidden, for the lab): the only Python of the site
+        with zipfile.ZipFile(mf / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
+            for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
+                rel = f.relative_to(ROOT)
+                if "web" in rel.parts or "__pycache__" in rel.parts:
+                    continue
+                z.write(f, rel.as_posix())
+        py = mf / "pyodide"
+        py.mkdir()
+        for n in CORE:
+            fetch(n, py, a.pyodide_dir)
+            check_sha256(py / n, SHA256[n])
+        lock = json.loads((py / "pyodide-lock.json").read_text(encoding="utf-8"))
+        fetch(lock["packages"]["numpy"]["file_name"], py, a.pyodide_dir)
+        check_sha256(py / lock["packages"]["numpy"]["file_name"], lock["packages"]["numpy"]["sha256"])
+    bad = python_files(out)
+    if bad:
+        raise SystemExit(f"the site must not carry Python outside static/mzfinder/: {bad[:5]}")
     # service worker at the site root (scope = the whole site): offline use after the first visit
     sw = (static / "sw.js").read_text(encoding="utf-8")
     (static / "sw.js").unlink()

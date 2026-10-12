@@ -343,31 +343,3 @@ def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precur
     rt, y = it.total("tic", 2, None, None, 229.1)
     assert rt.tolist() == [1.0, 1.2] and y.tolist() == [10.0, 20.0]
     it.run.close()
-
-
-def test_browser_entry_answers_like_the_api(tmp_path, demo, monkeypatch):
-    """mzlab.browser (run inside Pyodide by the site) goes through the same dispatch as the local server."""
-    import json
-    from mzlab import browser
-    monkeypatch.setattr(browser, "WORK", tmp_path / "work")
-    browser.start()
-
-    class Body:                                   # what Pyodide hands over for a JS Uint8Array
-        def __init__(self, b):
-            self.b = b
-
-        def to_bytes(self):
-            return self.b
-    src = demo[1][0]
-    code, text = browser.handle("POST", "api/upload?name=" + src.name, Body(src.read_bytes()))
-    assert code == 200 and json.loads(text)["files"][0]["name"] == src.name
-    code, text = browser.handle("POST", "api/explore", Body(json.dumps({"samples": [{"file": src.name}]}).encode()))
-    assert code == 200 and json.loads(text)["session"][0]["ms1"] > 0
-    code, text = browser.handle("GET", "api/chrom?k=0&kind=tic&level=1")
-    assert code == 200 and len(json.loads(text)["rt"]) > 10
-    code, text = browser.handle("GET", "api/formula?f=C15H12N2O&adduct=%5BM%2BH%5D%2B")
-    assert code == 200 and abs(json.loads(text)["mz"] - 237.1022) < 1e-3
-    assert browser.handle("GET", "api/nope")[0] == 404
-    assert browser.handle("POST", "api/upload?name=x.wiff", Body(b"x"))[0] == 400
-    code, text = browser.handle("POST", "api/remove", Body(json.dumps({"name": src.name}).encode()))
-    assert code == 200 and not (tmp_path / "work" / "_cestino").exists()
