@@ -380,9 +380,13 @@
   "lib.what.cosVis": "Prova aggiuntiva: {lo} = limite inferiore della finestra di scansione MS2 del file, {cos} = coseno già formattato.",
   "lib.what.attr": "Sotto lo specchio; autori, accessione e licenza della voce di libreria (testi dei file di libreria).",
   "conv.file": "Riga del pannello di conversione dei .raw: {i} = numero del file in conversione, {n} = quanti .raw in tutto, {name} = nome del file.",
-  "conv.detail.read": "Numeri sotto la barra della conversione: {pc} = percentuale, {done}/{total} = MB del .raw letti e totali, {elapsed} = tempo trascorso (m:ss).",
-  "conv.detail.writing": "Numeri sotto la barra durante la scrittura dell'mzML: {done}/{total} = MB scritti e totali, {elapsed} = tempo trascorso.",
-  "conv.detail.wait": "Numeri sotto la barra prima dei primi dati; {elapsed} = tempo trascorso (m:ss).",
+  "conv.detail.scans": "Numeri sotto la barra della conversione: {done} = scansioni convertite, {total} = scansioni del file.",
+  "conv.detail.written": "Numeri sotto la barra della conversione: {mb} = MB dell'mzML scritti finora.",
+  "conv.detail.elapsed": "Numeri sotto la barra della conversione: {elapsed} = tempo trascorso (m:ss).",
+  "conv.detail.eta": "Numeri sotto la barra della conversione: {eta} = tempo stimato rimanente (m:ss).",
+  "conv.detail.handover": "Numeri sotto la barra quando l'app desktop passa l'mzML alla pagina: {done}/{total} = MB passati e totali, {elapsed} = tempo trascorso.",
+  "conv.detail.wait": "Numeri sotto la barra prima delle scansioni, mentre si legge l'indice del file; {elapsed} = tempo trascorso (m:ss).",
+  "conv.total": "Barra del totale con più file .raw; {pc} = percentuale di tutti i file (pesata sulla dimensione).",
   "qaqc.ratio.atleast": "Intestazione di colonna del pannello QA/QC: il rapporto campione/bianco raggiunge la soglia scelta. {thr} = 3 o 10.",
   "qaqc.ratio.sum": "Riga sopra la tabella del rapporto campione/bianco di uno ione. {mz} = m/z, {blank} = area media dei bianchi, {thr} = soglia (3 o 10).",
   "qaqc.remove": "Etichetta accessibile del pulsante × che toglie uno ione di controllo. {n} = nome dello ione.",
@@ -464,5 +468,7 @@
   "settings.arch.line": "Riga delle impostazioni «Archivio nel browser»; {files} = dimensione dei file caricati e {idx} = dimensione degli indici, già formattate (es. 28 MB).",
   "settings.arch.nosize": "Come sopra quando la dimensione non è nota; {n} = numero di file caricati.",
   "settings.arch.quota": "Frase sulla quota del browser; {quota} = spazio concesso in tutto e {used} = spazio già usato, già formattati.",
-  "settings.arch.rm.ask": "Domanda di conferma prima di togliere file, indici e sessione; {size} = spazio che si libera, già formattato."
+  "settings.arch.rm.ask": "Domanda di conferma prima di togliere file, indici e sessione; {size} = spazio che si libera, già formattato.",
+  "tpmine.feat.degraded": "Avviso di mzFinder (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
+  "error.featMemory": "Errore di mzFinder (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB."
 }

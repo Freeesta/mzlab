@@ -63,7 +63,7 @@ fn weak_tier<R: ReadAt>(
             .take_while(|&j| strong.mz[j] <= w.mz[i] + tol)
             .any(|j| f64::from(strong.rt[j] - w.rt[i]).abs() <= gap);
         if !held {
-            out.push_row(&w, i);
+            out.push_lean(&w, i);
         }
     }
     Ok(out)
@@ -74,17 +74,35 @@ fn weak_tier<R: ReadAt>(
 pub fn align_and_fill<R: ReadAt>(
     files: &[FileFeatures],
     r: &Recipe,
-    mut open: impl FnMut(usize) -> Result<Index<R>>,
+    open: impl FnMut(usize) -> Result<Index<R>>,
 ) -> Result<(Aligned, usize)> {
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let mut table = match r.mode {
+    let table = match r.mode {
         Mode::Ion => align(&refs, &r.align.ion),
         Mode::Family => align_families(&refs, &r.align),
     };
+    let pos = |k: usize| {
+        Ok(FileFeatures {
+            mz: files[k].mz.clone(),
+            rt: files[k].rt.clone(),
+            ..FileFeatures::default()
+        })
+    };
+    finish(table, &mut { pos }, files.len(), r, open)
+}
+
+/// Weak tier, map of RT and gap filling on the aligned table of the strong peaks. `strong(k)` gives the table of file `k` (only its m/z and RT are read).
+pub(crate) fn finish<R: ReadAt>(
+    mut table: Aligned,
+    strong: &mut dyn FnMut(usize) -> Result<FileFeatures>,
+    n: usize,
+    r: &Recipe,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
+) -> Result<(Aligned, usize)> {
     if r.weak_files > 0 {
-        let mut weak = Vec::with_capacity(files.len());
-        for (k, f) in files.iter().enumerate() {
-            weak.push(weak_tier(&mut open(k)?, f, r)?);
+        let mut weak = Vec::with_capacity(n);
+        for k in 0..n {
+            weak.push(weak_tier(&mut open(k)?, &strong(k)?, r)?);
         }
         let refs: Vec<&FileFeatures> = weak.iter().collect();
         let mut ions = align(&refs, &r.align.ion);
@@ -94,7 +112,7 @@ pub fn align_and_fill<R: ReadAt>(
     let map: RtMap = build(&table, &r.rt);
     let map = map.ok().then_some(&map);
     let mut filled = 0;
-    for k in 0..files.len() {
+    for k in 0..n {
         if !r.fill_gaps {
             break;
         }

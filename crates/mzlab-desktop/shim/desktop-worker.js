@@ -62,7 +62,7 @@ async function handle(m) {
         const rid = await fileId(m.blob);
         // the conversion is one long native call: ask now and then how far it has got
         const poll = setInterval(async () => {
-          try { const p = await (await get("rawprogress", { id: rid })).json(); if (p.total) postMessage({ id, op: "progress", total: p.total, read: p.read, written: p.written }); } catch (_) { /* optional */ }
+          try { const p = await (await get("rawprogress", { id: rid })).json(); if (p.total) postMessage({ id, op: "progress", total: p.total, read: p.read, written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
         }, 300);
         let out;
         try { out = await (await get("raw2mzml", { id: rid })).json(); } finally { clearInterval(poll); }

@@ -21,11 +21,11 @@ try:
         shutil.rmtree("/tmp/s26", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 30])); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def ions():
-            for mode in ("tof", "orbi", "quad"):
+            for mode in ("tof", "orbi", "quad", "esi", "trappola", "fticr", "qqq"):
                 pg.evaluate(f"ldIon(true, '{mode}')"); pg.wait_for_timeout(250)
                 assert pg.evaluate("!!document.querySelector('#ldion')"), mode
                 pg.evaluate("ldIon(false)")
-        step("ldIon draws tof, orbi and quad without errors (still frame with reduced motion)", ions)
+        step("ldIon draws the seven analysers without errors (still frame with reduced motion)", ions)
         def cleanup():
             body = pg.inner_text("body")
             assert "cella attiva:" not in body.lower() and "active cell:" not in body.lower()

@@ -136,9 +136,11 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             None => bad(),
         },
         "rawprogress" => match u("id").and_then(|id| state.raw_progress(id)) {
-            Some((total, read, written)) => json(
+            Some((total, read, written, scans, scans_total)) => json(
                 200,
-                format!("{{\"total\":{total},\"read\":{read},\"written\":{written}}}"),
+                format!(
+                    "{{\"total\":{total},\"read\":{read},\"written\":{written},\"scans\":{scans},\"scansTotal\":{scans_total}}}"
+                ),
             ),
             None => json(200, "{}".into()),
         },

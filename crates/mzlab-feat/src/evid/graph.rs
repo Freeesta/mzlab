@@ -10,7 +10,6 @@ use crate::family::evidence::EdgeKind as FamilyEdge;
 use crate::hypo::{Registry, SRC_RULE};
 use crate::kinetic::Setup;
 use crate::table::*;
-use mzlab_core::roles::PROTON;
 
 pub const SOURCE_FEATURES: &str = "mzlab-feat/evid";
 /// Window (ppm) to match a row to a hypothesis, RT window (min) when the hypothesis has one, margin (min) of the direction of the RT.
@@ -144,7 +143,7 @@ pub struct Identity {
 }
 
 /// Row -> index of the hypothesis it confirms: the closest in m/z within the window (and in RT when the hypothesis has one).
-fn match_hypotheses(inp: &Inputs) -> Vec<Option<usize>> {
+pub(super) fn match_hypotheses(inp: &Inputs) -> Vec<Option<usize>> {
     let hyps = &inp.registry.hyps;
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
     by_mz.sort_by(|&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
@@ -168,7 +167,7 @@ fn match_hypotheses(inp: &Inputs) -> Vec<Option<usize>> {
 }
 
 /// Best library hit of every row (highest entropy, the first on a tie).
-fn best_hits(inp: &Inputs) -> Vec<Option<usize>> {
+pub(super) fn best_hits(inp: &Inputs) -> Vec<Option<usize>> {
     let mut best: Vec<Option<usize>> = vec![None; inp.aligned.len()];
     for (i, h) in inp.libs.iter().enumerate() {
         if h.row < best.len() && best[h.row].is_none_or(|b| inp.libs[b].entropy < h.entropy) {
@@ -180,7 +179,7 @@ fn best_hits(inp: &Inputs) -> Vec<Option<usize>> {
 
 /// N of every candidate: itself and the others of the same neutral mass (within the tolerance of the table) that the MS2 does not separate. The same
 /// rule as `indistinguishable`, with the masses sorted once.
-fn counts_of_n(table: &PointsTable, c: &[Candidate]) -> Vec<usize> {
+pub(super) fn counts_of_n(table: &PointsTable, c: &[Candidate]) -> Vec<usize> {
     let mut order: Vec<usize> = (0..c.len()).collect();
     order.sort_by(|&a, &b| c[a].mass.total_cmp(&c[b].mass));
     let mut n = vec![1; c.len()];
@@ -271,7 +270,7 @@ fn internal_edges(inp: &Inputs, row: usize, members: &[Member]) -> Vec<Edge> {
     edges
 }
 
-fn parent_row(inp: &Inputs) -> Option<usize> {
+pub(super) fn parent_row(inp: &Inputs) -> Option<usize> {
     let (mz, rt) = inp.parent?;
     let tol = mz * HYPOTHESIS_PPM * 1e-6;
     (0..inp.aligned.len()).find(|&r| {
@@ -282,31 +281,11 @@ fn parent_row(inp: &Inputs) -> Option<usize> {
 /// The graph: identities ordered by the explanation of their points (none against first, then the total, higher first, then the larger area; equal
 /// ones keep the order of the rows).
 pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
-    let n = inp.aligned.len();
-    let hyp = match_hypotheses(inp);
-    let best = best_hits(inp);
-    let sign = f64::from(inp.registry.polarity.signum());
-    let neutral = |r: usize| {
-        hyp[r].map_or(inp.aligned.mz[r] - sign * PROTON, |h| {
-            inp.registry.hyps[h].neutral
-        })
-    };
-    let cands: Vec<Candidate> = (0..n)
-        .map(|r| Candidate {
-            mass: neutral(r),
-            ms2: best[r].map(|b| inp.libs[b].entropy),
-        })
+    let prep = super::prepared::Prepared::new(inp);
+    let mut ids: Vec<Identity> = (0..inp.aligned.len())
+        .map(|r| prep.identity(inp, r))
         .collect();
-    let ns = counts_of_n(inp.table, &cands);
-    let parent = parent_row(inp);
-    let mut ids: Vec<Identity> = (0..n)
-        .map(|r| identity_of(inp, r, hyp[r], best[r], ns[r], parent, neutral(r)))
-        .collect();
-    ids.sort_by(|a, b| {
-        a.breakdown
-            .rank(&b.breakdown)
-            .then_with(|| b.area_max.total_cmp(&a.area_max))
-    });
+    ids.sort_by(|a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
     ids
 }
 
@@ -425,7 +404,7 @@ fn link_edges(
     edges
 }
 
-fn identity_of(
+pub(super) fn identity_of(
     inp: &Inputs,
     row: usize,
     hyp: Option<usize>,

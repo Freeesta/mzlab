@@ -35,6 +35,9 @@ pub struct Progress {
     pub total: AtomicU64,
     pub read: AtomicU64,
     pub written: AtomicU64,
+    /// Scans converted and scans in the file (0 until the container is open).
+    pub scans: AtomicU64,
+    pub scans_total: AtomicU64,
 }
 
 /// A reader that tells how far the source has been read.
@@ -232,7 +235,12 @@ impl State {
             inner: Cursor::new(map.bytes()),
             progress: progress.clone(),
         };
-        raw::to_mzml(source, &mut out, stem)?;
+        let pr = progress.clone();
+        let mut on_scan = move |done: u32, total: u32| {
+            pr.scans.store(u64::from(done), Ordering::Relaxed);
+            pr.scans_total.store(u64::from(total), Ordering::Relaxed);
+        };
+        raw::to_mzml_progress(source, &mut out, stem, &mut on_scan)?;
         progress
             .read
             .store(map.bytes().len() as u64, Ordering::Relaxed);
@@ -254,13 +262,16 @@ impl State {
         Ok((tid, size))
     }
 
-    /// `(total, read, written)` bytes of the conversion of the `.raw` with this number (None if it never started).
-    pub fn raw_progress(&self, id: u32) -> Option<(u64, u64, u64)> {
+    /// `(total, read, written, scans, scans_total)` of the conversion of the `.raw` with this number: bytes of the file, bytes read,
+    /// bytes of the mzML written, scans converted and scans in the file (None if it never started).
+    pub fn raw_progress(&self, id: u32) -> Option<(u64, u64, u64, u64, u64)> {
         self.lock().progress.get(&id).map(|p| {
             (
                 p.total.load(Ordering::Relaxed),
                 p.read.load(Ordering::Relaxed),
                 p.written.load(Ordering::Relaxed),
+                p.scans.load(Ordering::Relaxed),
+                p.scans_total.load(Ordering::Relaxed),
             )
         })
     }
