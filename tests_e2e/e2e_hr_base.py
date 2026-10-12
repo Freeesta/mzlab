@@ -52,10 +52,10 @@ try:
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
             pg.click("#opbtn")
-            pg.wait_for_timeout(1500)
+            pg.wait_for_selector("#hrmix-replace", timeout=30000)
             assert pg.is_visible("#hrmix-replace") and pg.is_visible("#hrmix-cancel")
             pg.click("#hrmix-replace")
-            pg.wait_for_timeout(6000)
+            pg.wait_for_function("E.files.length === 1 && E.files[0].file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
             v = pg.evaluate("E.files.map(f=>f.file)")
             assert len(v) == 1 and "B_FullMass-t0.mzML" in v[0]
         step("mix LR and HR: shows choice dialog and replaces files", test_mix)

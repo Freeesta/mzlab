@@ -761,7 +761,7 @@ addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.
 // are in E.pending (grey rows, aria-busy, not selectable); a file that fails stays there in red with its message and the others go on; a file taken off the list is not read.
 async function exploreList(samples){
   if(samples.length<2||!(window.QQQ_BROWSER||/[?&]progressivo=1\b/.test(location.search))){await post("api/explore",{samples});return null}
-  await post("api/explore",{samples:[samples[0]]});
+  await post("api/explore",{samples:[samples[0]],all:samples.map(s=>s.file)});
   const tok=E.progTok={};E.pendN=samples.length;
   E.pending=samples.slice(1).map(s=>({file:s.file,label:s.label||s.file,state:"wait"}));
   return ()=>openRest(samples.slice(1),tok)}
