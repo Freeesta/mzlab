@@ -149,7 +149,7 @@ const BARRA = (() => {
     try { s = JSON.parse(localStorage.getItem(storageKey()) || "{}") || {}; } catch (_) { s = {}; }
     _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = s.open === true;
+    _open = s.open === undefined ? innerWidth >= 900 : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;

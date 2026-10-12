@@ -402,7 +402,6 @@ I18N.add("it", {
   "load.note.big": "File grandi ({n}): il browser non li conserva, dopo aver ricaricato la pagina vanno caricati di nuovo.",
   "load.loaded.title": "File già caricati ({n})",
   "load.loaded.back": "◀ Torna ai dati",
-  "load.loaded.hint": "Aggiungi qui sotto altri file: quelli già caricati restano nella sessione.",
   "load.newSession.confirm": "Iniziare una <b>nuova sessione</b>? Il lavoro salvato e la copia del programma in memoria saranno cancellati e si ricarica tutto da zero (i file sul tuo computer non vengono toccati).",
   "load.hrmix.replace": "Chiudi i file aperti e carica questi",
   "settings.title": "Impostazioni",

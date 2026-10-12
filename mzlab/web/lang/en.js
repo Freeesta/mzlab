@@ -402,7 +402,6 @@ I18N.add("en", {
   "load.note.big": "Large files ({n}): the browser does not keep them, after reloading the page they must be loaded again.",
   "load.loaded.title": "Files already loaded ({n})",
   "load.loaded.back": "◀ Back to the data",
-  "load.loaded.hint": "Add more files below: the ones already loaded stay in the session.",
   "load.newSession.confirm": "Start a <b>new session</b>? The saved work and the stored copy of the program will be deleted and everything reloads from scratch (the files on your computer are not touched).",
   "load.hrmix.replace": "Close the open files and load these",
   "settings.title": "Settings",
