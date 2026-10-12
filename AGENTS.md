@@ -50,7 +50,8 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 ## 5. File d'area (leggi solo quello del tuo lavoro)
 | Se tocchi… | Leggi |
 |---|---|
-| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, barra laterale, tour | `docs/agenti/dati.md` |
+| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
+| barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |

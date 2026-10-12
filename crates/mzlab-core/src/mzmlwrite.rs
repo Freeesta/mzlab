@@ -21,7 +21,8 @@ impl<W: Write> MzmlWriter<W> {
             s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\"/>", i + 1, esc(f));
         }
         s += "</sourceFileList></fileDescription>\n";
-        s += &format!("<softwareList count=\"1\"><software id=\"mzlab\" version=\"{}\">{}</software></softwareList>\n", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)));
+        s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize, esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
+            if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() });
         s += "<instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">";
         if let Some((acc, name)) = &h.instrument {
             s += &cv(acc, name, "");
@@ -33,6 +34,9 @@ impl<W: Write> MzmlWriter<W> {
         s += "</componentList><softwareRef ref=\"mzlab\"/></instrumentConfiguration></instrumentConfigurationList>\n";
         s += "<dataProcessingList count=\"1\"><dataProcessing id=\"conversion\"><processingMethod order=\"0\" softwareRef=\"mzlab\">";
         s += &cv("MS:1000544", "Conversion to mzML", "");
+        if h.centroided {
+            s += &format!("</processingMethod><processingMethod order=\"1\" softwareRef=\"mzlab-centroidi\">{}", cv("MS:1000035", "peak picking", ""));
+        }
         s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\">\n", esc(&h.run));
         out.write_all(s.as_bytes()).map_err(io)?;
         Ok(MzmlWriter { out, spectra: 0, chroms: 0, z: Compress::new(Compression::default(), true), raw: Vec::new(), packed: Vec::new() })
@@ -128,6 +132,8 @@ pub struct Header {
     pub components: Vec<(String, String, String)>,
     /// Name and version of the program that wrote the file.
     pub software: (String, String),
+    /// The spectra were reduced to one point per peak by mzLab (adds the `MS:1000035` processing step).
+    pub centroided: bool,
 }
 
 pub struct MzmlWriter<W: Write> {
