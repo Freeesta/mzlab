@@ -77,7 +77,7 @@
     let m = cat[lang][key];
     if (m === undefined) m = cat.it[key];
     if (m === undefined) { if (!missing.has(key)) { missing.add(key); try { console.warn("i18n: missing key " + key); } catch (_) { /* no console */ } } return key; }
-    return params === undefined && m.indexOf("{") < 0 ? m : format(m, params, lang);
+    return params === undefined && m.indexOf("{") < 0 ? m : format(m, m.indexOf("{app") < 0 || (params && params.app !== undefined) || !root.APP_NAME ? params : Object.assign({ app: root.APP_NAME }, params), lang);   // {app} is always the name of appname.js, even when the caller passes no parameters
   }
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
   // fixed decimals, always with the point (file sizes inside prose: "1.5 MB"); data values use num()
