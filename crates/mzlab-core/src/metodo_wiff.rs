@@ -200,24 +200,7 @@ fn blank_identity(t: &str) -> String {
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let method = method_of_sample(ole, n);
     let sample = format!("SampleSubtree/Sample{n}/");
-    let log = ole
-        .read(&format!("{sample}Log"))
-        .map(|b| log_records(&b))
-        .unwrap_or_default();
-    let data = ole
-        .read(&format!("{sample}SampleDABE/DATA"))
-        .map(|b| counted_strings(&b))
-        .unwrap_or_default();
-    let cfr = ole
-        .read(&format!("{sample}SampleDABE/CFR_INFO"))
-        .map(|b| counted_strings(&b))
-        .unwrap_or_default();
-    let props = ole
-        .paths_list()
-        .find(|p| p.ends_with("SummaryInformation") && !p.contains("Document"))
-        .and_then(|p| ole.read(p))
-        .map(|b| properties(&b))
-        .unwrap_or_default();
+    let (log, data, cfr, props) = read_parts(ole, &sample);
     let prop = |id| {
         props
             .iter()
@@ -253,22 +236,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         .and_then(|s| s.rsplit('\\').next());
     let anon = src.anonymous;
 
-    let (lc, det) = method
-        .as_ref()
-        .and_then(|m| m.lc.as_ref())
-        .map_or((None, None), lc_sections);
-    let mut lc = lc;
-    if let (Some(pmax), Some(V::Obj(f))) =
-        (get("Pumps", "P.Max 1").and_then(value_unit), lc.as_mut())
-    {
-        f.extend(
-            obj(vec![
-                ("valore", num(Some(pmax.0))),
-                ("unita", text(&pmax.1)),
-            ])
-            .map(|p| ("pressione_max", p)),
-        );
-    }
+    let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
     let autosampler: Vec<V> = entries
         .iter()
         .filter(|(s, ..)| s.starts_with("Autosampler"))
@@ -278,82 +246,13 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let registro = run_records(&ms_rec);
     let raw = raw_log(&log, anon);
     let warn = warnings(ole, &sample, log.is_empty());
-    let name = data.first().filter(|_| data.len() >= 4);
 
     let doc = obj(vec![
         ("schema", Some(V::s(crate::metodo::SCHEMA))),
         ("origine", crate::metodo::origin(src, prop(12))),
-        (
-            "campione",
-            obj(vec![
-                ("nome", name.and_then(|s| text(s))),
-                (
-                    "vial",
-                    data.last()
-                        .filter(|_| data.len() >= 4)
-                        .and_then(|s| text(s)),
-                ),
-                (
-                    "iniezione_uL",
-                    get("", "Injection Volume")
-                        .and_then(value_unit)
-                        .and_then(|v| num(Some(v.0))),
-                ),
-                (
-                    "metodo_file",
-                    data.iter()
-                        .find(|s| s.to_lowercase().ends_with(".dam"))
-                        .and_then(|s| text(s)),
-                ),
-            ]),
-        ),
-        (
-            "strumento",
-            obj(vec![
-                (
-                    "produttore",
-                    cfg.and_then(|r| field(r, "Manufacturer:"))
-                        .and_then(text)
-                        .or_else(|| Some(V::s("SCIEX"))),
-                ),
-                (
-                    "modello",
-                    cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
-                ),
-                (
-                    "serie",
-                    if anon {
-                        None
-                    } else {
-                        cfg.and_then(|r| field(r, "Serial Number:")).and_then(text)
-                    },
-                ),
-                (
-                    "firmware",
-                    cfg.and_then(|r| field(r, "Firmware Version:"))
-                        .and_then(text),
-                ),
-                (
-                    "software",
-                    obj(vec![
-                        ("nome", Some(V::s("Analyst"))),
-                        ("versione", version.and_then(|v| text(v))),
-                    ])
-                    .map(|s| V::Arr(vec![s])),
-                ),
-            ]),
-        ),
-        (
-            "operatore",
-            if anon {
-                None
-            } else {
-                obj(vec![
-                    ("utente", user.or(domain_user).and_then(text)),
-                    ("computer", computer.and_then(text)),
-                ])
-            },
-        ),
+        ("campione", campione(&data, get("", "Injection Volume"))),
+        ("strumento", strumento(cfg, version, anon)),
+        ("operatore", operatore(user.or(domain_user), computer, anon)),
         ("ms", method.as_ref().and_then(ms_section)),
         ("lc", lc),
         (
@@ -370,6 +269,120 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())
+}
+
+/// The strings of the log, of `DATA` and of `CFR_INFO` of the sample, and the properties of the summary information.
+#[allow(clippy::type_complexity)]
+fn read_parts(
+    ole: &Ole,
+    sample: &str,
+) -> (Vec<String>, Vec<String>, Vec<String>, Vec<(u32, String)>) {
+    let log = ole
+        .read(&format!("{sample}Log"))
+        .map(|b| log_records(&b))
+        .unwrap_or_default();
+    let data = ole
+        .read(&format!("{sample}SampleDABE/DATA"))
+        .map(|b| counted_strings(&b))
+        .unwrap_or_default();
+    let cfr = ole
+        .read(&format!("{sample}SampleDABE/CFR_INFO"))
+        .map(|b| counted_strings(&b))
+        .unwrap_or_default();
+    let props = ole
+        .paths_list()
+        .find(|p| p.ends_with("SummaryInformation") && !p.contains("Document"))
+        .and_then(|p| ole.read(p))
+        .map(|b| properties(&b))
+        .unwrap_or_default();
+    (log, data, cfr, props)
+}
+
+/// The `lc` section with the maximum pressure of the pumps (`P.Max 1` of the log, a value with its unit) and the detectors.
+fn lc_with_pressure(
+    method: Option<&crate::methodinfo::Method>,
+    pmax: Option<&str>,
+) -> (Option<V>, Option<V>) {
+    let (mut lc, det) = method
+        .and_then(|m| m.lc.as_ref())
+        .map_or((None, None), lc_sections);
+    if let (Some(pmax), Some(V::Obj(f))) = (pmax.and_then(value_unit), lc.as_mut()) {
+        f.extend(
+            obj(vec![
+                ("valore", num(Some(pmax.0))),
+                ("unita", text(&pmax.1)),
+            ])
+            .map(|p| ("pressione_max", p)),
+        );
+    }
+    (lc, det)
+}
+
+/// The `campione` section: name and vial from the `DATA` strings (four or more), the method file, the injection volume.
+fn campione(data: &[String], injection: Option<&str>) -> Option<V> {
+    let named = data.len() >= 4;
+    obj(vec![
+        ("nome", data.first().filter(|_| named).and_then(|s| text(s))),
+        ("vial", data.last().filter(|_| named).and_then(|s| text(s))),
+        (
+            "iniezione_uL",
+            injection.and_then(value_unit).and_then(|v| num(Some(v.0))),
+        ),
+        (
+            "metodo_file",
+            data.iter()
+                .find(|s| s.to_lowercase().ends_with(".dam"))
+                .and_then(|s| text(s)),
+        ),
+    ])
+}
+
+/// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
+fn strumento(cfg: Option<&String>, version: Option<&String>, anon: bool) -> Option<V> {
+    obj(vec![
+        (
+            "produttore",
+            cfg.and_then(|r| field(r, "Manufacturer:"))
+                .and_then(text)
+                .or_else(|| Some(V::s("SCIEX"))),
+        ),
+        (
+            "modello",
+            cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
+        ),
+        (
+            "serie",
+            if anon {
+                None
+            } else {
+                cfg.and_then(|r| field(r, "Serial Number:")).and_then(text)
+            },
+        ),
+        (
+            "firmware",
+            cfg.and_then(|r| field(r, "Firmware Version:"))
+                .and_then(text),
+        ),
+        (
+            "software",
+            obj(vec![
+                ("nome", Some(V::s("Analyst"))),
+                ("versione", version.and_then(|v| text(v))),
+            ])
+            .map(|s| V::Arr(vec![s])),
+        ),
+    ])
+}
+
+/// The `operatore` section (absent in an anonymous document).
+fn operatore(user: Option<&str>, computer: Option<&str>, anon: bool) -> Option<V> {
+    if anon {
+        return None;
+    }
+    obj(vec![
+        ("utente", user.and_then(text)),
+        ("computer", computer.and_then(text)),
+    ])
 }
 
 /// The start and end records of the run, from the lookup of the Mass Spectrometer records of the log.
@@ -429,90 +442,4 @@ fn warnings(ole: &Ole, sample: &str, no_log: bool) -> Vec<Option<V>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn utf16(s: &str) -> Vec<u8> {
-        s.encode_utf16().flat_map(|c| c.to_le_bytes()).collect()
-    }
-
-    #[test]
-    fn counted_strings_are_read_between_binary_fields() {
-        let mut b = vec![0u8; 12];
-        for s in ["t60", "Lab\\B\\MS2.wiff", "x.dam"] {
-            b.extend((2 * s.encode_utf16().count() as u16).to_le_bytes());
-            b.extend(utf16(s));
-            b.extend([0, 0, 7, 0]);
-        }
-        assert_eq!(counted_strings(&b), ["t60", "Lab\\B\\MS2.wiff", "x.dam"]);
-    }
-
-    #[test]
-    fn log_records_drop_the_length_byte_and_join_the_blocks_of_1024() {
-        let long: String = (0..1024)
-            .map(|i| char::from(b'a' + (i % 26) as u8))
-            .collect();
-        let mut b = vec![1u8, 2, 3, 4, 5, 6, 7, 8];
-        b.extend(utf16("6Software Application::0:"));
-        b.extend([0, 0, 0xc2, 2, 0, 0]);
-        b.extend(utf16(
-            &format!("Shimadzu Instrument driver:User=\\:Computer=PC1,{long}")[..1024],
-        ));
-        b.extend([0, 0, 0x78, 0x69, 0, 0, 8, 0]);
-        b.extend(utf16(",tail of the record"));
-        let r = log_records(&b);
-        assert_eq!(r[0], "Software Application::0:");
-        assert_eq!(r.len(), 2);
-        assert!(
-            r[1].starts_with("Shimadzu Instrument driver:User=")
-                && r[1].ends_with(",tail of the record"),
-            "{}",
-            r[1]
-        );
-    }
-
-    #[test]
-    fn the_lc_record_gives_sections_and_values_with_units() {
-        let e = driver_entries("Shimadzu Instrument driver:User=\\:Computer=PC1,     Injection Volume:30 uL,Pumps:(LC-20ADXR),     Total Flow:0.25 mL/min,     P.Max 1:8000 psi,,Oven (CTO-20A),     Temperature:40 ");
-        assert!(e
-            .iter()
-            .any(|(s, k, v)| s.starts_with("Pumps") && k == "P.Max 1" && v == "8000 psi"));
-        assert!(e
-            .iter()
-            .any(|(s, k, _)| s.starts_with("Oven") && k == "Temperature"));
-        assert_eq!(
-            value_unit("0.25 mL/min"),
-            Some((0.25, "mL/min".to_string()))
-        );
-        assert_eq!(value_unit("Yes"), None);
-    }
-
-    #[test]
-    fn the_creation_time_of_a_property_set_is_a_local_timestamp() {
-        // 2025-11-11 13:15:22 as a FILETIME
-        let ft = (1_762_866_922u64 + 11_644_473_600) * 10_000_000;
-        assert_eq!(filetime(ft), "2025-11-11T13:15:22");
-        let mut b = vec![0u8; 0x30];
-        b[0x2c..0x30].copy_from_slice(&0x30u32.to_le_bytes());
-        b.extend([0u8; 4]);
-        b.extend(1u32.to_le_bytes());
-        b.extend(12u32.to_le_bytes());
-        b.extend(16u32.to_le_bytes());
-        b.extend(64u32.to_le_bytes());
-        b.extend(ft.to_le_bytes());
-        assert_eq!(
-            properties(&b),
-            vec![(12, "2025-11-11T13:15:22".to_string())]
-        );
-    }
-
-    #[test]
-    fn identity_is_blanked_in_the_text_of_the_log() {
-        let t = blank_identity("driver:User=jdoe:Computer=PC-7,x,Serial Number: AF1\nnext");
-        assert!(
-            !t.contains("jdoe") && !t.contains("PC-7") && !t.contains("AF1"),
-            "{t}"
-        );
-        assert!(t.contains("next"));
-    }
-}
+mod tests;

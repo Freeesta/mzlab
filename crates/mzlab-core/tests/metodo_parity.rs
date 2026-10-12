@@ -66,6 +66,75 @@ fn ms_of(doc: &str) -> String {
     o.0
 }
 
+/// One sample of a `.wiff`: the sections of the document, the method equal to the `.dam` it names, and nothing personal in the anonymous
+/// document. Gives 1 when a `.dam` of the repository was compared.
+fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
+    let doc = from_wiff(ole, sample, &src(wiff, bytes, sample, false));
+    let v =
+        json::parse(doc.as_bytes()).unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
+    assert_eq!(
+        v.get("schema").and_then(|s| s.str()),
+        Some("metodo/1"),
+        "{wiff} {sample}"
+    );
+    for k in ["origine", "campione", "strumento", "registro", "grezzo"] {
+        assert!(
+            v.get(k).is_some(),
+            "{wiff} {sample}: section {k} is missing"
+        );
+    }
+    let text = |sec: &str, key: &str| {
+        v.get(sec)
+            .and_then(|s| s.get(key))
+            .and_then(|s| s.str())
+            .map(String::from)
+    };
+    assert_eq!(
+        text("strumento", "modello").as_deref(),
+        Some("3200 Q TRAP"),
+        "{wiff} {sample}"
+    );
+    let mut checked = 0;
+    // the .dam named by the sample, when the repository has it: every parameter of the method the same
+    if let (Some(name), true) = (text("campione", "metodo_file"), v.get("ms").is_some()) {
+        if let Ok(dam) = std::fs::read(d.join("dam").join(&name)) {
+            let m = read_methods(dam, &name).unwrap().remove(0);
+            let source = Source {
+                format: "sciex-dam",
+                files: vec![SrcFile {
+                    name: name.clone(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            assert_eq!(
+                ms_of(&doc),
+                ms_of(&metodo::from_dam(&m, &source)),
+                "{wiff} sample {sample}: ms differs from {name}"
+            );
+            checked = 1;
+        }
+    }
+    // anonymous: nothing that names a person or a machine (the values are the ones of the full document)
+    let anon = from_wiff(ole, sample, &src(wiff, bytes, sample, true));
+    let secrets = [
+        text("operatore", "utente"),
+        text("operatore", "computer"),
+        text("strumento", "serie"),
+    ];
+    for secret in secrets.into_iter().flatten().filter(|s| s.len() > 3) {
+        assert!(
+            !anon.contains(&secret),
+            "{wiff} {sample}: anonymous document still has a personal value"
+        );
+    }
+    assert!(
+        !anon.contains("\"operatore\"") && !anon.contains("\"serie\""),
+        "{wiff} {sample}: personal sections in the anonymous document"
+    );
+    checked
+}
+
 #[test]
 fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
     let Some(d) = dati() else {
@@ -80,69 +149,7 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
         for sample in
             (1..=16u32).filter(|n| ole.has(&format!("SampleSubtree/Sample{n}/SampleDABE/DATA")))
         {
-            let doc = from_wiff(&ole, sample, &src(wiff, &bytes, sample, false));
-            let v = json::parse(doc.as_bytes())
-                .unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
-            assert_eq!(
-                v.get("schema").and_then(|s| s.str()),
-                Some("metodo/1"),
-                "{wiff} {sample}"
-            );
-            for k in ["origine", "campione", "strumento", "registro", "grezzo"] {
-                assert!(
-                    v.get(k).is_some(),
-                    "{wiff} {sample}: section {k} is missing"
-                );
-            }
-            assert_eq!(
-                v.get("strumento")
-                    .and_then(|s| s.get("modello"))
-                    .and_then(|s| s.str()),
-                Some("3200 Q TRAP"),
-                "{wiff} {sample}"
-            );
-            // the .dam named by the sample, when the repository has it: every parameter of the method the same
-            let dam_name = v
-                .get("campione")
-                .and_then(|c| c.get("metodo_file"))
-                .and_then(|s| s.str())
-                .map(String::from);
-            if let (Some(name), true) = (dam_name, v.get("ms").is_some()) {
-                if let Ok(dam) = std::fs::read(d.join("dam").join(&name)) {
-                    let m = read_methods(dam, &name).unwrap().remove(0);
-                    let from_dam = metodo::from_dam(
-                        &m,
-                        &Source {
-                            format: "sciex-dam",
-                            files: vec![SrcFile {
-                                name: name.clone(),
-                                ..Default::default()
-                            }],
-                            ..Default::default()
-                        },
-                    );
-                    assert_eq!(
-                        ms_of(&doc),
-                        ms_of(&from_dam),
-                        "{wiff} sample {sample}: ms differs from {name}"
-                    );
-                    checked += 1;
-                }
-            }
-            // anonymous: nothing that names a person or a machine
-            let anon = from_wiff(&ole, sample, &src(wiff, &bytes, sample, true));
-            for secret in [
-                "operatore",
-                "\"serie\"",
-                "LAB_CHIMICA",
-                "Lab_Chimica",
-                "AF2870",
-            ] {
-                assert!(
-                    !anon.contains(secret),
-                    "{wiff} {sample}: anonymous document still has {secret}"
-                );
-            }
+            checked += check_sample(&d, &ole, wiff, &bytes, sample);
         }
     }
     assert!(checked >= 1, "no .dam of the repository matched a .wiff");
