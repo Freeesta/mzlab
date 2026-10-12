@@ -13,3 +13,4 @@ Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 25
 - Indice: `idxpool.js` compila il `.wasm` una volta (`compileStreaming`) e passa il `WebAssembly.Module` a ogni worker con `{op:"module"}` (`null` = compila da sé); `idx-worker.js` aspetta quel messaggio.
 - Strato debole di `align`: le tabelle deboli di tutti i file sono contate sul budget (`series::finish`); oltre metà dello spazio libero la fase è rifiutata con `error.memoryBudget` (fase `align`).
 - Limite noto: l'mzML di un `.raw` grande resta in memoria come Blob durante la conversione.
+- Mappe e XIC: le regioni hanno al massimo 1024×1024 celle; i bastoncini 3D al massimo 200 000 punti, scelti in Rust (`sticks`); `subxic` non carica più la tabella dei picchi di una sopravvista (decine di milioni di picchi): per ogni finestra di ppm legge dall'indice solo i suoi picchi (`each_peak`), stesso JSON.
