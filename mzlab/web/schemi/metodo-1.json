@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "metodo/1",
+  "description": "Metodo di acquisizione di UN campione. Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
+  "type": "object",
+  "required": [
+    "schema"
+  ],
+  "properties": {
+    "schema": {
+      "const": "metodo/1"
+    },
+    "origine": {
+      "type": "object",
+      "properties": {
+        "formato": {
+          "type": "string"
+        },
+        "file": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "sha1": {
+                "type": "string"
+              },
+              "byte": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "campione": {
+          "type": "number"
+        },
+        "file_creato": {
+          "type": "string"
+        },
+        "lettore": {
+          "type": "object",
+          "properties": {
+            "nome": {
+              "type": "string"
+            },
+            "versione": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "campione": {
+      "type": "object",
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "vial": {
+          "type": "string"
+        },
+        "iniezione_uL": {
+          "type": "number"
+        },
+        "metodo_file": {
+          "type": "string"
+        }
+      }
+    },
+    "strumento": {
+      "type": "object",
+      "properties": {
+        "produttore": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "serie": {
+          "type": "string"
+        },
+        "software": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "versione": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "computer": {
+          "type": "string"
+        },
+        "firmware": {
+          "type": "string"
+        }
+      }
+    },
+    "operatore": {
+      "type": "object",
+      "properties": {
+        "utente": {
+          "type": "string"
+        },
+        "computer": {
+          "type": "string"
+        }
+      }
+    },
+    "ms": {
+      "type": "object",
+      "properties": {
+        "sorgente": {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string"
+            },
+            "parametri": {
+              "$ref": "#/$defs/parametri"
+            }
+          }
+        },
+        "periodi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "esperimenti": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "indice": {
+                      "type": "number"
+                    },
+                    "tipo": {
+                      "type": "string"
+                    },
+                    "mz": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "ce_eV": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "parametri": {
+                      "$ref": "#/$defs/parametri"
+                    },
+                    "transizioni": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "q1": {
+                            "type": "number"
+                          },
+                          "q3": {
+                            "type": "number"
+                          },
+                          "dwell_ms": {
+                            "type": "number"
+                          },
+                          "ce_eV": {
+                            "type": "number"
+                          },
+                          "nome": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "lc": {
+      "type": "object",
+      "properties": {
+        "gradiente": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "t_min": {
+                "type": "number"
+              },
+              "B_pct": {
+                "type": "number"
+              },
+              "flusso_mL_min": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "t_min"
+            ]
+          }
+        },
+        "flusso_mL_min": {
+          "type": "number"
+        },
+        "B_iniziale_pct": {
+          "type": "number"
+        },
+        "forno_C": {
+          "type": "number"
+        },
+        "durata_min": {
+          "type": "number"
+        },
+        "pressione_max": {
+          "type": "object",
+          "properties": {
+            "valore": {
+              "type": "number"
+            },
+            "unita": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "campionatore": {
+      "type": "object",
+      "properties": {
+        "parametri": {
+          "$ref": "#/$defs/parametri"
+        }
+      }
+    },
+    "rivelatori": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "nm": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "passo_nm": {
+            "type": "number"
+          },
+          "frequenza_Hz": {
+            "type": "number"
+          },
+          "lampada": {
+            "type": "string"
+          },
+          "cella_C": {
+            "type": "number"
+          },
+          "fenditura_nm": {
+            "type": "number"
+          },
+          "canali": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nm": {
+                  "type": "number"
+                },
+                "banda_nm": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "registro": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quando": {
+            "enum": [
+              "inizio",
+              "fine"
+            ]
+          },
+          "testo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "grezzo": {
+      "type": "array",
+      "description": "Testo del registro dello strumento così com'è (al massimo 256 KB).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sezione": {
+            "type": "string"
+          },
+          "testo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "avvisi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chiave": {
+            "type": "string"
+          },
+          "dove": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "parametri": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "etichetta": {
+            "type": "string"
+          },
+          "valore": {
+            "type": "number"
+          },
+          "unita": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
