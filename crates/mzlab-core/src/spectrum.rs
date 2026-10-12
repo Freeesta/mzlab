@@ -4,7 +4,7 @@
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::iteminfo::group_is_hr;
+use crate::iteminfo::hr_profile;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
 use crate::specpeaks::merge_unit;
@@ -38,67 +38,42 @@ impl<R: ReadAt> Routes<R> {
                 None => Ok(None),
             };
         }
-        if group_is_hr(&self.idx.scans, level == 1) || !(bin > 0.0) {
+        let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
+        if hr.on {
+            return self.hr_spectrum(level, (lo, hi), precursor, filt, &hr);
+        }
+        if !(bin > 0.0) {
             return Ok(None);
         }
-        let mut o = Out::default();
         let Some(m) = self.binned(level, lo, hi, precursor, bin, filt)? else {
-            o.raw("{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}");
-            return Ok(Some(o.0));
+            return Ok(Some(EMPTY.into()));
         };
-        let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
-        if merge {
-            let (a, b) = merge_unit(&mz, &y);
-            mz = a;
-            y = b;
-        }
-        o.raw("{\"mode\":\"centroid\",\"mz\":[");
-        for (i, v) in mz.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" }).num(round(*v, 3));
-        }
-        o.raw("],\"y\":[");
-        for (i, v) in y.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
-        }
-        o.raw("],\"scans\":").int(n as i64).raw(",\"i0\":");
-        match in_win.first() {
-            Some(i) => o.int(*i as i64),
-            None => o.raw("null"),
-        };
-        o.raw(",\"i1\":");
-        match in_win.last() {
-            Some(i) => o.int(*i as i64),
-            None => o.raw("null"),
-        };
-        o.raw(",\"n\":").int(sel.len() as i64);
-        if in_win.len() == 1 {
-            o.raw(",\"sid\":").int(scan_ids[sel[in_win[0]]]);
-        }
-        o.raw("}");
-        Ok(Some(o.0))
+        Ok(Some(binned_json(m, 3, merge)))
     }
 }
 
+pub(crate) const EMPTY: &str = "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
+
 impl<R: ReadAt> Routes<R> {
     /// Positions (in the section) of the scans that pass the filter and the precursor of a request (`_scan_ids`).
-    pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, filt: Option<&str>) -> Result<Vec<usize>> {
+    pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, prec_tol: f64, filt: Option<&str>) -> Result<Vec<usize>> {
         let ar = self.idx.arrays(si)?.clone();
         let want_prec = if level > 1 { precursor } else { None };
         Ok((0..ar.rt.len())
             .filter(|&j| {
                 let s = &self.idx.scans[ar.scan_ids[j] as usize];
-                filt.is_none_or(|f| s.filter == f || s.key() == f) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= 0.6)
+                filt.is_none_or(|f| s.filter == f || s.key() == f) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
             })
             .collect())
     }
 
     /// `None` when the file has no section of `level`.
     pub(crate) fn binned(&mut self, level: u8, lo: f64, hi: f64, precursor: Option<f64>, bin: f64, filt: Option<&str>) -> Result<Option<Binned>> {
-        self.binned_cells(level, lo, hi, precursor, filt, |m| (m / bin).floor() as i64)
+        self.binned_cells(level, lo, hi, (precursor, 0.6), filt, |m| (m / bin).floor() as i64)
     }
 
     /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
-    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, precursor: Option<f64>, filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
+    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
         let Some(si) = self.idx.section_of(level, None) else {
             return Ok(None);
         };
@@ -107,7 +82,7 @@ impl<R: ReadAt> Routes<R> {
         let keep = |j: usize, idx: &crate::idxread::Index<R>| {
             let s = &idx.scans[ar.scan_ids[j] as usize];
             filt.is_none_or(|f| s.filter == f || s.key() == f)
-                && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= 0.6)
+                && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
         };
         let ok: Vec<bool> = (0..ar.rt.len())
             .map(|j| ar.rt[j] >= lo && ar.rt[j] <= hi && keep(j, &self.idx))
@@ -164,4 +139,39 @@ pub(crate) struct Binned {
     pub sel: Vec<usize>,
     pub in_win: Vec<usize>,
     pub scan_ids: Vec<i64>,
+}
+
+/// The answer for a window: the peaks rounded to `nd` decimals (m/z) and 1 (intensity), the scans of the window and, for one scan, its number.
+pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
+    let mut o = Out::default();
+    let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
+    if merge {
+        let (a, b) = merge_unit(&mz, &y);
+        mz = a;
+        y = b;
+    }
+    o.raw("{\"mode\":\"centroid\",\"mz\":[");
+    for (i, v) in mz.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, nd));
+    }
+    o.raw("],\"y\":[");
+    for (i, v) in y.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
+    }
+    o.raw("],\"scans\":").int(n as i64).raw(",\"i0\":");
+    match in_win.first() {
+        Some(i) => o.int(*i as i64),
+        None => o.raw("null"),
+    };
+    o.raw(",\"i1\":");
+    match in_win.last() {
+        Some(i) => o.int(*i as i64),
+        None => o.raw("null"),
+    };
+    o.raw(",\"n\":").int(sel.len() as i64);
+    if in_win.len() == 1 {
+        o.raw(",\"sid\":").int(scan_ids[sel[in_win[0]]]);
+    }
+    o.raw("}");
+    o.0
 }
