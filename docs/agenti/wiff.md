@@ -42,3 +42,4 @@ Si tiene ciò che il file contiene, senza peak picking implicito: il `.wiff` del
 - Verificati solo full scan, prodotto di ione (MS2) e MRM in un periodo. EPI, MS3, perdita neutra, precursori e più periodi: non visti nei dati (si leggono come full scan se il blocco ha il marcatore).
 - Le tracce DAD/analogiche del `.wiff` e i nomi dei campioni (`DabsInfo`) non si leggono.
 - Il TIC è quello dell'indice (come l'mzML), non la somma dei punti. Chiavi i18n: `err.file.notWiff`, `err.file.wiffNoScan`, `err.file.wiff` (nei cataloghi quando la pagina le usa).
+- Centroidi: `Wiff::to_mzml_progress(.., centroid, ..)` (e l'argomento `centroid` di `wiff_to_mzml`, `m.centroid` nel messaggio `wiff2mzml`, sesto parametro di `convertWiff`) scrive un punto per picco con `centroidi` (parametri stimati da ≤64 scansioni, larghezza di riserva 0,7); l'mzML dichiara `MS:1000035` e il software «mzLab centroidi». Gli MRM non cambiano. La casella nell'interfaccia non c'è ancora.

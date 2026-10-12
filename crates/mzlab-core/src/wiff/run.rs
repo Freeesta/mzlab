@@ -5,6 +5,7 @@ use std::io::Write;
 
 use super::window::Window;
 use super::{scan, Wiff};
+use crate::centroidi::{self, Buf};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
@@ -78,11 +79,30 @@ impl Wiff {
 
     /// Writes the sample as mzML (`name`: the `.wiff`), one spectrum at a time; the `.wiff.scan` is read block by block.
     pub fn to_mzml<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str) -> Result<()> {
-        self.to_mzml_progress(scan, out, name, &mut |_, _| {})
+        self.to_mzml_progress(scan, out, name, false, &mut |_, _| {})
     }
 
-    /// As `to_mzml`; `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
+    /// Parameters of the centroids from at most 64 equally spaced scans (read and dropped), as `centroidi::estimate`.
+    fn centroid_params<R: ReadAt>(&self, scan: &mut R) -> Result<centroidi::Params> {
+        let mut good = Vec::new();
+        for r in &self.records {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
+                good.push((r.at, r.end));
+            }
+        }
+        let pick = (0..good.len().min(64)).map(|i| good[i * good.len() / good.len().min(64)]);
+        let mut scans = Vec::new();
+        for (at, end) in pick {
+            if let Some(p) = scan::read_scan(scan, self.scan_len, at, end)? {
+                scans.push((p.mz, p.intensity));
+            }
+        }
+        let refs: Vec<(&[f64], &[f64])> = scans.iter().map(|(a, b)| (a.as_slice(), b.as_slice())).collect();
+        Ok(centroidi::estimate(&refs, 0.7).params)
+    }
+
+    /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
+    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, centroid: bool, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
         let header = Header {
             run: name.trim_end_matches(".wiff").to_string(),
             sources: vec![name.to_string(), format!("{name}.scan")],
@@ -92,8 +112,11 @@ impl Wiff {
                 .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
                 .collect(),
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            centroided: centroid,
         };
         let mut scan = Window::new(scan, self.scan_len);
+        let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };
+        let mut buf = Buf::default();
         let mut w = MzmlWriter::new(out, &header)?;
         let count = self.spectrum_count(&mut scan)?;
         if count > 0 {
@@ -101,7 +124,15 @@ impl Wiff {
         }
         let mut done = 0;
         progress(0, count);
-        let chroms = self.visit(&mut scan, &mut |s| {
+        let chroms = self.visit(&mut scan, &mut |mut s| {
+            if let Some(p) = &cp {
+                let c = centroidi::centroids(&s.mz, s.wide.as_deref().unwrap_or(&[]), p, &mut buf);
+                s.mz = c.iter().map(|c| c.mz).collect();
+                let v: Vec<f64> = c.iter().map(|c| c.value).collect();
+                s.intensity = v.iter().map(|&x| x as f32).collect();
+                s.wide = Some(v);
+                s.profile = false;
+            }
             w.spectrum(&s)?;
             done += 1;
             if done % 32 == 0 {
