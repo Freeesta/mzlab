@@ -133,7 +133,10 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 #stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 7px 4px 5px}
 #stbar.lab-all .tb.on,#stbar.lab-all .tb[aria-pressed=true],#stbar.lab-main .tb.on[data-main],#stbar.lab-main .tb[data-main][aria-pressed=true]{border-color:var(--accent)}
 #stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
-#stbar .tb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* header buttons: one focus ring, only from the keyboard, drawn INSIDE the button (#stbar clips what falls outside) and never the browser's double ring */
+header button:focus:not(:focus-visible),header a:focus:not(:focus-visible){outline:none}
+header button:focus-visible,header a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+header .hq:focus-visible{outline-offset:1px}
 #stbar .tb-split{display:inline-flex;flex:none}
 #stbar .tb-split .tb-main{border-top-right-radius:0;border-bottom-right-radius:0}
 #stbar .tb-split .tb-car{border-top-left-radius:0;border-bottom-left-radius:0;padding:4px 3px;margin-left:-1px}
