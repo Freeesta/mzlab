@@ -370,6 +370,7 @@ I18N.add("it", {
   "conv.beat": "Sto ancora convertendo…",
   "conv.beat.indexing": "Sto ancora indicizzando…",
   "conv.stall": "Nessuna novità da oltre 30 secondi: un file grande può richiedere molto tempo. Lascia aperta questa scheda e chiudi le altre pesanti; se non riparte puoi annullare e riprovare.",
+  "load.note.wiffMethod": "{name}: letto il metodo dal .wiff per {n} file ({files}).",
   "conv.profile": "Conserva i dati in profilo (predefinito: centroidi)",
   "conv.profile.title": "Profilo: i dati come li ha registrati lo strumento (file molto più grandi, conversione più lenta). Centroidi: i picchi già calcolati o ricavati dallo strumento, uno per picco.",
   "conv.profile.note": "Vale per i file Thermo .raw e SCIEX .wiff; gli mzML sono già convertiti e restano come sono.",
