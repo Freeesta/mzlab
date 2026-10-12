@@ -147,8 +147,7 @@ export function createBridge({ workerUrl, notify }) {
       await s.opening;
       if (!s.idx || s.bad) return null;
       let r = await rpc({ op: "route", slot: k0, path, query: u.search });
-      if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob)       // one scan of a centroid HR file: the exact peaks are in the mzML
-        r = await rpc({ op: "specexact", slot: k0, query: u.search, blob: s.blob });
+      if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k0, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
       if (r.dead || r.error || !r.info) return null;
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };

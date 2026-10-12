@@ -54,41 +54,6 @@ impl<R: ReadAt> Routes<R> {
 
 pub(crate) const EMPTY: &str = "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
 
-/// The answer for a window: the peaks rounded to `nd` decimals (m/z) and 1 (intensity), the scans of the window and, for one scan, its number.
-pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
-    let mut o = Out::default();
-    let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
-    if merge {
-        let (a, b) = merge_unit(&mz, &y);
-        mz = a;
-        y = b;
-    }
-    o.raw("{\"mode\":\"centroid\",\"mz\":[");
-    for (i, v) in mz.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).num(round(*v, nd));
-    }
-    o.raw("],\"y\":[");
-    for (i, v) in y.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
-    }
-    o.raw("],\"scans\":").int(n as i64).raw(",\"i0\":");
-    match in_win.first() {
-        Some(i) => o.int(*i as i64),
-        None => o.raw("null"),
-    };
-    o.raw(",\"i1\":");
-    match in_win.last() {
-        Some(i) => o.int(*i as i64),
-        None => o.raw("null"),
-    };
-    o.raw(",\"n\":").int(sel.len() as i64);
-    if in_win.len() == 1 {
-        o.raw(",\"sid\":").int(scan_ids[sel[in_win[0]]]);
-    }
-    o.raw("}");
-    o.0
-}
-
 impl<R: ReadAt> Routes<R> {
     /// Positions (in the section) of the scans that pass the filter and the precursor of a request (`_scan_ids`).
     pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, prec_tol: f64, filt: Option<&str>) -> Result<Vec<usize>> {
@@ -174,4 +139,39 @@ pub(crate) struct Binned {
     pub sel: Vec<usize>,
     pub in_win: Vec<usize>,
     pub scan_ids: Vec<i64>,
+}
+
+/// The answer for a window: the peaks rounded to `nd` decimals (m/z) and 1 (intensity), the scans of the window and, for one scan, its number.
+pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
+    let mut o = Out::default();
+    let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
+    if merge {
+        let (a, b) = merge_unit(&mz, &y);
+        mz = a;
+        y = b;
+    }
+    o.raw("{\"mode\":\"centroid\",\"mz\":[");
+    for (i, v) in mz.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, nd));
+    }
+    o.raw("],\"y\":[");
+    for (i, v) in y.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).num(round(*v, 1));
+    }
+    o.raw("],\"scans\":").int(n as i64).raw(",\"i0\":");
+    match in_win.first() {
+        Some(i) => o.int(*i as i64),
+        None => o.raw("null"),
+    };
+    o.raw(",\"i1\":");
+    match in_win.last() {
+        Some(i) => o.int(*i as i64),
+        None => o.raw("null"),
+    };
+    o.raw(",\"n\":").int(sel.len() as i64);
+    if in_win.len() == 1 {
+        o.raw(",\"sid\":").int(scan_ids[sel[in_win[0]]]);
+    }
+    o.raw("}");
+    o.0
 }
