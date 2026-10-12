@@ -80,7 +80,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 
 .cont{margin-top:5px;padding-top:4px;border-top:1px solid var(--line);max-width:300px}.cont-h{color:var(--accent)}.cont-row{margin-top:3px}#convhelp{margin-top:8px}#convhelp summary{cursor:pointer;color:var(--accent)}#convhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}#convhelp a{color:var(--accent)}#unopen{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--ink)}#unopen p{margin:4px 0}#unopen ul{margin:4px 0 0 18px;padding:0}#unopen .row{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
 .go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
-.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
+.cp-head{display:flex;gap:8px;align-items:center;justify-content:space-between}.cp-phase{margin-top:4px}.cp-spin{display:inline-block;width:.8em;height:.8em;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;vertical-align:-.1em;animation:cpspin 1s linear infinite}@keyframes cpspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.cp-spin{animation:none;border-top-color:var(--accent);border-right-color:var(--accent)}}.cp-total{margin-top:8px}.prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
@@ -700,11 +700,13 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html","load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true}})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  const n=files.filter(f=>/\.raw$/i.test(f.name)).length,out=[];let i=0;
+  const raws=files.filter(f=>/\.raw$/i.test(f.name)),out=[];let i=0;const g=ConvUI.group(box,raws.map(f=>f.size));
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
-    const ui=ConvUI.start(box,++i,n,f.name);
-    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p));CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
-    catch(e){ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+    if(g.signal.aborted)continue;       // cancelled: the .raw files still to convert are left out
+    const ui=g.start(++i,f.name);
+    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal);CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
+    catch(e){if(e.cancelled){ui.done();continue}ui.fail(e.json?I18N.err(e.json).message:e.message)}}
+  g.end();if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
@@ -749,7 +751,7 @@ async function upload(files,into){const box=$("#up");fail();files=await rawToMzm
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
-    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
+    const row=document.createElement("div");row.innerHTML=`${CONV.has(f.name)?`<b>${I18N.t("conv.phase.indexing")}</b> `:""}${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
       if(j.error)throw I18N.err(j);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
       if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
