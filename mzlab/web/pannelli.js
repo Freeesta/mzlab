@@ -411,10 +411,10 @@ function stepScan(p, d, o = {}) {
   if (!o.noLock) lockStart(p, k);
   if (full) draw(p); else { cursorLine(p); uiSave(); }
   pushLinked(p, lo, hi, k, true, { step: true, i, dir: sg });
-  stepMsg(p, `scansione ${i + 1}/${tot} · RT ${rt.toFixed(2)} min`, true);
+  stepMsg(p, I18N.t("ms2.scanStep", { i: i + 1, tot, rt: rt.toFixed(2) }), true);
   return true;
 }
-function stepMsg(p, t, keep) { p.rd.textContent = t; p.rd.classList.toggle("show", /più vicina/.test(t)); if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
+function stepMsg(p, t, keep, notice) { p.rd.textContent = t; p.rd.classList.toggle("show", !!notice); if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
 // the legend lives INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line sits on the row of the x axis title and the file legend inside the graph
 function placeLeg(p) {
   if (!p.cv || p.type === "map") return;
