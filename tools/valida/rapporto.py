@@ -120,3 +120,26 @@ def scrivi_cancello(cartella, c: dict, det: dict, cancello_json: str) -> list[Pa
     out[1].write_text(json.dumps(_pulisci({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     out[2].write_text(cancello_markdown(c, det), encoding="utf-8")
     return out
+
+
+def cancello_tp_markdown(c: dict, det: dict) -> str:
+    """Summary of the gate of the TP view: the criteria with PASS / FAIL / not measured and the numbers of the raw view."""
+    L = [f"# Gate of the TP view: crate {c['crate_version']}, {c['dataset']}, {c['data']}", "", f"TP view: **{'open' if c['vista_tp'] else 'closed'}**.", "",
+         "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {'' if k['soglia'] is None else k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    v = det.get("vista_grezza")
+    if v:
+        L += ["", "## Raw view (candidates of the pipeline)", "", "| measure | value |", "|---|---|"] + [f"| {k} | {x} |" for k, x in v.items()]
+    return "\n".join(L) + "\n"
+
+
+def scrivi_cancello_tp(cartella, c: dict, det: dict, cancello_tp_json: str) -> list[Path]:
+    """Writes `cancello_tp.json` (beside `cancello.json`) and, in `cartella`, `cancello_tp_rapporto.json` / `.md`."""
+    d = Path(cartella)
+    d.mkdir(parents=True, exist_ok=True)
+    out = [Path(cancello_tp_json), d / "cancello_tp_rapporto.json", d / "cancello_tp_rapporto.md"]
+    out[0].parent.mkdir(parents=True, exist_ok=True)
+    out[0].write_text(json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[1].write_text(json.dumps(_pulisci({"cancello_tp": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[2].write_text(cancello_tp_markdown(c, det), encoding="utf-8")
+    return out

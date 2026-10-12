@@ -108,6 +108,20 @@ def main_cancello(a) -> int:
     return 0
 
 
+def main_cancello_tp(a) -> int:
+    import datetime
+    from valida import cancello, cancello_tp
+    if not (a.serie and a.verita):
+        raise SystemExit("--cancello-tp needs --serie and --verita")
+    verita = json.loads(Path(a.verita).read_text(encoding="utf-8"))
+    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
+    _, run, trattate = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
+    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat())
+    for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_tp_json):
+        print(p)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--serie", help="folder with the mzML files of the series (required unless --cancello)")
@@ -127,7 +141,12 @@ def main(argv=None) -> int:
     cg.add_argument("--data", help="date written in cancello.json (default today)")
     cg.add_argument("--lavoro", help="work folder of the gate (default .verifica/cancello)")
     cg.add_argument("--senza-wasm", action="store_true", help="skip the comparison with the .wasm run through Node")
+    cg.add_argument("--cancello-tp", action="store_true", help="measure the raw TP view against the truth (--serie, --verita) and write cancello_tp.json and cancello_tp_rapporto.{json,md}")
+    cg.add_argument("--cancello-tp-json", default=str(ROOT / "TP_Mine" / "data" / "cancello_tp.json"))
+    cg.add_argument("--dataset", default="D-TIM", help="name of the dataset written in cancello_tp.json")
     a = ap.parse_args(argv)
+    if a.cancello_tp:
+        return main_cancello_tp(a)
     if a.cancello:
         return main_cancello(a)
     if not a.serie:
