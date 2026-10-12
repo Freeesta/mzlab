@@ -254,6 +254,7 @@ async function changed() {
   if (!K) return;
   let ket = "";
   try { ket = await K.getKet(); } catch (_) { return; }
+  drawLabels();                                                          // the labels drawn right at a change can miss the structure Ketcher is still adding (Quick draw, paste): this one runs when it has settled
   try { if (!NB.ket && K.editor.struct().isBlank()) return; } catch (_) { /* no isBlank: save as before */ }       // nothing drawn and nothing saved: no empty notebook entry
   NB.ket = ket; nbSave();
   showInfo();
@@ -683,7 +684,7 @@ function syncBg() {                                    // JPEG cannot be transpa
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
-  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
+  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
