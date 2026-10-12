@@ -135,7 +135,8 @@ fn synthetic_folder_reads_back() {
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
         assert!((a.rt - b.rt).abs() < 1e-12);
     }
-    assert_eq!(back.chromatograms.len(), 1);
+    assert_eq!(back.chromatograms.len(), 2, "TIC and BPC");
+    assert_eq!(back.chromatograms[1].intensity[0], 500.0);
 }
 
 #[test]
@@ -355,4 +356,125 @@ Group 2               Group ID                  : B\nResolution                :
         ),
         ("Scan", Some(3.0), Some(50.0), Some(500.0), Some(100.0), 0)
     );
+}
+
+/// A `data.ms` written here (big-endian records of whole twentieths and 2-bit-exponent abundances): a run with only that file opens.
+fn encode_data_ms(scans: &[(u32, Vec<(u16, u16)>)]) -> Vec<u8> {
+    let start = 0x140usize;
+    let mut b = vec![0u8; start];
+    b[0] = 1;
+    b[1] = 0x32;
+    for (o, s) in [
+        (0x04usize, "GC / MS Data File"),
+        (0x18, "run one"),
+        (0xB2, "1 Jan 25  01:00 am"),
+    ] {
+        b[o] = s.len() as u8;
+        b[o + 1..o + 1 + s.len()].copy_from_slice(s.as_bytes());
+    }
+    b[0x10A..0x10C].copy_from_slice(&(((start + 2) / 2) as u16).to_be_bytes());
+    b[0x116..0x11A].copy_from_slice(&(scans.len() as u32).to_be_bytes());
+    for (ms, peaks) in scans {
+        let words = (24 + 4 * (peaks.len() + 1)) / 2;
+        b.extend((words as u16).to_be_bytes());
+        b.extend(ms.to_be_bytes());
+        b.extend([0, 12, 0, 1, 0, 0]);
+        b.extend((peaks.len() as u16).to_be_bytes());
+        let top = peaks
+            .iter()
+            .max_by_key(|p| p.1 & 0x3fff)
+            .copied()
+            .unwrap_or((0, 0));
+        b.extend(top.0.to_be_bytes());
+        b.extend(top.1.to_be_bytes());
+        for p in peaks.iter().rev() {
+            b.extend(p.0.to_be_bytes());
+            b.extend(p.1.to_be_bytes());
+        }
+        b.extend([0, 5, 0, 4, 0, 0]);
+        b.extend(
+            peaks
+                .iter()
+                .map(|p| (((p.1 & 0x3fff) as u32) << (3 * (p.1 >> 14))))
+                .sum::<u32>()
+                .to_be_bytes(),
+        );
+    }
+    b.extend([9u8; 20]);
+    b
+}
+
+#[test]
+fn a_run_with_only_data_ms_opens() {
+    let scans = vec![
+        (
+            60000u32,
+            vec![(1019u16, 10u16), (1680, 500), (4138, 0x4000 | 40)],
+        ),
+        (60300, vec![(1680, 20)]),
+    ];
+    let bytes = encode_data_ms(&scans);
+    let d = AgilentD::open(
+        "old.D",
+        &Files {
+            data_ms: Some(&bytes),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let run = d.run(&mut Vec::new()).unwrap();
+    assert_eq!(
+        (run.spectra.len(), run.spectra[0].mz.clone()),
+        (2, vec![50.95, 84.0, 206.9])
+    );
+    assert_eq!(
+        run.spectra[0].intensity_f64(2),
+        320.0,
+        "exponent 1 multiplies by 8"
+    );
+    assert_eq!(
+        (
+            d.records[0].time_min,
+            d.records[0].tic,
+            d.records[1].time_min
+        ),
+        (1.0, 830.0, 1.005)
+    );
+    assert!(d
+        .metadata
+        .iter()
+        .any(|i| i.origin == "data.ms" && i.name == "sample name" && i.value == "run one"));
+    assert!(
+        d.metadata
+            .iter()
+            .any(|i| i.origin == "data.ms#after-records" && i.name == "undecoded sha1"),
+        "the bytes after the records are declared"
+    );
+    let mut mzml = Vec::new();
+    d.to_mzml(&mut Vec::new(), 0, &mut mzml).unwrap();
+    assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
+    // another record length is an error that names the numbers
+    let mut odd = bytes.clone();
+    odd[0x140 + 13] = 5;
+    assert!(AgilentD::open(
+        "old.D",
+        &Files {
+            data_ms: Some(&odd),
+            ..Default::default()
+        }
+    )
+    .err()
+    .unwrap()
+    .to_string()
+    .contains("record 1 has"));
+    let mut wrong = bytes;
+    wrong[1] = 0x33;
+    assert!(AgilentD::open(
+        "old.D",
+        &Files {
+            data_ms: Some(&wrong),
+            ..Default::default()
+        }
+    )
+    .is_err());
 }

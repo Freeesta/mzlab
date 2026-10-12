@@ -1,6 +1,7 @@
 // The operations of rust-worker.js on the methods (.dam) and on how an item was acquired: method, analog traces, PDA, delay, gradient.
 // The .dam files live in OPFS with the mzML; the engine holds them parsed, loaded again (oldest first) whenever the set in OPFS changes.
 import { gradient_make } from "./wasm/mzlab_wasm.js";
+import { createMetodoOps } from "./rust-metodo.js";
 
 export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr }) {
   let sig = null, n = 0;
@@ -20,7 +21,10 @@ export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, 
     if (!(await lrOpen(name))) jerr("err.engine.index");
     return { slot: slotOf(name), f, rd: readerFor(f) };
   }
+  const metodoOp = createMetodoOps({ engine, ARCH, readerFor, open, sync });
   return async function labOp(m) {
+    const mo = await metodoOp(m);
+    if (mo) return mo;
     if (m.op === "lr_put" && /\.dam$/i.test(m.name)) seq.set(m.name, ++n);
     const e = engine();
     switch (m.op) {

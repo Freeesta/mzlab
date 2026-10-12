@@ -239,6 +239,7 @@ impl Folder {
             .collect();
         let files = Files {
             ms_scan: &self.scan,
+            data_ms: None,
             ms_scan_xsd: Some(&self.xsd),
             ms_peak_len: self.peak.len() as u64,
             ms_ts: get(SMALL[0]),
@@ -312,6 +313,90 @@ fn real_runs_agree_with_their_own_numbers() {
             d.records.len(),
             d.segments.len(),
             d.method.as_ref().unwrap().mode
+        );
+    }
+}
+
+/// The GC part of the method (oven, inlet, column, transfer line) is read for the real runs.
+#[test]
+fn the_gc_method_is_read() {
+    let Some(all) = folders() else { return };
+    for f in all {
+        let g = Folder::load(&f).open().method.unwrap().gc;
+        let ok = g.oven_initial_c.is_some()
+            && !g.oven_ramps.is_empty()
+            && g.inlet_heater_c.is_some()
+            && g.inlet_pressure_psi.is_some()
+            && g.column_flow_ml_min.is_some();
+        assert!(
+            ok && g.transfer_line_c.is_some()
+                && g.run_time_min.is_some()
+                && !g.column_dimensions.is_empty()
+                && !g.inlet_mode.is_empty(),
+            "{}: {g:?}",
+            f.file_name().unwrap().to_string_lossy()
+        );
+        eprintln!("oven {:?} C hold {:?} min, ramps {:?}, inlet {} {:?} C, column {} {:?} mL/min, transfer {:?}", g.oven_initial_c, g.oven_hold_min, g.oven_ramps, g.inlet_mode, g.inlet_heater_c, g.column_dimensions, g.column_flow_ml_min, g.transfer_line_c);
+    }
+}
+
+/// `data.ms` against the `AcqData` converted from it: same scans, times and TICs; the m/z are whole twentieths of the calibrated ones (up to 0.05 apart).
+/// A run with only `data.ms` opens and converts.
+#[test]
+fn data_ms_agrees_with_acqdata_and_opens_alone() {
+    let Some(all) = folders() else { return };
+    for f in all {
+        let label = f.file_name().unwrap().to_string_lossy().into_owned();
+        let bytes = std::fs::read(f.join("data.ms")).unwrap();
+        let mut fo = Folder::load(&f);
+        let full = fo.open();
+        let run = full.run(&mut fo.peak).unwrap();
+        let alone = AgilentD::open(
+            "x.D",
+            &Files {
+                data_ms: Some(&bytes),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut none = Vec::new();
+        let got = alone.run(&mut none).unwrap();
+        assert_eq!(
+            (got.spectra.len(), alone.records.len()),
+            (run.spectra.len(), full.records.len()),
+            "{label}: scans"
+        );
+        for (a, b) in alone.records.iter().zip(&full.records) {
+            assert!(
+                (a.time_min - b.time_min).abs() < 1e-9 && a.tic == b.tic,
+                "{label} scan {}: time/TIC",
+                b.id
+            );
+        }
+        for (a, b) in got.spectra.iter().zip(&run.spectra) {
+            assert!(
+                a.mz.len() == b.mz.len()
+                    && a.mz.iter().zip(&b.mz).all(|(x, y)| (x - y).abs() <= 0.0501),
+                "{label} {}: m/z",
+                b.id
+            );
+        }
+        let mut out = Vec::new();
+        alone.to_mzml(&mut none, 0, &mut out).unwrap();
+        assert_eq!(
+            mzml::read(&out[..]).unwrap().spectra.len(),
+            run.spectra.len(),
+            "{label}: mzML of data.ms alone"
+        );
+        assert!(
+            alone
+                .metadata
+                .iter()
+                .any(|i| i.origin == "data.ms" && i.name == "sample name")
+                && alone
+                    .metadata
+                    .iter()
+                    .any(|i| i.origin == "data.ms#header" && i.name == "undecoded sha1")
         );
     }
 }

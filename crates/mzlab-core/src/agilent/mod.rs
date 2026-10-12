@@ -3,6 +3,7 @@
 //! mobility, negative polarity) is written in `docs/agenti/agilent.md`. The folder is given as bytes of the small files and a reader of `MSPeak.bin`,
 //! so the same code serves the browser (files picked from a folder) and the desktop.
 
+mod datams;
 pub mod info;
 pub mod meta;
 pub mod method;
@@ -23,6 +24,8 @@ pub const SCAN_SIM: i32 = 2;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Files<'a> {
     pub ms_scan: &'a [u8],
+    /// `data.ms`, the ChemStation file: the data of an older `.D` that has no `AcqData` (`ms_scan` empty); with `AcqData` it only adds its header to the metadata.
+    pub data_ms: Option<&'a [u8]>,
     /// `AcqData/MSScan.xsd`: the record layout of this file (the built-in layout of the GC/MS runs when it is missing).
     pub ms_scan_xsd: Option<&'a [u8]>,
     pub ms_peak_len: u64,
@@ -48,13 +51,20 @@ pub struct AgilentD {
     pub metadata: Vec<meta::Item>,
     /// Names of `ScanRec::extra`.
     pub extra_names: Vec<String>,
+    /// SHA-1 (hex) of each file given to `open`, by its path in the folder (`MSPeak.bin` is hashed while converting).
+    pub file_sha1: Vec<(String, String)>,
+    /// The points of every scan when the run comes from `data.ms` (m/z and abundances; `MSPeak.bin` does not exist then).
+    pub(crate) inline: Option<Vec<(Vec<f64>, Vec<f64>)>>,
 }
 
 impl AgilentD {
     /// `name`: the folder name (`xxx.D`). A folder without `AcqData/MSScan.bin` is `err.file.notAgilentD`, an index that is not understood is `err.file.agilent`.
     pub fn open(name: &str, f: &Files) -> Result<AgilentD> {
         if f.ms_scan.is_empty() {
-            return Err(Error::new("err.file.notAgilentD").with("name", name));
+            return match f.data_ms {
+                Some(d) => Self::open_data_ms(name, f, d),
+                None => Err(Error::new("err.file.notAgilentD").with("name", name)),
+            };
         }
         let segments = f.ms_ts.map(info::segments).unwrap_or_default();
         let layout = match f.ms_scan_xsd {
@@ -76,6 +86,8 @@ impl AgilentD {
             method: f.acqmeth.map(method::parse),
             metadata: metadata(f),
             extra_names: layout.extra_names(),
+            file_sha1: hashes(f),
+            inline: None,
         })
     }
 
@@ -95,7 +107,13 @@ impl AgilentD {
 }
 
 fn metadata(f: &Files) -> Vec<meta::Item> {
-    let named: [(&str, Option<&[u8]>); 5] = [
+    let head = f
+        .ms_scan
+        .get(..scan::HEADER_LEN)
+        .filter(|_| !f.ms_scan.is_empty());
+    let named: [(&str, Option<&[u8]>); 7] = [
+        ("AcqData/MSScan.bin#header", head),
+        ("AcqData/MSTree2.bin", f.ms_tree),
         ("AcqData/MSTS.xml", f.ms_ts),
         ("AcqData/Devices.xml", f.devices),
         ("AcqData/Contents.xml", f.contents),
@@ -107,5 +125,78 @@ fn metadata(f: &Files) -> Vec<meta::Item> {
         .filter_map(|(n, b)| b.map(|b| (*n, b)))
         .collect();
     list.extend(f.others.iter().copied());
-    meta::collect(&list)
+    let mut items = meta::collect(&list);
+    if let (false, Some(b)) = (f.ms_scan.is_empty(), f.data_ms) {
+        if let Ok(d) = datams::parse(b) {
+            items.extend(datams::items(&d, b));
+        }
+    }
+    items
+}
+
+/// SHA-1 of the files given to `open` (path in the folder, hex).
+fn hashes(f: &Files) -> Vec<(String, String)> {
+    use sha1::{Digest as _, Sha1};
+    let named: [(&str, Option<&[u8]>); 8] = [
+        (
+            "AcqData/MSScan.bin",
+            Some(f.ms_scan).filter(|b| !b.is_empty()),
+        ),
+        ("data.ms", f.data_ms),
+        ("AcqData/MSScan.xsd", f.ms_scan_xsd),
+        ("AcqData/MSTS.xml", f.ms_ts),
+        ("AcqData/Devices.xml", f.devices),
+        ("AcqData/Contents.xml", f.contents),
+        ("AcqData/MSTree2.bin", f.ms_tree),
+        ("acqmeth.txt", f.acqmeth),
+    ];
+    let mut list: Vec<(&str, &[u8])> = named
+        .iter()
+        .filter_map(|(n, b)| b.map(|b| (*n, b)))
+        .collect();
+    list.extend(f.others.iter().copied());
+    list.iter()
+        .map(|(n, b)| {
+            (
+                n.to_string(),
+                Sha1::digest(b).iter().map(|x| format!("{x:02x}")).collect(),
+            )
+        })
+        .collect()
+}
+
+impl AgilentD {
+    /// The value of a field of a side file (`metadata`), by origin and name.
+    pub fn field(&self, origin: &str, name: &str) -> Option<&str> {
+        self.metadata
+            .iter()
+            .find(|i| i.origin == origin && i.name == name)
+            .map(|i| i.value.as_str())
+    }
+
+    /// Acquisition time as the instrument wrote it, with its UTC offset and without fractions of a second (`2025-05-15T16:00:45+01:00`).
+    pub fn acquired(&self) -> Option<String> {
+        let t = self.contents.as_ref()?.acquired.trim();
+        if t.len() < 19 {
+            return None;
+        }
+        let (head, tail) = t.split_at(19);
+        let zone = tail.trim_start_matches(|c: char| c == '.' || c.is_ascii_digit());
+        Some(format!("{head}{zone}"))
+    }
+
+    /// `Blank`, `Sample`, ... from `sequence.xml`.
+    pub fn sample_type(&self) -> Option<&str> {
+        self.field(
+            "AcqData/sequence.xml",
+            "SequenceTableDataSet/Sequence/SampleType",
+        )
+    }
+
+    pub fn sample_name(&self) -> Option<&str> {
+        self.field(
+            "AcqData/sequence.xml",
+            "SequenceTableDataSet/Sequence/SampleName",
+        )
+    }
 }
