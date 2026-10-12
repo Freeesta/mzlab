@@ -26,12 +26,16 @@ pub fn adduct_names() -> [&'static str; 7] {
     elements::adducts().map(|(a, _)| a)
 }
 
-fn code_of(names: &[&str], adduct: &str) -> u8 {
-    names
+/// Code of the adduct whose shift is `mz - neutral` (the state kept between workers does not carry the name of the adduct, the masses it does).
+fn code_of(shift: f64) -> u8 {
+    elements::adducts()
         .iter()
-        .position(|a| *a == adduct)
+        .position(|(_, s)| (s - shift).abs() < SHIFT_TOL)
         .map_or(0, |p| p as u8 + 1)
 }
+
+/// Largest difference between the shift of a hypothesis and the one of its adduct, Da.
+const SHIFT_TOL: f64 = 1e-3;
 
 impl RowIdent {
     pub fn len(&self) -> usize {
@@ -50,18 +54,14 @@ impl RowIdent {
     /// ion of the polarity of the registry.
     pub fn compute(table: &Aligned, hyps: &[Hypothesis], polarity: i8) -> RowIdent {
         let matched = match_hypotheses(hyps, table);
-        let names = adduct_names();
-        let (own, sign) = if polarity >= 0 {
-            (code_of(&names, "[M+H]+"), 1.0)
-        } else {
-            (code_of(&names, "[M-H]-"), -1.0)
-        };
+        let sign = if polarity >= 0 { 1.0 } else { -1.0 };
+        let own = code_of(sign * PROTON);
         let mut out = RowIdent::default();
         for (r, m) in matched.iter().enumerate() {
             let seen = table.state_counts(r).0 > 0;
             let bit = if seen { SRC_DETECTED } else { 0 };
             let (neutral, ion, src) = match m.map(|h| &hyps[h]) {
-                Some(h) => (h.neutral, code_of(&names, h.adduct), h.sources << 1 | bit),
+                Some(h) => (h.neutral, code_of(h.mz - h.neutral), h.sources << 1 | bit),
                 None => (table.mz[r] - sign * PROTON, own, bit),
             };
             out.neutral.push(neutral);
