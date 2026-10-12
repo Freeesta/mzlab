@@ -21,6 +21,7 @@ pub mod rtmap;
 pub mod suspects;
 mod sweep;
 pub mod table;
+pub mod target;
 pub mod trace;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).

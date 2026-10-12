@@ -103,6 +103,7 @@ fn two_runs_give_the_same_registry() {
     let imp = [Imported {
         name: "lista 1".into(),
         formula: "C6H12O6".into(),
+        mass: None,
     }];
     let inp = Inputs {
         families: &fam,
