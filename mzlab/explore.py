@@ -716,6 +716,7 @@ class Item:
         mz, y = (np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts])) if parts else (np.zeros(0), np.zeros(0))
         if len(mz) == 0:
             return (*e, n)
+        mz, y = mz.astype(np.float64, copy=False), y.astype(np.float64, copy=False)      # the peak table of a high-resolution survey is single precision: cells and weighted means in double precision
         if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly (read from the file: the peak table of a high-resolution file is float32)
             mz, y = self.run.read(int(t.scan_ids[np.flatnonzero(ok)[0]]))
             return np.arange(len(mz)), mz, y, 1

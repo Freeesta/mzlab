@@ -237,3 +237,15 @@ Parità: stessi picchi, stessa linea con gli zeri rimessi, numeri entro 1e-9; i 
 | 20 000 | 54 | 9,3 | 20 |
 
 La CWT resta il metodo predefinito e non cambia (parità di bordi e aree con Python in `golden.rs`); la modalità nuova costa un decimo e separa i picchi doppi dove la CWT li unisce (prove sintetiche in `peakq.rs`: doppio parzialmente risolto, spalla, coda, solo rumore).
+
+## Spettro HR e tabella DDA (`cargo test -p mzlab-core --test hr_parity --release -- --nocapture`, 2026-10-12, stessa macchina, un giro)
+Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 per scansione); «rust» = `Routes::handle`/`spectrum_exact` nativo dall'indice, «python» = `api.dispatch` nativo (senza il costo di Pyodide). Parità ≤1e-9 relativa su tutti i valori. Tempi in ms per richiesta:
+
+| richiesta | rust | python |
+|---|---|---|
+| `api/dda` | 0,7 | 1,4 |
+| `api/spectrum` MS1, finestra di 12 s (circa 20 scansioni) | 2,0 | 2,9 |
+| `api/spectrum` MS1, tutto il file | 59 | 99 |
+| `api/spectrum` MS2, tutto il file | 0,9 | 1,7 |
+| `api/spectrum` MS2 con precursore | 0,2 | 0,5 |
+| `api/spectrum` MS1, una sola scansione (legge l'mzML) | 1,5 | 1,7 |

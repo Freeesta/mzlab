@@ -78,7 +78,7 @@ export function createBridge({ workerUrl, notify }) {
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
-  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") is left to Python
+  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, except the MRM and polarity parts (Python)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
     if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
@@ -86,8 +86,9 @@ export function createBridge({ workerUrl, notify }) {
     for (const [i, s] of ((body && body.samples) || []).entries()) {
       const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
-      if (f.includes("#") || api.disabled) { slots[k] = null; continue; }
-      slots[k] = { name: base(f), blob: blob || null, info: null, bad: false, idx: false, mzml: null };
+      const tag = f.includes("#") ? f.slice(f.indexOf("#") + 1) : "";
+      if ((tag && /^MRM|[ _](pos|neg)$/i.test(tag)) || api.disabled) { slots[k] = null; continue; }      // MRM and polarity parts: Python (the routes of the index see the whole file)
+      slots[k] = { name: base(f.split("#")[0]), blob: blobs.get(base(f.split("#")[0])) || blob || null, info: null, bad: false, idx: false, mzml: null };
       slots[k].opening = open(k, slots[k]);
     }
   };
@@ -121,7 +122,7 @@ export function createBridge({ workerUrl, notify }) {
     return out;
   };
 
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (Pyodide answers).
   api.handle = async (method, url) => {
@@ -145,7 +146,8 @@ export function createBridge({ workerUrl, notify }) {
       if (!s) return null;
       await s.opening;
       if (!s.idx || s.bad) return null;
-      const r = await rpc({ op: "route", slot: k0, path, query: u.search });
+      let r = await rpc({ op: "route", slot: k0, path, query: u.search });
+      if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k0, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
       if (r.dead || r.error || !r.info) return null;
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };

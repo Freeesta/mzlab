@@ -94,6 +94,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scanlist" => self.scanlist(q),
             "/api/nearest_scan" => self.nearest_scan(q),
             "/api/spectrum" => self.spectrum(q),
+            "/api/dda" => self.dda(q),
             "/api/spectra" => self.spectra_profile(q),
             _ => Ok(None),
         }
