@@ -51,6 +51,42 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
     Ok(raw.instrument_method_text(&mut source))
 }
 
+/// The `metodo/1` document of a `.raw` (`metodo_raw.rs`); `name` is the file name, `anonymous` leaves out the people, the computer, the serial number and the paths.
+pub fn metodo<R: Read + Seek>(mut source: R, name: &str, anonymous: bool) -> Result<String> {
+    let raw = open(&mut source)?;
+    Ok(metodo_of(&raw, &mut source, name, anonymous))
+}
+
+fn metodo_of<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    name: &str,
+    anonymous: bool,
+) -> String {
+    let bytes = source.seek(SeekFrom::End(0)).unwrap_or(0);
+    let src = crate::metodo::Source {
+        format: "thermo-raw",
+        files: vec![crate::metodo::SrcFile {
+            name: name.to_string(),
+            sha1: None,
+            bytes,
+        }],
+        sample: None,
+        anonymous,
+    };
+    crate::metodo_raw::from_raw(raw, source, &src)
+}
+
+/// The `userParam` line that carries the `metodo/1` document in the `<run>` of the mzML (`metodo::from_userparam` reads it back).
+fn method_userparam<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    name: &str,
+    anonymous: bool,
+) -> String {
+    crate::metodo::userparam_xml(&metodo_of(raw, source, name, anonymous))
+}
+
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.
 pub fn parse<R: Read + Seek>(mut source: R, mut on: impl FnMut(Spectrum)) -> Result<()> {
     let raw = open(&mut source)?;
@@ -70,7 +106,8 @@ pub fn read<R: Read + Seek>(source: R) -> Result<Run> {
 /// Writes the file as mzML to `out` without holding the `.raw` in memory; `name` is the source file name.
 pub fn to_mzml<R: Read + Seek, W: Write>(mut source: R, out: &mut W, name: &str) -> Result<()> {
     let raw = open(&mut source)?;
-    let mut filter = MzmlFilter::new(out, false);
+    let doc = method_userparam(&raw, &mut source, name, false);
+    let mut filter = MzmlFilter::new(out, false).with_run_extra(doc);
     opentfraw::write_mzml(&raw, &mut source, &mut filter, name, false).map_err(raw_error)?;
     filter.flush().map_err(raw_error)
 }
@@ -116,7 +153,16 @@ pub fn to_mzml_progress<R: Read + Seek, W: Write>(
     profile: bool,
     on_scan: &mut dyn FnMut(u32, u32),
 ) -> Result<()> {
-    to_mzml_with(source, out, name, Convert { profile, anonymous: false }, on_scan)
+    to_mzml_with(
+        source,
+        out,
+        name,
+        Convert {
+            profile,
+            anonymous: false,
+        },
+        on_scan,
+    )
 }
 
 /// What `to_mzml_with` does besides the conversion: `profile` as above; `anonymous` leaves the personal data of the acquisition
@@ -136,12 +182,23 @@ pub fn to_mzml_with<R: Read + Seek, W: Write>(
     on_scan: &mut dyn FnMut(u32, u32),
 ) -> Result<()> {
     let raw = open(&mut source)?;
-    let mut starts: Vec<u64> = raw.scan_index.iter().map(|e| raw.data_addr.saturating_add(e.offset)).collect();
+    let mut starts: Vec<u64> = raw
+        .scan_index
+        .iter()
+        .map(|e| raw.data_addr.saturating_add(e.offset))
+        .collect();
     starts.sort_unstable();
     let total = starts.len() as u32;
     on_scan(0, total);
-    let mut counted = Counted { inner: source, starts, pos: 0, done: 0, on_scan };
-    let mut filter = MzmlFilter::new(&mut *out, opt.anonymous);
+    let doc = method_userparam(&raw, &mut source, name, opt.anonymous);
+    let mut counted = Counted {
+        inner: source,
+        starts,
+        pos: 0,
+        done: 0,
+        on_scan,
+    };
+    let mut filter = MzmlFilter::new(&mut *out, opt.anonymous).with_run_extra(doc);
     opentfraw::write_mzml(&raw, &mut counted, &mut filter, name, opt.profile).map_err(raw_error)?;
     filter.flush().map_err(raw_error)?;
     (counted.on_scan)(total, total);
@@ -157,7 +214,13 @@ mod tests {
     fn counted_reports_scans_in_order_and_never_backwards() {
         let mut seen: Vec<(u32, u32)> = Vec::new();
         let mut cb = |d: u32, t: u32| seen.push((d, t));
-        let mut c = Counted { inner: Cursor::new(vec![0u8; 100]), starts: vec![10, 30, 50, 70], pos: 0, done: 0, on_scan: &mut cb };
+        let mut c = Counted {
+            inner: Cursor::new(vec![0u8; 100]),
+            starts: vec![10, 30, 50, 70],
+            pos: 0,
+            done: 0,
+            on_scan: &mut cb,
+        };
         let mut b = [0u8; 20];
         while c.read(&mut b).unwrap() > 0 {}
         c.seek(SeekFrom::Start(0)).unwrap(); // a jump back (the container is read again) does not lower the count

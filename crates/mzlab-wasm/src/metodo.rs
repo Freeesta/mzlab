@@ -11,6 +11,8 @@ use wasm_bindgen::prelude::*;
 
 /// A `.wiff` is read whole to open its container: more than this is refused with the memory budget error (the files of the 3200 are tens of MB).
 const WIFF_MAX: u64 = 192 << 20;
+/// How much of the mzML after `<run ` is read for the `metodo/1` document it carries (the texts of a `.raw` method and its `campi` take ~100 kB).
+const DOC_MAX: u64 = 1 << 20;
 /// How much of the start of an mzML is searched for the source files and the first `sample=N`.
 const HEAD: usize = 1 << 20;
 
@@ -53,7 +55,7 @@ impl Engine {
     /// The `metodo/1` document an mzML carries in its `<run>` (`""` when it has none).
     pub fn mzml_metodo(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
         let mut m = Mzml::new(JsReader { read }, size as u64);
-        let head = m.info_head().map_err(|e| error_json(&e))?;
+        let head = m.run_head(DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(metodo::from_userparam(&head).unwrap_or_default())
     }
 

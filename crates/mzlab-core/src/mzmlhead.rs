@@ -275,9 +275,16 @@ impl<R: ReadAt> Mzml<R> {
 
     /// The start of the file up to `<run ` plus 3000 bytes, as text (where `fileinfo` finds the time stamp and the processing steps).
     pub fn info_head(&mut self) -> Result<String> {
-        let probe = self.until_run(3000)?;
+        self.run_head(3000)
+    }
+
+    /// The start of the file up to `<run ` plus `extra` bytes, as text (`metodo/1` needs the whole `userParam` that follows the tag).
+    pub fn run_head(&mut self, extra: u64) -> Result<String> {
+        let probe = self.until_run(extra)?;
         let run = find(&probe, b"<run ", 0);
-        let end = run.map_or(0, |p| p) + 3000;
+        let end = run
+            .map_or(0, |p| p)
+            .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
         Ok(text(&probe[..end.min(probe.len())]))
     }
 

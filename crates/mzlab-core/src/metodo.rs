@@ -17,6 +17,7 @@ pub const READER: &str = "mzlab-core";
 #[derive(Debug, Clone, PartialEq)]
 pub enum V {
     Num(f64),
+    Bool(bool),
     Str(String),
     Arr(Vec<V>),
     Obj(Vec<(&'static str, V)>),
@@ -29,6 +30,7 @@ impl V {
     pub fn write(&self, o: &mut Out) {
         match self {
             V::Num(x) => drop(o.num(*x)),
+            V::Bool(b) => drop(o.raw(if *b { "true" } else { "false" })),
             V::Str(t) => drop(o.str(t)),
             V::Arr(a) => {
                 o.raw("[");
