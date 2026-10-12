@@ -1,3 +1,4 @@
+// @ts-check
 // The smartphone card (index.html, #phone). Loaded only on a phone (telefono.js sets window.QQQ_PHONE): the Dati and Disegno scripts,
 // the page shell and the engine are never fetched there. Shows the card, wires "info" and "Apri comunque", and warms the Teoria in the
 // background so that "Vai alla Teoria" opens at once.
@@ -19,7 +20,7 @@
 
   // Teoria warm-up: only the files of the Teoria home, low priority, when the browser is idle, never on "save data". The service worker
   // answers through its normal path (network, then the app cache), so the later visit finds them without a second download.
-  const conn = navigator.connection;
+  const conn = /** @type {any} */ (navigator).connection;
   if (conn && conn.saveData) return;
   const warm = () => {
     for (const u of ["static/teoria/index.html", "static/teoria/teoria.css", "static/teoria/tema.js", "static/teoria/teoria.js", "static/teoria/lettura.js", "static/teoria/01-tp.html", "static/favicon-32.png"]) {

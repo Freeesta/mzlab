@@ -7,7 +7,7 @@ use super::proofs::{frequency, graded, kinetic_proofs, rt_proof};
 use super::*;
 use crate::aligned::Aligned;
 use crate::family::evidence::EdgeKind as FamilyEdge;
-use crate::hypo::{Registry, SRC_RULE};
+use crate::hypo::{Hypothesis, Registry, SRC_RULE};
 use crate::kinetic::Setup;
 use crate::table::*;
 
@@ -143,13 +143,12 @@ pub struct Identity {
 }
 
 /// Row -> index of the hypothesis it confirms: the closest in m/z within the window (and in RT when the hypothesis has one).
-pub(super) fn match_hypotheses(inp: &Inputs) -> Vec<Option<usize>> {
-    let hyps = &inp.registry.hyps;
+pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<usize>> {
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
     by_mz.sort_by(|&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
-    (0..inp.aligned.len())
+    (0..aligned.len())
         .map(|r| {
-            let (mz, rt) = (inp.aligned.mz[r], inp.aligned.rt[r]);
+            let (mz, rt) = (aligned.mz[r], aligned.rt[r]);
             let tol = mz * HYPOTHESIS_PPM * 1e-6;
             let from = by_mz.partition_point(|&h| hyps[h].mz < mz - tol);
             by_mz[from..]

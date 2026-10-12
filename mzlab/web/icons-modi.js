@@ -1,3 +1,4 @@
+// @ts-check
 // Icons of the three acquisition modes: the triple quadrupole itself, Q1 - Q2 - Q3, with what each stage does.
 //   sweep (<->, tinted box) = the stage scans a range of m/z;  dot = the stage is fixed on one m/z (filter);
 //   X = collision cell (Q2) breaks the ions;  arrow = the stage lets everything through.

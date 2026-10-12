@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Command palette: Ctrl+K (⌘K on the Mac) or the 🔍 button of the toolbar. It searches by name, in Italian and English, without accents and
 // by partial words, among the commands of BARRA.commands (tools, items of the HR menus, "Altro", method, gear, the "+" actions of the charts,
@@ -57,8 +58,8 @@ const PALETTE = (() => {
     input.addEventListener("input", () => render(input.value));
     input.addEventListener("keydown", onKey);
     box.addEventListener("pointerdown", e => { if (e.target === box) close(true); });
-    list.addEventListener("click", e => { const li = e.target.closest("li[data-i]"); if (li) run(+li.dataset.i); });
-    list.addEventListener("pointermove", e => { const li = e.target.closest("li[data-i]"); if (li && +li.dataset.i !== sel) mark(+li.dataset.i, false); });
+    list.addEventListener("click", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li) run(+li.dataset.i); });
+    list.addEventListener("pointermove", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li && +li.dataset.i !== sel) mark(+li.dataset.i, false); });
   }
 
   function render(q) {
