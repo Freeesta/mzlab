@@ -7,7 +7,9 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
 use crate::axis::{da, estimate_defect, half, MassAxis, LR_TOL};
-pub use crate::params_unit::{da_from_offsets, dead_time, DA_MAX, DA_MIN, RT_TOL_MAX, RT_TOL_MIN};
+pub use crate::params_unit::{
+    da_from_offsets, dead_time, DA_MAX, DA_MIN, RT_FACTOR, RT_TOL_MAX, RT_TOL_MIN,
+};
 use crate::sortc;
 use crate::table::FileFeatures;
 use crate::trace::{self, Params};
@@ -178,7 +180,7 @@ pub struct Estimate {
     /// Median FWHM of the strong traces, minutes.
     pub fwhm: Option<f64>,
     pub fwhm_n: usize,
-    /// Tolerance of RT, minutes: the FWHM within the bounds.
+    /// Tolerance of RT, minutes: twice the FWHM within the bounds.
     pub rt_tol: Option<f64>,
     /// Unit axis only: half window of m/z (Da), sigma and count of the offsets of the strong traces.
     pub da: Option<f64>,
@@ -302,7 +304,7 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
         ppm_n: if unit { 0 } else { n_err },
         fwhm,
         fwhm_n: widths.len(),
-        rt_tol: fwhm.map(|w| w.clamp(RT_TOL_MIN, RT_TOL_MAX)),
+        rt_tol: fwhm.map(|w| (RT_FACTOR * w).clamp(RT_TOL_MIN, RT_TOL_MAX)),
         da: da.map(|d| d.0),
         da_sigma: da.map_or(0.0, |d| d.1),
         da_n: if unit { n_err } else { 0 },
