@@ -211,7 +211,7 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
     for (raw_path, _) in pairs(&d) {
         let reader =
             opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
-        let v = json::parse(doc(&raw_path, false).as_bytes()).unwrap();
+        let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
         let campi = v.get("campi").map_or(&[][..], |c| c.arr());
         let warned = v
             .get("avvisi")
