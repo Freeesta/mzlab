@@ -40,6 +40,15 @@ try:
             open_kind(pg, "ms2"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.tab") == "ms2" and "full" in pg.evaluate(VIS)
         step("a click on a file of another group makes its type the current one and goes to its block", goto)
+        def empty_area():
+            for kind in ("full", "ms2", "mrm"):
+                for k in pg.evaluate("E.files.filter(f=>f.vis).map(f=>f.k)"):
+                    pg.locator(f"#flst .fl input[data-k='{k}']").uncheck()
+                pg.wait_for_timeout(500)
+                assert pg.evaluate("E.panels.length") == 0, "every file hidden: no panel left"
+                open_kind(pg, kind); pg.wait_for_timeout(2500)
+                assert pg.evaluate(f"E.panels.some(p=>p.tab==='{kind}'&&(p.type==='chrom'||p.type==='mrm'))"), f"{kind}: the TIC appears"
+        step("empty work area: a click on a file of any type opens its TIC", empty_area)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

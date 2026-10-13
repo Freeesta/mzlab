@@ -492,6 +492,9 @@ function bindFileRows() {
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
+      if (lrTog() && f0 && !E.panels.length) {          // empty work area (every file was hidden and its panels closed): the file opens with the starting layout of its type, which starts with the TIC
+        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+      }
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
