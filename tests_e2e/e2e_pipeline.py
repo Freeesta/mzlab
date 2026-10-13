@@ -25,6 +25,7 @@ try:
 except ImportError:
     print("SKIP numpy is needed for the synthetic series"); sys.exit(0)
 
+SMILES = "CC12CCC3C(C1CCC2(C)O)CCC4C3(CC5=C(C4)NN=C5O)C"     # a structure of the formula C21H32N2O2 of the synthetic parent (its grafo/1 goes to the hypotheses)
 tmp = Path(tempfile.mkdtemp(prefix="pipeline_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
@@ -148,7 +149,7 @@ try:
             crate = pg.evaluate("PIPE.state.crate")
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version=crate))
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('candidate view is available')", timeout=60000)
-            pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0")
+            pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0"); pg.fill("#pipe-psmi", SMILES)
             assert pg.input_value("#pipe-times") == ",,0,5,10,20", pg.input_value("#pipe-times")
             pg.click("#pipe-run-go")
             pg.wait_for_function("document.querySelectorAll('#pv-list [data-cand]').length > 0", timeout=180000)
@@ -264,7 +265,7 @@ try:
             ops = pg.evaluate("NB.ops.filter(o => o.op === 'feature_pipeline')"); assert len(ops) >= 1, ops
             o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
             assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
-            assert o["genitore"]["formula"] == "C21H32N2O2" and json.loads(o["recipe"]) == o["parametri"]
+            assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
         step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
@@ -274,11 +275,11 @@ try:
             pg.wait_for_function("document.querySelector('#pipe-again').disabled === true", timeout=20000)
             pg.evaluate("WORKFLOW.applyWorkflow(window.__wf)")
             pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelector('#pipe-again') && !document.querySelector('#pipe-again').disabled", timeout=20000)
-            pg.fill("#pipe-floor", "1"); pg.fill("#pipe-pf", "")                       # the recipe must bring them back
+            pg.fill("#pipe-floor", "1"); pg.fill("#pipe-pf", ""); pg.fill("#pipe-psmi", "")   # the recipe must bring them back
             pg.click("#pipe-again")
             pg.wait_for_function("/Re-applied/.test(document.querySelector('#pipe-run-msg').textContent)", timeout=180000)
             m = pg.inner_text("#pipe-run-msg"); assert "identical" in m and pg.evaluate("window.__sha").startswith(m.split("SHA-256 ")[1][:12]), m
-            assert pg.input_value("#pipe-pf") == "C21H32N2O2" and float(pg.evaluate("PIPE.values().floor")) == 5e4
+            assert pg.input_value("#pipe-pf") == "C21H32N2O2" and pg.input_value("#pipe-psmi") == SMILES and float(pg.evaluate("PIPE.values().floor")) == 5e4
         step("saved, reopened and «Re-apply» give the same table (same SHA-256)", reopen_and_again)
 
         def unknown_op():

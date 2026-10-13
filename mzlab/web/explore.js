@@ -150,7 +150,7 @@ const IC_RANGE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" st
 const IC_FIT = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
 const IC_LOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 5 0v1.9"/></svg>';
 const IC_UNLOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 4.8-1"/></svg>';
-// PHRASES and ldNext() are in index.html, right after #loading: the first phrase shows before the ~600 kB of scripts arrive
+// the loading phrases (ldNext, ldShow, ldRefresh) are in avvio.js: the first one shows at once, then one every 5 s; a status text or loading(true) never swaps the phrase early
 let ldSlow = 0;
 function loading(on, msg) {
   const L = Q("#loading");
@@ -158,7 +158,7 @@ function loading(on, msg) {
     ldSince = Date.now(); ldMsg = msg ? { text: msg, pct: null } : null; ldRefresh();
     clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !ldMsg && !window.qqPhaseCur) { ldMsg = { text: I18N.t("load.slow"), pct: null }; ldRefresh(); } }, 20000);
     ldIon(true);                                                     // engine start and data loading: the ions (one analyser per load)
-    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
+    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) goes on with its 5 s clock
   } else {
     if (window.qqFailed) return;                                   // a failed engine start keeps its message (and the «start from scratch» button) on screen
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
@@ -249,7 +249,7 @@ function uiSave(now = false) {
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
-        type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
+        type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
@@ -382,8 +382,10 @@ function hostWidth() {
 // full-width panels follow the page: when the window or the file list changes size
 function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
-  E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
-  if (window.DDA && E.panels.some(q => q.dock != null)) { relayout(); DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
+  const st = stackOrder();
+  E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+  const rows = st.some(q => LAYOUT.inRiga(q, st));       // panels side by side follow the width too (and stack when it is too narrow)
+  if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
 }
 function restoreUi() {
   const u = NB.ui;

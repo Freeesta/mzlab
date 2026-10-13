@@ -4,7 +4,9 @@
 //
 // Supervisor: if the worker dies (a trap, a lost memory, a script error) it is terminated, a new one is started, the files of the session
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches the engine off for the rest of the
-// session (`error.engineFallback`: the page asks to be reloaded).
+// session (`error.engineFallback`: the page asks to be reloaded). A death with the signature of a lack of memory (a trap or `rust_oom` after the memory grew) is not
+// retried as it is: once the engine restarts with half the budget, a second time the engine is off with `error.memoryBudget`, never a loop of restarts.
+// The .wasm is compiled once here and the same WebAssembly.Module goes to every worker of the engine (null = the worker compiles it).
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
@@ -14,19 +16,21 @@ import { wiffApi } from "./rust-convert.js";
 import { makeConvertAgilent } from "./rust-agilent.js";
 import { makeConvertLettori } from "./rust-lettori.js";
 import { makeRecycler } from "./rust-recycle.js";
+import { compileOnce, ordered, judgeDeath, forgetFaults } from "./rust-supervisor.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
-  let worker = null, seq = 0, restarts = [];
+  let worker = null, seq = 0, peakMem = 0;
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
-  const api = { enabled: true, disabled: false, stats };
+  const api = { enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) };
+  const death = { restarts: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
   const base = n => String(n || "").split(/[\\/]/).pop() || "";
-
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
+  const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
   function spawn() {
-    const w = new Worker(workerUrl, { type: "module" });
+    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq);
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
@@ -35,19 +39,19 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
-      pending.delete(m.id); recycler.seen(m.mem);
-      if (m.fatal) { p.res({ dead: true, error: m.error }); died(w); } else p.res(m);
+      pending.delete(m.id); peakMem = Math.max(peakMem, m.mem || 0); recycler.seen(m.mem);
+      if (m.fatal) { p.res({ dead: true, error: m.error }); died(w, { text: m.error, panic: m.panic, mem: m.mem }); } else p.res(m);
     };
-    w.onerror = () => died(w);
+    w.onerror = e => died(w, { text: e && e.message });
     worker = w;
   }
-  function recycle(buf) { if (worker) worker.postMessage({ op: "recycle", bufs: [buf] }, [buf]); }
+  function recycle(buf) { if (worker) worker.send({ op: "recycle", bufs: [buf] }, [buf]); }
   function rpc(msg, onp) {
     return new Promise(res => {
       if (!worker || api.disabled) return res({ dead: true });
       const id = ++seq;
       pending.set(id, { res, worker, onp });
-      worker.postMessage({ ...msg, id });
+      worker.send({ ...msg, id });
     });
   }
   function stop(w, res) {
@@ -58,14 +62,12 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     spawn();
     slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
   }
-  function died(w) {
+  function died(w, info) {
     if (w !== worker) return;
     stop(w, { dead: true });
-    const now = Date.now();
-    restarts = restarts.filter(t => now - t < 60000); restarts.push(now); stats.restarts++;
-    if (restarts.length > 1) { api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify("error.engineFallback"); return; }
-    respawn();
-    notify("error.engineRestarted");
+    const act = judgeDeath(death, info, peakMem);
+    if (act === "restart" || act === "halve") { respawn(); notify("error.engineRestarted"); return; }
+    api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(act === "oom" ? "error.memoryBudget" : "error.engineFallback");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
   // only for what needs the spectra (single scans), the first time they are asked, or at once when the file has no index (no OPFS).
@@ -96,7 +98,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
-    if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
+    if (!more) { slots = []; if (worker && !api.disabled) worker.send({ op: "reset", id: ++seq }); }
     const first = more ? slots.length : 0;
     for (const [i, s] of ((body && body.samples) || []).entries()) {
       const k = first + i;
@@ -116,7 +118,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     await Promise.all(ks.map(k => slots[k].opening));
     return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
   };
-  api.crash =() => rpc({ op: "crash" });
+  api.crash = grow => rpc({ op: "crash", grow: grow || 0 });
+  api.forgetFaults = () => { forgetFaults(death); if (!worker) respawn(); };      // test hook: starts the count of deaths again and brings a stopped engine back
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
   api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 

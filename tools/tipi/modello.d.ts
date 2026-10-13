@@ -34,6 +34,7 @@ interface PannelloBase {
   tab: Scheda;
   title: string;
   x: number; y: number; w: number; h: number; full?: boolean;
+  riga?: number; quota?: number | null;   // row of the stack and share of its width (layout.js)
   zoom: [number, number] | null;
   anns: any[]; ints: any[];
   k?: number;               // index of the file in E.files (saved as the file name)

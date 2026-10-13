@@ -14,6 +14,7 @@ use super::*;
 use crate::aligned::{Aligned, CELL_ABSENT};
 use crate::evid::match_hypotheses;
 use crate::hypo::{counts_of, HypoParams, Hypothesis, Registry, Rules, SRC_NETWORK};
+use crate::trace::filled;
 
 /// Thresholds of the network.
 #[derive(Debug, Clone, PartialEq)]
@@ -158,10 +159,9 @@ pub fn arcs(inp: &TpInputs, rules: &Rules, b: &TpBlock, np: &NetParams) -> Vec<A
 }
 
 /// Steps from the parent of the rows already explained: the steps of the hypothesis that covers them (at least one), 0 for the parent.
-fn anchors(inp: &TpInputs, b: &TpBlock) -> Vec<u8> {
+fn anchors(inp: &TpInputs, b: &TpBlock) -> Result<Vec<u8>> {
     let matched = match_hypotheses(inp.hyps, inp.aligned);
-    // one byte per row of a table that the `align` phase already counted
-    let mut g = vec![0u8; inp.aligned.len()];
+    let mut g = filled(inp.aligned.len(), 0u8)?;
     for (r, x) in g.iter_mut().enumerate() {
         *x = match b.status[r] {
             ST_PARENT => 1,
@@ -169,16 +169,21 @@ fn anchors(inp: &TpInputs, b: &TpBlock) -> Vec<u8> {
             _ => 0,
         };
     }
-    g
+    Ok(g)
 }
 
 /// Explains by the network the formed rows that nothing else explained: the rows reached by an arc from the parent or from an explained row. The status of
 /// those goes from unexplained to product and `VIA_NETWORK` is set; returns the arcs used (with the steps from the parent in `generation`).
 /// Generations are counted from 1 for the first step from the parent.
-pub fn explain_by_arcs(inp: &TpInputs, rules: &Rules, b: &mut TpBlock, np: &NetParams) -> Vec<Arc> {
+pub fn explain_by_arcs(
+    inp: &TpInputs,
+    rules: &Rules,
+    b: &mut TpBlock,
+    np: &NetParams,
+) -> Result<Vec<Arc>> {
     let all = arcs(inp, rules, b, np);
     // g[r]: 0 = not reached, else steps from the parent + 1 (the parent is 1)
-    let mut g = anchors(inp, b);
+    let mut g = anchors(inp, b)?;
     let mut used = Vec::new();
     loop {
         let mut changed = false;
@@ -202,7 +207,7 @@ pub fn explain_by_arcs(inp: &TpInputs, rules: &Rules, b: &mut TpBlock, np: &NetP
             break;
         }
     }
-    used
+    Ok(used)
 }
 
 /// The hypotheses of the next round, one step from the accepted products: not in `reg` and not repeated. Ids are given by `Registry::append`.

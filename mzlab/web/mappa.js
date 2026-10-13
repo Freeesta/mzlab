@@ -840,7 +840,7 @@ window.MAPPA = (() => {
   const pOf = el => E.panels.find(q => q.el === el);
   const simple = p => !(window.DDA && (DDA.docked(p) || E.panels.some(q => q.dock === p.id && DDA.docked(q))));
   const above = p => { let best = null; for (const q of E.panels) if (q !== p && q.full && simple(q) && q.y < p.y && (!best || q.y > best.y)) best = q; return best; };
-  const done = p => { if (p.full && typeof relayout === "function") relayout(); if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
+  const done = p => { if (p.full && typeof relayout === "function") { LAYOUT.altezza(p, E.panels); relayout(); } if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
   function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");
