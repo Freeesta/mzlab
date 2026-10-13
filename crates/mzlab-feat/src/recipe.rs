@@ -78,6 +78,15 @@ fn versions() -> String {
 }
 
 impl Recipe {
+    /// Window of m/z, ppm or minus Da, in which the summaries of a row look for the peak of a file (`rowmeta`): the Da of the alignment at unit resolution.
+    pub fn row_window(&self) -> f64 {
+        if self.align.ion.ppm < 0.0 {
+            self.align.ion.ppm
+        } else {
+            crate::rowmeta::WINDOW_PPM
+        }
+    }
+
     /// Text of what the table of one file depends on: the versions and the parameters of detection, quality, isotopes, MS2 and families.
     pub fn file_text(&self) -> String {
         let detect = Params {

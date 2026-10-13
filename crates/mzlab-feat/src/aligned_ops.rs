@@ -1,6 +1,7 @@
 //! Queries and the byte layout of `Aligned`.
 
 use crate::aligned::{Aligned, RowQ, CELL_DETECTED, CELL_FILLED, CELL_TARGETED};
+use crate::axis::half;
 use crate::table::ROLE_M;
 
 impl Aligned {
@@ -165,7 +166,7 @@ impl Aligned {
 
     /// Rows with the reference ion or any member within `ppm` of `mz`, ascending (the way to find an ion that is not the reference of its family).
     pub fn rows_near(&self, mz: f64, ppm: f64) -> Vec<usize> {
-        let tol = mz * ppm * 1e-6;
+        let tol = half(mz, ppm);
         (0..self.len())
             .filter(|&r| {
                 (self.mz[r] - mz).abs() <= tol

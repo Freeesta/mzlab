@@ -2,6 +2,7 @@
 //! The trace is the sum of the peaks within `ppm` in every scan (two binary searches on the peak table and one slice of it); a peak is accepted
 //! when its S/N, shape and number of points reach the limits of `TargetParams` (the S/N takes the place of the minimum height of the detection).
 
+use crate::axis::half;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::peakq::{detect_prominence, ProminenceParams};
@@ -57,7 +58,7 @@ pub(crate) fn peaks<R: ReadAt>(
     win: (f64, f64),
     p: &TargetParams,
 ) -> Result<Vec<Cand>> {
-    let d = mz * p.ppm * 1e-6;
+    let d = half(mz, p.ppm);
     let a = index.search(sec.si, mz - d, false)?;
     let b = index.search(sec.si, mz + d, true)?;
     if b <= a {
@@ -119,7 +120,7 @@ fn trace_peaks(rt: &[f64], y: &[f64], win: (f64, f64), p: &TargetParams) -> Vec<
 /// A row of the detection table (sorted by m/z) that is the same ion as `mz` at `rt`: within `ppm`, and the apex of one inside the edges of the
 /// other or within `rt_tol` minutes. The lowest m/z error wins.
 pub(crate) fn detected_row(f: &FileFeatures, mz: f64, c: &Cand, p: &TargetParams) -> Option<usize> {
-    let d = mz * p.ppm * 1e-6;
+    let d = half(mz, p.ppm);
     let a = f.mz.partition_point(|&x| x < mz - d);
     let b = f.mz.partition_point(|&x| x <= mz + d);
     (a..b)

@@ -155,8 +155,8 @@ pub fn detect_file(
     name: &str,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::detect(&mut ix, name, &r).map_err(js_err)
 }
 
@@ -170,8 +170,8 @@ pub fn detect_file_to(
     recipe: &str,
     write: Function,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     to_sink(write, |sink| run::detect_to(&mut ix, name, &r, sink))
 }
 
@@ -184,8 +184,8 @@ pub fn preview_file(
     size: f64,
     recipe: &str,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::preview(&mut ix, &r, run::floor_given(recipe)).map_err(js_err)
 }
 
@@ -202,7 +202,8 @@ pub fn align_series_to(
     write: Function,
     budget_mb: f64,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
+        .map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let open = |k| open_one(&read, k, sizes[k]);
@@ -220,7 +221,8 @@ pub fn align_series(
     sizes: Vec<f64>,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
+        .map_err(js_err)?;
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut src = JsStored { files };
@@ -281,8 +283,12 @@ pub fn run_hypotheses(
     parent_rt: f64,
     recipe: &str,
 ) -> std::result::Result<Hypotheses, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
+    let r = match ix.first_mut() {
+        Some(first) => run::recipe_for(recipe, first),
+        None => run::recipe_from_json(recipe),
+    }
+    .map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
     let mut src = JsStored { files };
     let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r)

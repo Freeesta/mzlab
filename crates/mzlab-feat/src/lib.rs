@@ -8,6 +8,7 @@ pub mod align;
 mod aligned;
 mod aligned_meta;
 mod aligned_ops;
+pub mod axis;
 mod channels;
 #[cfg(feature = "chem")]
 pub mod chem;
@@ -31,6 +32,7 @@ mod post;
 pub mod qc;
 pub mod quality;
 pub mod recipe;
+mod recipe_lr;
 pub mod report;
 pub mod resolve;
 pub mod rowident;

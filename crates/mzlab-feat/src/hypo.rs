@@ -50,6 +50,8 @@ pub struct HypoParams {
     pub max_suspects: usize,
     /// Expected members of a family in the other polarity too ([M-H]- of a positive base and the reverse).
     pub other_polarity: bool,
+    /// Unit resolution: two formulas of the same nominal m/z and adduct are one hypothesis, the others are its alternatives.
+    pub nominal: bool,
 }
 
 impl Default for HypoParams {
@@ -60,6 +62,7 @@ impl Default for HypoParams {
             min_mz: 50.0,
             max_suspects: 500,
             other_polarity: false,
+            nominal: false,
         }
     }
 }
@@ -139,6 +142,14 @@ pub(crate) fn ion(neutral: f64, polarity: i8) -> (&'static str, f64) {
 }
 
 fn same_key(a: &Hypothesis, b: &Hypothesis) -> bool {
+    same_ion(a, b, false)
+}
+
+/// Whether two hypotheses name the same ion: same formula (or, without one, the same m/z and label) and adduct, or at unit resolution the same nominal m/z.
+fn same_ion(a: &Hypothesis, b: &Hypothesis, nominal: bool) -> bool {
+    if nominal {
+        return libm::round(a.mz) == libm::round(b.mz) && a.adduct == b.adduct;
+    }
     if a.formula.is_empty() || b.formula.is_empty() {
         a.mz.to_bits() == b.mz.to_bits() && a.adduct == b.adduct && a.label == b.label
     } else {
@@ -174,9 +185,11 @@ impl Registry {
 }
 
 /// Merges the hypotheses that name the same ion (same formula and adduct): sources are united, the other labels become alternatives.
-fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
+fn merge(mut raw: Vec<Hypothesis>, nominal: bool) -> Vec<Hypothesis> {
+    let key = |h: &Hypothesis| if nominal { libm::round(h.mz) } else { h.mz };
     raw.sort_by(|a, b| {
-        a.mz.total_cmp(&b.mz)
+        key(a)
+            .total_cmp(&key(b))
             .then_with(|| a.adduct.cmp(b.adduct))
             .then_with(|| a.formula.cmp(&b.formula))
             .then_with(|| a.label.cmp(&b.label))
@@ -184,10 +197,15 @@ fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
     let mut out: Vec<Hypothesis> = Vec::with_capacity(raw.len());
     for h in raw {
         match out.last_mut() {
-            Some(l) if same_key(l, &h) => {
+            Some(l) if same_ion(l, &h, nominal) => {
                 l.sources |= h.sources;
-                if l.label != h.label && !l.alternatives.contains(&h.label) {
-                    l.alternatives.push(h.label);
+                let other = if l.formula == h.formula {
+                    h.label
+                } else {
+                    format!("{} ({})", h.formula, h.label)
+                };
+                if other != l.label && !l.alternatives.contains(&other) {
+                    l.alternatives.push(other);
                 }
                 l.level = if l.level == 0 {
                     h.level
@@ -222,7 +240,7 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
     }
     raw.extend(sources::from_families(inp.families, p));
     raw.extend(sources::from_imported(inp.imported, p)?);
-    let hyps = merge(raw);
+    let hyps = merge(raw, p.nominal);
     let outcomes = vec![Outcome::NotSearched; hyps.len()];
     Ok(Registry {
         hyps,

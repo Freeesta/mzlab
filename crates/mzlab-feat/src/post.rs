@@ -4,6 +4,7 @@
 use crate::sortc;
 use mzlab_core::error::Result;
 
+use crate::axis::{MassAxis, LR_TOUCH};
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE};
 use crate::trace::reserve;
 
@@ -25,7 +26,7 @@ pub(crate) struct Row {
 }
 
 /// Rows of the features seen on both grids: the one with more points stays (`_merge_grids`). Returns the keep mask.
-fn merge_grids(f: &[Row]) -> Result<Vec<bool>> {
+fn merge_grids(f: &[Row], axis: MassAxis) -> Result<Vec<bool>> {
     let (rt_tol, ppm, slack) = (0.05f64, 5e-6f64, 0.02f64);
     let n = f.len();
     let mut keep = Vec::new();
@@ -44,7 +45,8 @@ fn merge_grids(f: &[Row]) -> Result<Vec<bool>> {
         for t in 0..n - j {
             let (yi, xi) = (o[t] as usize, o[t + j] as usize);
             let (x, y) = (&f[xi], &f[yi]);
-            let near = (x.mz - y.mz).abs() <= x.mz * ppm && x.grid != y.grid;
+            let reach = if axis.is_da() { LR_TOUCH } else { x.mz * ppm };
+            let near = (x.mz - y.mz).abs() <= reach && x.grid != y.grid;
             if !near {
                 continue;
             }
@@ -118,15 +120,20 @@ pub(crate) fn median_interval(rt: &[f64]) -> f64 {
 }
 
 /// The merged and sorted table: grids merged, side lobes marked, rows in m/z order.
-pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64) -> Result<FileFeatures> {
+pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64, axis: MassAxis) -> Result<FileFeatures> {
     let [r0, r1] = rows;
     let mut f = r0;
     reserve(&mut f, r1.len())?;
     f.extend(r1);
-    let keep = merge_grids(&f)?;
+    let keep = merge_grids(&f, axis)?;
     let mut k = keep.iter();
     f.retain(|_| *k.next().unwrap());
-    let art = fourier_artefacts(&f)?;
+    // no Fourier-transform side lobes at unit resolution
+    let art = if axis.is_da() {
+        vec![false; f.len()]
+    } else {
+        fourier_artefacts(&f)?
+    };
     let mut idx: Vec<u32> = Vec::new();
     reserve(&mut idx, f.len())?;
     idx.extend(0..f.len() as u32);

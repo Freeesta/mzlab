@@ -1,6 +1,7 @@
 //! A series of files from the indexes to the aligned table: the analysis of every file (`analyse_file`), the alignment in the mode of the recipe
 //! and the gap filling (`align_and_fill`). One index is open at a time; the tables of the files are the only thing kept between the steps.
 
+use crate::axis::half;
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -58,7 +59,7 @@ fn weak_tier<R: ReadAt>(
             && w.flags[i] & FLAG_GOOD != 0
             && w.flags[i] & FLAG_ISOTOPE == 0
     }) {
-        let tol = w.mz[i] * ppm * 1e-6;
+        let tol = half(w.mz[i], ppm);
         let from = strong.mz.partition_point(|&m| m < w.mz[i] - tol);
         let held = (from..strong.len())
             .take_while(|&j| strong.mz[j] <= w.mz[i] + tol)
@@ -90,7 +91,7 @@ pub fn align_and_fill<R: ReadAt>(
         })
     };
     let (mut table, filled) = finish(table, &mut { pos }, files.len(), r, None, open)?;
-    crate::rowmeta::compute(&mut table, &mut |k, (lo, hi)| {
+    crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, (lo, hi)| {
         let mut part = FileFeatures {
             dt: files[k].dt,
             ..FileFeatures::default()

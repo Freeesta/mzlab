@@ -9,6 +9,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
+use crate::axis::MassAxis;
 use crate::channels::{segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
@@ -35,6 +36,8 @@ pub struct Params {
     pub min_height: f64,
     pub max_gap: u32,
     pub long_trace: u32,
+    /// Axis of the channels of m/z (`Da` = unit resolution).
+    pub axis: MassAxis,
     /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
     pub budget: usize,
 }
@@ -48,6 +51,7 @@ impl Default for Params {
             min_height: MIN_HEIGHT,
             max_gap: MAX_GAP,
             long_trace: LONG_TRACE,
+            axis: MassAxis::Ppm,
             budget: SLAB_PEAKS * BYTES_PER_PEAK,
         }
     }
@@ -76,7 +80,7 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     let mut lmz: Vec<f64> = Vec::new();
     reserve(&mut lmz, slab.mz.len())?;
     let den = libm::log1p(CHANNEL_PPM);
-    lmz.extend(slab.mz.iter().map(|&m| libm::log(m) / den));
+    lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
     for (g, shift) in [0.0f64, 0.5].into_iter().enumerate() {
         let mut segs = Vec::new();
         segments(&lmz, &slab.mz, &slab.it, &slab.pos, shift, p, &mut segs)?;
@@ -156,5 +160,5 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<FileFeature
     run_slab(&slab, &rt, dt, p, &mut rows)?;
     drop(slab);
 
-    finish(rows, dt)
+    finish(rows, dt, p.axis)
 }

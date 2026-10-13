@@ -4,6 +4,7 @@
 use crate::sortc;
 use mzlab_core::error::Result;
 
+use crate::axis::{LR_STITCH, LR_TOUCH};
 use crate::trace::{reserve, Params, TOUCH_HEIGHT};
 
 /// A run of scans in one channel.
@@ -139,6 +140,11 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     let m = segs.len();
     let (touch_ppm, touch_ratio) = (4.0f64, 10.0f64);
     let max_gap = p.max_gap as i64;
+    let touch_height = if p.axis.is_da() {
+        10.0 * p.min_height
+    } else {
+        TOUCH_HEIGHT
+    };
     for i in 0..m {
         let c = segs[i].chan;
         let lo = segs.partition_point(|s| s.chan < c + 1);
@@ -149,11 +155,18 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
             let ov = sj.z.min(si.z) as i64 - sj.a.max(si.a) as i64 + 1;
             let short = (si.z as i64 - si.a as i64 + 1).min(sj.z as i64 - sj.a as i64 + 1);
             let (hi_mx, lo_mx) = (si.mx.max(sj.mx), si.mx.min(sj.mx));
-            let like = (si.mzc - sj.mzc).abs() <= touch_ppm * 1e-6 * si.mzc
+            let near = if p.axis.is_da() {
+                LR_TOUCH
+            } else {
+                touch_ppm * 1e-6 * si.mzc
+            };
+            let like = (si.mzc - sj.mzc).abs() <= near
                 && hi_mx <= touch_ratio * lo_mx
-                && lo_mx >= TOUCH_HEIGHT;
-            let ok =
-                ov as f64 >= 0.5 * short as f64 || (ov >= 1 - max_gap && ov <= max_gap + 1 && like);
+                && lo_mx >= touch_height;
+            // a unit channel holds distinct ions a dalton apart: pieces are one ion only if their centroids are close
+            let overlap = ov as f64 >= 0.5 * short as f64
+                && (!p.axis.is_da() || (si.mzc - sj.mzc).abs() <= LR_STITCH);
+            let ok = overlap || (ov >= 1 - max_gap && ov <= max_gap + 1 && like);
             if ok {
                 let (ra, rb) = (find(parent, i as u32), find(parent, j as u32));
                 if ra != rb {

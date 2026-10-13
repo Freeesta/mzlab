@@ -3,6 +3,7 @@
 //! features whose consecutive m/z gaps are below `ppm` is one slab (no group crosses its edges): it is cut where it spans more than
 //! `max_ppm_span`, sorted by RT and cut where the RT gap is above `rt_gap`; so one slab is held at a time.
 
+use crate::axis::half;
 use crate::sortc;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -146,8 +147,13 @@ fn split_slab(
     adj: Option<&RtMap>,
 ) -> Vec<(usize, usize)> {
     let mz = |t: &Item| files[t.0 as usize].mz[t.1 as usize];
-    let x: Vec<f64> = items.iter().map(|t| libm::log(mz(t)) * 1e6).collect();
-    let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span);
+    // log-ppm axis, or the m/z itself when the tolerances are in Da
+    let unit = p.max_ppm_span < 0.0;
+    let x: Vec<f64> = items
+        .iter()
+        .map(|t| if unit { mz(t) } else { libm::log(mz(t)) * 1e6 })
+        .collect();
+    let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span.abs());
     // the RT of every feature of the slab, computed once (the corrected RT interpolates a curve)
     let rts: Vec<f64> = items.iter().map(|t| rt_of(files, adj, t)).collect();
     let mut groups = Vec::new();
@@ -308,7 +314,7 @@ fn merge_groups(
     let mut slab: Vec<Item> = Vec::new();
     let mut last = f64::NAN;
     while let Some(h) = heap.pop() {
-        if !slab.is_empty() && h.mz - last > h.mz * p.ppm * 1e-6 {
+        if !slab.is_empty() && h.mz - last > half(h.mz, p.ppm) {
             flush(files, &mut slab, p, adj, sink);
         }
         last = h.mz;
