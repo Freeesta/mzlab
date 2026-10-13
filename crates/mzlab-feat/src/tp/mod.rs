@@ -11,8 +11,10 @@ mod cancelli;
 mod meta;
 mod parentela;
 mod rete;
+mod tabella;
 
 pub use rete::{arcs, explain_by_arcs, next_generation, Arc, NetParams};
+pub use tabella::{role_of, table_json, Role, TABLE_SCHEMA};
 
 use mzlab_core::error::Result;
 

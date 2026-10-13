@@ -56,6 +56,12 @@ pub fn report_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &s
     Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
 }
 
+/// The `tptab/1` of a table that carries the view `tp/1`: the products, the formed and not explained rows and the parent, with their numbers and the controls.
+pub fn tp_table_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    mzlab_feat::tp::table_json(&t, &s)
+}
+
 /// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
 pub fn samples_json(files_json: &str) -> Result<String> {
     let v = mzlab_core::json::parse(files_json.as_bytes())?;
