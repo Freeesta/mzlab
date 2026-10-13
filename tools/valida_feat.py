@@ -158,7 +158,7 @@ def main(argv=None) -> int:
     cg.add_argument("--cancello-tp", action="store_true", help="measure the raw TP view against the truth (--serie, --verita) and write cancello_tp.json and cancello_tp_rapporto.{json,md}")
     cg.add_argument("--cancello-tp-json", default=str(ROOT / "TP_Mine" / "data" / "cancello_tp.json"))
     cg.add_argument("--dataset", default="D-TIM", help="name of the dataset written in cancello_tp.json")
-    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS/Esempio raw e mzML) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
+    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
     cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
     cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)
