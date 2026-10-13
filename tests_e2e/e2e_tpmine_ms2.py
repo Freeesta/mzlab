@@ -39,6 +39,7 @@ try:
             pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.evaluate("t => { document.getElementById('tp-tr').value += t; }", "\nmy oxygen rule;+O;lit: Doe 2020")                  # an own row with a reference (same change as hydroxylation)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
+            pg.locator("#hr-colm summary").click(); pg.check('#hr-cols input[data-col="pred"]'); pg.check('#hr-cols input[data-col="sim"]')          # off by default
             tab = pg.inner_text("#hr-t")
             assert "Pred." in tab and "Sim." in tab, tab[:300]
             assert pg.evaluate("document.querySelectorAll('#hr-t .lvb.pd-1').length") >= 2          # both known products are confirmed by their shifted fragments

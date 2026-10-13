@@ -66,7 +66,12 @@ def as_table(pg):
 def dig(pg, tr=None):
     if tr is not None: settr(pg, tr)
     pg.fill("#tp-mol", PARENT); pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
-    return pg.evaluate(TABLE)
+    t = pg.evaluate(TABLE)
+    for _ in range(40):                                     # some cells (t0, Blank) arrive a moment after the rows: read until two reads agree
+        pg.wait_for_timeout(500); u = pg.evaluate(TABLE)
+        if u == t: break
+        t = u
+    return t
 
 
 INIT = "try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}"
