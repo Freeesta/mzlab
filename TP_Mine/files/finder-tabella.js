@@ -36,6 +36,28 @@ export function samplesOf(call, lc, files) {
 }
 
 /**
+ * samplesOf where the operations of campioni/2 are asynchronous (the desktop app asks its native engine): the synchronous code runs again over the answers already received.
+ * @param {(op: string, json: string) => Promise<string>} callAsync @param {string[]} lc @param {{name: string, type?: string, time?: number | null}[]} files
+ */
+export async function samplesOfAsync(callAsync, lc, files) {
+  /** @type {Map<string, string>} */ const got = new Map(), miss = new Map();
+  for (;;) {
+    miss.clear();
+    try {
+      return samplesOf((op, j) => {
+        const k = op + "\n" + j, v = got.get(k);
+        if (v !== undefined) return v;
+        miss.set(k, j);
+        throw new Error("pending");
+      }, lc, files);
+    } catch (e) {
+      if (!miss.size) throw e;
+      for (const [k, j] of miss) got.set(k, await callAsync(k.slice(0, k.indexOf("\n")), j));
+    }
+  }
+}
+
+/**
  * tptab/1 of some rows of the table of the last Dig.
  * @param {{manifest: () => Promise<any>, url: (p: string) => string, sha: (b: ArrayBuffer) => Promise<string>}} deps
  * @param {{table: Uint8Array, lc: string[], files: any[]}} run
