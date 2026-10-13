@@ -21,7 +21,9 @@ r = Run(port=8830 + 140, wd="/tmp/wd_cartella")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.wait_for_selector("#pickdirbtn", timeout=60000)
+        pg.wait_for_selector("#cartpick", timeout=60000)
+        b = pg.locator("#cartpick"); assert b.get_attribute("aria-label") and b.get_attribute("title") and not pg.query_selector("#pickdirbtn, #cartcard"), "icon with label, old button and card gone"
+        bx = b.bounding_box(); assert bx["width"] >= 24 and bx["height"] >= 24, bx
         def folder():
             pg.set_input_files("#pickdir", str(top))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=90000)

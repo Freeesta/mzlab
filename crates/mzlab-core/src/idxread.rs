@@ -1,6 +1,5 @@
 //! Reader of the `.mzidx` index (format in `docs/agenti/mzidx.md`): header, metadata, scan table and, on request, slices of the arrays.
-//! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS
-//! callback), so the same code serves the browser, the desktop app and the tests.
+//! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS callback).
 
 use crate::error::{Error, Result};
 use crate::json::{self, Value};
@@ -194,8 +193,9 @@ pub struct Index<R: ReadAt> {
     pub sections: Vec<Section>,
     pub source: Value,
     pub run: Value,
-    cache: Vec<(usize, u8, u64, Vec<u8>)>, // (section, array, block, bytes)
-    arrays: Vec<Option<ScanArrays>>,
+    pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
+    pub(crate) arrays: Vec<Option<ScanArrays>>,
+    pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
@@ -290,6 +290,7 @@ impl<R: ReadAt> Index<R> {
             run: meta.get("run").cloned().unwrap_or(Value::Null),
             cache: Vec::new(),
             arrays: vec![None; n],
+            arrays_tick: vec![0; n],
         })
     }
 
@@ -343,7 +344,7 @@ impl<R: ReadAt> Index<R> {
                 bp_inten,
             });
         }
-        Ok(self.arrays[si].as_ref().unwrap())
+        Ok(self.touch_arrays(si))
     }
 
     /// Element `i` of the m/z array (as `f64`; the `f32` of a high-resolution survey is widened exactly), through the block cache.
@@ -366,11 +367,11 @@ impl<R: ReadAt> Index<R> {
                 if self.cache.len() >= 8 {
                     self.cache.remove(0);
                 }
-                self.cache.push((si, 7, blk, b));
+                self.cache.push((si, 7, blk, b, 0));
                 self.cache.len() - 1
             }
         };
-        let b = &self.cache[at].3;
+        let b = self.touch_block(at);
         let k = (i - blk * BLOCK) as usize * w;
         Ok(if w == 4 {
             f32::from_le_bytes(b[k..k + 4].try_into().unwrap()) as f64

@@ -7,7 +7,7 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi } from "./manifesto.js";
-import { createPool, poolSize } from "./idxpool.js";
+import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { wiffOp } from "./rust-wiff.js";
 import { agilentOp } from "./rust-agilent.js";
@@ -23,7 +23,10 @@ const take = len => {
   const i = pool.findIndex(b => b.byteLength >= need);
   return new Float64Array(i >= 0 ? pool.splice(i, 1)[0] : new ArrayBuffer(Math.max(need, 64 << 10)), 0, len);
 };
-const ready = init().then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
+// The page compiles the .wasm once and sends it first ({ op: "module", module }; null = compile it here); any other first message starts it too.
+let startInit = /** @type {(m: any) => void} */ (() => {}), wasmModule = null;
+const started = new Promise(res => { startInit = res; });
+const ready = started.then(module => { wasmModule = module || null; return module ? init({ module_or_path: module }) : init(); }).then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
 ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
 function readerFor(blob) {
@@ -39,9 +42,10 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the two pools below count together (2 on iPad/phone)
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
 let wifPool = null;                                                       // the pool of the .wiff -> mzML conversions (wiff-worker.js), made when the first one is asked
-const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
+const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
@@ -176,10 +180,11 @@ async function lrOp(m) {
   return null;
 }
 
-// linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js)
-const memNow = () => (wasmMem ? wasmMem.buffer.byteLength : 0);
+// linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js). The cache is trimmed to its budget first (one LRU).
+const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
 onmessage = async ev => {
   const m = ev.data;
+  if (m.op === "module") { startInit(m.module); return; } startInit(null);
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
   await ready;
   const { id } = m;
@@ -236,8 +241,9 @@ onmessage = async ev => {
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
+      case "budget": engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); break;
-      case "crash": engine.crash(); break;                                           // test hook: the supervisor must recover
+      case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
       case "xic": out = take(2 * engine.count(m.slot, m.level)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;
       case "spectra": {
@@ -252,6 +258,6 @@ onmessage = async ev => {
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else
     const fatal = !(typeof e === "string" && e.startsWith("{"));
-    postMessage({ id, op: m.op, error: text, fatal });
+    postMessage({ id, op: m.op, error: text, fatal, mem: wasmMem ? wasmMem.buffer.byteLength : 0, panic: fatal ? (globalThis.__mzlabPanic || null) : null });      // the panic message (set by the engine before the abort) and the memory it had: the supervisor tells a lack of memory from another fault
   }
 };

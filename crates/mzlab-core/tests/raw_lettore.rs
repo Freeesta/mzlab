@@ -115,3 +115,63 @@ fn not_a_raw_is_refused() {
     };
     assert!(lettori::riconosci(&mut fs).is_none());
 }
+
+#[test]
+fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks_alone() {
+    let files = raw_files();
+    if files.is_empty() {
+        eprintln!("SKIP raw_lettore: no data repository (MZLAB_DATI)");
+        return;
+    }
+    let mut seen = 0;
+    for f in files.iter().take(2) {
+        let direct = opentfraw::RawFileReader::open(std::io::BufReader::new(
+            std::fs::File::open(f).unwrap(),
+        ))
+        .unwrap();
+        let mut src = std::io::BufReader::new(std::fs::File::open(f).unwrap());
+        let first = direct.run_header.sample_info.first_scan_number;
+        let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
+        let n = l.indice(0).unwrap().len();
+        for k in (0..n).step_by((n / 12).max(1)) {
+            let head = l.intestazione(0, k).unwrap();
+            let get = |name: &str| {
+                head.iter()
+                    .find(|c| c.nome == name)
+                    .map(|c| c.valore.clone())
+            };
+            let nodes = direct
+                .read_scan_labels(&mut src, first + k as u32)
+                .map(|p| p.noise_nodes)
+                .unwrap_or_default();
+            if nodes.is_empty() {
+                assert!(
+                    get("thermo:noise_function").is_none(),
+                    "{k}: no nodes, no field"
+                );
+                continue;
+            }
+            seen += 1;
+            let want = nodes
+                .iter()
+                .map(|x| format!("{},{},{}", x.mz, x.noise, x.baseline))
+                .collect::<Vec<_>>()
+                .join(";");
+            assert_eq!(
+                get("thermo:noise_function").as_deref(),
+                Some(want.as_str()),
+                "scan {k}"
+            );
+            let noise: f32 = get("thermo:noise").unwrap().parse().unwrap();
+            let (lo, hi) = nodes.iter().fold((f32::MAX, f32::MIN), |a, x| {
+                (a.0.min(x.noise), a.1.max(x.noise))
+            });
+            assert!(
+                noise >= lo && noise <= hi,
+                "scan {k}: median outside the nodes"
+            );
+            assert!(get("thermo:baseline").is_some());
+        }
+    }
+    eprintln!("scans with noise nodes checked: {seen}");
+}
