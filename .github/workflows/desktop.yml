@@ -55,6 +55,8 @@ jobs:
         run: python crates/mzlab-desktop/prepare.py
       - name: Page, shim and worker against the native engine (fake file dialog)
         run: python crates/mzlab-desktop/tests/e2e_shim.py
+      - name: mzFinder in the page of the desktop (native routes, no Pyodide, no wasm-feat/)
+        run: python crates/mzlab-desktop/tests/e2e_shim_finder.py
 
   build:
     name: build (${{ matrix.name }})
