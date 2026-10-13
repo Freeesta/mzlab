@@ -670,7 +670,7 @@ function ctl(p) {
       }
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
-      if (["level", "all", "snip", "bg", "kind", "mz0", "mz1", "scale"].includes(k)) ctl(p);
+      if (["level", "all", "snip", "bg", "kind", "mz0", "mz1", "scale"].includes(k) || (k === "k" && p.type === "map")) ctl(p);
       draw(p);
     };
   });

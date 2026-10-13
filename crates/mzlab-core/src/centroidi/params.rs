@@ -32,7 +32,7 @@ fn mode_of(v: &mut [f64]) -> f64 {
     best
 }
 
-/// Unit and mode: u = most frequent smallest positive intensity of a scan; counts when 99.5 % of the points are whole multiples of u (within 0.01).
+/// Unit and mode: u = most frequent smallest positive intensity of a scan; counts when 95 % of the points are whole multiples of u (within 0.01).
 fn unit_and_mode(scans: &[(&[f64], &[f64])]) -> (f64, Mode) {
     let mut mins: Vec<f64> = scans
         .iter()
@@ -59,7 +59,7 @@ fn unit_and_mode(scans: &[(&[f64], &[f64])]) -> (f64, Mode) {
     }
     (
         u,
-        if all > 0 && ok as f64 >= 0.995 * all as f64 {
+        if all > 0 && ok as f64 >= 0.95 * all as f64 {
             Mode::Counts
         } else {
             Mode::Continuous

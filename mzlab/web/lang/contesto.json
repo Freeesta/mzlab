@@ -150,6 +150,8 @@
   "cursor.handle.value": "Valore letto da un lettore di schermo sul pallino del cursore del cromatogramma; {rt} = tempo di ritenzione in minuti.",
   "spec.contRemoved": "Nota nella legenda dello spettro; {n} = numero di picchi tolti perché compatibili con un contaminante Keller.",
   "ctx.spec.openMs2": "Voce del clic destro su un picco dello spettro; {mz} = m/z del precursore della scansione MS².",
+  "ctx.spec.extractMs2": "Voce del clic destro su un picco di uno spettro Full Scan (bassa risoluzione) il cui m/z è precursore di scansioni MS2 caricate.",
+  "ctx.spec.extractMs2.aria": "Etichetta per lettori di schermo; {mz} = m/z del picco.",
   "ctx.spec.openMs2.aria": "Etichetta per lettori di schermo; {mz} = m/z del picco.",
   "grad.src.dam": "Origine del gradiente mostrato nella finestra Metodo.",
   "gradient.err.point": "Errore di un punto del gradiente; {t} = tempo, {b} = %B.",
@@ -524,5 +526,8 @@
   "tpmine.feat.degraded": "Avviso di Tabui (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
   "error.featMemory": "Errore di Tabui (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB.",
   "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
-  "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file."
+  "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file.",
+  "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
+  "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
+  "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file."
 }
