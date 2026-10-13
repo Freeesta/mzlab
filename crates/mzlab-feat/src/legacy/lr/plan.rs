@@ -27,6 +27,16 @@ pub struct Settings {
     pub discover: bool,
     pub max_unexpected: usize,
     pub auto_offset: bool,
+    pub min_files: usize,
+}
+
+impl Settings {
+    pub fn persist(&self) -> super::labels::Persist {
+        super::labels::Persist {
+            min_files: self.min_files,
+            rt_tol: self.rt_tol_min,
+        }
+    }
 }
 
 impl Default for Settings {
@@ -39,6 +49,7 @@ impl Default for Settings {
             discover: true,
             max_unexpected: 40,
             auto_offset: true,
+            min_files: 3,
         }
     }
 }
@@ -146,6 +157,7 @@ pub fn settings(settings_json: &str) -> Settings {
     s.discover = flag("discover").unwrap_or(s.discover);
     s.max_unexpected = num("max_unexpected").map_or(s.max_unexpected, |x| x.max(0.0) as usize);
     s.auto_offset = flag("auto_offset").unwrap_or(s.auto_offset);
+    s.min_files = num("min_files").map_or(s.min_files, |x| x.max(0.0) as usize);
     s
 }
 
@@ -161,6 +173,7 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
     o.raw(",\"discover\":")
         .raw(if s.discover { "true" } else { "false" });
     o.raw(",\"max_unexpected\":").int(s.max_unexpected as i64);
+    o.raw(",\"min_files\":").int(s.min_files as i64);
     o.raw(",\"auto_offset\":")
         .raw(if s.auto_offset { "true" } else { "false" });
     o.raw("}");

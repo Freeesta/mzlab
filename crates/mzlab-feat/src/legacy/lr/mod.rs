@@ -8,6 +8,7 @@ pub mod labels;
 pub mod ms2;
 pub mod plan;
 pub mod rows;
+pub mod spec;
 pub mod summary;
 
 use std::collections::BTreeSet;
@@ -98,14 +99,14 @@ pub fn delta(formula: &str, parent: &str) -> String {
     format!("{}{}", part(true), part(false))
 }
 
-fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn]) {
+fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Persist) {
     e.cells = match e.row {
         Some(r) => rows::cells(t, r),
         None => vec![Cell::default(); lc.len()],
     };
     e.ref_rt = e.row.map(|r| mzlab_core::json::round(t.rt[r], 4));
     e.observed = e.row.map(|r| t.mz[r]);
-    let sc = score(lc, &e.cells);
+    let sc = score(lc, &e.cells, p);
     (e.score, e.label, e.criteria) = (sc.score, sc.label, sc.criteria);
 }
 
@@ -189,7 +190,7 @@ pub fn dig(
         row: prow,
         ..Entry::default()
     };
-    evaluate(&mut p, &t, &lc);
+    evaluate(&mut p, &t, &lc, s.persist());
     (p.score, p.label, p.criteria) = (None, "progenitore", Vec::new());
     let dec = decay(&kinetics(&lc, &p.cells));
     let gens = Gens::new(&kinetics(&lc, &p.cells), dec.map(|d| d.k));
@@ -197,13 +198,13 @@ pub fn dig(
     let mut entries = vec![p];
     entries.extend(cands);
     for e in entries.iter_mut().skip(1) {
-        evaluate(e, &t, &lc);
+        evaluate(e, &t, &lc, s.persist());
     }
     if s.discover {
         let known: Vec<f64> = entries.iter().map(|e| e.mz_x).collect();
         let mut un = rows::unexpected(&t, &lc, &known, &s, off);
         for e in un.iter_mut() {
-            evaluate(e, &t, &lc);
+            evaluate(e, &t, &lc, s.persist());
         }
         entries.extend(un);
     }

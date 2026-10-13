@@ -34,6 +34,15 @@ pub const RISE_MIN: f64 = 2.0;
 pub const STRONG: f64 = 75.0;
 pub const POSSIBLE: f64 = 50.0;
 pub const GROWS: &str = "grows over time";
+pub const PERSISTS: &str = "persistent";
+
+/// What counts as persistent: a peak in at least `min_files` treated samples (fewer when the series has fewer), or in two consecutive ones
+/// whose apexes lie within `rt_tol` minutes. `min_files = 0` switches the criterion off.
+#[derive(Debug, Clone, Copy)]
+pub struct Persist {
+    pub min_files: usize,
+    pub rt_tol: f64,
+}
 
 #[derive(Debug, Clone)]
 pub struct Score {
@@ -149,8 +158,33 @@ fn growth(files: &[FileIn], cells: &[Cell]) -> Option<Crit> {
     Some(crit(GROWS, if good { "pass" } else { "fail" }, text))
 }
 
+/// The persistence criterion over the treated samples `tr` (those with a peak).
+fn persistence(files: &[FileIn], cells: &[Cell], tr: &[usize], p: Persist) -> Crit {
+    if p.min_files == 0 {
+        return crit(PERSISTS, "n/a", "switched off".into());
+    }
+    let mut on: Vec<usize> = tr.iter().copied().filter(|&k| cells[k].detected).collect();
+    mzlab_core::sortc::by(&mut on, |&a, &b| {
+        let t = |k: usize| files[k].time.unwrap_or(f64::MAX);
+        t(a).total_cmp(&t(b))
+    });
+    let need = p.min_files.min(tr.len());
+    let close = on.windows(2).any(|w| {
+        let (a, b) = (cells[w[0]].apex_rt, cells[w[1]].apex_rt);
+        a.zip(b).is_some_and(|(a, b)| (a - b).abs() <= p.rt_tol) && tr.len() >= 2
+    });
+    let ok = on.len() >= need || (on.len() >= 2 && close);
+    let text = format!(
+        "peak in {} of {} treated samples (needs {need}, or two consecutive ones with the apex within {} min)",
+        on.len(),
+        tr.len(),
+        g(p.rt_tol)
+    );
+    crit(PERSISTS, if ok { "pass" } else { "fail" }, text)
+}
+
 /// `score_candidate` on the cells of a row (one per column of the table).
-pub fn score(files: &[FileIn], cells: &[Cell]) -> Score {
+pub fn score(files: &[FileIn], cells: &[Cell], p: Persist) -> Score {
     let pick = |sel: &dyn Fn(&FileIn) -> bool| -> Vec<usize> {
         (0..files.len()).filter(|&k| sel(&files[k])).collect()
     };
@@ -180,6 +214,9 @@ pub fn score(files: &[FileIn], cells: &[Cell]) -> Score {
             None => "no peak of the pipeline in the treated samples".into(),
         },
     )];
+    if ok {
+        c.push(persistence(files, cells, &tr, p));
+    }
     let areas = |ks: &[usize]| -> Vec<f64> { ks.iter().map(|&k| cells[k].area).collect() };
     c.push(match (blanks.is_empty(), ok) {
         (false, true) => ratio_crit(

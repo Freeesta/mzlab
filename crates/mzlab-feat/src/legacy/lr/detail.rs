@@ -6,6 +6,7 @@ use mzlab_core::json::{round, Out};
 
 use super::labels::Cell;
 use super::ms2;
+use super::spec;
 use super::summary::{criteria, level, strs};
 use super::{Entry, LrDig};
 use crate::legacy::Res;
@@ -187,6 +188,8 @@ pub fn detail<R: ReadAt>(
     } else {
         o.raw("[]");
     }
+    o.raw(",\"specificity\":");
+    spec::specificity_json(&mut o, d, e, &mut open)?;
     o.raw("}");
     Ok(o.0)
 }
