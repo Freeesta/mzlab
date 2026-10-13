@@ -60,7 +60,8 @@ try:
         step("the arrow keys move the slider by 0.05 and aria-valuetext says the value", keys)
         def clip():
             pg.check("#sp-clip"); pg.wait_for_timeout(600); ready(pg)
-            m = pg.evaluate(MINS % "xic"); assert all(v >= 0 for v in m.values()), m
+            m = pg.evaluate(MINS.replace("s.y)", "s.ys)") % "xic"); assert all(v >= 0 for v in m.values()), m      # drawn clipped...
+            m = pg.evaluate(MINS % "xic"); assert any(v < 0 for v in m.values()), m                              # ...while the numbers keep their negatives
             pg.uncheck("#sp-clip"); pg.wait_for_timeout(600); ready(pg)
         step("«clip at zero» removes the negatives", clip)
         def norm():

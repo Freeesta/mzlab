@@ -77,7 +77,7 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corri', has_text="Nessuna").click(); pg.wait_for_timeout(500)
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrw >> nth=0 >> .corri', has_text="Nessuna").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
