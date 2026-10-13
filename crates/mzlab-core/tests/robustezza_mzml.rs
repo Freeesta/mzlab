@@ -140,7 +140,6 @@ fn a_truncated_or_broken_base64() {
 }
 
 #[test]
-#[ignore = "bug 1: a zlib array reserves the memory its declared length asks for (34 GB), without comparing it with the file"]
 fn the_declared_length_at_the_maximum() {
     let (mz, inten) = (b64(&f64s(&[100.0])), b64(&f64s(&[1.0])));
     let comp = |b: &[f64]| b64(&zlib(&f64s(b)));
@@ -181,7 +180,6 @@ fn tags_that_never_close() {
 }
 
 #[test]
-#[ignore = "bug 2: a zlib array is inflated without a limit (a 2 MB mzML makes 200 MB)"]
 fn a_zlib_array_that_inflates_to_hundreds_of_megabytes() {
     let bomba = b64(&zlib(&vec![0u8; 200 << 20]));
     verde(caso("zlib bomb", mzml_con("3", &bomba, &bomba, true)));

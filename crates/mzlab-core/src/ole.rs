@@ -55,8 +55,10 @@ impl Ole {
             }
             s = u32_at(&sec, ss - 4)?;
         }
+        // a FAT sector is listed once: listing one again would make the FAT as large as the DIFAT, which the file does not bound
+        let mut fat_sectors = std::collections::HashSet::new();
         for &sid in difat.iter().take(n_fat as usize) {
-            if sid == END || sid == FREE {
+            if sid == END || sid == FREE || !fat_sectors.insert(sid) {
                 continue;
             }
             let sec = o.sector(sid);
@@ -87,7 +89,7 @@ impl Ole {
 
     fn chain_bytes(&self, start: u32) -> Vec<u8> {
         let (mut out, mut sid, mut seen) = (Vec::new(), start, 0);
-        while sid < END && seen < self.fat.len() + 1 {
+        while sid < END && seen <= self.fat.len().min(self.data.len() / self.ss) {
             out.extend(self.sector(sid));
             sid = self.fat.get(sid as usize).copied().unwrap_or(END);
             seen += 1;

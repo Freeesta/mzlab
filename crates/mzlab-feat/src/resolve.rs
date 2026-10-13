@@ -75,6 +75,7 @@ fn may_split(y: &[f64]) -> bool {
         .map(|i| (y[i.saturating_sub(1)] + y[i] + y[(i + 1).min(n - 1)]) / 3.0)
         .collect();
     let top = sm.iter().fold(0.0f64, |m, &v| m.max(v));
+    // one value per point of one trace window, at most the scans of the file
     let mut right = vec![0.0f64; n];
     for i in (0..n).rev() {
         right[i] = sm[i].max(if i + 1 < n { right[i + 1] } else { 0.0 });

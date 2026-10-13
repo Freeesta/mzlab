@@ -41,6 +41,7 @@ impl Structure {
             profile: s("profile"),
             formula: s("formula"),
             groups: strings(v.get("groups")),
+            // fixed size: the fragment list of one rule, empty when absent
             fragments: strings(v.get("fragments")).unwrap_or_default(),
         })
     }

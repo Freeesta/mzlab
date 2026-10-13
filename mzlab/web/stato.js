@@ -1,8 +1,9 @@
+// @ts-strict
 "use strict";
 // Page state: the objects E (files and panels), S (view, session), ST (file list, methods), NB (notebook), and the only places that write
 // E.tab, E.cur, E.active, E.panels, S.view and S.adding (tools/controlla.py refuses direct writes elsewhere). Classic script, loaded first.
 // Every transition fires "stato:cambiato" on document ({motivo, ...}); STATO.verifica() lists the broken invariants (tests_e2e/lib.py ready()).
-const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
+const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]), seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
 // addresses of the views: #/dati, #/disegno (and #/teoria, which the head script of index.html sends to the standalone Teoria on a cold start)
 const VIEW_HASH = { data: "dati", draw: "disegno", theory: "teoria" }, HASH_VIEW = { dati: "data", disegno: "draw", teoria: "theory" };

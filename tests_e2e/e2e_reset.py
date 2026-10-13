@@ -69,14 +69,11 @@ try:
         step("Full reset from the palette: question, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
-            txt = pg.inner_text("#uip-space-row"); assert "Storage in the browser" in txt and "stay in the browser even after a reload" in txt and "Full reset" in txt and "Remove files and indexes" in txt, txt
+            txt = pg.inner_text("#uip-space-row"); assert "Full reset" in txt and "Storage in the browser" not in txt and "Remove files and indexes" not in txt, txt
+            assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0 and pg.locator("#uip-space-val").count() == 0, "the storage section is gone"
             hs = pg.evaluate("[...document.querySelectorAll('#uip-space-row button')].map(b => b.getBoundingClientRect().height)"); assert all(h < 40 for h in hs), hs         # the buttons do not wrap to several lines
             pg.click("#uip-arch-all"); pg.wait_for_timeout(300); assert "Full reset" in pg.inner_text("#resetdlg") and "Files and session only" not in pg.inner_text("#resetdlg"); pg.click("#resetdlg [data-reset='']"); pg.wait_for_timeout(200)
-            pg.click("#np-set"); pg.wait_for_timeout(300); pg.click("#uip-arch-rm"); pg.wait_for_selector("#askok", timeout=5000); assert "Remove the loaded files" in pg.inner_text("#askdlg"), pg.inner_text("body")[:200]
-            pg.click("#askok"); pg.wait_for_function("location.search === ''", timeout=30000); ready_start(pg)
-            s = pg.evaluate(STATE); assert s["files"] == 0 and "mzlab" not in s["opfs"] and "librerie" in s["opfs"] and "qqq.lang" in s["ls"], s
-            pg.click("#np-set"); pg.wait_for_timeout(300); assert "No files in the browser" in pg.inner_text("#uip-space-val") and pg.evaluate("document.getElementById('uip-arch-rm').disabled")
-        step("gear: «Storage in the browser» says what is kept; «Remove files and indexes» (asks) keeps preferences; «Full reset…» asks; one line of buttons", gear)
+        step("gear: no storage section, one «Full reset…» button (asks, one line)", gear)
         def url_all():
             load_files(); pg.goto(base + "?reset=1"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE); assert s["files"] == 0 and s["opfs"] == [] and "qqq.lang" not in s["ls"], s

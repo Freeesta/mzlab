@@ -310,6 +310,7 @@ fn gather(
     lib: Option<usize>,
     is_parent: bool,
 ) -> Gathered {
+    // fixed size: the facts of one row, empty when the row has none
     let facts = inp.facts.get(row).cloned().unwrap_or_default();
     let mut ev: Vec<Evidence> = Vec::new();
     let ppm = hyp
@@ -326,6 +327,7 @@ fn gather(
         let params = facts
             .purity
             .map(|p| vec![("purity", p)])
+            // fixed size: a string of one identity, empty when absent
             .unwrap_or_default();
         graded(
             inp,
