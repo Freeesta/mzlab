@@ -23,13 +23,15 @@ try:
             after = raw_min(); print(before, after)
             assert all(a["lv"] is not None and a["lv"] > 0 for a in after)
             assert all(abs((b["mx"] - a["mx"]) - a["lv"]) < 1e-6 * max(1, b["mx"]) for a, b in zip(after, before)), "max drops by the level"
-            assert all(a["mn"] >= 0 for a in after), "TIC: negatives clipped by default"
+            assert pg.evaluate("!%s.clipDraw" % P), "negatives are not clipped: «negativi a 0» is only for the drawing"
             chip = pg.inner_text(f"#dpanels .pnl >> nth=0 >> .ibk"); print(chip)
             assert "fondo del tratto" in chip and "0.3-2 min" in chip
-        step("mean of 0.3-2 min subtracted, clipped, chip visible", mean)
+        step("mean of 0.3-2 min subtracted, not clipped, chip visible", mean)
         def noclip():
-            pg.evaluate("%s.ibk.clip=false;draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
-            assert min(a["mn"] for a in raw_min()) < 0, "negatives visible when not clipped"
+            pg.evaluate("%s.clipDraw=true;draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
+            assert pg.evaluate("Math.min(...%s._a.sr[0].ys)" % P) >= 0, "drawing clipped on request"
+            assert min(a["mn"] for a in raw_min()) < 0, "the numbers keep their negatives"
+            pg.evaluate("%s.clipDraw=false;draw(%s)" % (P, P)); pg.wait_for_timeout(800)
         step("unclip shows negatives", noclip)
         def median_line():
             pg.evaluate("ibkSet(%s,'median',[0.3,2])" % P); pg.wait_for_timeout(800)
@@ -37,7 +39,7 @@ try:
             pg.evaluate("ibkPick(%s,'line',[0.3,1.5])" % P); assert pg.evaluate("!!%s._ibkA" % P); pg.keyboard.press("Escape")
             pg.evaluate("document.querySelector('#askdlg[open] #askok')&&document.querySelector('#askok').click()")
             pg.evaluate("ibkPick(%s,'line',[18,19.5])" % P); pg.wait_for_timeout(1200)
-            assert pg.evaluate("%s.ibk.mode" % P) == "line" and pg.evaluate("%s.ibk.b[0]" % P) == 18
+            assert pg.evaluate("%s.fondo.ib.mode" % P) == "line" and pg.evaluate("%s.fondo.ib.b[0]" % P) == 18
             assert all(a["lv"] is not None for a in raw_min())
         step("median, then line between two stretches", median_line)
         def integ_note():
@@ -45,7 +47,7 @@ try:
             pg.evaluate("""async()=>{const p=%s;await draw(p);const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3,ion:s.name,file:'f',time:0});await draw(p)}""" % P); pg.wait_for_timeout(1500)
             it = pg.evaluate("%s.ints[0].ibk" % P); print(it); assert it.startswith("sì, 0.3-2 min, media")
             a1 = pg.evaluate("%s.ints[0].area" % P)
-            pg.evaluate("%s.ibk=null;draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
+            pg.evaluate("%s.fondo={mode:'none',w:1,ib:null};draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
             a0 = pg.evaluate("%s.ints[0].area" % P); print(a0, a1); assert a0 != a1 and pg.evaluate("%s.ints[0].ibk" % P) == "no"
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); pg.wait_for_timeout(1200)
         step("integration on the subtracted trace and declared (table)", integ_note)
@@ -67,9 +69,9 @@ try:
         step("spectrum of the blank stretch subtracted from the linked spectra", spec)
         def reload():
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(5000)
-            assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).ibk&&E.panels.find(q=>q.tab==='full'&&q.type==='chrom').ibk.mode") == "mean"
+            assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).fondo.ib.mode") == "mean"
             pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); pg.wait_for_timeout(500)
-            assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').ibk") is None
+            assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode") == "none"
         step("saved in the notebook, removable with one click", reload)
         pg.screenshot(path=SH + "230_ibk.png", full_page=True)
     r.close()

@@ -1,45 +1,20 @@
 // @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
 // ------------------------------------------------------------------ disegno dei grafici
-// ---- corrections applied to the traces: blank subtraction and SNIP baseline (both optional, shown in the legend)
-function interp(xs, ys, x) {                                // linear interpolation, 0 outside the blank's time range
-  if (!xs.length || x < xs[0] || x > xs[xs.length - 1]) return 0;
-  let lo = 0, hi = xs.length - 1;
-  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] <= x) lo = m; else hi = m; }
-  const dx = xs[hi] - xs[lo]; return dx > 0 ? ys[lo] + (ys[hi] - ys[lo]) * (x - xs[lo]) / dx : ys[lo];
-}
-// SNIP (Morhac 1997; Ryan 1988) with the LLS transform: the baseline is clipped iteratively by the mean of its two neighbours
-function snipBaseline(y, w) {
-  const n = y.length; if (n < 2 * w + 3) return new Array(n).fill(0);
-  let v = y.map(a => Math.log(Math.log(Math.sqrt(Math.max(a, 0) + 1) + 1) + 1));
-  for (let m = 1; m <= w; m++) { const t = v.slice(); for (let i = m; i < n - m; i++) { const a = (v[i - m] + v[i + m]) / 2; if (a < t[i]) t[i] = a; } v = t; }
-  return v.map(a => { const e = Math.exp(Math.exp(a) - 1) - 1; return e * e - 1; });
-}
-async function blankTrace(p, s) {
-  const b = E.files[+p.bk]; if (!b) return null;
-  if (p.type === "xic") { const tr = p.traces.find(t => t.id === s.tid) || {}, d = await getXic(b.k, ...(tr.ion && window.HR ? HR.xicArgs(b, tr, p) : [s.mz, tr.w ?? p.tol]), b.lv); return d && { x: d.rt, y: d.y }; }
-  if (p.type === "chrom") { const d = await getChrom(b.k, p.kind, b.lv); return { x: d.rt, y: d.y }; }
-  const tr = (await getMrm(b.k)).find(t => `${t.q1}>${t.q3}` === s.ion); return tr && { x: tr.rt, y: tr.y };
-}
+// ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
 // ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
-// subtracted from the whole trace. p.ibk = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] (line only: second stretch), clip: bool }.
+// subtracted from the whole trace. p.fondo.ib = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] (line only: second stretch) } (fondo.js).
 // Not a blank-file subtraction: one number (or a straight line), not a profile in time. The level is computed on each trace (each file) on its own.
 const ibkRange = (a, d = 1) => `${+a[0].toFixed(d)}-${+a[1].toFixed(d)} min`;
 const ibkRanges = ib => ib.mode === "line" && ib.b ? I18N.t("ibk.and", { a: ibkRange(ib.a), b: ibkRange(ib.b) }) : ibkRange(ib.a);
-const corrText = p => { const r = window.SUBREF ? SUBREF.text(p) : ""; return r ? (p.ibk ? ibkText(p.ibk) + " · " : "") + r : ibkText(p.ibk); };
+const fondoText = p => (ibOf(p) ? ibkText(ibOf(p)) : p.fondo && p.fondo.mode === "auto" ? I18N.t("fondo.auto.text", { w: p.fondo.w }) : ibkText(null));
+const corrText = p => { const r = window.SUBREF ? SUBREF.text(p) : "", f = p.fondo && p.fondo.mode !== "none"; return r ? (f ? fondoText(p) + " · " : "") + r : fondoText(p); };
 const ibkStat = ib => I18N.t(`ibk.${ib.mode}`);
-const ibkText = ib => !ib ? I18N.t("ibk.no") : I18N.t("ibk.yes", { ranges: ibkRanges(ib), stat: ibkStat(ib), clip: ib.clip ? I18N.t("ibk.clip") : "" });
-function ibkFn(s, ib) {
-  const stat = (r, med) => { const v = []; s.x.forEach((t, i) => { if (t >= r[0] && t <= r[1]) v.push(s.y[i]); }); if (!v.length) return 0; if (med) { v.sort((p, q) => p - q); return v.length % 2 ? v[v.length >> 1] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2; } return v.reduce((p, q) => p + q, 0) / v.length; };
-  if (ib.mode === "line" && ib.b) {
-    const xa = (ib.a[0] + ib.a[1]) / 2, xb = (ib.b[0] + ib.b[1]) / 2, ya = stat(ib.a), yb = stat(ib.b), m = (yb - ya) / ((xb - xa) || 1);
-    return { f: x => ya + m * (x - xa), lvl: ya, lvl2: yb };
-  }
-  const L = stat(ib.a, ib.mode === "median"); return { f: () => L, lvl: L };
-}
+const ibkText = ib => !ib ? I18N.t("ibk.no") : I18N.t("ibk.yes", { ranges: ibkRanges(ib), stat: ibkStat(ib), clip: "" });
 // ---- reference of the session (sottrazione.js): the difference sample minus reference is computed by the API (mzlab/differenza.py), trace by trace
-async function diffTrace(p, s, o) {
+async function diffTrace(p, s, o0) {
   const f = E.files[s.k]; if (!f) return null;
+  const o = { ...o0, clip: false };                               // the numbers are never clipped: «negativi a 0» is only a way of drawing
   if (p.type === "xic") {
     const tr = p.traces.find(t => t.id === s.tid) || {}, a = tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [s.mz, tr.w ?? p.tol];
     const j = await memo(`dx${s.k}|${a[0]}|${a[1]}|${f.lv}${SUBREF.qs(o)}`, () => J(`api/xic?k=${s.k}&mz=${a[0]}&tol=${a[1]}&level=${f.lv}${SUBREF.qs(o)}`));
@@ -55,25 +30,19 @@ async function diffTrace(p, s, o) {
   return t && !t.nodiff ? t : null;
 }
 async function corrected(p, all) {
-  const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null;
-  const hasBk = p.bk !== "" && p.bk != null && E.files[+p.bk] && !so;
-  if (!so && !hasBk && !p.snip && !p.ibk) return all;
+  const so = window.SUBREF && p.type !== "spec" && p.type !== "map" ? SUBREF.eff(p) : null, fo = p.fondo;
+  if (!so && (!fo || fo.mode === "none")) return all;
   const out = [], others = so ? all.some(s => s.k !== so.k) : true;
   for (const s of all) {
-    if ((hasBk || (so && others)) && s.k === (so ? so.k : +p.bk)) continue;       // the reference itself is the thing being subtracted (alone, it stays on the graph)
-    let y = s.y.slice(), x = s.x, note = [], ibl = null;
+    if (so && others && s.k === so.k) continue;                                    // the reference itself is the thing being subtracted (alone, it stays on the graph)
+    let y = s.y.slice(), x = s.x; const note = [];
     if (so && s.k !== so.k) {
       const d = await diffTrace(p, s, so);
       if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); }
     }
-    if (p.ibk) { ibl = ibkFn({ x, y }, p.ibk); y = y.map((v, i) => { const r = v - ibl.f(x[i]); return p.ibk.clip ? Math.max(0, r) : r; }); note.push(I18N.t("corr.note.ibk")); }
-    if (hasBk) { const b = await blankTrace(p, s); if (b) { y = y.map((v, i) => Math.max(0, v - interp(b.x, b.y, x[i]))); note.push(I18N.t("corr.note.blank")); } }
-    if (p.snip && x.length > 5) {
-      const dts = x.slice(1).map((v, i) => v - x[i]).sort((a, b) => a - b), dt = dts[dts.length >> 1] || 0.01;
-      const w = Math.max(2, Math.round((p.snipw || 1) / dt / 2)), bl = snipBaseline(y, w);
-      y = y.map((v, i) => Math.max(0, v - bl[i])); note.push(I18N.t("corr.note.baseline"));
-    }
-    out.push({ ...s, x, y, corr: note.join(" "), ibl });
+    const r = FONDO.apply(x, y, fo);
+    if (r) { y = r.y; note.push(I18N.t(fo.mode === "tract" ? "corr.note.ibk" : "corr.note.baseline")); }
+    out.push({ ...s, x, y, corr: note.join(" "), ibl: r ? r.ibl : null });
   }
   return out;
 }
@@ -211,42 +180,44 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
   if (p.type === "map") return MAPPA.setCorr(p, v);
-  if (p.type === "spec") {                         // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
-    p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);
-    ctl(p); draw(p); uiSave(); return;
-  }
-  p.bk = ""; p.snip = false; p._pickIbk = false;
-  if (v !== "tract") p.ibk = null;
-  if (v[0] === "f") p.bk = +v.slice(1);
-  else if (v === "snip") p.snip = true;
-  else if (v === "tract" && !p.ibk) {
-    if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }
-    else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  }
+  p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);       // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
   ctl(p); draw(p); uiSave();
 }
+// chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
+function setSub(p, v) { p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
+function setFondo(p, v) {
+  const f = p.fondo; p._pickIbk = false;
+  if (v === "snip") { p.fondo = { mode: "auto", w: f.w || 1, ib: null }; }
+  else if (v === "tract") {
+    if (f.ib) f.mode = "tract";
+    else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }
+    else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
+  } else p.fondo = { mode: "none", w: f.w || 1, ib: null };
+  ctl(p); draw(p); uiSave();
+}
+const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
 const ibkLevels = l => fmtA(l.lvl) + (l.lvl2 != null ? " " + I18N.t("ibk.andShort") + " " + fmtA(l.lvl2) : "") + " cps";
 function ibkChip(p) {
-  if (!p.ibk) return;
-  const ib = p.ibk, sr = p._a && p._a.sr, l0 = sr && sr[0] && sr[0].ibl;
+  const ib = ibOf(p); if (!ib) return;
+  const sr = p._a && p._a.sr, l0 = sr && sr[0] && sr[0].ibl;
   const chip = document.createElement("span"); chip.className = "ibk";
   chip.title = I18N.t("ibk.chip.title");
-  chip.innerHTML = `${I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) })} <label><input type="checkbox" data-ib="clip" ${ib.clip ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label> <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button> <button data-ib="off">${I18N.t("ibk.off")}</button>`;
-  chip.querySelector("[data-ib=clip]").onchange = e => { ib.clip = e.target.checked; draw(p); uiSave(); };
+  chip.innerHTML = `${I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) })} <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label> <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button> <button data-ib="off">${I18N.t("ibk.off")}</button>`;
+  chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
   chip.querySelector("[data-ib=spec]").onclick = () => ibkSpectra(p);
-  chip.querySelector("[data-ib=off]").onclick = () => { p.ibk = null; draw(p); uiSave(); };
+  chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
   (p.corrbar || p.leg).appendChild(chip);
 }
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
-  const ib = p.ibk; if (!ib) return;
+  const ib = ibOf(p); if (!ib) return;
   const sp = E.panels.filter(q => q.type === "spec" && (q.link === p.id || q.src === p.id));
   if (!sp.length) return info(I18N.t("ibk.noSpectra"));
   sp.forEach(q => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; ctl(q); draw(q); }); uiSave();
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
-  p.ibk = { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null, clip: p.type === "chrom" && p.kind === "tic" };
+  p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
   p._ibkA = null; draw(p); uiSave();
 }
 function ibkPick(p, mode, iv) {
@@ -255,8 +226,8 @@ function ibkPick(p, mode, iv) {
 }
 function ibkMenuItems(p) {
   const it = [], iv = p.sel && p.sel[1] > p.sel[0] ? p.sel : null;
-  if (iv && !p.ibk) it.push({ label: I18N.t("ibk.menu.sub"), fn: () => { p.bk = ""; p.snip = false; ibkSet(p, "mean", [...iv]); p.sel = null; ctl(p); draw(p); } });
-  if (p.ibk) it.push({ label: I18N.t("ibk.menu.off"), fn: () => { p.ibk = null; ctl(p); draw(p); uiSave(); } });
+  if (iv && !ibOf(p)) it.push({ label: I18N.t("ibk.menu.sub"), fn: () => { ibkSet(p, "mean", [...iv]); p.sel = null; ctl(p); draw(p); } });
+  if (ibOf(p)) it.push({ label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
   return it;
 }
 function legend(p, all, note = "") {
@@ -303,8 +274,10 @@ async function drawLines(p) {
   if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own
   p._u = [lo, hi];
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
+  const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
+    if (clipDraw) s.ys = s.ys.map(v => Math.max(0, v));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
     let m = 1e-9, neg = 0; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
@@ -337,8 +310,8 @@ async function drawLines(p) {
   const ph = H - M.t - M.b;
   p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, nl: rowMax, nrow, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
   if (ymin < 0 && !stk && !logy) { g.save(); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke(); g.restore(); }      // the zero line: what is below it is lower than the reference
-  if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
-    const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
+  if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
+    const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
     g.font = fpx(12); g.textAlign = "left"; g.fillStyle = css("--muted");
     g.fillText(I18N.t("ibk.band", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", extra: sr.length > 1 ? I18N.t("ibk.firstTrace") : "" }), Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
