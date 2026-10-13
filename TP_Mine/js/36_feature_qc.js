@@ -8,7 +8,7 @@
   const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   /** keys of the JSON of the engine that the page shows or uses */
   const CONTRACT = {
-    qc: ["schema", "file", "gruppi", "standard_cv"], qcFile: ["file", "rilevati", "mirati", "riempiti", "assenti", "area_totale"], qcGroup: ["tipo", "gruppo", "tempo_min", "file", "righe", "cv_mediano"],
+    qc: ["schema", "file", "gruppi", "standard_cv", "bianchi", "m1_su_m", "scartate"], blank: ["file", "righe", "righe_con_picco"], m1: ["righe", "min", "mediana", "max"], rejected: ["regola", "righe"], qcFile: ["file", "rilevati", "mirati", "riempiti", "assenti", "area_totale"], qcGroup: ["tipo", "gruppo", "tempo_min", "file", "righe", "cv_mediano"],
     view: ["digest", "righe", "fattori", "conteggi"], counts: ["righe", "tenute", "scartate"],
     report: ["crate", "tabella_sha256", "campioni_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
@@ -53,6 +53,8 @@
   // ------------------------------------------------------------ step 5: quality control
   const KINDS = [["rilevati", "D", "detected"], ["mirati", "T", "targeted"], ["riempiti", "F", "filled"], ["assenti", "A", "absent"]];
   const fmt = (/** @type {any} */ v) => (v == null ? "" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : String(+Number(v).toPrecision(4)));
+  /** the reason of each rule of the filters, in words (the number of rows is the engine's) */
+  const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2" });
   const W = 360, ROW = 22, M = { l: 120, r: 8, t: 6, b: 6 };
 
   /** stacked bars of the cells of each file (D, T, F, A) */
@@ -79,11 +81,13 @@
       ${files.map((/** @type {any} */ f) => `<tr><td>${esc(f.file)}</td>${KINDS.map(k => `<td class="n">${f[k[0]]}</td>`).join("")}<td class="n">${fmt(f.area_totale)}</td></tr>`).join("")}</table>
       ${q.gruppi.length ? `<table><caption class="mut">Agreement of the replicates: median CV (fraction) of the rows with a peak in every replicate</caption><tr><th>Type</th><th>Group</th><th class="n">Time (min)</th><th class="n">Files</th><th class="n">Rows</th><th class="n">CV</th></tr>
       ${q.gruppi.map((/** @type {any} */ g) => `<tr><td>${esc(g.tipo)}</td><td>${esc(g.gruppo)}</td><td class="n">${fmt(g.tempo_min)}</td><td class="n">${g.file}</td><td class="n">${g.righe}</td><td class="n">${fmt(g.cv_mediano)}</td></tr>`).join("")}</table>` : `<p class="mut">No condition has two or more replicates: no agreement to report.</p>`}
+      ${q.bianchi.file ? `<p class="mut">Rows with a peak in a blank: ${q.bianchi.righe_con_picco.toLocaleString("en")} of ${q.bianchi.righe.toLocaleString("en")} (${q.bianchi.file} blank file${q.bianchi.file > 1 ? "s" : ""}).</p>` : `<p class="mut">No blank file in the series.</p>`}
+      ${q.m1_su_m ? `<p class="mut">M+1/M of ${q.m1_su_m.righe.toLocaleString("en")} rows: median ${fmt(q.m1_su_m.mediana)} (from ${fmt(q.m1_su_m.min)} to ${fmt(q.m1_su_m.max)}).</p>` : ""}
       <p class="mut">Stability of the internal standard (CV of its area): ${q.standard_cv == null ? "no standard chosen" : fmt(q.standard_cv)}</p></details>`;
     o.chart(box.querySelector("#qc-m"), matrixSvg(files), "Cells per file", `Stacked bars of the cells of each of the ${files.length} files: detected, targeted, filled and absent.`,
       { head: ["File", ...KINDS.map(k => k[2])], rows: files.map((/** @type {any} */ f) => [f.file, ...KINDS.map(k => String(f[k[0]]))]) });
     return q;
   }
 
-  G.PIPEQC = { open, render, engine, CONTRACT, fmt, css: qcCss };
+  G.PIPEQC = { open, render, engine, CONTRACT, fmt, WHY, css: qcCss };
 })();

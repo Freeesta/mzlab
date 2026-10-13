@@ -8,7 +8,7 @@ use opentfraw::generic_data::GenericValue;
 use opentfraw::RawFileReader;
 
 /// What identifies a computer or a place of the acquisition in the texts of the file (the user is a fixed field: a user name is often a word that
-/// the texts hold for other reasons, as «Fusion» in the model): texts that must not leave an anonymous document.
+/// the texts hold for other reasons, as «Fusion» in the model): fields whose value names them are marked `identita`.
 #[derive(Default)]
 pub struct Ident {
     pub computer: String,
@@ -30,35 +30,6 @@ impl Ident {
         let t = t.to_ascii_lowercase();
         self.needles().any(|n| t.contains(&n.to_ascii_lowercase()))
     }
-
-    /// `t` without them: a path keeps its last element, the computer and the user vanish.
-    pub fn scrub(&self, t: &str) -> String {
-        let mut s = t.to_string();
-        for n in self.paths.iter().filter(|n| n.len() >= 4) {
-            let last = n.rsplit(['\\', '/']).next().unwrap_or("");
-            s = replace_nocase(&s, n, last);
-        }
-        if self.computer.len() >= 4 {
-            s = replace_nocase(&s, &self.computer, "");
-        }
-        for n in self.names.iter().filter(|n| n.len() >= 4) {
-            s = replace_nocase(&s, n, "");
-        }
-        s
-    }
-}
-
-fn replace_nocase(s: &str, from: &str, to: &str) -> String {
-    let (low, key) = (s.to_ascii_lowercase(), from.to_ascii_lowercase());
-    let mut out = String::new();
-    let mut at = 0;
-    while let Some(p) = low.get(at..).and_then(|r| r.find(&key)) {
-        out.push_str(s.get(at..at + p).unwrap_or(""));
-        out.push_str(to);
-        at += p + key.len();
-    }
-    out.push_str(s.get(at..).unwrap_or(""));
-    out
 }
 
 pub struct Campo {
@@ -322,14 +293,13 @@ fn script_map(key: &str) -> Option<&'static str> {
     }
 }
 
-/// All the fields of the file, in a stable order (origin, key); in an anonymous document the ones that identify a person or a computer are left out.
+/// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identita`.
 pub fn fields(
     raw: &RawFileReader,
     traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
     ident: &Ident,
-    anon: bool,
 ) -> Vec<V> {
     let mut all = container(raw);
     all.extend(instid(raw));
@@ -357,7 +327,7 @@ pub fn fields(
     for c in &mut all {
         c.identita |= ident.names(&c.valore);
     }
-    all.retain(|c| !(anon && c.identita) && !c.valore.is_empty());
+    all.retain(|c| !c.valore.is_empty());
     all.sort_by(|a, b| (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave)));
     all.iter().filter_map(Campo::json).collect()
 }

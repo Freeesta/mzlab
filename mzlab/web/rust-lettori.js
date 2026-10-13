@@ -37,7 +37,7 @@ export async function lettoriOp(m, id, readerFor, rawSink) {
   const tick = (/** @type {boolean} */ force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total: files.reduce((a, f) => a + f.blob.size, 0), read: 0, written, scans, scansTotal }); } };
   let l;
   try {
-    l = mod.LettoreWasm.open(files.map(f => f.name), Float64Array.from(files.map(f => f.blob.size)), (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => lectors[i](o, n), false);
+    l = mod.LettoreWasm.open(files.map(f => f.name), Float64Array.from(files.map(f => f.blob.size)), (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => lectors[i](o, n));
     l.mzml(m.campione | 0, (/** @type {Uint8Array} */ piece) => { sink.write(piece); written += piece.length; tick(false); },
       (/** @type {number} */ done, /** @type {number} */ all) => { scans = done; scansTotal = all; tick(done === 0 || done === all); });
   } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }          // q: the disk is full (error.quota)

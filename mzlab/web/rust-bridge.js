@@ -14,7 +14,6 @@ import { wiffApi } from "./rust-convert.js";
 import { makeConvertAgilent } from "./rust-agilent.js";
 import { makeConvertLettori } from "./rust-lettori.js";
 import { makeRecycler } from "./rust-recycle.js";
-import { pseudoSecret } from "./pseudo-secret.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
@@ -48,7 +47,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!worker || api.disabled) return res({ dead: true });
       const id = ++seq;
       pending.set(id, { res, worker, onp });
-      worker.postMessage({ ...msg, id, ...(msg.anonymous ? { secret: pseudoSecret() } : {}) });      // the secret of the pseudonyms goes only with an anonymous export
+      worker.postMessage({ ...msg, id });
     });
   }
   function stop(w, res) {
