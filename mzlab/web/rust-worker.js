@@ -201,6 +201,17 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
+      case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroidi/convert.rs; read twice, never held)
+        const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest);
+        let written = 0, last = 0, scans = 0, scansTotal = null, did = false;
+        const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total: f.size, written, scans, scansTotal }); } };
+        try { did = engine.mzml_to_centroids(m.name, f.size, rd, piece => { sink.write(piece); written += piece.length; tick(false); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }); }
+        catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }
+        if (!did) { await sink.abort(); postMessage({ id, op: m.op, none: true }); return; }     // no profile spectrum: nothing to reduce
+        const r = await sink.finish();
+        postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
+        return;
+      }
       case "agilent2mzml": await agilentOp(engine, m, id, readerFor, rawSink); return;        // Agilent .D folder -> mzML on OPFS (rust-agilent.js)
       case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)

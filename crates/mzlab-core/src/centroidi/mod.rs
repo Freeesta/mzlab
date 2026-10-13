@@ -6,6 +6,7 @@
 //! it are candidates, adjacent ones are merged unless the valley between them is significant (`detect`), and each region becomes a centroid if it passes
 //! the threshold of its mode (counts: Poisson Z; continuous: height over k sigma) (`emit`). `params` estimates the parameters from a few scans.
 
+mod convert;
 mod detect;
 mod emit;
 mod grid;
@@ -16,6 +17,7 @@ mod smooth;
 #[cfg(test)]
 mod tests;
 
+pub use convert::mzml_to_centroids;
 pub use params::{estimate, Estimate};
 
 /// How the intensities of the file are made: whole multiples of one unit (detector counts) or continuous values.
