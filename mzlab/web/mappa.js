@@ -7,7 +7,7 @@ window.MAPPA = (() => {
   const PREF_KEY = "qqq.mappa";
   const PREF = (() => { return lsObj(PREF_KEY); })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
-  const BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const GROUP_DA = 2.5, BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
@@ -271,7 +271,7 @@ window.MAPPA = (() => {
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
   }
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
-  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8). s.lbls keeps the boxes.
+  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8; one per group of peaks within GROUP_DA). s.lbls keeps the boxes.
   function sideLabels(g, W, order, get, x0, s) {
     const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
     for (const i of order) {
@@ -290,13 +290,14 @@ window.MAPPA = (() => {
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke(); g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]);
-    sideLabels(g, W, top.filter(i => sp.y[i] >= ymax * 0.05), i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
+    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), kept = [];
+    for (const i of top) { if (sp.y[i] < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
+    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
@@ -309,8 +310,10 @@ window.MAPPA = (() => {
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
     let ymax = 0; const tr = xi.tr || [];
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
-    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }); }
+    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }, true); }
     const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+    g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();      // intensity axis, like the other chromatograms
+    if (ymax) { g.textAlign = "right"; for (const t of nice(0, ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
     tr.forEach((t, n) => {
       const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
@@ -503,8 +506,8 @@ window.MAPPA = (() => {
     const s = st(p), a = p._a; if (!a || !s.grid) return;
     let box = s.tab;
     const list = is2d(p) ? pts(p) : [];
-    if (!list.length) { if (box) { box.remove(); s.tab = null; growTable(p, false); } return; }
-    if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); growTable(p, true); }
+    if (!list.length) { if (box) { box.remove(); s.tab = null; grow(p, "tab", 0); } return; }
+    if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); }
     const f = a.f, ref = a.ref, mzq = list.map(q => `${(+q.rt).toFixed(4)},${(+q.mz).toFixed(5)}`).join(";");
     let rows = [];
     try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? 0.05}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
@@ -536,10 +539,7 @@ window.MAPPA = (() => {
     box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; ptsSave(p); tableNow(p); });
     box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
     box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f)); });
-  }
-  function growTable(p, on) {
-    const s = st(p); if (on === !!s.tgrown || isMax(p)) return;
-    s.tgrown = on; p.h = Math.max(200, p.h + (on ? 1 : -1) * 220); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
+    grow(p, "tab", Math.ceil(box.offsetHeight) + 5);                    // the panel grows by the height of the table (it scrolls inside beyond its maximum): the map keeps its size
   }
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
@@ -669,7 +669,7 @@ window.MAPPA = (() => {
     p.zoom = clampView(x0 - sx, x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(y0 + sy, y1 + sy, a.fullY[0], a.fullY[1]);
   }
   // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
-  const BAR = { "2d": ["mapzin", "mapzout", "maplock", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
+  const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
