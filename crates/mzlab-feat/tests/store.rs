@@ -70,7 +70,7 @@ fn series() -> (Vec<FileFeatures>, Aligned) {
     let refs: Vec<&FileFeatures> = files.iter().collect();
     (
         files.clone(),
-        align_families(&refs, &Recipe::default().align),
+        align_families(&refs, &Recipe::default().align).unwrap(),
     )
 }
 

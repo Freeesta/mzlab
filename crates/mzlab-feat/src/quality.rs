@@ -210,7 +210,7 @@ pub fn assess<R: ReadAt>(
     p: &Params,
     q: &QParams,
 ) -> Result<()> {
-    assess_with(index, f, p, q, |_, _, _, _, _| {})
+    assess_with(index, f, p, q, |_, _, _, _, _| Ok(()))
 }
 
 /// `assess`, and after every row `hook(f, i, rt, y, w0)` sees the finished row and its trace `y` (scans `w0..`) while the peaks are in memory.
@@ -219,7 +219,7 @@ pub(crate) fn assess_with<R: ReadAt>(
     f: &mut FileFeatures,
     p: &Params,
     q: &QParams,
-    mut hook: impl FnMut(&FileFeatures, usize, &[f64], &[f64], usize),
+    mut hook: impl FnMut(&FileFeatures, usize, &[f64], &[f64], usize) -> Result<()>,
 ) -> Result<()> {
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(());
@@ -245,7 +245,7 @@ pub(crate) fn assess_with<R: ReadAt>(
             }
         }
         fill_row(f, i, &rt, &y, (w0, wa, wb), p.floor, q);
-        hook(f, i, &rt, &y, w0);
+        hook(f, i, &rt, &y, w0)?;
         Ok(())
     })
 }

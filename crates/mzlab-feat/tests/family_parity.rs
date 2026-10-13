@@ -296,7 +296,7 @@ fn families_like_python() {
             "correlation {g:?} against {w}"
         );
     }
-    let fam = build_families(&f, &pairs, &spectra, |_, _| Ratio::Unavailable, 1, &p);
+    let fam = build_families(&f, &pairs, &spectra, |_, _| Ratio::Unavailable, 1, &p).unwrap();
     check_arcs(&fam, want);
     check_columns(&fam, want);
     check_alternatives(&fam, want);

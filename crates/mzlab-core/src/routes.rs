@@ -377,12 +377,17 @@ pub(crate) fn next_tick() -> u64 {
     TICK.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Total bytes of the cached maps of the files, and the removal of the least recently used one among them (the byte-budgeted cache of the engine).
+/// Total bytes of the cached maps of the files.
 pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
     files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
 }
 
-/// Drops maps, oldest use first, until the cache holds at most `cap` bytes. Returns how many were dropped.
+/// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
+pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+    map_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+}
+
+/// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
 pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
     let mut dropped = 0;
     while map_cache_bytes(files) > cap {
@@ -390,6 +395,31 @@ pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Rout
         let Some((_, k, i)) = oldest else { break };
         if let Some(r) = files.get_mut(&k) {
             r.maps.remove(i);
+        }
+        dropped += 1;
+    }
+    dropped
+}
+
+/// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
+/// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
+pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+    let mut dropped = 0;
+    while cache_bytes(files) > cap {
+        let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
+        let idx = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k))).min();
+        match (map, idx) {
+            (Some((tm, k, i)), other) if other.is_none_or(|(ti, _)| tm <= ti) => {
+                if let Some(r) = files.get_mut(&k) {
+                    r.maps.remove(i);
+                }
+            }
+            (_, Some((_, k))) => {
+                if let Some(r) = files.get_mut(&k) {
+                    r.idx.evict_oldest();
+                }
+            }
+            _ => break,
         }
         dropped += 1;
     }

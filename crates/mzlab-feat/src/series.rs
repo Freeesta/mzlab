@@ -80,8 +80,8 @@ pub fn align_and_fill<R: ReadAt>(
 ) -> Result<(Aligned, usize)> {
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let table = match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion),
-        Mode::Family => align_families(&refs, &r.align),
+        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Family => align_families(&refs, &r.align)?,
     };
     let pos = |k: usize| {
         Ok(FileFeatures {
@@ -131,7 +131,7 @@ pub(crate) fn finish<R: ReadAt>(
             weak.push(w);
         }
         let refs: Vec<&FileFeatures> = weak.iter().collect();
-        let mut ions = align(&refs, &r.align.ion);
+        let mut ions = align(&refs, &r.align.ion)?;
         ions.retain_recurring(r.weak_files);
         table.append_unheld(&ions, r.align.ion.ppm, r.fill.rt_tol);
     }

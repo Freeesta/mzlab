@@ -16,7 +16,7 @@ mod scans;
 mod cache;
 mod wiff;
 mod agilent;
-mod centroidi;
+mod centroidi; mod panic;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -165,8 +165,8 @@ pub struct Engine {
     /// The `.mzidx` of each file: the routes that need only the index are answered from it (no mzML is read).
     pub(crate) idx: HashMap<u32, Routes<JsReader>>,
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
-    /// Bytes the cached maps of all the files may hold together (`set_cache_budget`; 0 = the default).
-    pub(crate) cache_cap: usize,
+    /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
+    pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -207,6 +207,7 @@ impl Engine {
         self.runs.remove(&slot);
         let reader = BufReader::with_capacity(1 << 20, BlockReader::new(read, size as u64));
         let run = mzml::read(reader).map_err(|e| error_json(&e))?;
+        self.fits_work(&run)?;
         let mut levels: std::collections::BTreeMap<u8, (usize, usize)> = Default::default();
         for s in &run.spectra {
             let e = levels.entry(s.level).or_default();
