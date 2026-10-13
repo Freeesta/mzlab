@@ -812,7 +812,6 @@ I18N.add("en", {
   "ctl.xr.title": "Extracted m/z interval (XIC). Type the two ends and press Enter",
   "ctl.split.title": "One panel for each ion",
   "ctl.split": "Split",
-  "ctl.mrm.quantQual": "quantifier + qualifier",
   "ctl.mrm.tr.title": "Transition",
   "ctl.mrm.all": "all transitions",
   "ctl.mrm.smooth.title": "Off: the areas are calculated on the raw signal. Smoothing changes only the drawing, never the integrated areas (in MRM you integrate, which is why it starts off)",
