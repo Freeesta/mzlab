@@ -93,6 +93,7 @@
     "../../mzlab/web/qualita.js",
     "../../mzlab/web/rust-agilent.js",
     "../../mzlab/web/rust-bridge-info.js",
+    "../../mzlab/web/rust-bridge.js",
     "../../mzlab/web/rust-centroidi.js",
     "../../mzlab/web/rust-convert.js",
     "../../mzlab/web/rust-diff.js",
