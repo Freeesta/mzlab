@@ -384,6 +384,7 @@
   "lv.sentence": "Frase del livello di confidenza ({lv} = 1, 2a, 2b, 3, 4, 5 o 0; {name} = nome del livello).",
   "lv.dec.1": "Frase decisiva del livello 1; {name} = nome dello standard.",
   "lv.dec.2a": "Frase decisiva del livello 2a; {lib} = nome della libreria (con uno spazio davanti, o vuoto), {name} = nome del candidato.",
+  "lv.dec.tetto": "Frase decisiva del profilo a risoluzione unitaria: tutti i cancelli superati, ma il livello non va oltre il tetto; {name} = candidato, {lib} = libreria, {lv} = livello massimo.",
   "lv.dec.3conf": "Frase decisiva: il candidato passa i cancelli della fonte ma non quelli di conferma; {gates} = elenco delle prove non superate.",
   "lv.dec.3prov": "Frase decisiva del livello 3 provvisorio; {gates} = elenco delle prove non superate.",
   "lv.dec.3an": "Frase decisiva: solo un analogo; {cos} = coseno modificato, {delta} = differenza di massa con segno.",
