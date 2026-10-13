@@ -1,11 +1,12 @@
 //! Metadata of the samples of a series, `campioni/1` (`docs/schemi/campioni-1.json`): a type, a time, a replicate, a group and a concentration for every file.
-//! It is proposed from the file names with the rules of `mzlab_core::project` and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
+//! It is proposed from the file names by `mzlab_core::campioni::proponi` (the one parser of `campioni/2`) and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
 //! Changing a metadatum does not change the detection (the `.mzfeat` is the same): only the views and the identities read it.
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
-use mzlab_core::project::{guess_conc, guess_sample};
+use mzlab_core::campioni;
+use mzlab_core::project::guess_sample;
 
 pub const SCHEMA: &str = "campioni/1";
 /// Types of a sample, in the order of the schema.
@@ -31,54 +32,34 @@ pub struct Sample {
     pub note: String,
 }
 
-fn has_word(low: &str, word: &str) -> bool {
-    low.split(|c: char| !c.is_ascii_alphanumeric())
-        .any(|w| w == word || (w.starts_with(word) && w[word.len()..].chars().all(|c| c.is_ascii_digit())))
-}
-
-/// The type of a file from its name: the rules of `guess_sample` plus `dark`, `qc`, `calibration` and the time zero.
-fn kind_of(name: &str, guess: &'static str, time: Option<f64>) -> &'static str {
-    let low = name.to_lowercase();
-    match guess {
-        "blank" => "blank",
-        "standard" => ["cal", "calib", "calibr", "calibrazione", "taratura", "curva"]
-            .iter()
-            .find(|w| has_word(&low, w))
-            .map_or("std", |_| "calibration"),
-        _ if has_word(&low, "dark") => "dark",
-        _ if has_word(&low, "qc") => "qc",
-        _ if time == Some(0.0) => "t0",
-        _ => "sample",
-    }
-}
-
-/// The metadata proposed for `files` (`(name, SHA-256)` in the order of injection, as in the table).
+/// The metadata proposed for `files` (`(name, SHA-256)` in the order of injection, as in the table): the roles and times of
+/// `mzlab_core::campioni::proponi` in the vocabulary of `campioni/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
 pub fn propose(files: &[(String, String)]) -> Vec<Sample> {
+    let named: Vec<(String, String, String)> = files.iter().map(|(n, s)| (n.clone(), s.clone(), String::new())).collect();
     let mut out: Vec<Sample> = Vec::with_capacity(files.len());
-    for (i, (name, sha)) in files.iter().enumerate() {
-        let (_, time, guess) = guess_sample(name);
-        let kind = kind_of(name, guess, time);
-        let (conc, unit) = match guess_conc(name) {
-            Some((v, u)) if guess == "standard" => (Some(v), u),
-            _ => (None, None),
+    for c in campioni::proponi(&named) {
+        let (kind, time_min) = match c.kind.as_str() {
+            "infusion" => (campioni::tipo_v1(&c.file), guess_sample(&c.file).1),
+            "qc" => ("qc", guess_sample(&c.file).1),
+            k => (k, c.time_min),
         };
         let replicate = 1 + out
             .iter()
-            .filter(|s| s.kind == kind && s.time_min == time && s.conc == conc)
+            .filter(|s| s.kind == kind && s.time_min == time_min && s.conc == c.conc)
             .count() as u32;
         let group = if matches!(kind, "sample" | "std" | "calibration") { "" } else { kind };
         out.push(Sample {
-            file: name.clone(),
-            sha256: sha.clone(),
             kind: kind.to_string(),
-            time_min: time,
+            time_min,
             replicate,
             group: group.to_string(),
-            conc,
-            unit,
-            order: i as u32 + 1,
+            conc: c.conc,
+            unit: c.unit,
+            order: c.order,
             istd: false,
             note: String::new(),
+            file: c.file,
+            sha256: c.sha256,
         });
     }
     out

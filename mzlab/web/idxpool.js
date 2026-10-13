@@ -5,7 +5,7 @@
 //  - supervisor: a worker that dies is replaced and its file goes back to the front of the queue (once; a second death fails the file with reason "crash");
 //  - memory: a builder that cannot reserve memory (error.memoryBudget) halves the pool and the budget and retries once; the page is told (notice);
 //  - no WASM / no OPFS: unavailable() is true and every job answers { ok: false, reason: "unavailable" } (the upload fails with an error key).
-// The same pool runs other short-lived workers (wiff-worker.js, the .wiff -> mzML conversion): a job may carry its own message to the worker (`msg`, with `transfer`), an `onProgress(m)`
+// The same pool runs other short-lived workers (a worker of its own): a job may carry its own message to the worker (`msg`, with `transfer`), an `onProgress(m)`
 // for the { op: "progress" } messages of the worker, and the worker's `done` message may carry `parts` (the result's `parts`).
 // A job's result: { ok: true, stats, parts } or { ok: false, reason: "unavailable" | "cancelled" | "crash" | "memory" | "error", text }.
 export function poolSize(small, cores) {

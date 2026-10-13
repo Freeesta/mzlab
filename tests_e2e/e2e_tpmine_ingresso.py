@@ -70,6 +70,7 @@ def fresh(b):
     """A new browser profile (empty OPFS and IndexedDB), the page loaded and mzFinder ready."""
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
     pg.add_init_script(INIT)
+    pg.on("console", lambda m: print("console:", m.text[:300], flush=True) if "mzFinder" in m.text else None)      # why the engine fell back, in the log of a red run
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.context.on("request", lambda r: reqs.append(r.url))
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
@@ -98,11 +99,18 @@ try:
 
         same = lambda got: got == {k: v for k, v in ref.items() if k != "table"}
 
+        def settle(q):                                      # the indexes of the last files may still be written when the table has its rows
+            got = q.evaluate(SHAS)
+            for _ in range(240):
+                if same(got): break
+                q.wait_for_timeout(500); got = q.evaluate(SHAS)
+            return got
+
         def chosen():                                       # a new profile: no file, no index in OPFS; «Choose mzML...» gives the files to the worker
             q = fresh(b); assert q.evaluate(SHAS) == {}
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.set_input_files("#tp-in", mzml); rows_ready(q)
-            got = q.evaluate(SHAS); assert same(got), (got, ref)
+            got = settle(q); assert same(got), (got, ref)
             assert dig(q) == ref["table"], "the Dig of the chosen files differs from the one from the Data tab"
         step("Choose mzML...: the .mzidx equals the one of the main program, the Dig equals the one from the Data tab", chosen)
 
@@ -111,7 +119,7 @@ try:
             q.evaluate(TO_IDB, [f"static/dati_finder/{n}" for n in names])
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.click("#tp-page"); rows_ready(q)
-            got = q.evaluate(SHAS); assert same(got), (got, ref)
+            got = settle(q); assert same(got), (got, ref)
             assert dig(q) == ref["table"], "the Dig of the IndexedDB files differs"
         step("IndexedDB: same index, same Dig", from_idb)
 

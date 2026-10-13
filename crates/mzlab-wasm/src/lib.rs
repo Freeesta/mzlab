@@ -14,7 +14,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic;
+mod centroidi; mod panic; mod campioni;
 mod nativi;
 mod nativi_motore;
 
