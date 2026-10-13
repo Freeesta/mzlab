@@ -118,7 +118,7 @@ fn analyse_timed(
     }
     let q = t(t1);
     let t2 = Instant::now();
-    mzlab_feat::isotopes::group(&mut f, &st.iso);
+    mzlab_feat::isotopes::group(&mut f, &st.iso).unwrap();
     let i = t(t2);
     let t3 = Instant::now();
     let l = mzlab_feat::ms2::link(ix, &mut f, p, &st.ms2).unwrap();
