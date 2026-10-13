@@ -121,6 +121,21 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     }
 }
 
+/// The name shown for a part of a mixed file: Full Scan, DDA (MS2 scans all tied to a precursor survey), MS2 or MRM, with the polarity suffix of the key.
+pub fn part_label(part: &Part, scans: &[Scan]) -> String {
+    let dda = scans.iter().any(|s| s.level == 1) && {
+        let mut ms2 = scans.iter().filter(|s| s.level >= 2).peekable();
+        ms2.peek().is_some() && ms2.all(|s| s.parent.is_some())
+    };
+    let (name, head) = match part.mode {
+        "ms1" => ("Full Scan", "MS1"),
+        "mrm" => ("MRM", "MRM"),
+        _ if dda => ("DDA", "MS2"),
+        _ => ("MS2", "MS2"),
+    };
+    format!("{name}{}", part.tag.strip_prefix(head).unwrap_or(""))
+}
+
 pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
     let Some(p) = part else { return true };
     if p.mode == "mrm"
