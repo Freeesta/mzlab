@@ -810,7 +810,6 @@ I18N.add("it", {
   "ctl.xr.title": "Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio",
   "ctl.split.title": "Un pannello per ogni ione",
   "ctl.split": "Separa",
-  "ctl.mrm.quantQual": "quantificatore + qualificatore",
   "ctl.mrm.tr.title": "Transizione",
   "ctl.mrm.all": "tutte le transizioni",
   "ctl.mrm.smooth.title": "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)",
