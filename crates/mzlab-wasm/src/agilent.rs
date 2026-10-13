@@ -69,3 +69,9 @@ impl Engine {
         })
     }
 }
+
+/// Sets the secret of the pseudonyms (`anon:<8 hex>`) that replace the identity in anonymous exports of this instance; empty clears it (identity left out).
+#[wasm_bindgen]
+pub fn set_pseudo_secret(secret: &[u8]) {
+    mzlab_core::pseudo::set_current(secret);
+}

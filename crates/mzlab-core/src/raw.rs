@@ -73,6 +73,7 @@ pub(crate) fn metodo_of<R: Read + Seek>(
         }],
         sample: None,
         anonymous,
+        secret: crate::pseudo::current(),
     };
     crate::metodo_raw::from_raw(raw, source, &src)
 }

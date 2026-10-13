@@ -119,6 +119,7 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
         ],
         sample: Some(sample),
         anonymous: l.anonimo,
+        secret: crate::pseudo::current(),
     }
 }
 

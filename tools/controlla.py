@@ -136,12 +136,36 @@ def regole_esperimenti(aggiorna: bool = False) -> list[str]:
     return bad
 
 
+FRAME_BASE = indice.ROOT / "tools" / "frame_base.json"
+def chiamate_frame() -> dict[str, int]:
+    """Per file of mzlab/web: direct uses of requestAnimationFrame / cancelAnimationFrame / new ResizeObserver (frame.js owns them)."""
+    import re
+    rx = re.compile(r"\b(?:requestAnimationFrame|cancelAnimationFrame)\(|new ResizeObserver\(")
+    out = {}
+    for f in indice.tracked():
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/frame.js":
+            n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
+            if n:
+                out[f] = n
+    return out
+
+
+def regole_frame(aggiorna: bool = False) -> list[str]:
+    """Direct frame-clock calls outside frame.js can only go down, file by file (base: tools/frame_base.json)."""
+    now = chiamate_frame()
+    base = json.loads(FRAME_BASE.read_text(encoding="utf-8")) if FRAME_BASE.exists() else dict(now)
+    bad = [f"direct requestAnimationFrame/ResizeObserver calls grew in {f}: {n} (base {base.get(f, 0)}); use FRAME in frame.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
+    if aggiorna and not bad:
+        FRAME_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    return bad
+
+
 def main() -> int:
     now = misura()
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv)
+    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv)
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))

@@ -261,8 +261,8 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("schema", Some(V::s(crate::metodo::SCHEMA))),
         ("origine", crate::metodo::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
-        ("strumento", strumento(cfg, version, anon)),
-        ("operatore", operatore(user.or(domain_user), computer, anon)),
+        ("strumento", strumento(cfg, version, src)),
+        ("operatore", operatore(user.or(domain_user), computer, src)),
         (
             "ms",
             method
@@ -369,7 +369,7 @@ fn source_type(log: &[String]) -> Option<String> {
 }
 
 /// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
-fn strumento(cfg: Option<&String>, version: Option<&String>, anon: bool) -> Option<V> {
+fn strumento(cfg: Option<&String>, version: Option<&String>, src: &Source) -> Option<V> {
     obj(vec![
         (
             "produttore",
@@ -379,14 +379,14 @@ fn strumento(cfg: Option<&String>, version: Option<&String>, anon: bool) -> Opti
             "modello",
             cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
         ),
-        (
-            "serie",
-            if anon {
-                None
+        ("serie", {
+            let serial = cfg.and_then(|r| field(r, "Serial Number:"));
+            if src.anonymous {
+                serial.and_then(|s| src.alias("serial", s)).map(V::s)
             } else {
-                cfg.and_then(|r| field(r, "Serial Number:")).and_then(text)
-            },
-        ),
+                serial.and_then(text)
+            }
+        }),
         (
             "firmware",
             cfg.and_then(|r| field(r, "Firmware Version:"))
@@ -403,10 +403,16 @@ fn strumento(cfg: Option<&String>, version: Option<&String>, anon: bool) -> Opti
     ])
 }
 
-/// The `operatore` section (absent in an anonymous document).
-fn operatore(user: Option<&str>, computer: Option<&str>, anon: bool) -> Option<V> {
-    if anon {
-        return None;
+/// The `operatore` section (pseudonyms in an anonymous document).
+fn operatore(user: Option<&str>, computer: Option<&str>, src: &Source) -> Option<V> {
+    if src.anonymous {
+        return obj(vec![
+            ("utente", user.and_then(|v| src.alias("user", v)).map(V::s)),
+            (
+                "computer",
+                computer.and_then(|v| src.alias("computer", v)).map(V::s),
+            ),
+        ]);
     }
     obj(vec![
         ("utente", user.and_then(text)),

@@ -51,7 +51,7 @@ fn campione(d: &AgilentD) -> Option<V> {
     ])
 }
 
-fn strumento(d: &AgilentD, anon: bool) -> Option<V> {
+fn strumento(d: &AgilentD, src: &Source) -> Option<V> {
     let dev = d.device.as_ref();
     let model = dev.map(|v| format!("{} {}", v.model, v.name));
     let soft = d.acquisition_software().and_then(|(_, name, version)| {
@@ -60,7 +60,16 @@ fn strumento(d: &AgilentD, anon: bool) -> Option<V> {
     obj(vec![
         ("produttore", Some(V::s("Agilent Technologies"))),
         ("modello", model.as_deref().and_then(text)),
-        ("serie", dev.filter(|_| !anon).and_then(|v| text(&v.serial))),
+        (
+            "serie",
+            dev.and_then(|v| {
+                if src.anonymous {
+                    src.alias("serial", &v.serial).map(V::s)
+                } else {
+                    text(&v.serial)
+                }
+            }),
+        ),
         ("firmware", dev.and_then(|v| text(&v.firmware))),
         ("software", soft.map(|s| V::Arr(vec![s]))),
     ])
@@ -288,11 +297,22 @@ impl AgilentD {
             ("schema", Some(V::s(metodo::SCHEMA))),
             ("origine", metodo::origin(src, created.as_deref())),
             ("campione", campione(self)),
-            ("strumento", strumento(self, anon)),
+            ("strumento", strumento(self, src)),
             (
                 "operatore",
                 if anon {
-                    None
+                    obj(vec![
+                        (
+                            "utente",
+                            self.operator().and_then(|v| src.alias("user", v)).map(V::s),
+                        ),
+                        (
+                            "computer",
+                            self.computer()
+                                .and_then(|v| src.alias("computer", v))
+                                .map(V::s),
+                        ),
+                    ])
                 } else {
                     obj(vec![
                         ("utente", self.operator().and_then(text)),

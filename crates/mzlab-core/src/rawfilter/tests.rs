@@ -108,3 +108,20 @@ fn an_anonymous_copy_says_so_in_the_run_and_a_whole_one_does_not() {
         "{whole}"
     );
 }
+
+#[test]
+fn with_a_secret_the_identity_becomes_a_stable_pseudonym() {
+    let xml = "<run>\n<userParam name=\"opentfraw.computer_name\" value=\"LABPC-07\"/>\n<userParam name=\"opentfraw.original_file_path\" value=\"C:\\u\\a.raw\"/>\n<userParam name=\"opentfraw.raw_version\" value=\"66\"/>\n</run>\n";
+    let go = |secret: &[u8]| {
+        let mut out = Vec::new();
+        let mut f = MzmlFilter::new(&mut out, true).with_secret(Some(secret.to_vec()));
+        f.write_all(xml.as_bytes()).unwrap();
+        f.flush().unwrap();
+        String::from_utf8(out).unwrap()
+    };
+    let (a, b) = (go(b"one"), go(b"one"));
+    assert_eq!(a, b);
+    assert!(a.contains("value=\"anon:") && !a.contains("LABPC") && !a.contains("a.raw"));
+    assert!(a.contains("raw_version"));
+    assert_ne!(a, go(b"two"));
+}
