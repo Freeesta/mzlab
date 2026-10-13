@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  TP Mine, high-resolution mode: ranking of the possible TPs, detail of a candidate (kinetics by session, mirror MS2 with S/U evidence,
 // localisation, criteria), MSn tree, exports. Called by 20_tpmine.js (window.TPHR.render) with its helpers; it does not talk to the worker itself.
 (() => {
@@ -49,7 +50,7 @@
     if (!document.getElementById("tp-hr-css")) { const st = document.createElement("style"); st.id = "tp-hr-css"; st.textContent = CSS; document.head.appendChild(st); }
     const { esc, fmtA, chart, hue, call, toast, dl } = h;
     const $ = q => R.querySelector(q);
-    const rows = s.rows, st = { sel: null, minLevel: 5, text: "", onlyLoc: false, det: {}, order: "score" };
+    const rows = s.rows, st = { sel: null, minLevel: /** @type {any} */ (5), text: "", onlyLoc: false, det: {}, order: "score" };
     const lvRank = r => r.diagnostic ? 4 : +r.level;
     const n = l => rows.filter(r => String(r.level) === l && !r.diagnostic).length, nDiag = rows.filter(r => r.diagnostic).length;
     const nMs2 = rows.filter(r => r.ms2_scans > 0).length;
@@ -105,11 +106,11 @@
       const edges = net.edges.filter(e => keepIds.has(e.from) && keepIds.has(e.to) && (ns.only === "all" || (ns.only === "network" ? e.kind !== "mass" : (e.from === st.sel || e.to === st.sel))));
       const nodes = net.nodes.filter(n => keepIds.has(n.id) && (n.id === "progenitore" || edges.some(e => e.from === n.id || e.to === n.id)));
       const depth = new Map([["progenitore", 0]]);
-      for (let ch = true; ch;) { ch = false; for (const e of edges) if (depth.has(e.from) && !depth.has(e.to)) { depth.set(e.to, depth.get(e.from) + 1); ch = true; } }
+      for (let ch = true; ch;) { ch = false; for (const e of edges) if (depth.has(e.from) && !depth.has(e.to)) { depth.set(e.to, /** @type {number} */ (depth.get(e.from)) + 1); ch = true; } }
       const last = Math.max(0, ...depth.values()) + 1;
       nodes.forEach(n => { if (!depth.has(n.id)) depth.set(n.id, last); });
       const cols = [...new Set(nodes.map(n => depth.get(n.id)))].sort((a, b) => a - b), col = new Map(cols.map((d, i) => [d, i])), pos = new Map();
-      cols.forEach(d => nodes.filter(n => depth.get(n.id) === d).sort((a, b) => (a.mz || 0) - (b.mz || 0)).forEach((n, i) => pos.set(n.id, { x: 60 + col.get(d) * 200, y: 34 + i * 50 })));
+      cols.forEach(d => nodes.filter(n => depth.get(n.id) === d).sort((a, b) => (a.mz || 0) - (b.mz || 0)).forEach((n, i) => pos.set(n.id, { x: 60 + /** @type {number} */ (col.get(d)) * 200, y: 34 + i * 50 })));
       const W = 120 + (cols.length - 1) * 200, H = 40 + Math.max(1, ...cols.map(d => nodes.filter(n => depth.get(n.id) === d).length)) * 50;
       const showLab = edges.length <= 40;
       const line = e => {

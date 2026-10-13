@@ -1,3 +1,4 @@
+// @ts-strict
 // Page side of the Rust engine: browser.js hands every GET of the routes in RUST_ROUTES to this module first. It answers them from
 // rust-worker.js (the same JSON as mzlab/api.py, the reference of the tests); null = the request is not one it answers.
 //
@@ -21,7 +22,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
   const api = { enabled: true, disabled: false, stats };
-  const base = n => String(n || "").split(/[\\/]/).pop();
+  const base = n => String(n || "").split(/[\\/]/).pop() || "";
 
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
   function spawn() {
@@ -83,7 +84,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const needMzml = (k, s) => s.mzml || (s.mzml = s.info ? Promise.resolve() : openMzml(k, s));
   function open(k, s) {
-    return rpc({ op: "idxopen", slot: k, name: s.name }).then(r => {
+    return rpc({ op: "idxopen", slot: k, name: s.name, pol: s.pol }).then(r => {
       s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
@@ -92,7 +93,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
   api.noteRemove = name => { blobs.delete(base(name)); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
-  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, except the MRM and polarity parts (Python)
+  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
     if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
@@ -101,8 +102,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
       const tag = f.includes("#") ? f.slice(f.indexOf("#") + 1) : "";
-      if ((tag && /^MRM|[ _](pos|neg)$/i.test(tag)) || api.disabled) { slots[k] = null; continue; }      // MRM and polarity parts: Python (the routes of the index see the whole file)
-      slots[k] = { name: base(f.split("#")[0]), blob: blobs.get(base(f.split("#")[0])) || blob || null, info: null, bad: false, idx: false, mzml: null };
+      if (api.disabled) { slots[k] = null; continue; }
+      slots[k] = { name: base(f.split("#")[0]), blob: blobs.get(base(f.split("#")[0])) || blob || null, info: null, bad: false, idx: false, mzml: null, pol: /[ _]pos$/i.test(tag) ? 1 : /[ _]neg$/i.test(tag) ? -1 : 0 };
       slots[k].opening = open(k, slots[k]);
     }
   };

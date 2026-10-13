@@ -74,7 +74,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
     pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
         let ar = self.idx.arrays(si)?.clone();

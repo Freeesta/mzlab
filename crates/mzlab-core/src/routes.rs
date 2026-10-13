@@ -72,11 +72,13 @@ pub struct Routes<R: ReadAt> {
     pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>, u64)>,
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
+    /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
+    pub pol: Option<i8>,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -116,7 +118,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// The XIC of one level as the arrays Python works on (not rounded): the reference difference subtracts these.
     pub fn xic_raw(&mut self, mz: f64, tol: f64, level: u8) -> Result<(Vec<f64>, Vec<f64>)> {
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok((Vec::new(), Vec::new()));
         };
         let (lo, hi) = (mz - tol, mz + tol);
@@ -149,7 +151,7 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let (mz0, mz1, prec) = (q.num("mz0")?, q.num("mz1")?, q.num("prec")?);
         let filt = q.some("filt");
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(Some((Vec::new(), Vec::new())));
         };
         let y = if mz0.is_some() || mz1.is_some() {
@@ -267,7 +269,7 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let filt = q.some("filt");
         let mut o = Out::default();
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             o.raw("{\"level\":").int(level as i64);
             o.raw(",\"n\":0,\"sid\":[],\"no\":[],\"rt\":[],\"tic\":[],\"prec\":[],\"bpmz\":[],\"bpint\":[]}");
             return Ok(Some(o.0));
@@ -325,7 +327,7 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let filter = q.get("filter");
         let precursor = q.num("precursor")?;
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
         let ar = self.idx.arrays(si)?.clone();

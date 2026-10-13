@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // Desktop app only (window.MZLAB_DESKTOP, set by desktop-shim.js): update of the web part. The native side does the work
 // (crates/mzlab-desktop/src/update.rs: manifest, only the changed files, SHA-256, atomic swap); this file only asks and shows.
@@ -77,7 +78,7 @@ window.DESKUPD = (() => {
 
   function auto() {
     if (!live()) return;
-    let last = 0; try { last = +localStorage.getItem(KEY) || 0; } catch (_) { /* optional */ }
+    let last = 0; try { last = +(localStorage.getItem(KEY) || 0); } catch (_) { /* optional */ }
     if (Date.now() - last > DAY) setTimeout(() => check(true), 4000);
   }
   addEventListener("load", auto);

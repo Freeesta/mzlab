@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  mzFinder: the «Dig» live. While the engine works, the right-hand side shows the phases with their state, the candidates that pass the criteria
 // (compact rows, best provisional score first) and, in high resolution, the MSn tree growing node by node. 20_tpmine.js feeds it with the events of the worker
 // (phase, payload); the final results replace this panel. No animation; the phase list is announced (aria-live) only when the phase changes.
@@ -26,7 +27,7 @@
       <div id="tp-live-f" class="mut"></div>
       <div id="tp-live-c" hidden><div class="mut">Candidates that pass the criteria (provisional score)</div><div class="cands" id="tp-live-cl"></div></div>
       ${hr ? `<div id="tp-live-t" hidden></div>` : ""}</div>`;
-    const st = { R, hr, h, list, t0: performance.now(), ph: null, tph: 0, cands: new Map(), nodes: [], files: [], alb: null, timer: null, last: new Map() };
+    const st = { R, hr, h, list, t0: performance.now(), ph: null, tph: 0, cands: new Map(), nodes: [], files: [], alb: null, timer: /** @type {any} */ (null), last: new Map() };
     st.timer = setInterval(() => tick(st), 500);
     cur = st;
   }

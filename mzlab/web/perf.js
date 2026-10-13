@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Performance meter. Off by default and then it costs nothing (the script returns at once).
 // On with ?perf in the address, or Ctrl+Alt+P (the page asks to reload with ?perf). A small box in the bottom left shows:
@@ -73,7 +74,7 @@
 
   // ---- panel draws and the commands that move around: wrap the global functions (they are plain function declarations)
   function wrapFn(name, label) {
-    const f = window[name];
+    const f = /** @type {any} */ (window)[name];
     if (typeof f !== "function" || f.__perf) return;
     const w = function (...a) {
       const t = performance.now(), p = a[0];
@@ -85,7 +86,7 @@
       return r;
     };
     w.__perf = true;
-    window[name] = w;
+    /** @type {any} */ (window)[name] = w;
   }
   function hook() { wrapFn("draw", "draw"); wrapFn("setTab", I18N.t("perf.hook.tab")); wrapFn("stepScan", I18N.t("perf.hook.step")); wrapFn("openXic", I18N.t("perf.hook.xic")); }
   hook();
@@ -115,12 +116,12 @@
   function schedule() { if (!pending) { pending = true; setTimeout(() => { pending = false; out.textContent = text(true); out.scrollTop = out.scrollHeight; }, 250); } }
 
   function env() {
-    const n = navigator, c = n.connection || {};
+    const n = /** @type {any} */ (navigator), c = n.connection || {};
     return [`${n.userAgent}`, I18N.t("perf.env", { sw: screen.width, sh: screen.height, iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio, cores: n.hardwareConcurrency || "?", mem: n.deviceMemory || "?", net: c.effectiveType || "?" }),
       I18N.t("perf.version", { app: window.APP_NAME || "?", title: document.title }), I18N.t("perf.engine", { engine: I18N.t(window.QQQ_BROWSER ? "perf.engine.browser" : "perf.engine.local") })];
   }
   function startLines() {
-    const nav = performance.getEntriesByType("navigation")[0], o = [];
+    const nav = /** @type {any} */ (performance.getEntriesByType("navigation")[0]), o = [];
     if (nav) o.push(`pagina: DOM pronto ${f1(nav.domContentLoadedEventEnd)} ms, caricata ${f1(nav.loadEventEnd)} ms`);
     return o;
   }

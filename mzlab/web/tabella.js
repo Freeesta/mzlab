@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Feature table of the series (high resolution only; «Statistica» panel): the matrix features x files that the blank subtraction and the PCA
 // work on. The program does not detect features: the table comes from the user, in one of three ways
@@ -9,7 +10,7 @@ const TABELLA = (() => {
   const MAX_LIST = 300;                                        // ions of a typed list (each costs one XIC per file)
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
-  const baseName = n => String(n || "").split(/[\\/]/).pop().replace(/#.*$/, "").replace(/\.(mzml|mzxml|raw|wiff|d|dam)\b/i, "").toLowerCase().trim();
+  const baseName = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/#.*$/, "").replace(/\.(mzml|mzxml|raw|wiff|d|dam)\b/i, "").toLowerCase().trim();
 
   // ---------------------------------------------------------------- pure functions
   // «m/z; RT» lines (separator: ; , tab or space; decimal comma accepted when the separator is not a comma) -> {rows: [{mz, rt}], bad: [line numbers]}
@@ -85,8 +86,8 @@ const TABELLA = (() => {
     if (r.error === "columns") throw new Error(t("feat.err.columns"));
     if (!r.features.length) throw new Error(t("feat.err.empty"));
     if (!r.columns.length) throw new Error(t("feat.err.nofiles"));
-    const tbl = setTable("file", r.features);
-    tbl.unmatched = files().filter(f => !r.columns.includes(f.file)).map(f => f.file);
+    const tbl = /** @type {any} */ (setTable("file", r.features));
+    tbl.unmatched = files().filter(f => !/** @type {any[]} */ (r.columns).includes(f.file)).map(f => f.file);
     return tbl;
   }
   function fromMzFinder() {

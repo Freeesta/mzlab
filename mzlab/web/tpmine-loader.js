@@ -1,3 +1,4 @@
+// @ts-strict
 // Loader of mzFinder (internal name "TP Mine"): the tools that give answers, only for the course owner.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) but are downloaded and run ONLY after the switch is turned on: with mzFinder off nothing of it is fetched.
@@ -9,14 +10,14 @@
 // (next to Teoria) and a full page; others get a button in the floating bar.
 (() => {
   "use strict";
-  const BASE = new URL(".", document.currentScript ? document.currentScript.src : location.href).href;
+  const BASE = new URL(".", document.currentScript ? /** @type {HTMLScriptElement} */ (document.currentScript).src : location.href).href;
   const DIR = BASE + "mzfinder/";
   const KEY = "qqq.mzfinder";
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
   const reg = window.QTOOLS = {
-    ctx: null,                                     // set before the scripts run: {pyZip: Uint8Array, base: URL of the site static folder, files}
+    ctx: /** @type {any} */ (null),                                     // set before the scripts run: {pyZip: Uint8Array, base: URL of the site static folder, files}
     list: () => on ? tools.slice() : [],
     register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on) addTab(t); render(); },
   };
@@ -25,7 +26,7 @@
   const setOn = v => { try { if (v) localStorage.setItem(KEY, "1"); else localStorage.removeItem(KEY); } catch (_) { /* private mode: only for this page */ } };
 
   function runScript(name) {
-    return new Promise((res, rej) => {
+    return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
       s.onload = () => { s.remove(); res(); };
       s.onerror = () => { s.remove(); rej(new Error("script " + name)); };
@@ -116,7 +117,7 @@
   }
 
   // ---- switch: logo-piccone.js (the five hits on the logo of the header) calls QTOOLS.flip()
-  reg.flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
+  /** @type {any} */ (reg).flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
   const start = () => { if (getOn()) turnOn(); };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

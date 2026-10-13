@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 "use strict";
 // Command palette: Ctrl+K (⌘K on the Mac) or the 🔍 button of the toolbar. It searches by name, in Italian and English, without accents and
@@ -58,8 +59,8 @@ const PALETTE = (() => {
     input.addEventListener("input", () => render(input.value));
     input.addEventListener("keydown", onKey);
     box.addEventListener("pointerdown", e => { if (e.target === box) close(true); });
-    list.addEventListener("click", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li) run(+li.dataset.i); });
-    list.addEventListener("pointermove", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li && +li.dataset.i !== sel) mark(+li.dataset.i, false); });
+    list.addEventListener("click", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li) run(+(li.dataset.i || 0)); });
+    list.addEventListener("pointermove", e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("li[data-i]")); if (li && +(li.dataset.i || 0) !== sel) mark(+(li.dataset.i || 0), false); });
   }
 
   function render(q) {
@@ -74,7 +75,7 @@ const PALETTE = (() => {
   function mark(i, scroll = true) {
     if (!rows.length) return;
     sel = (i + rows.length) % rows.length;
-    list.querySelectorAll("li[data-i]").forEach(li => li.setAttribute("aria-selected", String(+li.dataset.i === sel)));
+    list.querySelectorAll("li[data-i]").forEach(li => li.setAttribute("aria-selected", String(+(li.dataset.i || 0) === sel)));
     input.setAttribute("aria-activedescendant", "pal-o-" + sel);
     const li = list.querySelector(`#pal-o-${sel}`);
     if (li && scroll) li.scrollIntoView({ block: "nearest" });
