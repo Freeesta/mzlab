@@ -133,9 +133,12 @@ fn noise_alone_gives_no_peak() {
     assert_eq!(detect(&[s], &MrmParams::default()).len(), 0);
 }
 
+/// A transition and its peaks: (Q1, Q3, [(RT, apex)]).
+type Mixed = (f64, f64, &'static [(f64, f64)]);
+
 /// Several compounds: (Q1, Q3, [(RT min, apex per unit of concentration, counts per second)]); the last transition has two isomers 0.5 min apart and
 /// the weakest compound is 50 times below the quantifier above.
-const MIX: [(f64, f64, &[(f64, f64)]); 7] = [
+const MIX: [Mixed; 7] = [
     (180.1, 110.0, &[(3.0, 8000.0)]),
     (180.1, 138.1, &[(3.0, 3000.0)]),
     (250.1, 208.1, &[(10.0, 20000.0)]),
