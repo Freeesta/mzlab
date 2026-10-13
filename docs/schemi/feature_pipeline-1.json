@@ -78,6 +78,10 @@
        "null"
       ]
      }
+    },
+    "smiles": {
+     "type": "string",
+     "description": "the structure of the parent (optional): its grafo/1 gives the fragments and the groups of the rules"
     }
    },
    "description": "the parent of the hypotheses (null = no proofs, only the table)"
