@@ -116,7 +116,8 @@ function closePanel(p) {
   if (window.DDA) DDA.onClose(p);
   fsInert(null, p);
   if (p._ro) p._ro.disconnect();
-  if (p._up) removeEventListener("mouseup", p._up);
+  if (p._ac) p._ac.abort();                              // every listener the panel put on document/window goes with it
+  p._a = null;
   if (p.el) p.el.remove();
   STATO.rimuovi(p, "close");
 }
@@ -217,6 +218,7 @@ function addPanel(type, o, after) {
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "chrom" || type === "xic" || type === "mrm" ? '<div class="corrbar"></div>' : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
+  p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
   STATO.aggiungi(p, "open"); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
@@ -625,7 +627,7 @@ function ctl(p) {
   const parToggle = on => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
     const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; pushZh(p); p.zoom = null; p.zoomY = null; p._parOpen = false; ctl(p); draw(p); uiSave(); };
-    if (!p._parAway) { p._parAway = e => { if (p._parOpen && p.el.isConnected && !e.target.closest(".cpop") && !e.target.closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, true); } }
+    if (!p._parAway) { p._parAway = e => { if (p._parOpen && p.el.isConnected && !e.target.closest(".cpop") && !e.target.closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach(x => {
     const k = x.dataset.o;
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
@@ -721,8 +723,8 @@ function hdMoreInit(p) {
   mb.onclick = e => { e.stopPropagation(); if (m.hidden) { m.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); } else close(false); };
   m.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); close(true); } });
   p._moreAway = e => { if (!m.hidden && p.el.isConnected && !e.target.closest(".hmore") && !e.target.closest('[data-a="more"]') && !e.target.closest(".corrm,.cpop,#fpop,#ctx")) close(false); };
-  document.addEventListener("mousedown", p._moreAway, true);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected) { close(true); } });
+  document.addEventListener("mousedown", p._moreAway, { capture: true, signal: p._ac.signal });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected) { close(true); } }, { signal: p._ac.signal });
 }
 function addTrace(p, mz, label, w) {
   mz = rh(mz, w != null ? 2 : 1);       // (a window centre is half of two 0.1 values: two decimals, the edges stay at one) unit-resolution instrument: one decimal is all that means anything
