@@ -17,7 +17,7 @@ try:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); ready(pg)
         pg.evaluate(f"{S1}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(500)
-        t = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const tr=c._a.tri.filter(q=>q.rt>13.5&&q.rt<15)[0];const r=c.cv.getBoundingClientRect();return [r.left+tr.px,r.top+M.t+4]})()")
+        t = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});if(!c.ms2tri){c.ms2tri=true;draw(c)}const tr=c._a.tri.filter(q=>q.rt>13.5&&q.rt<15)[0];const r=c.cv.getBoundingClientRect();return [r.left+tr.px,r.top+M.t+4]})()")
         pg.mouse.click(t[0], t[1]); ready(pg); pg.wait_for_timeout(1500)
         pg.evaluate(f"{S1}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(400)
         def geo(): return pg.evaluate(f"(()=>{{const s={S1},r=s.cv.getBoundingClientRect();return {{n:s._a.flags.length,markN:s._a.markN,on:markOn(s),f:s._a.flags.map(q=>[r.left+q.px,r.top+q.py+14,q.j]),l:r.left,t:r.top}}}})()")
