@@ -113,7 +113,16 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
                part: Option<&crate::iteminfo::Part>|
      -> Result<OpenItem> {
         let shown = match part {
-            Some(p) if !label.ends_with(&p.tag) => format!("{label} \u{b7} {}", p.tag),
+            Some(p) => {
+                let n = crate::iteminfo::part_label(p, &idx.scans);
+                let old = format!(" \u{b7} {}", p.tag);
+                let base = label.strip_suffix(old.as_str()).unwrap_or(&label);
+                if base.ends_with(&n) {
+                    base.to_string()
+                } else {
+                    format!("{base} \u{b7} {n}")
+                }
+            }
             _ => label.clone(),
         };
         let meta = Meta {

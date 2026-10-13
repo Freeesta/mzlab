@@ -58,7 +58,7 @@ try:
         def full_cmd():
             load_files(); pg.keyboard.press("Control+k"); pg.wait_for_timeout(300); pg.keyboard.type("full reset"); pg.wait_for_timeout(300)
             assert "Full reset" in pg.inner_text("#pal-l"); pg.keyboard.press("Enter"); pg.wait_for_timeout(400)
-            txt = pg.inner_text("#resetdlg"); assert "Full reset" in txt and "notebook" in txt and "preferences" in txt and "Files and session only" not in txt, txt
+            txt = pg.inner_text("#resetdlg"); assert "Full reset" in txt and "Removes everything from this browser, then reloads." in txt and "Reset" not in txt.replace("Full reset", "") and "Files and session only" not in txt, txt
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("!document.getElementById('resetdlg')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"], s

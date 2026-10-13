@@ -115,3 +115,8 @@ pub fn ms2_file<R: ReadAt, I: ReadAt>(
         _ => Err(Error::new("error.badView")),
     }
 }
+
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp` (`mzlab_core::campioni::route`).
+pub fn campioni_json(op: &str, input: &str) -> Result<String> {
+    mzlab_core::campioni::route(op, input)
+}
