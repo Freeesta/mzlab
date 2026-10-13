@@ -70,6 +70,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
+| ingresso di mzFinder: `.mzidx` per ogni file scelto o da IndexedDB (`TP_Mine/files/finder-idx.js`), lista di trasformazioni dell'utente in Rust | `docs/agenti/mzfinder-ingresso.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`) |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
