@@ -65,6 +65,21 @@ fn window(e: &Entry) -> Option<(f64, f64)> {
     Some((lo - MARGIN, hi + MARGIN))
 }
 
+/// One (weighted m/z, mean intensity per scan) per bin.
+fn average(bins: &BTreeMap<i64, Vec<(f64, f64)>>, n: usize) -> Vec<(f64, f64)> {
+    bins.values()
+        .map(|v| {
+            let w: f64 = v.iter().map(|x| x.1).sum();
+            let m = if w > 0.0 {
+                v.iter().map(|x| x.0 * x.1).sum::<f64>() / w
+            } else {
+                v[0].0
+            };
+            (m, w / n as f64)
+        })
+        .collect()
+}
+
 /// Pooled fragments of `e` (without the comparison with the parent). `open(k)` gives the index of file `k` of the columns then the MS2 files.
 fn pool<R: ReadAt>(
     d: &LrDig,
@@ -122,18 +137,7 @@ fn pool<R: ReadAt>(
     if n == 0 {
         return Ok(out);
     }
-    let mut pooled: Vec<(f64, f64)> = bins
-        .values()
-        .map(|v| {
-            let w: f64 = v.iter().map(|x| x.1).sum();
-            let m = if w > 0.0 {
-                v.iter().map(|x| x.0 * x.1).sum::<f64>() / w
-            } else {
-                v[0].0
-            };
-            (m, w / n as f64)
-        })
-        .collect();
+    let mut pooled = average(&bins, n);
     let mx = pooled.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
     pooled.retain(|p| p.1 >= MIN_REL * mx);
     pooled.sort_by(|a, b| b.1.total_cmp(&a.1));
