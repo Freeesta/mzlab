@@ -414,8 +414,8 @@ const BANCO = (() => {
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
-    cancelAnimationFrame(infoRaf);
-    infoRaf = requestAnimationFrame(() => {
+    FRAME.cancel(infoRaf);
+    infoRaf = FRAME.next(() => {
       const p = act(), b = Q("#hri-body"); if (!b) return;
       Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
       if (!p) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.noCellText")}</div>`);
@@ -443,7 +443,7 @@ const BANCO = (() => {
       const pnlContainer = Q("#sb-panels") || aside;
       pnlContainer.appendChild(c);
       c.style.height = ist.h + "px";
-      new ResizeObserver(() => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } }).observe(c);
+      FRAME.ro(c, () => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } });
     }
     if (window.BARRA) {
       BARRA.syncMode();

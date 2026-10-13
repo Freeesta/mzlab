@@ -367,8 +367,8 @@ const TOUR = (() => {
   let rafScroll = null;
   const onScrollOrResize = () => {
     if (!active) return;
-    if (rafScroll) cancelAnimationFrame(rafScroll);
-    rafScroll = requestAnimationFrame(updatePosition);
+    if (rafScroll) FRAME.cancel(rafScroll);
+    rafScroll = FRAME.next(updatePosition);
   };
 
   const stopProvaTimer = () => {

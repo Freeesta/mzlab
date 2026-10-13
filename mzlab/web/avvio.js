@@ -15,7 +15,7 @@ function ldIon(on, mode) {
   if (on && LD_ANALYSERS && !window.LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
   if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
   const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
-  cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
+  FRAME.cancel(ldIonRaf); ldIonRaf = 0;
   cv.style.display = on ? "block" : "none"; if (bars) bars.style.display = on ? "none" : "";
   if (!on) return;
   const W = 420, H = 120, R = window.devicePixelRatio || 1, TAU = 2 * Math.PI;
@@ -45,9 +45,9 @@ function ldIon(on, mode) {
       cx.globalAlpha = p.a; cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
     }
     cx.globalAlpha = 1; if (!midDone) an.mid();
-    if (!still) ldIonRaf = requestAnimationFrame(frame);
+    if (!still) ldIonRaf = FRAME.next(frame);
   };
-  ldIonRaf = requestAnimationFrame(frame);
+  ldIonRaf = FRAME.next(frame);
 }
 // the ONE status line of the loading screen (#ldmsg): the text of a load in progress (loading(true, msg)) or the phase of the engine start
 // (window.qqPhaseCur, set by browser.js) replaces the funny phrases; the bar under it is determinate only when the percentage is known
