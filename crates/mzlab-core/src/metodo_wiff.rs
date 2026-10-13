@@ -196,6 +196,19 @@ fn blank_identity(t: &str) -> String {
     s
 }
 
+/// The instrument model (`Component ID` of the mass spectrometer in the Log of sample `n`) and the creation time of the file
+/// (`YYYY-MM-DDTHH:MM:SS`, local time of the instrument PC): what the mzML header says about the run.
+pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
+    let (log, _, _, props) = read_parts(ole, &format!("SampleSubtree/Sample{n}/"));
+    let model = log
+        .iter()
+        .find(|r| r.starts_with("Mass Spectrometer:") && r.contains("Config Table"))
+        .and_then(|r| field(r, "Component ID:"))
+        .map(str::to_string);
+    let created = props.into_iter().find(|(i, _)| *i == 12).map(|p| p.1);
+    (model, created)
+}
+
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let method = method_of_sample(ole, n);
