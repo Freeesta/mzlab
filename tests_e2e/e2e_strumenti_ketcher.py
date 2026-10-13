@@ -13,6 +13,7 @@ def ready(pg):
         if pg.evaluate("() => !!(window.TPDraw && TPDraw.ready())"): break
         pg.wait_for_timeout(100)
     pg.wait_for_timeout(500)
+RINGS = lambda: pg.evaluate("() => { const e = document.querySelector('#kframe').contentDocument.querySelector('#tp-bar [data-tp=rings]'); return !!e && e.getClientRects().length > 0; }")
 r = Run(port=8904, wd="/tmp/wd_kstr")
 try:
     with sync_playwright() as p:
@@ -23,18 +24,19 @@ try:
               const b = box('[class*="BottomToolbar-module_root"]'), l = box('[class*="LeftToolbar-module_root"]'), fr = f.getBoundingClientRect();
               return { bx: b.left, bw: b.width, bh: b.height, lx: l.left, fb: fr.bottom, vh: innerHeight, title: f.getAttribute('title'),
                        zoom: f.contentWindow.ketcher.editor.zoom() }; }""")
-            assert o["bh"] > o["bw"] and o["bx"] < o["lx"], ("rings: a column left of the tools", o)
+            assert o["bw"] == 0, ("the native rings column is replaced by the drop-down button", o)
+            assert pg.evaluate(VIS, "template-0") is False and pg.evaluate("() => !!document.querySelector('#kframe').contentDocument.querySelector('#tp-bar [data-tp=rings]').getClientRects().length")
             assert o["fb"] <= o["vh"] + 2, ("the editor fits the window", o)
             assert o["zoom"] == 1, ("first zoom 100 %", o)
             assert not o["title"], "no tooltip over the canvas"
-        step("rings column on the left, editor fits the window, zoom = 100 %, no tooltip", layout)
+        step("rings in one drop-down button, editor fits the window, zoom = 100 %, no tooltip", layout)
         def tools():
-            assert pg.evaluate(VIS, "template-0") and pg.evaluate(VIS, "reaction-plus")
+            assert RINGS() and pg.evaluate(VIS, "reaction-plus")
             for hidden in ("sgroup", "enhanced-stereo", "create-monomer", "polymer-toggler", "any-atom"): assert not pg.evaluate(VIS, hidden), hidden
             pg.click("#tools-card summary"); pg.click("#tools-all"); pg.wait_for_timeout(300)
             for shown in ("sgroup", "enhanced-stereo", "create-monomer", "polymer-toggler", "any-atom"): assert pg.evaluate(VIS, shown), shown
             pg.click("#tools-def"); pg.wait_for_timeout(300); pg.uncheck("input[data-t=rings]"); pg.wait_for_timeout(300)
-            assert not pg.evaluate(VIS, "template-0")
+            assert not RINGS()
         step("tool groups: essentials by default, «Mostra tutti», single groups", tools)
         def groups():
             assert pg.evaluate(VIS, "period-table"), "the periodic table is shown"
@@ -43,9 +45,9 @@ try:
         step("periodic table visible, no empty group in the left toolbar", groups)
         def keep():
             pg.reload(); pg.wait_for_timeout(1500); ready(pg)
-            assert not pg.evaluate(VIS, "template-0"), "the choice is kept after a reload"
+            assert not RINGS(), "the choice is kept after a reload"
             pg.click("#tools-card summary"); pg.click("#tools-def"); pg.wait_for_timeout(300)
-            assert pg.evaluate(VIS, "template-0")
+            assert RINGS()
         step("the choice is kept in this browser", keep)
         pg.screenshot(path=SH + "k_strumenti.png")
 finally:

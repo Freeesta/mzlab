@@ -3,6 +3,7 @@
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
 // Module script; helpers come from explore.js (window).
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
+import { mountBar } from "./disegno-barra.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -62,6 +63,7 @@ function start() {
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
+let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(fr) {
   try {
@@ -174,13 +176,14 @@ function hideMacro(fr) {
       // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
       root.style.setProperty("--ksz", "1");
       const need = Math.max(300, ...['[class*="LeftToolbar-module_buttons"]', '[class*="RightToolbar-module_buttons"]', '[class*="BottomToolbar-module_group"]']
-        .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 : 0; }));
+        .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 + (q.includes("Left") ? (d.getElementById("tp-bar")?.offsetHeight || 0) : 0) : 0; }));
       const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
       root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
     kFit = fit;
     fit(); d.defaultView.addEventListener("resize", fit);
     d.head.appendChild(st);
+    kBar = mountBar(d, k => I18N.t(k));
     applyTools();
   } catch (_) { /* not critical */ }
 }
@@ -221,6 +224,7 @@ function applyTools() {
       const bs = g.matches("[data-testid]") ? [g] : [...g.querySelectorAll("[data-testid]")];          // a bare button (periodic table) is its own group
       if (bs.length === 0 || bs.every(b => b.getClientRects().length === 0)) g.style.display = "none";   // no box = hidden by the sheet or by a parent
     });
+    if (kBar) kBar.update(ch);
     kFit();
     const kl = Q("#kload"); if (kl) kl.hidden = true;
   } catch (_) { /* editor not loaded yet: applied when it starts */ }
