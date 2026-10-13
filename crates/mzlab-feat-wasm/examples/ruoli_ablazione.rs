@@ -1,21 +1,24 @@
 //! Ablation of the roles of the files in the view of the products (`tp/1`): how many rows the view keeps, and how many of them are not in the truth, when a
 //! kind of file (t0, blank, dark, infusion) is taken out of the run. The recipe, the rules and every threshold are the defaults, the same in every configuration.
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example ruoli_ablazione -- SPEC.json
+//!     cargo run --release -p mzlab-feat-wasm --example ruoli_ablazione -- SPEC.json [--ruoli]
 //!
 //! `SPEC.json`: `parent` {`formula` (neutral), `mz`, `rt` (the row of the table nearest to them, within `tol`, is the parent), `smiles`?}, `rules` (path of regole_tp.json), `tol` {`ppm` | `da`, `rt`} (matching with the truth),
 //! `files` [{`path` (.mzidx), `role` (treated | t0 | blank | dark | infusion), `minutes` (treated)}], `truth`? (a `verita_tp/1` document or the `verita.json` of
 //! the synthetic series: `ioni`), `probes`? [{`mz`, `rt`}] (status of the rows around a point). Prints one JSON document with a line per configuration.
 //! The configurations: `completa` (every file as given: the infusion counts as a control, as the Pipeline panel does), `senza_t0`, `senza_bianco`,
 //! `senza_buio`, `senza_infusione`, `solo_tempi` (t0 and treated only); one whose role is absent from the files is `assente`.
+//! `--ruoli`: the run gets the roles of the files (`campioni/2`, confirmed times) instead of the minutes alone: gate 1 reads each reference with its
+//! reason (`tp::build_by_role`) and the infusion is never a control; each line also gives the rows taken out by the blank, the t0 and the dark.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 
+use mzlab_core::campioni::Campione;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{self, Value};
 use mzlab_feat::store::read_table;
-use mzlab_feat::tp::{ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED};
+use mzlab_feat::tp::{TpRoles, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 use mzlab_feat_wasm::run;
 
 const ROLES: [&str; 5] = ["treated", "t0", "blank", "dark", "infusion"];
@@ -180,10 +183,18 @@ struct Report {
     products_seen: BTreeSet<usize>,
     inherited_in_view: usize,
     probes: Vec<String>,
+    /// With `--ruoli`: the rows taken out by each reference and whether the t0 is missing.
+    reasons: String,
 }
 
 fn classify(rep: &mut Report, table: &mzlab_feat::table::Aligned, truth: &[Entry], t: &Tol) {
     rep.rows = table.len();
+    if let Some(c) = &table.tp.roles {
+        rep.reasons = format!(
+            ",\"scartate_per\":{{\"bianco\":{},\"t0\":{},\"buio\":{}}},\"senza_t0\":{}",
+            c.by_blank, c.by_t0, c.by_dark, c.no_t0
+        );
+    }
     for r in 0..table.len() {
         let name = status_name(table.tp.status[r]);
         *rep.by_status.entry(name.into()).or_default() += 1;
@@ -248,13 +259,34 @@ fn run_config(ctx: &Ctx, keep: &[usize]) -> Result<mzlab_feat::table::Aligned, S
     .map_err(|e| e.to_string())?;
     let mins: Vec<f64> = keep.iter().map(|&k| minutes_of(&ctx.files[k])).collect();
     let parent = parent_row(&table, ctx).unwrap_or(ctx.parent);
-    let ev =
-        run::evidence(&table, &h, &mins, Some(parent), &ctx.recipe).map_err(|e| e.to_string())?;
+    let roles = ctx.by_role.then(|| roles_of(ctx, keep));
+    let mut ev = Vec::new();
+    let budget = mzlab_core::budget::MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
+    let mut at = mzlab_feat::store::Slice(&table);
+    let size = table.len() as u64;
+    run::evidence_roles_to(
+        &mut at,
+        size,
+        &h,
+        &mins,
+        roles.as_ref(),
+        Some(parent),
+        &ctx.recipe,
+        &budget,
+        &mut ev,
+    )
+    .map_err(|e| e.to_string())?;
     let (t, _) = read_table(&ev).map_err(|e| e.to_string())?;
-    let (treated, others) = (
-        mins.iter().filter(|&&m| m > 0.0).count(),
-        mins.iter().filter(|&&m| m <= 0.0 || m.is_nan()).count(),
-    );
+    let (treated, others) = match &roles {
+        Some(ro) => (
+            ro.treated.len(),
+            ro.t0.len() + ro.blank.len() + ro.dark.len(),
+        ),
+        None => (
+            mins.iter().filter(|&&m| m > 0.0).count(),
+            mins.iter().filter(|&&m| m <= 0.0 || m.is_nan()).count(),
+        ),
+    };
     if treated == 0 || others == 0 {
         return Err("error.tpNoControls".into());
     }
@@ -268,6 +300,31 @@ fn run_config(ctx: &Ctx, keep: &[usize]) -> Result<mzlab_feat::table::Aligned, S
         return Err("error.tpNoParent".into());
     }
     Ok(t)
+}
+
+/// The roles of the files of the run as `campioni/2` gives them to the TP path (times confirmed, as after the loading table).
+fn roles_of(ctx: &Ctx, keep: &[usize]) -> TpRoles {
+    let cs: Vec<Campione> = keep
+        .iter()
+        .enumerate()
+        .map(|(i, &k)| {
+            let f = &ctx.files[k];
+            let mut c = Campione::new(f.path.rsplit('/').next().unwrap_or(""), "", i as u32 + 1);
+            c.kind = if f.role == "treated" {
+                "sample".into()
+            } else {
+                f.role.clone()
+            };
+            match f.role.as_str() {
+                "treated" => c.set_time(Some(f.minutes), "min"),
+                "t0" => c.set_time(Some(0.0), "min"),
+                _ => {}
+            }
+            c.time_confirmed = true;
+            c
+        })
+        .collect();
+    TpRoles::of(&cs)
 }
 
 /// The row of the table closest to the parent given (within the matching window), as the page picks it: its m/z moves a little with the files of the run.
@@ -289,6 +346,8 @@ struct Ctx {
     structure: String,
     formula: String,
     parent: (f64, f64),
+    /// `--ruoli`: the run gets the roles of the files.
+    by_role: bool,
 }
 
 fn render(name: &str, keep: &[usize], ctx: &Ctx, out: Result<Report, String>) -> String {
@@ -306,13 +365,14 @@ fn render(name: &str, keep: &[usize], ctx: &Ctx, out: Result<Report, String>) ->
                 .map(|(s, m)| format!("\"{s}\":{}", object(m)))
                 .collect();
             format!(
-                "{head},\"rows\":{},\"status\":{},\"truth_by_status\":{{{}}},\"products_in_view\":{},\"inherited_in_view\":{},\"probes\":[{}]}}",
+                "{head},\"rows\":{},\"status\":{},\"truth_by_status\":{{{}}},\"products_in_view\":{},\"inherited_in_view\":{},\"probes\":[{}]{}}}",
                 r.rows,
                 object(&r.by_status),
                 cats.join(","),
                 r.products_seen.len(),
                 r.inherited_in_view,
-                r.probes.join(",")
+                r.probes.join(","),
+                r.reasons
             )
         }
     }
@@ -366,6 +426,7 @@ fn main() {
         formula: text(parent, "formula"),
         parent: (num(parent, "mz", f64::NAN), num(parent, "rt", f64::NAN)),
         tol: tol.clone(),
+        by_role: std::env::args().any(|a| a == "--ruoli"),
     };
     let mut lines = Vec::new();
     for (name, drop) in CONFIGS {
