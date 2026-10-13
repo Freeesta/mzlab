@@ -75,7 +75,7 @@ try:
             a, b = pg.evaluate("stackOrder().slice(-2).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
         step("divider: keys change the widths, Enter makes them equal", divider)
         def narrow():
-            pg.set_viewport_size({"width": 1000, "height": 2200}); pg.wait_for_timeout(1000)
+            pg.set_viewport_size({"width": 860, "height": 2200}); pg.wait_for_timeout(1000)
             g = rects(); assert g[1][3] == g[2][3] and g[1][2] != g[2][2], g
             assert [len(x) for x in rows()] == [1, 2], rows()           # arrangement kept
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(1000)
