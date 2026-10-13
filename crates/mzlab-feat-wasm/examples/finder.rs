@@ -1,7 +1,7 @@
 //! The Dig of mzFinder on high-resolution files, natively: the pipeline (as `nativo`) and the adapter `mzlab_feat::legacy` that turns the series into the
 //! JSON of `api.run` and `api.detail`. Writes `run.json`, `detail.json` (the first candidates) and `inclusion.csv` in OUT_DIR.
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example finder -- OUT_DIR file.mzidx... --parent FORMULA --rules regole_tp.json [--smiles S] [--parent-rt R]
+//!     cargo run --release -p mzlab-feat-wasm --example finder -- OUT_DIR file.mzidx... --parent FORMULA --rules regole_tp.json [--smiles S] [--adduct A] [--parent-rt R]
 
 use std::fs::File;
 use std::path::Path;
@@ -56,6 +56,7 @@ fn write(out: &str, d: &legacy::dig::Dig) {
 }
 
 fn main() {
+    let mut adduct = "[M+H]+".to_string();
     let (mut files, mut out, mut parent, mut rules, mut smiles, mut prt) = (
         Vec::<String>::new(),
         String::new(),
@@ -71,6 +72,7 @@ fn main() {
             "--parent" => parent = next(),
             "--rules" => rules = next(),
             "--smiles" => smiles = next(),
+            "--adduct" => adduct = next(),
             "--parent-rt" => prt = next().parse().expect("number"),
             _ if out.is_empty() => out = a,
             _ => files.push(a),
@@ -105,13 +107,20 @@ fn main() {
     let mut pj = Out::default();
     pj.raw("{\"name\":\"parent\",\"neutral\":")
         .str(&parent)
-        .raw(",\"adduct\":\"[M+H]+\"");
+        .raw(",\"adduct\":")
+        .str(&adduct);
+    if let Some(t) = rt {
+        pj.raw(",\"rt\":").num(t);
+    }
     if !smiles.is_empty() {
         pj.raw(",\"smiles\":").str(&smiles);
     }
     pj.raw("}");
     let p = legacy::series::parent(&pj.0).expect("parent");
-    let par = rt.map(|t| (p.mz, t));
+    let par = match rt {
+        Some(t) => Some((p.mz, t)),
+        None => legacy::parent_peak(&fj.0, &pj.0, &table).expect("parent peak").map(|x| (p.mz, x.1)),
+    };
     let ev = run::evidence(&table, &h, &mins, par, &r).expect("evidence");
     let d = legacy::dig(&fj.0, &pj.0, &ev, &h.registry.to_json(), |k| open(paths[k])).expect("dig");
     write(&out, &d);
@@ -125,3 +134,4 @@ fn main() {
         d.parent_ms2.is_some()
     );
 }
+
