@@ -52,8 +52,12 @@ def rows_ready(pg):
     pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length >= {len(names) + 1}", timeout=240000)
 
 
+def settr(pg, t):
+    pg.evaluate("document.querySelector('#tp-tr').closest('details').open = true"); pg.fill("#tp-tr", t)
+
+
 def dig(pg, tr=None):
-    if tr is not None: pg.fill("#tp-tr", tr)
+    if tr is not None: settr(pg, tr)
     pg.fill("#tp-mol", PARENT); pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
     return pg.evaluate(TABLE)
 
@@ -91,7 +95,7 @@ try:
         step("the default text again: the same Dig", same_list)
 
         def wrong_line():
-            pg.fill("#tp-tr", base["text"] + "\nbroken line without a semicolon"); pg.fill("#tp-mol", PARENT); pg.click("#tp-go")
+            settr(pg, base["text"] + "\nbroken line without a semicolon"); pg.fill("#tp-mol", PARENT); pg.click("#tp-go")
             pg.wait_for_function("(document.getElementById('tp-msg') || {}).textContent.includes('invalid line (expected')", timeout=120000)
         step("a wrong line is refused with the text of the Python", wrong_line)
 
