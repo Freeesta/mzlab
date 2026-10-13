@@ -154,8 +154,8 @@ async function classifyRust(names) {
   const f = await finder(), ix = await openIdx(names);
   try { return f.finder_classify(names, ix.read, ix.sizes); } finally { ix.close(); }
 }
-/** L1-L3 of the files, reusing the .mzfeatf of a .mzidx already detected @param {any} p @param {{name: string, path: string}[]} files @param {File[]} idx @param {string} recipe */
-async function detect(p, files, idx, recipe) {
+/** L1-L3 of the files, reusing the .mzfeatf of a .mzidx already detected @param {any} p @param {{name: string, path: string}[]} files @param {File[]} idx @param {string} [recipe] */
+async function detect(p, files, idx, recipe = "") {
   const key = (/** @type {number} */ k) => `${files[k].name}|${idx[k].size}|${idx[k].lastModified}|${recipe}`;
   const todo = files.map((_, k) => k).filter(k => !detected.has(key(k)));
   if (todo.length) {
