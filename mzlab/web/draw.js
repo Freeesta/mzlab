@@ -71,6 +71,8 @@ function hideMacro(fr) {
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
       '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important}' +
       '[class*="App-module_top"] kbd{display:none!important}' +
+      '[data-testid="fullscreen-mode-button"],[data-testid="center-struct-button"]{display:inline-flex!important;align-items:center;justify-content:center}' +
+      '[data-testid="fullscreen-mode-button"] svg,[data-testid="center-struct-button"] svg{margin:0!important;display:block}' +
       '[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
       // the quick rings (Ketcher's bottom bar) become a column on the far left: the bottom row disappears and the canvas gets the whole height
       '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
@@ -168,13 +170,13 @@ function hideMacro(fr) {
 
     const fit = () => {
       const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches, root = d.documentElement;
-      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.15, (w - 24) / 1020)).toFixed(3)));
+      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.05, (w - 24) / 1020)).toFixed(3)));
       // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
       root.style.setProperty("--ksz", "1");
       const need = Math.max(300, ...['[class*="LeftToolbar-module_buttons"]', '[class*="RightToolbar-module_buttons"]', '[class*="BottomToolbar-module_group"]']
         .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 : 0; }));
       const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
-      root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.4, (h - th - 24) / need)).toFixed(3)));
+      root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
     kFit = fit;
     fit(); d.defaultView.addEventListener("resize", fit);
@@ -216,8 +218,8 @@ function applyTools() {
     const w = d.defaultView;
     d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach(g => {
       g.style.display = "";
-      const bs = [...g.querySelectorAll("[data-testid]")];
-      if (bs.length === 0 || bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
+      const bs = g.matches("[data-testid]") ? [g] : [...g.querySelectorAll("[data-testid]")];          // a bare button (periodic table) is its own group
+      if (bs.length === 0 || bs.every(b => b.getClientRects().length === 0)) g.style.display = "none";   // no box = hidden by the sheet or by a parent
     });
     kFit();
     const kl = Q("#kload"); if (kl) kl.hidden = true;
@@ -734,13 +736,13 @@ function labelMenu(ev, d, fr) {
 const SKEY = "qqq.disegno.riquadri";
 function sideApply(hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
-  const b = Q("#side-toggle"); b.textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
+  const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
   Q(hidden ? "#side-corner" : "#side-row").appendChild(b);   // the button sits above the cards, or in the canvas corner when they are hidden
   try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
   setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
 }
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
-try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").textContent = I18N.t("draw.side.show"); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle .tl").textContent = I18N.t("draw.side.show"); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
 function frameExtras(fr) {
   const d = fr.contentDocument; if (!d) return;

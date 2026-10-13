@@ -36,6 +36,11 @@ try:
             pg.click("#tools-def"); pg.wait_for_timeout(300); pg.uncheck("input[data-t=rings]"); pg.wait_for_timeout(300)
             assert not pg.evaluate(VIS, "template-0")
         step("tool groups: essentials by default, «Mostra tutti», single groups", tools)
+        def groups():
+            assert pg.evaluate(VIS, "period-table"), "the periodic table is shown"
+            n = pg.evaluate("""() => { const d = document.querySelector('#kframe').contentDocument; return [...d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *')].filter(g => g.getClientRects().length && g.getBoundingClientRect().height < 20).length; }""")
+            assert n == 0, ("no empty strip left in the left toolbar", n)
+        step("periodic table visible, no empty group in the left toolbar", groups)
         def keep():
             pg.reload(); pg.wait_for_timeout(1500); ready(pg)
             assert not pg.evaluate(VIS, "template-0"), "the choice is kept after a reload"
