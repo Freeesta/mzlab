@@ -1,5 +1,5 @@
 """Contract of the Feature table of mzFinder with the table engine: every key of the JSON of `qc/1`, of the view and of the rows of the sheet that TP_Mine/js/36_feature_qc.js and
-37_feature_table.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `tabella`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
+37_feature_table.js and 38_feature_export.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `tabella`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
 page shows cannot come from anywhere but the engine. Skipped without cargo, wasm-bindgen or node (the series is the one of test_feat_table_wasm.py)."""
 import json
 import subprocess
@@ -32,13 +32,15 @@ def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
     assert qc["gruppi"] == [] or set(c["qcGroup"]) <= set(qc["gruppi"][0])
     assert set(c["view"]) <= set(view) and set(c["counts"]) <= set(view["conteggi"])
     assert set(c["rows"]) <= set(rows) and set(c["sheet"]) <= set(rows["hojas"][0])
+    rep = outs["report.json"]
+    assert rep["schema"] == "report/1" and set(c["report"]) <= set(rep) and set(c["cells"]) <= set(rep["celle"]) and set(c["reportView"]) <= set(rep["vista"] or {"parametri": 0, "conteggi": 0})
     # the grid reads the sheet by position: six columns, then area and state of each file
     n = len(qc["file"])
     assert all(len(r) == 6 + 2 * n for r in rows["hojas"][0]["filas"])
 
 
 def test_the_page_names_no_key_the_contract_does_not_list():
-    src = (JS / "36_feature_qc.js").read_text() + (JS / "37_feature_table.js").read_text()
+    src = (JS / "36_feature_qc.js").read_text() + (JS / "37_feature_table.js").read_text() + (JS / "38_feature_export.js").read_text()
     for key in [k for ks in contract().values() for k in ks]:
         assert key in src, key
 

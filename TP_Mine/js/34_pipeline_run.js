@@ -73,7 +73,7 @@
       + (cand ? `<label><input type="checkbox" id="pv-dis"> Discarded (<span id="pv-nd">${all.filter(r => r.discarded).length}</span>)</label>` : "")
       + `<button type="button" id="pv-unt">Send to the feature tables</button><span class="mut" id="pv-n"></span></div>`
       + (cand ? "" : `<div class="mut">Pipeline not validated: only traces and families are shown, no candidates.</div>`)
-      + `<div id="pv-list" class="pv-wrap"></div><div id="pv-det" class="pv-det" hidden></div><div id="pipe-qc"></div><div id="pipe-tab"></div>`;
+      + `<div id="pv-list" class="pv-wrap"></div><div id="pv-det" class="pv-det" hidden></div><div id="pipe-qc"></div><div id="pipe-tab"></div><div id="pipe-exp"></div>`;
     st.view = PV().mount($("#pv-list"), { gated: cand, onPick: detail });
     $("#pv-q").oninput = refilter; if (cand) $("#pv-dis").onchange = refilter;
     $("#pv-unt").onclick = toUnt; refilter(); tableSteps();
@@ -85,7 +85,8 @@
       const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], pol: st.ctx.values().polarity });
       st.session = session; const g = { ...gate, table: gate.table === true };
       /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
-      /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
+      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
+      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "mzfinder_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
   }
   function refilter() {

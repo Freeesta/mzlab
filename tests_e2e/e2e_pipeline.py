@@ -227,6 +227,21 @@ try:
                 for sel, nm in (("#pipe-qc", "qc"), ("#pipe-tab", "tabella")): pg.locator(sel).screenshot(path=str(Path(out) / f"pipeline_{nm}.png"))
         step("table: normalisation and filters as a view with «N of M rows», virtualised grid, click opens the row", table_step)
 
+        def export_step():
+            def get(i):
+                with pg.expect_download(timeout=60000) as d: pg.click("#px-" + i)
+                return Path(d.value.path()).read_bytes()
+            assert get("mzmine").startswith(b"id,mz,rt"), "CSV for mzmine"
+            assert get("full").startswith(b"id,mz,rt")
+            assert get("xlsx")[:2] == b"PK", "xlsx is a zip"
+            assert get("semi").startswith(b"\xef\xbb\xbf"), "CSV with ; has a BOM"
+            z = get("fbmn"); assert z[:2] == b"PK" and b"quant.csv" in z and b"ms2.mgf" in z, "FBMN zip"
+            pg.wait_for_function("document.querySelector('#px-msg').textContent.includes('done')", timeout=20000)
+            get("sirius")
+            html = get("report").decode(); assert "mzFinder feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
+            assert "error" not in pg.inner_text("#px-msg").lower(), pg.inner_text("#px-msg")
+        step("export and report: mzmine, cells, xlsx, CSV with BOM, FBMN zip, SIRIUS and the report come from the engine", export_step)
+
         def unt():
             pg.click("#pv-unt")
             t = pg.evaluate("UNTUI.state.table"); assert t and t["program"] == "mzlab" and len(t["features"]) > 0 and len(t["samples"]) == len(names), t and t["program"]
