@@ -50,7 +50,16 @@ export function createIngress(base, say) {
       let why = String(res.text || res.reason); try { why = JSON.parse(why).error_key || why; } catch (_) { /* plain text */ }
       throw new Error(`cannot index ${name}: ${why}`.slice(0, 300));
     }
-    await arch.promote("idx", part, name + ".mzidx");
+    try { await arch.promote("idx", part, name + ".mzidx"); } catch (e) {
+      // the main program indexes the same file at the same time (files restored from IndexedDB) and holds the final name: its index, with the same bytes, is the one to use
+      try { await arch.remove("idx", part); } catch (_) { /* already gone */ }
+      for (let i = 0; i < 40; i++) {
+        const ix = await idxFile(name);
+        if (ix && await recordedSize(ix) === blob.size) return;
+        await new Promise(r => setTimeout(r, 250));
+      }
+      throw e;
+    }
   }
 
   return {
