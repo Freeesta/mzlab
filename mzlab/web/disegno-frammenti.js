@@ -15,7 +15,7 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
 }
 
 /** the graph module, loaded on the first cut; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json */
-function carica() {
+export function carica() {
   if (modulo) return modulo;
   modulo = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url), man = await (await fetch(new URL("manifest.json", base))).json(), e = man.grafo;

@@ -1,6 +1,6 @@
 //! Cuts of a drawn structure (the page sends a V2000 molfile, see `Mol::from_molfile`): the two pieces of a bond with formula, neutral mass and m/z of [F+H]+.
 
-use mzlab_core::elements;
+use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
@@ -82,6 +82,75 @@ pub fn fragments_json(molfile: &str, a: i32, b: i32) -> Result<String> {
     Ok(o.0)
 }
 
+/// A delta of a partial structure, «+O -H2»: signed formulas (spaces optional, «+O-H2» too). Empty text = no delta. `error.grafo.delta` with the text otherwise.
+pub fn parse_delta(s: &str) -> Result<Vec<(i64, Formula)>> {
+    let bad = || Error::new("error.grafo.delta").with("delta", s.trim());
+    let c: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+    let mut out = vec![];
+    let mut rest = c.as_str();
+    while !rest.is_empty() {
+        let sign = match rest.chars().next() {
+            Some('+') => 1,
+            Some('-') | Some('\u{2212}') => -1,
+            _ => return Err(bad()),
+        };
+        rest = &rest[rest.chars().next().map_or(1, char::len_utf8)..];
+        let end = rest.find(['+', '-', '\u{2212}']).unwrap_or(rest.len());
+        let f = elements::parse_formula(&rest[..end]).map_err(|_| bad())?;
+        out.push((sign, f));
+        rest = &rest[end..];
+    }
+    Ok(out)
+}
+
+/// The delta written back in the same order, one signed Hill formula per term: «+O -H2».
+pub fn fmt_delta(d: &[(i64, Formula)]) -> String {
+    d.iter()
+        .map(|(s, f)| format!("{}{}", if *s > 0 { "+" } else { "-" }, elements::fmt(f)))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// `f` plus the delta; an element that would go below zero gives `error.grafo.delta.neg`.
+pub fn apply_delta(f: &Formula, d: &[(i64, Formula)]) -> Result<Formula> {
+    let mut acc: Vec<(String, i64)> = f.iter().map(|(e, n)| (e.clone(), *n as i64)).collect();
+    for (s, g) in d {
+        for (e, n) in g {
+            match acc.iter_mut().find(|(x, _)| x == e) {
+                Some(x) => x.1 += s * *n as i64,
+                None => acc.push((e.clone(), s * *n as i64)),
+            }
+        }
+    }
+    if let Some((e, _)) = acc.iter().find(|(_, n)| *n < 0) {
+        return Err(Error::new("error.grafo.delta.neg").with("element", e));
+    }
+    Ok(acc
+        .into_iter()
+        .filter(|(_, n)| *n > 0)
+        .map(|(e, n)| (e, n as u64))
+        .collect())
+}
+
+/// `parz/1`: a partial structure (a drawn piece whose exact position of a change is unknown) as `{"format","formula","mass","mz","delta","level":3}`:
+/// the formula of the molfile plus the delta, its neutral mass and the m/z of [M+H]+. Level 3 of Schymanski: a candidate class, never one structure.
+pub fn partial_json(molfile: &str, delta: &str) -> Result<String> {
+    let m = Mol::from_molfile(molfile)?;
+    let d = parse_delta(delta)?;
+    let f = apply_delta(&m.formula(), &d)?;
+    let mass = elements::mass(&f);
+    let mz = elements::ion_mz(mass, "[M+H]+").unwrap_or(mass);
+    let mut o = Out::default();
+    o.raw("{\"format\":\"parz/1\",\"formula\":")
+        .str(&elements::fmt(&f));
+    o.raw(",\"mass\":").num(mzlab_core::json::round(mass, 4));
+    o.raw(",\"mz\":").num(mzlab_core::json::round(mz, 4));
+    o.raw(",\"delta\":")
+        .str(&fmt_delta(&d))
+        .raw(",\"level\":3}");
+    Ok(o.0)
+}
+
 #[cfg(test)]
 mod molfile_tests {
     use super::*;
@@ -104,5 +173,25 @@ mod molfile_tests {
         assert!(j.contains("\"formula\":\"C2H6\""), "{j}");
         assert!(j.contains("\"formula\":\"H2O\""), "{j}");
         assert!(j.contains("\"mz\":19.0178"), "{j}");
+    }
+
+    #[test]
+    fn delta_parses_and_applies() {
+        let d = parse_delta(" +O -H2 ").unwrap();
+        assert_eq!(fmt_delta(&d), "+O -H2");
+        assert_eq!(fmt_delta(&parse_delta("+O-H2").unwrap()), "+O -H2");
+        assert!(parse_delta("").unwrap().is_empty());
+        assert_eq!(parse_delta("O").unwrap_err().key, "error.grafo.delta");
+        assert_eq!(parse_delta("+Xx").unwrap_err().key, "error.grafo.delta");
+        let j = partial_json(ETHANOL, "+O -H2").unwrap();
+        assert!(j.contains("\"formula\":\"C2H4O2\""), "{j}");
+        assert!(
+            j.contains("\"level\":3") && j.contains("\"delta\":\"+O -H2\""),
+            "{j}"
+        );
+        assert_eq!(
+            partial_json(ETHANOL, "-N").unwrap_err().key,
+            "error.grafo.delta.neg"
+        );
     }
 }
