@@ -236,6 +236,36 @@ def tree_cases(rng):
     return out
 
 
+def origin_case(rng):
+    """A report «where does this ion come from?»: the ion and its candidate parent a step apart (adduct, loss, isotope, dimer or none), the apex
+    difference, the strongest peaks of the two MS2 and the ratio constancy; any part may be missing."""
+    pol = int(rng.choice([1, 1, -1]))
+    par = float(rng.uniform(120, 600))
+    steps = [21.981944, 17.026549, 37.955882, 18.010565, 43.989829, 46.005479, 27.994915, 35.976678, 1.003355, float(rng.uniform(1, 80))]
+    st = float(rng.choice(steps)) * (1 + rng.normal(0, 2e-6))
+    kind = int(rng.integers(0, 4))
+    mz = par - st if kind == 0 else par + st if kind == 1 else (par - 1.007276) / 2 + 1.007276 if kind == 2 else par + float(rng.uniform(-3, 3))
+    rep = {"mz": mz, "parent_mz": par}
+    if rng.random() < 0.8:
+        rep["profile"] = {"apex_diff_s": None if rng.random() < 0.1 else float(rng.normal(0, 4))}
+    if rng.random() < 0.85:
+        p, x = _ms2(rng, par, mz if mz < par else None), _ms2(rng, mz, par if par < mz else None)
+        if p is not None and rng.random() < 0.3:
+            p = [p["mz"], p["it"]]
+        rep["ms2_peaks"] = {"p": p, "x": x}
+    if rng.random() < 0.8:
+        rep["ratio_constancy"] = {"cv": None if rng.random() < 0.1 else float(rng.uniform(0, 4)), "k": int(rng.integers(0, 12))}
+    return {"report": rep, "pol": pol if rng.random() < 0.9 else None}
+
+
+def origin_cases(rng):
+    out = []
+    for _ in range(60):
+        d = origin_case(rng)
+        out.append({"payload": d, "out": json.loads(api.origin_evidence(json.dumps(d)))})
+    return out
+
+
 def main(argv):
     rng = np.random.default_rng(20261013)
     ref = {
@@ -247,6 +277,7 @@ def main(argv):
         "identity": identity_cases(rng),
         "polarity": polarity_cases(rng),
         "tree": tree_cases(rng),
+        "origin": origin_cases(rng),
     }
     text = json.dumps(ref, sort_keys=True, allow_nan=True)
     if "--golden" in argv:
