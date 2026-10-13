@@ -94,10 +94,17 @@ fn the_intensity_array_of_a_pressure_chromatogram_gets_the_pascal_unit() {
 
 #[test]
 fn an_anonymous_copy_says_so_in_the_run_and_a_whole_one_does_not() {
-    let xml = "<run id=\"x\">\n<userParam name=\"opentfraw.computer_name\" value=\"PC\"/>\n</run>\n";
+    let xml =
+        "<run id=\"x\">\n<userParam name=\"opentfraw.computer_name\" value=\"PC\"/>\n</run>\n";
     let anon = run(xml, true);
-    assert!(anon.contains(ANONYMIZED) && !anon.contains("computer_name"), "{anon}");
+    assert!(
+        anon.contains(ANONYMIZED) && !anon.contains("computer_name"),
+        "{anon}"
+    );
     assert!(anon.find("<run ") < anon.find(ANONYMIZED));
     let whole = run(xml, false);
-    assert!(!whole.contains("anonimizzato") && whole.contains("computer_name"), "{whole}");
+    assert!(
+        !whole.contains("anonimizzato") && whole.contains("computer_name"),
+        "{whole}"
+    );
 }
