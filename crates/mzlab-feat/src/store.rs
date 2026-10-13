@@ -306,6 +306,9 @@ fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
 /// Writes the `.mzfeatf` of one file to `sink`.
 pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: &Origin) -> Result<()> {
     let mut cols = file_cols(f);
+    if !f.q3.is_empty() {
+        cols.push(("q3", Col::F64(&f.q3)));
+    }
     let dt = [f.dt];
     cols.push(("dt", Col::F64(&dt)));
     write_container(sink, "file", r, o, &[("rows", f.len())], "", &cols, &mut (&[][..]))
@@ -381,6 +384,9 @@ pub fn write_table_tp<W: WriteAt>(
         ("ms2_file", Col::U32(&m.ms2_file)),
         ("ms2_purity", Col::F32(&m.ms2_purity)),
     ];
+    if !t.q3.is_empty() {
+        cols.push(("q3", Col::F64(&t.q3)));
+    }
     let ident = !t.ident.is_empty();
     if ident {
         cols.push(("neutral", Col::F64(&t.ident.neutral)));

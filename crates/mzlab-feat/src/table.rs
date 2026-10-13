@@ -55,6 +55,13 @@ impl FileFeatures {
             mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts, flags, iso_group,
             charge, shape, snr, fwhm, asym, gaps, qreason, ms2_n, purity, area_win
         );
+        self.push_q3(src, i);
+    }
+
+    fn push_q3(&mut self, src: &FileFeatures, i: usize) {
+        if !src.q3.is_empty() {
+            self.q3.push(src.q3[i]);
+        }
     }
 
     /// Append the columns that `align` reads of row `i` of `src` (m/z, RT, limits, area, height, flags): the weak tier needs no more.
@@ -63,6 +70,7 @@ impl FileFeatures {
             ($($c:ident),*) => { $( self.$c.push(src.$c[i]); )* };
         }
         cp!(mz, rt, left, right, area, height, flags);
+        self.push_q3(src, i);
     }
 
     /// Bytes of the table in a fixed layout (little-endian, column by column), the input of the digest of the output.
@@ -74,6 +82,7 @@ impl FileFeatures {
             ($($c:ident),*) => { $( for v in &self.$c { b.extend_from_slice(&v.to_le_bytes()); } )* };
         }
         put!(mz, rt, left, right, apex, scan_lo, scan_hi, area, height, npts);
+        put!(q3);
         b.extend_from_slice(&self.flags);
         put!(iso_group);
         b.extend(self.charge.iter().map(|&v| v as u8));
@@ -90,6 +99,8 @@ impl FileFeatures {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FileFeatures {
     pub mz: Vec<f64>,
+    /// MRM only: the Q3 of the transition of each peak (`mz` is its Q1); empty in a file of ions.
+    pub q3: Vec<f64>,
     pub rt: Vec<f32>,
     pub left: Vec<f32>,
     pub right: Vec<f32>,
