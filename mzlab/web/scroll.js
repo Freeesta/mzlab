@@ -97,7 +97,7 @@ function toggleLock(p) {
 // several requests in a frame = one drawing; while a drawing is still waiting for its data the next one is remembered (one, not a queue) and made when it ends
 function drawSoon(p) {
   if (p._ds) return;
-  p._ds = requestAnimationFrame(async () => {
+  p._ds = FRAME.next(async () => {
     p._ds = 0; if (p._dr) { p._dq = true; return; }
     p._dr = true; try { await draw(p); } finally { p._dr = false; if (p._dq) { p._dq = false; drawSoon(p); } }
   });
@@ -127,7 +127,7 @@ const walkTarget = (play) => {
   if (!fp && ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
   return ap && E.panels.includes(ap) && ap._a && ap._a.sr && (ap.cur != null || (play && ap.sel)) ? ap : null;
 };
-function playStop() { if (PLAY.raf) cancelAnimationFrame(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
+function playStop() { FRAME.cancel(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
 function playStart(p) {
   const sel = p.sel && p.sel[1] > p.sel[0] ? [p.sel[0], p.sel[1]] : null;
   if (sel && (p.cur == null || p.cur < sel[0] || p.cur > sel[1])) p.cur = sel[0];
@@ -139,19 +139,20 @@ function playStart(p) {
       if (sl) { if (PLAY.dir > 0 && q.cur >= sl[1] - 1e-9) PLAY.dir = -1; else if (PLAY.dir < 0 && q.cur <= sl[0] + 1e-9) PLAY.dir = 1; }
       if (!stepScan(q, PLAY.dir, { keepSel: !!sl })) { if (sl) PLAY.dir = -PLAY.dir; else return playStop(); }
     }
-    PLAY.raf = requestAnimationFrame(tick);
+    PLAY.raf = FRAME.next(tick);
   };
-  PLAY.raf = requestAnimationFrame(tick);
+  PLAY.raf = FRAME.next(tick);
 }
 function keyLoop() {
   if (KEY.raf) return;
   const tick = now => {
     KEY.raf = 0; if (!KEY.dir || !KEY.p) return;
     if (now - KEY.t0 >= 350 && paceDue(KEY, now)) { if (!stepScan(KEY.p, KEY.dir * KEY.n)) { KEY.dir = 0; return; } }
-    KEY.raf = requestAnimationFrame(tick);
+    KEY.raf = FRAME.next(tick);
   };
-  KEY.raf = requestAnimationFrame(tick);
+  KEY.raf = FRAME.next(tick);
 }
+document.addEventListener("keyup", e => { if (e.key === " " && PLAY.space) { PLAY.space = false; e.preventDefault(); } });   // Space on a focused button would also click it on release
 const typingNow = () => /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || !!Q("dialog[open]");
 document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
@@ -160,7 +161,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "?") { e.preventDefault(); shortcuts(); return; }
   if (e.key === " ") {
     const ap = walkTarget(true); if (!ap) return;
-    e.preventDefault(); if (e.repeat) return;
+    e.preventDefault(); PLAY.space = true; if (e.repeat) return;
     if (PLAY.p) playStop(); else playStart(ap);
     return;
   }
