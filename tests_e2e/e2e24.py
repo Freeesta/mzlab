@@ -8,6 +8,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:400]))
 KQ = "document.getElementById('kframe').contentWindow.ketcher"
+SELALL = "(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ
 SITE = os.environ.get("SITE")
 errs = []
 srv = None
@@ -68,7 +69,8 @@ try:
         step("2.0 no other control erases the drawing (labels, ion, selection, 4 exports, examples, tab switch, resize, reload)", no_control_erases)
         # ---------------------------------------------------------------- 2.1 charge excluded
         def logp_of(smi):
-            setmol(pg, smi); pg.wait_for_timeout(1500); rows = pg.evaluate(PROPS); return rows
+            setmol(pg, smi); pg.evaluate(SELALL); pg.wait_for_timeout(1500)      # the table is filled only for a selected molecule
+            rows = pg.evaluate(PROPS); return rows
         def charge():
             acid = logp_of("CC(=O)O"); ac = logp_of("CC(=O)[O-]")
             assert acid and ac and acid[0][1] == ac[0][1] != "–", (acid, ac)
@@ -128,8 +130,8 @@ try:
         step("2.3 SMILES of the selection (rectangle, select all, partial, single click) and logP rows", selection)
         def logp_without_selection():
             pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(1000)
-            rows = pg.evaluate(PROPS); assert len(rows) == 2 and all(re.match(r"-?\d", x[1]) for x in rows), rows
-        step("2.3 logP box without selection: all structures", logp_without_selection)
+            assert pg.evaluate(PROPS) == [] and "Seleziona una molecola" in pg.inner_text("#prop-body")
+        step("2.3 logP box without selection: only the hint", logp_without_selection)
         def exports():
             setmol(pg, "CC(=O)Nc1ccc(O)cc1")
             def grab(fmt):
