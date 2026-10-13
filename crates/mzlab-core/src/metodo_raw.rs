@@ -1,7 +1,7 @@
 //! The Thermo `.raw` adapter of `metodo/1` (`metodo.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
 //! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`metodo_raw/script.rs`) and, in `campi`,
 //! every other field of the container, of the scan trailer and of the method (`metodo_raw/campi.rs`). What is only guessed from position is marked in `docs/agenti/metodo.md`.
-//! The status log is not decoded: `avvisi` says so. An anonymous document leaves out the user, the computer, the serial number and the paths, also inside the texts.
+//! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so. An anonymous document leaves out the user, the computer, the serial number and the paths, also inside the texts.
 
 pub(crate) mod campi;
 mod script;
@@ -147,6 +147,20 @@ fn raw_texts(blocks: &[String], ident: &Ident, anon: bool) -> Vec<V> {
     out
 }
 
+/// The warning that the status log is there and was not decoded.
+fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
+    let missing = raw.status_log.is_none() && raw.run_header.sample_info.inst_log_length > 0;
+    missing
+        .then(|| {
+            obj(vec![
+                ("chiave", Some(V::s("meta.nonDecodificato"))),
+                ("dove", Some(V::s("Status log"))),
+            ])
+        })
+        .into_iter()
+        .collect()
+}
+
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let anon = src.anonymous;
@@ -174,10 +188,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         }
         v
     });
-    let mut warn = vec![obj(vec![
-        ("chiave", Some(V::s("meta.nonDecodificato"))),
-        ("dove", Some(V::s("Status log"))),
-    ])];
+    let mut warn = status_warning(raw);
     if blocks.is_empty() {
         warn.push(obj(vec![
             ("chiave", Some(V::s("meta.mancante"))),

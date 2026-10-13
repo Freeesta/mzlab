@@ -336,6 +336,9 @@ pub fn fields(
     all.extend(run_header(raw));
     all.extend(analog(traces));
     all.extend(trailer(raw));
+    if let Some(log) = &raw.status_log {
+        all.extend(status::fields(log));
+    }
     for (t, k, v, u) in pairs {
         let from = t.map_or("thermo-raw:InstrumentMethod/Script".to_string(), |t| {
             format!("thermo-raw:InstrumentMethod/Script@{t}min")
@@ -362,5 +365,6 @@ pub fn fields(
     all.iter().filter_map(Campo::json).collect()
 }
 
+mod status;
 #[cfg(test)]
 mod tests;
