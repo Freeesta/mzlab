@@ -25,7 +25,7 @@ Stato attuale; aggiornalo riscrivendo le righe, non aggiungendo storia. Il nucle
 - Barra di avanzamento (`#busybar`, in `explore.js` dopo `loading()`): `window.fetch` è avvolto, e ogni chiamata `api/...` ancora in corso dopo ~1 s la mostra (sotto la schermata di caricamento resta nascosta); senza animazione con animazioni ridotte.
 
 - **Tabella dei picchi**: `Run.table(livello, polarità)` è una vista sul `.mzidx` del file (formato in `docs/agenti/mzidx.md`), costruito alla prima richiesta e riaperto senza rileggere gli spettri; XIC, TIC, mappa e spettri leggono fette (`PeakTable.iter_chunks`, `sum_by_scan`, `base_peaks`), la memoria resta piatta. Cartella degli indici nel server di sviluppo: `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; i test ne usano una temporanea).
-  Nel sito file e indici stanno in OPFS (vedi `mzidx.md`); la sezione «Archivio nel browser» dell'ingranaggio li mostra (file caricati, indici, quota) e li toglie («Rimuovi file e indici», «Reset completo…»).
+  Nel sito file e indici stanno in OPFS (vedi `mzidx.md`); l'ingranaggio ha un solo pulsante per toglierli, «Reset completo…» (con la sua conferma).
 
 ## Schede e grafici
 - **Schede** Full Scan / MS2 / MRM: mai grafici misti. Vista iniziale: TIC + spettro all'apice (+ MRM); DDA/IDA: trio in colonna (cromatogramma, Full Scan MS1 a tutta larghezza, MS2 sotto). «Mostra tutti gli esperimenti insieme» (ingranaggio, spenta di base): `tabs.js` `setTogether`, `allTabs()`; test `e2e_tutti`.

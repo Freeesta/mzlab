@@ -383,6 +383,7 @@ const BARRA = (() => {
     applyLayout();
     updateButtons();
     saveState();
+    if (restoreFocus && !hintSeen()) hintShow();      // the first time the user hides the tools
     const o = _opener;
     _opener = null;
     if (restoreFocus && o && document.contains(o) && o.offsetParent !== null) o.focus({ preventScroll: true });
@@ -957,7 +958,7 @@ const BARRA = (() => {
     fit();
   }
 
-  // First-visit hint anchored under the toolbar. Never together with the tour invitation (it waits until that is answered), closes on Esc, ×, or the first tool opened.
+  // Hint anchored under the toolbar: shown only the first time the user hides the tools (marked seen at once, so never again), closes on Esc, ×, the first tool opened or after 10 s.
   let _hintMem = false, _hintTimer = 0, _hintRo = null;
   function hintSeen() { try { return !!localStorage.getItem(K_HINT); } catch (_) { return _hintMem; } }
   function hintMark() { _hintMem = true; try { localStorage.setItem(K_HINT, "1"); } catch (_) { /* none */ } }
@@ -974,7 +975,8 @@ const BARRA = (() => {
   function hintOnKey(e) { if (e.key === "Escape") hintClose(true); }
   function hintClose(mark) {
     const el = document.getElementById("bar-hint");
-    if (!el) return;             // not on screen yet: leave the waiting timer of hintMaybe alone (show() runs during the boot too)
+    if (!el) return;             // not on screen
+    clearTimeout(_hintTimer);
     el.remove();
     document.removeEventListener("keydown", hintOnKey);
     window.removeEventListener("resize", hintPlace);
@@ -999,28 +1001,14 @@ const BARRA = (() => {
     el.append(txt, x);
     document.body.appendChild(el);
     hintPlace();
+    hintMark();
+    _hintTimer = setTimeout(() => hintClose(false), 10000);
     document.addEventListener("keydown", hintOnKey);
     window.addEventListener("resize", hintPlace);
     document.addEventListener("fullscreenchange", hintPlace);
     if (typeof ResizeObserver !== "undefined") { _hintRo = new ResizeObserver(hintPlace); [bar, document.querySelector("header"), el].forEach(x => x && _hintRo.observe(x)); }      // the header or toolbar change size: the arrow follows
     return true;
   }
-  // Called after loading: waits (up to 2 minutes) until the tour invitation or the tour itself are gone, then shows the hint once.
-  function hintMaybe() {
-    if (hintSeen() || window.QQQ_PHONE) return;
-    clearTimeout(_hintTimer);
-    let n = 0;
-    const tick = () => {
-      if (hintSeen() || ++n > 240) return;
-      const busy = document.getElementById("tour-invito") || (window.TOUR && TOUR.active);
-      let tourKnown = false;       // the tour invitation comes a moment after loading: wait for its state, or 10 s when the tour is never offered (HR)
-      try { tourKnown = !!localStorage.getItem("qqq.tour.lr"); } catch (_) { /* none */ }
-      if (!busy && (tourKnown || n > 20) && inData() && hintShow()) return;
-      _hintTimer = setTimeout(tick, 500);
-    };
-    _hintTimer = setTimeout(tick, 600);
-  }
-
   function init() {
     if (_mounted) return;
     _mounted = true;
@@ -1055,7 +1043,6 @@ const BARRA = (() => {
 
   return {
     init,
-    hintMaybe,
     hintShow,
     hintClose,
     commands: CMD,

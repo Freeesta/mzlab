@@ -562,10 +562,13 @@ const TOUR = (() => {
       `;
       document.body.appendChild(div);
 
+      let idle = 0;
       const closeInv = () => {
+        clearTimeout(idle);
         if (div.parentNode) div.remove();
         document.removeEventListener("keydown", onInvKeyDown);
       };
+      idle = setTimeout(closeInv, 60000);      // no answer within a minute counts as «Not now» (the invitation is already marked as offered)
 
       const onInvKeyDown = e => {
         if (e.key === "Escape") {
@@ -575,6 +578,7 @@ const TOUR = (() => {
 
       document.addEventListener("keydown", onInvKeyDown);
       try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) {}
+      ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));      // whoever is reading or choosing keeps it
 
       div.querySelector("#tour-inv-si").onclick = () => {
         closeInv();
