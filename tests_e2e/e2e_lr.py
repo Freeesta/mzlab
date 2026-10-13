@@ -95,10 +95,12 @@ try:
         ref = PyRef(FILES, pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"])         # the same samples as the page posted
         def classic():
             py = {"state": ref.get("api/state")["j"], "session": ref.get("api/session")["j"]}
-            # `msn` (infusion recognised from the index, `infusione.rs`) is the engine's alone: the reference has no such field
+            # `msn` (infusion recognised from the index, `infusione.rs`) is the engine's alone, in the files and in the session: the reference has no such field
             json_close([{k: v for k, v in f.items() if k != "msn"} for f in lr_snap["state"]["files"]], py["state"]["files"], path="state.files")
             json_close({k: v for k, v in lr_snap["state"].items() if k not in ("files", "workdir")}, {k: v for k, v in py["state"].items() if k not in ("files", "workdir")}, path="state")
-            json_close({k: v for k, v in lr_snap["session"].items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+            lr_session = {k: v for k, v in lr_snap["session"].items() if k not in ("workdir", "commit")}
+            lr_session["session"] = [{k: v for k, v in f.items() if k != "msn"} for f in lr_session["session"]]
+            json_close(lr_session, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
         step("the JSON of state and session equals the Python reference", classic)
         def same_as_classic():
             urls = ["api/spectrum?k=0&rt0=0&rt1=1000&level=1&precursor=&merge=1", "api/spectrum?k=1&rt0=1&rt1=2.5&level=1&bin=0.5", "api/spectrum?k=0&rt0=3&rt1=3&level=1",
