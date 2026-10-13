@@ -5,7 +5,7 @@
 // classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
 // then detail, inclusion_csv, frag_tree and frag_tree_compare of that run; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
 // and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
-// every call when the site has no wasm-feat/ (a copy built without it).
+// every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
 /** @type {any} */ let py = null;
 /** @type {any} */ let api = null;
 /** @type {any} */ let init = null;               // the init message: Pyodide is loaded from it only when needed
@@ -16,6 +16,7 @@
 /** @type {any} */ let featPool = null;
 /** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
 /** @type {any} */ let ingress = null;            // finder-idx.js
+/** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
@@ -189,6 +190,7 @@ const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect };
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held, DEFAULT_TR))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
   if (fn === "classify") {

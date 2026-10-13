@@ -46,7 +46,7 @@ def unit_and_mode(scans):
                 q = v / u
                 if rnd(q) >= 1.0 and abs(q - rnd(q)) <= 0.01:
                     ok += 1
-    return u, (COUNTS if allc > 0 and ok >= 0.995 * allc else CONTINUOUS)
+    return u, (COUNTS if allc > 0 and ok >= 0.95 * allc else CONTINUOUS)
 
 
 def step_and_grid(scans):
