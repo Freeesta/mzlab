@@ -70,6 +70,12 @@ pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &
     core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
 }
 
+/// The `campioni/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
+#[wasm_bindgen]
+pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
+    core::samples_json(files_json).map_err(js_err)
+}
+
 /// The `qc/1` of a table under the view `spec` (empty = the whole table).
 #[wasm_bindgen]
 pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str) -> std::result::Result<String, JsValue> {

@@ -12,6 +12,7 @@ import { makeConvertRaw } from "./rust-raw.js";
 import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeConvertAgilent } from "./rust-agilent.js";
+import { makeConvertLettori } from "./rust-lettori.js";
 import { makeRecycler } from "./rust-recycle.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
@@ -108,7 +109,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
   api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
-  Object.assign(api, wiffApi(rpc, base), { convertAgilent: makeConvertAgilent({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertCentroids: makeConvertCentroids({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }) });      // wiffSamples, convertWiff (rust-convert.js); convertAgilent: Agilent .D folder -> Blob of mzML (rust-agilent.js); convertCentroids: profile mzML of the archive -> one point per peak (rust-centroidi.js)
+  Object.assign(api, wiffApi(rpc, base), { convertAgilent: makeConvertAgilent({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertLettori: makeConvertLettori({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertCentroids: makeConvertCentroids({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }) });      // wiffSamples, convertWiff (rust-convert.js); convertAgilent: Agilent .D folder -> Blob of mzML (rust-agilent.js); convertLettori: any dataset of a maker -> Blob of mzML through the readers of the registry (rust-lettori.js); convertCentroids: profile mzML of the archive -> one point per peak (rust-centroidi.js)
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

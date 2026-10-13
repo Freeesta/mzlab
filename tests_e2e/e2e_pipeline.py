@@ -5,6 +5,7 @@ Builds the site (python3 tools/build_site.py) and the two .wasm of the feature e
 opens the panel. Needs cargo, the wasm32 target, wasm-bindgen and numpy (SKIP without). MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site (the TP_Mine
 files are copied over it); MZLAB_PIPE_MZIDX=<file .mzidx> adds the time of the preview on a real file (its time is printed).
 Run from the repo root: python3 tests_e2e/e2e_pipeline.py"""
+import re
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -139,6 +140,8 @@ try:
             assert pg.locator("#pv-list [data-cand]").count() == 0 and pg.locator("#pv-dis").count() == 0, "candidates in the DOM without the gate"
             assert "no candidates" in pg.inner_text("#pipe-res")
             assert not pg.evaluate("/C21H32N2O2|against|1\\/\\d/.test(document.querySelector('#pipe-res').textContent)")
+            pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
+            assert "Table view not validated" in pg.inner_text("#pipe-tab") and pg.locator("#ft-g").count() == 0, "the table view needs vista_tabella"
         step("without the gate the run lists rows (traces and families) and no candidate is in the DOM", run_plain)
 
         def run_gated():
@@ -195,6 +198,49 @@ try:
             pg.wait_for_function("document.querySelector('#pv-ch .a').textContent.includes('Open ')", timeout=20000)
             pg.evaluate("window.fetch = window.__fetch; null")
         step("the click on a row shows proofs, cells, XIC and MS2 (each with its table of data)", detail_charts)
+
+        def qc_step():
+            pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
+            n = len(names)
+            got = pg.locator("#pipe-qc table >> nth=0 >> tr").count(); assert got == n + 1, f"one row per file: {got} rows for {n} files: " + pg.inner_text("#pipe-qc")[:500]
+            pg.locator("#qc-m svg").focus(); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+            assert pg.locator("#tdati table tr").count() >= n, "the chart has its table of data"
+            pg.keyboard.press("Escape")
+            assert "Table view: validated" in pg.inner_text("#pipe-qc") and "Candidate view: validated" in pg.inner_text("#pipe-qc")
+        step("quality control: matrix D/T/F/A per file with its table, numbers of the engine, state of the gate", qc_step)
+
+        def table_step():
+            pg.wait_for_function("document.querySelector('#ft-n').textContent.includes(' of ')", timeout=60000)
+            txt = pg.inner_text("#ft-n"); kept, total = [int(x.replace(',', '')) for x in re.findall(r"[\d,]+", txt)]
+            assert kept == total > 0, txt
+            assert 0 < pg.locator("#ft-g .ft-win .ft-r").count() < 80
+            pg.select_option("#ft-norm", "somma"); pg.fill("#ft-det", str(len(names) // 2)); pg.wait_for_timeout(600)
+            kept2 = int(re.findall(r"[\d,]+", pg.inner_text("#ft-n"))[0].replace(',', ""))
+            assert kept2 < total, (kept2, total, pg.inner_text("#ft-why"), pg.input_value("#ft-det"), pg.input_value("#ft-norm"))
+            assert pg.inner_text("#ft-why").startswith("Rejected by each filter"), pg.inner_text("#ft-why")
+            pg.click("#ft-g .ft-win .ft-r >> nth=0")
+            pg.wait_for_selector("#pv-det:not([hidden]) #pv-ch .ch.a", timeout=20000)
+            assert pg.locator("#pv-det h4").inner_text().startswith("Row "), pg.locator("#pv-det h4").inner_text()
+            out = os.environ.get("MZLAB_PIPE_SHOTS")
+            if out:
+                pg.wait_for_timeout(500)
+                for sel, nm in (("#pipe-qc", "qc"), ("#pipe-tab", "tabella")): pg.locator(sel).screenshot(path=str(Path(out) / f"pipeline_{nm}.png"))
+        step("table: normalisation and filters as a view with «N of M rows», virtualised grid, click opens the row", table_step)
+
+        def export_step():
+            def get(i):
+                with pg.expect_download(timeout=60000) as d: pg.click("#px-" + i)
+                return Path(d.value.path()).read_bytes()
+            assert get("mzmine").startswith(b"id,mz,rt"), "CSV for mzmine"
+            assert get("full").startswith(b"id,mz,rt")
+            assert get("xlsx")[:2] == b"PK", "xlsx is a zip"
+            assert get("semi").startswith(b"\xef\xbb\xbf"), "CSV with ; has a BOM"
+            z = get("fbmn"); assert z[:2] == b"PK" and b"quant.csv" in z and b"ms2.mgf" in z, "FBMN zip"
+            pg.wait_for_function("document.querySelector('#px-msg').textContent.includes('done')", timeout=20000)
+            get("sirius")
+            html = get("report").decode(); assert "mzFinder feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
+            assert "error" not in pg.inner_text("#px-msg").lower(), pg.inner_text("#px-msg")
+        step("export and report: mzmine, cells, xlsx, CSV with BOM, FBMN zip, SIRIUS and the report come from the engine", export_step)
 
         def unt():
             pg.click("#pv-unt")
