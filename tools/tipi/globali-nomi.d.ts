@@ -47,6 +47,7 @@ declare var EXPORTING: any;
 declare var FEATURES: any;
 declare var FIG: any;
 declare var FILE_COLORS: any;
+declare var FRAME: any;
 declare var FT: any;
 declare var GRP_HR: any;
 declare var HASH_VIEW: any;
