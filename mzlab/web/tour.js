@@ -48,14 +48,6 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
 const TOUR = (() => {
   const STORAGE_KEY = "qqq.tour.lr";
 
-  // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
-  const openFileDrawer = () => {
-    if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
-      const wasOpen = BARRA.isOpen();
-      BARRA.show("file", { noFocus: true, instant: true });
-      return () => { if (!wasOpen) BARRA.close(false); };
-    }
-  };
   const STEPS_CAP1 = [
     {
       id: "file",
@@ -152,6 +144,14 @@ const TOUR = (() => {
   let currentTargetEl = null;
   let curLeave = null;      // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
 
+  // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
+  function openFileDrawer() {
+    if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
+      const wasOpen = BARRA.isOpen();
+      BARRA.show("file", { noFocus: true, instant: true });
+      return () => { if (!wasOpen) BARRA.close(false); };
+    }
+  }
   const isReducedMotion = () => {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   };
