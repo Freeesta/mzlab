@@ -84,6 +84,20 @@ try:
             assert pg.evaluate("BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#nl-q") == "170.2"
             shut(pg, "#refx")
         step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
+        def ruler_label():
+            def lbl_pos(a_, b_):
+                pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:{a_},list:[{{a:{a_},b:{b_}}}]}};draw(p)}})()"); pg.wait_for_timeout(500)
+                return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.find(b=>b.dm!=null);return l?[q.left+l.x+l.w/2,q.top+l.y+l.h/2,l.tip,!!l.ap]:null}})()")
+            l = lbl_pos(364.4, 194.2); assert l and not l[3] and "perdite" in l[2], l
+            pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
+            assert not pg.evaluate("document.querySelector('#ctx') && !document.querySelector('#ctx').hidden"), "the general menu must not open on the label"
+            assert pg.evaluate("BARRA.curTab === 'losses'") and pg.input_value("#nl-q") == "170.2", "right click on the label: losses filtered on the value"
+            shut(pg, "#refx")
+            l = lbl_pos(300, 321.9819); assert l and l[3] and "[M+Na]" in l[2] and "[M+H]" in l[2], l
+            pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
+            assert pg.evaluate("BARRA.curTab === 'adducts'"), "right click on an adduct label: adducts tab"
+            shut(pg, "#refx")
+        step("4.8: ruler label: right click straight to losses / adducts, short adduct symbol with the full form in the tip", ruler_label)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
