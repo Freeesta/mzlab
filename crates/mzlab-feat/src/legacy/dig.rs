@@ -134,8 +134,10 @@ fn delta(f: &Formula, parent: &Formula) -> String {
     format!("{sign}{}", fmt(&abs))
 }
 
+/// The parent row of the TP view when the table has one (an empty `tp/1` block says nothing: its `parent_row` is the default 0), else the
+/// largest summed area within `PARENT_PPM` of the [M+H]+.
 fn parent_row(t: &Aligned, p: &Parent) -> Option<usize> {
-    if t.tp.parent_row != NO_PARENT && (t.tp.parent_row as usize) < t.len() {
+    if !t.tp.is_empty() && t.tp.parent_row != NO_PARENT && (t.tp.parent_row as usize) < t.len() {
         return Some(t.tp.parent_row as usize);
     }
     let area = |r: usize| {
@@ -441,3 +443,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
         warnings,
     })
 }
+
+#[cfg(test)]
+#[path = "dig_tests.rs"]
+mod tests;
