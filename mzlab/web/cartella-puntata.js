@@ -62,7 +62,9 @@ const CartPuntVista = (() => {
         : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
           + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
     }
-    box.innerHTML = head + `<div role="status" aria-live="polite">${body}</div>`;
+    const go = nat || S.perm === "granted" ? `<p class="sm muted">${T("cartp.go.hint")}</p><button type="button" class="go" id="cartgo" ${document.getElementById("opbtn") && document.getElementById("opbtn").disabled === false ? "" : "disabled"}>${T("cartp.go")}</button>` : "";
+    box.innerHTML = head + go + `<div role="status" aria-live="polite">${body}</div>`;
+    const cg = box.querySelector("#cartgo"); if (cg) cg.onclick = () => document.getElementById("opbtn").click();
     box.querySelector("#cartforget").onclick = () => CartPunt.forget(); box.querySelector("#cartrefresh").onclick = () => CartPunt.rescan();
     const g = box.querySelector("#cartgrant"); if (g) g.onclick = () => CartPunt.grant();
     box.querySelectorAll(".cprow").forEach(b => { b.onclick = () => CartPunt.open(S.items[+b.dataset.i]); });
