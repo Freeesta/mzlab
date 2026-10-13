@@ -54,7 +54,7 @@ fn with_block() -> Aligned {
         aligned: &t,
         minutes: &MINUTES,
         hyps: &[],
-        signs: &vec![[0; 10]; 4],
+        signs: &[[0; 10]; 4],
         parent: (300.0, 5.0),
         fragments: None,
         params: &p,
@@ -130,7 +130,12 @@ fn roles_have_one_reader() {
 
 #[test]
 fn given_rows_need_no_block() {
-    let v = parse(table_json(&table(), &samples(), Some(&[2, 1])).unwrap().as_bytes()).unwrap();
+    let v = parse(
+        table_json(&table(), &samples(), Some(&[2, 1]))
+            .unwrap()
+            .as_bytes(),
+    )
+    .unwrap();
     let rows = v.get("rows").unwrap().arr();
     assert_eq!(rows.len(), 2);
     // in the order asked, the contaminant of the blank is there and says so, the status is null without the block
@@ -138,5 +143,10 @@ fn given_rows_need_no_block() {
     assert_eq!(rows[0].get("in_blank").and_then(|x| x.bool()), Some(true));
     assert!(rows[0].get("status").is_some_and(|x| x.is_null()));
     assert!(v.get("parent").is_some_and(|x| x.is_null()));
-    assert_eq!(table_json(&table(), &samples(), Some(&[9])).unwrap_err().key, "error.badView");
+    assert_eq!(
+        table_json(&table(), &samples(), Some(&[9]))
+            .unwrap_err()
+            .key,
+        "error.badView"
+    );
 }
