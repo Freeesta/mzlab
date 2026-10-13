@@ -57,7 +57,7 @@ impl<R: ReadAt> Routes<R> {
         if pool.is_empty() || pool.iter().any(|s| !s.profile) || of_level_count(&self.idx.scans, level) == 0 {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         if self.idx.sections[si].n_scans != of_level_count(&self.idx.scans, level) {
             return Ok(None);
         }
@@ -80,7 +80,7 @@ impl<R: ReadAt> Routes<R> {
         levels.dedup();
         for level in levels {
             let all_profile = self.idx.scans.iter().filter(|s| s.level == level).all(|s| s.profile);
-            let f4 = self.idx.section_of(level, None).is_some_and(|si| self.idx.sections[si].f4);
+            let f4 = self.idx.section_of(level, self.pol).is_some_and(|si| self.idx.sections[si].f4);
             if !all_profile || !f4 || self.steps.iter().any(|(l, _)| *l == level) {
                 continue;
             }

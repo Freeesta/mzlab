@@ -12,7 +12,7 @@ use crate::routes::Routes;
 impl<R: ReadAt> Routes<R> {
     /// The section of a level with its scan RTs; None when the level has no peaks to map.
     fn map_level(&mut self, level: u8) -> Result<Option<(usize, Vec<f64>)>> {
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         if self.idx.sections[si].n_peaks == 0 || self.idx.sections[si].n_scans == 0 {
             return Ok(None);
         }
@@ -126,7 +126,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// `Item.xic` for one level: the RT of every scan and the summed intensity within `mz ± tol` (empty when the level has no section).
     pub(crate) fn xic_arrays(&mut self, mz: f64, tol: f64, level: u8) -> Result<(Vec<f64>, Vec<f64>)> {
-        let Some(si) = self.idx.section_of(level, None) else { return Ok((vec![], vec![])) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok((vec![], vec![])) };
         let (a, b) = (self.idx.search(si, mz - tol, false)?, self.idx.search(si, mz + tol, true)?);
         let y = if b <= a { vec![0.0; self.idx.sections[si].n_scans] } else { self.idx.sum_window(si, a, b)? };
         Ok((self.idx.arrays(si)?.rt.clone(), y))

@@ -219,7 +219,7 @@ onmessage = async ev => {
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
-        info = engine.open_index(m.slot, blob.size, readerFor(blob)); break;
+        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); break;
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
