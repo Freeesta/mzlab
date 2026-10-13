@@ -169,15 +169,6 @@ impl LettoreWiff {
     }
 }
 
-fn field(nome: &str, valore: impl ToString) -> Campo {
-    Campo {
-        nome: nome.into(),
-        valore: valore.to_string(),
-        unita: None,
-        cv: None,
-    }
-}
-
 impl Lettore for LettoreWiff {
     fn formato(&self) -> Formato {
         Formato::SciexWiff
@@ -286,5 +277,14 @@ impl LettoreWiff {
     /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
     pub fn membro_scan(&self) -> u16 {
         self.scan_member
+    }
+}
+
+fn field(nome: &str, valore: impl ToString) -> Campo {
+    Campo {
+        nome: nome.into(),
+        valore: valore.to_string(),
+        unita: None,
+        cv: None,
     }
 }
