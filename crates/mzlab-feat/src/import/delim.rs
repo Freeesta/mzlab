@@ -57,7 +57,7 @@ pub fn txt(v: &str) -> &str {
 }
 
 /// The cell of column `i` (empty when the column is missing or the row is short).
-pub fn cell<'a>(r: &'a [String], i: Option<usize>) -> &'a str {
+pub fn cell(r: &[String], i: Option<usize>) -> &str {
     i.and_then(|i| r.get(i)).map_or("", |s| s.as_str())
 }
 
@@ -130,13 +130,16 @@ pub fn split_quoted(line: &str, d: u8) -> Vec<String> {
     out
 }
 
+/// A test of the cells of a candidate header row.
+pub type HeaderTest<'a> = Option<&'a dyn Fn(&[String]) -> bool>;
+
 /// `eachRow`: `on_header(names)` runs for the first row (or the first one `is_header` accepts) and gives the state of the reader (the columns it found);
 /// `on_row(state, cells, row number)` runs for each following one. Quoted newlines are joined, empty lines after the header are skipped.
 /// Returns the state, or `None` when the text has no header.
 pub fn each_row<S>(
     text: &str,
     d: u8,
-    is_header: Option<&dyn Fn(&[String]) -> bool>,
+    is_header: HeaderTest,
     on_header: impl FnOnce(&[String]) -> Result<S, ImportError>,
     mut on_row: impl FnMut(&mut S, &[String], usize) -> Result<(), ImportError>,
 ) -> Result<Option<S>, ImportError> {

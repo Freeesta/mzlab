@@ -15,7 +15,11 @@ thread_local! {
 
 fn js_err(e: ImportError) -> JsValue {
     let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{\"message\":").str(&e.msg).raw("}}");
+    o.raw("{\"error_key\":")
+        .str(e.key)
+        .raw(",\"params\":{\"message\":")
+        .str(&e.msg)
+        .raw("}}");
     JsValue::from_str(&o.0)
 }
 
@@ -34,14 +38,22 @@ pub fn detect(name: &str, head: &str) -> String {
 /// Stages one file of the table (its SHA-256 is kept in the table).
 #[wasm_bindgen]
 pub fn add(name: &str, sha256: &str, text: String) {
-    STAGED.with(|s| s.borrow_mut().push(InFile { name: name.into(), text, sha256: sha256.into() }));
+    STAGED.with(|s| {
+        s.borrow_mut().push(InFile {
+            name: name.into(),
+            text,
+            sha256: sha256.into(),
+        })
+    });
 }
 
 /// ONE table (JSON, the model of the untargeted view) from the staged files; `pol` 1, -1 or 0, `max_features` 0 = no limit. The staged files are dropped.
 #[wasm_bindgen]
 pub fn build(pol: i32, max_features: u32) -> std::result::Result<String, JsValue> {
     let files = STAGED.with(|s| std::mem::take(&mut *s.borrow_mut()));
-    import::build(&files, pol, max_features as usize).map(|t| import::table_json(&t)).map_err(js_err)
+    import::build(&files, pol, max_features as usize)
+        .map(|t| import::table_json(&t))
+        .map_err(js_err)
 }
 
 /// Drops the staged files without building (the user closed the dialog).
@@ -52,10 +64,26 @@ pub fn clear() {
 
 /// Does the formula explain the precursor? `{"ok": true|false|null, "ppm", "adduct"}`; `precursor` NaN = none.
 #[wasm_bindgen]
-pub fn check_structure(formula: &str, precursor: f64, adduct: &str, pol: i32, tol_ppm: f64) -> String {
-    let c = import::check_structure(formula, (!precursor.is_nan()).then_some(precursor), adduct, pol, tol_ppm);
+pub fn check_structure(
+    formula: &str,
+    precursor: f64,
+    adduct: &str,
+    pol: i32,
+    tol_ppm: f64,
+) -> String {
+    let c = import::check_structure(
+        formula,
+        (!precursor.is_nan()).then_some(precursor),
+        adduct,
+        pol,
+        tol_ppm,
+    );
     let mut o = Out::default();
-    o.raw("{\"ok\":").raw(match c.ok { Some(true) => "true", Some(false) => "false", None => "null" });
+    o.raw("{\"ok\":").raw(match c.ok {
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "null",
+    });
     if let Some(p) = c.ppm {
         o.raw(",\"ppm\":").num(p);
     }
