@@ -1,3 +1,4 @@
+// @ts-strict
 // The data of a chart as a real HTML table (<table>, headers with scope), for readers who cannot use a canvas: one component for every chart. A chart gives
 // its data with TDATI.table({ title, head, rows, note }); the panels of the Dati view and the other charts register a provider with TDATI.attach(canvas, fn).
 // Also here: the short description of a chart (aria-describedby) and the live region that reads it only on request.
@@ -27,7 +28,7 @@ function say(text) {
 // ---- the table window
 function table(o) {
   const old = document.getElementById("tdati"); if (old) old.remove();
-  const opener = document.activeElement;
+  const opener = /** @type {HTMLElement | null} */ (document.activeElement);
   const d = document.createElement("dialog"); d.id = "tdati"; d.className = "tdati"; d.setAttribute("aria-labelledby", "tdati-h");
   const head = (o.head || []).map(h => `<th scope="col">${EH_(h)}</th>`).join("");
   const rows = (o.rows || []).map(r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`).join("");
@@ -42,7 +43,7 @@ function table(o) {
   d.querySelector('[data-td="c"]').onclick = async () => {
     const tsv = [o.head || [], ...(o.rows || [])].map(r => r.join("\t")).join("\n");
     try { await navigator.clipboard.writeText(tsv); } catch (_) { const t = document.createElement("textarea"); t.value = tsv; d.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* the table itself can be selected and copied */ } t.remove(); }
-    document.getElementById("tdati-n").textContent = T("tdati.copied");
+    /** @type {HTMLElement} */ (document.getElementById("tdati-n")).textContent = T("tdati.copied");
   };
   d.showModal();
   d.querySelector('[data-td="x"]').focus();

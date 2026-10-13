@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // «Formule compatibili»: elemental composition of an ion from its exact m/z (server: mzlab/chem/composition.py, /api/composition). High-resolution world only.
 // The answer is a list of CANDIDATES with their errors and checks, never an identification. Classic script, loaded after hr.js.
@@ -31,7 +32,7 @@ const COMP = (() => {
     const p = ps.find(x => x.id === E.active) || ps[0]; if (!p) return "";
     const d = p._a.data[0].d; return d.mz.map((m, i) => `${m.toFixed(5)} ${d.y[i].toPrecision(6)}`).join("\n");
   }
-  const halo = f => { const m = {}; String(f).replace(/(Cl|Br)(\d*)/g, (_, e, n) => { m[e] = +n || 1; }); return Object.entries(m).map(([e, n]) => e + (n > 1 ? "×" + n : "")).join(" "); };
+  const halo = f => { /** @type {Record<string, number>} */ const m = {}; /** @type {any} */ (String(f)).replace(/(Cl|Br)(\d*)/g, (_, e, n) => { m[e] = +n || 1; }); return Object.entries(m).map(([e, n]) => e + (n > 1 ? "×" + n : "")).join(" "); };
   const f2 = v => (v == null ? "–" : (+v).toFixed(2));
   // ---------------------------------------------------------------- helpers shared with the compact panel (elementare.js)
   const qs = q => Object.entries(q).filter(([, v]) => v != null && v !== "").map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
