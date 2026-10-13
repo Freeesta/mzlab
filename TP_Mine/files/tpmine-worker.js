@@ -169,9 +169,9 @@ async function runRust(a) {
   let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
   const tr = (a[3] || "").trim();
   if (tr) rules = f.finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
-  const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: NaN, recipe, structure: plan.structure });
+  const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: plan.rt ?? NaN, recipe, structure: plan.structure });
   const minutes = plan.minutes.map((/** @type {number | null} */ m) => (m == null ? NaN : m));
-  const e = await p.evidence({ table, state: h.state, minutes, parentMz: NaN, parentRt: NaN, recipe }); lap("proofs", t); t = performance.now();
+  const e = await p.evidence({ table, state: h.state, minutes, parentMz: plan.rt == null ? NaN : plan.mz, parentRt: plan.rt ?? NaN, recipe }); lap("proofs", t); t = performance.now();
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }

@@ -75,6 +75,8 @@ pub struct Parent {
     pub mz: f64,
     /// The adduct of `ion` and `mz`, one of `elements::adducts`.
     pub adduct: String,
+    /// The retention time of the parent given by the user (min), None to let the program choose it.
+    pub rt: Option<f64>,
     /// The SMILES of the parent (`smiles`, or `neutral` when it is not a formula), for the fragmentation tree.
     pub smiles: Option<String>,
 }
@@ -113,6 +115,7 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
         ion,
         mz,
         adduct,
+        rt: v.get("rt").and_then(Value::f64).filter(|r| r.is_finite() && *r >= 0.0),
         smiles,
     })
 }

@@ -118,7 +118,7 @@ pub fn finder_dig(
 }
 
 /// What the worker needs to run the pipeline before `finder_dig`: `{lc: [names of the LC files, in the order of the table], minutes: [time | null],
-/// formula: the neutral formula of the parent, structure: the grafo/1 JSON of its SMILES ("" without one)}`.
+/// formula: the neutral formula of the parent, structure: the grafo/1 JSON of its SMILES ("" without one), mz: the ion of the parent, rt: the RT the user gave | null}`.
 #[wasm_bindgen]
 pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValue> {
     let lc = legacy::series::lc_files(files_json).map_err(user)?;
@@ -141,6 +141,10 @@ pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValu
         .str(&p.formula())
         .raw(",\"structure\":")
         .str(&structure)
+        .raw(",\"mz\":")
+        .num(p.mz)
+        .raw(",\"rt\":")
+        .opt(p.rt)
         .raw("}");
     Ok(o.0)
 }

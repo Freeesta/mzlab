@@ -14,7 +14,28 @@ fn parent_row_without_tp_view() {
         ..Aligned::default()
     };
     assert!(t.tp.is_empty() && t.tp.parent_row == 0);
-    assert_eq!(parent_row(&t, &p), Some(1));
+    assert_eq!(parent_row(&t, &p, &[]), Some(1));
+}
+
+/// The RT given by the user picks the row nearest to it; with no RT the files at time 0 decide, not the largest area of the whole series.
+#[test]
+fn parent_row_by_rt_and_by_t0() {
+    let mk = |rt: &str| {
+        super::super::series::parent(&format!(r#"{{"neutral": "C10H18O5"{rt}}}"#)).unwrap()
+    };
+    let p = mk("");
+    let t = Aligned {
+        n_files: 2,
+        mz: vec![p.mz, p.mz],
+        rt: vec![13.38, 16.53],
+        area: vec![8e6, 1e6, 1e6, 9e6],
+        ..Aligned::default()
+    };
+    let f = |t: f64| FileIn { name: String::new(), label: String::new(), kind: "hr".into(), time: Some(t), t };
+    let files = [f(0.0), f(30.0)];
+    assert_eq!(parent_row(&t, &p, &files), Some(0), "the t0 decides");
+    assert_eq!(parent_row(&t, &p, &[]), Some(1), "no t0: the whole series");
+    assert_eq!(parent_row(&t, &mk(r#", "rt": 16.5"#), &files), Some(1));
 }
 
 /// The adduct of the parent sets its ion formula and m/z; the default is [M+H]+ and an unknown one is refused.

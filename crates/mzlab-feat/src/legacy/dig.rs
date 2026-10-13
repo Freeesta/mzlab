@@ -134,20 +134,31 @@ fn delta(f: &Formula, parent: &Formula) -> String {
     format!("{sign}{}", fmt(&abs))
 }
 
-/// The parent row of the TP view when the table has one (an empty `tp/1` block says nothing: its `parent_row` is the default 0), else the
-/// largest summed area within `PARENT_PPM` of the [M+H]+.
-fn parent_row(t: &Aligned, p: &Parent) -> Option<usize> {
+/// The parent row: the row nearest in RT to the one the user gave, else the one of the TP view when the table has one (an empty `tp/1` block says
+/// nothing: its `parent_row` is the default 0), else the one with the largest area within `PARENT_PPM` of the ion in the files at time 0 (the
+/// standard), or in all of them when none is at time 0.
+fn parent_row(t: &Aligned, p: &Parent, files: &[FileIn]) -> Option<usize> {
+    let near = |r: usize| ((t.mz[r] - p.mz) / p.mz * 1e6).abs() <= PARENT_PPM;
+    if let Some(rt) = p.rt {
+        return (0..t.len())
+            .filter(|&r| near(r))
+            .min_by(|&a, &b| (t.rt[a] - rt).abs().total_cmp(&(t.rt[b] - rt).abs()));
+    }
     if !t.tp.is_empty() && t.tp.parent_row != NO_PARENT && (t.tp.parent_row as usize) < t.len() {
         return Some(t.tp.parent_row as usize);
     }
+    let t0: Vec<bool> = files.iter().map(|f| f.t == 0.0).collect();
+    let only_t0 = t0.iter().any(|&b| b);
     let area = |r: usize| {
         t.area[r * t.n_files..(r + 1) * t.n_files]
             .iter()
-            .filter(|a| a.is_finite())
+            .enumerate()
+            .filter(|(k, a)| a.is_finite() && (!only_t0 || t0.get(*k).copied().unwrap_or(false)))
+            .map(|(_, a)| a)
             .sum::<f64>()
     };
     (0..t.len())
-        .filter(|&r| ((t.mz[r] - p.mz) / p.mz * 1e6).abs() <= PARENT_PPM)
+        .filter(|&r| near(r))
         .max_by(|&a, &b| area(a).total_cmp(&area(b)))
 }
 
@@ -403,7 +414,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
         .into_iter()
         .map(|i| candidate(t, &s.files, &s.parent, i, &s.hyps, &w))
         .collect();
-    let prow = parent_row(t, &s.parent);
+    let prow = parent_row(t, &s.parent, &s.files);
     let mut ix = (0..t.n_files).map(&mut open).collect::<Res<Vec<_>>>()?;
     let parent_ms2 = attach_ms2(&mut ix, t, &s.parent, prow, &mut cands)?;
     let mut warnings = Vec::new();
