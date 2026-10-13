@@ -38,7 +38,8 @@ fn table() -> Aligned {
             t.height.push((v / 10.0) as f32);
             t.apex_rt.push(rt as f32);
             t.width.push(0.1);
-            t.state.push(if v > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
+            t.state
+                .push(if v > 0.0 { CELL_DETECTED } else { CELL_ABSENT });
         }
     }
     t
@@ -68,8 +69,22 @@ fn run(signs: &[Signs], fragments: Option<&[f64]>) -> TpBlock {
 
 fn run_with(minutes: &[f64], signs: &[Signs], fragments: Option<&[f64]>) -> TpBlock {
     let t = table();
-    let hyps = [hyp(316.0, SRC_RULE), hyp(332.0, SRC_RULE), hyp(345.0, SRC_RULE), hyp(250.0, SRC_RULE)];
-    let inp = TpInputs { aligned: &t, minutes, hyps: &hyps, signs, parent: (300.0, 5.0), fragments, params: &TpParams::default() };
+    let hyps = [
+        hyp(316.0, SRC_RULE),
+        hyp(332.0, SRC_RULE),
+        hyp(345.0, SRC_RULE),
+        hyp(250.0, SRC_RULE),
+    ];
+    let inp = TpInputs {
+        aligned: &t,
+        minutes,
+        hyps: &hyps,
+        signs,
+        parent: (300.0, 5.0),
+        fragments,
+        params: &TpParams::default(),
+        rules: None,
+    };
     build(&inp).unwrap().expect("the parent is in the table")
 }
 
@@ -88,7 +103,18 @@ fn the_gates_give_a_status_to_every_row() {
     let b = run(&signs(), None);
     // 0 parent; 1 its in-source fragment, which is in the t0 as high as later (the first gate already takes it out); 2 a product; 3 present in the blank;
     // 4 also in the t0 but it grows 3-fold; 5 formed but covered by no hypothesis; 6 covered but against the kinetics
-    assert_eq!(b.status, vec![ST_PARENT, ST_CONTROL, ST_TP, ST_CONTROL, ST_TP, ST_UNEXPLAINED, ST_TP]);
+    assert_eq!(
+        b.status,
+        vec![
+            ST_PARENT,
+            ST_CONTROL,
+            ST_TP,
+            ST_CONTROL,
+            ST_TP,
+            ST_UNEXPLAINED,
+            ST_TP
+        ]
+    );
     assert_eq!(b.notes[4] & NOTE_T0_PRESENT, NOTE_T0_PRESENT);
     assert_eq!(b.parent_row, 0);
     assert_eq!(b.count(ST_TP), 3);
@@ -98,7 +124,10 @@ fn the_gates_give_a_status_to_every_row() {
 fn kinship_reads_the_proofs_and_a_proof_against_is_never_offset() {
     let mut s = signs();
     let b = run(&s, None);
-    assert_eq!((b.kinship[2], b.kinship[4], b.kinship[6]), (KIN_PROBABLE, KIN_PROBABLE, KIN_DOUBTFUL));
+    assert_eq!(
+        (b.kinship[2], b.kinship[4], b.kinship[6]),
+        (KIN_PROBABLE, KIN_PROBABLE, KIN_DOUBTFUL)
+    );
     assert_eq!(b.kinship[5], KIN_NONE, "an unexplained row has no kinship");
     // an MS2 related to the parent's makes it certain, unless something is against
     s[2][4] = FOR;
@@ -114,11 +143,18 @@ fn kinship_reads_the_proofs_and_a_proof_against_is_never_offset() {
 fn the_fragments_of_the_parent_decide_the_in_source_fragments() {
     // a series with no t0: the second gate is the one that tells the in-source fragment (its ratio to the parent is constant)
     let m = [f64::NAN, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0];
-    assert_eq!(run_with(&m, &signs(), None).status[1], ST_ISF, "no MS2 of the parent: the ratio and the coelution decide");
+    assert_eq!(
+        run_with(&m, &signs(), None).status[1],
+        ST_ISF,
+        "no MS2 of the parent: the ratio and the coelution decide"
+    );
     let b = run_with(&m, &signs(), Some(&[250.0001, 120.0]));
     assert_eq!(b.status[1], ST_ISF, "present in the MS2 of the parent");
     let b = run_with(&m, &signs(), Some(&[120.0]));
-    assert_ne!(b.status[1], ST_ISF, "the MS2 of the parent does not hold it: not an in-source fragment of it");
+    assert_ne!(
+        b.status[1], ST_ISF,
+        "the MS2 of the parent does not hold it: not an in-source fragment of it"
+    );
 }
 
 #[test]
@@ -126,7 +162,16 @@ fn no_controls_is_an_error_and_no_parent_is_no_view() {
     let t = table();
     let s = signs();
     let treated_only = [5.0; 7];
-    let mut inp = TpInputs { aligned: &t, minutes: &treated_only, hyps: &[], signs: &s, parent: (300.0, 5.0), fragments: None, params: &TpParams::default() };
+    let mut inp = TpInputs {
+        aligned: &t,
+        minutes: &treated_only,
+        hyps: &[],
+        signs: &s,
+        parent: (300.0, 5.0),
+        fragments: None,
+        params: &TpParams::default(),
+        rules: None,
+    };
     assert!(build(&inp).is_err());
     inp.minutes = &MINUTES;
     inp.parent = (999.0, 5.0);
@@ -138,11 +183,25 @@ fn the_block_survives_the_file() {
     let mut t = table();
     t.tp = run(&signs(), None);
     let bytes = write_table(&t, &Recipe::default(), &Origin::default());
-    assert_eq!(bytes, write_table(&t, &Recipe::default(), &Origin::default()));
+    assert_eq!(
+        bytes,
+        write_table(&t, &Recipe::default(), &Origin::default())
+    );
     let (back, meta) = read_table(&bytes).unwrap();
     assert_eq!(back.tp, t.tp);
-    assert_eq!(meta.get("tp").unwrap().get("schema").and_then(|v| v.str()), Some("tp/1"));
-    assert_eq!(meta.get("tp").unwrap().get("conteggi").unwrap().get("tp").and_then(|v| v.f64()), Some(3.0));
+    assert_eq!(
+        meta.get("tp").unwrap().get("schema").and_then(|v| v.str()),
+        Some("tp/1")
+    );
+    assert_eq!(
+        meta.get("tp")
+            .unwrap()
+            .get("conteggi")
+            .unwrap()
+            .get("tp")
+            .and_then(|v| v.f64()),
+        Some(3.0)
+    );
     // a table without the block reads as before
     let t2 = table();
     let (b2, m2) = read_table(&write_table(&t2, &Recipe::default(), &Origin::default())).unwrap();
