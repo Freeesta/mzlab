@@ -113,7 +113,7 @@ impl<R: ReadAt> Routes<R> {
             .collect();
         let (mut mz, mut y) = (vec![], vec![]);
         // `modo=somma`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
-        let (div, cap) = if self.opz.somma { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
+        let (div, cap) = if self.msn.opz.somma { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
         if n > 0 {
             // the peaks come in order of m/z, so the cells of `floor(mz / bin)` come in order too
             let (mut cell, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);

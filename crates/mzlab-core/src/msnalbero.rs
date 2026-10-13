@@ -262,15 +262,15 @@ pub fn albero(scans: &[Scan], r: &Raggruppa) -> Albero {
     albero_di(scans.iter().map(|s| (s.level, s.path.as_deref())), r)
 }
 
+/// A scan as (level, path of the filter).
+pub type ScanPath<'a> = (u8, Option<&'a [(f64, String, f64)]>);
+
 /// The tree of scans given as (level, path of the filter).
-pub fn albero_di<'a>(
-    scans: impl IntoIterator<Item = (u8, Option<&'a [(f64, String, f64)]>)>,
-    r: &Raggruppa,
-) -> Albero {
+pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Raggruppa) -> Albero {
     let mut out = Albero::default();
     let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
     let scans: Vec<_> = scans.into_iter().collect();
-    let usable = |&(level, path): &(u8, Option<&'a [(f64, String, f64)]>)| {
+    let usable = |&(level, path): &ScanPath<'a>| {
         path.filter(|p| level > 1 && !p.is_empty() && p.len() + 1 == level as usize)
     };
     let codici = Codici::new(r.tol, scans.iter().filter_map(usable));

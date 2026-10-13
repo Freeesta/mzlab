@@ -36,7 +36,7 @@ fn sum_is_mean_times_n() {
         }
     }
     // the option lasts one request
-    assert!(!r.opz.somma);
+    assert!(!r.msn.opz.somma);
 }
 
 #[test]

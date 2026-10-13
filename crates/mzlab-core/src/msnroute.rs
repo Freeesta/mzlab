@@ -25,71 +25,29 @@ impl<R: ReadAt> Routes<R> {
         let table = &self.idx.scans;
         msn_tree(&scans, |i| mzml.spettro(&table[i]), q.some("formula"), ppm.unwrap_or(5.0)).map(Some)
     }
-}
 
-/// What a request asks of the helpers deep in the routes: the grouping that `filt=msn:<id>` refers to (`mtol=nom|<Da>|<n>ppm`, `mce=1|0`)
-/// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::con_opz`).
-#[derive(Debug, Clone, Default)]
-pub(crate) struct Opz {
-    pub raggruppa: Raggruppa,
-    pub somma: bool,
-}
-
-/// `nom` (or absent), `0.01` (Da) or `10ppm`.
-fn tol_of(v: Option<&str>) -> Result<Tol> {
-    let Some(t) = v.filter(|t| !t.is_empty() && *t != "nom") else {
-        return Ok(Tol::Nominale);
-    };
-    let (num, ppm) = match t.strip_suffix("ppm") {
-        Some(n) => (n, true),
-        None => (t, false),
-    };
-    match num.trim().parse::<f64>() {
-        Ok(x) if x > 0.0 && x.is_finite() && ppm => Ok(Tol::Ppm(x)),
-        Ok(x) if x > 0.0 && x.is_finite() => Ok(Tol::Da(x)),
-        _ => Err(Error::new("err.msn.tol").with("tol", t)),
-    }
-}
-
-fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Raggruppa> {
-    Ok(Raggruppa {
-        tol: tol_of(q.get(tol))?,
-        energie: q.get(ce) != Some("0"),
-    })
-}
-
-/// What `filt` / `filter` keeps: a filter string or scan key, or the scans of a node of the MSn tree (`msn:<id>`, a mask over the scans).
-pub(crate) enum Filtro<'a> {
-    Testo(&'a str),
-    Nodo(Arc<Vec<bool>>),
-}
-
-/// The trees already built, at most this many groupings per file.
-const ALBERI: usize = 4;
-
-impl<R: ReadAt> Routes<R> {
     /// Runs `f` with the options of `q` (`Opz`), then puts back the ones before: what a request asks never leaks into the next.
     pub(crate) fn con_opz<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let opz = Opz {
             raggruppa: raggruppa_of(q, "mtol", "mce")?,
             somma: q.get("modo") == Some("somma"),
         };
-        let before = std::mem::replace(&mut self.opz, opz);
+        let before = std::mem::replace(&mut self.msn.opz, opz);
         let out = f(self);
-        self.opz = before;
+        self.msn.opz = before;
         out
     }
 
     /// The tree of the file for a grouping, built once (memory: the scan indices of the nodes).
     pub(crate) fn albero_per(&mut self, r: &Raggruppa) -> Arc<Albero> {
-        if let Some((_, a)) = self.alberi.iter().find(|(k, _)| k == r) {
+        if let Some((_, a)) = self.msn.alberi.iter().find(|(k, _)| k == r) {
             return a.clone();
         }
         let a = Arc::new(albero(&self.idx.scans, r));
-        if self.alberi.len() >= ALBERI {
-            self.alberi.remove(0);
+        if self.msn.alberi.len() >= ALBERI {
+            self.msn.alberi.remove(0);
         }
-        self.alberi.push((r.clone(), a.clone()));
+        self.msn.alberi.push((r.clone(), a.clone()));
         a
     }
 
@@ -99,7 +57,7 @@ impl<R: ReadAt> Routes<R> {
         let Some(id) = f.strip_prefix("msn:") else {
             return Ok(Some(Filtro::Testo(f)));
         };
-        let r = self.opz.raggruppa.clone();
+        let r = self.msn.opz.raggruppa.clone();
         let a = self.albero_per(&r);
         let Some(n) = a.nodi.iter().find(|n| n.id == id) else {
             return Err(Error::new("err.msn.node").with("id", id));
@@ -149,6 +107,54 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(o.0))
     }
 }
+
+/// What a request asks of the helpers deep in the routes: the grouping that `filt=msn:<id>` refers to (`mtol=nom|<Da>|<n>ppm`, `mce=1|0`)
+/// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::con_opz`).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Opz {
+    pub raggruppa: Raggruppa,
+    pub somma: bool,
+}
+
+/// What `filt` / `filter` keeps: a filter string or scan key, or the scans of a node of the MSn tree (`msn:<id>`, a mask over the scans).
+pub(crate) enum Filtro<'a> {
+    Testo(&'a str),
+    Nodo(Arc<Vec<bool>>),
+}
+
+/// The MSn state of a file: the trees already built, by grouping (the filter `msn:<id>` reads its scans from here), and the options of the request.
+#[derive(Default)]
+pub(crate) struct Msn {
+    pub alberi: Vec<(Raggruppa, Arc<Albero>)>,
+    pub opz: Opz,
+}
+
+/// `nom` (or absent), `0.01` (Da) or `10ppm`.
+fn tol_of(v: Option<&str>) -> Result<Tol> {
+    let Some(t) = v.filter(|t| !t.is_empty() && *t != "nom") else {
+        return Ok(Tol::Nominale);
+    };
+    let (num, ppm) = match t.strip_suffix("ppm") {
+        Some(n) => (n, true),
+        None => (t, false),
+    };
+    match num.trim().parse::<f64>() {
+        Ok(x) if x > 0.0 && x.is_finite() && ppm => Ok(Tol::Ppm(x)),
+        Ok(x) if x > 0.0 && x.is_finite() => Ok(Tol::Da(x)),
+        _ => Err(Error::new("err.msn.tol").with("tol", t)),
+    }
+}
+
+fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Raggruppa> {
+    Ok(Raggruppa {
+        tol: tol_of(q.get(tol))?,
+        energie: q.get(ce) != Some("0"),
+    })
+}
+
+/// The trees already built, at most this many groupings per file.
+const ALBERI: usize = 4;
+
 
 /// More nodes than this: `err.tree.tooMany` (energies merged or a wider tolerance make fewer).
 const MAX_NODI: usize = 400;

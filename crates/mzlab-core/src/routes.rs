@@ -74,15 +74,13 @@ pub struct Routes<R: ReadAt> {
     pub(crate) steps: Vec<(u8, Option<f64>)>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
-    /// The MSn trees already built, by grouping (`msnroute.rs`: the filter `msn:<id>` reads its scans from here).
-    pub(crate) alberi: Vec<(crate::msnalbero::Raggruppa, std::sync::Arc<crate::msnalbero::Albero>)>,
-    /// The options of the request being answered (`msnroute::Opz`).
-    pub(crate) opz: crate::msnroute::Opz,
+    /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
+    pub(crate) msn: crate::msnroute::Msn,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None, alberi: Vec::new(), opz: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -95,23 +93,19 @@ impl<R: ReadAt> Routes<R> {
         if !self.has_scans() {
             return Ok(crate::mrmroutes::no_scans(path, q));
         }
-        self.con_opz(q, |r| r.handle_in(path, q))
-    }
-
-    fn handle_in(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        match path {
-            "/api/chrom" => self.chrom(q),
-            "/api/filters" => self.filters().map(Some),
-            "/api/scanlist" => self.scanlist(q),
-            "/api/nearest_scan" => self.nearest_scan(q),
-            "/api/scan_axis" => self.scan_axis(q),
-            "/api/ms2tr" => self.ms2_transitions().map(Some),
-            "/api/spectrum" => self.spectrum(q),
-            "/api/dda" => self.dda(q),
-            "/api/spectra" => self.spectra_profile(q),
-            "/api/msn_albero" => self.msn_albero_route(q),
+        self.con_opz(q, |r| match path {
+            "/api/chrom" => r.chrom(q),
+            "/api/filters" => r.filters().map(Some),
+            "/api/scanlist" => r.scanlist(q),
+            "/api/nearest_scan" => r.nearest_scan(q),
+            "/api/scan_axis" => r.scan_axis(q),
+            "/api/ms2tr" => r.ms2_transitions().map(Some),
+            "/api/spectrum" => r.spectrum(q),
+            "/api/dda" => r.dda(q),
+            "/api/spectra" => r.spectra_profile(q),
+            "/api/msn_albero" => r.msn_albero_route(q),
             _ => Ok(None),
-        }
+        })
     }
 
     /// `/api/scaninfo` for scan `sid`, reading the header of that scan from the mzML.
@@ -285,10 +279,7 @@ impl<R: ReadAt> Routes<R> {
         let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filt)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| {
-                let id = ar.scan_ids[j] as usize;
-                fl.as_ref().is_none_or(|f| f.passa(id, &self.idx.scans[id]))
-            })
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &self.idx.scans[ar.scan_ids[j] as usize])))
             .collect();
         let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")

@@ -167,7 +167,7 @@ impl<R: ReadAt> Routes<R> {
         }
         let n = sids.len() as f64;
         let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
-        let div = if self.opz.somma { 1.0 } else { n };
+        let div = if self.msn.opz.somma { 1.0 } else { n };
         let mz: Vec<f64> = cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect();
         let y: Vec<f64> = cells.values().map(|(sy, _)| sy / div).collect();
         let mut o = Out::default();
