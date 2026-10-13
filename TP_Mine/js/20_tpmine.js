@@ -189,6 +189,7 @@
   <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
   <div class="row"><label class="mut grow" for="tp-prt">RT of the parent (min; empty = automatic)</label><input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
+  <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
@@ -226,6 +227,7 @@
     // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
     let estSeq = 0;
     for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) $(id).addEventListener("input", ev => { ev.target.dataset.user = "1"; ev.target.classList.remove("tp-est"); });
+    $("#tp-est").addEventListener("click", () => { for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) delete $(id).dataset.user; estimateLr(); });
     async function estimateLr() {
       const lr = st.files.filter(f => f.kind === "full"), f = lr.find(x => x.type === "sample") || lr[0], seq = ++estSeq;
       if (!f || st.files.some(x => x.kind === "hr")) return;
@@ -233,8 +235,8 @@
       try { e = JSON.parse(await callRaw("estimate", JSON.stringify([f.name]))); } catch (_) { /* no estimate: the defaults stay */ }
       if (!e || seq !== estSeq) return;
       const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
-      put("#tp-tol", e.da && e.da.value, 2, `From the data: 3 × the scatter of m/z of the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
-      put("#tp-rtt", e.rt_tol, 2, `From the data: the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-rtt", e.rt_tol, 2, `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)

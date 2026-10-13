@@ -78,13 +78,13 @@ fn fwhm_of_a_gaussian_trace() {
 }
 
 #[test]
-fn the_window_of_mz_is_three_robust_sigma_inside_the_bounds() {
+fn the_window_of_mz_is_twice_the_measured_tolerance_inside_the_bounds() {
     let mut r = Pcg64::new(11);
     let mut e: Vec<f64> = (0..400).map(|_| 0.08 * gauss(&mut r)).collect();
     e.extend([2.0, -1.5]); // outliers must not move it
     let (da, sigma) = da_from_offsets(&mut e).unwrap();
     assert!(
-        (sigma - 0.08).abs() < 0.02 && (da - 0.24).abs() < 0.06,
+        (sigma - 0.08).abs() < 0.02 && (da - 0.48).abs() < 0.12,
         "{da} {sigma}"
     );
     let mut tight: Vec<f64> = (0..50).map(|i| 0.001 * (i % 3) as f64).collect();
