@@ -10,6 +10,8 @@ pub mod fragtree;
 pub mod identity;
 pub mod kinetics;
 pub mod ms2;
+#[cfg(feature = "chem")]
+pub mod msn;
 pub mod out;
 pub mod sample;
 pub mod series;
