@@ -47,7 +47,7 @@ fn run(ions: usize) -> f64 {
     let files: Vec<FileFeatures> = (0..FILES).map(|k| file(k, ions)).collect();
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let before = peak_rss_mb();
-    let fam = align_families(&refs, &FamAlignParams::default());
+    let fam = align_families(&refs, &FamAlignParams::default()).unwrap();
     let peak_fam = peak_rss_mb() - before;
     assert_eq!(fam.len(), ions);
     assert!(
@@ -56,7 +56,7 @@ fn run(ions: usize) -> f64 {
         fam.heap_bytes()
     );
     drop(fam);
-    let ion = align(&refs, &AlignParams::default());
+    let ion = align(&refs, &AlignParams::default()).unwrap();
     assert_eq!(ion.len(), ions);
     assert!(
         ion.heap_bytes() <= ions * FILES * 21 + ions * 16,

@@ -1,12 +1,14 @@
 //! Reader of the `.mzidx` index (format in `docs/agenti/mzidx.md`): header, metadata, scan table and, on request, slices of the arrays.
-//! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS
-//! callback), so the same code serves the browser, the desktop app and the tests.
+//! The peaks are never loaded whole: a window of m/z reads only the blocks it needs. Bytes come from a `ReadAt` (a file, a slice, a JS callback).
 
 use crate::error::{Error, Result};
 use crate::json::{self, Value};
+use crate::lettori::Posizione;
 
 pub const BLOCK: u64 = 16384;
 const HEADER: usize = 64;
+/// Bit 0 of `flags` (version 2): the rows locate the scans in the members of a vendor file set, not in an mzML.
+pub const FLAG_LETTORE: u32 = 1;
 
 /// Bytes at an offset. `&mut self` so that a JS callback or a cache can keep state.
 pub trait ReadAt {
@@ -37,8 +39,12 @@ impl ReadAt for std::fs::File {
 /// One row of the scan table (`SCAN_COLUMNS`).
 #[derive(Debug, Clone, Default)]
 pub struct Scan {
+    /// Bytes of the spectrum in the mzML (version 1; 0 in the index of a vendor file).
     pub start: u64,
     pub end: u64,
+    /// Index of a vendor file (version 2): where the scan lies in the members of the set (`None` when the reader does not say) and its number `k` in `Lettore::indice`.
+    pub posizione: Option<Posizione>,
+    pub k: Option<usize>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
@@ -60,50 +66,6 @@ pub struct Scan {
 }
 
 impl Scan {
-    fn from_row(r: &Value) -> Option<Scan> {
-        let f = |i: usize| r.at(i).and_then(Value::f64);
-        let s = |i: usize| r.at(i).and_then(Value::str).map(String::from);
-        let iso = r.at(11).filter(|v| !v.is_null()).map(|v| {
-            (
-                v.at(0).and_then(Value::f64).unwrap_or(0.0),
-                v.at(1).and_then(Value::f64).unwrap_or(0.0),
-            )
-        });
-        let path = r.at(16).filter(|v| !v.is_null()).map(|v| {
-            v.arr()
-                .iter()
-                .map(|x| {
-                    (
-                        x.at(0).and_then(Value::f64).unwrap_or(0.0),
-                        x.at(1).and_then(Value::str).unwrap_or("").to_string(),
-                        x.at(2).and_then(Value::f64).unwrap_or(0.0),
-                    )
-                })
-                .collect()
-        });
-        Some(Scan {
-            start: f(0)? as u64,
-            end: f(1)? as u64,
-            level: f(2)? as u8,
-            rt: f(3)?,
-            polarity: f(4)? as i8,
-            tic: f(5)?,
-            precursor: f(6),
-            collision_energy: f(7),
-            filter: s(8).unwrap_or_default(),
-            profile: r.at(9).and_then(Value::bool).unwrap_or(false),
-            parent: f(10).map(|v| v as i64),
-            iso,
-            act: s(12),
-            res: f(13),
-            an: s(14),
-            pint: f(15),
-            path,
-            charge: f(18).map(|v| v as i64),
-            native: s(19).unwrap_or_default(),
-        })
-    }
-
     /// Centre of the isolation window, else the precursor, else `none` (the value the callers use for "no precursor").
     pub fn prec(&self, none: f64) -> f64 {
         match (self.iso, self.precursor) {
@@ -231,8 +193,33 @@ pub struct Index<R: ReadAt> {
     pub sections: Vec<Section>,
     pub source: Value,
     pub run: Value,
-    cache: Vec<(usize, u8, u64, Vec<u8>)>, // (section, array, block, bytes)
-    arrays: Vec<Option<ScanArrays>>,
+    pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
+    pub(crate) arrays: Vec<Option<ScanArrays>>,
+    pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
+}
+
+/// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
+fn nativo(h: &[u8]) -> Option<bool> {
+    let w = |a: usize| {
+        h.get(a..a + 4)
+            .and_then(|b| b.try_into().ok())
+            .map(u32::from_le_bytes)
+    };
+    match (w(8)?, w(12)?) {
+        (1, 0) => Some(false),
+        (2, FLAG_LETTORE) => Some(true),
+        _ => None,
+    }
+}
+
+/// The JSON of `len` bytes at `off`.
+fn read_json<R: ReadAt>(r: &mut R, off: u64, len: u64) -> Result<Value> {
+    let mut b = Vec::new();
+    b.try_reserve_exact(len as usize)
+        .map_err(|_| Error::memory_budget())?;
+    b.resize(len as usize, 0);
+    r.read_at(off, &mut b)?;
+    json::parse(&b)
 }
 
 fn u64_at(b: &[u8], at: usize) -> u64 {
@@ -251,6 +238,7 @@ impl<R: ReadAt> Index<R> {
         if &h[..8] != b"MZIDX001" || u64_at(&h, 48) != size {
             return Err(bad());
         }
+        let nativo = nativo(&h).ok_or_else(bad)?;
         let (moff, mlen, soff, slen) = (
             u64_at(&h, 16),
             u64_at(&h, 24),
@@ -260,24 +248,12 @@ impl<R: ReadAt> Index<R> {
         if moff.saturating_add(mlen) > size || soff.saturating_add(slen) > size {
             return Err(bad());
         }
-        let mut mb = Vec::new();
-        mb.try_reserve_exact(mlen as usize)
-            .map_err(|_| Error::memory_budget())?;
-        mb.resize(mlen as usize, 0);
-        r.read_at(moff, &mut mb)?;
-        let meta = json::parse(&mb)?;
-        drop(mb);
-        let mut sb = Vec::new();
-        sb.try_reserve_exact(slen as usize)
-            .map_err(|_| Error::memory_budget())?;
-        sb.resize(slen as usize, 0);
-        r.read_at(soff, &mut sb)?;
-        let rows = json::parse(&sb)?;
-        drop(sb);
+        let meta = read_json(&mut r, moff, mlen)?;
+        let rows = read_json(&mut r, soff, slen)?;
         let scans: Vec<Scan> = rows
             .arr()
             .iter()
-            .map(Scan::from_row)
+            .map(|r| crate::scanrow::scan_of_row(r, nativo))
             .collect::<Option<_>>()
             .ok_or_else(bad)?;
         let mut sections = Vec::new();
@@ -314,6 +290,7 @@ impl<R: ReadAt> Index<R> {
             run: meta.get("run").cloned().unwrap_or(Value::Null),
             cache: Vec::new(),
             arrays: vec![None; n],
+            arrays_tick: vec![0; n],
         })
     }
 
@@ -367,7 +344,7 @@ impl<R: ReadAt> Index<R> {
                 bp_inten,
             });
         }
-        Ok(self.arrays[si].as_ref().unwrap())
+        Ok(self.touch_arrays(si))
     }
 
     /// Element `i` of the m/z array (as `f64`; the `f32` of a high-resolution survey is widened exactly), through the block cache.
@@ -390,11 +367,11 @@ impl<R: ReadAt> Index<R> {
                 if self.cache.len() >= 8 {
                     self.cache.remove(0);
                 }
-                self.cache.push((si, 7, blk, b));
+                self.cache.push((si, 7, blk, b, 0));
                 self.cache.len() - 1
             }
         };
-        let b = &self.cache[at].3;
+        let b = self.touch_block(at);
         let k = (i - blk * BLOCK) as usize * w;
         Ok(if w == 4 {
             f32::from_le_bytes(b[k..k + 4].try_into().unwrap()) as f64

@@ -57,6 +57,7 @@ def legacy_discover(self):
         if obs is not None:
             e["mz_x"], e["mz"] = obs, obs - self.offset
             e["name"] = f"unexpected ion m/z {e['mz']:.1f}"
+    kept = [e for e in kept if not any(abs(e["mz_x"] - m) <= self.tol for m in known)]   # a window next to a candidate can catch the candidate's own ion
     good = []
     for e in kept:
         a = self.analyse(e)
