@@ -4,6 +4,7 @@
 
 use mzlab_core::error::Result;
 
+use crate::trace::filled;
 use crate::axis::half;
 use crate::table::{Aligned, FileFeatures, RowMeta, RowQ, CELL_DETECTED, NO_FILE, ROLE_ISOTOPE};
 
@@ -76,9 +77,9 @@ pub fn compute_in(table: &mut Aligned, win: f64, load: &mut dyn FnMut(usize, (f6
         };
         let n = b - a;
         // left, right, shape, snr, fwhm of every cell, then the best peak of each row
-        let mut grid = vec![f32::NAN; 5 * n * nf];
-        let mut best: Vec<(f64, f32, i8, u32, f32)> = vec![(-1.0, f32::NAN, 0, NO_FILE, -1.0); n];
-        let mut qreason = vec![0u8; n];
+        let mut grid = filled(5 * n * nf, f32::NAN)?;
+        let mut best: Vec<(f64, f32, i8, u32, f32)> = filled(n, (-1.0, f32::NAN, 0, NO_FILE, -1.0))?;
+        let mut qreason = filled(n, 0u8)?;
         for k in 0..nf {
             let f = load(k, (lo, hi))?;
             for r in a..b {

@@ -15,7 +15,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::axis::half;
 use crate::sweep::windows;
 use crate::table::{FileFeatures, FLAG_PURITY_EST};
-use crate::trace::{reserve, Params};
+use crate::trace::{filled, reserve, Params};
 
 #[derive(Debug, Clone)]
 pub struct Ms2Params {
@@ -116,7 +116,7 @@ fn candidates<R: ReadAt>(
 
 /// (feature, candidate) pairs: the peak spans the MS1 scan of the candidate and its m/z is inside the window. Sorted by candidate.
 fn pairs(f: &FileFeatures, cands: &[Cand], nscan: usize) -> Result<Vec<(u32, u32)>> {
-    let mut start = vec![0u32; nscan + 2];
+    let mut start = filled(nscan + 2, 0u32)?;
     for c in cands {
         start[c.ppos as usize + 1] += 1;
     }
@@ -124,7 +124,7 @@ fn pairs(f: &FileFeatures, cands: &[Cand], nscan: usize) -> Result<Vec<(u32, u32
         start[k + 1] += start[k];
     }
     let mut fill = start.clone();
-    let mut by_pos = vec![0u32; cands.len()];
+    let mut by_pos = filled(cands.len(), 0u32)?;
     for (ci, c) in cands.iter().enumerate() {
         by_pos[fill[c.ppos as usize] as usize] = ci as u32;
         fill[c.ppos as usize] += 1;
@@ -209,7 +209,7 @@ pub fn link<R: ReadAt>(
 ) -> Result<Ms2Links> {
     let n = f.len();
     let mut links = Ms2Links {
-        start: vec![0; n + 1],
+        start: filled(n + 1, 0)?,
         ..Default::default()
     };
     let Some(si) = index.section_of(1, p.polarity) else {

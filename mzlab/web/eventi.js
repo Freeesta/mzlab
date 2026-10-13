@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split from explore.js: classic script, loaded after picchi.js.
 // ------------------------------------------------------------------ mouse
@@ -98,7 +99,8 @@ function attach(p) {
     const cx = e.clientX, cy = e.clientY;
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
@@ -230,7 +232,7 @@ function nearestFile(p, x) {
   /** @type {{ v: number, k: number } | null} */
   let best = null;
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
-  return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
+  return best ? /** @type {{ k: number }} */ (best).k : (scanFiles(tabFiles())[0]?.k ?? 0);
 }
 function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
@@ -412,7 +414,7 @@ function lcHtml(lc, row) {
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">${I18N.t("method.time")}</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
   const pda = lc.pda || {};
   const tbl = `<table class="lct"><tr><th class="num">${I18N.t("method.time")}</th><th class="num">% A</th><th class="num">% B</th><th class="num">${I18N.t("method.flow")}</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  const chips = [lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean);
+  const chips = /** @type {string[][]} */ ([lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean));
   return `<section class="msec"><h4>${I18N.t("method.lc.title")}</h4>
    <div class="sm" style="margin:0 0 8px">A = H<sub>2</sub>O + 0.1% FA &nbsp;&middot;&nbsp; B = ACN + 0.1% FA</div>
    <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">${svg}<div style="flex:1 1 300px;max-width:520px">${tbl}</div></div>
@@ -476,7 +478,7 @@ async function showMethod(sel) {
 function loadDam() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dam,.DAM";
   inp.onchange = async () => {
-    const fl = inp.files[0]; if (!fl) return;
+    const fl = /** @type {FileList} */ (inp.files)[0]; if (!fl) return;
     try {
       const j = await (await fetch("api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
       if (j.error) throw I18N.err(j);
@@ -534,6 +536,27 @@ window.calcToggleFloat = () => {
 };
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden && !calcBox.classList.contains("sb-docked")) calcPlace(); });
+// two-step actions (second peak of a measure, second stretch of the internal blank): a label at the cursor says what the next click does and that Esc cancels
+function pendHint(p, e) {
+  const q = Q("#qtip"); if (!q) return; const k = pendKey(p);
+  if (!k) { if (q._pd === p) { q.hidden = true; q._pd = null; } return; }
+  q._pd = p; q.textContent = I18N.t(k); q.hidden = false;
+  q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, e.clientX + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, e.clientY + 16) + "px";
+}
+// the next click of a two-step action on this panel, as the i18n key of the cursor label (null: nothing pending)
+function pendKey(p) {
+  if (p.type === "spec" && p.meas && p.meas.ref != null) return "pend.peak";
+  if (p._ibkA) return "pend.span";
+  return null;
+}
+// Esc takes back the pending first step (the menus and dialogs keep their own Esc)
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || e.defaultPrevented || Q("dialog[open]") || (Q("#ctx") && !Q("#ctx").hidden)) return;
+  const p = E.panels.find(q => pendKey(q)); if (!p) return;
+  if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+  const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+  draw(p); uiSave();
+});
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (window.BARRA && BARRA.isDataView()) {
@@ -546,7 +569,7 @@ document.addEventListener("keydown", e => {
   if (calcBox.hidden) return;
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
-const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
+const CALC = { ans: 0, tape: /** @type {{ e: any, r: any }[]} */ ([]), fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
 let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 // the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
 function calcTape() {
@@ -643,12 +666,12 @@ Q("#calcin").oninput = calcRun;
     if (t === cur) return;
     hide();
     if (!t || t.closest("dialog[open]")) return;
-    if (t.hasAttribute("title")) { t.dataset.tip = t.getAttribute("title"); t.removeAttribute("title"); }
+    if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
     timer = setTimeout(() => {
-      if (html) tip.innerHTML = html; else tip.textContent = txt;
+      if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
       tip.hidden = false;
       const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
       tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";

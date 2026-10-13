@@ -335,6 +335,7 @@ pub fn csv_calibration(c: &Ctx) -> String {
                 stem.replace('"', "\"\""),
                 s.kind,
                 s.conc.map_or(String::new(), |v| fix(v, 6)),
+                // fixed size: a unit label, empty when absent
                 s.unit.clone().unwrap_or_default(),
                 if t.apex_rt[cell].is_nan() {
                     fix(t.rt[r], 4)

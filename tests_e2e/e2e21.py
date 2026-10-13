@@ -1,4 +1,4 @@
-"""Block 3-4: hover box on m/z labels, panel numbers (+ keys 1-9), right click on files (rename, colour, remove), area label with 3 decimals and thousands tooltip."""
+"""Block 3-4: hover box on m/z labels, panel numbers (+ keys 1-9), right click on files (rename, colour, remove), area label with 3 decimals and the full number in the tooltip."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -54,8 +54,8 @@ try:
             pg.wait_for_timeout(1200)
             lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes('Area')).map(l=>l.tip)}", info["id"]); print(lab)
             assert lab and "conteggi" in lab[0]
-            assert pg.evaluate("fmtA(2243051)") == "2.243e+6" and pg.evaluate("fmtFull(2243051)") == "2 243 051"
-        step("area label with 3 decimals, thousands in the tooltip", areas)
+            assert pg.evaluate("fmtA(2243051)") == "2.243e+6" and pg.evaluate("fmtFull(2243051)") == "2243051"
+        step("area label with 3 decimals, the full number (no thousands separator) in the tooltip", areas)
         pg.screenshot(path=SH + "210_labels.png", full_page=True)
     r.close()
 except Exception as e:

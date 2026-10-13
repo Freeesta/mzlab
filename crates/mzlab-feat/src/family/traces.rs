@@ -9,7 +9,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::FileFeatures;
-use crate::trace::Params;
+use crate::trace::{filled, Params};
 
 const NONE: u32 = u32::MAX;
 /// Fewest scans a correlation is computed on.
@@ -38,6 +38,7 @@ impl Traces {
     pub fn from_parts(n_rows: usize, parts: &[(usize, u32, Vec<f64>)]) -> Self {
         let mut t = Traces {
             slot: vec![NONE; n_rows],
+            // fixed size: the first offset of the trace index
             start: vec![0],
             ..Default::default()
         };
@@ -102,7 +103,8 @@ pub fn gather<R: ReadAt>(
     ppm: f64,
 ) -> Result<Traces> {
     let mut t = Traces {
-        slot: vec![NONE; f.len()],
+        slot: filled(f.len(), NONE)?,
+        // fixed size: the first offset of the trace index
         start: vec![0],
         ..Default::default()
     };
@@ -121,7 +123,7 @@ pub fn gather<R: ReadAt>(
         t.start
             .push(t.start[k] + (wins[k].1 - wins[k].0 + 1) as u32);
     }
-    t.y = vec![0.0; *t.start.last().unwrap_or(&0) as usize];
+    t.y = filled(*t.start.last().unwrap_or(&0) as usize, 0.0)?;
     let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
     let ranges = ppm_ranges(&centres, ppm);
     windows(index, si, &ranges, max_peaks, |k, a, b, slab| {

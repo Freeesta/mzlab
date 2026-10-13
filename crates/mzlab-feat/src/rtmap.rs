@@ -173,6 +173,7 @@ pub fn build(al: &Aligned, p: &RtParams) -> RtMap {
     let nf = al.n_files;
     let empty = RtMap {
         n_files: nf,
+        // one value per file of the series
         rms: vec![0.0; nf],
         ..RtMap::default()
     };

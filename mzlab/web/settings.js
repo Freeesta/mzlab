@@ -81,29 +81,11 @@ async function centroidAll(btn, stop, st, refresh) {
   refresh();
 }
 
-// «Archivio nel browser» of the settings: what is kept here (files and indexes in OPFS), the one-line truth, and the ways to remove it
-function uipArchivio(d) {
-    const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
-    const val = d.querySelector("#uip-space-val"), rm = d.querySelector("#uip-arch-rm"), der = d.querySelector("#uip-arch-der");
-    const paint = async j => {
-      const n = typeof E !== "undefined" && E.files ? E.files.filter(f => !f.gone).length : 0, size = j && j.opfs ? (j.files || 0) + (j.idx || 0) : 0;
-      let line;
-      if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
-      else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
-      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || (est.usage || 0) / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
-      if (j && j.feat > 0) line += " " + I18N.t("settings.arch.feat", { feat: mb(j.feat) });
-      if (j && j.opfs && j.persisted === false) line += " " + I18N.t("settings.arch.notpersisted");
-      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(/** @type {any} */ (navigator).standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
-      val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : ""; const dsz = j && j.opfs ? (j.idx || 0) + (j.feat || 0) : 0; der.disabled = !(dsz > 0); der.dataset.size = dsz ? mb(dsz) : "";
-    };
-    const refresh = () => { if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {}); };
-    paint(null); refresh();
-    try { const bc = new BroadcastChannel("mzlab"); bc.onmessage = () => { if (d.isConnected) refresh(); else bc.close(); }; } catch (_) { /* no BroadcastChannel */ }      // another tab added or took away a file
-    rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
-    der.onclick = async () => { const ask = I18N.t("settings.arch.der.ask", { size: der.dataset.size || "–" }); if (typeof yesno === "function" && !(await yesno(ask))) return; await fetch("api/spazio?derivati=1", { method: "POST" }).catch(() => {}); refresh(); };
-    const cen = d.querySelector("#uip-cen");
-    if (cen) cen.onclick = () => centroidAll(cen, d.querySelector("#uip-cen-x"), d.querySelector("#uip-cen-st"), refresh);
-    d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
+// Bottom of the settings: the centroid command (browser only) and the full reset (with its own confirmation)
+function uipReset(d) {
+  const cen = d.querySelector("#uip-cen");
+  if (cen) cen.onclick = () => centroidAll(cen, d.querySelector("#uip-cen-x"), d.querySelector("#uip-cen-st"), () => {});
+  d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
 }
 
 // --- popup of the gear
@@ -113,9 +95,11 @@ function uipOpen(btn) {
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">${I18N.t("settings.title")}</div>
     <div class="row"><span>${I18N.t("settings.language.label")}</span> <select id="uip-lang" title="${I18N.t("settings.language.title")}" aria-label="${I18N.t("settings.language.label")}"><option value="it">Italiano</option><option value="en">English</option></select></div>
     <div class="row">${I18N.t("settings.theme")} <select id="uip-th" aria-label="${I18N.t("settings.theme")}"><option value="auto">${I18N.t("settings.theme.auto")}</option><option value="light">${I18N.t("settings.theme.light")}</option><option value="dark">${I18N.t("settings.theme.dark")}</option></select></div>
+    <details id="uip-a11y" class="uip-sub"><summary>${I18N.t("settings.a11y.title")}</summary>
     <div class="row"><span>${I18N.t("settings.font.label")}</span> <select id="uip-font" aria-label="${I18N.t("settings.font.label")}"><option value="">${I18N.t("settings.font.default")}</option><option value="atkinson">${I18N.t("settings.font.atkinson")}</option><option value="dyslexic">${I18N.t("settings.font.dyslexic")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${Object.keys(PALS).map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
+    </details>
     <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
     ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || (f.ms2_exps && f.ms2_exps.length))) ? `
@@ -126,7 +110,7 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
-    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-der" type="button" title="${I18N.t("settings.arch.der.title")}">${I18N.t("settings.arch.der.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div>${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}</div>
+    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)">${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}<button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div>
     ${window.DESKUPD ? DESKUPD.row() : ""}
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
@@ -137,6 +121,9 @@ function uipOpen(btn) {
   if (window.DESKUPD) DESKUPD.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
+  const sub = /** @type {HTMLDetailsElement} */ (d.querySelector("#uip-a11y"));      // closed at first, then as the user left it
+  try { sub.open = localStorage.getItem("qqq.set.a11y") === "1"; } catch (_) { /* closed */ }
+  sub.addEventListener("toggle", () => { try { localStorage.setItem("qqq.set.a11y", sub.open ? "1" : "0"); } catch (_) { /* not remembered */ } });
   const a11yCur = QA11Y.read();
   const uipFont = d.querySelector("#uip-font");
   if (uipFont) {
@@ -160,16 +147,14 @@ function uipOpen(btn) {
   const uipEtich = d.querySelector("#uip-etich");
   if (uipEtich) { uipEtich.value = window.BARRA ? BARRA.labels : "auto"; uipEtich.onchange = e => { if (window.BARRA) BARRA.setLabels(e.target.value); }; }
   const uipTour = d.querySelector("#uip-tour");
-  if (uipTour) uipTour.onclick = () => {
+  if (uipTour) uipTour.onclick = () => {      // the tour lives in Dati: from Disegno go there first
     d.remove();
-    if (window.TOUR) {
-      if (typeof E !== "undefined" && E.files && E.files.length) TOUR.inizia(1, 0);
-      else TOUR.caricaEsempio();
-    }
+    const go = () => { if (!window.TOUR) return; if (typeof E !== "undefined" && E.files && E.files.length) TOUR.inizia(1, 0); else TOUR.caricaEsempio(); };
+    if (typeof S !== "undefined" && S.view !== "data" && typeof setView === "function") { setView("data"); setTimeout(go, 150); } else go();
   };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
-  uipArchivio(d);
+  uipReset(d);
   const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {
     __TAURI__.core.invoke("lib_get_config").then(c => { uipExt.checked = !!(c && c.external); }, () => {});

@@ -6,11 +6,11 @@ Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasforma
 
 ## Uso
 
-Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, Firefox, Safari) su computer o tablet. Non si installa nulla: Python e numpy girano **dentro il browser** (Pyodide). La prima volta si scaricano circa 10-15 MB; dopo funziona anche senza internet e si può installare come app (Chrome/Edge: «Installa» nella barra degli indirizzi; Safari: Aggiungi al Dock o alla schermata Home).
+Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, Firefox, Safari) su computer o tablet. Non si installa nulla: il calcolo gira **dentro il browser**. La prima volta si scaricano circa 10-15 MB; dopo funziona anche senza internet e si può installare come app (Chrome/Edge: «Installa» nella barra degli indirizzi; Safari: Aggiungi al Dock o alla schermata Home).
 
 - **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
-- I `.wiff` non si aprono: si convertono in mzML con ProteoWizard MSConvert su Windows (guida nella schermata di caricamento; consigliato il formato in profilo).
+- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent. Per gli altri formati si converte in mzML (guida nella schermata di caricamento).
 - **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet.
 
 ## Le schede
@@ -39,8 +39,8 @@ Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di
 
 - **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `mzlab/web/vendor/ketcher/`, https://github.com/epam/ketcher
 - **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
-- **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), scaricato dalla build del sito: https://github.com/pyodide/pyodide
-- **NumPy** (incluso in Pyodide), BSD-3-Clause: https://numpy.org
+- **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), usato solo da mzFinder (nascosto), scaricato dalla build del sito: https://github.com/pyodide/pyodide
+- **NumPy** (incluso in Pyodide, solo mzFinder), BSD-3-Clause: https://numpy.org
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).
 - **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
 

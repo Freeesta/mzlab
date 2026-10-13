@@ -50,6 +50,7 @@ pub fn coincidence(rates: &[f64], minutes: f64, hits: usize) -> f64 {
     if hits > rates.len() {
         return 0.0;
     }
+    // one value per decoy rate (one per file of the series)
     let mut dp = vec![0.0f64; rates.len() + 1];
     dp[0] = 1.0;
     for (i, r) in rates.iter().enumerate() {

@@ -160,6 +160,7 @@ pub fn arcs(inp: &TpInputs, rules: &Rules, b: &TpBlock, np: &NetParams) -> Vec<A
 /// Steps from the parent of the rows already explained: the steps of the hypothesis that covers them (at least one), 0 for the parent.
 fn anchors(inp: &TpInputs, b: &TpBlock) -> Vec<u8> {
     let matched = match_hypotheses(inp.hyps, inp.aligned);
+    // one byte per row of a table that the `align` phase already counted
     let mut g = vec![0u8; inp.aligned.len()];
     for (r, x) in g.iter_mut().enumerate() {
         *x = match b.status[r] {
