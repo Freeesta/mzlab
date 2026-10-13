@@ -2,7 +2,6 @@
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/nativi.rs).
-import { native_samples, build_mzidx_native, native_to_mzml } from "./wasm/mzlab_wasm.js";
 import { putChunks, ensureRoom } from "./archivio.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
@@ -27,8 +26,8 @@ export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end:
   return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
 }
 
-/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample; `write(offset, bytes)` writes it; `progress({frac, phase})` is told the overall fraction 0..1 */
-export function buildNative(/** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string }) => void} */ progress, /** @type {number} */ budget) {
+/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase})` is told the overall fraction 0..1 */
+export function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string }) => void} */ progress, /** @type {number} */ budget) {
   const sizes = j.files.map(f => f.size), all = sizes.reduce((a, b) => a + b, 0) || 1, high = sizes.map(() => 0);
   let phase = 1, last = 0;
   const base = () => W.copy + (phase > 1 ? W.sha : 0) + (phase > 2 ? W.scans : 0);
@@ -43,8 +42,8 @@ export function buildNative(/** @type {{ st: Stub, files: Blob[] }} */ j, /** @t
     (/** @type {number} */ p) => { phase = p; high.fill(0); tell(true); });
   return stats;
 }
-/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never }} h */
-export function createNativo({ ARCH, readerFor, fileOf, jerr }) {
+/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function }} h */
+export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml }) {
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);

@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -47,7 +47,7 @@ async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
 }
-const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr });
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml });
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
   if (!ix) return false;

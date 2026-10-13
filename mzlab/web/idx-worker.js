@@ -1,7 +1,7 @@
 // Short-lived worker of the index pool: builds the .mzidx of ONE mzML with the Rust builder (mzlab-wasm, build_mzidx), reading the source file
 // in slices (Blob.slice, synchronously) and writing the index to a file of OPFS under a temporary name. Then the pool closes it: the WASM memory
 // goes back to the system. Messages only (no SharedArrayBuffer). If it dies, idxpool.js starts another one.
-import init, { build_mzidx } from "./wasm/mzlab_wasm.js";
+import init, { build_mzidx, build_mzidx_native } from "./wasm/mzlab_wasm.js";
 import { writeFull, quotaError } from "./archivio.js";
 import { buildNative } from "./rust-nativo.js";
 
@@ -24,7 +24,7 @@ onmessage = async ev => {
     const t0 = performance.now();
     let stats;
     if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
-      stats = buildNative(m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget);
+      stats = buildNative(build_mzidx_native, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget);
     } else {
       const fr = new FileReaderSync(), blob = m.blob;
       let tp = 0;
