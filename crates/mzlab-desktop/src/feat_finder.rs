@@ -37,6 +37,40 @@ impl State {
             },
         );
         g.dig = Some(d);
+        g.lr = None;
+        text(out)
+    }
+
+    /// `finder/lr_plan`: what the page needs before the pipeline of a low-resolution series (`{rust, lc, minutes, formula}`).
+    fn finder_lr_plan(&self, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        text(legacy::lr::plan::plan_json(s("files"), s("parent")).map_err(user)?)
+    }
+
+    /// `finder/lr_dig`: the Dig of a low-resolution series over the table of the last `feat/align`; it stays for `finder/detail`, `frag_tree` and `frag_tree_compare`.
+    fn finder_lr_dig(&self, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let mut g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
+        let table = g
+            .table
+            .as_deref()
+            .ok_or_else(|| Error::new("error.featState"))?;
+        let settings = if s("settings").is_empty() {
+            "{}"
+        } else {
+            s("settings")
+        };
+        let d = legacy::lr::dig(s("files"), s("parent"), settings, table, s("registry"))
+            .map_err(user)?;
+        let timing = if s("timing").is_empty() {
+            "{}"
+        } else {
+            s("timing")
+        };
+        let out = legacy::lr::summary::summary(&d, timing);
+        let names = d.lc.iter().map(|f| f.name.clone()).collect();
+        g.lr = Some((d, names));
+        g.dig = None;
         text(out)
     }
 
@@ -69,6 +103,9 @@ impl State {
     /// The answers about the Dig of the last `finder/dig`.
     fn finder_of_dig(&self, op: &str, p: &Value) -> Result<Answer> {
         let g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((d, names)) = g.lr.as_ref() {
+            return self.finder_of_lr(op, p, d, names);
+        }
         let d = g
             .dig
             .as_ref()
@@ -79,6 +116,29 @@ impl State {
             "finder/inclusion_csv" => legacy::out::inclusion_csv(d, id),
             "finder/frag_tree" => legacy::fragtree::of_dig(d),
             _ => legacy::fragtree::COMPARE_NONE.to_string(),
+        })
+    }
+
+    /// The answers about the low-resolution Dig of the last `finder/lr_dig` (`detail` reads the XICs from the `.mzidx` of its columns).
+    fn finder_of_lr(
+        &self,
+        op: &str,
+        p: &Value,
+        d: &legacy::lr::LrDig,
+        names: &[String],
+    ) -> Result<Answer> {
+        let id = p["id"].as_i64().unwrap_or(0);
+        text(match op {
+            "finder/detail" => legacy::lr::detail::detail(d, id, |k| {
+                self.open_idx(names.get(k).map_or("", |n| n.as_str()))
+                    .map_err(|e| e.key.to_string())
+            })
+            .map_err(user)?,
+            "finder/frag_tree" => legacy::lr::detail::frag_tree(d),
+            "finder/frag_tree_compare" => {
+                legacy::lr::detail::frag_tree_compare(d, id).map_err(user)?
+            }
+            _ => return Err(Error::new("rpc.unknown")),
         })
     }
 
@@ -106,6 +166,8 @@ impl State {
                 text(String::from_utf8_lossy(&merged).into_owned())
             }
             "finder/dig" => self.finder_dig(p),
+            "finder/lr_plan" => self.finder_lr_plan(p),
+            "finder/lr_dig" => self.finder_lr_dig(p),
             "finder/detail"
             | "finder/inclusion_csv"
             | "finder/frag_tree"
