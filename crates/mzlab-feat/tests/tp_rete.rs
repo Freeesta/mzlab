@@ -106,7 +106,7 @@ fn the_arcs_run_from_the_row_the_rule_starts_at_and_carry_the_generation() {
         params: &TpParams::default(),
         rules: Some(&r),
     };
-    let used = explain_by_arcs(&inp, &r, &mut b, &NetParams::default());
+    let used = explain_by_arcs(&inp, &r, &mut b, &NetParams::default()).unwrap();
     let mut got: Vec<(u32, u32, u8)> = used.iter().map(|a| (a.from, a.to, a.generation)).collect();
     got.sort();
     assert_eq!(got, vec![(0, 1, 1), (1, 2, 2), (2, 3, 3)]);

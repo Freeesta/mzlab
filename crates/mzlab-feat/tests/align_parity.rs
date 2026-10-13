@@ -108,7 +108,7 @@ fn groups_equal_python() {
     let files: Vec<FileFeatures> = g["files"].as_array().unwrap().iter().map(file).collect();
     let refs: Vec<&FileFeatures> = files.iter().collect();
     same(
-        &align(&refs, &AlignParams::default()),
+        &align(&refs, &AlignParams::default()).unwrap(),
         &g["align"],
         "default",
     );
@@ -116,12 +116,20 @@ fn groups_equal_python() {
         max_rt_span: Some(0.5),
         ..AlignParams::default()
     };
-    same(&align(&refs, &span), &g["align_span"], "max_rt_span 0.5");
+    same(
+        &align(&refs, &span).unwrap(),
+        &g["align_span"],
+        "max_rt_span 0.5",
+    );
     let keep = AlignParams {
         drop_artefacts: false,
         ..AlignParams::default()
     };
-    same(&align(&refs, &keep), &g["align_keep"], "artefacts kept");
+    same(
+        &align(&refs, &keep).unwrap(),
+        &g["align_keep"],
+        "artefacts kept",
+    );
 }
 
 #[test]
@@ -129,7 +137,7 @@ fn rt_map_equals_python() {
     let g = golden();
     let files: Vec<FileFeatures> = g["files"].as_array().unwrap().iter().map(file).collect();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let al = align(&refs, &AlignParams::default());
+    let al = align(&refs, &AlignParams::default()).unwrap();
     let m = build(&al, &RtParams::default());
     let w = &g["rtmap"];
     assert_eq!(m.ok(), w["ok"].as_bool().unwrap());
@@ -169,10 +177,10 @@ fn two_runs_same_bytes_and_empty_series() {
     let g = golden();
     let files: Vec<FileFeatures> = g["files"].as_array().unwrap().iter().map(file).collect();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let run = || format!("{:?}", align(&refs, &AlignParams::default()));
+    let run = || format!("{:?}", align(&refs, &AlignParams::default()).unwrap());
     assert_eq!(run(), run());
     let empty = FileFeatures::default();
-    let al = align(&[&empty, &empty], &AlignParams::default());
+    let al = align(&[&empty, &empty], &AlignParams::default()).unwrap();
     assert!(al.is_empty() && al.n_files == 2);
     assert!(!build(&al, &RtParams::default()).ok());
 }

@@ -157,7 +157,7 @@ fn main() {
     );
     let refs: Vec<&FileFeatures> = feats.iter().collect();
     let t1 = Instant::now();
-    let al = align(&refs, &AlignParams::default());
+    let al = align(&refs, &AlignParams::default()).unwrap();
     report("per ion", &al, t1.elapsed().as_secs_f64());
     let t2 = Instant::now();
     let m = build(&al, &RtParams::default());
@@ -178,12 +178,12 @@ fn main() {
     }
     if fam {
         let t3 = Instant::now();
-        let fa = align_families(&refs, &FamAlignParams::default());
+        let fa = align_families(&refs, &FamAlignParams::default()).unwrap();
         report("per family", &fa, t3.elapsed().as_secs_f64());
         println!(
             "sha256 {} / {}",
             digest(&fa),
-            digest(&align_families(&refs, &FamAlignParams::default()))
+            digest(&align_families(&refs, &FamAlignParams::default()).unwrap())
         );
         if !list.is_empty() {
             println!(
@@ -194,7 +194,10 @@ fn main() {
         }
     }
     if let (Some(path), true) = (dump, fam) {
-        dump_rows(&path, &align_families(&refs, &FamAlignParams::default()));
+        dump_rows(
+            &path,
+            &align_families(&refs, &FamAlignParams::default()).unwrap(),
+        );
     }
     if let Some(path) = tsv {
         let mut w = std::io::BufWriter::new(std::fs::File::create(path).expect("tsv"));
