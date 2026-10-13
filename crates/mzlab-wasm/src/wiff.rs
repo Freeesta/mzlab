@@ -28,7 +28,8 @@ impl Engine {
     pub fn wiff_to_mzml(&mut self, name: &str, size: f64, read: Function, scan_size: f64, scan_read: Function, sample: u32, centroid: bool, sink: Function, progress: Function) -> Result<(), JsValue> {
         let ole = container(size, read, name)?;
         let len = (scan_size >= 0.0).then_some(scan_size as u64);
-        let w = Wiff::open(&ole, name, len, sample).map_err(|e| error_json(&e))?;
+        let mut w = Wiff::open(&ole, name, len, sample).map_err(|e| error_json(&e))?;
+        w.wiff_sha1 = Some(ole.sha1_hex());
         let mut out = BlockWriter { sink, buf: Vec::new() };
         let mut tell = |done: usize, total: usize| {
             let _ = progress.call2(&JsValue::NULL, &(done as f64).into(), &(total as f64).into());

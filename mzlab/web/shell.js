@@ -1,9 +1,6 @@
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
 // addresses of the views: #/dati, #/disegno (and #/teoria, which the head script above sends to the standalone Teoria on a cold start)
-const VIEW_HASH={data:"dati",draw:"disegno",theory:"teoria"},HASH_VIEW={dati:"data",disegno:"draw",teoria:"theory"};
-const hashView=()=>{const m=/^#\/(\w+)/.exec(location.hash);return m&&HASH_VIEW[m[1]]||null};
-const S={view:hashView()||"data",sess:null,adding:false,ref:{on:{},k:"auto",factor:1,norm:"none",istd:"",rttol:0.1,clip:false}};
 const fmt=v=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -25,7 +22,6 @@ async function init(){try{loading(true);await bootSession();await Promise.all(E.
   const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
-const ST={files:[],methods:[]};
 function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
@@ -41,7 +37,7 @@ function applyView(){const v=S.view,d=v==="data";
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
-function setView(v,fromHistory){S.view=v;applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);   // Back and Forward walk through the views
+function setView(v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);   // Back and Forward walk through the views
   if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash (a cold #/teoria never gets here: the head script leaves the page)
@@ -265,7 +261,7 @@ async function openRest(rest,tok){
   }
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I18N.t("load.reading"));
-  try{const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));S.adding=false;await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
+  try{const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
@@ -279,7 +275,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I
         try {
           await post("api/new",{});                                 // closes the open files but keeps the uploaded ones on disk
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
-          S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
+          STATO.aggiunta(false,"adding");await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
         }catch(e2){$("#gomsg").innerHTML=`<span class="fail">${esc(e2.message)}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {
@@ -288,12 +284,12 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I
     b.disabled=false
   }finally{if($("#gomsg").innerHTML==="")loading(false)}
 };
-$("#cancadd").onclick=()=>{S.adding=false;applyView()};
+$("#cancadd").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
 // while adding files the ones already in the session stay visible, with a way back to the data
 function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=="undefined"&&E.files.some(f=>!f.gone));el.hidden=!on;if(!on)return;
   const fs=E.files.filter(f=>!f.gone);
   el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
-  $("#backdata").onclick=()=>{S.adding=false;applyView()}}
+  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()}}
 // New session: ask first (nothing is touched if the student cancels), then clear everything the app keeps in the browser: the loaded files and the notebook
 // (the server or, in the web version, the worker's IndexedDB stores via api/new), localStorage (preferences), the drawing and the settings. The service
 // worker's cache holds only the program itself (no student data) and stays, so the page keeps working offline.
@@ -305,7 +301,7 @@ async function wipeLocal(){
   document.dispatchEvent(new Event("nbreset"));
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
-  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
+  try{await post("api/new",{fresh:true});S.sess=null;STATO.aggiunta(false,"adding");E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());STATO.pannelli([],"reset");$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
