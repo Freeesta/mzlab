@@ -2,6 +2,7 @@
 37_feature_table.js and 38_feature_export.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `tabella`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
 page shows cannot come from anywhere but the engine. Skipped without cargo, wasm-bindgen or node (the series is the one of test_feat_table_wasm.py)."""
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 from test_feat_table_wasm import ROOT, SPEC, built, run  # noqa: F401  (the fixture `built` makes the series and the engine)
 
 JS = ROOT / "TP_Mine" / "js"
+pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
 
 
 def contract():
