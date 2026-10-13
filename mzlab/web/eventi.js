@@ -99,7 +99,8 @@ function attach(p) {
     const cx = e.clientX, cy = e.clientY;
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
@@ -535,6 +536,27 @@ window.calcToggleFloat = () => {
 };
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden && !calcBox.classList.contains("sb-docked")) calcPlace(); });
+// two-step actions (second peak of a measure, second stretch of the internal blank): a label at the cursor says what the next click does and that Esc cancels
+function pendHint(p, e) {
+  const q = Q("#qtip"); if (!q) return; const k = pendKey(p);
+  if (!k) { if (q._pd === p) { q.hidden = true; q._pd = null; } return; }
+  q._pd = p; q.textContent = I18N.t(k); q.hidden = false;
+  q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, e.clientX + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, e.clientY + 16) + "px";
+}
+// the next click of a two-step action on this panel, as the i18n key of the cursor label (null: nothing pending)
+function pendKey(p) {
+  if (p.type === "spec" && p.meas && p.meas.ref != null) return "pend.peak";
+  if (p._ibkA) return "pend.span";
+  return null;
+}
+// Esc takes back the pending first step (the menus and dialogs keep their own Esc)
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || e.defaultPrevented || Q("dialog[open]") || (Q("#ctx") && !Q("#ctx").hidden)) return;
+  const p = E.panels.find(q => pendKey(q)); if (!p) return;
+  if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+  const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+  draw(p); uiSave();
+});
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (window.BARRA && BARRA.isDataView()) {
