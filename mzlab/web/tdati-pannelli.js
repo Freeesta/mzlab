@@ -1,3 +1,4 @@
+// @ts-strict
 // The panels of the Dati view (chromatograms, XIC, MRM, spectra, maps) give their data to TDATI (tdati.js): the table of what is drawn and the short description
 // read by screen readers. Called by afterDraw (pannelli.js) after every drawing.
 const T = (k, p) => I18N.t(k, p);

@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Open-data exports of an untargeted table: GNPS2 (FBMN / IIMN: the quantification table in the mzMine format + the MGF with FEATURE_ID + the IIN edges) and SIRIUS 6 (.ms).
 // Files only, nothing is sent: the user uploads them where they choose. Spectra and areas, never annotations or names (the programs of the destination do their own search). Pure functions (node tests them,
 // reading the files back with the readers of 25_untarget.js) + the buttons added to the export bar of 28_untarget_export.js.

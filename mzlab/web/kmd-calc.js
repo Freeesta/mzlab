@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Kendrick mass defect (KMD) of a list of ions: pure arithmetic, no page. Used by kmd.js (Statistica panel, high resolution) and tested under node.
 // Kendrick mass KM = m/z x (nominal mass of the repeating unit / its exact mass); KMD = round(KM) - KM. The ions of a homologous series (they differ by a

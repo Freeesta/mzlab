@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // Chromatographic figures of a peak (block H): S/N, width at half height, plates, tailing. Pure functions (also run by node in tests/test_cromato.py):
 // the program computes, the student reads. Same baseline as the integration (straight line between the two edges, ends = mean of 3 points).

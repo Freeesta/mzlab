@@ -1,3 +1,4 @@
+// @ts-strict
 // The operations of rust-worker.js on `metodo/1` (the method of an item, docs/agenti/metodo.md): the document the mzML carries, the one of the .wiff it was made from, or the .dam preselected for it.
 // A .wiff dropped without its .scan is only read for its method: its SHA-1 is looked for among the source files the open mzML files name (ProteoWizard writes it), and the document of the matching
 // sample is kept for those files until the page is closed.

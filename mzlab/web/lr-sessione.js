@@ -1,3 +1,4 @@
+// @ts-strict
 // Two helpers of lr.js about the list of the files of a session.
 
 /** The notebook lists the items of the session: the parts of a mixed file ("name.mzML#MS1") come back as the file, once. */

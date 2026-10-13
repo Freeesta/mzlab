@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Time profile of ONE ion chosen by the user («Statistica» panel): height or area of its XIC in every file, in the order of the file times,
 // the points joined by a line, the table under the chart (copy / Excel). The measure is the integration that is already there (autoEdges +

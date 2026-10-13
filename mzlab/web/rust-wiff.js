@@ -1,3 +1,4 @@
+// @ts-strict
 // SCIEX .wiff in the worker (rust-worker.js): the samples of a .wiff and one sample as mzML pieces. `readerFor(blob)` gives `(offset, length) => Uint8Array`; both files are read by offset (the .wiff is small, the .wiff.scan is never held).
 
 const samples = (engine, m, id, readerFor) => postMessage({ id, op: m.op, n: 0, info: engine.wiff_samples(m.name, m.blob.size, readerFor(m.blob)), buf: null, len: 0 });         // info: JSON array of the sample numbers

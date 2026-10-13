@@ -1,3 +1,4 @@
+// @ts-strict
 // The routes of lr.js about the methods (.dam) and how an item was acquired, answered by the Rust engine: /api/method, /api/method_warnings, /api/analog,
 // /api/delay, /api/chrom?kind=pda, /api/gradient (GET and POST), /api/gradient_parse. `get` and `post` return { status, text }, or undefined when the route is
 // not theirs, or null when it is not served (a part of a mixed file with a PDA for the delay, a reference file).

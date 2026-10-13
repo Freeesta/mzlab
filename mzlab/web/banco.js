@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Classic script, loaded after tabs.js.
 // A cell is one panel of the page. In the high-resolution world every chromatogram and spectrum cell gets

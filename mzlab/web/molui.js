@@ -1,3 +1,4 @@
+// @ts-strict
 // Shared chemistry presentation helpers: formula composition (order-free comparison, Hill order), theme-aware molecule SVG, compound-name display.
 // Classic script: window.MOLUI in the page, module.exports for the node tests.
 (function (root) {

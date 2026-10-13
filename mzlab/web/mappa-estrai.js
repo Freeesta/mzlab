@@ -1,3 +1,4 @@
+// @ts-strict
 // «How an XIC and a spectrum are extracted» on the RT x m/z map (module, loaded the first time the view is turned on from mappa.js).
 // The student places a box on the map (m/z window x RT window; drag it, drag its edges); beside the map the XIC of the m/z window (sum of the
 // intensities with m/z inside the window, against RT) and the mean spectrum of the RT window are drawn from the SAME box, the integrated zone is

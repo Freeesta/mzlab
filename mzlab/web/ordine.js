@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // Order and unit of the file times: pure functions, also run by node in tests/test_ordine.py. Times are always stored in MINUTES; the unit
 // (min, h, d) only changes what is shown and typed. The order of the files has ONE rule, here: by time if the names give a time, else standards

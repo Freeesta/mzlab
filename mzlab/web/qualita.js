@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak and the two methods of finding peaks.
 // Loaded as a module after the classic scripts; picchi.js uses window.QUALITA. Every call resolves to null when the .wasm is not there
 // (the local development server does not build it) or the worker dies: the page then shows an empty cell, never an error.

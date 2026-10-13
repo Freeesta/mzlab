@@ -1,3 +1,4 @@
+// @ts-strict
 // Agilent MassHunter .D folder -> mzML, done in the engine's worker (rust-worker.js, case "agilent2mzml") like the Thermo .raw (rust-raw.js): the mzML goes to a file of OPFS
 // (rust-opfs.js), MSPeak.bin is read by offset (Blob.slice, synchronously) and never held, the small files of the folder are read whole. `files` = { scan, xsd, peak, ts, devices, contents,
 // tree, acqmeth, datams }: Blobs (File) of AcqData/MSScan.bin, AcqData/MSScan.xsd, AcqData/MSPeak.bin, AcqData/MSTS.xml, AcqData/Devices.xml, AcqData/Contents.xml, AcqData/MSTree2.bin, acqmeth.txt and data.ms; scan and peak are required unless
