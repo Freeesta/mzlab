@@ -6,6 +6,7 @@
 #![allow(clippy::indexing_slicing)]
 
 mod agilent_synth;
+mod lettori_rotte;
 
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -13,6 +14,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use agilent_synth::{encode, sample};
+use lettori_rotte::{mzml_of, same_as_conversion, same_routes};
 use mzlab_core::idxread::{Index, Scan, FLAG_LETTORE};
 use mzlab_core::json::{self, Value};
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro, VoceCromatogramma};
@@ -107,6 +109,7 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
             "{label}: {k}"
         );
     }
+    same_routes(label, &mzml_of(&mut *l, c), &a, &b, &mut *l, c);
     voci.len()
 }
 
@@ -308,7 +311,9 @@ fn the_synthetic_wiff_pairs_give_the_index_of_their_mzml() {
     let n: usize = ["one", "two", "serie", "prodotto"]
         .iter()
         .filter(|n| out.join(format!("{n}.wiff.scan")).exists())
-        .map(|n| same_all(n, &|| wiff_set(&out, n)))
+        .map(|n| {
+            same_all(n, &|| wiff_set(&out, n)) + same_as_conversion(&out, n, &|| wiff_set(&out, n))
+        })
         .sum();
     let _ = std::fs::remove_dir_all(&out);
     assert!(n > 0);
@@ -347,6 +352,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
         );
         if dir.join(format!("{name}.wiff.scan")).exists() {
             count(&name, &|| wiff_set(dir, &name));
+            same_as_conversion(dir, &name, &|| wiff_set(dir, &name));
         }
     }
     let mut dirs: Vec<PathBuf> = files

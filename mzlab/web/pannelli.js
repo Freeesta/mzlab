@@ -424,11 +424,12 @@ function stepMsg(p, t, keep, notice) { p.rd.textContent = t; p.rd.classList.togg
 // the legend lives INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line sits on the row of the x axis title and the file legend inside the graph
 function placeLeg(p) {
   if (!p.cv || p.type === "map") return;
-  const right = p.el.clientWidth - p.cv.offsetLeft - p.cv.offsetWidth + M.r + 6;
   if (p.type === "spec") {
+    const right = p.el.clientWidth - p.cv.offsetLeft - p.cv.offsetWidth + M.r + 6;
     p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + p.cv.offsetHeight - 17 + "px";
-    if (p.leg2) { p.leg2.style.right = right + "px"; p.leg2.style.top = p.cv.offsetTop + M.t + 5 + "px"; }
-  } else { p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + M.t + 5 + "px"; }
+  }
+  const el = p.type === "spec" ? p.leg2 : p.leg;
+  if (el && LEGENDE.place(p, el)) drawSoon(p);
 }
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(p) {

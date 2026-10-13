@@ -28,6 +28,7 @@ try:
             pg.evaluate("(l) => { E.files.forEach(f => { f.label = l + '_' + f.k; }); E.panels.forEach(q => { if (q.el && typeof ctl === 'function') ctl(q); }); if (typeof renderFileList === 'function') renderFileList(); }", LONG)
             pg.wait_for_timeout(400)
             check(pg, f"{w}px {theme}")
+            pg.click("#np-set"); pg.wait_for_timeout(300); check(pg, f"{w}px {theme} settings"); pg.keyboard.press("Escape")
             steps.append((f"{w}px, {theme}: room for the arrow and ellipsis on every menu", "ok"))
             ctx.close()
         b.close()
