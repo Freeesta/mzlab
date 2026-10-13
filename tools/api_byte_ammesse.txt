@@ -5,3 +5,4 @@ lib.rs::detect_file
 lib.rs::align_series
 lib.rs::build_evidence
 lib.rs::state
+finder.rs::finder_transformations
