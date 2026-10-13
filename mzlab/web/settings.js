@@ -15,7 +15,7 @@ function a11yApply(o) {
   if (o.motion === "always" || (rm && o.motion !== "never")) r.setAttribute("data-a11y-reduce", ""); else r.removeAttribute("data-a11y-reduce");
 }
 function a11yWrite(o) {
-  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) {}
+  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* storage blocked: the setting applies now and is not remembered */ }
   a11yApply(o);
 }
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
@@ -102,7 +102,7 @@ function uipOpen(btn) {
     </details>
     <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
-    ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || (f.ms2_exps && f.ms2_exps.length))) ? `
+    ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row hr-only" title="${I18N.t("settings.hrPpm.title")}">${I18N.t("settings.hrPpm", { input: `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px">` })}</div>

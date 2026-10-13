@@ -1,0 +1,25 @@
+{
+ "nota": "OpenMS defaults (documentation of FeatureFinderMetabo / UmetaFlow for Orbitrap) except the mass error",
+ "MassTraceDetection": {
+  "mass_error_ppm": 5.0,
+  "noise_threshold_int": 10000.0,
+  "chrom_peak_snr": 3.0
+ },
+ "ElutionPeakDetection": {
+  "chrom_fwhm": 5.0,
+  "width_filtering": "fixed"
+ },
+ "FeatureFindingMetabo": {
+  "local_rt_range": 10.0,
+  "local_mz_range": 6.5,
+  "isotope_filtering_model": "metabolites (5% RMS)",
+  "report_convex_hulls": "true"
+ },
+ "FeatureGroupingAlgorithmKD": {
+  "mz_unit": "ppm",
+  "warp:mz_tol": 5.0,
+  "warp:rt_tol": 30.0,
+  "link:rt_tol": 30.0,
+  "link:mz_tol": 10.0
+ }
+}

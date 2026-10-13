@@ -46,6 +46,15 @@ def da_json(path) -> list[dict]:
     return da_righe([dict(d["parent"], ruolo="progenitore")] + list(d["tps"]))
 
 
+def rapporto_atteso(v) -> float:
+    """Expected concentration ratio: a number, or `a\\b` as written in the MAF of D1 (SA\\SB), read as a/b."""
+    t = str(v).strip().replace(",", ".")
+    if "\\" in t or "/" in t:
+        a, b = t.replace("/", "\\").split("\\")
+        return float(a) / float(b)
+    return float(t)
+
+
 def da_maf(path, mz: str = "mass_to_charge", rt: str = "retention_time", atteso: str = "expected_ratio", nome: str = "metabolite_identification", rt_secondi: bool = False,
            sep: str = "\t") -> list[dict]:
     """Compounds of the MAF table of D1: one per row with an m/z, an RT and the expected concentration ratio (SA/SB). Rows without a number are skipped."""
@@ -53,8 +62,8 @@ def da_maf(path, mz: str = "mass_to_charge", rt: str = "retention_time", atteso:
     with open(path, newline="", encoding="utf-8") as f:
         for i, r in enumerate(csv.DictReader(f, delimiter=sep)):
             try:
-                m, t, a = float(r[mz]), float(r[rt]), float(r[atteso])
-            except (KeyError, ValueError, TypeError):
+                m, t, a = float(r[mz]), float(r[rt]), rapporto_atteso(r[atteso])
+            except (KeyError, ValueError, TypeError, ZeroDivisionError):
                 continue
             out.append({"id": str(r.get(nome) or f"maf{i}") + f"@{i}", "mz": m, "rt": t / 60.0 if rt_secondi else t, "ruolo": "progenitore", "fascia": None, "atteso": a, "area_attesa": None})
     return sorted(out, key=lambda c: (c["mz"], c["rt"], c["id"]))

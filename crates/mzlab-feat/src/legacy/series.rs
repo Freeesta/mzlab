@@ -73,6 +73,8 @@ pub struct Parent {
     pub neutral: Formula,
     pub ion: Formula,
     pub mz: f64,
+    /// The SMILES of the parent (`smiles`, or `neutral` when it is not a formula), for the fragmentation tree.
+    pub smiles: Option<String>,
 }
 
 pub fn parent(parent_json: &str) -> Res<Parent> {
@@ -99,11 +101,19 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
     }
     let mz = ion_mz(mass(&neutral), "[M+H]+").unwrap_or(f64::NAN);
     let name = text("name").unwrap_or_default().to_string();
+    let is_formula = |t: &str| {
+        t.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+            && t.chars().all(|c| c.is_ascii_alphanumeric())
+    };
+    let smiles = text("smiles")
+        .or(text("neutral").filter(|t| !is_formula(t)))
+        .map(String::from);
     Ok(Parent {
         name,
         neutral,
         ion,
         mz,
+        smiles,
     })
 }
 
