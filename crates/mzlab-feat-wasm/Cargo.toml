@@ -9,11 +9,13 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# Two .wasm come from this crate, each under 400 KB (the CI builds them with --no-default-features): `detect` = L1-L6 (detect_file, align_series), `proofs` = L7-L9
-# (run_hypotheses, build_evidence). Both on (the default) is the native build used by the tests and the examples.
-default = ["detect", "proofs"]
+# Three .wasm come from this crate, each under 450 KB (the CI builds them with --no-default-features): `detect` = L1-L6 (detect_file, align_series), `proofs` = L7-L9
+# (run_hypotheses, build_evidence), `mrm` = L1-L6 of the MRM files (detect_mrm_file, align_mrm_series; it carries the reader of the chromatograms of the mzML,
+# loaded only for an MRM series). All on (the default) is the native build used by the tests and the examples.
+default = ["detect", "proofs", "mrm"]
 detect = []
 proofs = []
+mrm = []
 
 [dependencies]
 js-sys = "0.3.106"

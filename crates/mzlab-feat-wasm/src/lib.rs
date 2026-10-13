@@ -4,9 +4,13 @@
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 #![forbid(unsafe_code)]
 use js_sys::{Array, Function, Uint8Array};
-use mzlab_core::budget::{Hashing, MemBudget, WriteAt};
+#[cfg(any(feature = "detect", feature = "proofs"))]
+use mzlab_core::budget::MemBudget;
+use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::idxread::{Index, ReadAt};
+#[cfg(any(feature = "detect", feature = "proofs"))]
+use mzlab_core::idxread::Index;
+use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
@@ -80,6 +84,7 @@ impl ReadAt for JsReader {
     }
 }
 
+#[cfg(any(feature = "detect", feature = "proofs"))]
 fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
     let r = JsReader {
         read: read.clone(),
@@ -231,7 +236,7 @@ pub fn align_series(
     Ok(out)
 }
 
-#[cfg(feature = "detect")]
+#[cfg(feature = "mrm")]
 fn mrm_params(min_height: f64) -> mzlab_feat::mrm::MrmParams {
     let mut p = mzlab_feat::mrm::MrmParams::default();
     if min_height.is_finite() && min_height > 0.0 {
@@ -240,7 +245,7 @@ fn mrm_params(min_height: f64) -> mzlab_feat::mrm::MrmParams {
     p
 }
 
-#[cfg(feature = "detect")]
+#[cfg(feature = "mrm")]
 /// L1-L3 of an MRM file (the mzML of `size` bytes read with `read(0, offset, length)`) written to `write(offset, bytes)`: `{"bytes", "sha256"}` of its
 /// `.mzfeatf`, one peak list for every transition. `sha256` is the one of the source (it goes in the meta); `min_height` NaN = the default.
 #[wasm_bindgen]
@@ -260,7 +265,7 @@ pub fn detect_mrm_file(
     })
 }
 
-#[cfg(feature = "detect")]
+#[cfg(feature = "mrm")]
 /// L4-L6 of an MRM series: the `.mzfeatf` (an `Array` of `Uint8Array`) aligned by transition and RT, the cells without a peak integrated on the
 /// chromatogram of their mzML (`read(k, offset, length)`, `sizes[k]` bytes), written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`.
 #[wasm_bindgen]
