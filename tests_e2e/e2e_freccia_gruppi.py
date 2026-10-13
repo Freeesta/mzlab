@@ -5,7 +5,7 @@ EX = ROOT / "mzlab" / "web" / "esempi"
 steps = []
 r = Run(port=8899, wd="/tmp/wd_freccia_gruppi")
 INFO = """() => [...document.querySelectorAll('#flst .fgh[data-gt], #flst .fgh[data-gg]')].map(g => { const c = g.querySelector('.chv'), b = c.getBoundingClientRect(), s = getComputedStyle(c, '::before');
-  return { w: b.width, h: b.height, bw: parseFloat(s.width) + parseFloat(s.borderRightWidth), col: getComputedStyle(c).color, ink: getComputedStyle(document.body).color, muted: getComputedStyle(g).color, exp: g.getAttribute('aria-expanded'), on: c.classList.contains('on'), tf: s.transform } })"""
+  return { w: b.width, h: b.height, bw: parseFloat(s.width) + parseFloat(s.borderRightWidth), col: getComputedStyle(c).color, ink: getComputedStyle(document.body).color, muted: getComputedStyle(g).color, exp: c.getAttribute('aria-expanded'), on: c.classList.contains('on'), tf: s.transform } })"""
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
@@ -22,7 +22,7 @@ try:
             x = i0[0]
             assert x["w"] >= 24 and x["h"] >= 24 and x["bw"] >= 11, x
             assert x["col"] == x["ink"] and x["on"] and x["exp"] == "true", x
-            pg.focus("#flst .fgh >> nth=0"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
+            pg.focus("#flst .fgh .chv >> nth=0"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
             x1 = pg.evaluate(INFO)[0]
             assert x1["exp"] == "false" and not x1["on"] and x1["tf"] != x["tf"], (x, x1)
             steps.append((f"{theme}: group arrow is a clear 24 px control that toggles with the keyboard", "ok"))

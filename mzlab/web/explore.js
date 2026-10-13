@@ -646,8 +646,8 @@ function renderFileList() {
   const grpClosed = g => compact && flGrpGet()[g] === 1;
   const gh = (G, label) => {
     const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
-    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" aria-hidden="true"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
-    return `<div class="fgh" data-gt="${gk}" role="button" tabindex="0" aria-expanded="${open}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" aria-hidden="true"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+    if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+    return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
   // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
@@ -666,7 +666,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll(".fgh[data-gt]").forEach(el => {
     const flip = () => { const t = el.dataset.gt; E._grpOpen[t] = !isExpOpen(t); renderFileList(); };
     el.onclick = e => { if (!e.target.closest("input")) flip(); };
-    el.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("input")) { e.preventDefault(); flip(); } };
+    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
   Q("#flst").querySelectorAll(".pr-tog").forEach(tog => {
     const flip = () => { const f = E.files[+tog.dataset.prk]; if (f) { f._prOpen = f._prOpen === false; renderFileList(); } };
@@ -676,7 +676,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll(".fgh[data-gg]").forEach(el => {
     const flip = () => { const m = flGrpGet(); m[el.dataset.gg] = m[el.dataset.gg] === 1 ? 0 : 1; flGrpSet(m); renderFileList(); };
     el.onclick = e => { if (!e.target.closest("input")) flip(); };
-    el.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("input")) { e.preventDefault(); flip(); } };
+    const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
     side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);

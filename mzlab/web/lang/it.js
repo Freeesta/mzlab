@@ -605,6 +605,7 @@ I18N.add("it", {
   "files.showHidePrec": "Mostra o nascondi precursori",
   "files.addPair.title": "Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato",
   "files.precGo.title": "Clic: i grafici passano a questo precursore.",
+  "files.grp.toggle": "Mostra o nascondi i file del gruppo",
   "files.showHideGroup": "Mostra o nascondi tutto il gruppo",
   "files.rename.prompt": "Nome del campione",
   "files.color.of": "Colore di {label}",

@@ -605,6 +605,7 @@ I18N.add("en", {
   "files.showHidePrec": "Show or hide the precursors",
   "files.addPair.title": "Adds (or closes) a second pair of charts to compare this precursor with the one shown",
   "files.precGo.title": "Click: the charts switch to this precursor.",
+  "files.grp.toggle": "Show or hide the files of the group",
   "files.showHideGroup": "Show or hide the whole group",
   "files.rename.prompt": "Sample name",
   "files.color.of": "Color of {label}",
