@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 
 window.toast = function(msg) {
@@ -341,7 +342,7 @@ async function bootSession0() {
     if (S.ref.k !== "auto") /** @type {any} */ (S.ref).k = idx(oldNames[S.ref.k]);
     STATO.file(Math.min(E.cur, E.files.length - 1), "reload");
     renderFileList();
-    // @ts-expect-error toolbar() below is also window.toolbar (a BarProp) for lib.dom
+    // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     return;
@@ -351,7 +352,7 @@ async function bootSession0() {
   await nbLoad();
   if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
   ensureLayout();
-  // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom
+  // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); uiSave();
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
@@ -478,7 +479,7 @@ function reorderFiles(fromK, toK, isBefore) {
   uiSave();
 }
 
-const flCompact = () => !!(window.matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
+const flCompact = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { return lsObj("qqq.flgrp"); }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
 // the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
@@ -596,8 +597,8 @@ function bindFileReorder() {
         const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         const isBefore = target?.classList.contains("drop-before");
         document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
-        if (target && +target.dataset.k !== fromK) {
-          reorderFiles(fromK, +target.dataset.k, isBefore);
+        if (target && +(/** @type {string} */ (target.dataset.k)) !== fromK) {
+          reorderFiles(fromK, +(/** @type {string} */ (target.dataset.k)), isBefore);
         }
       }
     };
@@ -729,7 +730,7 @@ async function removeFile(f) {
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
   if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
   renderFileList(); renderNav();
-  // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom
+  // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
 }
 function fileCtx(e, f) {
@@ -766,7 +767,7 @@ function renderNav() {
   const shortName = n => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;          // a very long name is cut in the middle, so the final time stays visible
   s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""} title="${EH(f.label)}">${EH(shortName(f.label))}</option>`).join("");
   const cur = tabFiles().find(f => f.k === E.cur);
-  const g = document.createElement("canvas").getContext("2d"), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
+  const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
   s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";   // as wide as the longest name (CSS sets the minimum and the maximum)
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");   // with a single file nothing here has a meaning
   // a single file: "Solo il selezionato" is on and "Tutti sovrapposti" is off; with two or more files the choice the student had made comes back
@@ -789,7 +790,7 @@ Q("#fsel").onchange = e => { STATO.file(+e.target.value, "file"); renderFileList
 Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
 document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
-// @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
+// @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
   const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2"), mrm = has("mrm"), empty = !scan && !mrm;       // the buttons follow the experiment types the files have

@@ -5,7 +5,7 @@ Needs the site and the .wasm (python tools/build_site.py)."""
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
-from pyref import PyRef
+from golden_ref import PyRef
 from lib_hr import synth
 
 sys.path.insert(0, str(ROOT))

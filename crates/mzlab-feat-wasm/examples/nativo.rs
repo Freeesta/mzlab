@@ -1,4 +1,4 @@
-//! The pipeline of the bridge on files, natively: the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
+//! The pipeline of the bridge on files, natively (the recipe fits the first index: high or unit resolution, as the site chooses it): the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
 //!
 //!     cargo run --release -p mzlab-feat-wasm --example nativo -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N]
 //!
@@ -76,7 +76,7 @@ fn budgeted(
     pmz: f64,
     prt: f64,
 ) {
-    let r = run::recipe_from_json(recipe).expect("recipe");
+    let r = run::recipe_for(recipe, &mut open(&files[0])).expect("recipe");
     let budget = MemBudget::mb(mb);
     for p in files {
         let mut s = sink(out, &format!("{}.mzfeatf", base(p)));
@@ -137,7 +137,7 @@ fn main() {
     if budget_mb.is_finite() {
         return budgeted(&files, &recipe, &out, budget_mb, &parent, &rules, pmz, prt);
     }
-    let r = run::recipe_from_json(&recipe).expect("recipe");
+    let r = run::recipe_for(&recipe, &mut open(&files[0])).expect("recipe");
     let t0 = Instant::now();
     let mut stored = Vec::new();
     for p in &files {

@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
 // ------------------------------------------------------------------ pannelli mobili
@@ -321,7 +322,7 @@ function fsInert(on, closing) {
 function whiteCanvas(cv, caption = "") {
   const sc = cv.width / Math.max(cv.clientWidth, 1), top = caption ? Math.round(30 * sc) : 0;
   const c = document.createElement("canvas"); c.width = cv.width; c.height = cv.height + top;
-  const g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(cv, 0, top);
+  const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(cv, 0, top);
   if (caption) { g.fillStyle = "#222"; g.font = `${Math.round(12 * sc)}px system-ui`; g.textBaseline = "middle"; g.fillText(caption, Math.round(14 * sc), top / 2); }
   return c;
 }
@@ -658,7 +659,7 @@ function ctl(p) {
     else if (k === "corr") corrWire(x, v => setCorr(p, v));
         else x.onchange = () => {
       if (k === "tr" && x.value === "__quant_qual") {
-        // @ts-expect-error CAL is a const of tabs.js, so window.CAL is undefined at run time (kept as is: no change of behavior)
+        // @ts-ignore CAL is a const of tabs.js, so window.CAL is undefined at run time (kept as is: no change of behavior)
         p.tr = [window.CAL?.quant, window.CAL?.qual].filter(Boolean);
       } else {
         p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
