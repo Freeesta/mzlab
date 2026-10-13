@@ -6,6 +6,7 @@
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { fragmentItems } from "./disegno-frammenti.js";
+import { partialItems, drawPartials, plainSmiles, partialExport } from "./disegno-parziali.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -141,7 +142,7 @@ function hideMacro(fr) {
       (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = await K.getSmiles(); } catch (_) {} }
+      if (!smi) { try { smi = plainSmiles(await K.getSmiles()); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
@@ -167,7 +168,7 @@ function hideMacro(fr) {
         const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
         m.appendChild(brk);
       }
-      for (const it of await fragmentItems(K, ev, fragHelpers).catch(() => [])) {                  // the two pieces of the bond under the pointer, and the table of all cuts
+      for (const it of [...await partialItems(K, ev, set, fragHelpers).catch(() => []), ...await fragmentItems(K, ev, fragHelpers).catch(() => [])]) {   // brackets with a delta (disegno-parziali.js); the two pieces of the bond, all cuts
         const row = document.createElement("div"); row.textContent = it.text; if (it.title) row.title = it.title;
         row.onclick = () => { m.hidden = true; if (it.run) it.run(); }; m.appendChild(row);
       }
@@ -333,7 +334,7 @@ function breakBonds(ids) {
 }
 window.breakBonds = breakBonds;
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: ids => pieceMolfile(ids), t: (k, p) => I18N.t(k, p), copy: s => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
-  num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o) };
+  num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o), ask: (q, d) => ask(EH(q), d), note: s => (window.toast ? toast(s) : dnote(s)) };
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
@@ -489,6 +490,7 @@ function drawLabels() {
   if (!g) { g = doc.createElementNS(ns, "g"); g.id = "qqq-labels"; g.setAttribute("pointer-events", "none"); }
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
+  drawPartials(K, svg, sc);                               // brackets of the partial structures, always drawn
   if (!labelsOn()) return;
   // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
@@ -701,7 +703,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
+window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
 try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });

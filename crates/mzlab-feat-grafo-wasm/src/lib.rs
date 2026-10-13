@@ -6,7 +6,7 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/2";
+const BRIDGE: &str = "mzfeat-grafo/3";
 
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
@@ -34,4 +34,11 @@ pub fn analyse(smiles: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn fragments(molfile: &str, a: i32, b: i32) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::frammenti::fragments_json(molfile, a, b).map_err(js_err)
+}
+
+/// `parz/1` of a V2000 molfile and a delta «+O -H2»: formula, mass and m/z of [M+H]+ of the partial structure, `level` 3
+/// (see `mzlab_feat::chem::frammenti::partial_json`).
+#[wasm_bindgen]
+pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::frammenti::partial_json(molfile, delta).map_err(js_err)
 }
