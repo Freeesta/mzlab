@@ -66,6 +66,14 @@ pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
     v.try_reserve(extra).map_err(|_| Error::memory_budget())
 }
 
+/// `vec![value; n]` that refuses with `error.memoryBudget` instead of aborting when the allocation fails.
+pub(crate) fn filled<T: Clone>(n: usize, value: T) -> Result<Vec<T>> {
+    let mut v = Vec::new();
+    reserve(&mut v, n)?;
+    v.resize(n, value);
+    Ok(v)
+}
+
 /// One slab of peaks (m/z ascending, above the floor) through both grids.
 struct Slab {
     mz: Vec<f64>,
@@ -161,4 +169,17 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<FileFeature
     drop(slab);
 
     finish(rows, dt, p.axis)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filled;
+
+    #[test]
+    fn filled_gives_the_vec_or_refuses_with_the_key() {
+        assert_eq!(filled(3, 7u8).unwrap(), vec![7, 7, 7]);
+        assert!(filled::<f64>(0, 0.0).unwrap().is_empty());
+        let e = filled::<u64>(usize::MAX / 16, 0).unwrap_err();
+        assert_eq!(e.key, "error.memoryBudget");
+    }
 }

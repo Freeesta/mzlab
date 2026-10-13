@@ -117,3 +117,12 @@ def test_robustness_end_to_end_on_files_named_like_the_dda_ones(tmp_path):
     assert det["robustezza"]["file"] == 2 and all(v[i] is True for i in hr.ID_ROBUSTEZZA), (v, det)
     assert c["vista_tabella_hr"] is True and c["concordanza_mzmine"] == "non_misurata" and "saltato" in det["csv"]
     assert "hr_robustezza_gira" in hr.markdown(c, det)
+
+
+def test_trova_hr_cerca_anche_nella_radice(tmp_path, monkeypatch):
+    from valida import hr
+    (tmp_path / "HRMS").mkdir()
+    monkeypatch.setenv("MZLAB_DATI", str(tmp_path))
+    assert hr.trova_hr(None) is None
+    (tmp_path / "HRMS" / "Orbitrap_Fusion_DDApos_1-2min.mzML").write_bytes(b"")
+    assert hr.trova_hr(None) == tmp_path / "HRMS"

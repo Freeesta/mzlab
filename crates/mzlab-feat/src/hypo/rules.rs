@@ -139,6 +139,7 @@ fn rule_of(v: &Value) -> Result<Rule> {
                     .filter_map(|x| x.str().map(String::from))
                     .collect()
             })
+            // fixed size: a rule text, empty when absent
             .unwrap_or_default()
     };
     Ok(Rule {

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import resource
 import sys
 import time
 from pathlib import Path
@@ -22,6 +21,30 @@ from valida import PPM, ROOT, RT_TOL, isotopologhi, metriche, rapporto, tabelle 
 from mzlab.chem import elements as E                         # noqa: E402
 
 
+def _memoria_massima_mb() -> float:
+    """Peak resident memory of this process in MB (`resource` on Unix, the peak working set through ctypes on Windows)."""
+    try:
+        import resource
+    except ImportError:
+        import ctypes
+        from ctypes import wintypes
+
+        class Contatori(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t), ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                        ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+
+        c = Contatori()
+        c.cb = ctypes.sizeof(c)
+        k32 = ctypes.WinDLL("kernel32")
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        ok = ctypes.WinDLL("psapi").GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+        return c.PeakWorkingSetSize / 1048576 if ok else 0.0
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak / (1048576 if sys.platform == "darwin" else 1024)
+
+
 def carica_verita(path) -> list[dict]:
     """Truth ions as [{id, mz, ion, rt_obs[], parent}]: the parent ('parent' key) and the products ('tps' or 'ioni')."""
     d = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -29,7 +52,7 @@ def carica_verita(path) -> list[dict]:
     if isinstance(d, dict) and d.get("parent"):
         p = d["parent"]
         rt = p.get("rt_obs")
-        out.append({"id": str(p.get("name") or "parent"), "mz": float(p["mz"]), "ion": p.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": True})
+        out.append({"id": str(p.get("name") or "parent"), "mz": float(p["mz"]), "ion": p.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": True, **({"smiles": p["smiles"]} if p.get("smiles") else {})})
     lista = d if isinstance(d, list) else d.get("tps") or d.get("ioni") or []
     for x in lista:
         rt = x.get("rt_obs")
@@ -93,7 +116,7 @@ def valida(serie: list[dict], ioni: list[dict] | None = None, mzmine: str | None
             tp = metriche.tp_veri(ioni, x.riempita, tr_c, x.candidati)["riassunto"] if ioni else {}
             r["sensibilita"][f"{f:g}"] = {"righe": len(x.allineata), "candidati": int(len(x.candidati)), "tp_trovati": tp.get("trovati"), "tp_nei_candidati": tp.get("nei_candidati")}
             fasi[f"sensibilita_{f:g}"] = time.perf_counter() - t1
-    r["prestazioni"] = {"totale_s": time.perf_counter() - t0, "fasi_s": fasi, "memoria_massima_mb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024}
+    r["prestazioni"] = {"totale_s": time.perf_counter() - t0, "fasi_s": fasi, "memoria_massima_mb": _memoria_massima_mb()}
     return r
 
 
@@ -179,7 +202,7 @@ def main(argv=None) -> int:
     cg.add_argument("--lr", action="store_true", help="measure the low-resolution table view (MRM and full scan; synthetic series always, real ones from --serie-lr or $MZLAB_DATI) and write cancello_lr.json")
     cg.add_argument("--serie-lr", help="folder with the real LR mzML (B_MRM-*, B_FullMass-*, B_MS2-*); default $MZLAB_DATI/mzML; --verita gives the parent of the full scan")
     cg.add_argument("--lr-json", help="also write cancello_lr.json here (the tool never commits it)")
-    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS/Esempio raw e mzML) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
+    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
     cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
     cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)

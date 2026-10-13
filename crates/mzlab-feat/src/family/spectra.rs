@@ -128,6 +128,7 @@ pub fn gather<R: ReadAt>(
     })?;
     out.specs = top
         .iter()
+        // fixed size: the strongest pair of one spectrum, none when the spectrum is empty
         .map(|t| rules.strongest(&t.mz, &t.it).unwrap_or_default())
         .collect();
     for &(scan, row) in &want {

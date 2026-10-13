@@ -110,6 +110,7 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
     });
     let mut parent = vec![NO_PARENT; n];
     let mut role = vec![ROLE_NONE; n];
+    // one byte per feature of the file whose table the `detect` phase already counted
     let mut alt = vec![0u8; n];
     for i in (0..n).filter(|&i| !excluded(f, i)) {
         role[i] = ROLE_M;
