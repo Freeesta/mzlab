@@ -115,7 +115,10 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
         ion,
         mz,
         adduct,
-        rt: v.get("rt").and_then(Value::f64).filter(|r| r.is_finite() && *r >= 0.0),
+        rt: v
+            .get("rt")
+            .and_then(Value::f64)
+            .filter(|r| r.is_finite() && *r >= 0.0),
         smiles,
     })
 }
