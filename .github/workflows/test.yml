@@ -25,7 +25,7 @@ jobs:
       matrix:
         python: ["3.11", "3.14"]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,6 +33,25 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      # the tests that build a .wasm (test_untarget*, three of test_fair) are skipped without the wasm32 target and wasm-bindgen
+      - name: Toolchain (version pinned in rust-toolchain.toml) and wasm32 target
+        run: |
+          rustup show
+          rustup target add wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: wasm-bindgen-cli (same version as Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then
+            cargo install wasm-bindgen-cli --version "$ver" --locked --force
+          fi
       - name: Install
         run: python -m pip install -e ".[test]"
       - name: Unit tests

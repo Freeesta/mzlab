@@ -46,11 +46,35 @@
       <div class="mut">Shift of the apex of the anchors (strong, alone in their <i>m/z</i> and RT neighbourhood, present in the files) in each file against the median of the files. No signal is moved: the curve tells where a feature is expected in a file when its area is filled.</div>${svg}<div class="rta-leg">${leg}</div></details>`;
   }
 
+  /** Columns of the table of the products: label, sort value and cell of each. */
+  function tableCols(/** @type {any} */ h, /** @type {Map<any, number>} */ rank, /** @type {(r: any) => number} */ lvRank) {
+    const { esc, fmtA } = h, TPTAB = /** @type {any} */ (window).TPTAB;
+    const yn = (r, k) => !r.ctl ? `<span class="tpt-no" title="not available for this run">–</span>` : r.ctl[k] ? `<span title="detected: ${(100 * r.ctl[k + "_ratio"]).toFixed(0)}% of the maximum of the treated samples" aria-label="yes">●</span>` : `<span class="tpt-no" aria-label="no">○</span>`;
+    return [
+      { key: "rank", off: true, label: "#", num: true, sort: r => rank.get(r), cell: r => String(rank.get(r)) },
+      { key: "level", label: "Lvl", sort: r => lvRank(r) * 1e6 + r.score, cell: r => lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "") },
+      { key: "pred", off: true, label: "Pred.", title: "prediction level (Löffler et al. 2025)", sort: r => r.pred ?? 9, cell: r => predBadge(r) },
+      { key: "sim", off: true, label: "Sim.", title: "modified cosine split in equal / shifted / common neutral loss fragments", sort: r => r.modcos, cell: r => simBar(r.sim) },
+      { key: "score", label: "Score", num: true, sort: r => r.score, cell: r => String(r.score) },
+      { key: "mz", label: "<i>m/z</i>", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(4) },
+      { key: "formula", label: "Formula (ppm)", sort: r => r.formula || "", cell: r => `${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}` },
+      { key: "change", label: "Change", sort: r => r.derivation || r.delta || "", cell: r => `${(typeof TPTR !== "undefined") ? TPTR.change(r.derivation || r.delta || "") : esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}` },
+      { key: "rt", label: "RT", num: true, sort: r => r.rt, cell: r => String(r.rt) },
+      { key: "tmax", off: true, label: "t max", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
+      { key: "area", off: true, label: "Max area", title: "largest area among the treated samples", num: true, sort: r => r.area_max, cell: r => fmtA(r.area_max || 0) },
+      { key: "kin", label: "Kinetics", cell: r => `${TPTAB.spark(r.series, "area")}${r.filled.length ? ` <span class="mut" title="${r.filled.length} area(s) re-integrated where no peak was found (filled)">○${r.filled.length}</span>` : ""}` },
+      { key: "ms2", off: true, label: "MS²", title: "MS² scans inside the peak", num: true, sort: r => r.ms2_scans, cell: r => String(r.ms2_scans || "") },
+      { key: "t0", label: "t0", title: "the ion is detected in the t0 file(s)", sort: r => r.ctl ? +r.ctl.in_t0 : null, cell: r => yn(r, "in_t0") },
+      { key: "blank", label: "Blank", title: "the ion is detected in the blank or dark control(s)", sort: r => r.ctl ? +r.ctl.in_blank : null, cell: r => yn(r, "in_blank") },
+      { key: "class", off: true, label: "Class", sort: r => r.class || "", cell: r => esc(r.class || "") },
+      { key: "region", off: true, label: "Region", sort: r => r.region || "", cell: r => esc(r.region || "") },
+    ];
+  }
   function render(R, s, h) {
     if (!document.getElementById("tp-hr-css")) { const st = document.createElement("style"); st.id = "tp-hr-css"; st.textContent = CSS; document.head.appendChild(st); }
     const { esc, fmtA, chart, hue, call, toast, dl } = h;
     const $ = q => R.querySelector(q);
-    const rows = s.rows, st = { sel: null, minLevel: /** @type {any} */ (5), text: "", onlyLoc: false, det: {}, order: "score" };
+    const TPTAB = /** @type {any} */ (window).TPTAB, rows = s.rows, st = { sel: /** @type {number | null} */ (null), minLevel: /** @type {any} */ (5), text: "", onlyLoc: false, ms2: false, noT0: false, noBlank: false, det: {} };
     const lvRank = r => r.diagnostic ? 4 : +r.level;
     const n = l => rows.filter(r => String(r.level) === l && !r.diagnostic).length, nDiag = rows.filter(r => r.diagnostic).length;
     const nMs2 = rows.filter(r => r.ms2_scans > 0).length;
@@ -62,9 +86,10 @@
       <div class="card hrn">Each row is a hypothesis, not an identification: the level says how much evidence supports it (5 appears with the treatment, 4 unique and derivable formula, 3 MS² linked to the parent and region localised; ◆ diagnostic evidence: site determined with margin, consistent RT and kinetics, which only the chemist can turn into level 2b). Levels 2a and 1 require a standard.</div>
       ${s.warnings.length ? `<div class="card">${s.warnings.map(w => `<div class="flag">⚠ ${esc(w)}</div>`).join("")}</div>` : ""}
       <div class="card"><div class="row"><label class="mut">Minimum level</label><select id="hr-lv"><option value="5">all</option><option value="4">4 or higher</option><option value="3">3 or higher</option><option value="d">3 with diagnostic evidence only</option></select>
-        <input type="text" id="hr-q" placeholder="filter: formula, m/z, region" class="grow"><label class="mut">Sort by</label><select id="hr-ord"><option value="score">score</option><option value="level">level, then score</option></select><label><input type="checkbox" id="hr-loc"> only with region</label><span class="mut" id="hr-cnt"></span></div>
-        <div class="tbl"><table id="hr-t"></table></div></div>
-      <div id="tp-det"></div>
+        <input type="text" id="hr-q" placeholder="filter: formula, m/z, region" class="grow"><label class="mut">Sort by</label><select id="hr-ord"><option value="score">score</option><option value="level">level, then score</option><option value="">table column</option></select><label><input type="checkbox" id="hr-loc"> only with region</label>
+        <label><input type="checkbox" id="hr-ms2f"> with MS²</label><label><input type="checkbox" id="hr-t0f" disabled> not in t0</label><label><input type="checkbox" id="hr-blf" disabled> not in blank</label><span class="mut" id="hr-cnt" role="status"></span></div>
+        <details class="tpt-colm" id="hr-colm"><summary>Columns</summary><div id="hr-cols"></div></details>
+        <div id="hr-tbl"></div></div>
       <div class="card" id="hr-mnet"></div>
       <details class="card"><summary>Applied filters (funnel) and sessions</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("en")} · ${esc(f.text)}</div>`).join("")}
         <div class="mut" style="margin-top:6px">Sessions: ${esc([...new Set(s.sessions.labels)].map(l => l + " (" + s.sessions.labels.filter(x => x === l).length + " files)").join(", "))}${s.sessions.factors.applied ? "; areas rescaled to the reference session" : "; no correction needed"}.</div>
@@ -72,29 +97,36 @@
       ${rtAlign(s.rt_align, esc)}
       <div class="card" id="hr-tree"></div>`;
 
-    function spark(series) {
-      const mx = Math.max(...series) || 1, w = 70, ht = 18, pts = series.map((v, i) => `${(i / Math.max(1, series.length - 1) * (w - 4) + 2).toFixed(1)},${(ht - 2 - v / mx * (ht - 4)).toFixed(1)}`).join(" ");
-      return `<svg width="${w}" height="${ht}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
-    }
-    const ordered = () => st.order === "level" ? [...rows].sort((x, y) => lvRank(y) - lvRank(x) || y.score - x.score) : rows;
-    const keep = () => ordered().filter(r => (st.minLevel === 5 || lvRank(r) >= (st.minLevel === "d" ? 4 : st.minLevel)) && (!st.onlyLoc || r.region) &&
-      (!st.text || [r.formula, String(r.mz), r.region, r.delta, r.derivation].join(" ").toLowerCase().includes(st.text)));
+    const rank = new Map(rows.map((r, i) => [r, i + 1]));
+    const keep = () => rows.filter(r => (st.minLevel === 5 || lvRank(r) >= (st.minLevel === "d" ? 4 : st.minLevel)) && (!st.onlyLoc || r.region) &&
+      (!st.text || [r.formula, String(r.mz), r.region, r.delta, r.derivation].join(" ").toLowerCase().includes(st.text)) &&
+      (!st.ms2 || r.ms2_scans > 0) && (!st.noT0 || !r.ctl || !r.ctl.in_t0) && (!st.noBlank || !r.ctl || !r.ctl.in_blank));
+    const COLS = tableCols(h, rank, lvRank);
+    const T = TPTAB.mount($("#hr-tbl"), { id: "hr-t", label: "Possible transformation products", cols: COLS, rowId: r => r.id, esc, name: r => `${r.formula || "m/z " + r.mz}, m/z ${r.mz}`,
+      onOpen: (id, panel) => fill(id, panel), onSort: () => { $("#hr-ord").value = ""; } });
+    $("#hr-cols").innerHTML = COLS.map(c => `<label><input type="checkbox" data-col="${c.key}"${c.off ? "" : " checked"}> ${c.label}</label>`).join("");
+    $("#hr-cols").onchange = () => T.setCols([...R.querySelectorAll("#hr-cols input:checked")].map(i => /** @type {HTMLElement} */ (i).dataset.col || ""));
     function table() {
-      const o = ordered(), k = keep();
+      const k = keep();
       $("#hr-cnt").textContent = `${k.length} of ${rows.length}`;
-      $("#hr-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th title="prediction level (Löffler et al. 2025)">Pred.</th><th title="modified cosine split in equal / shifted / common neutral loss fragments">Sim.</th><th>Score</th><th><i>m/z</i></th><th>Formula (ppm)</th><th>Change</th><th>RT</th><th>t max</th><th>Class</th><th>Region</th><th>Kinetics</th></tr>` +
-        k.map((r, i) => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}"><td>${o.indexOf(r) + 1}</td><td>${lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "")}</td>
-          <td>${predBadge(r)}</td><td>${simBar(r.sim)}</td><td class="n">${r.score}</td><td class="n">${r.mz.toFixed(4)}</td><td>${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}</td>
-          <td>${(typeof TPTR !== "undefined") ? TPTR.change(r.derivation || r.delta || "") : esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}</td><td class="n">${r.rt}</td><td class="n">${r.tmax ?? ""}</td><td>${esc(r.class || "")}</td>
-          <td>${esc(r.region || "")}</td><td>${spark(r.series)}${r.filled.length ? ` <span class="mut" title="${r.filled.length} area(s) re-integrated where no peak was found (filled)">○${r.filled.length}</span>` : ""}</td></tr>`).join("");
-      $("#hr-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
+      T.setRows(k);
     }
     $("#hr-lv").onchange = e => { st.minLevel = e.target.value === "d" ? "d" : +e.target.value; table(); };
     $("#hr-q").oninput = e => { st.text = e.target.value.trim().toLowerCase(); table(); };
-    $("#hr-ord").onchange = e => { st.order = e.target.value; table(); };
+    $("#hr-ord").onchange = e => { if (e.target.value === "level") T.sortBy("level", -1); else if (e.target.value) T.sortBy("rank", 1); };
     $("#hr-loc").onchange = e => { st.onlyLoc = e.target.checked; table(); };
+    $("#hr-ms2f").onchange = e => { st.ms2 = e.target.checked; table(); };
+    $("#hr-t0f").onchange = e => { st.noT0 = e.target.checked; table(); };
+    $("#hr-blf").onchange = e => { st.noBlank = e.target.checked; table(); };
     if (window.TPALBERO) window.TPALBERO.mount($("#hr-tree"), h, { compareId: () => st.sel });
-    table();
+    table(); T.sortBy("rank", 1);
+    // the numbers of the table that the ranking does not carry (largest area, t0, blank) come from the Rust table of the products; a run served by Python has none
+    call("tp_table", rows.map(r => r.id)).then(d => {
+      if (!d || !d.rows) return;
+      const by = new Map(d.rows.map(x => [x.row, x]));
+      rows.forEach(r => { const x = by.get(r.id); if (x) r.ctl = { in_t0: x.in_t0, in_blank: x.in_blank, in_t0_ratio: x.t0_ratio ?? 0, in_blank_ratio: x.blank_ratio ?? 0 }; });
+      $("#hr-t0f").disabled = $("#hr-blf").disabled = false; table();
+    }).catch(() => { /* no numbers: the columns stay with a dash */ });
 
     const fmtDm = v => (v >= 0 ? "+" : "") + v.toFixed(4);
     function massNet() {
@@ -147,10 +179,19 @@
         <div class="mut">Mass difference of the precursors ${sim.delta >= 0 ? "+" : ""}${sim.delta.toFixed(4)}. Equal: the fragment does not contain the modification. Shifted: it moved with the precursor, so it contains it. Common neutral losses: shifted fragments close to the precursor (the same small neutral is lost by both).</div>`;
     }
     async function detail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
-    async function show(id) {
-      st.sel = id; table(); if (st.net && st.net.only === "sel") massNet();
-      const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Computing...</div>`;
+    /** opens the row of a candidate (its sheet is shown right under it); a row hidden by the filters brings them back to "all" */
+    function show(id) {
+      if (T.open(id)) return;
+      st.minLevel = 5; st.text = ""; st.onlyLoc = st.ms2 = st.noT0 = st.noBlank = false;
+      $("#hr-lv").value = "5"; $("#hr-q").value = ""; ["#hr-loc", "#hr-ms2f", "#hr-t0f", "#hr-blf"].forEach(q => { $(q).checked = false; });
+      table(); T.open(id);
+    }
+    /** the sheet of a candidate, in the panel under its row @param {number} id @param {HTMLElement} D */
+    async function fill(id, D) {
+      st.sel = id; if (st.net && st.net.only === "sel") massNet();
+      D.innerHTML = `<div class="card mut">Computing...</div>`;
       let d; try { d = await detail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
+      if (T.openId !== id) return;                         // the user opened another row while this one was loading
       const r = d.row, loc = d.localization, w = s.weights;
       const comp = Object.keys(w).filter(k => typeof d.components[k] === "number").map(k => [k, d.components[k]]).map(([k, v]) => `<div class="comp" title="${esc((d.components.text || {})[k] || "")}"><span>${esc(k)} <span class="mut">×${w[k]}</span></span><span><i style="width:${Math.round(100 * v)}%"></i></span><span class="mut">${v.toFixed(2)}</span></div>`).join("");
       const kin = d.kinetics || {};
@@ -180,6 +221,7 @@
         if (ix.length) series.push({ x: ix.map(i => t[i]), y: ix.map(i => d.areas[i]), color: hue(j, Math.max(2, labs.length)), dots: true, hollow: ix.map((i, p) => fl.has(i) ? p : -1).filter(p => p >= 0), label: lab });
       });
       chart($("#hr-kin"), series, { xlabel: "treatment time (min)" });
+      if (window.TDATI) TDATI.series($("#hr-kin"), { title: "Kinetics of the product by session", xl: "treatment time (min)", yl: "peak area", series: series.map(x => ({ name: x.label === "?" ? "area" : "session " + x.label, x: x.x, y: x.y })) });
       $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("") +
         ((d.row.filled || []).length ? `<span class="mut"><span class="rta-open"></span> filled: area re-integrated where no peak was found (${d.row.filled.map(k => t[k]).join(", ")} min)</span>` : "");
       if (d.ms2) mirror($("#hr-ms2"), d);
@@ -237,7 +279,6 @@
     $("#hr-x-csv").onclick = () => exportAll("csv"); $("#hr-x-json").onclick = () => exportAll("json");
     $("#hr-x-incl").onclick = async () => dl((s.parent.formula || "parent") + "_inclusion.csv", await h.callRaw("inclusion_csv", "50"), "text/csv");
     massNet();
-    if (rows.length) show(rows[0].id);
   }
 
   window.TPHR = { render };
