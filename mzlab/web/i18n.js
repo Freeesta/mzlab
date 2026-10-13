@@ -4,14 +4,16 @@
 // Interface languages (Italian and English). Classic script, loaded FIRST by index.html (before the catalogs lang/it.js and lang/en.js).
 //  - Code uses semantic keys ("load.drop.title"); the texts live in the two catalogs, loaded as plain <script> tags (no fetch: CSP, offline).
 //  - Italian is the fallback language: a key missing in English shows the Italian text; a key missing everywhere shows the key itself.
-//  - Default language: browser language starting with "it" -> Italian, any other -> English. The gear (settings.js) can change it
-//    (stored in localStorage "qqq.lang"); ?lang=it|en in the address forces the language for that tab only.
+//  - Default language: the first of the browser languages that is Italian or English (none -> English). The gear (settings.js) can change it
+//    (stored in localStorage "mzlab.lang"); ?lang=it|en in the address forces the language for that tab only.
+//  - index.html decides the language in a tiny inline script at the top of the head (same rules as detect below), sets I18N_LANG, <html lang>
+//    and the title, and loads ONLY the catalog of that language.
 //  - Messages use a reduced ICU format: {name}, {n, number}, {n, plural, one {# file} other {# files}}. One sentence = one key: never glue
 //    translated pieces together (genders and articles differ between the languages).
 //  - Numbers that are DATA (m/z, RT, intensity, ppm, areas) go through I18N.num: always a decimal point, in both languages.
 //  - What the user writes (file names, annotations, labels) is never translated.
 (function (root) {
-  const LANGS = ["it", "en"], KEY = "qqq.lang";   // the key name "qqq.lang" is part of the stored data: never rename it
+  const LANGS = ["it", "en"], KEY = "mzlab.lang";   // "qqq.lang" (old QqQ-lab site, same origin) is ignored on purpose
   const cat = { it: {}, en: {} }, missing = new Set();
   let lang = "it";
 
@@ -20,12 +22,18 @@
     set(v) { try { localStorage.setItem(KEY, v); } catch (_) { /* storage blocked: the choice lasts until the page is closed */ } },
   };
 
-  // language chosen at start: ?lang= (this tab only) > stored choice > browser language (Italian -> it, everything else -> en)
+  // language chosen at start: ?lang= (this tab only) > stored choice > the first browser language that is Italian or English (default English)
+  // keep in step with the inline script at the top of the head of index.html
   function detect(search, stored, browser) {
     const q = /[?&]lang=(it|en)(?:&|#|$)/.exec(search || "");
     if (q) return q[1];
     if (LANGS.includes(stored)) return stored;
-    return String(browser || "").toLowerCase().startsWith("it") ? "it" : "en";
+    for (const b of [].concat(browser || [])) {
+      const l = String(b).toLowerCase();
+      if (/^it(-|_|$)/.test(l)) return "it";
+      if (/^en(-|_|$)/.test(l)) return "en";
+    }
+    return "en";
   }
 
   // ---- reduced ICU: {name} {name, number} {name, plural, =0 {..} one {..} other {..}}  (# = the number inside a plural branch)
@@ -118,7 +126,7 @@
   }
 
   const loc = typeof location !== "undefined" ? location : {}, nav = typeof navigator !== "undefined" ? navigator : {};
-  lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.language || (nav.languages && nav.languages[0]));   // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
+  lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.languages && nav.languages.length ? Array.from(nav.languages) : nav.language);   // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
   setLangAttr();
   if (typeof document !== "undefined") {
     const go = () => apply(document);

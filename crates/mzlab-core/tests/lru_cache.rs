@@ -106,3 +106,67 @@ fn lru_keeps_the_cap_and_the_answers() {
     trim_cache(&mut files, 0);
     assert_eq!(cache_bytes(&files), 0);
 }
+
+fn items() -> Vec<mzlab_core::originroute::ItemMeta> {
+    (0..3)
+        .map(|k| mzlab_core::originroute::ItemMeta {
+            slot: k,
+            label: format!("f{k}"),
+            time: Some(k as f64),
+            full: true,
+        })
+        .collect()
+}
+
+/// The maps of the session and the XIC of every file, the cache cut to `cap` after each answer (None = never): what a page with a tiny budget would see.
+fn ask_maps(files: &mut HashMap<u32, Routes<Vec<u8>>>, cap: Option<usize>) -> Vec<String> {
+    let items = items();
+    let mut out = Vec::new();
+    for q in [
+        "k=0&level=1",
+        "k=1&level=1&agg=max",
+        "k=2&level=1&ref=0",
+        "k=1&level=1&rt0=0&rt1=30&mz0=100&mz1=160&nrt=2000&nmz=300",
+        "k=2&level=1&rt0=2&rt1=12&mz0=110&mz1=140&nrt=64&nmz=40&bg=1",
+    ] {
+        let a = mzlab_core::maproute::map_route("/api/map", &items, files, &Query::parse(q))
+            .unwrap()
+            .expect("the map route answers");
+        out.push(a);
+        if let Some(c) = cap {
+            trim_cache(files, c);
+        }
+    }
+    let a = mzlab_core::maproute::map_route(
+        "/api/mappunti",
+        &items,
+        files,
+        &Query::parse("k=1&level=1&pts=5,110;12,130"),
+    )
+    .unwrap()
+    .unwrap();
+    out.push(a);
+    for k in [0u32, 1, 2] {
+        out.push(files.get_mut(&k).unwrap().xic(110.0, 0.4, 1).unwrap());
+        if let Some(c) = cap {
+            trim_cache(files, c);
+        }
+    }
+    out
+}
+
+#[test]
+fn maps_and_xic_of_many_files_are_the_same_in_blocks_and_in_memory() {
+    let mut files: HashMap<u32, Routes<Vec<u8>>> = (0..3).map(|k| (k, routes(k as f64))).collect();
+    let whole = ask_maps(&mut files, None);
+    assert!(
+        whole[3].contains("\"nrt\":2000"),
+        "a region follows the cells the page asks for (up to 2048)"
+    );
+    for cap in [cache_bytes(&files) / 4, 64 << 10, 0] {
+        trim_cache(&mut files, 0);
+        let blocks = ask_maps(&mut files, Some(cap));
+        assert_eq!(blocks, whole, "answers differ at cap {cap}");
+        assert!(cache_bytes(&files) <= cap, "cache above cap {cap}");
+    }
+}

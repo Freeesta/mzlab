@@ -379,6 +379,8 @@ declare var ldLast: any;
 declare var ldMsg: any;
 declare var ldNext: any;
 declare var ldRefresh: any;
+declare var ldShow: any;
+declare var ldShown: any;
 declare var ldSince: any;
 declare var ldSlow: any;
 declare var ldTimer: any;

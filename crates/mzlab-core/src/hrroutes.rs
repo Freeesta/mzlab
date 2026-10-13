@@ -4,10 +4,10 @@
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::hrscans::read_scan;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
+use crate::sorgente::Scansioni;
 use crate::spectrum::{binned_json, Binned, EMPTY};
 
 impl<R: ReadAt> Routes<R> {
@@ -21,7 +21,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// `/api/spectrum` of a window that holds ONE scan of a high-resolution centroid file: the centroids of the scan as the file has them (the peak
     /// table is single precision), read from the mzML. `None` = not this case (the index answers, or Python does).
-    pub fn spectrum_exact<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    pub fn spectrum_exact<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         let (Some(rt0), Some(rt1)) = (q.num("rt0")?, q.num("rt1")?) else {
             return Ok(None);
         };
@@ -42,7 +42,7 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         };
         if !m.mz.is_empty() {
-            (m.mz, m.y) = read_scan(sc, mzml)?;
+            (m.mz, m.y) = mzml.spettro(sc)?;
         }
         Ok(Some(binned_json(m, hr.dec + 1, false)))
     }

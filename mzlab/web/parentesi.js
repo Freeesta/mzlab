@@ -37,3 +37,21 @@ export function drawBrackets(/** @type {Element} */ g, /** @type {Pt[]} */ pts, 
   g.appendChild(grp);
   return grp;
 }
+
+/**
+ * A multicentre attachment (the substituent on «any of these atoms», V3000 ENDPTS): a dashed bond from the substituent atom `sub` to the centre of the
+ * candidate atoms `ends`, and a small open circle on each candidate. Returns the group made (class «mz-multicentro»); nothing with fewer than two candidates.
+ * @returns {SVGGElement | null}
+ */
+export function drawMulticenter(/** @type {Element} */ g, /** @type {Pt} */ sub, /** @type {Pt[]} */ ends, /** @type {{ color?: string, r?: number }} */ o = {}) {
+  if (ends.length < 2) return null;
+  const doc = g.ownerDocument, color = o.color || "#3b3b3b", r = o.r || 4, f = (/** @type {number} */ v) => v.toFixed(1);
+  const cx = ends.reduce((s, p) => s + p.x, 0) / ends.length, cy = ends.reduce((s, p) => s + p.y, 0) / ends.length;
+  const grp = /** @type {SVGGElement} */ (doc.createElementNS(NS, "g"));
+  grp.setAttribute("class", "mz-multicentro"); grp.setAttribute("fill", "none"); grp.setAttribute("stroke", color); grp.setAttribute("stroke-width", "1.4");
+  const add = (/** @type {string} */ tag, /** @type {Record<string, string>} */ at) => { const e = doc.createElementNS(NS, tag); for (const [k, v] of Object.entries(at)) e.setAttribute(k, v); grp.appendChild(e); };
+  add("line", { x1: f(sub.x), y1: f(sub.y), x2: f(cx), y2: f(cy), "stroke-dasharray": "4 3" });
+  for (const p of ends) add("circle", { cx: f(p.x), cy: f(p.y), r: String(r) });
+  g.appendChild(grp);
+  return grp;
+}
