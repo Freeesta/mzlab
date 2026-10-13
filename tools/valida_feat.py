@@ -29,7 +29,7 @@ def carica_verita(path) -> list[dict]:
     if isinstance(d, dict) and d.get("parent"):
         p = d["parent"]
         rt = p.get("rt_obs")
-        out.append({"id": str(p.get("name") or "parent"), "mz": float(p["mz"]), "ion": p.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": True})
+        out.append({"id": str(p.get("name") or "parent"), "mz": float(p["mz"]), "ion": p.get("ion"), "rt_obs": [rt] if isinstance(rt, (int, float)) else list(rt or []), "parent": True, **({"smiles": p["smiles"]} if p.get("smiles") else {})})
     lista = d if isinstance(d, list) else d.get("tps") or d.get("ioni") or []
     for x in lista:
         rt = x.get("rt_obs")
