@@ -13,19 +13,20 @@ function place(w, h) {
 const dockedP = q => !!(window.DDA && DDA.docked(q));                       // MS2 spectrum of a DDA trio sitting to the right of its Full Scan (dda.js)
 const hasDocked = p => !!(window.DDA && E.panels.some(q => q.dock === p.id && DDA.docked(q)));
 const followers = p => {
-  const f = tabPanels().filter(q => q !== p && q.full && q.el && q.type === "spec" && (q.link === p.id || q.src === p.id));
-  return [...f, ...tabPanels().filter(q => q.full && q.el && q.type === "spec" && q.dock != null && f.some(x => x.id === q.dock))];       // + the MS2 panel docked to one of them
+  const f = tabPanels(p.tab).filter(q => q !== p && q.full && q.el && q.type === "spec" && (q.link === p.id || q.src === p.id));
+  return [...f, ...tabPanels(p.tab).filter(q => q.full && q.el && q.type === "spec" && q.dock != null && f.some(x => x.id === q.dock))];       // + the MS2 panel docked to one of them
 };
 const pnlGap = () => /** @type {any} */ (pnlGap).v ??= (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--pnl-gap")) || 6);      // space between stacked panels: the CSS token
 const gapAfter = (a, b) => (window.DDA && b && DDA.joined(a, b)) ? 0 : pnlGap();       // the chromatogram and its Full Scan of a DDA trio touch each other
 function restack(drag, final, grp = []) {
   grp = grp.filter(q => !dockedP(q));
-  const st = tabPanels().filter(q => q.full && q.el && !dockedP(q));
+  const st = tabPanels(drag.tab).filter(q => q.full && q.el && !dockedP(q));      // the panels of the block of the dragged one
+  const y0 = drag._top ?? Math.min(...st.map(q => q.y));
   const others = st.filter(q => q !== drag && !grp.includes(q)).sort((a, b) => a.y - b.y), c = drag.y + drag.h / 2;
   let idx = others.filter(q => q.y + q.h / 2 < c).length;
   if (others.length && drag.y < others[0].y + others[0].h * 0.5) idx = 0;
   const order = others.slice(); order.splice(idx, 0, drag, ...grp);      // the group stays together, in its own order
-  let y = 0;
+  let y = y0;
   order.forEach((q, i) => {
     const mine = q === drag, moving = grp.includes(q);
     if (!mine && !moving) { q.y = y; apply(q); }                         // the others close the gap
@@ -66,14 +67,14 @@ function pairArrows() {
   });
 }
 // a full-width panel (with its child spectra) swaps with its neighbour; the panels are moved by dragging their header (movePanel is the same move, for tests)
-function stackOrder() { return tabPanels().filter(q => q.full && q.el && !dockedP(q)).sort((a, b) => a.y - b.y || a.id - b.id); }
+function stackOrder(t) { return tabPanels(t).filter(q => q.full && q.el && !dockedP(q)).sort((a, b) => a.y - b.y || a.id - b.id); }
 // block that moves together: a chromatogram with its child spectra; the others, in order
-function blockOf(p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])].filter(q => q === p || !dockedP(q)), st = stackOrder(), others = st.filter(q => !grp.includes(q)); return { grp, others, at: others.filter(q => q.y < p.y).length }; }
+function blockOf(p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])].filter(q => q === p || !dockedP(q)), st = stackOrder(p.tab), others = st.filter(q => !grp.includes(q)); return { grp, others, at: others.filter(q => q.y < p.y).length }; }
 function movePanel(p, dir) {
   if (!p.full) return;
   const b = blockOf(p), j = b.at + dir; if (j < 0 || j > b.others.length) return;
   const order = b.others.slice(); order.splice(j, 0, ...b.grp);
-  let y = 0; order.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, order[i + 1]); });
+  let y = Math.min(...order.map(q => q.y)); order.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, order[i + 1]); });
   if (window.DDA) DDA.sync();
   E.panels.sort((a, b2) => a.y - b2.y || a.id - b2.id); front(p.el); uiSave();
 }
@@ -230,13 +231,14 @@ function addPanel(type, o, after) {
     if (e.target.closest("input,select,button,label,option") || el.classList.contains("max")) return;
     const sx = e.clientX - p.x, sy = e.clientY - p.y;
     const grp = p.full ? followers(p).sort((a, b) => a.y - b.y) : [], off = new Map(grp.map(q => [q, q.y - p.y]));
+    p._top = Math.min(...tabPanels(p.tab).filter(q => q.full && q.el && !dockedP(q)).map(q => q.y));      // where the block of this panel starts
     if (p.full) { el.classList.add("drag"); grp.forEach(q => q.el.classList.add("drag")); }
     const mv = ev => {
       p.y = Math.max(0, ev.clientY - sy);
       if (p.full) { p.x = 0; grp.forEach(q => { q.y = Math.max(0, p.y + off.get(q)); q.x = 0; apply(q); }); restack(p, false, grp); } else p.x = Math.max(0, ev.clientX - sx);
       apply(p); fitHost();
     };
-    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); grp.forEach(q => q.el.classList.remove("drag")); restack(p, true, grp); fitHost(); } uiSave(); };
+    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); grp.forEach(q => q.el.classList.remove("drag")); restack(p, true, grp); fitHost(); } p._top = undefined; uiSave(); };
     addEventListener("mousemove", mv); addEventListener("mouseup", up); e.preventDefault();
   });
   let first = true;
