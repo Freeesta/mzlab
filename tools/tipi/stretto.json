@@ -110,6 +110,7 @@
     "../../mzlab/web/rust-centroidi.js",
     "../../mzlab/web/rust-convert.js",
     "../../mzlab/web/rust-diff.js",
+    "../../mzlab/web/rust-lettori.js",
     "../../mzlab/web/rust-metodo.js",
     "../../mzlab/web/rust-opfs.js",
     "../../mzlab/web/rust-raw.js",
