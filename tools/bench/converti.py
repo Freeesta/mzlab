@@ -39,9 +39,8 @@ def versione(parser: str) -> str:
 
 
 def _env() -> dict:
-    e = dict(os.environ)
-    e.setdefault("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "1")   # no ICU needed: the converter does not format locale-dependent text
-    return e
+    """The converter needs ICU (invariant-globalization mode makes every scan fail with «en-US is an invalid culture»): libicu must be installed."""
+    return dict(os.environ)
 
 
 def converti(parser: str, raw: Path, uscita: Path) -> Path:
