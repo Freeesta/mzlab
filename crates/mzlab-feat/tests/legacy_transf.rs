@@ -71,3 +71,22 @@ fn transformations_match_python() {
         }
     }
 }
+
+#[test]
+fn describe_rows_for_the_table() {
+    let t = "# header\nhydroxylation;+O;one oxygen\n#loss of CO;-CO\n# just a note\nbad;+Zz9\nx;-Cl+H;lit: Doe 2020\n\n#nonsense;";
+    let v: Value = serde_json::from_str(&transf::describe(t)).unwrap();
+    let rows = v["rows"].as_array().unwrap();
+    let key = |r: &Value| (r["line"].as_i64().unwrap(), r["on"].as_bool().unwrap());
+    assert_eq!(
+        rows.iter().map(key).collect::<Vec<_>>(),
+        [(1, true), (2, false), (4, true), (5, true)]
+    );
+    assert_eq!(rows[0]["change"], "+O");
+    assert_eq!(rows[0]["class"], "oxidation");
+    assert!((rows[0]["dm"].as_f64().unwrap() - 15.9949).abs() < 1e-4);
+    assert_eq!(rows[1]["class"], "loss");
+    assert!(rows[2]["error"].is_string());
+    assert_eq!(rows[3]["class"], "halogen");
+    assert_eq!(rows[3]["lit"], true);
+}

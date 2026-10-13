@@ -43,12 +43,16 @@ export async function persistOnce() {
   try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (_) { /* optional */ }
 }
 export const BIG = 50 << 20, ROOM = 1.8;
-export async function ensureRoom(bytes) {
+const held = new Map();                                     // room promised to the files being loaded (file + index), not yet written: several files loaded together do not count the same free space twice
+export const release = key => { held.delete(key); };
+export async function ensureRoom(bytes, key = "") {
   if (bytes < BIG) return;
   const e = await estimate();
   if (!e.quota) return;                                      // unknown: not refused
-  const need = bytes * ROOM, free = e.quota - e.usage;
+  let promised = 0; for (const [k, v] of held) if (k !== key) promised += v;
+  const need = bytes * ROOM, free = e.quota - e.usage - promised;
   if (need > free) throw fail("error.quota", { serve_mb: Math.ceil(need / 1048576), libero_mb: Math.max(0, Math.floor(free / 1048576)) });
+  if (key) held.set(key, need);
 }
 
 export const available = () => {
@@ -84,6 +88,7 @@ async function writeNow(kind, name, size, chunk) {
     ah.truncate(0);
     for (let off = 0; off < size; off += STEP) await writeAll(ah, await chunk(off, Math.min(STEP, size - off)), off);
     ah.flush();
+    if (ah.getSize() < size) throw await quotaError(size);        // the browser took the writes but the file is shorter (quota reached)
   } catch (e) {
     try { ah.close(); } catch (_) { /* already closed */ }
     try { await d.removeEntry(name); } catch (_) { /* nothing to remove */ }

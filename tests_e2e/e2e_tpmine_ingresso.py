@@ -58,6 +58,13 @@ def dig(pg):
     return pg.evaluate(TABLE)
 
 
+def diff(a, b):                                           # the first row that differs, for the log of a red run
+    for i in range(max(len(a), len(b))):
+        x, y = (a[i] if i < len(a) else None), (b[i] if i < len(b) else None)
+        if x != y: return f"{len(a)} vs {len(b)} rows; row {i}: {x!r} vs {y!r}"
+    return "same rows"
+
+
 def rows_ready(pg):
     pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length >= {len(names) + 1}", timeout=240000)
     assert "LC-HRMS" in pg.inner_text("#tp-fsum"), pg.inner_text("#tp-fsum")
@@ -120,7 +127,8 @@ try:
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.click("#tp-page"); rows_ready(q)
             got = settle(q); assert same(got), (got, ref)
-            assert dig(q) == ref["table"], "the Dig of the IndexedDB files differs"
+            t = dig(q)
+            assert t == ref["table"], "the Dig of the IndexedDB files differs: " + diff(t, ref["table"]) + " | files: " + q.inner_text("#tp-files")[:300].replace("\n", " ")
         step("IndexedDB: same index, same Dig", from_idb)
 
         def no_pyodide():

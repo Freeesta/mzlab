@@ -135,6 +135,38 @@ const TOUR = (() => {
     }
   ];
 
+  // Disegno: elements of the Ketcher iframe have no rectangle in the page, so a target can be a stand-in that adds the offset of the iframe
+  const frameBox = sels => {
+    const fr = document.getElementById("kframe"), doc = fr instanceof HTMLIFrameElement ? fr.contentDocument : null;
+    const els = doc ? sels.map(q => doc.querySelector(q)).filter(Boolean) : [];
+    if (!fr || !els.length) return null;
+    return {
+      offsetParent: fr.offsetParent,
+      scrollIntoView: () => {},
+      getBoundingClientRect: () => {
+        const o = fr.getBoundingClientRect(), r = els.map(e => e.getBoundingClientRect());
+        const l = Math.min(...r.map(x => x.left)), t = Math.min(...r.map(x => x.top)), rr = Math.max(...r.map(x => x.right)), b = Math.max(...r.map(x => x.bottom));
+        return new DOMRect(o.left + l, o.top + t, rr - l, b - t);
+      }
+    };
+  };
+  const card = (/** @type {string} */ sel) => document.querySelector(sel)?.closest(".card") || null;
+  // the right-hand panels may be hidden by the student: the steps about them show them and hide them again when the step ends
+  function showSidePanels() {
+    const v = document.getElementById("v-draw"), b = document.getElementById("side-toggle");
+    if (v && b && v.classList.contains("noside")) { b.click(); return () => { if (!v.classList.contains("noside")) b.click(); }; }
+  }
+  const STEPS_D = [
+    { id: "d_tela", target: () => document.getElementById("kframe") },
+    { id: "d_zoom", target: () => frameBox(['[data-testid="zoom-in-tp"]', '[data-testid="zoom-out-tp"]', '[data-testid="zoom-reset-tp"]']) },
+    { id: "d_riquadri", target: () => document.getElementById("side-toggle") },
+    { id: "d_etichette", prep: showSidePanels, target: () => card("#lb-f") },
+    { id: "d_proprieta", prep: showSidePanels, target: () => document.getElementById("prop-card") },
+    { id: "d_parziali", target: () => document.getElementById("kframe") },
+    { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
+  ];
+  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? STEPS_CAP1 : cap === 3 ? STEPS_D : STEPS_CAP2;
+
   let active = false;
   let curCap = 1;
   let curStep = 0;
@@ -383,7 +415,7 @@ const TOUR = (() => {
 
   const renderStep = () => {
     stopProvaTimer();
-    const list = curCap === 1 ? STEPS_CAP1 : STEPS_CAP2;
+    const list = stepsOf(curCap);
     if (curStep >= list.length) {
       if (curCap === 1) {
         TOUR.continua();
@@ -410,7 +442,7 @@ const TOUR = (() => {
 
     const totalSteps = list.length;
     const stepNumber = curStep + 1;
-    const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : "tour.cap2");
+    const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : curCap === 3 ? "tour.cap3" : "tour.cap2");
     const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
     const titleText = I18N.t(`tour.${step.id}.titolo`);
     const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
@@ -418,7 +450,7 @@ const TOUR = (() => {
 
     const dlg = getDialogEl();
     const isCap1End = curCap === 1 && curStep === list.length - 1;
-    const isCap2End = curCap === 2 && curStep === list.length - 1;
+    const isCap2End = curCap !== 1 && curStep === list.length - 1;
 
     let tryHtml = "";
     if (step.prova && provaText) {
@@ -443,7 +475,7 @@ const TOUR = (() => {
         <button type="button" id="tour-btn-fine">${I18N.t("tour.fine")}</button>
       `;
     } else {
-      const backDisabled = (curCap === 1 && curStep === 0) ? "disabled" : "";
+      const backDisabled = ((curCap === 1 || curCap === 3) && curStep === 0) ? "disabled" : "";
       buttonsHtml = `
         <button type="button" id="tour-btn-back" ${backDisabled}>${I18N.t("tour.indietro")}</button>
         <button type="button" id="tour-btn-next">${I18N.t("tour.avanti")}</button>
@@ -626,7 +658,7 @@ const TOUR = (() => {
 
     avanti: () => {
       if (!active) return;
-      const list = curCap === 1 ? STEPS_CAP1 : STEPS_CAP2;
+      const list = stepsOf(curCap);
       if (curStep < list.length - 1) {
         curStep++;
         renderStep();
@@ -655,13 +687,16 @@ const TOUR = (() => {
       renderStep();
     },
 
+    // the tour of the Disegno view: its own chapter, and it leaves the state of the Dati invitation alone
+    disegno: () => TOUR.inizia(3, 0),
+
     fine: () => {
-      saveState("fatto");
+      if (curCap !== 3) saveState("fatto");
       TOUR.chiudi();
     },
 
     salta: () => {
-      saveState("saltato");
+      if (curCap !== 3) saveState("saltato");
       TOUR.chiudi();
     },
 

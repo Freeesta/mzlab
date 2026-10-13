@@ -181,3 +181,83 @@ pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     emit(&file, &mut o);
     Ok(o.0.into_bytes())
 }
+
+/// Class of a change for the table of the page: `halogen` (a halogen changes), `oxidation` (oxygen gained), `loss` (the mass goes down), `gain`.
+fn class_of(d: &Delta) -> &'static str {
+    let n = |e: &str| d.iter().find(|(x, _)| x == e).map_or(0, |(_, k)| *k);
+    if ["Cl", "Br", "F", "I"].iter().any(|e| n(e) != 0) {
+        "halogen"
+    } else if n("O") > 0 {
+        "oxidation"
+    } else if mass_delta(d) < 0.0 {
+        "loss"
+    } else {
+        "gain"
+    }
+}
+
+fn mass_delta(d: &Delta) -> f64 {
+    d.iter()
+        .map(|(e, k)| mzlab_core::elements::mass_of(e).unwrap_or(0.0) * *k as f64)
+        .sum()
+}
+
+/// One line of the list as a row for the table: `{"line","on","name","change","dm","class","note","lit"}`, or `{"line","on","error"}` for an active line that is wrong.
+/// A `#` line that reads as a row is an inactive row (`on` false); any other comment gives no row. Lines are those of `text.split('\n')`.
+pub fn describe(text: &str) -> String {
+    let mut o = Out::default();
+    o.raw("{\"rows\":[");
+    let mut first = true;
+    for (i, raw) in text.split('\n').enumerate() {
+        let ln = raw.trim();
+        let (on, body) = match ln.strip_prefix('#') {
+            Some(rest) => (false, rest.trim_start_matches('#').trim()),
+            None => (true, ln),
+        };
+        if body.is_empty() {
+            continue;
+        }
+        let parsed = parse(body).and_then(|mut r| match r.pop() {
+            Some(row) if !row.delta.is_empty() => Ok(row),
+            _ => Err("no change".to_string()),
+        });
+        let (sep, ok) = (if first { "" } else { "," }, parsed.is_ok() || on);
+        if !ok {
+            continue;
+        }
+        first = false;
+        o.raw(sep);
+        match parsed {
+            Ok(r) => {
+                o.raw("{\"line\":")
+                    .int(i as i64)
+                    .raw(",\"on\":")
+                    .raw(if on { "true" } else { "false" });
+                o.raw(",\"name\":")
+                    .str(&r.name)
+                    .raw(",\"change\":")
+                    .str(&delta_text(&r.delta));
+                o.raw(",\"dm\":")
+                    .num(mzlab_core::elements::round_half_up(mass_delta(&r.delta), 4));
+                o.raw(",\"class\":")
+                    .str(class_of(&r.delta))
+                    .raw(",\"note\":")
+                    .str(&r.comment);
+                o.raw(",\"lit\":").raw(if literature(&r.comment).is_some() {
+                    "true}"
+                } else {
+                    "false}"
+                });
+            }
+            Err(e) => {
+                o.raw("{\"line\":")
+                    .int(i as i64)
+                    .raw(",\"on\":true,\"error\":")
+                    .str(&e)
+                    .raw("}");
+            }
+        }
+    }
+    o.raw("]}");
+    o.0
+}

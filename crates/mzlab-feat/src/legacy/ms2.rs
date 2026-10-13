@@ -78,58 +78,8 @@ pub fn read_scans<R: ReadAt>(
     Ok(out)
 }
 
-/// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: (m/z, mean relative intensity over all the spectra, number of spectra with the peak).
-pub fn consensus_arrays(
-    spectra: &[(Vec<f64>, Vec<f64>)],
-    ppm: f64,
-    min_frac: f64,
-    min_rel: f64,
-) -> (Vec<f64>, Vec<f64>, Vec<usize>) {
-    let n = spectra.len();
-    let mut pk: Vec<(f64, f64, usize)> = vec![];
-    for (i, (m, it)) in spectra.iter().enumerate() {
-        let mx = it.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        if m.is_empty() || mx.is_nan() || mx <= 0.0 {
-            continue;
-        }
-        for (&a, &b) in m.iter().zip(it) {
-            let r = b / mx;
-            if r > 0.0 {
-                pk.push((a, r, i));
-            }
-        }
-    }
-    if pk.is_empty() {
-        return (vec![], vec![], vec![]);
-    }
-    crate::sortc::by(&mut pk, |a, b| a.0.total_cmp(&b.0));
-    // groups: a new one where the step to the next m/z exceeds ppm of that m/z
-    let (mut w, mut wm, mut seen): (Vec<f64>, Vec<f64>, Vec<Vec<usize>>) = (vec![], vec![], vec![]);
-    for (j, &(m, r, s)) in pk.iter().enumerate() {
-        if j == 0 || m - pk[j - 1].0 > m * ppm * 1e-6 {
-            w.push(0.0);
-            wm.push(0.0);
-            seen.push(vec![]);
-        }
-        let g = w.len() - 1;
-        w[g] += r;
-        wm[g] += r * m;
-        if !seen[g].contains(&s) {
-            seen[g].push(s);
-        }
-    }
-    let need = (min_frac * n as f64).max(1.0);
-    let (mut cm, mut mean, mut nsc) = (vec![], vec![], vec![]);
-    for g in 0..w.len() {
-        let m = w[g] / n as f64;
-        if seen[g].len() as f64 >= need && m >= min_rel {
-            cm.push(wm[g] / w[g]);
-            mean.push(m);
-            nsc.push(seen[g].len());
-        }
-    }
-    (cm, mean, nsc)
-}
+/// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: moved to `mzlab_core::msnalbero::consenso` (the MSn tree uses it too).
+pub use mzlab_core::msnalbero::consenso as consensus_arrays;
 
 /// `ms2_consensus`: peaks in at least 40 % of the scans and at least 0.5 % of the base peak, relative to the strongest (= 100).
 #[derive(Debug, Clone, Default, PartialEq)]
