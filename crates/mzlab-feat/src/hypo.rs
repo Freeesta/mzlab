@@ -237,6 +237,12 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
     let pc = counts_of(&parent);
     let mut raw = sources::from_rules(rules, &pc, inp.groups, p);
     raw.extend(sources::from_fragments(inp.fragments, &pc, p)?);
+    raw.extend(sources::from_fragment_products(
+        rules,
+        inp.fragments,
+        &pc,
+        p,
+    )?);
     let mut cut = 0;
     if let Some(s) = inp.suspects {
         let (h, c) = sources::from_suspects(s, &pc, p);
