@@ -119,6 +119,13 @@ async function finder() {
   await mod.default({ module_or_path: bytes });
   return (fin = mod);
 }
+/** @type {any} */ let lastRun = null;           // the .mzfeat and the files of the last Dig in Rust (the numbers of the table of the products)
+/** the numbers of the table of the products for some rows of the last Dig (finder-tabella.js); "null" when there is none @param {string} rows */
+async function tpTable(rows) {
+  if (last !== "rust" || !lastRun) return "null";
+  const m = await import(base() + "mzfinder/finder-tabella.js");
+  return m.tpTable({ manifest, url: featUrl, sha }, lastRun, rows);
+}
 async function pool() {
   if (featPool) return featPool;
   const m = await manifest(), url = base() + "mzfinder/feat-worker.js", mine = self.onmessage;
@@ -164,7 +171,7 @@ async function runRust(a) {
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
-  lap("dig", t); lap("total", t0); last = "rust";
+  lap("dig", t); lap("total", t0); last = "rust"; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
   return dig.summary(settingsJson || "{}", JSON.stringify(timing));
 }
 /** a run goes to Rust: high-resolution files, all with their .mzidx, no MSn file, the default transformations @param {string[]} a */
@@ -178,6 +185,7 @@ async function rustRun(a) {
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (fn === "tp_table") return tpTable(a[0]);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
   if (fn === "classify" && !py) { const names = JSON.parse(a[0]); if (await idxFiles(names)) return classifyRust(names); }
