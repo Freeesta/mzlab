@@ -75,6 +75,7 @@
   async function build() {
     const pv = $("#unt-pol").value, guess = st.files.map(f => f.name).join(" "), pol = pv !== "auto" ? +pv : /(^|[^a-z])neg/i.test(guess) && !/(^|[^a-z])pos/i.test(guess) ? -1 : /(^|[^a-z])pos/i.test(guess) && !/(^|[^a-z])neg/i.test(guess) ? 1 : 0;
     try {
+      await U().ready();
       const t = U().build(st.files.map(f => ({ name: f.name, text: f.text })), { pol });
       const main = st.files.find(f => f.name === t.used[0]);
       if (main) { try { t.file.sha256 = await U().sha256Hex(await main.file.arrayBuffer()); } catch (e) { t.file.sha256 = ""; } }
