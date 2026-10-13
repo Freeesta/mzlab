@@ -76,7 +76,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r.dead || r.error) {
         s.bad = true;
         let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
-        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is left to Python
+        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is not opened (the page tells the user)
         return;
       }
       s.info = JSON.parse(r.info);
@@ -118,7 +118,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   api.crash =() => rpc({ op: "crash" });
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
-  api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
+  api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
@@ -140,7 +140,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis)$/;
   const hasRef = q => !!q.get("ref");
-  // Returns { status, text } or null (Pyodide answers).
+  // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url) => {
     if (!api.enabled || api.disabled || method !== "GET" || !worker) return null;
     const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;

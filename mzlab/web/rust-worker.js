@@ -32,7 +32,7 @@ function readerFor(blob) {
 }
 
 
-// ---- the flow without Pyodide (?lr=1, lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
+// ---- the flow of the page (lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
 // session and the state of the page come from here. The slots of these files are numbered above LR_BASE, apart from the ones of the session (k).
 const LR_BASE = 1000000;
 const lrSlot = new Map(), lrFile = new Map();
