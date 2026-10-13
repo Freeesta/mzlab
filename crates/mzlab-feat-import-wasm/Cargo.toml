@@ -1,0 +1,14 @@
+[package]
+name = "mzlab-feat-import-wasm"
+description = "wasm-bindgen bridge of the readers of external tables of mzlab-feat (mzMine, FBMN/GNPS2, MS-DIAL); a .wasm of its own, loaded by mzFinder only when the user opens a table of another program"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+mzlab-feat = { path = "../mzlab-feat", default-features = false }
+wasm-bindgen = "0.2"
