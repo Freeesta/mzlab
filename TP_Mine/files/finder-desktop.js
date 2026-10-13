@@ -37,8 +37,8 @@ async function upload(name, blob) {
   return id;
 }
 
-/** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held @param {string} defaultTr the default list of transformations (only that one is served) */
-export function createDesktop(base, say, held, defaultTr) {
+/** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held */
+export function createDesktop(base, say, held) {
   /** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {string[]} names */
   async function ensure(names) {
     const boot = /** @type {{name: string, size: number, indexed: boolean, id: number}[]} */ (JSON.parse(await rpc("lr_boot")));
@@ -65,7 +65,9 @@ export function createDesktop(base, say, held, defaultTr) {
     lap("feature", t); t = performance.now();
     say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
-    const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text();
+    let rules = await (await fetch(base + "mzfinder/regole_tp.json")).text();
+    const tr = (a[3] || "").trim();
+    if (tr) rules = await rpc("finder/transformations", { rules, text: tr });     // the user's list: its rows become rules of the hypotheses
     const h = JSON.parse(await rpc("feat/hypotheses", { names, rules, structure: plan.structure, parent: plan.formula, recipe: "" }));
     await rpc("feat/evidence", { minutes: plan.minutes, recipe: "" }); lap("proofs", t); t = performance.now();
     say("Ranking the candidates...");
@@ -85,7 +87,6 @@ export function createDesktop(base, say, held, defaultTr) {
         const files = JSON.parse(a[0]);
         if (files.some((/** @type {any} */ f) => f.kind === "msn")) throw new Error("MSn files are not in the app yet: use the website for this series");
         if (!files.some((/** @type {any} */ f) => f.kind === "hr")) throw new Error("low-resolution series are not in the app yet: use the website for this series");
-        if ((a[3] || "").trim() && a[3].trim() !== defaultTr) throw new Error("a modified list of transformations is not in the app yet: use the website for this series");
         return run(a);
       }
       throw new Error(`${fn} is not in the app`);
