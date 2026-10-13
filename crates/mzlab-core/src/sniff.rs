@@ -6,6 +6,7 @@ use crate::idxread::{Index, ReadAt};
 use crate::iteminfo::{file_parts, item_info, Facts, Meta};
 use crate::json::{self, Out};
 use crate::mzmlhead::Mzml;
+use crate::sorgente::Scansioni;
 
 /// The hint the file name gives: "mrm", "ms2" or "full" (the first rule that matches the lower-case stem).
 pub fn hint(file_name: &str) -> Option<&'static str> {
@@ -28,9 +29,9 @@ pub fn hint(file_name: &str) -> Option<&'static str> {
 }
 
 /// `True` when the first MS1 scan is a PROFILE spectrum of a high-resolution analyzer (Orbitrap, TOF): the heaviest kind of mzML.
-fn hr_profile<R: ReadAt, M: ReadAt>(
+fn hr_profile<R: ReadAt, M: Scansioni + ?Sized>(
     idx: &Index<R>,
-    m: &mut Mzml<M>,
+    src: &mut M,
     instrument: &str,
 ) -> Result<bool> {
     let Some(s) = idx.scans.iter().find(|s| s.level == 1) else {
@@ -43,21 +44,11 @@ fn hr_profile<R: ReadAt, M: ReadAt>(
     if up.starts_with("FTMS") || up.starts_with("TOFMS") {
         return Ok(true);
     }
-    let head = crate::scaninfo::header(&mut m.r, s.start, s.end)?;
-    // _cv(head, "MS:1000800"): accession="MS:1000800"[^>]*?value="([^"]*)"
-    let key = "accession=\"MS:1000800\"";
-    if let Some(p) = head.find(key) {
-        let t = &head[p + key.len()..];
-        let tag_end = t.find('>').unwrap_or(t.len());
-        if let Some(v) = t[..tag_end].find("value=\"") {
-            let val = &t[v + 7..];
-            if let Some(e) = val.find('"') {
-                if let Ok(r) = val[..e].trim().parse::<f64>() {
-                    if r >= 10000.0 {
-                        return Ok(true);
-                    }
-                }
-            }
+    // _cv(head, "MS:1000800"): the value of the resolution of the scan header
+    let res = src.intestazione(s)?;
+    if let Some(f) = res.iter().find(|f| f.cv.as_deref() == Some("MS:1000800")) {
+        if f.valore.trim().parse::<f64>().is_ok_and(|r| r >= 10000.0) {
+            return Ok(true);
         }
     }
     let low = instrument.to_lowercase();
@@ -96,7 +87,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         .collect();
     prec.sort();
     prec.dedup();
-    let hrp = hr_profile(idx, m, &facts.instrument)?;
+    let hrp = hr_profile(idx, &mut m.r, &facts.instrument)?;
     let mut o = Out::default();
     o.raw("{\"kind\":")
         .str(v.get("kind").and_then(|x| x.str()).unwrap_or(""))

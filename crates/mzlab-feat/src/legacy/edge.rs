@@ -5,7 +5,9 @@
 use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};
 use mzlab_core::json::Out;
 
+mod report;
 mod stats;
+pub use report::origin_evidence;
 pub use stats::*;
 
 pub const ABS_DA: f64 = 0.002;

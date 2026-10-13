@@ -153,7 +153,7 @@ pub fn build(inp: &TpInputs) -> Result<Option<TpBlock>> {
     cancelli::not_in_source(inp, parent, &mut b);
     cancelli::explained(inp, &mut b);
     if let Some(rules) = inp.rules {
-        explain_by_arcs(inp, rules, &mut b, &NetParams::default());
+        explain_by_arcs(inp, rules, &mut b, &NetParams::default())?;
     }
     parentela::kinship(inp, &mut b);
     Ok(Some(b))

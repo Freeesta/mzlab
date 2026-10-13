@@ -1,4 +1,4 @@
-//! `.mzidx` builder (format: docs/agenti/mzidx.md): the peaks of an mzML or `.raw` stream, sorted by m/z, written to any `Output`.
+//! `.mzidx` builder (format: docs/agenti/mzidx.md): the peaks of an mzML or `.raw` stream or of a `Lettore`, sorted by m/z, written to any `Output`.
 //! The result is byte for byte what `mzlab/reader/mzidx.py::build` writes. The scan table (JSON rows), the source and run
 //! descriptions and the per-scan level, polarity, RT and TIC come from the caller (`ScanTable`): in the browser from the
 //! Python reader, which has already read the headers; this crate only decodes the peaks.
@@ -388,12 +388,19 @@ fn f64_bytes(v: &[f64]) -> Vec<u8> {
 pub type Pass<'a> = dyn FnMut(&mut dyn FnMut(Spectrum)) -> Result<()> + 'a;
 
 /// Builds the index. `pass` decodes the whole stream once per call (it must start from the beginning every time).
+/// `nativo`: the rows locate the scans in a vendor file set (version 2, `idxread::FLAG_LETTORE`), otherwise in an mzML (version 1).
 pub fn build(
     table: &ScanTable,
     pass: &mut Pass,
     out: &mut dyn Output,
     budget: usize,
+    nativo: bool,
 ) -> Result<Stats> {
+    let (version, flags) = if nativo {
+        (2u32, crate::idxread::FLAG_LETTORE)
+    } else {
+        (1, 0)
+    };
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
@@ -586,7 +593,8 @@ pub fn build(
     // -- the tables, the metadata and last the header
     let scans_off = pos;
     out.write_at(scans_off, &table.scans_json)?;
-    let mut meta = String::from("{\"format\":\"mzidx\",\"version\":1,\"block\":16384,\"source\":");
+    let mut meta =
+        format!("{{\"format\":\"mzidx\",\"version\":{version},\"block\":16384,\"source\":");
     meta.push_str(&table.source_json);
     meta.push_str(",\"run\":");
     meta.push_str(&table.run_json);
@@ -619,8 +627,8 @@ pub fn build(
     let total = meta_off + meta.len() as u64;
     let mut head = Vec::with_capacity(HEADER);
     head.extend_from_slice(b"MZIDX001");
-    head.extend_from_slice(&1u32.to_le_bytes());
-    head.extend_from_slice(&0u32.to_le_bytes());
+    head.extend_from_slice(&version.to_le_bytes());
+    head.extend_from_slice(&flags.to_le_bytes());
     for v in [
         meta_off,
         meta.len() as u64,
@@ -660,6 +668,7 @@ pub fn build_mzml<R: std::io::Read + Seek>(
         },
         out,
         budget,
+        false,
     )
 }
 
@@ -678,6 +687,25 @@ pub fn build_raw<R: std::io::Read + Seek>(
         },
         out,
         budget,
+        false,
+    )
+}
+
+/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).
+pub fn build_lettore(
+    table: &ScanTable,
+    l: &mut dyn crate::lettori::Lettore,
+    c: usize,
+    out: &mut dyn Output,
+    budget: usize,
+) -> Result<Stats> {
+    let n = l.indice(c)?.len();
+    build(
+        table,
+        &mut |on| (0..n).try_for_each(|k| crate::mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        out,
+        budget,
+        true,
     )
 }
 

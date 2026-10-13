@@ -8,13 +8,13 @@
   const bytesOf = d => (typeof d === "string" ? new TextEncoder().encode(d) : d);
   const verOf = (text, re) => { const m = re.exec(String(text || "")); return m ? +m[1] : null; };
 
-  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({versione, sha256}|null) } */
+  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes, smiles?} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({versione, sha256}|null) } */
   async function record(a) {
     const rulesText = a.rules == null ? null : typeof a.rules === "string" ? a.rules : new TextDecoder().decode(a.rules);
     const reg = a.out.registry == null ? null : typeof a.out.registry === "string" ? a.out.registry : new TextDecoder().decode(a.out.registry);
     return {
       op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/1", crate_version: a.crate, recipe: a.recipe, parametri: JSON.parse(a.recipe), prove: a.proofs || null,
-      genitore: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minuti: a.parent.minuti.map(m => (Number.isFinite(m) ? m : null)) } : null,
+      genitore: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minuti: a.parent.minuti.map(m => (Number.isFinite(m) ? m : null)), ...(a.parent.smiles ? { smiles: a.parent.smiles } : {}) } : null,
       ingressi: (a.data.meta.inputs || []).map(i => ({ nome: i.name, sha256: i.sha256 })),
       tabella_sha256: await sha(a.out.evid || a.out.table),
       regole: rulesText == null ? null : { nome: "regole_tp/1", versione: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },

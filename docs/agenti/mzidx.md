@@ -1,4 +1,4 @@
-# `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`)
+# `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`) o di un file del produttore
 Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
 
 ## Formato (tutto little-endian, nessuna compressione)
@@ -25,6 +25,15 @@ total      dimensione del file: un file di dimensione diversa (troncato) non si 
 - **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
 - **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (la stessa che userà `.mzflow`).
 - **Scrittura atomica**: file temporaneo accanto alla destinazione, poi rinomina; l'intestazione si scrive per ultima.
+
+## Indice di un file del produttore (versione 2)
+Un `.raw`, un `.wiff` (un indice per campione) o una cartella `.D` si indicizzano direttamente dal `Lettore` (`lettori.rs`), senza scrivere e rileggere un mzML. Codice: `crates/mzlab-core/src/mzidx_lettore.rs`, `upload::prepare_lettore`, `mzidx::build_lettore`; prova: `crates/mzlab-core/tests/lettori_mzidx.rs`.
+- **Testata**: `u32 versione = 2`, `flags` con il bit 0 (`idxread::FLAG_LETTORE`: le righe puntano ai membri dell'insieme, non a un mzML), gli altri bit a zero; nel meta `"version":2`. `idxread::Index::open` accetta solo 1/0 e 2/bit 0, il resto è `error.badIndex`; il lettore Python accetta solo la versione 1.
+- **Righe**: le 20 colonne di `SCAN_COLUMNS` salvo le prime due: al posto di `start,end` ci sono la posizione `[membro,offset,lunghezza]` (`Posizione` di `Lettore::indice`, `null` se il lettore non la dà) e `k`, il numero della scansione in `indice(c)`; il nativeID resta in `native`. `scanrow::scan_of_row` le porta in `posizione` e `k` di `idxread::Scan` (`start`, `end` = 0).
+- **`source`**: le chiavi della versione 1 (`name`, `size` = somma dei membri, `mtime_ns`, `probe`, `sha256`) più `members: [{name,size,sha256,probe}]` nell'ordine del `FileSet` e `sample: {id, nome}`. Con un membro `sha256` e `probe` sono i suoi; con più membri sono SHA-256 (SHA-1 per `probe`) dei valori dei membri, ognuno seguito da un a capo, e poi dell'`id` del campione. Le impronte dei membri si prendono con `upload::impronte` prima di `lettori::apri`, che consuma l'insieme.
+- **Uguale all'mzML**: tutto il resto è byte per byte l'indice dell'mzML che `lettori_mzml::scrivi` scrive per quel campione. Le righe vengono da `scantable::Rows` (`scantable/rows.rs`, la stessa che legge l'mzML) sul testo che lo scrittore darebbe alla testa di ogni spettro (`mzmlwrite::spectrum_head`: TIC e picco base dai picchi, quindi ogni scansione si decodifica una volta anche in `prepare_lettore`); `n_chromatograms` conta i cromatogrammi che lo scrittore scrive (tipo noto, almeno un punto); lo spettro dato al costruttore è quello che l'mzML ridarebbe (array tagliati al più corto).
+- **Costruzione**: `build_lettore` decodifica ogni scansione una volta per passata (`scansione(c, k)`, `k` in ordine), con lo stesso `budget` di `build`.
+- **Sorgente delle scansioni** (`sorgente.rs`): `Scansioni` (`spettro(riga)`, `intestazione(riga)`) e `Tracce` (`cromatogrammi`, `cromatogramma(id)`, `testata`), ciascuno con due implementazioni: l'mzML per offset (ogni `ReadAt`, righe della versione 1; `TracceMzml` sopra `Mzml`) e un campione di un `Lettore` (`SorgenteLettore`, righe della versione 2). Le rotte delle scansioni (`hrscans`, `hrroutes`, `hrscanbin`, `profspec`, `msnroute`, `scaninfo`, `sniff`) leggono attraverso `Scansioni`.
 
 ## Costruzione (`build`)
 1. Le scansioni sono già nella tabella di `Run`: con un `indexList` (indexedmzML) le posizioni degli spettri vengono da lì e si leggono solo le intestazioni (fino a `<binaryDataArrayList`), mai i dati binari; senza `indexList` si percorre il file come prima (`Run._spans`).

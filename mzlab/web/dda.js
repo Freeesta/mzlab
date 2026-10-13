@@ -47,8 +47,8 @@ const DDA = (() => {
         if (s2.dock == null || !s2.el) return;
         const s1 = byId(s2.dock); if (!s1) return;
         if (s2.extra) return;
-        const row = [s2, ...extras(s1)], n = row.length, w = Math.floor(W / n);
-        set(s1, { x: 0, w: W }); row.forEach((q, i) => { set(q, { x: i * w, w: i === n - 1 ? W - i * w : w, y: s2.y, h: s2.h }); q.el.classList.add("dk"); });
+        const row = [s2, ...extras(s1)], g = LAYOUT.geometria([{ voci: row.map(q => ({ id: q.id, h: s2.h })) }], W, 0, 0);       // equal shares side by side (no minimum: the trio keeps its shape)
+        set(s1, { x: 0, w: W }); row.forEach(q => { const r = g.rett.find(t => t.id === q.id); set(q, { x: r.x, w: r.w, y: s2.y, h: s2.h }); q.el.classList.add("dk"); });
         s2.el.classList.add("dk"); s1.el.classList.add("jb");
         const c = s1.link != null ? byId(s1.link) : null; if (c && c.y + c.h <= s1.y + 1) c.el.classList.add("jt");
       });
