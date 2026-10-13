@@ -17,6 +17,7 @@ No .dam files: tests that need a method file are skipped by tools/verifica.py.
 from __future__ import annotations
 
 import base64
+import math
 import sys
 import zlib
 from pathlib import Path
@@ -26,6 +27,16 @@ import numpy as np
 OFF = 0.3                       # instrument m/z offset seen in the lab files
 TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
+
+
+def _libm(f):
+    """numpy's exp/log/sin/power choose SIMD code by CPU (AVX-512 or not) and may differ in the last bit; the scalar libm is the same
+    on every runner, so the files, their SHA-256 (the keys of tests/golden/e2e) and the golden answers do not depend on the machine."""
+    v = np.frompyfunc(f, 1, 1)
+    return lambda x: np.asarray(v(np.asarray(x, float)), float) if np.ndim(x) else f(float(x))
+
+
+_exp, _log, _sin = _libm(math.exp), _libm(math.log), _libm(math.sin)
 
 
 def _b64(a, f4=False) -> str:
@@ -63,7 +74,7 @@ def _chrom(i, cid, t, y, extra="", yunit="") -> str:
 def pressure_trace(rt_end: float = 15.0, n: int = 6000):
     """Pump pressure like a Thermo file converted with msconvert: declared in pascal, values ten times too high (278 bar at 1 min really shows 2.78e8)."""
     t = np.linspace(0, rt_end, n)
-    bar = 270 + 8 * t + 20 * np.sin(t * 3)
+    bar = 270 + 8 * t + 20 * _sin(t * 3)
     return t, bar * 1e5 * 10
 
 
@@ -85,12 +96,12 @@ def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
 def _g(rt, c, s, tau=0.04):
     """Slightly tailed Gaussian (exponential tail on the right), max ~1."""
     x = np.asarray(rt, float) - c
-    return np.exp(-0.5 * (x / s) ** 2) * np.where(x > 0, np.exp(-x / max(tau, 1e-6) * 0.15), 1.0)
+    return _exp(-0.5 * (x / s) ** 2) * np.where(x > 0, _exp(-x / max(tau, 1e-6) * 0.15), 1.0)
 
 
 def _pda(rng, total, rt_end=22.0):
     t = np.arange(0, rt_end, 0.004)
-    y = 2.0e3 + 1.5e2 * np.sin(t / 3) + rng.normal(0, 30, t.size)
+    y = 2.0e3 + 1.5e2 * _sin(t / 3) + rng.normal(0, 30, t.size)
     for c, a in ((14.3, 2.2e4 * total), (7.07, 3e3), (18.3, 4e3), (2.1, 6e3)):
         y += a * _g(t, c, 0.07)
     return t, y
@@ -98,14 +109,14 @@ def _pda(rng, total, rt_end=22.0):
 
 def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False) -> None:
     k = 0.035
-    P = 2.0e7 * np.exp(-k * t)
+    P = 2.0e7 * _exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
         (364.07 + OFF, 14.3, 0.06, P), (365.07 + OFF, 14.3, 0.06, 0.16 * P), (366.07 + OFF, 14.3, 0.06, 0.055 * P),
         (194.0 + 0.2, 14.3, 0.06, 0.8 * P), (152.0 + 0.2, 14.3, 0.06, 0.95 * P), (124.0 + 0.3, 14.3, 0.06, 0.3 * P),
         (386.05 + OFF, 14.3, 0.06, 0.03 * P),
-        (305.0 + 0.3, 14.7, 0.06, 2.5e6 * (1 - np.exp(-0.06 * t)) * np.exp(-0.01 * t)),
-        (229.1, 7.07, 0.06, 1.2e6 * (1 - np.exp(-0.04 * t))),
-        (224.2, 13.0, 0.06, 8e5 * (1 - np.exp(-0.03 * t)) ** 2),
+        (305.0 + 0.3, 14.7, 0.06, 2.5e6 * (1 - _exp(-0.06 * t)) * _exp(-0.01 * t)),
+        (229.1, 7.07, 0.06, 1.2e6 * (1 - _exp(-0.04 * t))),
+        (224.2, 13.0, 0.06, 8e5 * (1 - _exp(-0.03 * t)) ** 2),
         (391.3, 18.3, 0.08, 6e5), (279.2, 2.1, 0.1, 3e5),
     ]
     if neg:                                           # negative mode: [M-H]- is 2.0146 lighter than [M+H]+ (everything else the same, only to test the sign and the default adduct)
@@ -113,19 +124,19 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = Fal
     rts = np.linspace(0.5087, 20.0076, 1111)
     specs, tic, bpc = [], [], []
     for i, rt in enumerate(rts):
-        mz = list(rng.uniform(120, 480, 45)); it = list(rng.lognormal(np.log(4e3), 0.9, 45))
+        mz = list(rng.uniform(120, 480, 45)); it = list(rng.lognormal(_log(4e3), 0.9, 45))
         for m, c, s, a in comps:
             v = a * _g(rt, c, s) * rng.normal(1, 0.03)
             if v > 200:
                 mz.append(m + rng.normal(0, 0.03)); it.append(v)
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
-    tp, yp = _pda(rng, np.exp(-k * t))
+    tp, yp = _pda(rng, _exp(-k * t))
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
 
 
 def ms2(path: Path, rng, t: float = 15) -> None:
-    f = (1 - np.exp(-0.04 * t)) / (1 - np.exp(-0.6))                 # products grow with the treatment time
+    f = (1 - _exp(-0.04 * t)) / (1 - _exp(-0.6))                 # products grow with the treatment time
     prods = {229.1: ([123.1, 171.2, 211.1, 229.1], [0.05, 0.8, 0.25, 1.0], 7.07, 9e5 * f),
              305.0: ([152.2, 194.2, 263.1, 305.2], [0.3, 1.0, 0.2, 0.6], 14.7, 7e5 * f)}
     rts = np.linspace(0.0197, 20.0009, 1005)
@@ -138,7 +149,7 @@ def ms2(path: Path, rng, t: float = 15) -> None:
             mz = it = np.zeros(0)
         else:
             mz = np.array(mzs) + rng.normal(0, 0.03, len(mzs)); it = np.array(rel) * max(sig, 300) * rng.normal(1, 0.05, len(mzs))
-            noise_mz = rng.uniform(60, prec, 6); noise = rng.lognormal(np.log(150), 0.6, 6)
+            noise_mz = rng.uniform(60, prec, 6); noise = rng.lognormal(_log(150), 0.6, 6)
             mz = np.concatenate([mz, noise_mz]); it = np.concatenate([it, noise]); o = np.argsort(mz); mz, it = mz[o], it[o]
         specs.append(_spec(i, rt, mz, it, level=2, prec=prec, ce=10.0)); tic.append(float(np.sum(it))); bpc.append(float(np.max(it)) if len(it) else 0.0)
     tp, yp = _pda(rng, 0.6, 20.0)
@@ -158,7 +169,7 @@ def mrm(path: Path, amount: float, rng, sample: int) -> None:
 
 
 def _scan_ions(rt, rng, ions, neg=False):
-    mz = list(rng.uniform(120, 480, 12)); it = list(rng.lognormal(np.log(3e3), 0.8, 12))
+    mz = list(rng.uniform(120, 480, 12)); it = list(rng.lognormal(_log(3e3), 0.8, 12))
     for m, c, sg, a in ions:
         v = a * _g(rt, c, sg) * rng.normal(1, 0.03)
         if v > 200:
@@ -175,7 +186,7 @@ def mixed_ida(path: Path, rng) -> None:
         for k in range(2):
             top = sorted(ions, key=lambda x: -x[3] * _g(rt, x[1], x[2]))[k]
             prec = round(top[0] + rng.normal(0, 0.15), 1) if c % 3 else round(top[0] + 0.0, 1)
-            frag = np.sort(rng.uniform(60, prec - 10, 5)); it2 = rng.lognormal(np.log(2e3), 0.6, 5) * (1 + 3 * _g(rt, top[1], top[2]))
+            frag = np.sort(rng.uniform(60, prec - 10, 5)); it2 = rng.lognormal(_log(2e3), 0.6, 5) * (1 + 3 * _g(rt, top[1], top[2]))
             specs.append(_spec(i, rt + 0.004 * (k + 1), frag, it2, level=2, prec=prec, ce=25.0)); i += 1
     _write(path, specs, [_chrom(0, "TIC", rts, tic)])
 
@@ -208,21 +219,21 @@ def full_scan_profile(path: Path, t: float, rng) -> None:
     """The same kind of Full Scan as `full_scan`, but as PROFILE: points every 0.06 Da, peaks about 0.7 Da wide (FWHM) and one ion (305)
     with a flat top that a centroiding algorithm would split in two. Zeros are left out, as MSConvert does."""
     k = 0.035
-    P = 2.0e7 * np.exp(-k * t)
+    P = 2.0e7 * _exp(-k * t)
     comps = [(364.07 + OFF, 14.3, 0.06, P, 0.3), (365.07 + OFF, 14.3, 0.06, 0.16 * P, 0.3), (366.07 + OFF, 14.3, 0.06, 0.055 * P, 0.3),
              (194.0 + 0.2, 14.3, 0.06, 0.8 * P, 0.3), (152.0 + 0.2, 14.3, 0.06, 0.95 * P, 0.3),
-             (305.0 + 0.3, 14.7, 0.06, 2.5e6 * (1 - np.exp(-0.06 * t)) * np.exp(-0.01 * t), -1),     # sigma < 0: flat top
-             (229.1, 7.07, 0.06, 1.2e6 * (1 - np.exp(-0.04 * t)), 0.3)]
+             (305.0 + 0.3, 14.7, 0.06, 2.5e6 * (1 - _exp(-0.06 * t)) * _exp(-0.01 * t), -1),     # sigma < 0: flat top
+             (229.1, 7.07, 0.06, 1.2e6 * (1 - _exp(-0.04 * t)), 0.3)]
     grid = np.round(np.arange(120.0, 400.0, 0.06), 2)
     rts = np.linspace(0.5087, 20.0076, 400)
     specs, tic, bpc = [], [], []
     for i, rt in enumerate(rts):
-        y = rng.lognormal(np.log(30), 0.8, grid.size) * (rng.random(grid.size) < 0.25)      # chemical noise: sparse small points
+        y = rng.lognormal(_log(30), 0.8, grid.size) * (rng.random(grid.size) < 0.25)      # chemical noise: sparse small points
         for m, c, s, a, sg in comps:
             v = a * _g(rt, c, s) * rng.normal(1, 0.03)
             if v > 200:
                 x = grid - m
-                y = y + v * (np.exp(-0.5 * (x / sg) ** 2) if sg > 0 else np.exp(-(x / 0.42) ** 8))
+                y = y + v * (_exp(-0.5 * (x / sg) ** 2) if sg > 0 else _exp(-np.square(np.square(np.square(x / 0.42)))))
         keep = y > 50
         mz, it = grid[keep], y[keep]
         specs.append(_spec(i, rt, mz, it, profile=True)); tic.append(it.sum()); bpc.append(it.max() if len(it) else 0.0)
@@ -304,7 +315,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
     iso = lambda m: [(m + 1.00335, 0.13)] + ([(m + 1.99580, 0.045)] if m == mz_par else [])        # 13C (+34S for the parent)
     def level(m, rt, c, s, a):
         if s <= 0:
-            return a * (1 + 0.1 * np.sin(rt / 2.0))
+            return a * (1 + 0.1 * _sin(rt / 2.0))
         return a * float(_g(rt, c, s))
     pre, ex = "controllerType=0 controllerNumber=1 scan=", {}
     if kind == "fusion":
@@ -322,7 +333,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
         if prof:
             mz = np.asarray(mz, float); it = np.asarray(it, float)
             off = np.arange(-4, 5) * 0.004
-            mz = (mz[:, None] + off[None, :]).ravel(); it = (it[:, None] * np.exp(-0.5 * (off / 0.008) ** 2)[None, :]).ravel()
+            mz = (mz[:, None] + off[None, :]).ravel(); it = (it[:, None] * _exp(-0.5 * (off / 0.008) ** 2)[None, :]).ravel()
             o = np.argsort(mz, kind="stable"); mz, it = mz[o], it[o]
         n = len(mz)
         base = int(np.argmax(it)) if n else 0
@@ -341,7 +352,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
     cyc = 0.03
     for rt in np.arange(0.5, 20.0, cyc):
         vals = [(m, level(m, rt, c, s, a) * rng.normal(1, 0.03), sel) for m, c, s, a, sel in ions]
-        mz = list(rng.uniform(100, 900, 150)); it = list(rng.lognormal(np.log(8e3), 0.7, 150))
+        mz = list(rng.uniform(100, 900, 150)); it = list(rng.lognormal(_log(8e3), 0.7, 150))
         meas = {}
         for m, v, _ in vals:
             if v < 2e3:
@@ -362,7 +373,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
             fm, fi = [], []
             for mm, vv in w:
                 fm += list(frags[mm][0] * (1 + rng.normal(0, sd, 4))); fi += list(frags[mm][1] * vv * 0.2 * rng.normal(1, 0.05, 4))
-            fm += list(rng.uniform(60, m, 8)); fi += list(rng.lognormal(np.log(1.5e3), 0.5, 8))
+            fm += list(rng.uniform(60, m, 8)); fi += list(rng.lognormal(_log(1.5e3), 0.5, 8))
             o = np.argsort(fm); fm = np.array(fm)[o]; fi = np.array(fi)[o]
             if fus:
                 fm = np.round(fm + rng.normal(0, 0.05, fm.size), 2)
@@ -390,7 +401,7 @@ def hr_series(path: Path, rng, features: list[tuple], rt_end: float = 12.0, cyc:
     pre, specs, rts, tic = "controllerType=0 controllerNumber=1 scan=", [], [], []
     filt = "FTMS + p ESI Full ms [100.0000-900.0000]"
     for i, rt in enumerate(np.arange(0.5, rt_end, cyc)):
-        mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(np.log(3e3), 0.5, 100))
+        mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(_log(3e3), 0.5, 100))
         for m, c, sg, a in features:
             v = a * float(_g(rt, c, sg)) * rng.normal(1, 0.02) if a > 0 else 0.0
             if v >= 1e3:
@@ -427,7 +438,7 @@ def subtraction_series(out: Path, blank: bool = True, seed: int = 41) -> list[Pa
             continue
         specs, tic = [], []
         for i, rt in enumerate(rts):
-            mz = list(rng.uniform(100, 400, 20)); it = list(rng.lognormal(np.log(3e3), 0.8, 20))
+            mz = list(rng.uniform(100, 400, 20)); it = list(rng.lognormal(_log(3e3), 0.8, 20))
             for m, c, a in ((253.3, 5.2 + drift, par), (301.3, 6.4 + drift, prod), (150.2, 3.0, 2e5)):
                 v = a * float(_g(rt, c, 0.08, 1e6)) * rng.normal(1, 0.01)
                 if v > 100:
@@ -448,7 +459,7 @@ def make(out: Path) -> Path:
     for t in (15, 45, 60):
         ms2(out / f"B_MS2-t{t}.mzML", rng, t)
     for i, t in enumerate((0, 5, 10, 15, 30, 45, 60)):
-        mrm(out / f"B_MRM-t{t}.mzML", 1.3e5 * np.exp(-0.035 * t), rng, 6 + i)
+        mrm(out / f"B_MRM-t{t}.mzML", 1.3e5 * _exp(-0.035 * t), rng, 6 + i)
     for i, (name, c) in enumerate(STANDARDS.items()):
         mrm(out / f"B_MRM-STD_{name}ppm.mzML", 1.0e4 * c, rng, 1 + i)
     full_scan(out / "B_FullMass-neg-t0.mzML", 0, np.random.default_rng(7), neg=True)      # one NEGATIVE Full Scan (written last: the other files do not change)
