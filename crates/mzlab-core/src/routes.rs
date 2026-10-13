@@ -74,11 +74,15 @@ pub struct Routes<R: ReadAt> {
     pub(crate) steps: Vec<(u8, Option<f64>)>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
+    /// The MSn trees already built, by grouping (`msnroute.rs`: the filter `msn:<id>` reads its scans from here).
+    pub(crate) alberi: Vec<(crate::msnalbero::Raggruppa, std::sync::Arc<crate::msnalbero::Albero>)>,
+    /// The options of the request being answered (`msnroute::Opz`).
+    pub(crate) opz: crate::msnroute::Opz,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None, alberi: Vec::new(), opz: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -91,6 +95,10 @@ impl<R: ReadAt> Routes<R> {
         if !self.has_scans() {
             return Ok(crate::mrmroutes::no_scans(path, q));
         }
+        self.con_opz(q, |r| r.handle_in(path, q))
+    }
+
+    fn handle_in(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
         match path {
             "/api/chrom" => self.chrom(q),
             "/api/filters" => self.filters().map(Some),
@@ -101,6 +109,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/spectrum" => self.spectrum(q),
             "/api/dda" => self.dda(q),
             "/api/spectra" => self.spectra_profile(q),
+            "/api/msn_albero" => self.msn_albero_route(q),
             _ => Ok(None),
         }
     }
@@ -182,10 +191,9 @@ impl<R: ReadAt> Routes<R> {
             (ar.rt.clone(), ar.scan_ids.clone())
         };
         let mut keep = vec![true; rt.len()];
-        if let Some(f) = filt {
+        if let Some(f) = self.filtro(filt)? {
             for (j, &id) in ids.iter().enumerate() {
-                let s = &self.idx.scans[id as usize];
-                keep[j] = s.key() == f || s.filter == f;
+                keep[j] = f.passa(id as usize, &self.idx.scans[id as usize]);
             }
         }
         if let (Some(p), true) = (prec, level > 1) {
@@ -275,13 +283,11 @@ impl<R: ReadAt> Routes<R> {
             return Ok(Some(o.0));
         };
         let ar = self.idx.arrays(si)?.clone();
+        let fl = self.filtro(filt)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| match filt {
-                None => true,
-                Some(f) => {
-                    let s = &self.idx.scans[ar.scan_ids[j] as usize];
-                    s.key() == f || s.filter == f
-                }
+            .filter(|&j| {
+                let id = ar.scan_ids[j] as usize;
+                fl.as_ref().is_none_or(|f| f.passa(id, &self.idx.scans[id]))
             })
             .collect();
         let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
@@ -331,11 +337,12 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         };
         let ar = self.idx.arrays(si)?.clone();
+        let fl = self.filtro(filter)?;
         let mut best: Option<(f64, usize)> = None;
         for &id in &ar.scan_ids {
             let s = &self.idx.scans[id as usize];
-            let ok = match (filter, precursor) {
-                (Some(f), _) => s.filter == f || s.key() == f,
+            let ok = match (&fl, precursor) {
+                (Some(f), _) => f.passa(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
                 (None, None) => true,
             };

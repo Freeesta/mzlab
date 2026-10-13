@@ -6,6 +6,7 @@ use crate::composition::{compose, Opts, Ranges};
 use crate::elements::MASS;
 use crate::error::{Error, Result};
 use crate::json::{self, fmt_g, round, Out, Value};
+use crate::msnalbero::{albero_di, consenso, Raggruppa};
 
 const MAX_SCANS: usize = 60;
 const MAX_PEAKS: usize = 120;
@@ -26,8 +27,6 @@ pub struct TreeScan {
     pub polarity: i8,
     pub path: Vec<(f64, String, f64)>,
 }
-
-type Key = Vec<(i64, String, u64)>;
 
 /// `([A-Z][a-z]?)(\d*)` found anywhere, counts added per element in the order of first appearance.
 fn parse(f: &str) -> Ranges {
@@ -88,47 +87,6 @@ struct Consensus {
     rel: Vec<f64>,
 }
 
-/// Peaks present in at least half of the scans (max-normalised per scan), merged within 5 ppm: (m/z, mean relative intensity).
-fn consensus<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
-    read: &mut F,
-    idx: &[usize],
-    ppm: f64,
-    min_frac: f64,
-) -> Result<Consensus> {
-    let mut pts: Vec<(f64, f64, usize)> = vec![];
-    for (k, &i) in idx.iter().enumerate() {
-        let (mz, it) = read(i)?;
-        let mx = it.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        if mz.is_empty() || mx <= 0.0 {
-            continue;
-        }
-        pts.extend(mz.iter().zip(&it).map(|(m, v)| (*m, v / mx, k)));
-    }
-    pts.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let mut groups: Vec<Vec<usize>> = vec![];
-    for i in 0..pts.len() {
-        if i > 0 && pts[i].0 - pts[i - 1].0 <= pts[i].0 * ppm * 1e-6 {
-            groups.last_mut().unwrap().push(i);
-        } else {
-            groups.push(vec![i]);
-        }
-    }
-    let need = (min_frac * idx.len() as f64).max(1.0);
-    let (mut mz, mut rel) = (vec![], vec![]);
-    for g in groups {
-        let w: f64 = g.iter().map(|&i| pts[i].1).sum();
-        let cm = g.iter().map(|&i| pts[i].1 * pts[i].0).sum::<f64>() / w.max(1e-12);
-        let mut sc: Vec<usize> = g.iter().map(|&i| pts[i].2).collect();
-        sc.sort();
-        sc.dedup();
-        if sc.len() as f64 >= need {
-            mz.push(cm);
-            rel.push(w / idx.len() as f64);
-        }
-    }
-    Ok(Consensus { mz, rel })
-}
-
 /// The best candidate for an exact m/z: (formula, error in ppm), or None when there is none or the request is not valid.
 fn best(
     mz: f64,
@@ -154,12 +112,6 @@ fn best(
         r.get("formula")?.str()?.to_string(),
         r.get("delta_ppm")?.f64()?,
     ))
-}
-
-fn key_of(path: &[(f64, String, f64)]) -> Key {
-    path.iter()
-        .map(|(m, a, ce)| (m.round_ties_even() as i64, a.clone(), ce.to_bits()))
-        .collect()
 }
 
 struct Node {
@@ -193,28 +145,19 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
             return Err(Error::new("err.tree.formula").with("formula", f));
         }
     }
-    let mut keys: Vec<Key> = vec![];
-    let mut groups: Vec<Vec<usize>> = vec![];
-    let mut paths: Vec<Vec<(f64, String, f64)>> = vec![];
-    for s in scans.iter().filter(|s| s.level >= 2 && !s.path.is_empty()) {
-        let k = key_of(&s.path);
-        match keys.iter().position(|q| *q == k) {
-            Some(g) => groups[g].push(s.index),
-            None => {
-                keys.push(k);
-                groups.push(vec![s.index]);
-                paths.push(s.path.clone());
-            }
-        }
-    }
-    if groups.is_empty() {
+    // nodes and parents from the one builder of the tree (`msnalbero`): a node without the generation before hangs from the nearest ancestor
+    let tree = albero_di(
+        scans.iter().map(|s| (s.level, Some(&s.path[..]))),
+        &Raggruppa::default(),
+    );
+    if tree.nodi.is_empty() {
         return Err(Error::new("err.tree.noPath"));
     }
-    if keys.iter().map(|k| k.len()).max().unwrap() < 2 {
+    if tree.nodi.iter().map(|n| n.chiave.len()).max().unwrap() < 2 {
         return Err(Error::new("err.tree.needStages"));
     }
-    if groups.len() > 400 {
-        return Err(Error::new("err.tree.tooMany").with("n", groups.len()));
+    if tree.nodi.len() > 400 {
+        return Err(Error::new("err.tree.tooMany").with("n", tree.nodi.len()));
     }
     let pol = scans
         .iter()
@@ -222,63 +165,33 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         .find(|p| *p != 0)
         .unwrap_or(1);
     let ion1 = if pol >= 0 { "[M]+" } else { "[M]-" };
-    let ms1: Vec<usize> = scans
-        .iter()
-        .filter(|s| s.level == 1)
-        .map(|s| s.index)
-        .take(MAX_SCANS)
-        .collect();
+    let mut cons_of = |idx: &[usize]| -> Result<Consensus> {
+        let spectra = idx
+            .iter()
+            .take(MAX_SCANS)
+            .map(|&i| read(scans[i].index))
+            .collect::<Result<Vec<_>>>()?;
+        let (mz, rel, _) = consenso(&spectra, 5.0, 0.5, 0.0);
+        Ok(Consensus { mz, rel })
+    };
     let mut cons: Vec<Consensus> = vec![];
-    for g in &groups {
-        cons.push(consensus(
-            &mut read,
-            &g[..g.len().min(MAX_SCANS)],
-            5.0,
-            0.5,
-        )?);
+    for n in &tree.nodi {
+        cons.push(cons_of(&n.scansioni)?);
     }
-    let ms1c = if ms1.is_empty() {
+    let ms1c = if tree.ms1.is_empty() {
         None
     } else {
-        Some(consensus(&mut read, &ms1, 5.0, 0.5)?)
+        Some(cons_of(&tree.ms1)?)
     };
-    let mut order: Vec<usize> = (0..keys.len()).collect();
-    order.sort_by(|&a, &b| {
-        keys[a].len().cmp(&keys[b].len()).then_with(|| {
-            for (x, y) in keys[a].iter().zip(&keys[b]) {
-                let c =
-                    x.0.cmp(&y.0)
-                        .then_with(|| x.1.cmp(&y.1))
-                        .then_with(|| f64::from_bits(x.2).total_cmp(&f64::from_bits(y.2)));
-                if c.is_ne() {
-                    return c;
-                }
-            }
-            std::cmp::Ordering::Equal
-        })
-    });
     let root_el: Ranges = ROOT_ELEMENTS
         .iter()
         .map(|(s, a, b)| (s.to_string(), (*a, *b)))
         .collect();
     let mut nodes: Vec<Node> = vec![];
-    let mut pos: Vec<(usize, usize)> = vec![]; // (group, node)
-    for &g in &order {
-        let k = &keys[g];
-        let nom = k.last().unwrap().0;
-        let par = &k[..k.len() - 1];
-        let mut pk = pos
-            .iter()
-            .find(|(q, _)| keys[*q][..] == *par)
-            .map(|(q, _)| *q);
-        if pk.is_none() && !par.is_empty() {
-            pk = pos
-                .iter()
-                .find(|(q, _)| {
-                    keys[*q].len() == par.len() && keys[*q].iter().zip(par).all(|(a, b)| a.0 == b.0)
-                })
-                .map(|(q, _)| *q);
-        }
+    for (g, tn) in tree.nodi.iter().enumerate() {
+        let nom = tn.chiave.last().unwrap().0;
+        let path = &scans[tn.scansioni[0]].path;
+        let pk = tn.genitore;
         let src = match pk {
             Some(q) => Some(&cons[q]),
             None => ms1c.as_ref(),
@@ -287,13 +200,13 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         if let Some(c) = src {
             let mut bi: Option<usize> = None;
             for (i, m) in c.mz.iter().enumerate() {
-                if (m - nom as f64).abs() <= 0.5 && bi.is_none_or(|b| c.rel[i] > c.rel[b]) {
+                if (m - nom).abs() <= 0.5 && bi.is_none_or(|b| c.rel[i] > c.rel[b]) {
                     bi = Some(i);
                 }
             }
             prec = bi.map(|i| c.mz[i]);
         }
-        let pnode = pk.map(|q| &nodes[pos.iter().find(|(x, _)| *x == q).unwrap().1]);
+        let pnode = pk.map(|q| &nodes[q]);
         let ptxt: Option<String> = match pnode {
             Some(n) => n.formula.clone(),
             None => formula.map(String::from),
@@ -351,18 +264,17 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
             .iter()
             .filter(|p| p.2.is_some() && p.1 >= 5.0 && prec.is_none_or(|pr| p.0 < pr - 0.5))
             .count();
-        let label = paths[g]
+        let label = path
             .iter()
             .map(|(m, a, ce)| format!("{}@{}{}", fmt_g(*m), a.to_lowercase(), fmt_g(*ce)))
             .collect::<Vec<_>>()
             .join(" > ");
-        pos.push((g, nodes.len()));
         nodes.push(Node {
-            parent: pk.map(|q| pos.iter().find(|(x, _)| *x == q).unwrap().1),
-            path: paths[g].clone(),
+            parent: pk,
+            path: path.clone(),
             label,
-            level: k.len() + 1,
-            scans: groups[g].len(),
+            level: tn.chiave.len() + 1,
+            scans: tn.scansioni.len(),
             prec: prec.map(|p| round(p, 5)),
             formula: form,
             ppm: bst.as_ref().map(|b| b.1),

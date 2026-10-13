@@ -13,11 +13,26 @@ pub enum Tol {
     /// Precursors rounded to the nominal mass (`node_key`).
     #[default]
     Nominale,
+    /// Precursors of a stage closer than this many Da are one (sorted m/z, a gap wider than the tolerance starts a new group).
+    Da(f64),
+    /// The same within this many ppm of the lower m/z.
+    Ppm(f64),
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Raggruppa {
     pub tol: Tol,
+    /// `true` (default): one energy, one node; `false`: the collision energy is out of the key.
+    pub energie: bool,
+}
+
+impl Default for Raggruppa {
+    fn default() -> Self {
+        Raggruppa {
+            tol: Tol::Nominale,
+            energie: true,
+        }
+    }
 }
 
 /// One node (not the root MS1).
@@ -48,9 +63,75 @@ pub struct Albero {
 
 type Key = Vec<(i64, String, u64)>;
 
-fn key_of(path: &[(f64, String, f64)]) -> Key {
+/// The groups of the precursors of each stage of the paths (`Tol`): code of an m/z (the nominal mass, or the rank of its group) and the
+/// m/z shown for a code (the nominal mass, or the mean of the group).
+struct Codici {
+    tol: Tol,
+    stadi: Vec<(Vec<f64>, Vec<i64>, Vec<f64>)>,
+}
+
+impl Codici {
+    fn new<'a>(tol: Tol, paths: impl Iterator<Item = &'a [(f64, String, f64)]>) -> Codici {
+        let mut stadi: Vec<(Vec<f64>, Vec<i64>, Vec<f64>)> = vec![];
+        if tol != Tol::Nominale {
+            for p in paths {
+                for (s, (m, _, _)) in p.iter().enumerate() {
+                    if stadi.len() <= s {
+                        stadi.push(Default::default());
+                    }
+                    stadi[s].0.push(*m);
+                }
+            }
+        }
+        for (mz, code, centre) in &mut stadi {
+            crate::sortc::by(mz, f64::total_cmp);
+            mz.dedup();
+            let (mut sum, mut n) = (0.0, 0usize);
+            for (i, m) in mz.iter().enumerate() {
+                let far = match tol {
+                    Tol::Da(d) => i > 0 && m - mz[i - 1] > d,
+                    Tol::Ppm(p) => i > 0 && m - mz[i - 1] > mz[i - 1] * p * 1e-6,
+                    Tol::Nominale => false,
+                };
+                if far {
+                    centre.push(sum / n as f64);
+                    (sum, n) = (0.0, 0);
+                }
+                code.push(centre.len() as i64);
+                sum += m;
+                n += 1;
+            }
+            centre.push(sum / n.max(1) as f64);
+        }
+        Codici { tol, stadi }
+    }
+
+    fn code(&self, stage: usize, mz: f64) -> i64 {
+        if self.tol == Tol::Nominale {
+            return mz.round_ties_even() as i64;
+        }
+        let (v, code, _) = &self.stadi[stage];
+        code[v.partition_point(|x| *x < mz).min(v.len() - 1)]
+    }
+
+    fn mz(&self, stage: usize, code: i64) -> f64 {
+        match self.tol {
+            Tol::Nominale => code as f64,
+            _ => (self.stadi[stage].2[code as usize] * 1e4).round() / 1e4,
+        }
+    }
+}
+
+/// The energy of a key when the energies are merged.
+const NO_CE: f64 = f64::NAN;
+
+fn key_of(path: &[(f64, String, f64)], c: &Codici, energie: bool) -> Key {
     path.iter()
-        .map(|(mz, act, ce)| (mz.round_ties_even() as i64, act.clone(), ce.to_bits()))
+        .enumerate()
+        .map(|(s, (mz, act, ce))| {
+            let ce = if energie { *ce } else { NO_CE };
+            (c.code(s, *mz), act.clone(), ce.to_bits())
+        })
         .collect()
 }
 
@@ -69,7 +150,8 @@ fn key_cmp(a: &Key, b: &Key) -> Ordering {
     })
 }
 
-/// `node_id`: `195@cid30>138@cid35`, `MS1` for the empty path.
+/// `node_id`: `195@cid30>138@cid35`, `MS1` for the empty path; an m/z that is not nominal (`Tol::Da`, `Tol::Ppm`) with 4 decimals
+/// (`195.0876@cid30`), a merged energy (`NaN`) left out (`195@cid`).
 pub fn node_id(chiave: &[(f64, String, f64)]) -> String {
     if chiave.is_empty() {
         return "MS1".into();
@@ -77,12 +159,16 @@ pub fn node_id(chiave: &[(f64, String, f64)]) -> String {
     chiave
         .iter()
         .map(|(mz, act, ce)| {
-            format!(
-                "{}@{}{}",
-                mz.round_ties_even() as i64,
-                act.to_lowercase(),
+            let m = match mz.fract() == 0.0 {
+                true => (mz.round_ties_even() as i64).to_string(),
+                false => format!("{mz:.4}"),
+            };
+            let e = if ce.is_nan() {
+                String::new()
+            } else {
                 crate::json::fmt_g(*ce)
-            )
+            };
+            format!("{m}@{}{e}", act.to_lowercase())
         })
         .collect::<Vec<_>>()
         .join(">")
@@ -179,17 +265,23 @@ pub fn albero(scans: &[Scan], r: &Raggruppa) -> Albero {
 /// The tree of scans given as (level, path of the filter).
 pub fn albero_di<'a>(
     scans: impl IntoIterator<Item = (u8, Option<&'a [(f64, String, f64)]>)>,
-    _r: &Raggruppa,
+    r: &Raggruppa,
 ) -> Albero {
     let mut out = Albero::default();
     let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
-    for (i, (level, path)) in scans.into_iter().enumerate() {
-        match path {
-            _ if level == 1 => out.ms1.push(i),
-            Some(p) if !p.is_empty() && p.len() + 1 == level as usize => {
-                groups.entry(key_of(p)).or_default().push(i)
-            }
-            _ => out.scartate += 1,
+    let scans: Vec<_> = scans.into_iter().collect();
+    let usable = |&(level, path): &(u8, Option<&'a [(f64, String, f64)]>)| {
+        path.filter(|p| level > 1 && !p.is_empty() && p.len() + 1 == level as usize)
+    };
+    let codici = Codici::new(r.tol, scans.iter().filter_map(usable));
+    for (i, sc) in scans.iter().enumerate() {
+        match usable(sc) {
+            _ if sc.0 == 1 => out.ms1.push(i),
+            Some(p) => groups
+                .entry(key_of(p, &codici, r.energie))
+                .or_default()
+                .push(i),
+            None => out.scartate += 1,
         }
     }
     let mut keys: Vec<Key> = groups.keys().cloned().collect();
@@ -206,7 +298,8 @@ pub fn albero_di<'a>(
         let (pk, depth) = find_parent(k, &by_nominal, &groups);
         let chiave: Vec<(f64, String, f64)> = k
             .iter()
-            .map(|(m, a, ce)| (*m as f64, a.clone(), f64::from_bits(*ce)))
+            .enumerate()
+            .map(|(s, (m, a, ce))| (codici.mz(s, *m), a.clone(), f64::from_bits(*ce)))
             .collect();
         out.nodi.push(Nodo {
             id: node_id(&chiave),
@@ -218,6 +311,33 @@ pub fn albero_di<'a>(
         });
     }
     out
+}
+
+/// The blocks of each node: runs of its scans with no scan of another node between them (MS1 and unusable scans do not break a run),
+/// as (first, last) indices of the input. A tree from Tune has a few long blocks per node; a cycled method one block per scan.
+pub fn blocchi(a: &Albero, n_scans: usize) -> Vec<Vec<(usize, usize)>> {
+    let mut owned = vec![0usize; n_scans + 1];
+    for n in &a.nodi {
+        for &i in &n.scansioni {
+            owned[i + 1] = 1;
+        }
+    }
+    for i in 1..owned.len() {
+        owned[i] += owned[i - 1];
+    }
+    a.nodi
+        .iter()
+        .map(|n| {
+            let mut out: Vec<(usize, usize)> = vec![];
+            for &i in &n.scansioni {
+                match out.last_mut() {
+                    Some(b) if owned[i] == owned[b.1 + 1] => b.1 = i,
+                    _ => out.push((i, i)),
+                }
+            }
+            out
+        })
+        .collect()
 }
 
 #[cfg(test)]
