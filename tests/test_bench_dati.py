@@ -77,3 +77,14 @@ def test_conversion_failure_is_reported(tmp_path):
     (tmp_path / "S1.raw").write_bytes(b"r")
     with pytest.raises(SystemExit, match="failed"):
         C.converti(str(bad), tmp_path / "S1.raw", tmp_path / "o")
+
+
+def test_runner_parameters_and_shared_helpers(tmp_path):
+    from bench import corri
+    assert corri.parametri("asari", "predefinita")["mode"] == "pos"
+    assert "FeatureFindingMetabo" in corri.parametri("openms", "predefinita")
+    (tmp_path / "B.mzML").write_text("")
+    (tmp_path / "A.mzML").write_text("")
+    assert [f.stem for f in corri.file_mzml(tmp_path)] == ["A", "B"] and [f.stem for f in corri.file_mzml(tmp_path, ["B"])] == ["B"]
+    with pytest.raises(SystemExit):
+        corri.file_mzml(tmp_path / "vuota")
