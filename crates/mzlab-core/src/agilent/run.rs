@@ -201,6 +201,10 @@ impl AgilentD {
                 .sample_type()
                 .map(|t| ("sample type".to_string(), t.to_string()))
                 .into_iter()
+                .chain(
+                    self.anonymous
+                        .then(|| ("mzLab anonimizzato".to_string(), "true".to_string())),
+                )
                 .chain((!document.is_empty()).then(|| (metodo::USERPARAM.to_string(), document)))
                 .collect(),
             instrument: Some(("MS:1000490".into(), name)),

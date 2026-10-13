@@ -27,6 +27,7 @@ impl Engine {
         data_ms: &[u8],
         peak_size: f64,
         peak_read: Function,
+        anonymous: bool,
         sink: Function,
         progress: Function,
     ) -> Result<(), JsValue> {
@@ -42,7 +43,9 @@ impl Engine {
             data_ms: some(data_ms),
             others: &[],
         };
-        let run = AgilentD::open(name, &files).map_err(|e| error_json(&e))?;
+        let run = AgilentD::open(name, &files)
+            .map_err(|e| error_json(&e))?
+            .anonymous(anonymous);
         let mut out = BlockWriter {
             sink,
             buf: Vec::new(),
