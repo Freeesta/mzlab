@@ -427,6 +427,11 @@ fn canonical_json_and_schema() {
     assert!(campioni::route("valida", &j)
         .unwrap()
         .contains("\"codice\":\"timeUnconfirmed\""));
+    assert_eq!(campioni::route("canonico", &j).unwrap(), j);
+    assert_eq!(
+        campioni::route("digest", &j).unwrap(),
+        campioni::digest(&from_json(j.as_bytes()).unwrap())
+    );
     assert_eq!(
         campioni::route("nope", "{}").unwrap_err().key,
         "error.badCampioni"
