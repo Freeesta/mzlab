@@ -249,7 +249,7 @@ function uiSave(now = false) {
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
-        type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
+        type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
@@ -375,8 +375,10 @@ function hostWidth() {
 // full-width panels follow the page: when the window or the file list changes size
 function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
-  E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
-  if (window.DDA && E.panels.some(q => q.dock != null)) { relayout(); DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
+  const st = stackOrder();
+  E.panels.forEach(p => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+  const rows = st.some(q => LAYOUT.inRiga(q, st));       // panels side by side follow the width too (and stack when it is too narrow)
+  if (rows || window.DDA && E.panels.some(q => q.dock != null)) { relayout(); if (window.DDA) DDA.sync(); }       // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
 }
 function restoreUi() {
   const u = NB.ui;

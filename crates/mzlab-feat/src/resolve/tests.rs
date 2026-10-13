@@ -58,7 +58,8 @@ fn run(y: &[f64]) -> Found {
         &QParams::default(),
         &ResolveParams::default(),
         &mut out,
-    );
+    )
+    .unwrap();
     out
 }
 

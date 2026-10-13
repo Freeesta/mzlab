@@ -252,8 +252,8 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
 function stackAfter(p, anchor) {
   if (!p.full || !anchor.full || !p.el || !anchor.el) return;
   const st = stackOrder().filter(q => q !== p); st.splice(st.indexOf(anchor) + 1, 0, p);
-  let y = 0; st.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, st[i + 1]); });
-  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+  placeRows(st);
+  E.panels.sort(LAYOUT.ordine);
 }
 function freezeSpec(s) {
   if (!s.link) return;

@@ -168,7 +168,7 @@ pub fn build_families(
     ratio: impl Fn(usize, usize) -> Ratio,
     pol: i8,
     p: &FamParams,
-) -> Families {
+) -> Result<Families> {
     let t = Tables::new(pol);
     let mut arcs = Vec::new();
     for &(i, j, r) in pairs {
@@ -196,9 +196,9 @@ pub fn build_families(
             });
         }
     }
-    let a = roles::assign(f, &arcs, p.parent_factor);
+    let a = roles::assign(f, &arcs, p.parent_factor)?;
     let alternatives = alternatives(f, &arcs, &a.family, &t);
-    Families {
+    Ok(Families {
         version: FAMILY_VERSION,
         proof_version: PROOF_VERSION,
         params: p.clone(),
@@ -208,7 +208,7 @@ pub fn build_families(
         parent: a.parent,
         arcs,
         alternatives,
-    }
+    })
 }
 
 /// Neutral mass under each reading of the undetermined steps that two readings explain, ordered by family, row and reading.
@@ -258,7 +258,7 @@ pub fn analyse_families<R: ReadAt>(
     let spectra = spectra::gather(index, f, links, &with_ms2, base, &p.rules)?;
     let cand = candidates(f, &spectra, pol, p);
     let pairs = correlate(index, f, cand, base, p)?;
-    let fam = build_families(f, &pairs, &spectra, |_, _| Ratio::Unavailable, pol, p);
+    let fam = build_families(f, &pairs, &spectra, |_, _| Ratio::Unavailable, pol, p)?;
     fam.apply(f);
     Ok(fam)
 }
