@@ -99,15 +99,18 @@
     try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "mzFinder failed: " + (e && e.message || e); }
   }
 
-  // ---- loading (once per page): index, extra files, Python zip, then the scripts in order
+  // ---- loading (once per page): index, then extra files + Python zip + the scripts' downloads in parallel, then the scripts run in order
   async function load() {
     const get = async (name, how) => { const r = await fetch(DIR + name); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
     const idx = await get("indice.json", "json");
+    const js = idx.js || [], names = idx.files || [];
+    const warm = js.map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now; the script tags below then hit the cache
+    const [texts, pyBuf] = await Promise.all([Promise.all(names.map(n => get(n, "text"))), idx.py ? get(idx.py, "arrayBuffer") : null]);
     const files = {};
-    for (const n of idx.files || []) files[n] = await get(n, "text");
-    const pyZip = idx.py ? new Uint8Array(await get(idx.py, "arrayBuffer")) : null;
-    reg.ctx = { pyZip, base: BASE, meta: idx.meta || {}, files };
-    for (const n of idx.js || []) await runScript(n);
+    names.forEach((n, i) => { files[n] = texts[i]; });
+    reg.ctx = { pyZip: pyBuf ? new Uint8Array(pyBuf) : null, base: BASE, meta: idx.meta || {}, files };
+    await Promise.all(warm);
+    for (const n of js) await runScript(n);
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading mzFinder…</p>'; } };
