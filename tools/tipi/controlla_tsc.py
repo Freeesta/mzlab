@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE = os.path.join(RADICE, "tools", "tipi", "base_errori.json")
-PROGETTI = ("pagina", "moduli", "worker")
+PROGETTI = ("pagina", "moduli", "worker", "stretto")
 TSC = ["npx", "--yes", "-p", "typescript@5.9.3", "tsc", "-p"]
 RIGA = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")
 
@@ -39,6 +39,7 @@ def misura():
 def main():
     base = json.load(open(BASE)) if os.path.exists(BASE) else {}
     ora = misura()
+    # «stretto:» keys (files marked `// @ts-strict`) are never in the base: any error there is a failure
     peggio = ["%s: %d errors (base %d)" % (k, n, base.get(k, 0)) for k, n in sorted(ora.items()) if n > base.get(k, 0)]
     print("tsc errors: %d in %d files (base %d in %d)" % (sum(ora.values()), len(ora), sum(base.values()), len(base)))
     if "--aggiorna" in sys.argv:

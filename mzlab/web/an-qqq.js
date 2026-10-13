@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: triple quadrupole (Q1 - collision cell q2 - Q3). Three rod sets of the same type (the length is shortened to fit the screen, about
 // 28 r0 instead of 50): Q1 selects the precursor (a wrong m/z has an unstable trajectory: the swing grows until it hits a rod), q2 is a gas-filled RF-only cell
 // where the precursor breaks into lighter fragments, Q3 lets through only one fragment m/z; what is left reaches the detector.

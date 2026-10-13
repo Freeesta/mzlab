@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: linear ion trap. Four rods in three sections; RF confines the ions radially, the higher DC on the two end sections confines
 // them axially in a parabolic well, where they swing with omega_z ~ sqrt(qU/m). The centre section has a slit in one rod (radial ejection).
 (function (G) {
