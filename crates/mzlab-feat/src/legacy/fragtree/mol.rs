@@ -4,10 +4,10 @@ use super::*;
 
 /// The heavy-atom graph of `molgraph.Mol`.
 pub struct Graph {
-    atoms: Vec<String>,
-    h: Vec<i64>,
-    bonds: Vec<(usize, usize, f32)>,
-    adj: Vec<Vec<(usize, usize)>>,
+    pub(crate) atoms: Vec<String>,
+    pub(crate) h: Vec<i64>,
+    pub(crate) bonds: Vec<(usize, usize, f32)>,
+    pub(crate) adj: Vec<Vec<(usize, usize)>>,
 }
 
 impl Graph {
@@ -30,7 +30,7 @@ impl Graph {
 
 impl Graph {
     /// `Mol.rings`: the smallest ring through every bond (BFS), duplicates removed, atoms sorted.
-    fn rings(&self) -> Vec<Vec<usize>> {
+    pub(crate) fn rings(&self) -> Vec<Vec<usize>> {
         let (mut found, mut seen) = (Vec::new(), HashSet::new());
         for (k, &(a, b, _)) in self.bonds.iter().enumerate() {
             let mut prev: HashMap<usize, Option<usize>> = HashMap::from([(a, None)]);
@@ -91,16 +91,16 @@ fn components(g: &Graph, mask: u64, cut: u128) -> Vec<u64> {
 
 /// `molgraph.SubStructures`: masks in the order they were found, the fewest cuts of each and their neutral formulas.
 pub struct Subs {
-    g: Graph,
-    masks: Vec<u64>,
+    pub(crate) g: Graph,
+    pub(crate) masks: Vec<u64>,
     cuts: Vec<i64>,
-    els: Vec<&'static str>,
-    f: Vec<Vec<i64>>,
+    pub(crate) els: Vec<&'static str>,
+    pub(crate) f: Vec<Vec<i64>>,
 }
 
 impl Subs {
     /// `candidates(ion)`: substructures with the heavy atoms of the ion and |H + 1 - H_ion| <= 3, weighted exp(-3 (cuts - min) - |dH|).
-    pub(super) fn candidates(&self, ion: &[i64]) -> (Vec<usize>, Vec<f64>) {
+    pub(crate) fn candidates(&self, ion: &[i64]) -> (Vec<usize>, Vec<f64>) {
         if ion.len() != self.els.len() {
             return (Vec::new(), Vec::new());
         }
@@ -126,7 +126,7 @@ impl Subs {
     }
 
     /// `_top_smiles`: up to three different substructures, heaviest first.
-    pub(super) fn top_smiles(&self, idx: &[usize], w: &[f64]) -> Vec<(String, f64)> {
+    pub(crate) fn top_smiles(&self, idx: &[usize], w: &[f64]) -> Vec<(String, f64)> {
         let mut o: Vec<usize> = (0..w.len()).collect();
         o.sort_by(|&a, &b| w[b].total_cmp(&w[a]));
         let mut out: Vec<(String, f64)> = Vec::new();

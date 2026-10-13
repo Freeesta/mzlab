@@ -2,8 +2,9 @@
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
-// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file, and any list of transformations (finder_transformations merges the user text into regole_tp.json),
-// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
+// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx and any list of transformations (finder_transformations merges the user text into regole_tp.json),
+// then detail, inclusion_csv, msn_tree, frag_tree and frag_tree_compare of that run. With an MSn file of the standard the `finder_msn` .wasm, loaded only
+// then, adds its tree, calibration and the localisation of the products (FinderMsn) to what the Dig gives; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
 // and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
 // every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
 /** @type {any} */ let py = null;
@@ -11,17 +12,18 @@
 /** @type {any} */ let init = null;               // the init message: Pyodide is loaded from it only when needed
 /** @type {Promise<any> | null} */ let pyReady = null;
 /** @type {Map<string, any>} */ const puts = new Map();   // the files of the page, kept until Pyodide loads them (then written at once)
-/** @type {any} */ let fin = null;                // the finder module (wasm-bindgen)
+/** @type {Record<string, any>} */ const mods = {};   // the modules of the manifest already loaded (wasm-bindgen): finder, finder_msn
 /** @type {any} */ let man = null;                // wasm-feat/manifest.json
 /** @type {any} */ let featPool = null;
 /** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
 /** @type {any} */ let ingress = null;            // finder-idx.js
 /** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
+/** @type {any} */ let msn = null;                // FinderMsn of that run (null without an MSn file)
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
-const OF_DIG = new Set(["detail", "inclusion_csv", "frag_tree", "frag_tree_compare"]);
+const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare"]);
 // chem.transformations_text() of the Python engine (tests/test_tpmine_worker.py keeps them equal)
 const DEFAULT_TR = `hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
 dihydroxylation;+O2;two extra oxygens
@@ -115,17 +117,26 @@ function hasRust() {
 }
 /** @param {ArrayBuffer} b */
 const sha = async b => [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
-async function finder() {
-  if (fin) return fin;
-  const m = (await manifest()).finder, bytes = await (await fetch(featUrl(m.wasm))).arrayBuffer();
+/** the module `key` of the manifest, checked against its SHA-256 @param {string} key */
+async function load(key) {
+  if (mods[key]) return mods[key];
+  const m = (await manifest())[key], bytes = await (await fetch(featUrl(m.wasm))).arrayBuffer();
   if (m.sha256 && await sha(bytes) !== m.sha256) throw new Error("the engine of mzFinder does not match its manifest: reload the page");
   const mod = await import(featUrl(m.js));
   await mod.default({ module_or_path: bytes });
-  return (fin = mod);
+  return (mods[key] = mod);
 }
+/** @type {any} */ let lastRun = null;           // the .mzfeat and the files of the last Dig in Rust (the numbers of the table of the products)
+/** the numbers of the table of the products for some rows of the last Dig (finder-tabella.js); "null" when there is none @param {string} rows */
+async function tpTable(rows) {
+  if (last !== "rust" || !lastRun) return "null";
+  const m = await import(base() + "mzfinder/finder-tabella.js");
+  return m.tpTable({ manifest, url: featUrl, sha }, lastRun, rows);
+}
+const finder = () => load("finder");
 /** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
 async function ensureIdx(names) {
-  if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say);
+  if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say, (key, params) => postMessage({ type: "notice", key, params }));
   await ingress.ensure(names, held);
 }
 async function pool() {
@@ -155,7 +166,9 @@ async function detect(p, files, idx, recipe) {
 }
 /** the Dig of a high-resolution series in Rust: pipeline L1-L9 in the pool, then the adapter (finder_dig) @param {string[]} a */
 async function runRust(a) {
-  const [filesJson, parentJson, settingsJson] = a, t0 = performance.now(), f = await finder(), p = await pool();
+  const all = JSON.parse(a[0]), x = all.find((/** @type {any} */ f) => f.kind === "msn"), [, parentJson, settingsJson] = a;
+  const filesJson = JSON.stringify(all.filter((/** @type {any} */ f) => f.kind !== "msn"));    // the series of the Dig: the LC files only
+  const t0 = performance.now(), f = await finder(), p = await pool();
   const plan = JSON.parse(f.finder_plan(filesJson, parentJson)), idx = await idxFiles(plan.lc);
   if (!idx) throw new Error("no index of the file: open it again");
   const files = plan.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + n + ".mzidx" })), paths = files.map((/** @type {any} */ x) => x.path);
@@ -177,13 +190,50 @@ async function runRust(a) {
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
-  lap("dig", t); lap("total", t0); last = "rust";
-  return dig.summary(settingsJson || "{}", JSON.stringify(timing));
+  lap("dig", t); t = performance.now(); last = "rust"; msn = null; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
+  if (x) { await msnTree(x.name, parentJson); lap("albero", t); }
+  lap("total", t0);
+  const s = dig.summary(settingsJson || "{}", JSON.stringify(timing));
+  return msn ? JSON.stringify(msnSummary(JSON.parse(s))) : s;
 }
-/** a run goes to Rust: high-resolution files, all with their .mzidx, no MSn file @param {string[]} a */
+/** the MSn tree of the standard (`finder_msn` .wasm, loaded only now) from the .mzidx of `name` @param {string} name @param {string} parentJson */
+async function msnTree(name, parentJson) {
+  say("MSn tree of the parent...");
+  const mod = await load("finder_msn"), ix = await openIdx([name]);
+  try { msn = mod.finder_msn(ix.read, ix.sizes[0], parentJson); } finally { ix.close(); }
+  msn.parentSet = false;
+}
+/** the summary of the Dig with the MSn tree: tree, calibration, region and margin of the rows @param {any} s */
+function msnSummary(s) {
+  s.tree = JSON.parse(msn.msn_tree());
+  s.calibration = JSON.parse(msn.calibration());
+  for (const r of s.rows) {
+    if (!r.ms2_scans || !r.formula) continue;
+    const loc = localize(JSON.parse(dig.detail(r.id)));
+    r.region = loc && loc.ok ? loc.region : null;
+    r.margin = loc && loc.ok ? Math.round(loc.margin * 100) / 100 : null;
+  }
+  return s;
+}
+/** the localisation of a candidate from its detail (kept in FinderMsn for frag_tree_compare); the first MS2 of the parent rebuilds the library @param {any} d */
+function localize(d) {
+  if (!msn || !d.ms2 || !d.row.formula) return null;
+  if (!msn.parentSet) { msn.set_parent_ms2(Float64Array.from(d.ms2.parent.mz), Float64Array.from(d.ms2.parent.rel)); msn.parentSet = true; }
+  const c = d.ms2.candidate;
+  return JSON.parse(msn.localize(d.id, d.row.formula, Float64Array.from(c.mz), Float64Array.from(c.rel), d.row.mz));
+}
+/** `api.detail` of the Dig with the localisation of the MSn tree @param {number} id */
+function detail(id) {
+  const raw = dig.detail(id);
+  if (!msn) return raw;
+  const d = JSON.parse(raw), loc = localize(d);
+  if (loc) { d.localization = loc; d.ms2.evidence = loc.evidence || []; }
+  return JSON.stringify(d);
+}
+/** a run goes to Rust: high-resolution files (and at most the MSn file of the standard), all with their .mzidx @param {string[]} a */
 async function rustRun(a) {
   const files = JSON.parse(a[0]);
-  if (!files.some((/** @type {any} */ f) => f.kind === "hr") || files.some((/** @type {any} */ f) => f.kind === "msn")) return false;
+  if (!files.some((/** @type {any} */ f) => f.kind === "hr")) return false;
   return !!(await idxFiles(files.map((/** @type {any} */ f) => f.name)));
 }
 
@@ -203,6 +253,8 @@ async function waitIdx(names) {
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (fn === "tp_table") return tpTable(a[0]);
+  if (fn === "transf_rows") return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (the text is parsed by the same .wasm in the desktop app)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
@@ -214,15 +266,19 @@ async function call(fn, a) {
   }
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
-    last = "py"; dig = null;
+    last = "py"; dig = null; msn = null;
     const tr = (a[3] || "").trim(), lr = tr && tr !== DEFAULT_TR ? false : await (await lrMod()).run(lrCtx, a);
     if (lr !== false) { last = "rust-lr"; return lr; }
   }
-  if (OF_DIG.has(fn) && last === "rust-lr") return (await lrMod()).ofDig(lrCtx, fn, a);
+  if (OF_DIG.has(fn) && last === "rust-lr") return fn === "msn_tree" ? "null" : (await lrMod()).ofDig(lrCtx, fn, a);     // a low-resolution run has no MSn tree
   if (OF_DIG.has(fn) && last === "rust") {
-    if (fn === "detail") return dig.detail(+a[0]);
+    if (fn === "detail") return detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));
-    return fn === "frag_tree" ? dig.frag_tree() : dig.frag_tree_compare(+a[0]);
+    if (fn === "msn_tree") return msn ? msn.msn_tree() : "null";
+    if (!msn) return fn === "frag_tree" ? dig.frag_tree() : dig.frag_tree_compare(+a[0]);
+    if (fn === "frag_tree") return msn.frag_tree();
+    detail(+a[0]);                                   // "candidate not found", and the localisation the comparison uses
+    return msn.frag_tree_compare(+a[0]);
   }
   return toPy(fn, a);
 }

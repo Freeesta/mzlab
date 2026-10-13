@@ -21,7 +21,10 @@ import { originRoute } from "./lr-origin.js";
 import { engineRoute, statRoute } from "./lr-map.js";
 import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
+import { W } from "./nativo-fasi.js";
 
+/** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload) */
+const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase) => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase } }));
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
@@ -49,7 +52,7 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
-  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; };
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; if (rb.clearNative) rb.clearNative(); };
 
   api.boot = async (fresh) => {                                          // fresh: «start from scratch» (the database may be held by another tab: it is not read)
     const r = await rpc({ op: "lr_boot", fresh });
@@ -59,6 +62,7 @@ export function createLr({ rb }) {
       if (/\.dam$/i.test(f.name)) continue;                                           // a method: read on demand
       if (!/\.mzml$/i.test(f.name)) continue;
       try {                                                                           // a file whose index was lost (a stopped upload) is indexed again
+        if (f.nat && rb.markNative) rb.markNative(f.name);                            // a sample of a maker's file: «Download .mzML» makes its mzML
         if (!f.indexed) await rpc({ op: "lr_index", name: f.name });
         files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info));
       } catch (_) { /* unreadable: it is left out of the list */ }
@@ -75,12 +79,14 @@ export function createLr({ rb }) {
   async function upload(name, blob) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
-    if (blob.size > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
-    try {                                                              // lr_index reports how far the index has got: the page shows it (event mzlab-index, index.html upload)
-      const put = await rpc({ op: "lr_put", name: n, blob });
+    const nat = /** @type {any} */ (blob).mzlabNat || null;                   // a sample of a maker's file (nativo.js): the members go to the browser storage with it
+    if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
+    try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
+      const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : undefined);
+      if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { await rpc({ op: "lr_index", name: n }, p => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name: n, frac: p.frac } }))); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
+      else { await rpc({ op: "lr_index", name: n }, p => tellIndex(n, p.frac, p.phase)); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       return fail(key, { name: n, ...params }, `cannot read the file: ${n}`);
@@ -146,7 +152,7 @@ export function createLr({ rb }) {
 
   async function fresh(body) {
     items = null; hr = lr = false;
-    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); }
+    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); if (rb.clearNative) rb.clearNative(); }
     rb.noteNew();
     return json(state());
   }
