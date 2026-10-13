@@ -143,6 +143,7 @@ declare var xlsxBuild: any;
 declare var xlsxCrc32: any;
 declare var zipStore: any;
 interface Window {
+  AFFIANCA: typeof AFFIANCA;
   BANCO: typeof BANCO;
   BARRA: typeof BARRA;
   BIANCO: typeof BIANCO;
