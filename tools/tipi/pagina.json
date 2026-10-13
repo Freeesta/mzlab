@@ -31,12 +31,14 @@
     "../../mzlab/web/modi.js",
     "../../mzlab/web/ordine.js",
     "../../mzlab/web/conversione.js",
+    "../../mzlab/web/nativo.js",
     "../../mzlab/web/cartella-carica.js",
     "../../mzlab/web/cartella-puntata.js",
     "../../mzlab/web/cartella-puntata-desktop.js",
     "../../mzlab/web/agilent-d.js",
     "../../mzlab/web/explore.js",
     "../../mzlab/web/layout.js",
+    "../../mzlab/web/fondo.js",
     "../../mzlab/web/pannelli.js",
     "../../mzlab/web/affianca.js",
     "../../mzlab/web/legende.js",
@@ -120,6 +122,8 @@
     "../../TP_Mine/js/35_pipeline_recipe.js",
     "../../TP_Mine/js/36_feature_qc.js",
     "../../TP_Mine/js/37_feature_table.js",
-    "../../TP_Mine/js/38_feature_export.js"
+    "../../TP_Mine/js/38_feature_export.js",
+    "../../TP_Mine/js/42_tp_table.js",
+    "../../TP_Mine/js/43_trasformazioni.js"
   ]
 }
