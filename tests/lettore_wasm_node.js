@@ -2,7 +2,7 @@
 // The members are every file of the folder (logical names relative to it), read by offset as the page does. Prints the answers as one JSON.
 const fs = require("fs"), path = require("path");
 const [pkg, dir] = process.argv.slice(2);
-const { LettoreWasm } = require(path.join(pkg, "mzlab_wasm.js"));
+const { LettoreWasm } = require(path.join(pkg, "mzlab_lettori_wasm.js"));
 const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 const files = walk(dir), names = files.map(f => path.relative(dir, f).split(path.sep).join("/")), sizes = files.map(f => fs.statSync(f).size);
 const fds = files.map(f => fs.openSync(f, "r"));

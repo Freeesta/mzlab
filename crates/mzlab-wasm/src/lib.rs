@@ -16,7 +16,6 @@ mod scans;
 mod cache;
 mod wiff;
 mod agilent;
-mod lettore;
 mod centroidi;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.

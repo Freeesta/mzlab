@@ -6,7 +6,16 @@ use mzlab_core::json::Out;
 use mzlab_core::lettori::{self, Campione, Campo, FileSet, Lettore, Limiti, Membro, VoceScansione};
 use wasm_bindgen::prelude::*;
 
-use crate::error_json;
+/// An error as the JSON the page reads: `{"error_key", "params"}`.
+fn error_json(e: &mzlab_core::Error) -> JsValue {
+    let mut o = Out::default();
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
+    for (i, (k, v)) in e.params.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
+    }
+    o.raw("}}");
+    JsValue::from_str(&o.0)
+}
 
 /// One member of the set, read by the page.
 struct Dal {
