@@ -326,6 +326,26 @@ pub fn evidence(
     Ok(out)
 }
 
+/// Computes the identity columns of the table and gives the table of points: the unit-resolution one (windows in Da) when the recipe in the meta says so.
+fn points_and_identity(
+    aligned: &mut mzlab_feat::table::Aligned,
+    hypo: &HypoRun,
+    meta: &Value,
+) -> Result<PointsTable> {
+    let unit = meta
+        .get("recipe")
+        .and_then(Value::str)
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    let win = if unit {
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    } else {
+        mzlab_feat::evid::HYPOTHESIS_PPM
+    };
+    aligned.ident = RowIdent::compute_in(aligned, &hypo.registry.hyps, hypo.registry.polarity, win);
+    let points = PointsTable::bundled()?;
+    Ok(if unit { points.with_unit() } else { points })
+}
+
 /// `evidence` over a table read by offsets and an output written to `sink`. The graph is built whole and written when its estimate fits in half of the
 /// budget; else its identities are made twice, once for the order and the length, once for the bytes (`GraphStream`), and only one is held. Same bytes.
 #[allow(clippy::too_many_arguments)]
@@ -344,22 +364,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         .add_missing_to(&mut aligned, &JoinParams::default());
     aligned.sort_rows();
     let origin = origin_from_meta(&meta);
-    let unit = meta
-        .get("recipe")
-        .and_then(Value::str)
-        .is_some_and(mzlab_feat::recipe::is_unit_text);
-    let win = if unit {
-        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
-    } else {
-        mzlab_feat::evid::HYPOTHESIS_PPM
-    };
-    aligned.ident =
-        RowIdent::compute_in(&aligned, &hypo.registry.hyps, hypo.registry.polarity, win);
-    let points = if unit {
-        PointsTable::bundled()?.with_unit()
-    } else {
-        PointsTable::bundled()?
-    };
+    let points = points_and_identity(&mut aligned, hypo, &meta)?;
     let treated: Vec<usize> = (0..minutes.len())
         .filter(|&k| minutes[k].is_finite())
         .collect();

@@ -148,6 +148,17 @@ impl PointsTable {
         Self::parse(BUNDLED.as_bytes())
     }
 
+    pub fn rule(&self, kind: Kind) -> Option<&Rule> {
+        self.rules.iter().find(|(k, _)| *k == kind).map(|(_, r)| r)
+    }
+}
+
+/// The lowest step of a rule: what is missing to earn points.
+fn lowest(rule: &Rule) -> Option<f64> {
+    rule.steps.last().map(|s| s.threshold)
+}
+
+impl PointsTable {
     /// The table for a unit-resolution series: tolerances in Da.
     pub fn with_unit(mut self) -> PointsTable {
         self.unit = true;
@@ -164,17 +175,6 @@ impl PointsTable {
         }
     }
 
-    pub fn rule(&self, kind: Kind) -> Option<&Rule> {
-        self.rules.iter().find(|(k, _)| *k == kind).map(|(_, r)| r)
-    }
-}
-
-/// The lowest step of a rule: what is missing to earn points.
-fn lowest(rule: &Rule) -> Option<f64> {
-    rule.steps.last().map(|s| s.threshold)
-}
-
-impl PointsTable {
     /// Points of a measured `value` (NaN: not measured, no points); `support` is the second measurement of the types that need one.
     pub fn grade(&self, kind: Kind, value: f64, support: Option<f64>) -> Grade {
         let Some(rule) = self.rule(kind) else {
