@@ -131,7 +131,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         None => o.raw("null"),
     };
     let msn = crate::infusione::infusione(&idx.scans, facts.lc, file_name);
-    crate::iteminfo::msn_json(&mut o, msn.as_ref());
+    crate::infusione::json(&mut o, msn.as_ref());
     o.raw("}");
     Ok(o.0)
 }

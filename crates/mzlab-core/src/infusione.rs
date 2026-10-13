@@ -10,7 +10,10 @@
 
 use std::collections::HashMap;
 
-use crate::idxread::Scan;
+use crate::error::Result;
+use crate::idxread::{ReadAt, Scan};
+use crate::json::Out;
+use crate::mzmlhead::Mzml;
 
 /// Why a file is an infusion, its deepest MSn level and its number of nominal MSn nodes (energies merged).
 #[derive(Debug, Clone, PartialEq)]
@@ -139,6 +142,44 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
     } else {
         None
     }
+}
+
+/// `"msn":{motivo, livelli, nodi}` of an infusion, else `"msn":null` (`iteminfo`, `sniff`).
+pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
+    o.raw(",\"msn\":");
+    match m {
+        Some(m) => o
+            .raw("{\"motivo\":")
+            .str(m.motivo)
+            .raw(",\"livelli\":")
+            .int(m.livelli as i64)
+            .raw(",\"nodi\":")
+            .int(m.nodi as i64)
+            .raw("}"),
+        None => o.raw("null"),
+    };
+}
+
+/// Whether the `.raw` method an mzML carries (`metodo/1` written by the converter of a `.raw`) has an LC part: `None` when the file is
+/// not a Thermo mzML, carries no such document or the `.raw` had no method.
+pub(crate) fn raw_lc<M: ReadAt>(m: &mut Mzml<M>) -> Result<Option<bool>> {
+    if !m.nce()? {
+        return Ok(None);
+    }
+    let head = m.run_head(1 << 20)?;
+    let Some(doc) = crate::metodo::from_userparam(&head) else {
+        return Ok(None);
+    };
+    let Ok(v) = crate::json::parse(doc.as_bytes()) else {
+        return Ok(None);
+    };
+    let raw = v
+        .get("origine")
+        .and_then(|o| o.get("formato"))
+        .and_then(|f| f.str())
+        == Some("thermo-raw");
+    let no_method = doc.contains("\"meta.mancante\"");
+    Ok((raw && !no_method).then(|| v.get("lc").is_some()))
 }
 
 #[cfg(test)]

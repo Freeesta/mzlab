@@ -399,22 +399,6 @@ fn opt_str(o: &mut Out, v: &Option<String>) {
     };
 }
 
-/// `"msn":{motivo, livelli, nodi}` of an infusion, else `"msn":null` (`infusione.rs`).
-pub(crate) fn msn_json(o: &mut Out, m: Option<&crate::infusione::Infusione>) {
-    o.raw(",\"msn\":");
-    match m {
-        Some(m) => o
-            .raw("{\"motivo\":")
-            .str(m.motivo)
-            .raw(",\"livelli\":")
-            .int(m.livelli as i64)
-            .raw(",\"nodi\":")
-            .int(m.nodi as i64)
-            .raw("}"),
-        None => o.raw("null"),
-    };
-}
-
 /// The JSON of one item as `Session.info()` lists it.
 pub fn item_info<R: ReadAt>(
     idx: &mut Index<R>,
@@ -625,7 +609,7 @@ pub fn item_info<R: ReadAt>(
         .raw(if dda { "true" } else { "false" })
         .raw(",\"infusion\":")
         .raw(if msn.is_some() { "true" } else { "false" });
-    msn_json(&mut o, msn.as_ref());
+    crate::infusione::json(&mut o, msn.as_ref());
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
@@ -659,28 +643,6 @@ pub fn item_info<R: ReadAt>(
     }
     o.raw("}");
     Ok(o.0)
-}
-
-/// Whether the `.raw` method an mzML carries (`metodo/1` written by the converter of a `.raw`) has an LC part: `None` when the file is
-/// not a Thermo mzML, carries no such document or the `.raw` had no method.
-fn raw_lc<M: ReadAt>(m: &mut crate::mzmlhead::Mzml<M>) -> Result<Option<bool>> {
-    if !m.nce()? {
-        return Ok(None);
-    }
-    let head = m.run_head(1 << 20)?;
-    let Some(doc) = crate::metodo::from_userparam(&head) else {
-        return Ok(None);
-    };
-    let Ok(v) = crate::json::parse(doc.as_bytes()) else {
-        return Ok(None);
-    };
-    let raw = v
-        .get("origine")
-        .and_then(|o| o.get("formato"))
-        .and_then(|f| f.str())
-        == Some("thermo-raw");
-    let no_method = doc.contains("\"meta.mancante\"");
-    Ok((raw && !no_method).then(|| v.get("lc").is_some()))
 }
 
 /// The `Facts` of a file, read from its mzML: instrument, chromatograms (SRM, PDA, analog traces). `need_mrm` also reads what a file without
@@ -717,7 +679,7 @@ pub fn facts_from<M: ReadAt>(
             });
         }
     }
-    f.lc = raw_lc(m)?;
+    f.lc = crate::infusione::raw_lc(m)?;
     if need_mrm {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
