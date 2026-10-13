@@ -41,7 +41,8 @@ fn same(dir: &Path, name: &str) -> usize {
     assert_eq!(l.campioni().len(), ids.len(), "{name}: samples");
     let mut checked = 0;
     for (c, s) in ids.into_iter().enumerate() {
-        let w = Wiff::open(&ole, name, Some(scan.len() as u64), s).unwrap();
+        let mut w = Wiff::open(&ole, name, Some(scan.len() as u64), s).unwrap();
+        w.wiff_sha1 = Some(ole.sha1_hex());
         let run = w.run(&mut scan).unwrap();
         let index = l.indice(c).unwrap().to_vec();
         assert_eq!(index.len(), run.spectra.len(), "{name}/{s}: index");

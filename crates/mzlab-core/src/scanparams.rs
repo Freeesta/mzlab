@@ -21,9 +21,7 @@ fn med(mut v: Vec<f64>) -> Option<f64> {
 fn vals<M: ReadAt>(sc: &[&crate::idxread::Scan], acc: &str, mzml: &mut M) -> Result<Vec<f64>> {
     let mut out = Vec::new();
     for s in sc.iter().step_by((sc.len() / 300).max(1)) {
-        let mut b = vec![0u8; s.end.saturating_sub(s.start) as usize];
-        mzml.read_at(s.start, &mut b)?;
-        let h = String::from_utf8_lossy(&b);
+        let h = crate::sorgente::testo_scansione(mzml, s)?;
         let cut = h.find("<binaryDataArrayList").unwrap_or(h.len().saturating_sub(1));
         if let Some(v) = cv_value(&h[..cut], acc).and_then(|v| v.trim().parse::<f64>().ok()) {
             out.push(v);
