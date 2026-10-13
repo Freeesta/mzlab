@@ -2,7 +2,7 @@
 //! the `.wiff.scan` never, a scan reads only its own block. One `Campione` per injection; the index lists the scans (the MRM blocks are chromatograms).
 
 use super::window::Window;
-use super::{container, samples, scan, Wiff};
+use super::{container, samples, scan, Record, Wiff};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::{
@@ -53,6 +53,132 @@ pub struct LettoreWiff {
     anonimo: bool,
     campioni: Vec<Campione>,
     parti: Vec<Parte>,
+}
+
+pub const VOCE: VoceLettore = VoceLettore {
+    id: "sciex-wiff",
+    contratto: CONTRATTO,
+    estensioni: &[".wiff", ".wiff.scan"],
+    riconosci,
+    apri,
+};
+
+impl LettoreWiff {
+    /// The same reader asked for an anonymous `metodo/1` (no people, computer, serial number or paths).
+    pub fn anonimo(mut self, on: bool) -> Self {
+        self.anonimo = on;
+        self
+    }
+
+    fn parte(&self, c: usize) -> Result<&Parte> {
+        self.parti
+            .get(c)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))
+    }
+
+    /// The chromatograms of injection `c`, read once (the MRM blocks only).
+    fn chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
+        let p = self
+            .parti
+            .get_mut(c)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+        if p.chroms.is_none() {
+            let mut win = Window::new(&mut self.scan, self.scan_len);
+            p.chroms = Some(p.w.chromatograms(&mut win)?);
+        }
+        Ok(p.chroms.as_deref().unwrap_or_default())
+    }
+
+    /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
+    pub fn membro_scan(&self) -> u16 {
+        self.scan_member
+    }
+}
+
+/// The injection `c` and its record `k` (the `k`-th scan).
+fn row(parti: &[Parte], c: usize, k: usize) -> Result<(&Parte, &Record)> {
+    let p = parti
+        .get(c)
+        .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+    let r = p
+        .scans
+        .get(k)
+        .and_then(|&i| p.w.records.get(i))
+        .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
+    Ok((p, r))
+}
+
+/// `origine` of the document of injection `sample`.
+fn source(l: &LettoreWiff, sample: u32) -> Source {
+    let file = |name: String, sha1: Option<String>, bytes: u64| SrcFile { name, sha1, bytes };
+    Source {
+        format: "sciex-wiff",
+        files: vec![
+            file(l.nome.clone(), Some(l.ole.sha1_hex()), 0),
+            file(format!("{}.scan", l.nome), None, l.scan_len),
+        ],
+        sample: Some(sample),
+        anonymous: l.anonimo,
+    }
+}
+
+impl Lettore for LettoreWiff {
+    fn formato(&self) -> Formato {
+        Formato::SciexWiff
+    }
+
+    fn campioni(&self) -> &[Campione] {
+        &self.campioni
+    }
+
+    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        Ok(&self.parte(c)?.indice)
+    }
+
+    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        let (p, r) = row(&self.parti, c, k)?;
+        let pts = scan::read_scan(&mut self.scan, self.scan_len, r.at, r.end)?
+            .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
+        Ok(p.w.spectrum_of(k, r, pts))
+    }
+
+    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+        let (p, r) = row(&self.parti, c, k)?;
+        Ok(vec![
+            field("sample", p.w.sample),
+            field("cycle", r.cycle + 1),
+            field("experiment", r.experiment + 1),
+        ])
+    }
+
+    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+        let all = self.chromatograms(c)?;
+        Ok(all
+            .iter()
+            .map(|h| VoceCromatogramma {
+                id: h.id.clone(),
+                tipo: h.kind,
+                unita: h.unit.clone(),
+            })
+            .collect())
+    }
+
+    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        self.chromatograms(c)?
+            .iter()
+            .find(|h| h.id == id)
+            .cloned()
+            .ok_or_else(|| Error::new("error.badIndex").with("id", id))
+    }
+
+    fn metodo(&mut self, c: usize) -> Result<String> {
+        let sample = self.parte(c)?.w.sample;
+        Ok(crate::metodo_wiff::from_wiff(
+            &self.ole,
+            sample,
+            &source(self, sample),
+        ))
+    }
 }
 
 fn member(fs: &mut FileSet, i: usize) -> Result<&mut Membro> {
@@ -145,139 +271,6 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
         indice,
         chroms: None,
     })
-}
-
-pub const VOCE: VoceLettore = VoceLettore {
-    id: "sciex-wiff",
-    contratto: CONTRATTO,
-    estensioni: &[".wiff", ".wiff.scan"],
-    riconosci,
-    apri,
-};
-
-impl LettoreWiff {
-    /// The same reader asked for an anonymous `metodo/1` (no people, computer, serial number or paths).
-    pub fn anonimo(mut self, on: bool) -> Self {
-        self.anonimo = on;
-        self
-    }
-
-    fn parte(&self, c: usize) -> Result<&Parte> {
-        self.parti
-            .get(c)
-            .ok_or_else(|| Error::new("error.badIndex").with("c", c))
-    }
-}
-
-impl Lettore for LettoreWiff {
-    fn formato(&self) -> Formato {
-        Formato::SciexWiff
-    }
-
-    fn campioni(&self) -> &[Campione] {
-        &self.campioni
-    }
-
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        Ok(&self.parte(c)?.indice)
-    }
-
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let p = self
-            .parti
-            .get(c)
-            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
-        let r = p
-            .scans
-            .get(k)
-            .and_then(|&i| p.w.records.get(i))
-            .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        let pts = scan::read_scan(&mut self.scan, self.scan_len, r.at, r.end)?
-            .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
-        Ok(p.w.spectrum_of(k, r, pts))
-    }
-
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        let p = self.parte(c)?;
-        let r = p
-            .scans
-            .get(k)
-            .and_then(|&i| p.w.records.get(i))
-            .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        Ok(vec![
-            field("sample", p.w.sample),
-            field("cycle", r.cycle + 1),
-            field("experiment", r.experiment + 1),
-        ])
-    }
-
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.chromatograms(c)?;
-        Ok(self
-            .parte(c)?
-            .chroms
-            .iter()
-            .flatten()
-            .map(|h| VoceCromatogramma {
-                id: h.id.clone(),
-                tipo: h.kind,
-                unita: h.unit.clone(),
-            })
-            .collect())
-    }
-
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.chromatograms(c)?;
-        self.parte(c)?
-            .chroms
-            .iter()
-            .flatten()
-            .find(|h| h.id == id)
-            .cloned()
-            .ok_or_else(|| Error::new("error.badIndex").with("id", id))
-    }
-
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        let sample = self.parte(c)?.w.sample;
-        let src = Source {
-            format: "sciex-wiff",
-            files: vec![
-                SrcFile {
-                    name: self.nome.clone(),
-                    sha1: Some(self.ole.sha1_hex()),
-                    bytes: 0,
-                },
-                SrcFile {
-                    name: format!("{}.scan", self.nome),
-                    sha1: None,
-                    bytes: self.scan_len,
-                },
-            ],
-            sample: Some(sample),
-            anonymous: self.anonimo,
-        };
-        Ok(crate::metodo_wiff::from_wiff(&self.ole, sample, &src))
-    }
-}
-
-impl LettoreWiff {
-    /// The chromatograms of injection `c`, read once (the MRM blocks only).
-    fn chromatograms(&mut self, c: usize) -> Result<()> {
-        let p = self
-            .parti
-            .get_mut(c)
-            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
-        if p.chroms.is_none() {
-            let mut win = Window::new(&mut self.scan, self.scan_len);
-            p.chroms = Some(p.w.chromatograms(&mut win)?);
-        }
-        Ok(())
-    }
-
-    /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
-    pub fn membro_scan(&self) -> u16 {
-        self.scan_member
-    }
 }
 
 fn field(nome: &str, valore: impl ToString) -> Campo {
