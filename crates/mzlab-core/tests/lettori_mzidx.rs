@@ -95,48 +95,8 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     }
     assert!(small == b, "{label}: the budget changes the index");
 
-    // header: version and flags, the same layout of the sections
-    assert_eq!((u32_at(&a, 8), u32_at(&a, 12)), (1, 0), "{label}");
-    assert_eq!(
-        (u32_at(&b, 8), u32_at(&b, 12)),
-        (2, FLAG_LETTORE),
-        "{label}"
-    );
-    assert_eq!(u64_at(&b, 48), b.len() as u64);
-    let scans_off = u64_at(&a, 32) as usize;
-    assert_eq!(u64_at(&b, 32) as usize, scans_off, "{label}: sections");
-    assert!(
-        a[64..scans_off] == b[64..scans_off],
-        "{label}: sections differ"
-    );
-    // rows: all but the first two columns
-    let (ra, rb) = (json_at(&a, 32, 40), json_at(&b, 32, 40));
-    assert_eq!(ra.arr().len(), rb.arr().len(), "{label}: rows");
+    compare(label, &a, &b, &pb.sha256, membri.len(), l.campioni()[c].id);
     let voci = l.indice(c).unwrap().to_vec();
-    for (k, (x, y)) in ra.arr().iter().zip(rb.arr()).enumerate() {
-        assert_eq!(x.arr()[2..], y.arr()[2..], "{label}: row {k}");
-        assert_eq!(y.at(1).and_then(Value::f64), Some(k as f64));
-    }
-    // metadata: all but source and version
-    let (ma, mb) = (json_at(&a, 16, 24), json_at(&b, 16, 24));
-    assert_eq!(
-        without(&ma, &["source", "version"]),
-        without(&mb, &["source", "version"]),
-        "{label}: metadata"
-    );
-    assert_eq!(mb.get("version").and_then(Value::f64), Some(2.0));
-    let src = mb.get("source").unwrap();
-    assert_eq!(src.get("members").unwrap().arr().len(), membri.len());
-    assert_eq!(
-        src.get("sha256").and_then(Value::str),
-        Some(pb.sha256.as_str())
-    );
-    assert_eq!(
-        src.get("sample")
-            .and_then(|s| s.get("id"))
-            .and_then(Value::f64),
-        Some(f64::from(l.campioni()[c].id))
-    );
     // the reader of the index takes it, with the positions of the reader
     let idx = Index::open(b.clone(), b.len() as u64).unwrap();
     assert_eq!(idx.scans.len(), voci.len());
@@ -148,6 +108,44 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
         );
     }
     voci.len()
+}
+
+/// Index `b` (from the reader) against `a` (from the mzML): header, sections, rows from the third column, metadata and source.
+fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_membri: usize, id: u32) {
+    // header: version and flags, the same layout of the sections
+    assert_eq!((u32_at(a, 8), u32_at(a, 12)), (1, 0), "{label}");
+    assert_eq!((u32_at(b, 8), u32_at(b, 12)), (2, FLAG_LETTORE), "{label}");
+    assert_eq!(u64_at(b, 48), b.len() as u64);
+    let scans_off = u64_at(a, 32) as usize;
+    assert_eq!(u64_at(b, 32) as usize, scans_off, "{label}: sections");
+    assert!(
+        a[64..scans_off] == b[64..scans_off],
+        "{label}: sections differ"
+    );
+    // rows: all but the first two columns
+    let (ra, rb) = (json_at(a, 32, 40), json_at(b, 32, 40));
+    assert_eq!(ra.arr().len(), rb.arr().len(), "{label}: rows");
+    for (k, (x, y)) in ra.arr().iter().zip(rb.arr()).enumerate() {
+        assert_eq!(x.arr()[2..], y.arr()[2..], "{label}: row {k}");
+        assert_eq!(y.at(1).and_then(Value::f64), Some(k as f64));
+    }
+    // metadata: all but source and version
+    let (ma, mb) = (json_at(a, 16, 24), json_at(b, 16, 24));
+    assert_eq!(
+        without(&ma, &["source", "version"]),
+        without(&mb, &["source", "version"]),
+        "{label}: metadata"
+    );
+    assert_eq!(mb.get("version").and_then(Value::f64), Some(2.0));
+    let src = mb.get("source").unwrap();
+    assert_eq!(src.get("members").unwrap().arr().len(), n_membri);
+    assert_eq!(src.get("sha256").and_then(Value::str), Some(sha256));
+    assert_eq!(
+        src.get("sample")
+            .and_then(|s| s.get("id"))
+            .and_then(Value::f64),
+        Some(f64::from(id))
+    );
 }
 
 /// `Scansioni` and `Tracce` give the same peaks and traces from the mzML by offset (rows of version 1) and from the reader (rows of version 2).
