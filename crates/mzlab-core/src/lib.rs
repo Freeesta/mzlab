@@ -29,6 +29,7 @@ pub mod idxcache;
 pub mod idxread;
 pub mod isoscore;
 pub mod itemroutes;
+pub mod infusione;
 pub mod iteminfo;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;

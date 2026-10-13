@@ -27,6 +27,10 @@ tools/wasm_opt.sh "$out/lettori/mzlab_lettori_wasm_bg.wasm" 600000 "lettori"
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/import" target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm
 tools/wasm_opt.sh "$out/import/mzlab_feat_import_wasm_bg.wasm" $limit "mzFinder import"
+# the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
+wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
+tools/wasm_opt.sh "$out/finder-lr/mzlab_finder_lr_wasm_bg.wasm" $limit "mzFinder finder-lr"
 python3 - "$out" <<'P'
 import hashlib, json, sys
 o = sys.argv[1]
@@ -46,5 +50,7 @@ m["lettori"] = {"js": "lettori/mzlab_lettori_wasm.js", "wasm": "lettori/mzlab_le
               "sha256": hashlib.sha256(open(f"{o}/lettori/mzlab_lettori_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
+                 "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)
 P
