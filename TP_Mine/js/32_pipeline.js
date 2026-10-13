@@ -176,7 +176,7 @@
     if (!st.files.length) say("No .mzidx file: open an mzML in Data first, its index is made there.");
   }
   async function open() {
-    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : ""); document.head.appendChild(s); }
+    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : ""); document.head.appendChild(s); }
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");
