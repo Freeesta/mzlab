@@ -2,7 +2,8 @@
 """A synthetic unit-resolution LC-MS series (Full Scan only, centroids shifted by +0.30 Da like the real instrument) for the low-resolution engine.
 Truth: the parent 241.0641 decays; two isomers of the +O product (257.0590) at RT 7.4 and 8.3 grow with different kinetics; unexpected ions: 333.20
 @ 6.8 grows with its 13C peak at 334.20 (an isotope, not an ion of its own), 355.10 @ 5.2 grows and falls (a product of a product), 289.10 @ 4.4 is
-flat in every treated file (not at t0, not in the blank), 311.10 @ 3.3 is in every file, blank included."""
+flat in every treated file (not at t0, not in the blank), 311.10 @ 3.3 is in every file, blank included. Noise: random peaks that never fall
+within 1 Da of a noise peak of the scan before, so they never form a row."""
 from __future__ import annotations
 
 import sys
@@ -35,6 +36,18 @@ def _pool(t, blank):
     return out
 
 
+def _noise(rng, n: int, prev: np.ndarray) -> np.ndarray:
+    """m/z of the noise peaks of one scan, none within 1 Da of a noise peak of the scan before: like the real instrument, noise does not repeat
+    from scan to scan at the same m/z, so it never forms a chromatographic peak (a row) of its own."""
+    out = rng.uniform(100, 400, n)
+    for _ in range(50):
+        bad = np.array([bool(len(prev)) and np.min(np.abs(prev - m)) < 1.0 for m in out])
+        if not bad.any():
+            break
+        out[bad] = rng.uniform(100, 400, int(bad.sum()))
+    return out
+
+
 def write_series(folder, times=TIMES, n_noise: int = 40, seed: int = 11, scan_step: float = 0.05, blank: bool = True) -> list[dict]:
     """Writes one Full Scan file per time (and a blank) and returns the file list for Experiment."""
     folder = Path(folder)
@@ -44,8 +57,11 @@ def write_series(folder, times=TIMES, n_noise: int = 40, seed: int = 11, scan_st
     for t, is_blank in [(t, False) for t in times] + ([(None, True)] if blank else []):
         comps = _pool(t, is_blank)
         specs = []
+        prev = np.empty(0)
         for i, rt in enumerate(np.arange(0.5, 14.0, scan_step)):
-            mz = list(rng.uniform(100, 400, n_noise))
+            noise = _noise(rng, n_noise, prev)
+            prev = noise
+            mz = list(noise)
             it = list(rng.lognormal(np.log(3e3), 0.8, n_noise))
             for m, c, s, a in comps:
                 v = a * demo._gauss(rt, c, s) * rng.normal(1, 0.04)
