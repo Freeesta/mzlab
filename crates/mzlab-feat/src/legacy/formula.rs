@@ -44,7 +44,7 @@ pub fn pyrepr(s: &str) -> String {
 }
 
 /// `str(e)` of the `UserError` of `elements.parse_formula`.
-fn formula_text(e: &Error) -> String {
+pub(crate) fn formula_text(e: &Error) -> String {
     let p = |k: &str| {
         e.params
             .iter()
