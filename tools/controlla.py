@@ -99,12 +99,25 @@ def regole_statiche() -> list[str]:
     return bad
 
 
+def regole_stato() -> list[str]:
+    """E.tab / E.active / E.cur / E.panels and S.view / S.adding are written only by the transitions of mzlab/web/stato.js (docs/agenti/dati.md)."""
+    import re
+    rx = re.compile(r"\b(?:E\.(?:tab|active|cur|panels)|S\.(?:view|adding))\s*=(?!=)")
+    bad = []
+    for f in indice.tracked():
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/stato.js":
+            for n, line in enumerate((indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n"), 1):
+                if not line.lstrip().startswith("//") and rx.search(line):
+                    bad.append(f"direct write of the page state outside stato.js: {f}:{n} (use STATO.file/scheda/attiva/pannelli/vista/aggiunta)")
+    return bad
+
+
 def main() -> int:
     now = misura()
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche()
+    bad = peggiori(now, base) + regole_statiche() + regole_stato()
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
