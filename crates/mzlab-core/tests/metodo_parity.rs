@@ -31,6 +31,7 @@ fn src(name: &str, bytes: &[u8], sample: u32, anonymous: bool) -> Source {
         }],
         sample: Some(sample),
         anonymous,
+        secret: None,
     }
 }
 

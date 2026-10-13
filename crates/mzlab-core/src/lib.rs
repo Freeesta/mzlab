@@ -55,6 +55,7 @@ pub mod methodinfo;
 pub mod methodjson;
 pub mod lettori;
 pub mod metodo;
+pub mod pseudo;
 pub mod metodo_raw;
 pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]

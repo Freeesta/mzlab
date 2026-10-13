@@ -135,6 +135,7 @@ impl AgilentD {
                 .collect(),
             sample: None,
             anonymous: self.anonymous,
+            secret: crate::pseudo::current(),
         })
     }
 

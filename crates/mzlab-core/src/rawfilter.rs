@@ -23,6 +23,8 @@ pub struct MzmlFilter<W: Write> {
     inner: W,
     line: Vec<u8>,
     anonymous: bool,
+    /// With `anonymous`: the secret of the pseudonyms that replace the identity values (none: they are dropped).
+    secret: Option<Vec<u8>>,
     /// Lines written right after the `<run ...>` tag (the `metodo/1` document as a `userParam`).
     run_extra: Option<String>,
     /// Inside a `pressure chromatogram` (MS:1003019): its intensity array gets the unit.
@@ -46,11 +48,18 @@ impl<W: Write> MzmlFilter<W> {
             inner,
             line: Vec::new(),
             anonymous,
+            secret: crate::pseudo::current(),
             run_extra: None,
             pressure: false,
             current: 0,
             last: [0; 8],
         }
+    }
+
+    /// The secret of the pseudonyms (the default is the one set by `pseudo::set_current`).
+    pub fn with_secret(mut self, secret: Option<Vec<u8>>) -> Self {
+        self.secret = secret;
+        self
     }
 
     /// Writes `extra` (complete lines) after the `<run ...>` tag.
@@ -151,7 +160,14 @@ impl<W: Write> MzmlFilter<W> {
                 .unwrap_or("")
                 .trim_start_matches("opentfraw.");
             if is_identity(name) {
-                return None;
+                let kind = if name == "computer_name" {
+                    "computer"
+                } else {
+                    "path"
+                };
+                let v = value_of(t)?;
+                let alias = crate::pseudo::alias(self.secret.as_deref(), kind, v)?;
+                return Some(format!("{}\n", l.replacen(v, &alias, 1)));
             }
         }
         Some(format!("{l}\n"))
