@@ -206,7 +206,11 @@ pub struct VoceLettore {
 }
 
 /// The formats, one line each. A new format is a module that implements `Lettore`, its `VOCE` and a line here; nothing else changes.
-pub static LETTORI: &[VoceLettore] = &[crate::agilent::lettore::VOCE, crate::wiff::lettore::VOCE];
+pub static LETTORI: &[VoceLettore] = &[
+    crate::agilent::lettore::VOCE,
+    crate::wiff::lettore::VOCE,
+    crate::rawlettore::VOCE,
+];
 
 /// The entry of `registro` that is surest of `fs` (the first among equals), `None` when none is at least `Forse`.
 pub fn riconosci_in<'a>(registro: &'a [VoceLettore], fs: &mut FileSet) -> Option<&'a VoceLettore> {
