@@ -134,7 +134,6 @@ fn con_difat(k: usize) -> Vec<u8> {
 }
 
 #[test]
-#[ignore = "bug 3: DIFAT sectors that all point to one FAT sector make the FAT 16 000 times larger than the file, and a chain that loops is followed through all of it"]
 fn a_difat_that_makes_the_fat_larger_than_the_file() {
     verifica("difat", 1, &caso("difat 10 sectors", con_difat(10)));
 }

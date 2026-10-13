@@ -195,6 +195,7 @@ fn split_duplicates(
     for (a, b) in groups {
         let mut by_file: Vec<(u32, usize)> = (a..b).map(|i| (sorted[i].1 .0, i)).collect();
         sortc::ord(&mut by_file);
+        // one counter per feature of a single group (a group never spans more than the files and the gap allow), not the table
         let mut straddle = vec![0i32; b - a + 1];
         for w in by_file.chunk_by(|x, y| x.0 == y.0) {
             let (lo, hi) = (w[0].1, w[w.len() - 1].1);

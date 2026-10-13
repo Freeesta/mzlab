@@ -262,13 +262,12 @@ fn write_container<W: WriteAt>(
     seq.bytes(&(meta.len() as u64).to_le_bytes())?;
     seq.bytes(meta.as_bytes())?;
     seq.pad_to(ALIGN)?;
-    let start = seq.pos;
-    for ((_, col), (_, _, _, off)) in cols.iter().zip(&dir) {
-        seq.bytes(&vec![0u8; (start as usize + off) - seq.pos as usize])?;
+    for (_, col) in cols.iter() {
+        // padding between two columns: less than ALIGN bytes
+        seq.pad_to(ALIGN)?;
         col.put(&mut seq)?;
     }
-    let off = dir[cols.len()].3;
-    seq.bytes(&vec![0u8; (start as usize + off) - seq.pos as usize])?;
+    seq.pad_to(ALIGN)?;
     let seq = std::cell::RefCell::new(seq);
     evid.emit(&mut |b| seq.borrow_mut().bytes(b))
 }

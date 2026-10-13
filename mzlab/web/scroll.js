@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 "use strict";
 // Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possible:
@@ -121,7 +122,7 @@ function cursorLine(p) {                                           // the vertic
 
 // ---- keys: ← → one scan (Maiusc: five), held = ~15 scans/s, Space = play/pause, Esc = stop, ? = list of the shortcuts
 const KEY = { dir: 0, n: 1, t0: 0, t: 0, raf: 0, p: null };
-const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
+/** @type {any} */ const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
 // the chromatogram that walks: the active one, or the one a linked spectrum follows (after zooming in the spectrum the arrows still walk)
 const walkTarget = (play) => {
   const fp = fsPanel();

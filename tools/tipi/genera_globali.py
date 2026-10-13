@@ -29,8 +29,9 @@ def nomi_primo_livello(testo):
     ris = set()
     for m in re.finditer(r"^(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)", testo, re.M):
         ris.add(m.group(1))
-    for m in re.finditer(r"^(?:const|let|var)\s[^\n]*[}\])],\s*([A-Za-z_$][\w$]*)\s*=[^=>]", testo, re.M):   # const A = {...}, B = ...
-        ris.add(m.group(1))
+    for riga in re.finditer(r"^(?:const|let|var)\s[^\n]*", testo, re.M):   # const A = {...}, B = null, C = 0 ...: every name after a value
+        for m in re.finditer(r"(?:[}\])]|\bnull|\btrue|\bfalse|\d|[\"'])\s*,\s*([A-Za-z_$][\w$]*)\s*=(?=[^=>])", riga.group(0)):
+            ris.add(m.group(1))
     return ris
 
 

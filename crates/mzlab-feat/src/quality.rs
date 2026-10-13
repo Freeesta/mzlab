@@ -14,7 +14,7 @@ use mzlab_core::peakq;
 
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{FileFeatures, FLAG_EDGE, FLAG_GOOD};
-use crate::trace::Params;
+use crate::trace::{filled, Params};
 
 /// Reason bits of `FileFeatures::qreason`.
 pub const Q_SHAPE: u8 = 1;
@@ -237,7 +237,7 @@ pub(crate) fn assess_with<R: ReadAt>(
         let (wa, wb) = around_apex(&rt, (f.apex[i] as usize).min(nscan - 1), AREA_HALF_WINDOW);
         let w0 = slo.min(wa).saturating_sub(q.pad);
         let w1 = (shi.max(wb) + q.pad).min(nscan - 1);
-        let mut y = vec![0.0f64; w1 - w0 + 1];
+        let mut y = filled(w1 - w0 + 1, 0.0f64)?;
         for j in a..b {
             let s = slab.pos[j] as usize;
             if s >= w0 && s <= w1 {
@@ -302,6 +302,7 @@ mod tests {
 
     #[test]
     fn two_spikes_have_gaps_and_no_bell_shape() {
+        // fixed size: a 40-point trace of a test
         let mut y = vec![0.0; 40];
         for (i, v) in [(10, 9e5), (25, 8.8e5)] {
             y[i] = v;
