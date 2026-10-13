@@ -20,7 +20,7 @@ function a11yWrite(o) {
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.tog === true) UIP.tog = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.tog === true) STATO.insieme(true, "load");  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
