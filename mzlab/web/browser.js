@@ -1,3 +1,4 @@
+// @ts-strict
 // Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are answered by the Rust engine
 // (WebAssembly: rust-bridge.js, rust-worker.js, lr.js). The student's files stay in this browser (OPFS and IndexedDB, to resume after a
 // reload): nothing is uploaded anywhere.
@@ -5,7 +6,7 @@
 (() => {
   window.MZLAB_BROWSER = true;
   window.QQQ_BROWSER = true; // kept from the old name: backward compatibility
-  const SRC = document.currentScript.src;
+  const SRC = /** @type {HTMLScriptElement} */ (document.currentScript).src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);      // OPFS keeps the files and their indexes
   try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
@@ -23,7 +24,7 @@
   window.qqHardReset = async () => {
     window.qqEngineStop();
     await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());     // the files and indexes in OPFS
-    await wait(new Promise(r => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
+    await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
     await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
     await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
     const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
@@ -38,7 +39,7 @@
       let el = document.getElementById("rust-note");
       if (!el) { el = document.createElement("div"); el.id = "rust-note"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;padding:8px 14px;border-radius:8px;background:var(--panel,#222);color:var(--fg,#fff);border:1px solid var(--accent,#888);font:14px system-ui,sans-serif"; document.body.appendChild(el); }
       el.textContent = window.I18N ? I18N.t(key) : key; el.hidden = false;
-      clearTimeout(el._t); el._t = setTimeout(() => { el.hidden = true; }, 9000);
+      clearTimeout(/** @type {any} */ (el)._t); /** @type {any} */ (el)._t = setTimeout(() => { el.hidden = true; }, 9000);
     };
     if (document.body) show(); else document.addEventListener("DOMContentLoaded", show);
   };
@@ -58,7 +59,7 @@
     if (!b || b.disabled) { const t = "the calculation engine is not available in this browser"; fail("load.err.engineStart", { text: t }); throw new Error(t); }
     try {
       lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
-      const u = new URL(location.href), stall = +u.searchParams.get("ripresa") || 30000;       // the browser storage held by another tab: the loading screen says so
+      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;       // the browser storage held by another tab: the loading screen says so
       const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
@@ -78,10 +79,10 @@
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
   window.fetch = async (input, init = {}) => {
-    const url = typeof input === "string" ? input : input.url;
+    const url = typeof input === "string" ? input : /** @type {Request} */ (input).url;
     if (typeof url !== "string" || !/^(\.\/)?api\//.test(url)) return realFetch(input, init);
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
-    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;
+    const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;
     if (tr) tr.push("fetch> " + url.slice(0, 80));
     try { return await fetchApi(url, init); }
     finally { if (tr) tr.push(`fetch< ${url.slice(0, 80)} ${Math.round(performance.now() - t0)}ms`); }
@@ -99,6 +100,6 @@
     (window.MZLAB_LR_MISS = window.MZLAB_LR_MISS || []).push(method + " " + url);             // a request the engine could not answer (tests: it must stay empty)
     return json({ error: "operation not available", error_key: rb && rb.disabled ? "load.err.engineLost" : "err.route.unavailable", params: {} }, 501);
   };
-  window.EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program
+  /** @type {any} */ (window).EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program
   navigator.sendBeacon = () => true;
 })();
