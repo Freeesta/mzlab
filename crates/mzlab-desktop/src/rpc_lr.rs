@@ -125,10 +125,11 @@ impl State {
                 let files: u64 = self.store.lock().unwrap_or_else(|e| e.into_inner()).list().iter().map(|(_, e, _)| e.size).sum();
                 let b = self.indexer()?;
                 let (mut idx, mut gone, mut n_gone) = (0u64, 0u64, 0u64);
+                let derived = p["free"].as_str() == Some("derived");                           // every index can be made again from the sources: all of them go
                 for (name, size) in index_list(&b) {
-                    if names.contains(&name) {
+                    if names.contains(&name) && !derived {
                         idx += size;
-                    } else if p["free"].as_bool().unwrap_or(false) {
+                    } else if derived || p["free"].as_bool().unwrap_or(false) {
                         b.remove(&name);
                     } else {
                         gone += size;

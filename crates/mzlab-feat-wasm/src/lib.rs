@@ -3,6 +3,8 @@
 //! sync handle). Outputs are byte arrays (`.mzfeatf`, `.mzfeat`); errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key).
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 #![forbid(unsafe_code)]
+// the .wasm of `finder` alone has no step that writes to a sink or reads the stored files
+#![cfg_attr(not(any(feature = "detect", feature = "proofs", feature = "mrm")), allow(dead_code))]
 use js_sys::{Array, Function, Uint8Array};
 #[cfg(any(feature = "detect", feature = "proofs"))]
 use mzlab_core::budget::MemBudget;
@@ -15,6 +17,8 @@ use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "finder")]
+pub mod finder;
 pub mod run;
 #[cfg(feature = "proofs")]
 pub mod state;

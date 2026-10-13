@@ -1,6 +1,6 @@
 // Start screen of the page: loading phrases and the three-ion animation (functions used by loading() in explore.js).
 // Classic script, run in place by index.html: it shares the global scope with the Dati scripts.
-document.title = I18N.t("app.title", { app: window.APP_NAME || "mzLab" });
+document.title = I18N.t("app.title", { app: window.APP_NAME || "" });
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
