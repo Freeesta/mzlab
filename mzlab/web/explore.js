@@ -307,13 +307,6 @@ async function methodWarn() {
     el.hidden = false; Q("#methwarn-x").onclick = () => { el.hidden = true; };
   } catch (_) { /* no session or no method: nothing to say */ }
 }
-// A part of a mixed file ("x.mzML#MS1") is labelled with the kind of acquisition it holds (Full Scan, DDA, MRM) instead of the scan level; a polarity suffix stays
-function partLabel(f, label) {
-  const tag = String(f.file || "").split("#")[1], m = tag && /^(MS1|MS2|MRM)(.*)$/.exec(tag), lab = String(label || "");
-  if (!m || !lab.endsWith(" \u00b7 " + tag)) return lab;
-  const name = m[1] === "MS1" ? ESP.etichetta("full") : m[1] === "MRM" ? ESP.etichetta("mrm") : f.dda ? "DDA" : "MS2";
-  return lab.slice(0, lab.length - tag.length) + name + m[2];
-}
 async function bootSession() { await bootSession0(); methodWarn(); window.TOUR && TOUR.offri(); }
 async function bootSession0() {
   const j = await J("api/session");
@@ -339,7 +332,7 @@ async function bootSession0() {
       const firstIdx = j.session.findIndex(x => x.kind === s.kind);
       vis = (k === firstIdx);
     }
-    return { ...s, k, vis, label: partLabel(s, oldVis[s.file] ? oldVis[s.file].label : s.label), lv: s.kind === "ms2" ? 2 : 1 };
+    return { ...s, k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -393,7 +386,7 @@ function restoreUi() {
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
-  u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = partLabel(f, sf.label) || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); E.browse = !!u.browse; STATO.scheda(pickTab(u.tab), "notebook");
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
