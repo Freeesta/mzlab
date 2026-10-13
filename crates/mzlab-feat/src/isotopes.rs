@@ -13,6 +13,8 @@ use mzlab_core::isoscore::fine_pattern;
 
 use crate::axis::half;
 use crate::table::{FileFeatures, FLAG_ISOTOPE};
+use crate::trace::filled;
+use mzlab_core::error::Result;
 
 const ELECTRON_PROTON: f64 = 1.007_276;
 const D_13C: f64 = 1.003_355;
@@ -152,12 +154,12 @@ fn parent_of(
 }
 
 /// Group the isotopologues of the table: fills `iso_group`, `charge` and `FLAG_ISOTOPE` (features sorted by m/z).
-pub fn group(f: &mut FileFeatures, p: &IsoParams) {
+pub fn group(f: &mut FileFeatures, p: &IsoParams) -> Result<()> {
     let n = f.len();
     let mut ex = Expect::new();
     let st = steps(p.tol_ppm < 0.0);
-    let mut charge = vec![0i8; n];
-    let mut gid = vec![0u32; n];
+    let mut charge = filled(n, 0i8)?;
+    let mut gid = filled(n, 0u32)?;
     for j in 0..n {
         let Some((i, z)) = parent_of(f, j, &charge, &mut ex, p, &st) else {
             continue;
@@ -171,4 +173,5 @@ pub fn group(f: &mut FileFeatures, p: &IsoParams) {
     }
     f.iso_group = gid;
     f.charge = charge;
+    Ok(())
 }

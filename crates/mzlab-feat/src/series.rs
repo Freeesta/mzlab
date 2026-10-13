@@ -48,7 +48,7 @@ fn weak_tier<R: ReadAt>(
     };
     let mut w = detect(index, &p)?;
     assess(index, &mut w, &p, &r.steps.quality)?;
-    group(&mut w, &r.steps.iso);
+    group(&mut w, &r.steps.iso)?;
     let (ppm, gap) = (r.align.ion.ppm, r.align.ion.rt_gap);
     let mut out = FileFeatures {
         dt: w.dt,

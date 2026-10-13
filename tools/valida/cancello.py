@@ -175,14 +175,14 @@ def nativo_contro_wasm(idx: list[str], parent: tuple, cartella: Path, prima: nat
 
 # ---------------------------------------------------------------------------------------------------------------- the whole measure
 def esegui_reale(cartella: Path, ioni: list[dict], lavoro: Path):
-    """Runs the native pipeline on a real series (the parent is the one of the truth). Returns (serie of files, run, columns of the treated samples)."""
+    """Runs the native pipeline on a real series (the parent, with its structure when the truth gives one, is the one of the truth). Returns (serie of files, run, columns of the treated samples)."""
     from . import tabelle
     serie = tabelle.trova_serie(cartella)
     file_ = {x["nome"]: Path(cartella) / (x["nome"] + ".mzML") for x in serie}
     mzml = [p if p.exists() else p.with_suffix(".mzml") for p in file_.values()]
     idx = nativo.indici(mzml, lavoro / "indici")
     padre = next(x for x in ioni if x.get("parent"))
-    run = nativo.esegui(idx, nativo.neutra_da_ione(padre["ion"]), padre["mz"], (padre["rt_obs"] or [None])[0], lavoro / "nativo")
+    run = nativo.esegui(idx, nativo.neutra_da_ione(padre["ion"]), padre["mz"], (padre["rt_obs"] or [None])[0], lavoro / "nativo", padre.get("smiles", ""))
     trattate = [k for k, x in enumerate(serie) if x["time"] and x["time"] > 0 and x["type"] == "sample"]
     return serie, run, trattate
 

@@ -1,7 +1,25 @@
 {
- "serie": "piccolo (feat_mirato.py --seme 2 --scala 1.0)",
+ "serie": "piccolo e completo (feat_mirato.py --seme 2 --scala 1.0); completo_blocchi = completo con budget di 24 MB",
  "soglia": "valore registrato + 10 %",
  "byte": {
+  "detect": 33554432,
+  "align": 33554432,
+  "hypotheses": 33554432,
+  "proofs": 33554432,
+  "engine_open": 33554432,
+  "engine_tic_xic": 33554432,
+  "engine_scanlist": 33554432
+ },
+ "completo": {
+  "detect": 33554432,
+  "align": 33554432,
+  "hypotheses": 33554432,
+  "proofs": 45154304,
+  "engine_open": 33554432,
+  "engine_tic_xic": 33554432,
+  "engine_scanlist": 33554432
+ },
+ "completo_blocchi": {
   "detect": 33554432,
   "align": 33554432,
   "hypotheses": 33554432,

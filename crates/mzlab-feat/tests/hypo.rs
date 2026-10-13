@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use mzlab_core::elements;
 use mzlab_feat::hypo::*;
 use mzlab_feat::suspects::Suspects;
 use serde_json::Value;
@@ -218,7 +219,10 @@ fn fragments_must_come_from_the_parent() {
     )
     .unwrap();
     assert_eq!(
-        ok.hyps.iter().filter(|h| h.sources == SRC_CLEAVAGE).count(),
+        ok.hyps
+            .iter()
+            .filter(|h| h.sources == SRC_CLEAVAGE && h.steps == 1)
+            .count(),
         1
     );
     let e = generate(
@@ -232,6 +236,48 @@ fn fragments_must_come_from_the_parent() {
     .err()
     .unwrap();
     assert_eq!(e.key, "error.hypo.fragment");
+}
+
+#[test]
+fn a_cleavage_product_takes_one_reaction_of_the_rules() {
+    let rules = rules();
+    let frag = ["C6H9N2O".to_string()];
+    let run = |max_steps| {
+        generate(
+            &rules,
+            &Inputs {
+                fragments: &frag,
+                ..none()
+            },
+            &HypoParams {
+                max_steps,
+                ..HypoParams::default()
+            },
+        )
+        .unwrap()
+    };
+    let two = run(2);
+    let products: Vec<_> = two
+        .hyps
+        .iter()
+        .filter(|h| {
+            h.steps == 2 && h.sources & SRC_CLEAVAGE != 0 && h.label.starts_with("rottura+")
+        })
+        .collect();
+    assert!(!products.is_empty());
+    // the fragment plus an oxygen (hydroxylation): a product of the cleavage, never a product of the parent in one step
+    let oxy = elements::mass(&elements::parse_formula("C6H9N2O2").unwrap()) + 1.007276;
+    assert!(products
+        .iter()
+        .any(|h| (h.mz - oxy).abs() < 1e-3 && h.level >= 4));
+    // one step only: the cleavage alone, no second reaction
+    assert!(run(1)
+        .hyps
+        .iter()
+        .all(|h| h.label != "rottura" || h.steps == 1));
+    assert!(run(1).hyps.iter().all(|h| !h.label.starts_with("rottura+")));
+    // same twice, byte for byte
+    assert_eq!(sha(&two), sha(&run(2)));
 }
 
 fn pad8(v: &mut Vec<u8>) {

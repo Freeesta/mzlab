@@ -1,6 +1,6 @@
 # Estendere mzLab: i lettori dei file dei produttori
 
-Stato attuale. Codice: `crates/mzlab-core/src/lettori.rs` (contratto `CONTRATTO = 1`); i lettori già scritti (`raw.rs`, `wiff/`, `agilent/`, `mzml.rs`) si portano sul trait a uno a uno, il registro `LETTORI` ne elenca solo quelli già portati (finora `agilent-d`, `agilent/lettore.rs`).
+Stato attuale. Codice: `crates/mzlab-core/src/lettori.rs` (contratto `CONTRATTO = 1`); i lettori già scritti (`raw.rs`, `wiff/`, `agilent/`, `mzml.rs`) si portano sul trait a uno a uno, il registro `LETTORI` elenca quelli già portati (`agilent`, `wiff`, `raw`).
 
 ## Il contratto
 - `Lettore`: `formato`, `campioni` (almeno uno; un `.wiff` ne ha più), `indice(c)` (una `VoceScansione` per scansione: id, RT in minuti, livello, polarità, TIC, picco base, filtro, precursore, `Posizione` nel grezzo), `scansione(c, k)` (legge solo i byte di `k`), `intestazione(c, k)` (`Campo`: nome, valore, unità, CV: energia di collisione, isolamento, trailer), `cromatogrammi(c)` / `cromatogramma(c, id)`, `metodo(c)` (documento `metodo/1`).

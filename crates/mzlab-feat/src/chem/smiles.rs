@@ -26,6 +26,7 @@ fn cap(s: &str) -> String {
     let mut c = s.chars();
     c.next()
         .map(|f| f.to_ascii_uppercase().to_string() + c.as_str())
+        // fixed size: a one-word label, empty when the string is empty
         .unwrap_or_default()
 }
 

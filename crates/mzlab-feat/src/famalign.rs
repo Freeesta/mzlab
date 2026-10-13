@@ -100,6 +100,7 @@ fn collect(
     p: &FamAlignParams,
 ) -> (Votes, Vec<(u32, u32)>) {
     let mut votes = Votes {
+        // one counter per aligned group, on top of the table that the `align` phase already counted
         base: vec![0; ions.len()],
         role: vec![[0; 7]; ions.len()],
     };

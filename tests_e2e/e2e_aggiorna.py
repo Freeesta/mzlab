@@ -60,13 +60,14 @@ try:
             a = pg.query_selector("#updbox a"); assert a and "github.com/Freeesta/mzlab" in a.get_attribute("href") and a.get_attribute("rel") == "noopener noreferrer"
             assert "9.9" in box()
         step("a newer app is needed: link to the releases", newapp)
+        def upd(): return pg.evaluate("__calls.filter(c => c.startsWith('update'))")       # the page makes other desktop calls on load (the data folder)
         def once_a_day():
             pg.evaluate("window.__calls=[]"); pg.evaluate("localStorage.setItem('qqq.upd.last',String(Date.now()))")
             pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_timeout(4600)
-            assert pg.evaluate("__calls") == [], "checked twice in a day"
+            assert upd() == [], "checked twice in a day: " + str(upd())
             pg.evaluate("localStorage.setItem('qqq.upd.last','1')"); pg.evaluate("window.__reply={update_check:{status:'uptodate'}}")
-            pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_function("__calls.length>0", timeout=15000)
-            assert pg.evaluate("__calls") == ["update_check"], pg.evaluate("__calls")
+            pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_function("__calls.some(c => c === 'update_check')", timeout=15000)
+            assert upd() == ["update_check"], upd()
         step("the automatic check runs once a day", once_a_day)
         def row():
             assert 'id="uip-upd"' in pg.evaluate("DESKUPD.row()")
