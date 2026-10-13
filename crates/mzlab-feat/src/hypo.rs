@@ -17,6 +17,7 @@ use mzlab_core::json::{round, Out};
 pub use rules::{
     parse_delta, Counts, Dir, Rule, Rules, FORMAT as RULES_FORMAT, VERSION as RULES_VERSION,
 };
+pub(crate) use sources::from_rules;
 pub use sources::{FamilyBase, Imported};
 pub use structure::Structure;
 
@@ -26,14 +27,16 @@ pub const SRC_SUSPECT: u8 = 2;
 pub const SRC_FAMILY: u8 = 4;
 pub const SRC_IMPORTED: u8 = 8;
 pub const SRC_CLEAVAGE: u8 = 16;
+pub const SRC_NETWORK: u8 = 32;
 
 pub const REGISTRY_FORMAT: &str = "ipotesi/1";
-const SRC_NAMES: [(u8, &str); 5] = [
+const SRC_NAMES: [(u8, &str); 6] = [
     (SRC_RULE, "regola"),
     (SRC_SUSPECT, "sospetti"),
     (SRC_FAMILY, "famiglia"),
     (SRC_IMPORTED, "importata"),
     (SRC_CLEAVAGE, "rottura"),
+    (SRC_NETWORK, "rete"),
 ];
 
 #[derive(Debug, Clone)]
@@ -140,6 +143,33 @@ fn same_key(a: &Hypothesis, b: &Hypothesis) -> bool {
         a.mz.to_bits() == b.mz.to_bits() && a.adduct == b.adduct && a.label == b.label
     } else {
         a.formula == b.formula && a.adduct == b.adduct
+    }
+}
+
+/// Registry methods for a later round of hypotheses.
+impl Registry {
+    /// Adds the hypotheses of a later round: those whose ion is already in the registry are dropped, the others are sorted like `generate` does and get the
+    /// next ids, so the ids and outcomes of the first round do not move. Returns how many were added.
+    pub fn append(&mut self, mut extra: Vec<Hypothesis>) -> usize {
+        extra.retain(|h| !self.hyps.iter().any(|x| same_key(x, h)));
+        let mut order: Vec<usize> = (0..extra.len()).collect();
+        crate::sortc::by(&mut order, |&a, &b| {
+            let (a, b) = (&extra[a], &extra[b]);
+            a.mz.total_cmp(&b.mz)
+                .then_with(|| a.adduct.cmp(b.adduct))
+                .then_with(|| a.formula.cmp(&b.formula))
+                .then_with(|| a.label.cmp(&b.label))
+        });
+        let n = extra.len();
+        let mut slots: Vec<Option<Hypothesis>> = extra.into_iter().map(Some).collect();
+        for i in order {
+            if let Some(mut h) = slots[i].take() {
+                h.id = self.hyps.len() as u32;
+                self.hyps.push(h);
+                self.outcomes.push(Outcome::NotSearched);
+            }
+        }
+        n
     }
 }
 

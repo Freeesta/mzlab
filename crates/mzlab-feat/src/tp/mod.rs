@@ -8,10 +8,13 @@
 //! second axis, read from the signs of the proofs of `evid/1`.
 
 mod cancelli;
+mod meta;
 mod parentela;
+mod rete;
+
+pub use rete::{arcs, explain_by_arcs, next_generation, Arc, NetParams};
 
 use mzlab_core::error::Result;
-use mzlab_core::json::{Out, Value};
 
 use crate::aligned::Aligned;
 use crate::evid::rowproofs::Signs;
@@ -39,7 +42,7 @@ pub const VIA_RULE: u8 = 1;
 pub const VIA_CLEAVAGE: u8 = 2;
 pub const VIA_IMPORTED: u8 = 4;
 pub const VIA_MS2: u8 = 8;
-/// Reserved for the arcs of the network of mass differences.
+/// An arc of the network of mass differences (`rete`) explains the row.
 pub const VIA_NETWORK: u8 = 16;
 
 /// Kinship with the parent (`TpBlock::kinship`).
@@ -70,7 +73,15 @@ pub struct TpParams {
 
 impl Default for TpParams {
     fn default() -> Self {
-        TpParams { ratio: 3.0, isf_cv: 0.2, isf_rt: 0.1, isf_points: 3, ppm: 10.0, purity_min: 0.5, saturated: false }
+        TpParams {
+            ratio: 3.0,
+            isf_cv: 0.2,
+            isf_rt: 0.1,
+            isf_points: 3,
+            ppm: 10.0,
+            purity_min: 0.5,
+            saturated: false,
+        }
     }
 }
 
@@ -87,6 +98,8 @@ pub struct TpInputs<'a> {
     /// Fragments of the MS2 of the parent, when it has one (the m/z of an in-source fragment must be among them).
     pub fragments: Option<&'a [f64]>,
     pub params: &'a TpParams,
+    /// The rules, to look for their differences of mass among the rows (`rete`); None = no network.
+    pub rules: Option<&'a crate::hypo::Rules>,
 }
 
 /// The block `tp/1`: one byte per row and column.
@@ -117,48 +130,20 @@ impl TpBlock {
     pub fn count(&self, status: u8) -> usize {
         self.status.iter().filter(|&&s| s == status).count()
     }
-
-    /// The object `tp` of the meta of the `.mzfeat`: schema, thresholds used, id of the parent and the rows of every status.
-    pub fn meta_json(&self) -> String {
-        let p = &self.params;
-        let mut j = Out::default();
-        j.raw("{\"schema\":").str(SCHEMA).raw(",\"progenitore\":").int(i64::from(self.parent_row) + 1);
-        j.raw(",\"parametri\":{\"rapporto\":").num(p.ratio).raw(",\"isf_cv\":").num(p.isf_cv).raw(",\"isf_rt\":").num(p.isf_rt);
-        j.raw(",\"isf_punti\":").int(p.isf_points as i64).raw(",\"ppm\":").num(p.ppm).raw(",\"purezza_min\":").num(p.purity_min);
-        j.raw(",\"saturo\":").raw(if p.saturated { "true" } else { "false" }).raw("},\"conteggi\":{\"tp\":");
-        j.int(self.count(ST_TP) as i64).raw(",\"controllo\":").int(self.count(ST_CONTROL) as i64);
-        j.raw(",\"isf\":").int(self.count(ST_ISF) as i64).raw(",\"non_spiegate\":").int(self.count(ST_UNEXPLAINED) as i64).raw("}}");
-        j.0
-    }
-
-    /// The thresholds and the parent from the object `tp` of a meta (the columns are read by the caller).
-    pub fn from_meta(v: &Value) -> TpBlock {
-        let num = |o: &Value, k: &str, d: f64| o.get(k).and_then(Value::f64).unwrap_or(d);
-        let d = TpParams::default();
-        let o = v.get("parametri");
-        let get = |k: &str, dv: f64| o.map_or(dv, |o| num(o, k, dv));
-        TpBlock {
-            parent_row: (num(v, "progenitore", 0.0) as u32).wrapping_sub(1),
-            params: TpParams {
-                ratio: get("rapporto", d.ratio),
-                isf_cv: get("isf_cv", d.isf_cv),
-                isf_rt: get("isf_rt", d.isf_rt),
-                isf_points: get("isf_punti", d.isf_points as f64) as usize,
-                ppm: get("ppm", d.ppm),
-                purity_min: get("purezza_min", d.purity_min),
-                saturated: o.and_then(|o| o.get("saturo")).and_then(Value::bool).unwrap_or(false),
-            },
-            ..TpBlock::default()
-        }
-    }
 }
 
 /// The view of the transformation products of a table. `Ok(None)` when the parent is not in the table; an error when there are no controls or no treated
 /// samples (the gates cannot be read, and a view with no gate would be a lie).
 pub fn build(inp: &TpInputs) -> Result<Option<TpBlock>> {
-    let Some(parent) = cancelli::parent_row(inp) else { return Ok(None) };
+    let Some(parent) = cancelli::parent_row(inp) else {
+        return Ok(None);
+    };
     let n = inp.aligned.len();
-    let mut b = TpBlock { parent_row: parent as u32, params: inp.params.clone(), ..TpBlock::default() };
+    let mut b = TpBlock {
+        parent_row: parent as u32,
+        params: inp.params.clone(),
+        ..TpBlock::default()
+    };
     b.status = vec![ST_TP; n];
     b.notes = vec![0; n];
     b.via = vec![0; n];
@@ -166,6 +151,9 @@ pub fn build(inp: &TpInputs) -> Result<Option<TpBlock>> {
     cancelli::formed(inp, parent, &mut b)?;
     cancelli::not_in_source(inp, parent, &mut b);
     cancelli::explained(inp, &mut b);
+    if let Some(rules) = inp.rules {
+        explain_by_arcs(inp, rules, &mut b, &NetParams::default());
+    }
     parentela::kinship(inp, &mut b);
     Ok(Some(b))
 }
