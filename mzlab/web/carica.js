@@ -1,3 +1,4 @@
+// @ts-strict
 // Script loader of the page (replaces document.write): puts the Dati scripts in the page in the order of the list, as classic scripts that
 // run in sequence (async=false); then the page shell (shell.js); then the ES modules (the leaves nobody calls by name), as before.
 // carica(name) loads a script once and returns a Promise: for the tools that can wait for their first use.

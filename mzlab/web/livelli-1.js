@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of thresholds. Pure data (JSON inside the assignment): the module
 // livelli.js reads it, tests/test_livelli.py reads it, nothing here is code. A new version of the format is a new file (livelli-2.js), never an edit of the meaning of a key.

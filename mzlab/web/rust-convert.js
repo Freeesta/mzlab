@@ -1,3 +1,4 @@
+// @ts-strict
 // SCIEX .wiff + .wiff.scan -> mzML done in the worker (rust-worker.js), for the page (the Thermo .raw is in rust-raw.js). `rpc(msg, onProgress)` and `base(name)` come from
 // the bridge (rust-bridge.js). A failed conversion rejects with an Error whose `json` is { error, error_key, params } like the API errors.
 const WIFF_ERRORS = ["err.file.notWiff", "err.file.wiffNoScan", "err.file.wiff", "err.file.mzmlWrite"];        // the keys the Rust reader and writer of the .wiff give

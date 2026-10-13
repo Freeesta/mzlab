@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted export: the annotated table (xlsx with xlsx.js, CSV with «;»), the MS2 of the features (MGF) and the licences of the library records cited. The key of a row is (polarity, id of the feature)
 // and the SHA-256 of the file of the table it comes from, so that a later step (SIRIUS, the chemist's curation) can join the rows without ambiguity. Pure functions (node tests them) + the buttons of the window.
 (() => {

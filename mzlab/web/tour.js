@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Guided tour of the Dati view (low-resolution only).
 // Global object TOUR, no external libraries. Pure JS, accessible dialog and spotlight.
@@ -690,7 +691,7 @@ const TOUR = (() => {
         if (typeof upload === "function") {
           await upload([file], "data");
         }
-        const op = document.getElementById("opbtn");
+        const op = /** @type {HTMLButtonElement | null} */ (document.getElementById("opbtn"));
         if (op && !op.disabled) {
           op.click();
         }

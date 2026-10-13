@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Loading a whole folder (docs/agenti/dati.md): a folder chosen with the «Load a folder» button (input webkitdirectory) or dropped on the start box is read
 // recursively and every compatible file in it goes through the usual upload(); the others are only counted. Files keep the folder they came from (`dir`): a

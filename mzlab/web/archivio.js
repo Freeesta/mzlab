@@ -52,7 +52,7 @@ export async function ensureRoom(bytes) {
 }
 
 export const available = () => {
-  try { return !!(self.navigator && navigator.storage && navigator.storage.getDirectory && typeof FileSystemFileHandle !== "undefined" && /** @type {any} */ (FileSystemFileHandle.prototype).createSyncAccessHandle); }
+  try { return !!(self.navigator && navigator.storage && /** @type {any} */ (navigator.storage).getDirectory && typeof FileSystemFileHandle !== "undefined" && /** @type {any} */ (FileSystemFileHandle.prototype).createSyncAccessHandle); }
   catch (_) { return false; }
 };
 

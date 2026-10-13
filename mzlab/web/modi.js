@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // The three acquisition modes explained once (used by the "?" next to each Dati tab and by the Teoria chapter 9): what each quadrupole does,
 // what the mode is for in the lab, a thumbnail of the typical output, and a comparison table. Classic script; needs icons-modi.js (QICON).

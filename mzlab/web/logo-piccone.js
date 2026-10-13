@@ -1,3 +1,4 @@
+// @ts-strict
 // Easter egg of the header logo: five hits with a small pickaxe switch mzFinder on (or off, see tpmine-loader.js). Each hit shakes the logo and adds a
 // stage of cracks (1-4); the fifth shatters it into pieces and flips the switch: mzFinder ON = the logo stays GOLDEN (localStorage, as a trophy), the next round
 // of five hits switches mzFinder OFF and gives the original logo back.
@@ -90,6 +91,6 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
     if (n >= HITS) { shatter(window.QTOOLS && QTOOLS.flip ? !!QTOOLS.flip() : !root.hasAttribute("data-logo-gold")); return; }
     showStage(n); swing();
   }
-  document.addEventListener("click", ev => { if (ev.target && ev.target.closest && ev.target.closest("header img.logo")) hit(); }, true);
+  document.addEventListener("click", ev => { const t = /** @type {Element | null} */ (ev.target); if (t && t.closest && t.closest("header img.logo")) hit(); }, true);
   logo.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); hit(); } });
 })();

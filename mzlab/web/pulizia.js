@@ -1,3 +1,4 @@
+// @ts-strict
 // Automatic cleaning of the archive (docs/agenti/memoria.md), at start and when idle. It removes only what can be made again or is left over, never a source file:
 //  - the `.part` files older than an hour (a write that was cut);
 //  - an index (`idx/`) whose source is no longer in `files/` and that has not been used for a week (an orphan). The files of the pipeline (`feat/`) are not

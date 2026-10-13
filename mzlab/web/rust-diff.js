@@ -1,3 +1,4 @@
+// @ts-strict
 // `ref=` (the difference from a reference file) on api/chrom, api/xic and api/mrm for rust-bridge.js: the traces come from the indexes of the
 // files (the MRM transitions from their mzML), the subtraction is Rust's. Returns { status, text } or null when Python must answer.
 export async function diffRoute({ slots, rpc }, path, u) {

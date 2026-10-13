@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Data-dependent acquisition (DDA / IDA): the Full Scan (MS1) and the MS2 scans it triggered, one under the other (classic script, loaded after hr.js).
 //

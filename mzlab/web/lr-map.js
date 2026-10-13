@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // The map routes (`api/map`, `api/mapsnap`, `api/mappunti`, `api/mappunti3d`) of the browser version: the Rust engine answers from the
 // indexes of the files of the session (unit or high resolution, centroids or profile points). null = not served: a file without index,
 // or a parameter the reference would reject.

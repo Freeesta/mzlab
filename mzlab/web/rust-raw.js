@@ -1,3 +1,4 @@
+// @ts-strict
 import { ensureRoom } from "./archivio.js";
 // Before starting, the room left in the browser (navigator.storage.estimate, archivio.js ensureRoom) is checked against the size of the mzML and of its index (about 2x the .raw, 4x with the profile): too little is an error.quota with the MB needed and left.
 // Thermo .raw -> mzML for rust-bridge.js: made in the worker, which reports the scans converted and writes the mzML to a file of OPFS (a File backed by the disk, not a Blob in memory;

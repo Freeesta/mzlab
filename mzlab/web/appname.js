@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // The visible name of the program: the ONLY place where it is written (chosen 7/10/2026; package and internal name is mzlab).
 // Loaded first by index.html and by every page of the Teoria. In HTML a «{APP}» in <title> or in the title/alt/aria-label attributes becomes the name.
 window.APP_NAME = "mzLab";

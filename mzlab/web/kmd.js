@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Kendrick mass defect (KMD) of the feature table (high resolution only; «Statistica» panel), for the PFAS and any other series of ions that differ by a whole
 // number of repeating units (CF2, CF2O, C2F4, CH2). The arithmetic is in kmd-calc.js (KMDCALC). A VIEW and a list of CANDIDATE series with their evidence

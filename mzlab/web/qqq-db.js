@@ -1,3 +1,4 @@
+// @ts-strict
 // The IndexedDB of the page ("qqq_lab": the name is kept, renaming it would lose the users' data): its schema and one way to open it.
 // Used by rust-worker.js and (with a dynamic import) liste.js.
 // SCHEMA is the version of the whole archive (this database and the folders of OPFS together); `kv.schema` holds the one the data are at and migra.js brings it

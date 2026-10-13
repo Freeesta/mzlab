@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted identities: the features of a table that are the same compound, grouped with the evidence of every link. The graph is built by the Python engine of mzFinder
 // (tpmine/hr/identity.py, api «identity_graph»: co-eluting, correlated over the shared samples and a mass relation explained by iimn.relations; the ion identities of the mzMine table enter as
 // evidence «mzMine IIN»); this file prepares the payload, adds the singletons, takes the level of an identity from its best member and draws the small network. Pure but for the globals

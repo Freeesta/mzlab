@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo` and the `api/chrom` of an MRM file.
 // Returns { status, text, ms } or null (Pyodide answers).
 

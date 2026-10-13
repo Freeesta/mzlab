@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Blank subtraction of the feature table (high resolution only; «Statistica» panel): threshold = blank level (maximum or mean of the blank files)
 // x a factor chosen by the user; a feature is kept when at least N sample files are above its threshold. Two lists, both visible: kept and

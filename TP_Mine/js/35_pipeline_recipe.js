@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json; the reader and the check of
 // the record are in mzlab/web/workflow.js) and the comparison of a re-application with the table that was recorded. Pure but for UNT.sha256Hex (a global of the page, injected by the node tests).
 (() => {
