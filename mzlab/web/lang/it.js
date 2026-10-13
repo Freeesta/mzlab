@@ -683,6 +683,7 @@ I18N.add("it", {
   "ctl.noMs2": "Non si applica al cromatogramma dei precursori MS2: contiene solo gli scan MS2 del precursore scelto.",
   "ctl.noMrm": "Non si applica agli MRM: ogni transizione è già selettiva.",
   "ctl.oneFile": "Con un solo file non c'è nulla da sovrapporre o impilare.",
+  "ctl.mode.aria": "Disegno delle tracce",
   "ctl.mode.title": "Come disegnare più tracce: una sopra l'altra; una per riga (come in FreeStyle); a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)",
   "ctl.mode.ovl": "sovrapposti",
   "ctl.mode.stk": "impilati",

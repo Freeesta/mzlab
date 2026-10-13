@@ -548,7 +548,7 @@ function ctl(p) {
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
   const chk = (k, lab, dis, why, tip) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : tip ? ` title="${tip}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = I18N.t("ctl.oneFile");
-  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
+  const view = `<select data-o="mode" aria-label="${I18N.t("ctl.mode.aria")}"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
   // low resolution: the gradient delay and the PDA alignment are in this popover (in high resolution they are in «Opzioni di visualizzazione»)
   const num = (k, v, lo, hi, st) => `<input data-o="${k}" type="number" class="mzf" min="${lo}" max="${hi}" step="${st}" value="${v}" style="width:5em">`;
   const lrExtra = window.BANCO && BANCO.on() ? "" :

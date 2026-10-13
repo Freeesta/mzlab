@@ -683,6 +683,7 @@ I18N.add("en", {
   "ctl.noMs2": "Does not apply to the precursor chromatogram of MS2: it contains only the MS2 scans of the chosen precursor.",
   "ctl.noMrm": "Does not apply to MRM: every transition is already selective.",
   "ctl.oneFile": "With a single file there is nothing to overlay or stack.",
+  "ctl.mode.aria": "Trace layout",
   "ctl.mode.title": "How to draw several traces: on top of each other; one per row (as in FreeStyle); cascaded, in order of time, the first in front (for viewing only: no integration and no reading of values)",
   "ctl.mode.ovl": "overlaid",
   "ctl.mode.stk": "stacked",
