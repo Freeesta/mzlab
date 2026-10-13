@@ -42,6 +42,17 @@ try:
             pg.click("#tools-card summary"); pg.click("#tools-def"); pg.wait_for_timeout(300)
             assert pg.evaluate(VIS, "template-0")
         step("the choice is kept in this browser", keep)
+        def font():
+            pg.click("#tools-card summary") if not pg.is_visible("#font-body") else None
+            sz = lambda: pg.evaluate("() => JSON.parse(document.querySelector('#kframe').contentWindow.localStorage.getItem('ketcher-opts') || '{}').fontsz")
+            pg.check("input[name=dfont][value='20']"); pg.wait_for_timeout(500)
+            assert sz() == 20, sz()
+            pg.reload(); pg.wait_for_timeout(1500); ready(pg)
+            assert pg.evaluate("localStorage.getItem('qqq.disegno.font')") == "20"
+            assert sz() == 20, ("applied again after a reload", sz())
+            pg.click("#tools-card summary") if not pg.is_visible("#font-body") else None
+            pg.check("input[name=dfont][value='16']"); pg.wait_for_timeout(300)
+        step("atom symbol size: three sizes, applied to Ketcher and kept", font)
         pg.screenshot(path=SH + "k_strumenti.png")
 finally:
     r.close()
