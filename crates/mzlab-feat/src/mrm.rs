@@ -87,7 +87,7 @@ fn key(q: f64) -> i64 {
 /// Median interval between two points, seconds.
 fn interval(t: &[f64]) -> f64 {
     let mut d: Vec<f64> = t.windows(2).map(|w| (w[1] - w[0]) * 60.0).collect();
-    d.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut d, f64::total_cmp);
     d.get(d.len() / 2).copied().unwrap_or(0.0)
 }
 
@@ -270,7 +270,7 @@ pub fn qualifier_ratios(t: &Aligned) -> Vec<QualRatio> {
             .map(|k| t.area[r * nf + k])
             .filter(|&a| a > 0.0)
             .collect();
-        v.sort_by(f64::total_cmp);
+        crate::sortc::by(&mut v, f64::total_cmp);
         v.get(v.len() / 2).copied().unwrap_or(0.0)
     };
     let mut out = Vec::new();

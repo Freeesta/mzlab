@@ -60,7 +60,7 @@ fn noise_sigma(d: &[f64], n: usize, m: usize) -> f64 {
 
 /// Median (mean of the two middle values for an even count), as `np.median`.
 fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(&mut v, |a, b| a.total_cmp(b));
     let h = v.len() / 2;
     if v.len() % 2 == 1 {
         v[h]

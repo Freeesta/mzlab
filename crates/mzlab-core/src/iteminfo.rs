@@ -206,7 +206,7 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
         .filter_map(|s| s.res)
         .filter(|r| *r != 0.0)
         .collect();
-    res.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut res, f64::total_cmp);
     if an == "?" && !res.is_empty() && res[res.len() / 2] >= 10000.0 {
         return Profile {
             hr: true,
@@ -249,7 +249,7 @@ fn median(v: &mut [f64]) -> Option<f64> {
     if v.is_empty() {
         return None;
     }
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(v, f64::total_cmp);
     let n = v.len();
     Some(if n % 2 == 1 {
         v[n / 2]
@@ -291,7 +291,7 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
             .collect();
         let n = centres.len() as f64;
         let mut uniq = centres.clone();
-        uniq.sort_by(f64::total_cmp);
+        crate::sortc::by(&mut uniq, f64::total_cmp);
         uniq.dedup();
         let d = uniq.len() as f64;
         if width >= 5.0 && n / d.max(1.0) >= 3.0 {
@@ -426,7 +426,7 @@ pub fn item_info<R: ReadAt>(
         .filter_map(|s| s.precursor.filter(|p| *p != 0.0))
         .map(|p| round(p, 1))
         .collect();
-    precs.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
     let nprof = sc.iter().filter(|s| s.profile).count();
     let mode = if !sc.is_empty() && nprof == sc.len() {

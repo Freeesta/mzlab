@@ -18,7 +18,7 @@ fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) ->
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(v, f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
@@ -103,10 +103,10 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     filters.sort();
     filters.dedup();
     let mut precs: Vec<f64> = ms2.iter().filter_map(|s| s.precursor.filter(|p| *p != 0.0)).map(|p| round(p, 2)).collect();
-    precs.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
     let mut ces: Vec<f64> = ms2.iter().filter_map(|s| s.collision_energy).collect();
-    ces.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut ces, f64::total_cmp);
     ces.dedup();
     let mut o = Out::default();
     o.raw("{\"file\":").str(file).raw(",\"kind\":").str(kind).raw(",\"instrument\":").str(&md.instrument).raw(",\"serial\":").str(&md.serial);

@@ -80,7 +80,7 @@
   "crates/mzlab-feat/src/kinetic/resample.rs::clippy::should_implement_trait": 1,
   "crates/mzlab-feat/src/ms2spec.rs::clippy::type_complexity": 1,
   "crates/mzlab-feat/src/params_tests.rs::clippy::approx_constant": 1,
-  "crates/mzlab-feat/src/sortc.rs::clippy::unnecessary_sort_by": 2,
+  "crates/mzlab-core/src/sortc.rs::clippy::unnecessary_sort_by": 2,
   "crates/mzlab-feat/src/store.rs::clippy::too_many_arguments": 1,
   "crates/mzlab-feat/src/tp/cancelli.rs::clippy::needless_range_loop": 1,
   "crates/mzlab-feat/tests/evid_graph.rs::clippy::no_effect_replace": 1,

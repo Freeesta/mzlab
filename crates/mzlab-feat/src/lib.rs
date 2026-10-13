@@ -42,7 +42,7 @@ pub mod rtmap;
 pub mod samples;
 pub mod series;
 pub mod slabs;
-pub mod sortc;
+pub use mzlab_core::sortc;
 pub mod store;
 mod store_read;
 pub mod suspects;

@@ -5,7 +5,9 @@ pub(crate) fn median(v: &[f64]) -> f64 {
         return 0.0;
     }
     let mut s = v.to_vec();
-    s.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    crate::sortc::by(&mut s, |a, b| {
+        a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+    });
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]

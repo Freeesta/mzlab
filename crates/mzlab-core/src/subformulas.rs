@@ -36,7 +36,7 @@ pub fn submasses(formula: &str, z: i32, min_mz: f64) -> Result<Vec<f64>> {
         .map(|&m| (m - z as f64 * ELECTRON) / (z.abs() as f64))
         .filter(|&v| v >= min_mz)
         .collect();
-    mz.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut mz, f64::total_cmp);
     Ok(mz)
 }
 

@@ -130,7 +130,7 @@ impl<'a, 'b> GraphStream<'a, 'b> {
             body += o.0.len();
         }
         let mut order: Vec<u32> = (0..n as u32).collect();
-        order.sort_by(|&a, &b| graph_order(&keys[a as usize], &keys[b as usize]));
+        crate::sortc::by(&mut order, |&a, &b| graph_order(&keys[a as usize], &keys[b as usize]));
         let commas = n.saturating_sub(1);
         GraphStream {
             inp,

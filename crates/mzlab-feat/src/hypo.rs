@@ -132,7 +132,12 @@ pub(crate) fn to_formula(c: &Counts) -> Option<Formula> {
 }
 
 pub(crate) fn counts_of(f: &Formula) -> Counts {
-    f.iter().map(|(e, n)| (e.clone(), *n as i64)).collect()
+    // inserted one by one: `collect` into a BTreeMap brings in a sort of its own
+    let mut m = Counts::new();
+    for (e, n) in f {
+        m.insert(e.clone(), *n as i64);
+    }
+    m
 }
 
 /// The adduct of the polarity and the m/z of a neutral mass.
@@ -187,7 +192,7 @@ impl Registry {
 /// Merges the hypotheses that name the same ion (same formula and adduct): sources are united, the other labels become alternatives.
 fn merge(mut raw: Vec<Hypothesis>, nominal: bool) -> Vec<Hypothesis> {
     let key = |h: &Hypothesis| if nominal { libm::round(h.mz) } else { h.mz };
-    raw.sort_by(|a, b| {
+    crate::sortc::any_by(&mut raw, |a, b| {
         key(a)
             .total_cmp(&key(b))
             .then_with(|| a.adduct.cmp(b.adduct))
@@ -221,7 +226,7 @@ fn merge(mut raw: Vec<Hypothesis>, nominal: bool) -> Vec<Hypothesis> {
     }
     for (i, h) in out.iter_mut().enumerate() {
         h.id = i as u32;
-        h.alternatives.sort();
+        crate::sortc::any_by(&mut h.alternatives, |a, b| a.cmp(b));
     }
     out
 }

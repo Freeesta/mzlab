@@ -106,7 +106,7 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut s, f64::total_cmp);
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]
@@ -141,7 +141,7 @@ fn flatten(y: &[f64], width: usize) -> Vec<f64> {
 
 fn tops(v: &[f64], k: usize) -> Vec<usize> {
     let mut idx: Vec<usize> = (1..v.len().saturating_sub(1)).filter(|&j| v[j] > v[j - 1] && v[j] >= v[j + 1] && v[j] > 2.0).collect();
-    idx.sort_by(|a, b| v[*b].total_cmp(&v[*a]));
+    crate::sortc::by(&mut idx, |a, b| v[*b].total_cmp(&v[*a]));
     idx.truncate(k);
     idx
 }

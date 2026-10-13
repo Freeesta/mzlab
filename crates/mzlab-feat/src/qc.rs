@@ -56,7 +56,7 @@ fn cv(v: &[f64]) -> f64 {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut v, f64::total_cmp);
     match v.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => v[n / 2],
