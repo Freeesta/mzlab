@@ -22,8 +22,6 @@ window.toast = function(msg) {
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
-const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, tab: "full" };
-const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4, tog: false };      // merge = join the centroids of the same nominal mass (centroid files only)
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
@@ -341,15 +339,15 @@ async function bootSession0() {
   if (E.panels.length && oldNames.length) {                // caricamento successivo: i pannelli restano
     E.panels.forEach(p => { if (p.k != null) p.k = idx(oldNames[p.k]); if (p.ref !== "" && p.ref != null) p.ref = idx(oldNames[+p.ref]); });
     if (S.ref.k !== "auto") S.ref.k = idx(oldNames[S.ref.k]);
-    E.cur = Math.min(E.cur, E.files.length - 1);
+    STATO.file(Math.min(E.cur, E.files.length - 1), "reload");
     renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     return;
   }
   renderFileList();
-  E.panels = []; Q("#dpanels").innerHTML = "";
+  STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = "";
   await nbLoad();
-  if (!restoreUi()) E.tab = pickTab(E.tab);
+  if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
   ensureLayout(); toolbar(); uiSave();
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
@@ -382,7 +380,7 @@ function restoreUi() {
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
   u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
-  E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; E.tab = pickTab(u.tab);
+  STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); E.browse = !!u.browse; STATO.scheda(pickTab(u.tab), "notebook");
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
   const made = u.panels.map(sp => addPanel(sp.type, {
@@ -392,7 +390,7 @@ function restoreUi() {
   u.panels.forEach((sp, i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });       // DDA trio: Full Scan / MS2 side by side (dda.js)
   if (window.DDA) DDA.restored(made);
   made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });     // one live spectrum per chromatogram, even in an old notebook
-  if (E.files[E.cur]?.kind !== E.tab) E.cur = (tabFiles()[0] || { k: 0 }).k;
+  if (E.files[E.cur]?.kind !== E.tab) STATO.file((tabFiles()[0] || { k: 0 }).k, "notebook");
   renderFileList(); return true;
 }
 
@@ -433,7 +431,7 @@ function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFil
 const modeIcon = () => "";       // the little icons of the three experiments are gone from the tabs and the file list (7 Oct 2026, Federico): they stay only in Teoria, where they are big enough to read
 // go to the tab of a file that is not usable in the current one, with a one-line message
 function goToFileTab(f) {
-  setTab(f.kind); E.cur = f.k; renderFileList(); renderNav(); redrawAll(); uiSave();
+  setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave();
   const n = Q("#fnote"); if (n) { n.textContent = I18N.t("files.goTab", { label: f.label, kind: kindOf(f), tab: TABS.find(x => x[0] === f.kind)[1] }); clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
 }
 function reorderFiles(fromK, toK, isBefore) {
@@ -452,7 +450,7 @@ function reorderFiles(fromK, toK, isBefore) {
     f.k = newIdx;
   });
 
-  if (oldKToNewK.has(E.cur)) E.cur = oldKToNewK.get(E.cur);
+  if (oldKToNewK.has(E.cur)) STATO.file(oldKToNewK.get(E.cur), "order");
   if (S.ref.k !== "auto") S.ref.k = oldKToNewK.has(S.ref.k) ? oldKToNewK.get(S.ref.k) : "auto";
   if (E.curBy) {
     for (const t in E.curBy) {
@@ -489,9 +487,9 @@ function bindFileRows() {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
       const f0 = E.files[+nm.dataset.k];
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
-        sibsOf(f0).forEach(f => { f.vis = true; }); E.cur = f0.k; renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
-      E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
+      STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
     const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
@@ -601,6 +599,11 @@ function bindFileReorder() {
   });
 }
 
+// «Profilo» / «Un punto per picco» on the card of a low-resolution full-scan file (a centroid file is one whose peaks are single points)
+function modeTag(f) {
+  if ((f.kind !== "full" && f.kind !== "ms2") || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
+  return `<small class="muted">${I18N.t(f.spectrum_mode === "profile" ? "files.mode.profile" : "files.mode.centroid")}</small>`;
+}
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
@@ -616,7 +619,7 @@ function renderFileList() {
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
-      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${CONV.has(fileBase(f.file)) ? `<button type="button" class="sec sm" data-dl="${EH(fileBase(f.file))}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button>` : ""}${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${modeTag(f)}${CONV.has(fileBase(f.file)) ? `<button type="button" class="sec sm" data-dl="${EH(fileBase(f.file))}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button>` : ""}${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
         prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="${I18N.t("files.addPair.title")}"><div class="fi"><b class="pn" data-pg="${pr}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
         '</div>' : ""}
@@ -714,7 +717,7 @@ async function removeFile(f) {
   if (!await yesno(I18N.t("files.remove.confirm", { label: EH(f.label) }))) return;
   f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
-  if (E.cur === f.k) E.cur = (tabFiles()[0] || { k: 0 }).k;
+  if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
   renderTabs(); renderFileList(); renderNav(); toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
 }
 function fileCtx(e, f) {
@@ -755,7 +758,7 @@ function renderNav() {
   s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";   // as wide as the longest name (CSS sets the minimum and the maximum)
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");   // with a single file nothing here has a meaning
   // a single file: "Solo il selezionato" is on and "Tutti sovrapposti" is off; with two or more files the choice the student had made comes back
-  if (one && tf.length) { if (!E._forced) { E._forced = true; E._prev = !!E.browse; } E.browse = true; E.cur = tf[0].k; }
+  if (one && tf.length) { if (!E._forced) { E._forced = true; E._prev = !!E.browse; } E.browse = true; STATO.file(tf[0].k, "browse"); }
   else if (E._forced) { E._forced = false; E.browse = !!E._prev; }
   Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
   const nowhy = I18N.t("nav.onlySelected");
@@ -766,11 +769,11 @@ function renderNav() {
 }
 function goFile(d) {
   const tf = tabFiles(); if (tf.length < 2 || !E.browse) return;
-  E.cur = tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k; renderNav();
+  STATO.file(tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k, "browse"); renderNav();
   renderFileList(); redrawAll(); uiSave();
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
-Q("#fsel").onchange = e => { E.cur = +e.target.value; renderFileList(); renderNav(); if (E.browse) redrawAll(); uiSave(); };
+Q("#fsel").onchange = e => { STATO.file(+e.target.value, "file"); renderFileList(); renderNav(); if (E.browse) redrawAll(); uiSave(); };
 Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
 document.addEventListener("mousedown", e => { if (E.active && e.target.closest("#dpanels") && !e.target.closest(".pnl")) setActive(null); });
