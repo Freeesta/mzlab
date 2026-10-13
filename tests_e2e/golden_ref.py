@@ -1,5 +1,5 @@
 """The reference answers of the e2e tests, from committed golden data (tests/golden/e2e/<test>.json.gz): same interface as `pyref.PyRef`, no Python engine in the process.
-Every call is keyed by the chain of the calls made before it on the same object (method, URL, body, SHA-256 of the uploaded bytes), so the files may live anywhere.
+Every call is keyed by the chain of the calls made before it on the same object (method, URL, body, name and size of the uploaded file: the synthetic files can differ in the last bits of a float between CPUs, so a byte hash would not match across machines), so the files may live anywhere.
 To rewrite the data (a deliberate change of the reference): `MZLAB_REGEN_GOLDEN=1 python3 tools/verifica.py --solo <test>`; that is the only case that loads pyref.py."""
 import atexit
 import base64
@@ -66,7 +66,7 @@ class PyRef:
 
     def upload(self, path):
         p = Path(path)
-        return self._step("upload", lambda: self.real.upload(path), p.name, hashlib.sha256(p.read_bytes()).hexdigest())
+        return self._step("upload", lambda: self.real.upload(path), p.name, p.stat().st_size)
 
     def open(self, files, samples=None):
         for f in files:
