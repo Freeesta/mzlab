@@ -109,6 +109,9 @@ try:
             assert run["n_candidates"] >= 1, run["n_candidates"]
             r = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, 'no change here').then(() => 'ran', e => String(e.message || e))", [got["files"], PARENT])
             assert "invalid line" in r, r
+            rows = pg.evaluate("() => window.TPCALL('transf_rows', 'my rule;+O;a row\\nbad line')")
+            rows = json.loads(rows) if isinstance(rows, str) else rows
+            assert len(rows["rows"]) >= 1, rows
         step("a list of transformations of the user runs; a bad row says what is wrong", transformations)
         def lr_series():
             pg.set_input_files("#tp-in", [f["path"] for f in lrs])

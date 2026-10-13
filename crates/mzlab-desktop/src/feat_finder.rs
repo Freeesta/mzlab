@@ -160,6 +160,7 @@ impl State {
                 }))
             }
             "finder/plan" => self.finder_plan(p),
+            "finder/transf_rows" => text(legacy::transf::describe(s("text"))),
             "finder/transformations" => {
                 let merged =
                     legacy::transf::merge(s("rules").as_bytes(), s("text")).map_err(user)?;

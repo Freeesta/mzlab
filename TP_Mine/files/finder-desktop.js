@@ -37,6 +37,12 @@ async function upload(name, blob) {
   return id;
 }
 
+/** the rules of the hypotheses: regole_tp.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
+async function rulesOf(base, list) {
+  const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text(), tr = (list || "").trim();
+  return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
+}
+
 /** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held */
 export function createDesktop(base, say, held) {
   /** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {string[]} names */
@@ -65,7 +71,7 @@ export function createDesktop(base, say, held) {
     lap("feature", t); t = performance.now();
     say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
-    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(a[3]), structure: plan.structure, parent: plan.formula, recipe: "" }));
+    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: plan.structure, parent: plan.formula, recipe: "" }));
     await rpc("feat/evidence", { minutes: plan.minutes, recipe: "" }); lap("proofs", t); t = performance.now();
     say("Ranking the candidates...");
     const out = await rpc("finder/dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}" });
@@ -84,22 +90,17 @@ export function createDesktop(base, say, held) {
     lap("feature", t); t = performance.now();
     say("Aligning the peaks of the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Generating candidates...");
-    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(a[3]), structure: "", parent: plan.formula, recipe: "" })); lap("candidates", t); t = performance.now();
+    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: "", parent: plan.formula, recipe: "" })); lap("candidates", t); t = performance.now();
     say("Computing the tables...");
     const out = await rpc("finder/lr_dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}" });
     lap("dig", t); lap("total", t0);
     return JSON.stringify({ ...JSON.parse(out), timing });
   }
 
-  /** the rules of the hypotheses: regole_tp.json with the rows of the user's list of transformations @param {string | undefined} list */
-  async function rulesOf(list) {
-    const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text(), tr = (list || "").trim();
-    return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
-  }
-
   return {
     /** one call of the page @param {string} fn @param {string[]} a */
     async call(fn, a) {
+      if (fn === "transf_rows") return rpc("finder/transf_rows", { text: a[0] });
       if (fn === "formula_info") return rpc("finder/formula_info", { text: a[0], adduct: a[1] });
       if (STATELESS.has(fn)) return rpc("finder/" + fn, { payload: a[0] });
       if (OF_DIG.has(fn)) return rpc("finder/" + fn, { id: +(a[0] || 0) });
