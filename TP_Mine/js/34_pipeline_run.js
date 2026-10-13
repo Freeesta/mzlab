@@ -10,6 +10,7 @@
 
   const html = () => `<details open><summary>Run on all the files</summary>
     <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="e.g. C9H11NO2" autocomplete="off"><span class="why">only with the gate open: hypotheses of transformation</span></label>
+      <label>Parent SMILES<input id="pipe-psmi" type="text" placeholder="optional" autocomplete="off" spellcheck="false"><span class="why">the structure: fragments and groups of the rules</span></label>
       <label>Parent m/z<input id="pipe-pmz" type="number" step="any"></label><label>Parent RT (min)<input id="pipe-prt" type="number" step="any"></label>
       <label>Treatment time of each file (min, empty = control)<input id="pipe-times" type="text" autocomplete="off"></label></div>
     <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
@@ -24,12 +25,28 @@
   }
   const msg = (t, err) => { const e = $("#pipe-run-msg"); if (e) { e.textContent = t || ""; e.className = err ? "err" : "mut"; } };
 
+  /** grafo/1 JSON of a SMILES (the .wasm «grafo» of wasm-feat/manifest.json, verified against its SHA-256); "" without a SMILES */
+  let grafo = null;
+  async function structureOf(smiles) {
+    if (!smiles) return "";
+    if (!grafo) {
+      const u = p => new URL("wasm-feat/" + p, window.QTOOLS.ctx.base).href, g = (await (await fetch(u("manifest.json"))).json()).grafo;
+      if (!g) throw Object.assign(new Error("error.featFailed"), { key: "error.featFailed" });
+      const bytes = await (await fetch(u(g.wasm))).arrayBuffer(), hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+      if (g.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== g.sha256) throw Object.assign(new Error("error.featWasmHash"), { key: "error.featWasmHash" });
+      const m = await import(u(g.js)); await m.default({ module_or_path: bytes }); grafo = m;
+    }
+    try { return grafo.analyse(smiles); }
+    catch (e) { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } throw j && j.error_key ? Object.assign(new Error(j.error_key), { key: j.error_key, params: j.params }) : e; }
+  }
   /** the parent of the proofs (null without the gate, the formula or the rules) */
   async function parentOf(files) {
     const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
     if (!st.gated || !f || !rules) return null;
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; }, t = $("#pipe-times").value.split(",").map(s => s.trim());
-    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => (t[i] === "" || t[i] == null ? NaN : +t[i])) };
+    const smiles = $("#pipe-psmi").value.trim();
+    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => (t[i] === "" || t[i] == null ? NaN : +t[i])),
+      smiles, structure: await structureOf(smiles) };
   }
   async function run(op) {
     if (st.busy) return;
@@ -51,7 +68,7 @@
   const levelsText = async () => { const s = document.querySelector('script[src*="livelli-1.js"]'); try { return s ? await (await fetch(s.src)).text() : null; } catch (_) { return null; } };
   async function recordRun(recipe, parent, op) {
     const rec = await window.PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
-      parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes } : null });
+      parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = window.PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
     if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); }
     st.last = rec; armAgain();
@@ -61,7 +78,7 @@
   function again() {
     const op = lastOp(); if (!op) return;
     st.ctx.apply(op.parametri);
-    const g = op.genitore; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : "";
+    const g = op.genitore; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : ""; $("#pipe-psmi").value = g && g.smiles ? g.smiles : "";
     $("#pipe-times").value = g ? g.minuti.map(m => (m == null ? "" : m)).join(",") : $("#pipe-times").value; run(op);
   }
 

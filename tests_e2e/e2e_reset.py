@@ -16,7 +16,7 @@ SEED = """async () => {
   for (const n of ['mzlab', 'invented-by-another-part', 'librerie']) { const d = await root.getDirectoryHandle(n, { create: true }); const f = await d.getFileHandle('x.bin', { create: true }); const w = await f.createWritable(); await w.write(new Uint8Array([1, 2, 3])); await w.close(); }
   for (const n of ['mzlab-libs', 'mzlab-libdir', 'invented-db']) await new Promise(res => { const q = indexedDB.open(n, 1); q.onupgradeneeded = () => q.result.createObjectStore('s'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = res; });
   for (const n of ['qqq-big-x', 'qqq-app-x', 'other-cache']) await (await caches.open(n)).put('/a', new Response('1'));
-  localStorage.setItem('qqq.lang', 'en'); localStorage.setItem('qqq.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
+  localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('qqq.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
 }"""
 STATE = """async () => ({
   opfs: await (async () => { const out = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) out.push(n); return out.sort(); })(),
@@ -51,7 +51,7 @@ try:
             assert "mzlab" not in s["opfs"] and "invented-by-another-part" not in s["opfs"] and "librerie" in s["opfs"], s["opfs"]
             assert "invented-db" not in s["idb"] and "mzlab-libs" in s["idb"] and "mzlab-libdir" in s["idb"], s["idb"]
             assert "qqq-big-x" not in s["caches"] and "other-cache" in s["caches"], s["caches"]
-            assert "qqq.lang" in s["ls"] and "qqq.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
+            assert "mzlab.lang" in s["ls"] and "qqq.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
         def ready_start(q):
             q.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000); q.wait_for_timeout(500)
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
@@ -65,7 +65,7 @@ try:
             assert s["opfs"] == [], s["opfs"]
             assert set(s["idb"]) <= {"qqq_lab"}, s["idb"]
             assert s["caches"] == [] or all(c.startswith("qqq-app") for c in s["caches"]) and "other-cache" not in s["caches"], s["caches"]
-            assert "qqq.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "qqq.mappa" not in s["ls"], s["ls"]
+            assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "qqq.mappa" not in s["ls"], s["ls"]
         step("Full reset from the palette: question, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
@@ -76,7 +76,7 @@ try:
         step("gear: no storage section, one «Full reset…» button (asks, one line)", gear)
         def url_all():
             load_files(); pg.goto(base + "?reset=1"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
-            s = pg.evaluate(STATE); assert s["files"] == 0 and s["opfs"] == [] and "qqq.lang" not in s["ls"], s
+            s = pg.evaluate(STATE); assert s["files"] == 0 and s["opfs"] == [] and "mzlab.lang" not in s["ls"], s
         step("?reset=1 is the full reset at start", url_all)
         def cancel():
             load_files(); pg.keyboard.press("Control+k"); pg.keyboard.type("reset"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)

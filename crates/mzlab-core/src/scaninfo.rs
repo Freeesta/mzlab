@@ -1,9 +1,11 @@
-//! `/api/scaninfo`: every name / value pair of the header of one scan as the mzML has it, plus the fields of the scan table
+//! `/api/scaninfo`: every name / value pair of the header of one scan as the source has it (`sorgente::Scansioni`), plus the fields of the scan table
 //! (`Item.scan_header` in `mzlab/explore.py`). Only the header up to `<binaryDataArrayList` is read from the mzML, never the arrays.
 
 use crate::error::{Error, Result};
 use crate::idxread::{ReadAt, Scan};
 use crate::json::{round, Out};
+use crate::lettori::Campo;
+use crate::sorgente::Scansioni;
 
 const MARK: &[u8] = b"<binaryDataArrayList";
 
@@ -57,8 +59,8 @@ fn attrs(body: &str) -> Vec<(String, String)> {
     out
 }
 
-/// `<(cvParam|userParam)\b([^>]*?)/?>`: the (name, value, unit) of every parameter that has a name.
-fn pairs(head: &str) -> Vec<(String, String, String)> {
+/// `<(cvParam|userParam)\b([^>]*?)/?>`: the name, value, unit and accession of every parameter that has a name.
+pub(crate) fn campi(head: &str) -> Vec<Campo> {
     let mut out = vec![];
     let mut rest = head;
     while let Some(p) = rest.find('<') {
@@ -74,17 +76,22 @@ fn pairs(head: &str) -> Vec<(String, String, String)> {
         let a = attrs(body);
         let get = |k: &str| a.iter().rev().find(|(n, _)| n == k).map(|(_, v)| v.clone());
         if let Some(name) = get("name").filter(|n| !n.is_empty()) {
-            out.push((name, get("value").unwrap_or_default(), get("unitName").unwrap_or_default()));
+            out.push(Campo {
+                nome: name,
+                valore: get("value").unwrap_or_default(),
+                unita: get("unitName"),
+                cv: get("accession"),
+            });
         }
         rest = &tail[end + 1..];
     }
     out
 }
 
-/// The JSON of `/api/scaninfo` for scan `sid` of `scans` (the rows of the index); the header comes from the mzML.
-pub fn scaninfo<M: ReadAt>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<String> {
+/// The JSON of `/api/scaninfo` for scan `sid` of `scans` (the rows of the index); the header fields come from the source (the mzML by offset).
+pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<String> {
     let sc = scans.get(sid).ok_or_else(|| Error::new("err.scan.outside"))?;
-    let head = header(mzml, sc.start, sc.end)?;
+    let fields = mzml.intestazione(sc)?;
     let mut o = Out::default();
     o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(sc.number(sid)).raw(",\"filter\":").str(&sc.filter);
     o.raw(",\"rt\":").num(round(sc.rt, 4)).raw(",\"level\":").int(sc.level as i64);
@@ -115,8 +122,9 @@ pub fn scaninfo<M: ReadAt>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<S
         None => o.raw("null"),
     };
     o.raw(",\"tic\":").num(sc.tic).raw(",\"key\":").str(&sc.key()).raw(",\"pairs\":[");
-    for (i, (n, v, u)) in pairs(&head).iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(n).raw(",\"value\":").str(v).raw(",\"unit\":").str(u).raw("}");
+    for (i, f) in fields.iter().enumerate() {
+        let unit = f.unita.as_deref().unwrap_or("");
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(&f.nome).raw(",\"value\":").str(&f.valore).raw(",\"unit\":").str(unit).raw("}");
     }
     o.raw("]}");
     Ok(o.0)
@@ -129,8 +137,8 @@ mod tests {
     #[test]
     fn reads_pairs() {
         let h = r#"<spectrum><cvParam cvRef="MS" accession="MS:1" name="ms level" value="1"/><userParam name="x" value="a" unitName="s" /><cvParamX name="no"/><cvParam name=""/></spectrum>"#;
-        let p = pairs(h);
-        assert_eq!(p, vec![("ms level".into(), "1".into(), "".into()), ("x".into(), "a".into(), "s".into())]);
+        let p: Vec<_> = campi(h).into_iter().map(|c| (c.nome, c.valore, c.unita, c.cv)).collect();
+        assert_eq!(p, vec![("ms level".into(), "1".into(), None, Some("MS:1".into())), ("x".into(), "a".into(), Some("s".into()), None)]);
     }
 
     #[test]

@@ -1,5 +1,5 @@
-//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify`, `formula_info`, `identity_graph` and
-//! `polarity_pairs` with the same JSON, and the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`,
+//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify`, `formula_info`, `identity_graph`,
+//! `polarity_pairs` and `origin_evidence` with the same JSON, and the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`,
 //! `inclusion_csv`, `frag_tree`, `frag_tree_compare`). Built only into the `.wasm`
 //! of the feature `finder`, loaded by the worker of mzFinder when the page asks for one of them. Errors are JavaScript `Error`s with the English text
 //! that the Python raised.
@@ -91,6 +91,12 @@ pub fn finder_identity_graph(payload: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn finder_polarity_pairs(payload: &str) -> Result<String, JsValue> {
     legacy::polarity_pairs(payload).map_err(user)
+}
+
+/// `api.origin_evidence(payload)`: the evidence of the report «where does this ion come from?».
+#[wasm_bindgen]
+pub fn finder_origin_evidence(payload: &str) -> Result<String, JsValue> {
+    legacy::edge::origin_evidence(payload).map_err(user)
 }
 
 /// `api.run` on high-resolution files: `table` = the `.mzfeat` with the proofs of the LC files (in the order of the files of `files_json` that are

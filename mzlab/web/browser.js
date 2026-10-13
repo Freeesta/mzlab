@@ -31,7 +31,7 @@
   };
   const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
-  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
+  const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m && window.I18N) m.textContent = I18N.t(key, params); if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });
 
   const notice = key => {                                                    // a short message under the header (a polite live region)
@@ -56,7 +56,7 @@
     if (window.QQQ_PHONE) throw new Error("phone: engine not started");
     if (!modern) { fail("load.err.oldBrowser"); throw new Error("this browser is too old"); }
     const b = await rustReady;
-    if (!b || b.disabled) { const t = "the calculation engine is not available in this browser"; fail("load.err.engineStart", { text: t }); throw new Error(t); }
+    if (!b || b.disabled) { fail("load.err.engineMissing"); throw new Error("the calculation engine is not available in this browser"); }
     try {
       lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
       const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;       // the browser storage held by another tab: the loading screen says so
@@ -68,7 +68,7 @@
     }
     catch (e) {
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
-      if (e && e.key) fail(e.key, null, true); else fail("load.err.engineStart", { text: window.MZLAB_LR_ERR });
+      if (e && e.key) fail(e.key, null, true); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }   // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
       throw e;
     }
   };

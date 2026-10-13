@@ -71,7 +71,7 @@
     b.onclick = () => setView(t.id);
     const fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
-      if (show && !opened) { opened = true; try { t.open(sec, reg.ctx); } catch (e) { sec.textContent = "mzFinder failed: " + (e && e.message || e); } }
+      if (show && !opened) { opened = true; try { t.open(sec, reg.ctx); } catch (e) { sec.textContent = "Tabui failed: " + (e && e.message || e); } }
       else if (show && t.onShow) try { t.onShow(); } catch (_) { /* ignore */ }
     };
     document.addEventListener("tpview", fn);
@@ -89,7 +89,7 @@
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "mzFinder failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
   }
 
   // ---- loading (once per page): index, extra files, Python zip, then the scripts in order
@@ -105,7 +105,7 @@
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
-    try { await loaded; } catch (e) { loaded = null; console.error("mzFinder failed to load:", e); return; }
+    try { await loaded; } catch (e) { loaded = null; console.error("Tabui failed to load:", e); return; }
     if (!on) return;
     for (const t of tools) if (t.nav) addTab(t);
     render();

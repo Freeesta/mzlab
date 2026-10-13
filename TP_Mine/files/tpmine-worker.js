@@ -1,9 +1,9 @@
 // @ts-check
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
-// pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs and default_transformations always;
+// pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
 // classify when every file has its .mzidx in OPFS (mzlab/idx/); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
-// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, origin_evidence, ...) goes to Pyodide, and so does
+// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, isf_classify, transitions, ...) goes to Pyodide, and so does
 // every call when the site has no wasm-feat/ (a copy built without it).
 /** @type {any} */ let py = null;
 /** @type {any} */ let api = null;
@@ -16,7 +16,7 @@
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
-const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs"]);
+const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
 const OF_DIG = new Set(["detail", "inclusion_csv", "frag_tree", "frag_tree_compare"]);
 // chem.transformations_text() of the Python engine (tests/test_tpmine_worker.py keeps them equal)
 const DEFAULT_TR = `hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
