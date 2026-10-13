@@ -8,9 +8,7 @@ const LAYOUT = (() => {
   const ordine = (/** @type {{x?: number, y: number, id: number}} */ a, /** @type {{x?: number, y: number, id: number}} */ b) => a.y - b.y || (a.x || 0) - (b.x || 0) || a.id - b.id;
 
   /**
-   * @typedef {{ id: number, quota?: number | null, h: number, min?: number }} Voce
-   * @typedef {{ voci: Voce[], gapDopo?: number }} Riga
-   * @typedef {{ id: number, x: number, y: number, w: number, h: number }} Rett
+   * @typedef {{ id: number, quota?: number | null, h: number, min?: number }} Voce  @typedef {{ voci: Voce[], gapDopo?: number }} Riga  @typedef {{ id: number, x: number, y: number, w: number, h: number }} Rett
    */
   /** Widths (px) of the n items of a row: shares from `quota` (equal when missing), none below its minimum, summing to `avail`. */
   function larghezze(/** @type {Voce[]} */ voci, avail) {
@@ -78,10 +76,7 @@ const LAYOUT = (() => {
     return { pos: out, H: g.H, impilata: g.impilata };
   }
   /** A panel leaves its row (own row from now on, full width). */
-  function esci(/** @type {any} */ p, /** @type {any[]} */ list, W) {
-    const used = list.reduce((m, q) => Math.max(m, q.riga ?? -1), -1);
-    p.riga = used + 1; p.quota = null; p.x = 0; p.w = W;
-  }
+  const esci = (/** @type {any} */ p, /** @type {any[]} */ list, W) => { p.riga = list.reduce((m, q) => Math.max(m, q.riga ?? -1), -1) + 1; p.quota = null; p.x = 0; p.w = W; };
   /** The row has one height: the panels beside `p` take its height. */
   function altezza(/** @type {any} */ p, /** @type {any[]} */ list) { if (p.riga != null) list.forEach(q => { if (q !== p && q.riga === p.riga && q.tab === p.tab && q.full) q.h = p.h; }); }
   return { ordine, geometria, colloca, righeDi, inRiga, esci, altezza, MAX_ROW };
