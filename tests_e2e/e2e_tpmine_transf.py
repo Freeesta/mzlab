@@ -112,9 +112,10 @@ try:
             assert box["width"] >= 24 and box["height"] >= 24, box
             pg.uncheck('.tptr input[aria-label="Search hydroxylation"]')
             assert pg.input_value("#tp-tr").startswith("# hydroxylation;+O"), pg.input_value("#tp-tr")[:60]
-            assert pg.locator(".tptr tr.off").count() == 1
+            pg.wait_for_selector(".tptr tr.off"); assert pg.locator(".tptr tr.off").count() == 1
             pg.check('.tptr input[aria-label="Search hydroxylation"]')
             assert pg.input_value("#tp-tr") == base["text"], "on again: the text as it was"
+            pg.wait_for_function("!document.querySelector('.tptr tr.off')")
         step("the table reads the list, a box switches a line off and on", table_view)
 
         def table_add():
