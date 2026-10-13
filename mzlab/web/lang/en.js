@@ -288,6 +288,7 @@ I18N.add("en", {
   "pal.grp.panel": "Panel",
   "pal.grp.app": "Program",
   "pal.count": "{n, plural, one {# command} other {# commands}}",
+  "cmd.panel.lab": "Panel",
   "cmd.panel.hide": "Hide panels",
   "cmd.panel.show": "Show panels",
   "cmd.panel.name": "Side panel",
