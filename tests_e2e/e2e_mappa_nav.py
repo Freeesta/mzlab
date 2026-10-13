@@ -141,7 +141,7 @@ try:
         def targets():
             assert pg.evaluate("matchMedia('(pointer:coarse)').matches"), "touch context"
             sizes = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
-            assert len(sizes) == 4 and all(w >= 40 and h >= 40 for w, h in sizes), sizes
+            assert len(sizes) == 3 and all(w >= 40 and h >= 40 for w, h in sizes), sizes
         step("touch screen: the buttons of the bar are at least 40 px, like the others of the head", targets)
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)

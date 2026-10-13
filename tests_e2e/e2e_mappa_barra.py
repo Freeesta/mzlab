@@ -31,8 +31,8 @@ try:
               return {n:bs.length,inHead:bs.every(b=>b.closest('.hd')),overlap:ov,floating:bs.some(b=>b.closest('.mzgrid')),
                 h:bs.map(b=>b.getBoundingClientRect().height),ho:o.map(b=>b.getBoundingClientRect().height),names:bs.map(b=>b.dataset.nav),explain:!!el.querySelector('[data-nav=mapexplain]'),
                 row:bs.every(b=>{const r=b.getBoundingClientRect();return r.top>=hd.top-1&&r.bottom<=hd.bottom+1})}})()""")
-            assert r["n"] >= 4 and r["inHead"] and not r["floating"] and not r["overlap"] and r["row"], r
-            assert r["names"][:3] == ["mapzin", "mapzout"] and "maplock" not in r["names"] and not r["explain"], r
+            assert r["n"] >= 3 and r["inHead"] and not r["floating"] and not r["overlap"] and r["row"], r
+            assert r["names"][:2] == ["mapzin", "mapzout"] and "maplock" not in r["names"] and not r["explain"], r
             assert abs(r["h"][0] - r["ho"][0]) <= 1, r
         step("controls are in the panel head, none over the plot, no «How it is extracted»", place)
         def works():

@@ -45,6 +45,7 @@ try:
         def no_lock_btn():
             assert pg.locator(".pnl.map [data-nav=maplock]").count() == 0
         step("no «Lock the sight» button on the 2D map", no_lock_btn)
+        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(900); ready(pg)          # back to the page: the panel grows only outside full screen
         def selector():
             def sel(): return pg.locator(".pnl.map select[data-o=k]")
             assert sel().count() == 1 and sel().is_enabled()
