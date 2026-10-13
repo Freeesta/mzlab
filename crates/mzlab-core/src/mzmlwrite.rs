@@ -78,39 +78,7 @@ impl<W: Write> MzmlWriter<W> {
 
     /// As `spectrum`, with the SIM mark, the observed range, the scan window and userParams of `extra`.
     pub fn spectrum_with(&mut self, sp: &Spectrum, extra: &SpectrumExtra) -> Result<()> {
-        let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
-        let base = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)));
-        let mut s = format!("<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">", self.spectra, esc(&sp.id), sp.mz.len());
-        s += &cv("MS:1000511", "ms level", sp.level);
-        s += &if sp.level <= 1 { cv("MS:1000579", "MS1 spectrum", "") } else { cv("MS:1000580", "MSn spectrum", "") };
-        match sp.polarity {
-            1 => s += &cv("MS:1000130", "positive scan", ""),
-            -1 => s += &cv("MS:1000129", "negative scan", ""),
-            _ => {}
-        }
-        s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
-        if let Some(b) = base {
-            s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
-            s += &cv("MS:1000505", "base peak intensity", sp.intensity_f64(b));
-        }
-        s += &cv("MS:1000285", "total ion current", tic);
-        if extra.sim {
-            s += &cv("MS:1000582", "SIM spectrum", "");
-        }
-        if let (true, Some(&lo), Some(&hi)) = (extra.observed, sp.mz.first(), sp.mz.last()) {
-            s += &mz_cv("MS:1000528", "lowest observed m/z", lo);
-            s += &mz_cv("MS:1000527", "highest observed m/z", hi);
-        }
-        for (k, v) in &extra.params {
-            s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
-        }
-        if !sp.filter.is_empty() {
-            s += &cv("MS:1000512", "filter string", esc(&sp.filter));
-        }
-        s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, window_xml(extra.window));
-        if let Some(p) = sp.precursor {
-            s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
-        }
+        let mut s = spectrum_head(self.spectra, sp, extra);
         s += "<binaryDataArrayList count=\"2\">\n";
         self.array(&mut s, "mz", "mz", Data::F64(&sp.mz))?;
         match &sp.wide {
@@ -124,12 +92,8 @@ impl<W: Write> MzmlWriter<W> {
 
     /// TIC, BPC, SIC and SRM chromatograms; other kinds are not written.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
-        let kind = match c.kind {
-            ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
-            ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
-            ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
-            ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
-            _ => return Ok(()),
+        let Some(kind) = chromatogram_kind(c) else {
+            return Ok(());
         };
         let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{kind}", self.chroms, esc(&c.id), c.time.len());
         if let (Some(q1), Some(q3)) = (c.q1, c.q3) {
@@ -280,6 +244,55 @@ impl<W: Write> MzmlWriter<W> {
         }
         Ok(())
     }
+}
+
+/// The text of a spectrum up to its arrays (`<spectrum ...>` and every header element before `<binaryDataArrayList`): what `scantable` reads.
+pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) -> String {
+    let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
+    let base = (0..sp.mz.len()).max_by(|&a, &b| sp.intensity_f64(a).total_cmp(&sp.intensity_f64(b)));
+    let mut s = format!("<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">", index, esc(&sp.id), sp.mz.len());
+    s += &cv("MS:1000511", "ms level", sp.level);
+    s += &if sp.level <= 1 { cv("MS:1000579", "MS1 spectrum", "") } else { cv("MS:1000580", "MSn spectrum", "") };
+    match sp.polarity {
+        1 => s += &cv("MS:1000130", "positive scan", ""),
+        -1 => s += &cv("MS:1000129", "negative scan", ""),
+        _ => {}
+    }
+    s += &if sp.profile { cv("MS:1000128", "profile spectrum", "") } else { cv("MS:1000127", "centroid spectrum", "") };
+    if let Some(b) = base {
+        s += &mz_cv("MS:1000504", "base peak m/z", sp.mz[b]);
+        s += &cv("MS:1000505", "base peak intensity", sp.intensity_f64(b));
+    }
+    s += &cv("MS:1000285", "total ion current", tic);
+    if extra.sim {
+        s += &cv("MS:1000582", "SIM spectrum", "");
+    }
+    if let (true, Some(&lo), Some(&hi)) = (extra.observed, sp.mz.first(), sp.mz.last()) {
+        s += &mz_cv("MS:1000528", "lowest observed m/z", lo);
+        s += &mz_cv("MS:1000527", "highest observed m/z", hi);
+    }
+    for (k, v) in &extra.params {
+        s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
+    }
+    if !sp.filter.is_empty() {
+        s += &cv("MS:1000512", "filter string", esc(&sp.filter));
+    }
+    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, window_xml(extra.window));
+    if let Some(p) = sp.precursor {
+        s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
+    }
+    s
+}
+
+/// The kind element of a chromatogram the writer writes, `None` for the kinds it leaves out.
+pub(crate) fn chromatogram_kind(c: &Chromatogram) -> Option<String> {
+    Some(match c.kind {
+        ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
+        ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
+        ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
+        ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
+        _ => return None,
+    })
 }
 
 fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
