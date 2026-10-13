@@ -10,6 +10,7 @@
   },
   "include": [
     "globali.d.ts",
+    "modello.d.ts",
     "manuale.d.ts",
     "../../mzlab/web/reset.js",
     "../../mzlab/web/telefono.js",
