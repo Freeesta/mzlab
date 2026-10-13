@@ -386,7 +386,7 @@
           },
           "identita": {
             "type": "boolean",
-            "description": "true: identifica una persona, un computer, un seriale o un percorso (tolto dal documento anonimo)."
+            "description": "true: identifica una persona, un computer, un seriale o un percorso."
           }
         },
         "required": [

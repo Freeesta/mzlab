@@ -18,7 +18,6 @@ FAKE = """window.MZLAB_RUST_READY = Promise.resolve({ convertRaw: async (f, onp,
   const wait = () => new Promise((r, j) => { window.__go = r; if (signal) signal.addEventListener('abort', () => j(Object.assign(new Error('cancelled'), { cancelled: true })), { once: true }); });
   window.__log = (window.__log || []).concat([f.name]);
   window.__prof = (window.__prof || []).concat([!!(opts && opts.profile)]);
-  window.__anon = (window.__anon || []).concat([!!(opts && opts.anonymous)]);
   onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: null });      // the container is open (its tail was read: read = total) but no scan has been converted
   await wait();
   onp({ total: 100, read: 100, written: 0, scans: 0, scansTotal: 10 });
@@ -130,29 +129,6 @@ try:
             assert pg.evaluate("window.__prof") == [True]
             pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")
         step("Profilo / Centroide: centroids by default, the choice is remembered and reaches the converter", profile)
-        def anonymous():
-            assert pg.evaluate("document.getElementById('rawanonbox').hidden") is False
-            assert pg.evaluate("document.getElementById('rawanon').checked") is False      # off by default: the student's files stay whole
-            assert "Esporta senza dati personali" in pg.inner_text("#rawanonbox")
-            pg.evaluate("window.__anon=[]")
-            pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
-            assert pg.evaluate("window.__anon") == [False]
-            pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")
-            pg.wait_for_function("document.querySelectorAll('.convprog').length==0", timeout=10000)
-            pg.evaluate("document.getElementById('rawanon').click()")
-            assert pg.evaluate("localStorage.getItem('qqq.rawanon')") == "1"
-            pg.reload(); fake()
-            assert pg.evaluate("document.getElementById('rawanon').checked") is True      # remembered
-            pg.evaluate("window.__anon=[]")
-            pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
-            assert pg.evaluate("window.__anon") == [True]
-            pg.evaluate("document.querySelector('.convprog [data-r=cancel]').click()")
-            pg.evaluate("CONV.add('a.mzML', new Blob(['x']), true); CONV.add('b.mzML', new Blob(['x']), false)")
-            for n, key in (("a.mzML", "File salvato senza computer"), ("b.mzML", "riconvertilo")):
-                pg.evaluate("document.getElementById('up').querySelectorAll('.note').forEach(x => x.remove()); window.saveBlob = () => {}; CONV.download(%r)" % n)
-                pg.wait_for_function("document.querySelector('#up .note')")
-                assert key in pg.inner_text("#up .note"), pg.inner_text("#up .note")
-        step("Esporta senza dati personali: off by default, remembered, reaches the converter, a note at the download", anonymous)
 finally:
     r.close()
 for s in steps: print(s)

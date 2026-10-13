@@ -7,7 +7,7 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - `startTimeStamp` (il FILETIME sta negli audit tag; `metodo/1` lo dà come `origine.file_creato`) e SHA-1 del file: non scritti nell'mzML.
 - Pressione della pompa: il controller analogico (90 001 campioni `f64` prima del suo RunHeader, nome e unità nelle stringhe che lo seguono) esce come `pressure chromatogram` (MS:1003019) in pascal, tutti i campioni; altri canali analogici in un'altra unità non sono scritti (restano in `metodo/1.campi`, `Controller<N>`).
 - Status log (90 record binari, avviso `meta.nonDecodificato`), tune data, rumore e baseline per picco FT.
-- Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); `raw::Convert { anonymous }` li toglie (`rawfilter.rs`), insieme a utente, computer, seriale e percorsi del documento `metodo/1`.
+- Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); il documento `metodo/1` che porta li riporta con `operatore`, `strumento.serie` e i campi marcati `identita`.
 
 ## SCIEX `.wiff` / `.dam`
 - Decodifica mancante: PDA 3D del `.wiff` (flussi `DAD*`), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
