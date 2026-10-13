@@ -148,7 +148,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "disegno-barra.js", "disegno-frammenti.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-centroidi.js", "rust-opfs.js", "rust-metodo.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "disegno-barra.js", "disegno-font.js", "disegno-frammenti.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-raw.js", "rust-centroidi.js", "rust-opfs.js", "rust-metodo.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -200,12 +200,22 @@ def data_dir() -> tuple[Path, str]:
                  ROOT.parent / "esempio_conversione" / "mzml"):
         if cand and (Path(cand) / "B_FullMass-t0.mzML").exists():
             return Path(cand), "veri"
+    return sintetici(), "sintetici"
+
+
+def sintetici() -> Path:
+    """The synthetic look-alikes (tools/dati_sintetici.py), written once into .verifica/dati_sintetici/."""
     syn = OUT / "dati_sintetici"
     if not (syn / "B_FullMass-t0.mzML").exists():
         sys.path.insert(0, str(ROOT / "tools"))
         import dati_sintetici
         dati_sintetici.make(syn)
-    return syn, "sintetici"
+    return syn
+
+
+def con_golden(n: str) -> bool:
+    """An e2e that answers from committed golden data (tests_e2e/golden_ref.py): they exist only for the synthetic files, never for real lab data."""
+    return "golden_ref" in (E2E / f"{n}.py").read_text(encoding="utf-8")
 
 
 def hrms_dirs() -> list[Path]:
@@ -261,7 +271,7 @@ CORE_JS = ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js") 
 AREE = [
     ("mzlab/web/teoria/", {"e2e_teoria_sblocco", "e2e_teoria_impostazioni", "e2e_teoria_contesto", "e2e7", "e2e_pratica", "e2e_pratica_ei_set", "e2e_pratica_tp", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_tema_lampo", "e2e_accessibilita", "e2e_teoria_mobile", "e2e_indirizzi", "e2e_teoria_cerca", "e2e_teoria_strumenti", "e2e_teoria_nav", "e2e_teoria_barra", "e2e_teoria_transizione"}),
     ("mzlab/web/tavola-periodica.js", {"e2e28", "e2e6", "e2e_teoria_strumenti"}),
-    ("mzlab/web/disegno-barra.js", {"e2e_disegno_barra", "e2e_strumenti_ketcher", "e2e_ketcher_grandi"}), ("mzlab/web/disegno-frammenti.js", {"e2e_frammenti"}), ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
+    ("mzlab/web/disegno-font.js", {"e2e_strumenti_ketcher"}), ("mzlab/web/disegno-barra.js", {"e2e_disegno_barra", "e2e_strumenti_ketcher", "e2e_ketcher_grandi"}), ("mzlab/web/disegno-frammenti.js", {"e2e_frammenti"}), ("mzlab/web/draw.js", {"e2e_rifiniture", "e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_tocco_disegno", "e2e_lingua_disegno"}),
     ("tools/tema_testa.py", {"e2e_tema_lampo"}), ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/telefono-scheda.js", {"e2e_telefono", "e2e_indirizzi"}), ("mzlab/web/an-", {"e2e_rifiniture"}),
     ("tools/build_site.py", set()), ("tests_e2e/e2e_indirizzi.py", {"e2e_indirizzi"}), ("tests_e2e/e2e_teoria_mobile.py", {"e2e_teoria_mobile"}),
@@ -288,7 +298,7 @@ AREE = [
     ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/qaqc.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_tour"}), ("mzlab/web/features.js", {"e2e_qaqc", "e2e_qaqc_dormiente", "e2e_strumenti"}), ("mzlab/web/profilo.js", {"e2e_statistica"}), ("mzlab/web/tabella.js", {"e2e_statistica"}), ("mzlab/web/bianco.js", {"e2e_statistica"}), ("mzlab/web/riferimento.js", {"e2e_differenza_hr", "e2e_tour"}), ("tests_e2e/e2e_differenza_hr.py", {"e2e_differenza_hr"}), ("mzlab/web/pca.js", {"e2e_statistica"}), ("mzlab/statistica.py", {"e2e_statistica"}), ("tools/dati_sintetici.py", {"e2e_statistica"}), ("mzlab/web/stat.js", {"e2e_statistica", "e2e_strumenti", "e2e_tour"}), ("mzlab/web/campioni.js", {"e2e_statistica", "e2e_workflow"}), ("tests_e2e/e2e_statistica.py", {"e2e_statistica"}), ("mzlab/web/rapporto.js", {"e2e_qaqc", "e2e_workflow"}), ("mzlab/qaqc.py", {"e2e_qaqc"}),
-    ("mzlab/web/workflow.js", {"e2e_workflow"}), ("mzlab/web/gradiente.js", {"e2e_gradiente", "e2e_workflow"}), ("mzlab/web/tdati.js", {"e2e_tabelle_dati"}), ("mzlab/web/tdati-pannelli.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_tabelle_dati.py", {"e2e_tabelle_dati"}), ("mzlab/web/tdati.js", {"e2e_axe_grafici"}), ("mzlab/web/mappa.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_axe_grafici.py", {"e2e_axe_grafici"}), ("tests_e2e/e2e_a11y_dati.py", {"e2e_a11y_dati"}), ("mzlab/web/settings.js", {"e2e_a11y_dati"}), ("mzlab/web/paletta.js", {"e2e_a11y_dati"}), ("mzlab/analog.py", {"e2e_gradiente"}), ("tests_e2e/e2e_gradiente.py", {"e2e_gradiente"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/web/version.js", {"e2e_workflow"}),
+    ("mzlab/web/workflow.js", {"e2e_workflow", "e2e_errori"}), ("mzlab/web/errori.js", {"e2e_errori"}), ("tests_e2e/e2e_errori.py", {"e2e_errori"}), ("mzlab/web/gradiente.js", {"e2e_gradiente", "e2e_workflow"}), ("mzlab/web/tdati.js", {"e2e_tabelle_dati"}), ("mzlab/web/tdati-pannelli.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_tabelle_dati.py", {"e2e_tabelle_dati"}), ("mzlab/web/tdati.js", {"e2e_axe_grafici"}), ("mzlab/web/mappa.js", {"e2e_tabelle_dati"}), ("tests_e2e/e2e_axe_grafici.py", {"e2e_axe_grafici"}), ("tests_e2e/e2e_a11y_dati.py", {"e2e_a11y_dati"}), ("mzlab/web/settings.js", {"e2e_a11y_dati"}), ("mzlab/web/paletta.js", {"e2e_a11y_dati"}), ("mzlab/analog.py", {"e2e_gradiente"}), ("tests_e2e/e2e_gradiente.py", {"e2e_gradiente"}), ("mzlab/web/fair.js", {"e2e_workflow", "e2e_fair"}), ("tests_e2e/e2e_fair.py", {"e2e_fair"}), ("tests/test_fair.py", {"e2e_fair"}), ("mzlab/web/version.js", {"e2e_workflow"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
 
@@ -357,8 +367,9 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
             out_by[n] = (n, "SKIP", 0, [why])
         else:
             todo.append(n)
+    env_sint = dict(env, MZLAB_MZML=str(sintetici()), QQQ_MZML=str(sintetici())) if src == "veri" and any(con_golden(n) for n in names) else env
     def one(n):
-        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
+        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env_sint if con_golden(n) else env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)

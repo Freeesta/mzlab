@@ -112,7 +112,8 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "idxopen" => {
-                let r = self.open_index_file(s("name")).map_err(|_| Error::new("error.noIndex"))?;
+                let mut r = self.open_index_file(s("name")).map_err(|_| Error::new("error.noIndex"))?;
+                r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8);      // as `set_polarity` of the wasm: 0 = every section
                 let out = format!("{{\"scans\":{},\"hr1\":{}}}", r.idx.scans.len(), r.idx.hr1());
                 eng.idx.insert(u("slot"), r);
                 text(out)
