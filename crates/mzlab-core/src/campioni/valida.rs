@@ -53,8 +53,7 @@ fn series_checks(out: &mut Vec<Avviso>, cs: &[Campione], series: &str) {
         .filter(|c| c.role() == "sample" && c.time_min.is_some_and(|t| t > 0.0))
         .collect();
     let mut times: Vec<f64> = treated.iter().filter_map(|c| c.time_min).collect();
-    times.sort_by(f64::total_cmp);
-    times.dedup();
+    super::keep_first(&mut times);
     if times.len() == 1 {
         push(out, "onePoint", "warning", None, series);
     }
@@ -93,8 +92,7 @@ pub fn valida(cs: &[Campione]) -> Vec<Avviso> {
         .filter(|c| c.role() == "sample")
         .map(|c| c.series.as_str())
         .collect();
-    series.sort();
-    series.dedup();
+    super::keep_first(&mut series);
     if series.is_empty() {
         push(&mut out, "noTreated", "error", None, "");
         if !cs

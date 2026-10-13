@@ -213,13 +213,16 @@ fn apply(cs: &mut Vec<Campione>, o: &Old) -> Result<()> {
     Ok(())
 }
 
+fn list(a: Option<&Value>) -> &[Value] {
+    a.map(|x| x.arr()).unwrap_or(&[])
+}
+
 /// `campioni/2` from the old places, `{"session":[NB.session v1], "qaqc":{"roles":{file: role}}, "campioni1":{campioni/1}, "mzflow":{"files":[...]}}`
 /// (every part optional). The order of the files is the one of the session, then the `.mzflow`, then `campioni/1`; a field is taken from
 /// the session first, then the `.mzflow`, then `campioni/1`, and the QA/QC role wins (it kept the QC and dark roles the session saved as
 /// `sample`). The times of the session and of the `.mzflow` were written by the user (confirmed); those of `campioni/1` were proposed.
 pub fn da_legacy(bytes: &[u8]) -> Result<Vec<Campione>> {
     let doc = parse(bytes)?;
-    let list = |a: Option<&Value>| a.map(|x| x.arr().to_vec()).unwrap_or_default();
     let session = list(doc.get("session"));
     let flow = list(doc.get("mzflow").and_then(|m| m.get("files")));
     let c1 = list(doc.get("campioni1").and_then(|m| m.get("campioni")));

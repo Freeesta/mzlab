@@ -111,6 +111,18 @@ pub fn minutes_per(unit: &str) -> f64 {
     }
 }
 
+/// Removes the repeated values, keeping the first of each in its place (no sort: the size of the WASM).
+fn keep_first<T: PartialEq>(v: &mut Vec<T>) {
+    let mut i = 0;
+    while i < v.len() {
+        if v[..i].contains(&v[i]) {
+            v.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+}
+
 /// The replicates counted again: 1-based among the files with the same series, role, minutes and concentration.
 pub fn number_replicates(cs: &mut [Campione]) {
     for i in 0..cs.len() {

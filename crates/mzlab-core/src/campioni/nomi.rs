@@ -196,8 +196,7 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
         .flatten()
         .filter(|p| !p.is_empty())
         .collect();
-    distinct.sort();
-    distinct.dedup();
+    super::keep_first(&mut distinct);
     if distinct.len() <= 1 {
         return;
     }
