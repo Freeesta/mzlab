@@ -16,6 +16,7 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uip-tog"); pg.check("#uip-tog"); pg.wait_for_timeout(600)
             assert pg.evaluate(TABS_N) == 0, "tab buttons still visible"
             assert pg.evaluate("new Set(E.panels.filter(p=>p.el&&p.el.style.display!=='none').map(p=>p.tab)).size") >= 2, "panels of several types expected"
+            assert pg.evaluate("STATO.verifica()") == [], pg.evaluate("STATO.verifica()")
         step("on: no tab buttons, panels of several experiments on the page", on)
         def kept():
             pg.keyboard.press("Escape")
@@ -24,6 +25,7 @@ try:
         def off():
             pg.evaluate("setTogether(false)"); pg.wait_for_timeout(500)
             assert pg.evaluate(TABS_N) == 3, pg.evaluate(TABS_N)
+            assert pg.evaluate("STATO.verifica()") == [], pg.evaluate("STATO.verifica()")
         step("off: the tabs are back", off)
 finally:
     r.close(); r.report()

@@ -213,7 +213,7 @@ const WORKFLOW = (() => {
       if (p.tema) UIP.theme = p.tema;
       if (p.tavolozza) UIP.pal = p.tavolozza;
       if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
-      if (typeof p.mostra_tutti === "boolean") UIP.tog = p.mostra_tutti;
+      if (typeof p.mostra_tutti === "boolean") STATO.insieme(p.mostra_tutti, "workflow");
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
     }

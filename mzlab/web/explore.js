@@ -118,7 +118,6 @@ window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
 const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one sub-tab for each (Full Scan, MS2, MRM); panels and files belong to one
-const TABS = [["full", "Full Scan"], ["ms2", "MS2 (Product Ion)"], ["mrm", "MRM"]];
 const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
 // the panels of a tab; in the high-resolution bench (banco.js) the cells of every experiment are on the page together, so "the panels of the tab" is all of them
 // «Mostra tutti gli esperimenti insieme» (gear, off by default; low-resolution world): one block per experiment type on the same page. A panel still holds ONE experiment type.
@@ -432,7 +431,7 @@ const modeIcon = () => "";       // the little icons of the three experiments ar
 // go to the tab of a file that is not usable in the current one, with a one-line message
 function goToFileTab(f) {
   setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave();
-  const n = Q("#fnote"); if (n) { n.textContent = I18N.t("files.goTab", { label: f.label, kind: kindOf(f), tab: TABS.find(x => x[0] === f.kind)[1] }); clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
+  const n = Q("#fnote"); if (n) { n.textContent = I18N.t("files.goTab", { label: f.label, kind: kindOf(f), tab: ESP.etichetta(f.kind) }); clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
 }
 function reorderFiles(fromK, toK, isBefore) {
   if (fromK == null || toK == null || fromK === toK) return;
@@ -601,7 +600,7 @@ function bindFileReorder() {
 
 // «Profilo» / «Un punto per picco» on the card of a low-resolution full-scan file (a centroid file is one whose peaks are single points)
 function modeTag(f) {
-  if ((f.kind !== "full" && f.kind !== "ms2") || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
+  if (!(ESP.voce(f.kind) || {}).spettri || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
   return `<small class="muted">${I18N.t(f.spectrum_mode === "profile" ? "files.mode.profile" : "files.mode.centroid")}</small>`;
 }
 function renderFileList() {
@@ -629,7 +628,7 @@ function renderFileList() {
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
   const isExpOpen = t => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog());
-  const others = (allTabs() ? [] : TABS).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => {
+  const others = (allTabs() ? [] : ESP.coppie).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => {
     const open = isExpOpen(t);
     return `<div class="fgh sep" data-gt="${t}" style="cursor:pointer"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div><div class="grp-files" style="${open ? "" : "display:none"}">${tabFiles(t).map(ghost).join("")}</div>`;
   }).join("");
