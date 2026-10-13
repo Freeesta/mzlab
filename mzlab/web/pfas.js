@@ -21,7 +21,7 @@ let res = null;
 let selRow = /** @type {number|null} */ (null), curBox = /** @type {HTMLElement|null} */ (null), seq = 0;
 
 // ------------------------------------------------------------------ computation
-const ms2Files = () => E.files.filter((/** @type {any} */ f) => f.kind === "ms2" && !f.gone && HR.isHr(f, 2));
+const ms2Files = () => E.files.filter((/** @type {any} */ f) => f.kind === ESP.ids[1] && !f.gone && HR.isHr(f, 2));
 
 /** best MS2 scan (most fragments and losses) of the files that selected the ion near its retention time */
 async function ms2Evidence(/** @type {Row} */ r, pol, files) {
