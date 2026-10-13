@@ -4,6 +4,7 @@ use js_sys::{Array, Float64Array, Function, Uint8Array};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_core::lettori::{self, Campione, Campo, FileSet, Lettore, Limiti, Membro, VoceScansione};
+use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
 /// An error as the JSON the page reads: `{"error_key", "params"}`.
@@ -15,6 +16,29 @@ fn error_json(e: &mzlab_core::Error) -> JsValue {
     }
     o.raw("}}");
     JsValue::from_str(&o.0)
+}
+
+/// The output of the mzML: the writes are gathered in pieces of about 64 KB and each goes to the page as a `Uint8Array`.
+struct Pieces(Function, Vec<u8>);
+
+impl std::io::Write for &mut Pieces {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        self.1.extend_from_slice(b);
+        if self.1.len() >= 1 << 16 {
+            self.flush()?;
+        }
+        Ok(b.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        if !self.1.is_empty() {
+            let piece = Uint8Array::from(&self.1[..]);
+            self.1.clear();
+            self.0
+                .call1(&JsValue::NULL, &piece)
+                .map_err(|_| std::io::Error::other("sink"))?;
+        }
+        Ok(())
+    }
 }
 
 /// One member of the set, read by the page.
@@ -169,6 +193,18 @@ impl LettoreWasm {
             &self.inner.intestazione(c, k).map_err(|e| error_json(&e))?,
             campo_json,
         ))
+    }
+
+    /// Writes sample `c` as mzML: `sink(bytes)` gets the pieces in order, `progress(done, total)` counts the spectra.
+    pub fn mzml(&mut self, c: usize, sink: Function, progress: Function) -> Result<(), JsValue> {
+        let mut out = Pieces(sink, Vec::new());
+        let mut tick = |done: usize, all: usize| {
+            let _ = progress.call2(&JsValue::NULL, &done.into(), &all.into());
+        };
+        let mut w = lettori_mzml::scrivi(&mut *self.inner, c, &mut out, &mut tick)
+            .map_err(|e| error_json(&e))?;
+        std::io::Write::flush(&mut w)
+            .map_err(|_| JsValue::from_str("{\"error_key\":\"err.file.agilent\",\"params\":{}}"))
     }
 
     /// The `metodo/1` document of sample `c`.

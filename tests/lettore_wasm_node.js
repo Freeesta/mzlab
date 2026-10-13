@@ -10,4 +10,6 @@ const read = (i, o, l) => { const b = Buffer.alloc(l); fs.readSync(fds[i], b, 0,
 const l = LettoreWasm.open(names, Float64Array.from(sizes), read, process.argv[4] === "anon");
 const camp = JSON.parse(l.campioni()), idx = JSON.parse(l.indice(0));
 const [h, mz, it] = l.scansione(0, 2);
-console.log(JSON.stringify({ formato: l.formato(), campioni: camp, indice: idx, scan2: { h: JSON.parse(h), mz: Array.from(mz), it: Array.from(it) }, metodo: JSON.parse(l.metodo(0)) }));
+const pieces = [], ticks = []; l.mzml(0, b => pieces.push(Buffer.from(b)), (d, n) => ticks.push([d, n]));
+const mzml = Buffer.concat(pieces).toString("utf8");
+console.log(JSON.stringify({ mzml, ticks, formato: l.formato(), campioni: camp, indice: idx, scan2: { h: JSON.parse(h), mz: Array.from(mz), it: Array.from(it) }, metodo: JSON.parse(l.metodo(0)) }));

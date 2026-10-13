@@ -73,10 +73,21 @@
       + (cand ? `<label><input type="checkbox" id="pv-dis"> Discarded (<span id="pv-nd">${all.filter(r => r.discarded).length}</span>)</label>` : "")
       + `<button type="button" id="pv-unt">Send to the feature tables</button><span class="mut" id="pv-n"></span></div>`
       + (cand ? "" : `<div class="mut">Pipeline not validated: only traces and families are shown, no candidates.</div>`)
-      + `<div id="pv-list" class="pv-wrap"></div><div id="pv-det" class="pv-det" hidden></div>`;
+      + `<div id="pv-list" class="pv-wrap"></div><div id="pv-det" class="pv-det" hidden></div><div id="pipe-qc"></div><div id="pipe-tab"></div><div id="pipe-exp"></div>`;
     st.view = PV().mount($("#pv-list"), { gated: cand, onPick: detail });
     $("#pv-q").oninput = refilter; if (cand) $("#pv-dis").onchange = refilter;
-    $("#pv-unt").onclick = toUnt; refilter();
+    $("#pv-unt").onclick = toUnt; refilter(); tableSteps();
+  }
+  /** steps 5 (quality control) and 6 (table): the numbers come from the table .wasm (PIPEQC, PIPET) */
+  async function tableSteps() {
+    const gate = st.ctx.gate(), chart = st.ctx.chart, say = e => st.ctx.msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || ""));
+    try {
+      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], pol: st.ctx.values().polarity });
+      st.session = session; const g = { ...gate, table: gate.table === true };
+      /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
+      const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
+      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "mzfinder_" + session.sha.slice(0, 8) });
+    } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
   }
   function refilter() {
     const opt = { text: $("#pv-q").value, discarded: !!(st.cand && $("#pv-dis").checked) };
@@ -99,10 +110,10 @@
       + r.cells.map((c, j) => `<tr><td>${esc(st.names[j])}</td><td>${PV().STATE[c.state]} ${PV().STATE_NAME[c.state]}</td><td>${c.area > 0 ? Number(c.area).toExponential(2) : ""}</td></tr>`).join("") + `</table>`;
   }
   function detail(r) {
-    const box = $("#pv-det"); st.sel = r; box.hidden = false;
+    const box = $("#pv-det"); st.sel = r; box.hidden = false; const cand = st.cand && !r.plain;
     const best = r.cells.reduce((b, c, j) => (c.state <= 1 && c.area > (r.cells[b] ? r.cells[b].area : -1) ? j : b), 0);
-    box.innerHTML = `<h4>${st.cand ? "ID" + r.id + (r.formula ? " " + esc(r.formula) : "") : "Row " + r.id} · m/z ${r.mz.toFixed(4)} · RT ${r.rt.toFixed(2)} min</h4>`
-      + (st.cand ? `<p class="mut">Hypothesis with its proofs, not an identification. ${r.reasons.map(c => esc(PV().REASON[c] || c)).join("; ")}.</p>${proofsTable(r)}` : "") + cellsTable(r)
+    box.innerHTML = `<h4>${cand ? "ID" + r.id + (r.formula ? " " + esc(r.formula) : "") : "Row " + r.id} · m/z ${r.mz.toFixed(4)} · RT ${r.rt.toFixed(2)} min</h4>`
+      + (cand ? `<p class="mut">Hypothesis with its proofs, not an identification. ${r.reasons.map(c => esc(PV().REASON[c] || c)).join("; ")}.</p>${proofsTable(r)}` : "") + cellsTable(r)
       + `<div class="row"><label>File <select id="pv-file">${st.names.map((n, j) => `<option value="${j}"${j === best ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label></div><div class="charts" id="pv-ch"><div class="ch a"></div><div class="ch b"></div></div>`;
     $("#pv-file").onchange = () => traces(r); traces(r);
   }
@@ -140,5 +151,5 @@
     } catch (e) { b.innerHTML = `<span class="err">${esc(e.message || e)}</span>`; }
   }
 
-  window.PIPER = { mount, state: st, lineSvg, sticksSvg };
+  window.PIPER = { mount, state: st, lineSvg, sticksSvg, detail };
 })();

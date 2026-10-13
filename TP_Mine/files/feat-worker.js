@@ -14,7 +14,7 @@ const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof Wo
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 
-// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
+// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
 // the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
 function createCore(opts) {
@@ -149,6 +149,13 @@ export function createFeatPool(opts) {
     },
     ...previewOps(submit, call, opts),
     ...proofOps(submit, call, copy, opts),
+    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
+    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
+      });
+    },
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -284,6 +291,10 @@ const OPS = {
     const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
     mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0);
     return { bytes: out.bytes() };
+  },
+  async ms2file(m) {
+    const f = await openAll(m.paths), t = new Uint8Array(m.table);
+    try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {

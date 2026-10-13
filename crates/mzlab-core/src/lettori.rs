@@ -6,6 +6,7 @@
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::mzmlwrite::{Header, SpectrumExtra};
 
 /// Version of this contract; a `VoceLettore` states the one it was written for.
 pub const CONTRATTO: u16 = 1;
@@ -194,6 +195,14 @@ pub trait Lettore {
     fn metodo(&mut self, c: usize) -> Result<String>;
     /// Asks for an anonymous `metodo/1` (pseudonyms or nothing for people, computer, serial number and paths); a reader without them ignores it.
     fn imposta_anonimo(&mut self, _on: bool) {}
+    /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.
+    fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
+        Ok(None)
+    }
+    /// What the mzML says of a spectrum besides its points (SIM mark, scan window).
+    fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
+        SpectrumExtra::default()
+    }
 }
 
 /// A format in the registry.

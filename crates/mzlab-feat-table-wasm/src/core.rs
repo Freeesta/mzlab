@@ -56,6 +56,19 @@ pub fn report_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &s
     Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
 }
 
+/// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
+pub fn samples_json(files_json: &str) -> Result<String> {
+    let v = mzlab_core::json::parse(files_json.as_bytes())?;
+    let files: Vec<(String, String)> = v
+        .get("files")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .map(|f| (f.get("name").and_then(|x| x.str()).unwrap_or("").to_string(), f.get("sha256").and_then(|x| x.str()).unwrap_or("").to_string()))
+        .collect();
+    Ok(samples::to_json(&samples::propose(&files)))
+}
+
 /// The `qc/1` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
 pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
