@@ -192,6 +192,8 @@ pub trait Lettore {
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`), anonymous when the reader was asked for it.
     fn metodo(&mut self, c: usize) -> Result<String>;
+    /// Asks for an anonymous `metodo/1` (pseudonyms or nothing for people, computer, serial number and paths); a reader without them ignores it.
+    fn imposta_anonimo(&mut self, _on: bool) {}
 }
 
 /// A format in the registry.

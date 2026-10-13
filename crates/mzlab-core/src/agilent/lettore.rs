@@ -375,6 +375,10 @@ fn listed(l: &LettoreAgilent) -> Vec<VoceCromatogramma> {
 }
 
 impl Lettore for LettoreAgilent {
+    fn imposta_anonimo(&mut self, on: bool) {
+        self.d.anonymous = on;
+    }
+
     fn formato(&self) -> Formato {
         Formato::AgilentD
     }

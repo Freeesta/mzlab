@@ -193,6 +193,9 @@ fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str
 }
 
 impl Lettore for LettoreRaw {
+    fn imposta_anonimo(&mut self, on: bool) {
+        self.anonimo = on;
+    }
     fn formato(&self) -> Formato {
         Formato::ThermoRaw
     }
