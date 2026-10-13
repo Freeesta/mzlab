@@ -8,16 +8,15 @@ use std::rc::Rc;
 use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
-use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
 use wasm_bindgen::prelude::*;
 
-use crate::{error_json, BlockWriter, Engine, JsOutput, JsReader};
+use crate::{error_json, BlockWriter, JsOutput, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
 const OPEN: usize = 4;
 /// Bytes of `guscio` kept at once.
-const SHELLS: usize = 32 << 20;
+pub(crate) const SHELLS: usize = 32 << 20;
 
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
 struct JsMember {
@@ -47,14 +46,18 @@ impl ReadAt for JsMember {
 }
 
 /// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
-struct Membri {
+pub(crate) struct Membri {
     names: Vec<String>,
     sizes: Vec<f64>,
     read: Function,
 }
 
 impl Membri {
-    fn new(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Membri, JsValue> {
+    pub(crate) fn new(
+        names: js_sys::Array,
+        sizes: &[f64],
+        read: Function,
+    ) -> Result<Membri, JsValue> {
         let names: Vec<String> = names
             .iter()
             .map(|v| v.as_string().unwrap_or_default())
@@ -91,7 +94,7 @@ impl Membri {
     }
 
     /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
-    fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
+    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
         let l = lettori::apri(self.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
         Ok(if centroid {
             lettori_centroidi::centroidato(l)
@@ -101,21 +104,21 @@ impl Membri {
     }
 }
 
-struct Dataset {
-    membri: Membri,
-    centroid: bool,
-    l: Option<Box<dyn Lettore>>,
-    used: u64,
+pub(crate) struct Dataset {
+    pub(crate) membri: Membri,
+    pub(crate) centroid: bool,
+    pub(crate) l: Option<Box<dyn Lettore>>,
+    pub(crate) used: u64,
 }
 
 /// The datasets of the session and which sample of which dataset each slot is.
 #[derive(Default)]
 pub(crate) struct Nativi {
-    sets: HashMap<String, Dataset>,
-    slots: HashMap<u32, (String, usize)>,
-    shells: HashMap<(String, usize), Rc<Vec<u8>>>,
-    order: VecDeque<(String, usize)>,
-    clock: u64,
+    pub(crate) sets: HashMap<String, Dataset>,
+    pub(crate) slots: HashMap<u32, (String, usize)>,
+    pub(crate) shells: HashMap<(String, usize), Rc<Vec<u8>>>,
+    pub(crate) order: VecDeque<(String, usize)>,
+    pub(crate) clock: u64,
 }
 
 /// The bytes the routes read for a slot: the mzML through JS, or the `guscio` of a sample with its reader (`ReadAt::lettore`).
@@ -150,15 +153,12 @@ impl ReadAt for Src<'_> {
 }
 
 /// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
-fn reader<'a>(
-    sets: &'a mut HashMap<String, Dataset>,
-    clock: &mut u64,
-    ds: &str,
-) -> Result<&'a mut dyn Lettore, JsValue> {
-    *clock += 1;
-    let open = sets.values().filter(|d| d.l.is_some()).count();
-    if open >= OPEN && sets.get(ds).is_some_and(|d| d.l.is_none()) {
-        if let Some(old) = sets
+pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsValue> {
+    n.clock += 1;
+    let open = n.sets.values().filter(|d| d.l.is_some()).count();
+    if open >= OPEN && n.sets.get(&ds).is_some_and(|d| d.l.is_none()) {
+        if let Some(old) = n
+            .sets
             .values_mut()
             .filter(|d| d.l.is_some())
             .min_by_key(|d| d.used)
@@ -166,123 +166,17 @@ fn reader<'a>(
             old.l = None;
         }
     }
-    let d = sets
-        .get_mut(ds)
+    let d = n
+        .sets
+        .get_mut(&ds)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("error.badIndex")))?;
-    d.used = *clock;
+    d.used = n.clock;
     if d.l.is_none() {
         d.l = Some(d.membri.open(d.centroid)?);
     }
     match d.l.as_deref_mut() {
         Some(l) => Ok(l),
         None => Err(error_json(&mzlab_core::Error::new("error.badIndex"))),
-    }
-}
-
-impl Nativi {
-    pub(crate) fn forget(&mut self, slot: u32) {
-        if let Some((ds, _)) = self.slots.remove(&slot) {
-            if !self.slots.values().any(|(d, _)| *d == ds) {
-                self.sets.remove(&ds);
-                self.shells.retain(|(d, _), _| *d != ds);
-                self.order.retain(|(d, _)| *d != ds);
-            }
-        }
-    }
-
-    pub(crate) fn clear(&mut self) {
-        *self = Nativi::default();
-    }
-
-    /// What the routes read for `slot`: the `guscio` and the reader of its sample when it is native, else the mzML through `read`; with its size.
-    pub(crate) fn src(
-        &mut self,
-        slot: u32,
-        read: Function,
-        size: f64,
-    ) -> Result<(Src<'_>, u64), JsValue> {
-        let Some((ds, c)) = self.slots.get(&slot).cloned() else {
-            return Ok((Src::Js(JsReader { read }), size as u64));
-        };
-        let key = (ds.clone(), c);
-        let g = match self.shells.get(&key) {
-            Some(g) => g.clone(),
-            None => {
-                let l = reader(&mut self.sets, &mut self.clock, &ds)?;
-                let g = Rc::new(lettori_mzml::guscio(l, c).map_err(|e| error_json(&e))?);
-                let mut held: usize = self.shells.values().map(|g| g.len()).sum();
-                while held + g.len() > SHELLS {
-                    let Some(old) = self.order.pop_front() else {
-                        break;
-                    };
-                    held -= self.shells.remove(&old).map_or(0, |g| g.len());
-                }
-                self.shells.insert(key.clone(), g.clone());
-                self.order.push_back(key);
-                g
-            }
-        };
-        let len = g.len() as u64;
-        let l = reader(&mut self.sets, &mut self.clock, &ds)?;
-        Ok((Src::Nat { g, l, c }, len))
-    }
-
-    /// The head of the mzML of `slot` (`mzmlhead::Mzml`) over `src`.
-    pub(crate) fn mzml(
-        &mut self,
-        slot: u32,
-        read: Function,
-        size: f64,
-    ) -> Result<Mzml<Src<'_>>, JsValue> {
-        let (s, len) = self.src(slot, read, size)?;
-        Ok(Mzml::new(s, len))
-    }
-}
-
-#[wasm_bindgen]
-impl Engine {
-    /// Makes `slot` sample `c` of the dataset `ds` (`names`, `sizes`, `read(member, offset, length)`): the routes that read the file besides its index
-    /// (`open_index`) read it through its reader. `centroid`: the profile scans become centroids (the same value the index was built with).
-    #[allow(clippy::too_many_arguments)]
-    pub fn native_attach(
-        &mut self,
-        slot: u32,
-        ds: &str,
-        names: js_sys::Array,
-        sizes: &[f64],
-        read: Function,
-        c: u32,
-        centroid: bool,
-    ) -> Result<(), JsValue> {
-        self.nat.forget(slot);
-        if !self.nat.sets.contains_key(ds) {
-            let membri = Membri::new(names, sizes, read)?;
-            self.nat.sets.insert(
-                ds.to_string(),
-                Dataset {
-                    membri,
-                    centroid,
-                    l: None,
-                    used: 0,
-                },
-            );
-        }
-        self.nat.slots.insert(slot, (ds.to_string(), c as usize));
-        Ok(())
-    }
-
-    /// Forgets the dataset of `slot` (with the index: `close`).
-    pub fn native_detach(&mut self, slot: u32) {
-        self.nat.forget(slot);
-    }
-
-    /// `metodo/1` of the sample of `slot` from its reader; `""` when `slot` is not native.
-    pub fn native_metodo(&mut self, slot: u32) -> Result<String, JsValue> {
-        let Some((ds, c)) = self.nat.slots.get(&slot).cloned() else {
-            return Ok(String::new());
-        };
-        let l = reader(&mut self.nat.sets, &mut self.nat.clock, &ds)?;
-        l.metodo(c).map_err(|e| error_json(&e))
     }
 }
 
@@ -313,8 +207,9 @@ pub fn native_samples(
 }
 
 /// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
-/// it with `write(offset, bytes)`; `name` is the name of the item (JS follows the progress from the bytes it is asked for). Returns the statistics and
-/// the SHA-256 of the dataset as JSON.
+/// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
+/// 2 the scans are read and indexed, 3 the chromatograms and the index are written); JS follows how far each goes from the bytes it is asked for.
+/// Returns the statistics and the SHA-256 of the dataset as JSON.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -326,9 +221,12 @@ pub fn build_mzidx_native(
     centroid: bool,
     write: Function,
     budget_mb: u32,
+    phase: Function,
 ) -> Result<String, JsValue> {
+    let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Membri::new(names, sizes, read)?;
     let mut fs = m.fileset();
+    tell(1);
     let impronte = upload::impronte(&mut fs).map_err(|e| error_json(&e))?;
     let l = lettori::apri(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
     let mut l = if centroid {
@@ -337,7 +235,9 @@ pub fn build_mzidx_native(
         l
     };
     let c = c as usize;
+    tell(2);
     let p = upload::prepare_lettore(&mut *l, c, &impronte, name).map_err(|e| error_json(&e))?;
+    tell(3);
     let mut out = JsOutput { write };
     let st = mzidx::build_lettore(&p.table, &mut *l, c, &mut out, (budget_mb as usize) << 20)
         .map_err(|e| error_json(&e))?;

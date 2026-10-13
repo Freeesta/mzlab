@@ -3,6 +3,7 @@
 // goes back to the system. Messages only (no SharedArrayBuffer). If it dies, idxpool.js starts another one.
 import init, { build_mzidx } from "./wasm/mzlab_wasm.js";
 import { writeFull, quotaError } from "./archivio.js";
+import { buildNative } from "./rust-nativo.js";
 
 // The pool sends one message first, { op: "module", module }: the .wasm compiled once for all the workers, or null (this worker compiles it itself).
 let ready = null, startInit = null;
@@ -19,17 +20,22 @@ onmessage = async ev => {
     const fh = await d.getFileHandle(m.part, { create: true });
     ah = await fh.createSyncAccessHandle();
     ah.truncate(0);
-    const fr = new FileReaderSync(), blob = m.blob;
-    let tp = 0;
-    const read = (off, len) => {                                      // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
-      const now = performance.now();
-      if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
-      return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
-    };
     const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } };       // a full disk: not a silently short index
-    const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
     const t0 = performance.now();
-    const stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
+    let stats;
+    if (m.nat) {                                                    // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
+      stats = buildNative(m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase }), m.budget);
+    } else {
+      const fr = new FileReaderSync(), blob = m.blob;
+      let tp = 0;
+      const read = (off, len) => {                                  // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
+        const now = performance.now();
+        if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
+        return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
+      };
+      const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
+      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
+    }
     ah.flush(); ah.close(); ah = null;
     postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
   } catch (e) {

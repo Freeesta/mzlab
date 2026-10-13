@@ -8,16 +8,15 @@ mod info; mod diff; mod items; mod metodo; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
+use mzlab_core::{analysis, mzidx, mzml, peakq, peaks};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod wiff;
-mod agilent;
 mod centroidi; mod panic;
 mod nativi;
+mod nativi_motore;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -361,33 +360,6 @@ impl Engine {
             return Ok(String::new());
         };
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
-    }
-
-    /// Converts a Thermo `.raw` of `size` bytes (read through `read(offset, length)`) to mzML, sent to `sink(Uint8Array)` piece by piece.
-    /// The `.raw` is never held in memory: only the block being read. Errors are JSON with a key, as in `open`.
-    pub fn raw_to_mzml(
-        &mut self,
-        name: &str,
-        size: f64,
-        read: Function,
-        sink: Function,
-        scans: Function, // scans(done, total): scans converted / scans in the file (first done = 0, last done = total)
-        flags: u32, // bit 0: profile data as stored (else the vendor centroids)
-    ) -> Result<(), JsValue> {
-        let mut out = BlockWriter { sink, buf: Vec::new() };
-        let mut on_scan = |d: u32, t: u32| drop(scans.call2(&JsValue::NULL, &d.into(), &t.into()));
-        raw::to_mzml_progress(BlockReader::new(read, size as u64), &mut out, name, flags & 1 != 0, &mut on_scan)
-            .map_err(|e| error_json(&e))?;
-        out.flush().map_err(|_| {
-            error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))
-        })
-    }
-
-    /// The text of the instrument method of a Thermo `.raw` (read through `read(offset, length)`): the Chromeleon script with the gradient; empty when there is none.
-    pub fn raw_method_text(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        raw::instrument_method_text(BlockReader::new(read, size as u64))
-            .map(|t| t.unwrap_or_default())
-            .map_err(|e| error_json(&e))
     }
 
     /// Number of scans of one level (the capacity a trace needs).

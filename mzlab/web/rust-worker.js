@@ -9,9 +9,7 @@ import { limpia } from "./pulizia.js";
 import { infoDi } from "./manifesto.js";
 import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
-import { wiffOp } from "./rust-wiff.js";
-import { agilentOp } from "./rust-agilent.js";
-import { lettoriOp } from "./rust-lettori.js";
+import { createNativo } from "./rust-nativo.js";
 import { rawSink } from "./rust-opfs.js";
 
 let engine = null, wasmMem = null;
@@ -42,19 +40,19 @@ const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
-const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the two pools below count together (2 on iPad/phone)
+const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
-let wifPool = null;                                                       // the pool of the .wiff -> mzML conversions (wiff-worker.js), made when the first one is asked
-const wiffPool = () => wifPool || (wifPool = createPool({ workerUrl: new URL("./wiff-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), notify: key => postMessage({ op: "notice", key }) }));
 const jerr = key => { throw JSON.stringify({ error_key: key, params: {} }); };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
 }
+const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr });
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
   if (!ix) return false;
   engine.open_index(slotOf(name), ix.size, readerFor(ix));
+  await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
   return true;
 }
 // IndexedDB of the page ("qqq_lab"): the notebook and, without OPFS, the files
@@ -120,11 +118,17 @@ async function lrMigrate() {                                              // wha
   }
 }
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
-  await ARCH.ensureRoom(m.blob.size);                                 // room first (error.quota with the MB needed and free), never write hoping
+  if (!m.nat) await ARCH.ensureRoom(m.blob.size);                     // room first (error.quota with the MB needed and free), never write hoping
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
   await ARCH.remove("idx", m.name + ".mzidx");
   let f;
+  if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
+    f = await nativo.put(m, frac => postMessage({ op: "progress", id: m.id, frac, phase: "read" }));
+    lrFile.set(m.name, f);
+    await ARCH.persistOnce();
+    return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
+  }
   try { f = await ARCH.put("files", m.name, m.blob); }
   catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
   lrFile.set(m.name, f);
@@ -140,15 +144,17 @@ async function lrOp(m) {
         const f = await ARCH.get("files", e.name); if (!f) continue;
         lrFile.set(e.name, f);
         const ok = /\.mzml$/i.test(e.name) ? await safe(() => lrOpen(e.name)) : false;
-        out.push({ name: e.name, size: f.size, indexed: !!ok, file: f });
+        const st = /\.mzml$/i.test(e.name) ? await nativo.stubOf(e.name) : null;
+        out.push({ name: e.name, size: st ? st.size : f.size, indexed: !!ok, nat: !!st, file: f });
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
     case "lr_put": return lrPut(m);
     case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
-      const f = await fileOf(m.name), t0 = performance.now();
-      const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
-      const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part, onProgress: p => postMessage({ op: "progress", id: m.id, frac: p.frac }) });      // frac: how far the builder has read
+      const f = await fileOf(m.name), t0 = performance.now(), job = await nativo.indexJob(m.name), part = m.name + ".mzidx.part";
+      const onProgress = p => postMessage({ op: "progress", id: m.id, frac: p.frac, phase: p.phase });
+      const res = await idxPool().build(job ? { name: m.name, nat: job, part, onProgress }
+        : { name: m.name, blob: f, inputs: Array.from(prepare_upload(f.size, readerFor(f), m.name)).slice(0, 8), part, onProgress });      // frac: how far the builder has read
       if (!res.ok) {                                                                // the true cause reaches the page: the error of the builder (a key), else its text
         await ARCH.remove("idx", part);
         if (res.reason === "memory") jerr("error.memoryBudget");
@@ -160,12 +166,20 @@ async function lrOp(m) {
       if (!(await lrOpen(m.name))) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
     }
-    case "lr_entry": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)) }; }
+    case "lr_entry": {
+      const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
+      const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
+      return { info: st ? JSON.stringify({ ...JSON.parse(info), size: st.size, nat: true }) : info };      // the size of a sample of a maker's file is the one of its members
+    }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
-    case "lr_remove": { engine.close(slotOf(m.name)); lrFile.delete(m.name); await ARCH.remove("files", m.name); return { info: "{}" }; }
+    case "lr_remove": {
+      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name);
+      await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
+      return { info: "{}" };
+    }
     case "lr_space": { if (m.free) await (m.free === "derived" ? lrFreeDerived() : lrFree()); return { info: JSON.stringify(await lrSpace()) }; }
     case "lr_kv_get": { const v = await safe(() => tx("kv", "readonly", s => s.get(m.key))); return { info: JSON.stringify({ value: v === undefined ? null : v }) }; }
     case "lr_kv_set": { await safe(() => tx("kv", "readwrite", s => s.put(m.value, m.key))); return { info: "{}" }; }
@@ -197,16 +211,6 @@ onmessage = async ev => {
     }
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
-      case "raw2mzml": {                                                              // Thermo .raw -> mzML on OPFS (the .raw is read block by block; the mzML goes to the disk, never held)
-        const total = m.blob.size, rd = readerFor(m.blob), sink = await rawSink(m.dest);
-        let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
-        const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
-        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, (m.profile ? 1 : 0)); }      // scans: converted / in the file, from the scan index
-        catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }      // q: the disk is full (error.quota)
-        const r = await sink.finish();
-        postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
-        return;
-      }
       case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroidi/convert.rs; read twice, never held)
         const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest);
         let written = 0, last = 0, scans = 0, scansTotal = null, did = false;
@@ -218,14 +222,17 @@ onmessage = async ev => {
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
         return;
       }
-      case "agilent2mzml": await agilentOp(engine, m, id, readerFor, rawSink); return;        // Agilent .D folder -> mzML on OPFS (rust-agilent.js)
-      case "lettori2mzml": await lettoriOp(m, id, readerFor, rawSink); return;        // dataset of a maker -> mzML on OPFS through the readers of the registry (rust-lettori.js)
-      case "wiffsamples": case "wiff2mzml": case "wiffcancel": wiffOp(engine, m, id, readerFor, wiffPool); return;      // SCIEX .wiff: its samples, one sample as mzML pieces (rust-wiff.js)
+      case "natsamples": info = nativo.samples(m.members); break;                      // the samples of a maker's dataset (a .wiff holds several), from its members
+      case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
+        const sink = await nativo.toMzml(m, p => postMessage({ op: "progress", id, ...p }));
+        postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
+        return;
+      }
       case "idxopen": {                                                               // the .mzidx of a file, read from OPFS where the index builder put it (no mzML is read)
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
-        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); break;
+        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML

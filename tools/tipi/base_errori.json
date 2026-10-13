@@ -25,6 +25,5 @@
  "worker:mzlab/web/peaks-worker.js": 1,
  "worker:mzlab/web/rust-worker-lab.js": 1,
  "worker:mzlab/web/rust-worker.js": 3,
- "worker:mzlab/web/sw.js": 5,
- "worker:mzlab/web/wiff-worker.js": 1
+ "worker:mzlab/web/sw.js": 5
 }
