@@ -25,6 +25,9 @@
     };
   }
 
+  /** the operation «campioni» of the log (next to «feature_pipeline»): the canonical campioni/2 of the run and its SHA-256, both of the Rust (finder-ruoli.js `canonical`) */
+  function campioniOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, campioni: d.campioni, sha256: c.sha256 }; }
+
   /** the last operation feature_pipeline of the log that can be re-applied (null when none) */
   function lastOp(ops, check) {
     for (let i = (ops || []).length - 1; i >= 0; i--) if (ops[i] && ops[i].op === "feature_pipeline" && !check(ops[i]).length) return ops[i];
@@ -41,6 +44,6 @@
     return { same, filesSame: !missing.length, crateSame: now.crate_version === op.crate_version, lines };
   }
 
-  G.PIPEREC = { record, lastOp, compare };
+  G.PIPEREC = { record, lastOp, compare, campioniOp };
   if (typeof module !== "undefined") module.exports = G.PIPEREC;
 })();

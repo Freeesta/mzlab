@@ -19,9 +19,11 @@
     "../../TP_Mine/files/feat-run.js",
     "../../TP_Mine/files/feat-worker.js",
     "../../TP_Mine/files/finder-idx.js",
+    "../../TP_Mine/files/finder-ruoli.js",
     "../../TP_Mine/files/finder-tabella.js",
     "../../TP_Mine/files/finder-desktop.js",
     "../../TP_Mine/files/tpmine-worker.js",
+    "../../TP_Mine/files/finder-lr.js",
     "../../mzlab/web/libreria-cartella.js",
     "../../mzlab/web/libreria-scarica.js"
   ]

@@ -33,13 +33,25 @@
     return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {});
   };
 
+  /** the campioni/1 of the engine with the roles and times the user confirmed (campioni/2, same order of the files): the types of campioni/1 have no infusion, which counts as a sample without a time */
+  function withRoles(/** @type {string} */ proposed, /** @type {any[]} */ cs) {
+    const doc = JSON.parse(proposed);
+    if (doc.campioni.length !== cs.length) return proposed;
+    doc.campioni.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
+      const c = cs[i], inf = c.tipo === "infusion";
+      s.tipo = inf ? "sample" : c.tipo; s.tempo_min = inf ? null : c.tempo_min;
+    });
+    return JSON.stringify(doc);
+  }
+
   /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol } */
   async function open(/** @type {any} */ a) {
     const m = await engine(a.base), bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length;
     const read = (/** @type {any} */ _, /** @type {number} */ off, /** @type {number} */ len) => bytes.slice(off, off + len);
     const sha = await G.UNT.sha256Hex(bytes);
     /** @type {(fn: () => string) => any} */ const run = fn => { try { return fn(); } catch (e) { throw fail(e); } };
-    const samples = run(() => m.table_samples(JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) })));
+    const proposed = run(() => m.table_samples(JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) })));
+    const samples = a.campioni ? withRoles(proposed, a.campioni) : proposed;
     return {
       samples, sha, size, bytes,
       qc: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_qc(read, size, samples, spec))),
