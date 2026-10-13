@@ -191,7 +191,16 @@
      },
      "controlli": {
       "op": ">=",
-      "gradini": []
+      "gradini": [
+       {
+        "soglia": 3,
+        "punti": 2
+       },
+       {
+        "soglia": 1,
+        "punti": 1
+       }
+      ]
      },
      "RT": {
       "op": ">=",

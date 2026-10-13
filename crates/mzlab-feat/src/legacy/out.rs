@@ -233,6 +233,35 @@ fn files_json(o: &mut Out, d: &Dig) {
     o.raw("]");
 }
 
+/// The fragments in source left out of the candidates.
+fn isf_json(o: &mut Out, d: &Dig) {
+    for (i, (mz, rt)) in d.isf_hidden.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
+            .num(round(*mz, 4))
+            .raw(",\"rt\":")
+            .num(round(*rt, 2))
+            .raw(",\"candidate\":false}");
+    }
+}
+
+/// The inclusion list: m/z, RT window, formula and score of the candidates worth a targeted MS2.
+fn inclusion_json(o: &mut Out, d: &Dig) {
+    for (i, c) in inclusion(d).iter().enumerate() {
+        let (a, b) = rt_span(c);
+        o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
+            .num(round(c.mz, 4))
+            .raw(",\"rt\":")
+            .num(round(c.rt, 2));
+        o.raw(",\"rt_from\":")
+            .num(round(a, 2))
+            .raw(",\"rt_to\":")
+            .num(round(b, 2))
+            .raw(",\"formula\":");
+        opt_str(o, c.formula.as_deref());
+        o.raw(",\"score\":").num(round(c.score, 1)).raw("}");
+    }
+}
+
 /// `api.run` (HR): `settings` and `timing` are JSON objects written as they come.
 pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
     let mut o = Out::default();
@@ -272,21 +301,10 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
         o.raw(if i > 0 { "," } else { "" });
         row(&mut o, c, d.files.len());
     }
-    o.raw("],\"mass_network\":null,\"isf_hidden\":[],\"tree\":null,\"calibration\":null,\"inclusion\":[");
-    for (i, c) in inclusion(d).iter().enumerate() {
-        let (a, b) = rt_span(c);
-        o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
-            .num(round(c.mz, 4))
-            .raw(",\"rt\":")
-            .num(round(c.rt, 2));
-        o.raw(",\"rt_from\":")
-            .num(round(a, 2))
-            .raw(",\"rt_to\":")
-            .num(round(b, 2))
-            .raw(",\"formula\":");
-        opt_str(&mut o, c.formula.as_deref());
-        o.raw(",\"score\":").num(round(c.score, 1)).raw("}");
-    }
+    o.raw("],\"mass_network\":null,\"isf_hidden\":[");
+    isf_json(&mut o, d);
+    o.raw("],\"tree\":null,\"calibration\":null,\"inclusion\":[");
+    inclusion_json(&mut o, d);
     o.raw("],\"timing\":")
         .raw(if timing.trim().is_empty() {
             "{}"

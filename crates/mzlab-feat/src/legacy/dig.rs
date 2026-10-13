@@ -15,7 +15,7 @@ use super::Res;
 use crate::evid::points::PointsTable;
 use crate::evid::Kind;
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
-use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT};
+use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT, ST_ISF};
 
 /// Isolation centre within this many ppm of the m/z of the row (`select_ms2`).
 const MS2_PPM: f64 = 10.0;
@@ -94,6 +94,8 @@ pub struct Dig {
     pub parent_row: Option<usize>,
     pub parent_rt: Option<f64>,
     pub parent_ms2: Option<Consensus>,
+    /// The (m/z, RT) of the rows left out because the gate of the TP view takes them for in-source fragments of the parent or of a product.
+    pub isf_hidden: Vec<(f64, f64)>,
     pub n_features: Vec<usize>,
     pub cands: Vec<Cand>,
     pub weights: [f64; 10],
@@ -134,21 +136,41 @@ fn delta(f: &Formula, parent: &Formula) -> String {
     format!("{sign}{}", fmt(&abs))
 }
 
-/// The parent row of the TP view when the table has one (an empty `tp/1` block says nothing: its `parent_row` is the default 0), else the
-/// largest summed area within `PARENT_PPM` of the [M+H]+.
-fn parent_row(t: &Aligned, p: &Parent) -> Option<usize> {
+/// The parent row: the row nearest in RT to the one the user gave, else the one of the TP view when the table has one (an empty `tp/1` block says
+/// nothing: its `parent_row` is the default 0), else the one with the largest area within `PARENT_PPM` of the ion in the files at time 0 (the
+/// standard), or in all of them when none is at time 0.
+pub(super) fn parent_row(t: &Aligned, p: &Parent, files: &[FileIn]) -> Option<usize> {
+    let near = |r: usize| ((t.mz[r] - p.mz) / p.mz * 1e6).abs() <= PARENT_PPM;
+    if let Some(rt) = p.rt {
+        return (0..t.len())
+            .filter(|&r| near(r))
+            .min_by(|&a, &b| (t.rt[a] - rt).abs().total_cmp(&(t.rt[b] - rt).abs()));
+    }
     if !t.tp.is_empty() && t.tp.parent_row != NO_PARENT && (t.tp.parent_row as usize) < t.len() {
         return Some(t.tp.parent_row as usize);
     }
+    let t0: Vec<bool> = files.iter().map(|f| f.t == 0.0).collect();
+    let only_t0 = t0.iter().any(|&b| b);
     let area = |r: usize| {
         t.area[r * t.n_files..(r + 1) * t.n_files]
             .iter()
-            .filter(|a| a.is_finite())
+            .enumerate()
+            .filter(|(k, a)| a.is_finite() && (!only_t0 || t0.get(*k).copied().unwrap_or(false)))
+            .map(|(_, a)| a)
             .sum::<f64>()
     };
     (0..t.len())
-        .filter(|&r| ((t.mz[r] - p.mz) / p.mz * 1e6).abs() <= PARENT_PPM)
+        .filter(|&r| near(r))
         .max_by(|&a, &b| area(a).total_cmp(&area(b)))
+}
+
+/// The rows that the gate of the TP view took for in-source fragments of the parent or of a product, by m/z.
+fn isf_rows(t: &Aligned) -> Vec<usize> {
+    let mut rows: Vec<usize> = (0..t.len())
+        .filter(|&r| t.tp.status.get(r) == Some(&ST_ISF))
+        .collect();
+    rows.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
+    rows
 }
 
 /// Peak limits of a row in every file: apex ± width / 2 where the file has a peak, the edges of the row elsewhere (NaN without them).
@@ -260,10 +282,20 @@ fn candidate(
         .clone()
         .or_else(|| hyp.as_ref().map(|h| h.formula.clone()))
         .filter(|f| !f.is_empty());
+    // a row stands for its family: the ion of the hypothesis may be one of its members (the [M+H]+ of a product whose row is led by its [M+Na]+)
+    let mz = hyp
+        .as_ref()
+        .filter(|h| h.mz.is_finite())
+        .map_or(t.mz[r], |h| {
+            std::iter::once(t.mz[r])
+                .chain(t.members(r).map(|k| t.member_mz[k]))
+                .min_by(|a, b| (a - h.mz).abs().total_cmp(&(b - h.mz).abs()))
+                .unwrap_or(t.mz[r])
+        });
     let ppm = hyp
         .as_ref()
         .filter(|h| h.mz.is_finite())
-        .map(|h| (t.mz[r] - h.mz) / h.mz * 1e6);
+        .map(|h| (mz - h.mz) / h.mz * 1e6);
     let delta = formula
         .as_deref()
         .and_then(|f| parse_formula(f).ok())
@@ -273,7 +305,7 @@ fn candidate(
         .collect();
     Cand {
         row: r,
-        mz: t.mz[r],
+        mz,
         rt: t.rt[r],
         areas,
         area_max,
@@ -393,20 +425,29 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
     }
     let w = weights(&PointsTable::bundled().map_err(|e| e.to_string())?);
     let n_ident = s.idents.len();
+    let isf_rows = isf_rows(t);
+    let is_isf = |r: usize| isf_rows.contains(&r);
+    let isf_hidden: Vec<(f64, f64)> = isf_rows.iter().map(|&r| (t.mz[r], t.rt[r])).collect();
     let mut ids: Vec<Ident> = s
         .idents
         .into_iter()
-        .filter(|i| i.total > 0.0 && i.row < t.len())
+        .filter(|i| i.total > 0.0 && i.row < t.len() && !is_isf(i.row))
         .collect();
     ids.sort_by(|a, b| b.total.total_cmp(&a.total).then(a.row.cmp(&b.row)));
     let mut cands: Vec<Cand> = ids
         .into_iter()
         .map(|i| candidate(t, &s.files, &s.parent, i, &s.hyps, &w))
         .collect();
-    let prow = parent_row(t, &s.parent);
+    let prow = parent_row(t, &s.parent, &s.files);
     let mut ix = (0..t.n_files).map(&mut open).collect::<Res<Vec<_>>>()?;
     let parent_ms2 = attach_ms2(&mut ix, t, &s.parent, prow, &mut cands)?;
     let mut warnings = Vec::new();
+    if !isf_hidden.is_empty() {
+        warnings.push(format!(
+            "{} ions left out as in-source fragments: they co-elute with the parent or with a product, in a constant ratio, and sit among the fragments of the parent.",
+            isf_hidden.len()
+        ));
+    }
     if parent_ms2.is_none() {
         warnings.push("No MS2 of the parent in the series: the similarity of the candidates to the parent is not computed.".to_string());
     }
@@ -436,6 +477,7 @@ pub fn dig<R: ReadAt>(s: Series, mut open: impl FnMut(usize) -> Res<Index<R>>) -
         parent_row: prow,
         parent_rt: prow.map(|r| t.rt[r]),
         parent_ms2,
+        isf_hidden,
         n_features: (0..t.n_files).map(detected).collect(),
         cands,
         weights: w,
