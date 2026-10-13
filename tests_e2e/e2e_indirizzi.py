@@ -9,7 +9,7 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_indirizzi.py")][-1]
         steps.append((name, f"FAIL (line {ln}) " + str(e).split("\n")[0][:200]))
-r = Run(port=8931, wd="/tmp/wdind", motore="python")
+r = Run(port=8931, wd="/tmp/wdind")
 HEAVY = ("pyodide", ".wasm", "explore.js", "grafici.js", "draw.js", "openchemlib", "ketcher", "/api/", "hr.js", "banco.js", "pannelli.js")
 try:
     with sync_playwright() as p:
