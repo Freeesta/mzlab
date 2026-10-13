@@ -107,12 +107,11 @@ pub struct LettoreWasm {
 #[wasm_bindgen]
 impl LettoreWasm {
     /// Opens the dataset made of `names[i]` (logical names, e.g. `AcqData/MSScan.bin`) of `sizes[i]` bytes; `read(i, offset, length)` gives the bytes.
-    /// `err.file.notAccepted` when no reader recognises it. `anonymous`: the `metodo/1` leaves out (or pseudonymises) the people, the computer, the serial number and the paths.
+    /// `err.file.notAccepted` when no reader recognises it.
     pub fn open(
         names: Vec<String>,
         sizes: Vec<f64>,
         read: Function,
-        anonymous: bool,
     ) -> Result<LettoreWasm, JsValue> {
         let membri = names
             .into_iter()
@@ -127,9 +126,8 @@ impl LettoreWasm {
                 }),
             })
             .collect();
-        let mut inner =
+        let inner =
             lettori::apri(FileSet { membri }, &Limiti::sito()).map_err(|e| error_json(&e))?;
-        inner.imposta_anonimo(anonymous);
         Ok(LettoreWasm { inner })
     }
 

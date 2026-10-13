@@ -11,14 +11,14 @@ export async function agilentOp(engine, m, id, readerFor, rawSink) {
   const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };
   try {
     engine.agilent_to_mzml(m.name, small(f.scan), small(f.xsd), small(f.ts), small(f.devices), small(f.contents), small(f.tree), small(f.acqmeth), small(f.datams), total,
-      (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(false); return b; }, !!m.anonymous, piece => { sink.write(piece); written += piece.length; tick(false); },
+      (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(false); return b; }, piece => { sink.write(piece); written += piece.length; tick(false); },
       (done, all) => { scans = done; scansTotal = all; tick(done === 0 || done === all); });
   } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }          // q: the disk is full (error.quota)
   const r = await sink.finish();
   postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
 }
 
-// page side, for rust-bridge.js: Blob of mzML (a File of OPFS when there is OPFS). `opts.anonymous`: leave the user, the computer, the serial number and the paths out. `signal` (AbortSignal) cancels it: the worker is busy in one long call, so cancelling asks the bridge to
+// page side, for rust-bridge.js: Blob of mzML (a File of OPFS when there is OPFS). `signal` (AbortSignal) cancels it: the worker is busy in one long call, so cancelling asks the bridge to
 // stop it and start a new one (h.abort). Rejects with an Error whose `json` is { error, error_key, params } like the API errors, or with { cancelled: true }.
 export function makeConvertAgilent(h) {
   return async (name, files, onProgress, signal, opts = {}) => {
@@ -28,7 +28,7 @@ export function makeConvertAgilent(h) {
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;      // in OPFS mzlab/conv/
     const drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});
-    const r = await h.rpc({ op: "agilent2mzml", name: h.base(name), files, dest, anonymous: !!opts.anonymous }, onProgress);
+    const r = await h.rpc({ op: "agilent2mzml", name: h.base(name), files, dest }, onProgress);
     if (signal) signal.removeEventListener("abort", onAbort);
     if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
     if (r.dead || r.error) {

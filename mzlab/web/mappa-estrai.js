@@ -234,7 +234,7 @@ function found(p, box) {                                               // «How 
     `<p class="muted">${T("mapfeat.note")}</p>`;
   box.appendChild(el);
   const c = el.querySelector("canvas"), t = s.xic;
-  requestAnimationFrame(() => {
+  FRAME.next(() => {
     const r = c.getBoundingClientRect(), dpr = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
     const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); const W = r.width, H = r.height, ml = 6, mb = 16, mt = 8;
     if (!t || !t.rt.length) return;

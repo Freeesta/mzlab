@@ -1,7 +1,7 @@
 //! The Thermo `.raw` adapter of `metodo/1` (`metodo.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
 //! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`metodo_raw/script.rs`) and, in `campi`,
 //! every other field of the container, of the scan trailer and of the method (`metodo_raw/campi.rs`). What is only guessed from position is marked in `docs/agenti/metodo.md`.
-//! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so. An anonymous document leaves out the user, the computer, the serial number and the paths, also inside the texts.
+//! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
 
 pub(crate) mod campi;
 mod script;
@@ -51,7 +51,7 @@ fn campione(raw: &RawFileReader) -> Option<V> {
     ])
 }
 
-fn strumento(raw: &RawFileReader, src: &Source) -> Option<V> {
+fn strumento(raw: &RawFileReader) -> Option<V> {
     let id = |n: usize| {
         raw.inst_id_strings
             .get(n)
@@ -66,17 +66,7 @@ fn strumento(raw: &RawFileReader, src: &Source) -> Option<V> {
     obj(vec![
         ("produttore", Some(V::s("Thermo Fisher Scientific"))),
         ("modello", model),
-        (
-            "serie",
-            if src.anonymous {
-                raw.inst_id_strings
-                    .get(2)
-                    .and_then(|s| src.alias("serial", s))
-                    .map(V::s)
-            } else {
-                id(2)
-            },
-        ),
+        ("serie", id(2)),
         ("hardware", id(4)),
         (
             "software",
@@ -122,12 +112,12 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
     obj(vec![("parametri", Some(V::Arr(params)))])
 }
 
-/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, with the identity blanked in an anonymous document.
-fn raw_texts(blocks: &[String], ident: &Ident, anon: bool) -> Vec<V> {
+/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, in all.
+fn raw_texts(blocks: &[String]) -> Vec<V> {
     let mut left = GRAW_MAX;
     let mut out = Vec::new();
     for b in blocks {
-        let t = if anon { ident.scrub(b) } else { b.clone() };
+        let t = b;
         let mut end = t.len().min(left);
         while !t.is_char_boundary(end) {
             end -= 1;
@@ -163,7 +153,6 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
 
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
-    let anon = src.anonymous;
     let s = &raw.seq_row;
     let ident = Ident {
         computer: raw.raw_file_info.computer_name.clone(),
@@ -202,38 +191,22 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             metodo::origin(src, campi::clock(raw.header.audit_start.time).as_deref()),
         ),
         ("campione", campione(raw)),
-        ("strumento", strumento(raw, src)),
+        ("strumento", strumento(raw)),
         (
             "operatore",
-            if anon {
-                obj(vec![
-                    (
-                        "utente",
-                        src.alias("user", &raw.header.audit_start.tag2).map(V::s),
-                    ),
-                    (
-                        "computer",
-                        src.alias("computer", &raw.raw_file_info.computer_name)
-                            .map(V::s),
-                    ),
-                ])
-            } else {
-                obj(vec![
-                    ("utente", text(&raw.header.audit_start.tag2)),
-                    ("computer", text(&raw.raw_file_info.computer_name)),
-                ])
-            },
+            obj(vec![
+                ("utente", text(&raw.header.audit_start.tag2)),
+                ("computer", text(&raw.raw_file_info.computer_name)),
+            ]),
         ),
         ("ms", ms(raw, script::experiments(&items))),
         ("lc", lc),
         ("campionatore", sampler(&pairs)),
         (
             "campi",
-            Some(V::Arr(campi::fields(
-                raw, &traces, &pairs, &items, &ident, anon,
-            ))),
+            Some(V::Arr(campi::fields(raw, &traces, &pairs, &items, &ident))),
         ),
-        ("grezzo", Some(V::Arr(raw_texts(&blocks, &ident, anon)))),
+        ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())

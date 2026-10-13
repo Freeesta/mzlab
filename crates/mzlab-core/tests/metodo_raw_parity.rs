@@ -1,5 +1,5 @@
 //! `metodo/1` of the Thermo `.raw` files against what is known of them: the mzML that msconvert made from the same file (instrument, serial number, software version),
-//! the gradient that `chromeleon::parse` reads from the method text, the document that the conversion writes into the mzML, and the anonymous document against the complete one.
+//! the gradient that `chromeleon::parse` reads from the method text, the document that the conversion writes into the mzML.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped.
 use mzlab_core::json::{self, Value};
 use mzlab_core::{chromeleon, metodo, mzml, raw};
@@ -42,13 +42,8 @@ fn pairs(d: &Path) -> Vec<(PathBuf, PathBuf)> {
     out
 }
 
-fn doc(p: &Path, anonymous: bool) -> String {
-    raw::metodo(
-        BufReader::new(File::open(p).unwrap()),
-        "sample.raw",
-        anonymous,
-    )
-    .unwrap()
+fn doc(p: &Path) -> String {
+    raw::metodo(BufReader::new(File::open(p).unwrap()), "sample.raw").unwrap()
 }
 
 fn value_after(head: &str, accession: &str) -> Option<String> {
@@ -83,7 +78,7 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
         "no .raw with an mzML in the data repository"
     );
     for (raw_path, mzml_path) in all {
-        let full = doc(&raw_path, false);
+        let full = doc(&raw_path);
         let v = json::parse(full.as_bytes()).unwrap();
         let mut head = vec![0u8; 20_000];
         std::io::Read::read_exact(&mut File::open(&mzml_path).unwrap(), &mut head).unwrap();
@@ -122,13 +117,13 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
 }
 
 #[test]
-fn the_conversion_carries_the_document_and_the_anonymous_one_has_no_identity() {
+fn the_conversion_carries_the_document() {
     let Some(d) = dati() else {
         eprintln!("skipped: no data repository (MZLAB_DATI)");
         return;
     };
     for (raw_path, _) in pairs(&d) {
-        let full = doc(&raw_path, false);
+        let full = doc(&raw_path);
         let mut out = Vec::new();
         raw::to_mzml(
             BufReader::new(File::open(&raw_path).unwrap()),
@@ -155,31 +150,6 @@ fn the_conversion_carries_the_document_and_the_anonymous_one_has_no_identity() {
             n >= 10,
             "only {n} trailer fields in the first spectrum of {raw_path:?}"
         );
-        // identity: every value the complete document marks as personal is absent from the anonymous one
-        let v = json::parse(full.as_bytes()).unwrap();
-        let anon = doc(&raw_path, true);
-        let mut secrets: Vec<String> = ["utente", "computer"]
-            .iter()
-            .filter_map(|k| text(&v, &["operatore", k]).map(String::from))
-            .collect();
-        secrets.extend(text(&v, &["strumento", "serie"]).map(String::from));
-        for c in v.get("campi").map_or(&[][..], |c| c.arr()) {
-            if c.get("identita").is_some() {
-                secrets.extend(text(c, &["valore"]).map(String::from));
-            }
-        }
-        assert!(!secrets.is_empty());
-        // a user name can be a word of the model («Fusion»): what the model says stays
-        let model = text(&v, &["strumento", "modello"])
-            .unwrap_or("")
-            .to_lowercase();
-        for s in secrets
-            .iter()
-            .filter(|s| s.len() >= 4 && !model.contains(&s.to_lowercase()))
-        {
-            assert!(!anon.to_lowercase().contains(&s.to_lowercase()), "anonymous document of {raw_path:?} still has the identity value of {} characters (starts with {:?})", s.len(), s.chars().take(3).collect::<String>());
-        }
-        assert!(anon.len() > 1000 && !anon.contains("\"operatore\""));
     }
 }
 

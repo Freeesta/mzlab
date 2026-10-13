@@ -59,8 +59,8 @@ try:
             m = pg.evaluate("Object.fromEntries(ST.files.map(f => [f.name, f.spectrum_mode]))")
             assert m == {"prof.mzML": "profile", "prof.centroidi.mzML": "centroid"}, m
             t = pg.evaluate("modeTag({ kind: 'full', spectrum_mode: 'centroid' })")
-            assert "Un punto per picco" in t, t
-        step("the copy is a centroid file, the original is still a profile file", modes)
+            assert t == "" and "Un punto per picco" not in pg.inner_text("#flst"), t      # the usual centroid file carries no label
+        step("the copy is a centroid file (no label), the original is still a profile file", modes)
         def copy_text():
             t = pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const f = await (await d.getFileHandle('prof.centroidi.mzML')).getFile(); return [f.size, await f.text()]; }""")
             assert "MS:1000035" in t[1] and "mzlab-centroidi" in t[1] and t[0] < size0, (t[0], size0)

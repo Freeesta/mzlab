@@ -32,8 +32,8 @@ function start() {
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
   });
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
-  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
-    k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
+  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
+    k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
@@ -696,7 +696,7 @@ document.addEventListener("nbreset", () => {
   clearTimeout(timer);
   Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-a").checked = false; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
   Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
-  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; requestAnimationFrame(() => { drawLabels(); showInfo(); }); }
+  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; FRAME.next(() => { drawLabels(); showInfo(); }); }
 });
 
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass

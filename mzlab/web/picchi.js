@@ -286,9 +286,9 @@ async function showInts() {
 const MARK_N = 20;
 const markOn = p => (p.mk != null ? !!p.mk : !p._a || (p._a.markN || 0) <= MARK_N);
 // the spectrum a palette command acts on: the active one if it is a spectrum, else the first of the tab; pred tests its drawing state
-const specHere = pred => { const l = [E.active, ...E.panels.filter(q => q.tab === E.tab || allTabs())].filter(q => q && q.type === "spec" && q._a && pred(q._a)); return l[0] || null; };
+const specHere = pred => { const l = [E.active, ...E.panels].filter(q => q && q.type === "spec" && q._a && pred(q._a)); return l[0] || null; };
 // the chromatogram a palette command acts on: the active one, else the first of the tab, that satisfies pred
-const lineHere = pred => [E.active, ...E.panels.filter(q => q.tab === E.tab || allTabs())].find(q => q && (q.type === "chrom" || q.type === "xic" || q.type === "mrm") && q._a && q.el && pred(q)) || null;
+const lineHere = pred => [E.active, ...E.panels].find(q => q && (q.type === "chrom" || q.type === "xic" || q.type === "mrm") && q._a && q.el && pred(q)) || null;
 // MS2 scan of the peak last picked with the right button (palette: «open the MS2 scan»)
 const lastMs2 = () => {
   const p = specHere(a => a.hrp && window.DDA), q = p && p._pm != null ? DDA.ms2For(p, p._pm)[0] : null;

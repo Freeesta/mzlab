@@ -15,10 +15,10 @@ try:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=full]"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
+        open_kind(pg, "full"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
-            pg.click("#dpanels .pnl.chrom [data-a=xic]"); assert dlg()
+            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
@@ -37,17 +37,17 @@ try:
             assert not any(i[0] == "Ripristina zoom" for i in items) and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: no such entry
             pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
-            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").click(); box = pg.locator("#dpanels .pnl.chrom canvas").bounding_box()
+            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
-            assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").is_enabled()
+            assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0] == ["Ripristina zoom", ""], items          # with a zoom it is the first entry
             pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); pg.wait_for_timeout(500)
-            assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").is_disabled()
-            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").click()
+            assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
+            pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
         step("right click on the chromatogram: Estrai uno ione (same window), Ripristina zoom", chrom_menu)
         def guard():
-            c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]"); c.click()
+            c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); pg.wait_for_timeout(400)
             pg.screenshot(path=SH + "181_guard.png"); pg.click("#askok"); pg.wait_for_timeout(400)
             assert dlg(); pg.click("#xic-no"); c.click()

@@ -115,11 +115,11 @@ try:
             z0 = pg.evaluate(f"{SPEC}.zoom"); c0 = pg.evaluate("E.active.cur")
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(700); pg.click("#nav [data-v=data]"); pg.wait_for_timeout(900)
             assert pg.evaluate("E.active&&E.active.type")=="chrom" and pg.evaluate(f"{SPEC}.zoom") == z0 and pg.evaluate("E.active.cur") == c0
-            pg.click("#dtabs [data-t=ms2]"); ready(pg); pg.click("#dtabs [data-t=full]"); ready(pg)
+            open_kind(pg, "ms2"); ready(pg); open_kind(pg, "full"); ready(pg)
             assert pg.evaluate("E.active&&E.active.type")=="chrom"
         step("B-19 back to Data / back to a tab: same active graph, zoom, cursor (no automatic scroll since A3)", back)
         def mrm():
-            pg.click("#dtabs >> text=MRM"); pg.wait_for_timeout(5000)
+            open_kind(pg, "mrm"); pg.wait_for_timeout(5000)
             z = pg.evaluate("E.panels.filter(p=>p.tab==='mrm').map(p=>p.zoom)"); print("   MRM zoom:", z)
             assert z and all(x is None for x in z), "MRM starts with full chromatogram without auto-zoom"
             vis = pg.evaluate("tabFiles('mrm').map(f=>f.vis)")

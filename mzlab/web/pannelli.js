@@ -83,7 +83,7 @@ const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; 
 function reveal(p) {
   if (!p || !p.el) return p;
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  FRAME.next(() => FRAME.next(() => {
     p.el.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
     if (!calm) { p.el.classList.remove("flash"); void p.el.offsetWidth; p.el.classList.add("flash"); setTimeout(() => p.el.classList.remove("flash"), 1100); }
   }));
@@ -116,10 +116,11 @@ function closePanel(p) {
   if (!p) return;
   if (window.DDA) DDA.onClose(p);
   fsInert(null, p);
-  if (p._ro) p._ro.disconnect();
+  if (p._ro) p._ro();
   if (p._ac) p._ac.abort();                              // every listener the panel put on document/window goes with it
   p._a = null;
   if (p.el) p.el.remove();
+  if (E.active === p) setActive(null);
   STATO.rimuovi(p, "close");
 }
 
@@ -129,7 +130,7 @@ function closeAllPanels() {
   relayout();
   fitHost();
   uiSave();
-  if (E.tab === "ms2") renderFileList();
+  if (tabFiles("ms2").length) renderFileList();
   redrawAll();
 }
 
@@ -174,7 +175,7 @@ function cleanupOrphanPanels() {
   if (changed) {
     relayout();
     fitHost();
-    if (E.tab === "ms2") renderFileList();
+    if (tabFiles("ms2").length) renderFileList();
   }
 }
 
@@ -222,7 +223,7 @@ function addPanel(type, o, after) {
   p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
-  STATO.aggiungi(p, "open"); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
+  STATO.aggiungi(p, "open"); apply(p); fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", e => {
@@ -238,14 +239,14 @@ function addPanel(type, o, after) {
     const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); grp.forEach(q => q.el.classList.remove("drag")); restack(p, true, grp); fitHost(); } uiSave(); };
     addEventListener("mousemove", mv); addEventListener("mouseup", up); e.preventDefault();
   });
-  let first = true;
-  p._ro = new ResizeObserver(() => {
-    if (first) { first = false; return; }
+  let skip = 2;                                                    // the first notification of each of the two watched elements is the initial size
+  const onSize = () => {
+    if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
-    cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
+    FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
     fitHdSoon(p);
-  });
-  p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
+  };
+  const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap to more lines
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
   const fsB = el.querySelector('[data-a="max"]');
   p._setMax = on => {
@@ -254,7 +255,7 @@ function addPanel(type, o, after) {
     if (on) setActive(p);
     fsB.title = I18N.t(on ? "panel.max.exit" : "panel.max.title");
     if (on) front(el);
-    cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => { draw(p); setTimeout(() => draw(p), 120); });
+    FRAME.cancel(p._raf); p._raf = FRAME.next(() => { draw(p); setTimeout(() => draw(p), 120); });
   };
   fsB.onclick = () => p._setMax(!el.classList.contains("max"));
   hdMoreInit(p);
@@ -294,7 +295,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
-  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
+  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -302,7 +303,7 @@ function addPanel(type, o, after) {
 const redrawAll = () => tabPanels().forEach(draw);
 // many requests in the same frame (window resize, a burst of answers) become one redraw
 let redrawRaf = 0;
-const redrawSoon = () => { if (!redrawRaf) redrawRaf = requestAnimationFrame(() => { redrawRaf = 0; redrawAll(); }); };
+const redrawSoon = () => { if (!redrawRaf) redrawRaf = FRAME.next(() => { redrawRaf = 0; redrawAll(); }); };
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
@@ -311,7 +312,7 @@ document.addEventListener("keydown", e => {
 // full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
 const fsPanel = () => E.panels.find(q => q.el && q.el.classList.contains("max"));
 function fsInert(on, closing) {
-  document.querySelectorAll("header,#dfiles,#dtabs,#tools,#dpanels>.pnl").forEach(e => {
+  document.querySelectorAll("header,#dfiles,#tools,#dpanels>.pnl").forEach(e => {
     if (on && e !== on.el) e.setAttribute("inert", ""); else if (!on) e.removeAttribute("inert");
   });
   if (!on && !closing) document.documentElement.classList.remove("fs-on"); else if (on) document.documentElement.classList.add("fs-on");
@@ -717,7 +718,7 @@ function fitHd(p) {
     else if (open) { more.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); }
   } finally { p._fitBusy = false; }
 }
-function fitHdSoon(p) { cancelAnimationFrame(p._fitRaf); p._fitRaf = requestAnimationFrame(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }       // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
+function fitHdSoon(p) { FRAME.cancel(p._fitRaf); p._fitRaf = FRAME.next(() => fitHd(p)); clearTimeout(p._fitT); p._fitT = setTimeout(() => fitHd(p), 300); }       // a second pass: widgets that settle after the first layout (fonts, async parts of the header) must not leave it too wide
 function hdMorePlace(p) { const hd = p.el.querySelector(".hd"), m = p.el.querySelector(".hmore"); if (hd && m) { m.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; m.style.maxHeight = Math.max(80, p.el.clientHeight - hd.offsetHeight - 16) + "px"; } }
 function hdMoreInit(p) {
   const mb = p.el.querySelector('[data-a="more"]'), m = p.el.querySelector(".hmore"); if (!mb || !m) return;

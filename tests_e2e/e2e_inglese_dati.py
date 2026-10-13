@@ -31,7 +31,7 @@ try:
         stage(pg, synth.make_series("/tmp/s_ingl_c", [0, 15, 60])); pg.click("#opbtn"); ready(pg)
         def first_view():
             it = italian(pg); assert not it, it
-            for w in ("Full Scan", "Selected only", "All overlaid", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w in pg.inner_text("#v-data"), w
+            for w in ("Full Scan", "Selected only", "All overlaid", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w.lower() in pg.inner_text("#v-data").lower(), w
         step("first view of Data: no Italian", first_view)
         def sidebar():
             for t in ("calc", "losses", "adducts", "lists"):

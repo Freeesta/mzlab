@@ -33,19 +33,19 @@ try:
             assert pg.evaluate("E.panels.filter(p=>p.tab===E.tab).every(p=>!p.el.querySelector('.pnum').hidden)"), "numbers are always shown"
         step("panels are numbered from the top; key 2 activates the second", numbering)
         def files():
-            drawer(pg); nm = pg.locator("#flst .fl:not(.ghost) .nm").first
+            drawer(pg); nm = pg.locator("#flst .fl .nm").first
             nm.click(button="right"); pg.wait_for_timeout(200)
             assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi").count() == 1
             pg.locator("#ctx div", has_text="Rinomina").click(); pg.wait_for_timeout(300)
             pg.fill("#askin", "Campione prova"); pg.click("#askok"); pg.wait_for_timeout(500)
             assert "Campione prova" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
-            pg.locator("#flst .fl:not(.ghost) .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Cambia colore").click(); pg.wait_for_timeout(300)
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Cambia colore").click(); pg.wait_for_timeout(300)
             pg.locator("#colpop [data-c]").nth(3).click(); pg.wait_for_timeout(400)
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
-            n0 = pg.locator("#flst .fl:not(.ghost)").count()
-            pg.locator("#flst .fl:not(.ghost) .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi").click(); pg.wait_for_timeout(300)
+            n0 = pg.locator("#flst .fl").count()
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi").click(); pg.wait_for_timeout(300)
             pg.click("#askok"); pg.wait_for_timeout(800)
-            assert pg.locator("#flst .fl:not(.ghost)").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
+            assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
         step("right click on a file: rename, colour, remove (with confirmation)", files)
         def areas():
             pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)

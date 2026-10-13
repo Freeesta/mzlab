@@ -10,7 +10,7 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
   - Ogni canale è un campo di `metodo/1.campi` (origine `thermo-raw:StatusLog`, valore se costante, altrimenti `min..max`, con unità); i titoli di sezione (`====  Ion Source  ====`) non hanno valore. `meta.nonDecodificato` resta solo se lo schema non si trova.
   - `StatusLog::series()` dà le serie nel tempo con nome e unità; lo scrittore mzML non le scrive ancora come cromatogrammi.
 - Tune: i valori «Tune Data» e la calibrazione di massa stanno nello schema del trailer (già in `campi`), il file di tune di base nel testo del metodo (`grezzo`, `InitialTuneFile`). Resta fuori il rumore e la baseline per picco FT.
-- Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); `raw::Convert { anonymous }` li toglie (`rawfilter.rs`), insieme a utente, computer, seriale e percorsi del documento `metodo/1`.
+- Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); il documento `metodo/1` che porta li riporta con `operatore`, `strumento.serie` e i campi marcati `identita`.
 
 ## SCIEX `.wiff` / `.dam`
 - Decodifica mancante: PDA 3D del `.wiff` (flussi `DAD*`), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.

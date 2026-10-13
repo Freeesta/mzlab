@@ -1,7 +1,7 @@
 //! The `metodo/1` document (`metodo.rs`) of an Agilent `.D` run: the sample and the sequence row, the instrument (model, serial number, firmware, acquisition
 //! program), the people and the computer, the EI source with its tune values, the scan range or the SIM groups of the method, and in `campi` every name/value of
 //! the side files (`AgilentD::metadata`) with the section that carries it. The method report, the run start and the converter log go whole to `grezzo`. A block of
-//! the folder that is not decoded is named in `avvisi`. An anonymous document leaves out the user, the computer, the serial number and the paths, also inside the texts.
+//! the folder that is not decoded is named in `avvisi`.
 
 use super::AgilentD;
 use crate::metodo::{self, num, obj, text, Source, V};
@@ -51,7 +51,7 @@ fn campione(d: &AgilentD) -> Option<V> {
     ])
 }
 
-fn strumento(d: &AgilentD, src: &Source) -> Option<V> {
+fn strumento(d: &AgilentD) -> Option<V> {
     let dev = d.device.as_ref();
     let model = dev.map(|v| format!("{} {}", v.model, v.name));
     let soft = d.acquisition_software().and_then(|(_, name, version)| {
@@ -60,16 +60,7 @@ fn strumento(d: &AgilentD, src: &Source) -> Option<V> {
     obj(vec![
         ("produttore", Some(V::s("Agilent Technologies"))),
         ("modello", model.as_deref().and_then(text)),
-        (
-            "serie",
-            dev.and_then(|v| {
-                if src.anonymous {
-                    src.alias("serial", &v.serial).map(V::s)
-                } else {
-                    text(&v.serial)
-                }
-            }),
-        ),
+        ("serie", dev.and_then(|v| text(&v.serial))),
         ("firmware", dev.and_then(|v| text(&v.firmware))),
         ("software", soft.map(|s| V::Arr(vec![s]))),
     ])
@@ -219,7 +210,7 @@ fn ident(d: &AgilentD) -> Ident {
     }
 }
 
-fn fields(d: &AgilentD, ident: &Ident, anon: bool) -> Vec<V> {
+fn fields(d: &AgilentD, ident: &Ident) -> Vec<V> {
     let mut all: Vec<Campo> = d
         .metadata
         .iter()
@@ -231,13 +222,13 @@ fn fields(d: &AgilentD, ident: &Ident, anon: bool) -> Vec<V> {
             c
         })
         .collect();
-    all.retain(|c| !(anon && c.identita) && !c.valore.is_empty());
+    all.retain(|c| !c.valore.is_empty());
     all.sort_by(|a, b| (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave)));
     all.iter().filter_map(Campo::json).collect()
 }
 
 /// The texts the folder holds whole (method report, run start, converter log), cut to `GRAW_MAX` in all.
-fn raw_texts(d: &AgilentD, ident: &Ident, anon: bool) -> Vec<V> {
+fn raw_texts(d: &AgilentD) -> Vec<V> {
     let mut left = GRAW_MAX;
     let mut out = Vec::new();
     for (origin, title) in TEXTS {
@@ -248,11 +239,7 @@ fn raw_texts(d: &AgilentD, ident: &Ident, anon: bool) -> Vec<V> {
         else {
             continue;
         };
-        let t = if anon {
-            ident.scrub(&t.value)
-        } else {
-            t.value.clone()
-        };
+        let t = &t.value;
         let mut end = t.len().min(left);
         while !t.is_char_boundary(end) {
             end -= 1;
@@ -286,9 +273,8 @@ fn warnings(d: &AgilentD) -> Vec<V> {
 }
 
 impl AgilentD {
-    /// The `metodo/1` document of the run (`src.anonymous`: without the people, the computer, the serial number and the paths). Never an error: what is missing is absent.
+    /// The `metodo/1` document of the run. Never an error: what is missing is absent.
     pub fn metodo(&self, src: &Source) -> String {
-        let anon = src.anonymous;
         let ident = ident(self);
         let created = self
             .acquired()
@@ -297,32 +283,17 @@ impl AgilentD {
             ("schema", Some(V::s(metodo::SCHEMA))),
             ("origine", metodo::origin(src, created.as_deref())),
             ("campione", campione(self)),
-            ("strumento", strumento(self, src)),
+            ("strumento", strumento(self)),
             (
                 "operatore",
-                if anon {
-                    obj(vec![
-                        (
-                            "utente",
-                            self.operator().and_then(|v| src.alias("user", v)).map(V::s),
-                        ),
-                        (
-                            "computer",
-                            self.computer()
-                                .and_then(|v| src.alias("computer", v))
-                                .map(V::s),
-                        ),
-                    ])
-                } else {
-                    obj(vec![
-                        ("utente", self.operator().and_then(text)),
-                        ("computer", self.computer().and_then(text)),
-                    ])
-                },
+                obj(vec![
+                    ("utente", self.operator().and_then(text)),
+                    ("computer", self.computer().and_then(text)),
+                ]),
             ),
             ("ms", ms(self)),
-            ("campi", Some(V::Arr(fields(self, &ident, anon)))),
-            ("grezzo", Some(V::Arr(raw_texts(self, &ident, anon)))),
+            ("campi", Some(V::Arr(fields(self, &ident)))),
+            ("grezzo", Some(V::Arr(raw_texts(self)))),
             ("avvisi", Some(V::Arr(warnings(self)))),
         ]);
         doc.map_or_else(String::new, |d| d.json())
