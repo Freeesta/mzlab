@@ -111,6 +111,7 @@ pub mod statroute;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
+pub mod campioni;
 
 pub use error::{Error, Result};
 
