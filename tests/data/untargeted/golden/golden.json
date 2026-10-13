@@ -1,0 +1,3654 @@
+{
+ "cases": [
+  {
+   "name": "all_pos",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv",
+    "mzmine/fbmn.mgf",
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": 1,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:4",
+      "id": "4",
+      "pol": 1,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        100,
+        110,
+        120,
+        130
+       ],
+       "it": [
+        500,
+        800,
+        1000,
+        600
+       ],
+       "prec": 299.1754,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-5",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:6",
+      "id": "6",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 3,
+     "unreliableStructures": 1,
+     "ms2": 2,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "networkRows": 2
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv",
+     "fbmn.mgf",
+     "biblioteca.tsv",
+     "rete.tsv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "all_nopol",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv",
+    "mzmine/fbmn.mgf",
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": 0,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 0,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 0,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 0,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:4",
+      "id": "4",
+      "pol": 0,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 0,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        100,
+        110,
+        120,
+        130
+       ],
+       "it": [
+        500,
+        800,
+        1000,
+        600
+       ],
+       "prec": 299.1754,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-5",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:6",
+      "id": "6",
+      "pol": 0,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 3,
+     "unreliableStructures": 1,
+     "ms2": 2,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "networkRows": 2
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv",
+     "fbmn.mgf",
+     "biblioteca.tsv",
+     "rete.tsv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "all_neg",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv",
+    "mzmine/fbmn.mgf",
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": -1,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": -1,
+    "features": [
+     {
+      "key": "NEG:1",
+      "id": "1",
+      "pol": -1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "NEG:2",
+      "id": "2",
+      "pol": -1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "NEG:3",
+      "id": "3",
+      "pol": -1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "NEG:4",
+      "id": "4",
+      "pol": -1,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "NEG:5",
+      "id": "5",
+      "pol": -1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        100,
+        110,
+        120,
+        130
+       ],
+       "it": [
+        500,
+        800,
+        1000,
+        600
+       ],
+       "prec": 299.1754,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-5",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "NEG:6",
+      "id": "6",
+      "pol": -1,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 3,
+     "unreliableStructures": 1,
+     "ms2": 2,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "networkRows": 2
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv",
+     "fbmn.mgf",
+     "biblioteca.tsv",
+     "rete.tsv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "all_max3",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv",
+    "mzmine/fbmn.mgf",
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": 1,
+   "max": 3,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 3,
+     "withMatch": 2,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 2,
+     "unreliableStructures": 1,
+     "ms2": 1,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "networkRows": 2
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv",
+     "fbmn.mgf",
+     "biblioteca.tsv",
+     "rete.tsv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "all_crlf",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv",
+    "mzmine/fbmn.mgf",
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": 1,
+   "variant": "crlf",
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:4",
+      "id": "4",
+      "pol": 1,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": {
+       "mz": [
+        100,
+        110,
+        120,
+        130
+       ],
+       "it": [
+        500,
+        800,
+        1000,
+        600
+       ],
+       "prec": 299.1754,
+       "ce": ""
+      },
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-5",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:6",
+      "id": "6",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 3,
+     "unreliableStructures": 1,
+     "ms2": 2,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "networkRows": 2
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv",
+     "fbmn.mgf",
+     "biblioteca.tsv",
+     "rete.tsv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "full_only",
+   "files": [
+    "mzmine/tabella_pos.csv"
+   ],
+   "pol": 0,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 0,
+    "features": [
+     {
+      "key": "UNK:1",
+      "id": "1",
+      "pol": 0,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "UNK:2",
+      "id": "2",
+      "pol": 0,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "structureChecked": true,
+        "structure": "unreliable"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "UNK:3",
+      "id": "3",
+      "pol": 0,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "UNK:4",
+      "id": "4",
+      "pol": 0,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "UNK:5",
+      "id": "5",
+      "pol": 0,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 2,
+      "program": "mzmine"
+     },
+     {
+      "key": "UNK:6",
+      "id": "6",
+      "pol": 0,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [
+     "Polarity not found in the files: choose it before matching."
+    ],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "unreliableStructures": 1
+    },
+    "used": [
+     "tabella_pos.csv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "full_annotations",
+   "files": [
+    "mzmine/tabella_pos.csv",
+    "mzmine/annotazioni_pos.csv"
+   ],
+   "pol": 1,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-1",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "entry": "E-2",
+        "structureChecked": true,
+        "structure": "unreliable"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:4",
+      "id": "4",
+      "pol": 1,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "FFFFFFFFFFFFFF-UHFFFAOYSA-N",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "entry": "E-5",
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 2,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:6",
+      "id": "6",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "annotationRows": 5,
+     "lipidRowsDropped": 1,
+     "annotationsMerged": 3,
+     "unreliableStructures": 1
+    },
+    "used": [
+     "tabella_pos.csv",
+     "annotazioni_pos.csv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "quant_edges",
+   "files": [
+    "mzmine/fbmn_quant.csv",
+    "mzmine/fbmn_edges.csv",
+    "mzmine/fbmn.mgf"
+   ],
+   "pol": 1,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "fbmn_quant.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120.5,
+        800,
+        300
+       ],
+       "prec": 184.1332,
+       "ce": ""
+      },
+      "ann": [],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": null,
+      "nScans": 2,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        100,
+        110,
+        120,
+        130
+       ],
+       "it": [
+        500,
+        800,
+        1000,
+        600
+       ],
+       "prec": 299.1754,
+       "ce": ""
+      },
+      "ann": [],
+      "group": "4",
+      "iin": null,
+      "component": null,
+      "nScans": 3,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [
+     {
+      "a": "1",
+      "b": "6",
+      "type": "MS1 annotation",
+      "score": 0.97,
+      "annotation": "[M+H]+ [M+Na]+ dm/z=21.98"
+     },
+     {
+      "a": "1",
+      "b": "5",
+      "type": "Cosine",
+      "score": 0.82,
+      "annotation": ""
+     }
+    ],
+    "warnings": [],
+    "stats": {
+     "features": 3,
+     "edges": 2,
+     "ms2": 2,
+     "mgfBlocks": 4,
+     "mgfNotMs2": 1
+    },
+    "used": [
+     "fbmn_quant.csv",
+     "fbmn_edges.csv",
+     "fbmn.mgf"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "quant_crlf",
+   "files": [
+    "mzmine/fbmn_quant.csv",
+    "mzmine/fbmn_edges.csv"
+   ],
+   "pol": 1,
+   "variant": "crlf",
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "fbmn_quant.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": "4",
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [
+     {
+      "a": "1",
+      "b": "6",
+      "type": "MS1 annotation",
+      "score": 0.97,
+      "annotation": "[M+H]+ [M+Na]+ dm/z=21.98"
+     },
+     {
+      "a": "1",
+      "b": "5",
+      "type": "Cosine",
+      "score": 0.82,
+      "annotation": ""
+     }
+    ],
+    "warnings": [],
+    "stats": {
+     "features": 3,
+     "edges": 2
+    },
+    "used": [
+     "fbmn_quant.csv",
+     "fbmn_edges.csv"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "msdial",
+   "files": [
+    "msdial/allineamento.txt"
+   ],
+   "pol": 1,
+   "expect": {
+    "program": "msdial",
+    "file": {
+     "name": "allineamento.txt",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:0",
+      "id": "0",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A": 100000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120,
+        800,
+        300
+       ]
+      },
+      "ann": [
+       {
+        "source": "MS-DIAL",
+        "type": "dot product (0-1000)",
+        "score": 912,
+        "reverse": 890,
+        "total": 85.5,
+        "shared": null,
+        "ppm": null,
+        "name": "Testamine",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "analog": false,
+        "propagated": false,
+        "external": true,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A": 80000,
+       "Campione_B": 70000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 250.1,
+      "rt": 7,
+      "areas": {
+       "Campione_B": 5000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8.1,
+      "areas": {
+       "Campione_A": 30000,
+       "Campione_B": 20000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        100,
+        110
+       ],
+       "it": [
+        10,
+        20
+       ]
+      },
+      "ann": [
+       {
+        "source": "MS-DIAL",
+        "type": "dot product (0-1000)",
+        "score": 500,
+        "reverse": null,
+        "total": 40,
+        "shared": null,
+        "ppm": null,
+        "name": "Low",
+        "cleanName": "Low",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "ik": "",
+        "analog": false,
+        "propagated": false,
+        "external": true,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     }
+    ],
+    "samples": [
+     "Campione_A",
+     "Campione_B"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 4,
+     "ms2": 2
+    },
+    "used": [
+     "allineamento.txt"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "msdial_crlf",
+   "files": [
+    "msdial/allineamento.txt"
+   ],
+   "pol": 1,
+   "variant": "crlf",
+   "expect": {
+    "program": "msdial",
+    "file": {
+     "name": "allineamento.txt",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:0",
+      "id": "0",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A": 100000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        56.05,
+        84.08,
+        156.1
+       ],
+       "it": [
+        120,
+        800,
+        300
+       ]
+      },
+      "ann": [
+       {
+        "source": "MS-DIAL",
+        "type": "dot product (0-1000)",
+        "score": 912,
+        "reverse": 890,
+        "total": 85.5,
+        "shared": null,
+        "ppm": null,
+        "name": "Testamine",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "ik": "AAAAAAAAAAAAAA-UHFFFAOYSA-N",
+        "analog": false,
+        "propagated": false,
+        "external": true,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A": 80000,
+       "Campione_B": 70000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 250.1,
+      "rt": 7,
+      "areas": {
+       "Campione_B": 5000
+      },
+      "detected": null,
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8.1,
+      "areas": {
+       "Campione_A": 30000,
+       "Campione_B": 20000
+      },
+      "detected": null,
+      "ms2": {
+       "mz": [
+        100,
+        110
+       ],
+       "it": [
+        10,
+        20
+       ]
+      },
+      "ann": [
+       {
+        "source": "MS-DIAL",
+        "type": "dot product (0-1000)",
+        "score": 500,
+        "reverse": null,
+        "total": 40,
+        "shared": null,
+        "ppm": null,
+        "name": "Low",
+        "cleanName": "Low",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "ik": "",
+        "analog": false,
+        "propagated": false,
+        "external": true,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "msdial"
+     }
+    ],
+    "samples": [
+     "Campione_A",
+     "Campione_B"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 4,
+     "ms2": 2
+    },
+    "used": [
+     "allineamento.txt"
+    ],
+    "ignored": []
+   }
+  },
+  {
+   "name": "mgf_only",
+   "files": [
+    "mzmine/fbmn.mgf"
+   ],
+   "pol": 1,
+   "expect": {
+    "error": "noTable"
+   }
+  },
+  {
+   "name": "gnps_only",
+   "files": [
+    "gnps/biblioteca.tsv",
+    "gnps/rete.tsv"
+   ],
+   "pol": 1,
+   "expect": {
+    "error": "noTable"
+   }
+  },
+  {
+   "name": "full_gnps_first",
+   "files": [
+    "gnps/rete.tsv",
+    "gnps/biblioteca.tsv",
+    "mzmine/tabella_pos.csv"
+   ],
+   "pol": 1,
+   "expect": {
+    "program": "mzmine",
+    "file": {
+     "name": "tabella_pos.csv",
+     "sha256": "abc"
+    },
+    "pol": 1,
+    "features": [
+     {
+      "key": "POS:1",
+      "id": "1",
+      "pol": 1,
+      "mz": 184.1332,
+      "rt": 5.2,
+      "areas": {
+       "Campione_A_pos": 100000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.91,
+        "shared": 8,
+        "explained": null,
+        "ppm": 0,
+        "name": "MoNA:Testamine|HCD 30",
+        "cleanName": "Testamine",
+        "adduct": "[M+H]+",
+        "formula": "C10H17NO2",
+        "smiles": "CCOC",
+        "inchi": "",
+        "ik": "",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "structureChecked": true,
+        "structure": "ok"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.93,
+        "shared": 9,
+        "ppm": 0.5430851144714804,
+        "name": "MassbankEU:Testamine|HCD",
+        "cleanName": "Testamine",
+        "ik": "AAAAAAAAAAAAAA",
+        "smiles": "CCOC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.88,
+        "shared": 7,
+        "ppm": 271.5425572357402,
+        "name": "Testamine analogue",
+        "cleanName": "Testamine analogue",
+        "ik": "PLANARBBBBBBBB",
+        "smiles": "CCOCC",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 184.1332,
+        "analog": true,
+        "propagated": false,
+        "notes": [
+         "analogue: |mass difference| > 15 ppm"
+        ]
+       }
+      ],
+      "group": "3",
+      "iin": {
+       "id": "7",
+       "ions": "[M+H]+",
+       "neutral": 183.1259
+      },
+      "component": 7,
+      "nScans": 3,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:2",
+      "id": "2",
+      "pol": 1,
+      "mz": 301.1547,
+      "rt": 6,
+      "areas": {
+       "Campione_A_pos": 80000,
+       "Campione_B_pos": 70000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.88,
+        "shared": 3,
+        "explained": null,
+        "ppm": 0,
+        "name": "Massbank:Testol - 30.0 eV",
+        "cleanName": "Testol",
+        "adduct": "[M+H]+",
+        "formula": "",
+        "smiles": "",
+        "inchi": "",
+        "ik": "",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": [
+         "unreliable library structure: the formula does not explain the precursor"
+        ],
+        "structureChecked": true,
+        "structure": "unreliable"
+       },
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.5,
+        "shared": 3,
+        "ppm": 0,
+        "name": "Testol",
+        "cleanName": "Testol",
+        "ik": "PLANARDDDDDDDD",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 301.1547,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 1,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:3",
+      "id": "3",
+      "pol": 1,
+      "mz": 195.0875,
+      "rt": 4,
+      "areas": {
+       "Campione_A_pos": 150000,
+       "Campione_B_pos": 160000
+      },
+      "detected": [
+       "Campione_A_pos",
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "GNPS2",
+        "type": "MQScore",
+        "score": 0.85,
+        "shared": 8,
+        "ppm": 0,
+        "name": "Caffeine",
+        "cleanName": "Caffeine",
+        "ik": "RYYVLZVUVIJVGH",
+        "smiles": "",
+        "inchi": "",
+        "adduct": "[M+H]+",
+        "library": "GNPS-LIB",
+        "precursor": 195.0875,
+        "analog": false,
+        "propagated": false,
+        "notes": []
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:4",
+      "id": "4",
+      "pol": 1,
+      "mz": 280.1,
+      "rt": 6.5,
+      "areas": {
+       "Campione_A_pos": 99999
+      },
+      "detected": [],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:5",
+      "id": "5",
+      "pol": 1,
+      "mz": 299.1754,
+      "rt": 9.5,
+      "areas": {
+       "Campione_A_pos": 60000
+      },
+      "detected": [
+       "Campione_A_pos"
+      ],
+      "ms2": null,
+      "ann": [
+       {
+        "source": "mzMine library",
+        "type": "cosine",
+        "score": 0.95,
+        "shared": 9,
+        "explained": null,
+        "ppm": 0,
+        "name": "Testagel",
+        "cleanName": "Testagel",
+        "adduct": "[M+H]+",
+        "formula": "C18H22N2O2",
+        "smiles": "CCREAL",
+        "inchi": "",
+        "ik": "",
+        "precursor": 299.1754,
+        "analog": false,
+        "propagated": false,
+        "notes": [],
+        "structureChecked": true,
+        "structure": "ok"
+       }
+      ],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": 2,
+      "program": "mzmine"
+     },
+     {
+      "key": "POS:6",
+      "id": "6",
+      "pol": 1,
+      "mz": 310.3,
+      "rt": 8,
+      "areas": {
+       "Campione_B_pos": 35000
+      },
+      "detected": [
+       "Campione_B_pos"
+      ],
+      "ms2": null,
+      "ann": [],
+      "group": null,
+      "iin": null,
+      "component": null,
+      "nScans": null,
+      "program": "mzmine"
+     }
+    ],
+    "samples": [
+     "Campione_A_pos",
+     "Campione_B_pos"
+    ],
+    "edges": [],
+    "warnings": [],
+    "stats": {
+     "features": 6,
+     "withMatch": 3,
+     "networkRows": 2,
+     "gnpsRows": 6,
+     "gnpsAnalogs": 1,
+     "gnpsPropagated": 1,
+     "gnpsUnmatched": 1,
+     "unreliableStructures": 1
+    },
+    "used": [
+     "tabella_pos.csv",
+     "rete.tsv",
+     "biblioteca.tsv"
+    ],
+    "ignored": []
+   }
+  }
+ ],
+ "num": [
+  [
+   "1",
+   1
+  ],
+  [
+   " 2.5 ",
+   2.5
+  ],
+  [
+   "1,5",
+   1.5
+  ],
+  [
+   "1,234.5",
+   null
+  ],
+  [
+   "na",
+   null
+  ],
+  [
+   "NaN",
+   null
+  ],
+  [
+   "-",
+   null
+  ],
+  [
+   "",
+   null
+  ],
+  [
+   "x",
+   null
+  ],
+  [
+   "1e3",
+   1000
+  ],
+  [
+   ".5",
+   0.5
+  ],
+  [
+   "5.",
+   5
+  ],
+  [
+   "+7",
+   7
+  ],
+  [
+   "0x10",
+   16
+  ],
+  [
+   "1 000",
+   null
+  ],
+  [
+   "Infinity",
+   null
+  ],
+  [
+   "-3",
+   -3
+  ],
+  [
+   "  ",
+   null
+  ]
+ ],
+ "inline": [
+  {
+   "d": ",",
+   "text": "a,b,c\n1,\"x,y\",3\n2,\"line1\nline2\",4\n",
+   "header": [
+    "a",
+    "b",
+    "c"
+   ],
+   "rows": [
+    [
+     "1",
+     "x,y",
+     "3"
+    ],
+    [
+     "2",
+     "line1\nline2",
+     "4"
+    ]
+   ]
+  },
+  {
+   "d": ",",
+   "text": "a,b\n1,2,\n,\n\n\"q\"\"r\",\"s\"t,u\n",
+   "header": [
+    "a",
+    "b"
+   ],
+   "rows": [
+    [
+     "1",
+     "2",
+     ""
+    ],
+    [
+     "",
+     ""
+    ],
+    [
+     "q\"r",
+     "s"
+    ]
+   ]
+  },
+  {
+   "d": "\t",
+   "text": "\n\na\tb\n1\t2",
+   "header": [
+    ""
+   ],
+   "rows": [
+    [
+     "a",
+     "b"
+    ],
+    [
+     "1",
+     "2"
+    ]
+   ]
+  }
+ ],
+ "adducts": [
+  [
+   "M+H",
+   "[M+H]+"
+  ],
+  [
+   "M-H",
+   "[M-H]-"
+  ],
+  [
+   "[M+Na]+",
+   "[M+Na]+"
+  ],
+  [
+   "M+HCOO",
+   "[M+HCOO]-"
+  ],
+  [
+   "M-H2O+H",
+   "[M-H2O+H]+"
+  ],
+  [
+   "M-H2O",
+   "[M-H2O]+"
+  ],
+  [
+   " [M + H]+ ",
+   "[M+H]+"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "M+Cl",
+   "[M+Cl]-"
+  ],
+  [
+   "M+2H",
+   "[M+2H]+"
+  ],
+  [
+   "M+H-",
+   "[M+H]-"
+  ],
+  [
+   "M+CH3COO",
+   "[M+CH3COO]-"
+  ]
+ ],
+ "checks": [
+  [
+   [
+    "C10H17NO2",
+    184.1332,
+    "M+H",
+    1
+   ],
+   {
+    "ok": true,
+    "ppm": 0.028464560127725854,
+    "adduct": "[M+H]+"
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    206.1151,
+    "[M+H]+",
+    1
+   ],
+   {
+    "ok": true,
+    "ppm": 0.2401090483344732,
+    "adduct": "[M+Na]+"
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    301.1547,
+    "M+H",
+    1
+   ],
+   {
+    "ok": false,
+    "ppm": -262541.5213868469,
+    "adduct": "[M+K]+"
+   }
+  ],
+  [
+   [
+    "",
+    184.1,
+    "M+H",
+    1
+   ],
+   {
+    "ok": null
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    182.1187,
+    "[M-H]-",
+    -1
+   ],
+   {
+    "ok": true,
+    "ppm": -0.2617142036347404,
+    "adduct": "[M-H]-"
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    0,
+    "M+H",
+    1
+   ],
+   {
+    "ok": null
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    null,
+    "M+H",
+    1
+   ],
+   {
+    "ok": null
+   }
+  ],
+  [
+   [
+    "Xx5",
+    184.1,
+    "M+H",
+    1
+   ],
+   {
+    "ok": null
+   }
+  ],
+  [
+   [
+    "C6H12O6",
+    203.0526,
+    "",
+    1
+   ],
+   {
+    "ok": true,
+    "ppm": 0.043354236907019894,
+    "adduct": "[M+Na]+"
+   }
+  ],
+  [
+   [
+    "C6H12O6",
+    179.0561,
+    "[M-H]-",
+    -1
+   ],
+   {
+    "ok": true,
+    "ppm": 0.06506362800511699,
+    "adduct": "[M-H]-"
+   }
+  ],
+  [
+   [
+    "C10H17NO2",
+    184.1332,
+    "M+Na",
+    0
+   ],
+   {
+    "ok": true,
+    "ppm": 0.028464560127725854,
+    "adduct": "[M+H]+"
+   }
+  ],
+  [
+   [
+    "B2H6",
+    28,
+    "M+H",
+    1
+   ],
+   {
+    "ok": false,
+    "ppm": 38315.62302073355,
+    "adduct": "[M+H]+"
+   }
+  ],
+  [
+   [
+    "FeCl3",
+    162.8,
+    "[M+Cl]-",
+    -1
+   ],
+   {
+    "ok": false,
+    "ppm": -18217.327470273758,
+    "adduct": "[M-H]-"
+   }
+  ]
+ ],
+ "forms": [
+  [
+   "C10H17NO2",
+   183.12592878911
+  ],
+  [
+   "C6H12O6",
+   180.0633881022
+  ],
+  [
+   "",
+   null
+  ],
+  [
+   "c6",
+   null
+  ],
+  [
+   "C10H17NO2 ",
+   183.12592878911
+  ],
+  [
+   "H2O",
+   18.0105646837
+  ],
+  [
+   "CH3OH",
+   32.02621474784
+  ],
+  [
+   "(CH3)2",
+   null
+  ],
+  [
+   "Fe2O3",
+   159.85461885868
+  ],
+  [
+   "BH3",
+   14.03278049621
+  ],
+  [
+   "C0",
+   0
+  ]
+ ],
+ "names": [
+  [
+   "Massbank:Caffeine",
+   "Caffeine"
+  ],
+  [
+   "MassbankEU:Foo|HCD 30",
+   "Foo"
+  ],
+  [
+   "Spectral Match to Bar from NIST14",
+   "Bar"
+  ],
+  [
+   "MoNA:Baz - 30.0 eV",
+   "Baz"
+  ],
+  [
+   "MB000123 Qux",
+   "Qux"
+  ],
+  [
+   "Quux_CE35.5",
+   "Quux"
+  ],
+  [
+   "  Plain  ",
+   "Plain"
+  ],
+  [
+   "ReSpect:Name|x|y",
+   "Name"
+  ],
+  [
+   "",
+   ""
+  ],
+  [
+   "AB12345 Name",
+   "Name"
+  ],
+  [
+   "ABC123456  Name2",
+   "Name2"
+  ],
+  [
+   "ABCD12345 Name3",
+   "ABCD12345 Name3"
+  ],
+  [
+   "12345 Name4",
+   "Name4"
+  ],
+  [
+   "1234 Name5",
+   "1234 Name5"
+  ],
+  [
+   "Name_CE30",
+   "Name"
+  ],
+  [
+   "Name_CE30.5x",
+   "Name_CE30.5x"
+  ],
+  [
+   "Name_CE",
+   "Name_CE"
+  ],
+  [
+   "massbank:lower",
+   "lower"
+  ],
+  [
+   "Foo - 40.0 eV|x",
+   "Foo"
+  ],
+  [
+   "X_CE1_CE2",
+   "X_CE1"
+  ]
+ ],
+ "prop": [
+  [
+   "Candidate X",
+   true
+  ],
+  [
+   "Y (known structural isomers)",
+   true
+  ],
+  [
+   "Z (delta mass: 14)",
+   true
+  ],
+  [
+   "Candidate",
+   true
+  ],
+  [
+   "candidate_x",
+   false
+  ],
+  [
+   "Candidates",
+   false
+  ],
+  [
+   " candidate x",
+   true
+  ],
+  [
+   "Plain",
+   false
+  ]
+ ],
+ "spec": [
+  [
+   "10:5 20:6",
+   {
+    "mz": [
+     10,
+     20
+    ],
+    "it": [
+     5,
+     6
+    ]
+   }
+  ],
+  [
+   "10:5 x:6 30",
+   {
+    "mz": [
+     10
+    ],
+    "it": [
+     5
+    ]
+   }
+  ],
+  [
+   "10: :4",
+   {
+    "mz": [
+     10
+    ],
+    "it": [
+     0
+    ]
+   }
+  ],
+  [
+   "  ",
+   {
+    "mz": [],
+    "it": []
+   }
+  ],
+  [
+   "5:1:2 7:8",
+   {
+    "mz": [
+     7
+    ],
+    "it": [
+     8
+    ]
+   }
+  ]
+ ],
+ "heads": [
+  [
+   "mzmine/tabella_pos.csv",
+   "mzmine-full"
+  ],
+  [
+   "mzmine/annotazioni_pos.csv",
+   "mzmine-annotations"
+  ],
+  [
+   "mzmine/fbmn_quant.csv",
+   "mzmine-quant"
+  ],
+  [
+   "mzmine/fbmn_edges.csv",
+   "mzmine-edges"
+  ],
+  [
+   "mzmine/fbmn.mgf",
+   "mgf"
+  ],
+  [
+   "msdial/allineamento.txt",
+   "msdial"
+  ],
+  [
+   "gnps/biblioteca.tsv",
+   "gnps-library"
+  ],
+  [
+   "gnps/rete.tsv",
+   "gnps-network"
+  ],
+  [
+   "a.mgf",
+   "mgf"
+  ],
+  [
+   "none",
+   ""
+  ],
+  [
+   "quoted",
+   ""
+  ],
+  [
+   "empty-first",
+   ""
+  ]
+ ]
+}

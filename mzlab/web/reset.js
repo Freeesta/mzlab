@@ -69,9 +69,8 @@
   function ask(only) {
     const T = (k, o) => I18N.t(k, o), modes = only ? [only] : ["all", "files"];
     document.getElementById("resetdlg")?.remove();
-    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "resetdlg-t");
-    d.innerHTML = `<h3 id="resetdlg-t">${T("reset.title")}</h3><p>${T("reset.intro")}</p>` +
-      modes.map(m => `<div class="rs-opt"><button type="button" class="${m === "all" ? "danger" : ""}" data-reset="${m}">${I18N.t(`reset.${m}.btn`)}</button><span class="sm">${I18N.t(`reset.${m}.desc`)}</span></div>`).join("") +
+    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-label", T("reset.title"));
+    d.innerHTML = modes.map(m => `<div class="rs-opt"><button type="button" class="${m === "all" ? "danger" : ""}" data-reset="${m}">${I18N.t(`reset.${m}.btn`)}</button><span class="sm">${I18N.t(`reset.${m}.desc`)}</span></div>`).join("") +
       `<div class="rs-end"><button type="button" data-reset="">${T("reset.cancel")}</button></div>`;
     document.body.appendChild(d);
     d.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-reset]")); if (!b) return; if (b.dataset.reset) { d.querySelectorAll("button").forEach(x => { x.disabled = true; }); run(b.dataset.reset); } else d.close(); });
