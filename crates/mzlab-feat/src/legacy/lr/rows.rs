@@ -8,7 +8,7 @@ use mzlab_core::json::{self, round, Value};
 
 use super::super::series::FileIn;
 use super::super::Res;
-use super::labels::{crit, score, status, Cell, GROWS};
+use super::labels::{crit, score, status, Cell, GROWS, PERSISTS};
 use super::plan::{ParentLr, Settings};
 use super::{Entry, Offset};
 use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
@@ -275,10 +275,15 @@ pub fn unexpected(
             continue;
         }
         let c = cells(t, r);
-        let sc = score(files, &c);
-        let fine = ["absent in the blank", "absent at time zero", GROWS]
-            .iter()
-            .all(|n| status(&sc.criteria, n) != "fail");
+        let sc = score(files, &c, s.persist());
+        let fine = [
+            "absent in the blank",
+            "absent at time zero",
+            GROWS,
+            PERSISTS,
+        ]
+        .iter()
+        .all(|n| status(&sc.criteria, n) != "fail");
         if matches!(sc.label, "forte" | "possibile") && fine {
             let area = best_area(t, files, r, is_treated);
             found.push((

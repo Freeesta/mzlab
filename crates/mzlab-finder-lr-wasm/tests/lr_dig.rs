@@ -253,7 +253,9 @@ fn contract_and_rows_of_python() {
         let id = r["id"].as_i64().unwrap();
         let det: Value =
             serde_json::from_str(&detail(&d, id, |k| Ok(open(&idxs[k]))).unwrap()).unwrap();
-        same_shape(&det, &g["detail"], "detail");
+        let mut shared = det.clone();
+        shared.as_object_mut().unwrap().remove("specificity");
+        same_shape(&shared, &g["detail"], "detail");
         assert!(
             det["criteria"]
                 .as_array()
@@ -265,6 +267,14 @@ fn contract_and_rows_of_python() {
         for t in det["traces"].as_array().unwrap() {
             same_shape(t, &g["trace"], "trace");
         }
+        let sp = &det["specificity"];
+        assert_eq!(sp["neighbours"].as_array().map(Vec::len), Some(4), "{id}");
+        assert_eq!(sp["decoys"].as_array().map(Vec::len), Some(2), "{id}");
+        assert!(det["criteria"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c["name"] == "persistent"));
     }
 }
 
