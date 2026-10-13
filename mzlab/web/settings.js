@@ -49,6 +49,38 @@ if (typeof window !== "undefined" && window.matchMedia) {
   });
 }
 
+// «Riduci ogni picco a un solo punto»: every profile file at low resolution gets a copy `<name>.centroidi.mzML` next to it (the original is not changed); the copy is loaded like any file
+const CEN_EXT = /\.centroidi\.mzML$/i;
+function centroidTargets() {
+  const all = typeof ST !== "undefined" && ST.files || [], have = new Set(all.map(f => f.name));
+  return all.filter(f => !f.gone && f.spectrum_mode === "profile" && !f.hr_profile && /\.mzML$/i.test(f.name) && !CEN_EXT.test(f.name) && !have.has(f.name.replace(/\.mzML$/i, ".centroidi.mzML")));
+}
+async function centroidAll(btn, stop, st, refresh) {
+  const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null;
+  const list = centroidTargets();
+  if (!rb || !rb.convertCentroids || !list.length) return;
+  const sizeOf = f => f.size || 0;
+  const ask = I18N.t("settings.cen.ask", { n: list.length, size: (list.reduce((a, f) => a + sizeOf(f), 0) / 1e6).toFixed(0) + " MB" });
+  if (typeof yesno === "function" && !(await yesno(ask))) return;
+  const ctl = new AbortController(); let made = 0, failed = 0;
+  btn.disabled = true; stop.hidden = false; stop.onclick = () => ctl.abort();
+  for (let i = 0; i < list.length && !ctl.signal.aborted; i++) {
+    const f = list[i], name = f.name.replace(/\.mzML$/i, ".centroidi.mzML");
+    const line = frac => { st.textContent = I18N.t("settings.cen.run", { n: i + 1, m: list.length, name: f.name }) + (frac >= 0 ? " " + Math.floor(100 * frac) + " %" : ""); };
+    line(-1);
+    try {
+      const blob = await rb.convertCentroids(f.name, sizeOf(f), p => { if (p.scansTotal) line(p.scans / p.scansTotal); }, ctl.signal);
+      if (blob) { await upload([new File([blob], name, { type: "application/xml" })], "data"); made++; }
+    } catch (e) {
+      if (e && e.cancelled) break;
+      failed++; st.textContent = I18N.t("settings.cen.fail", { name: f.name });
+    }
+  }
+  stop.hidden = true; btn.disabled = false;
+  if (!failed) st.textContent = ctl.signal.aborted ? I18N.t("settings.cen.stopped", { n: made }) : I18N.t("settings.cen.done", { n: made });
+  refresh();
+}
+
 // «Archivio nel browser» of the settings: what is kept here (files and indexes in OPFS), the one-line truth, and the ways to remove it
 function uipArchivio(d) {
     const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0.1, n / 1e6).toFixed(n < 1e7 ? 1 : 0) + " MB";
@@ -69,6 +101,8 @@ function uipArchivio(d) {
     try { const bc = new BroadcastChannel("mzlab"); bc.onmessage = () => { if (d.isConnected) refresh(); else bc.close(); }; } catch (_) { /* no BroadcastChannel */ }      // another tab added or took away a file
     rm.onclick = async () => { const ask = I18N.t("settings.arch.rm.ask", { size: rm.dataset.size || "–" }); d.remove(); if (typeof yesno === "function" && !(await yesno(ask))) return; if (window.QQRESET) QQRESET.run("files"); };
     der.onclick = async () => { const ask = I18N.t("settings.arch.der.ask", { size: der.dataset.size || "–" }); if (typeof yesno === "function" && !(await yesno(ask))) return; await fetch("api/spazio?derivati=1", { method: "POST" }).catch(() => {}); refresh(); };
+    const cen = d.querySelector("#uip-cen");
+    if (cen) cen.onclick = () => centroidAll(cen, d.querySelector("#uip-cen-x"), d.querySelector("#uip-cen-st"), refresh);
     d.querySelector("#uip-arch-all").onclick = () => { d.remove(); if (window.QQRESET) QQRESET.ask("all"); };
 }
 
@@ -93,7 +127,7 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
-    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-der" type="button" title="${I18N.t("settings.arch.der.title")}">${I18N.t("settings.arch.der.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div></div>
+    <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)"><div style="font-weight:600">${I18N.t("settings.arch.title")}</div><div class="sm" id="uip-space-val" role="status" aria-live="polite" style="margin:3px 0 6px"></div><div style="display:flex;flex-wrap:wrap;gap:6px"><button id="uip-arch-rm" type="button" title="${I18N.t("settings.arch.rm.title")}">${I18N.t("settings.arch.rm.btn")}</button><button id="uip-arch-der" type="button" title="${I18N.t("settings.arch.der.title")}">${I18N.t("settings.arch.der.btn")}</button><button id="uip-arch-all" type="button" title="${I18N.t("settings.arch.all.title")}">${I18N.t("settings.arch.all.btn")}</button></div>${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}</div>
     ${window.DESKUPD ? DESKUPD.row() : ""}
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `

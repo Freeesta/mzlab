@@ -108,7 +108,12 @@ fn the_surest_reader_wins_and_a_reader_of_another_contract_is_not_asked() {
 #[test]
 fn the_extensions_for_the_pickers_come_from_the_registry_without_repeats() {
     assert_eq!(estensioni_in(REGISTRO), [".dat", ".x", ".a", ".old"]);
-    assert!(estensioni().is_empty()); // no format registered yet: the pickers keep their own list
+    // the real registry: whatever is registered, in lower case with the dot and without repeats
+    let real = estensioni();
+    assert!(real
+        .iter()
+        .all(|e| e.starts_with('.') && *e == e.to_lowercase()));
+    assert!(real.iter().enumerate().all(|(i, e)| !real[..i].contains(e)));
 }
 
 #[test]
