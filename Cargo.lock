@@ -1962,6 +1962,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-finder-lr-wasm"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-wasm",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-lettori-wasm"
 version = "0.1.0"
 dependencies = [

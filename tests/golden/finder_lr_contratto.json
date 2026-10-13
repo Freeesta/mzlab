@@ -1,0 +1,239 @@
+{
+ "detail": {
+  "alternatives": [
+   "array"
+  ],
+  "criteria": [
+   "array"
+  ],
+  "delta": [
+   "string"
+  ],
+  "formula": [
+   "string"
+  ],
+  "id": [
+   "number"
+  ],
+  "label": [
+   "string"
+  ],
+  "level": [
+   "null",
+   "number"
+  ],
+  "level_text": [
+   "string"
+  ],
+  "ms2": [
+   "object"
+  ],
+  "mz": [
+   "number"
+  ],
+  "mz_extracted": [
+   "number"
+  ],
+  "mz_observed": [
+   "null",
+   "number"
+  ],
+  "name": [
+   "string"
+  ],
+  "ref_rt": [
+   "null",
+   "number"
+  ],
+  "rows": [
+   "array"
+  ],
+  "score": [
+   "null",
+   "number"
+  ],
+  "traces": [
+   "array"
+  ],
+  "transitions": [
+   "array"
+  ]
+ },
+ "kinetics": {
+  "area": [
+   "number"
+  ],
+  "height": [
+   "number"
+  ],
+  "time": [
+   "null",
+   "number"
+  ]
+ },
+ "python_rows": [
+  {
+   "kind": "candidate",
+   "label": "progenitore",
+   "mz": 241.0641,
+   "ref_rt": 9.0
+  },
+  {
+   "kind": "candidate",
+   "label": "forte",
+   "mz": 257.0591,
+   "ref_rt": 7.4
+  },
+  {
+   "kind": "candidate",
+   "label": "forte",
+   "mz": 289.0489,
+   "ref_rt": 4.4
+  },
+  {
+   "kind": "candidate",
+   "label": "forte",
+   "mz": 257.0591,
+   "ref_rt": 8.3
+  },
+  {
+   "kind": "unexpected",
+   "label": "forte",
+   "mz": 333.2194,
+   "ref_rt": 6.8
+  },
+  {
+   "kind": "unexpected",
+   "label": "forte",
+   "mz": 355.1053,
+   "ref_rt": 5.2
+  }
+ ],
+ "row": {
+  "alternatives": [
+   "array"
+  ],
+  "delta": [
+   "string"
+  ],
+  "delta_mz": [
+   "number"
+  ],
+  "formula": [
+   "string"
+  ],
+  "generation": [
+   "null",
+   "string"
+  ],
+  "id": [
+   "number"
+  ],
+  "insource": [
+   "bool"
+  ],
+  "isf": [
+   "null",
+   "object"
+  ],
+  "isotope_of": [
+   "null"
+  ],
+  "kind": [
+   "string"
+  ],
+  "kinetics": [
+   "array"
+  ],
+  "label": [
+   "string"
+  ],
+  "level": [
+   "null",
+   "number"
+  ],
+  "level_text": [
+   "string"
+  ],
+  "max_area": [
+   "number"
+  ],
+  "mz": [
+   "number"
+  ],
+  "name": [
+   "string"
+  ],
+  "ref_rt": [
+   "null",
+   "number"
+  ],
+  "score": [
+   "null",
+   "number"
+  ],
+  "steps": [
+   "number"
+  ],
+  "tmax": [
+   "null",
+   "number"
+  ]
+ },
+ "summary": {
+  "decay": [
+   "null",
+   "object"
+  ],
+  "files": [
+   "array"
+  ],
+  "mrm": [
+   "null"
+  ],
+  "n_samples": [
+   "number"
+  ],
+  "offset": [
+   "null",
+   "object"
+  ],
+  "parent": [
+   "object"
+  ],
+  "rows": [
+   "array"
+  ],
+  "settings": [
+   "object"
+  ],
+  "times": [
+   "array"
+  ],
+  "timing": [
+   "object"
+  ]
+ },
+ "trace": {
+  "label": [
+   "string"
+  ],
+  "peak": [
+   "null",
+   "object"
+  ],
+  "rt": [
+   "array"
+  ],
+  "time": [
+   "null",
+   "number"
+  ],
+  "type": [
+   "string"
+  ],
+  "y": [
+   "array"
+  ]
+ }
+}
