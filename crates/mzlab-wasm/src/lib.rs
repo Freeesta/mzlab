@@ -17,6 +17,7 @@ mod cache;
 mod wiff;
 mod agilent;
 mod centroidi; mod panic;
+mod nativi;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -167,6 +168,8 @@ pub struct Engine {
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
     pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
+    /// The slots read straight from the files of a maker (`nativi.rs`).
+    pub(crate) nat: nativi::Nativi,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -232,11 +235,13 @@ impl Engine {
     pub fn close(&mut self, slot: u32) {
         self.runs.remove(&slot);
         self.idx.remove(&slot);
+        self.nat.forget(slot);
     }
 
     pub fn close_all(&mut self) {
         self.runs.clear();
         self.idx.clear();
+        self.nat.clear();
     }
 
     /// Opens the `.mzidx` of a file (`size` bytes, read through `read(offset, length)`). Returns `{"scans": n, "hr1": bool}`.
@@ -269,10 +274,9 @@ impl Engine {
         size: f64,
         read: Function,
     ) -> Result<String, JsValue> {
-        let _ = size;
         match self.idx.get(&slot) {
             Some(r) if r.has_scans() => r
-                .scaninfo(sid as usize, &mut JsReader { read })
+                .scaninfo(sid as usize, &mut self.nat.src(slot, read, size)?.0)
                 .map_err(|e| error_json(&e)),
             _ => Ok(String::new()),
         }
@@ -281,7 +285,7 @@ impl Engine {
     /// `/api/spectrum` of a window holding ONE scan of a centroid HR file: the exact peaks come from the mzML (`read`). Empty = Python's.
     pub fn spectrum_exact(&mut self, slot: u32, query: &str, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
-        r.spectrum_exact(&Query::parse(query), &mut JsReader { read }).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
+        r.spectrum_exact(&Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
     }
 
     /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).
@@ -290,7 +294,7 @@ impl Engine {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
         let end = r.idx.scans.last().map_or(0, |s| s.end);
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
         mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms).map_err(|e| error_json(&e))
     }
@@ -306,7 +310,7 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size as u64)
             .map_err(|e| error_json(&e))
     }
@@ -335,7 +339,7 @@ impl Engine {
             cunit: s("cunit"),
             rep: s("rep"),
         };
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, name, &sample)
             .map_err(|e| error_json(&e))?;
         let body: Vec<String> = items
