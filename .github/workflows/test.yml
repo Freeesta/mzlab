@@ -126,7 +126,7 @@ jobs:
       - name: Teoria chapters (no private data)
         run: python3 tools/controlla_teoria.py
 
-  # Types without a build step: tsc only reads the JS files listed in tsconfig.json (each one starts with `// @ts-check`). Not a required check yet.
+  # Types without a build step: tsc on the projects of tools/tipi/ (pagina, moduli, worker); the errors per file may only go down (tools/tipi/base_errori.json).
   tipi:
     name: tipi (tsc)
     runs-on: ubuntu-latest
@@ -136,5 +136,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Globals
+        run: python3 tools/tipi/genera_globali.py --controlla
       - name: tsc
-        run: npx --yes -p typescript@5.9.3 tsc -p tsconfig.json
+        run: python3 tools/tipi/controlla_tsc.py
