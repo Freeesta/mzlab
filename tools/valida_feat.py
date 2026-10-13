@@ -202,7 +202,7 @@ def main(argv=None) -> int:
     cg.add_argument("--lr", action="store_true", help="measure the low-resolution table view (MRM and full scan; synthetic series always, real ones from --serie-lr or $MZLAB_DATI) and write cancello_lr.json")
     cg.add_argument("--serie-lr", help="folder with the real LR mzML (B_MRM-*, B_FullMass-*, B_MS2-*); default $MZLAB_DATI/mzML; --verita gives the parent of the full scan")
     cg.add_argument("--lr-json", help="also write cancello_lr.json here (the tool never commits it)")
-    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS/Esempio raw e mzML) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
+    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
     cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
     cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)
