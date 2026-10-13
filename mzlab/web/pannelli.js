@@ -26,31 +26,29 @@ function restack(drag, final, grp = []) {
   let idx = others.filter(q => q.y + q.h / 2 < c).length;
   if (others.length && drag.y < others[0].y + others[0].h * 0.5) idx = 0;
   const order = others.slice(); order.splice(idx, 0, drag, ...grp);      // the group stays together, in its own order
-  let y = 0;
-  order.forEach((q, i) => {
-    const mine = q === drag, moving = grp.includes(q);
-    if (!mine && !moving) { q.y = y; apply(q); }                         // the others close the gap
-    else if (final) { q.y = y; apply(q); }                                // the dragged ones: placed at the drop
-    y += q.h + gapAfter(q, order[i + 1]);
-  });
-  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+  placeRows(order, q => final || (q !== drag && !grp.includes(q)));           // the others close the gap; the dragged ones are placed at the drop
+  E.panels.sort(LAYOUT.ordine);
   if (window.DDA) DDA.sync();
 }
 function relayout() {      // after a panel changes height: keep the order, close or open the gap
-  let y = 0; const st = tabPanels().filter(q => q.full && q.el && !dockedP(q)).sort((a, b) => a.y - b.y || a.id - b.id);
-  st.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, st[i + 1]); });
+  placeRows(stackOrder());
   if (window.DDA) DDA.sync();
+}
+const minW = q => q.type === "map" ? 480 : 440;       // narrowest a panel is drawn side by side (a row that does not fit is shown stacked)
+function placeRows(order, only) {      // rows of the stack (layout.js): y for all, x/w/h for the panels that share a row
+  const g = LAYOUT.colloca(order, hostWidth(), pnlGap(), minW, gapAfter);
+  order.forEach(q => { const r = g.pos.get(q); if (!r || only && !only(q)) return; q.x = r.x; q.y = r.y; q.w = r.w; q.h = r.h; apply(q); });
 }
 // small grey number in the title of every panel of the tab, in order from the top (follows moves); keys 1-9 activate the panel
 function numberPanels() {
-  const st = tabPanels().filter(q => q.el).sort((a, b) => a.y - b.y || a.id - b.id);
+  const st = tabPanels().filter(q => q.el).sort(LAYOUT.ordine);
   E.panels.forEach(q => { const n = q.el && q.el.querySelector(".pnum"); if (n) n.hidden = true; });
   st.forEach((q, i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
   if (fsPanel()) return;
-  const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
+  const q = tabPanels().filter(x => x.el).sort(LAYOUT.ordine)[+e.key - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
 function fitHost() { if (window.DDA) DDA.sync(); numberPanels(); Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; pairArrows(); }
@@ -67,16 +65,16 @@ function pairArrows() {
   });
 }
 // a full-width panel (with its child spectra) swaps with its neighbour; the panels are moved by dragging their header (movePanel is the same move, for tests)
-function stackOrder() { return tabPanels().filter(q => q.full && q.el && !dockedP(q)).sort((a, b) => a.y - b.y || a.id - b.id); }
+function stackOrder() { return tabPanels().filter(q => q.full && q.el && !dockedP(q)).sort(LAYOUT.ordine); }
 // block that moves together: a chromatogram with its child spectra; the others, in order
 function blockOf(p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])].filter(q => q === p || !dockedP(q)), st = stackOrder(), others = st.filter(q => !grp.includes(q)); return { grp, others, at: others.filter(q => q.y < p.y).length }; }
 function movePanel(p, dir) {
   if (!p.full) return;
   const b = blockOf(p), j = b.at + dir; if (j < 0 || j > b.others.length) return;
   const order = b.others.slice(); order.splice(j, 0, ...b.grp);
-  let y = 0; order.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, order[i + 1]); });
+  placeRows(order);
   if (window.DDA) DDA.sync();
-  E.panels.sort((a, b2) => a.y - b2.y || a.id - b2.id); front(p.el); uiSave();
+  E.panels.sort(LAYOUT.ordine); front(p.el); uiSave();
 }
 const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; p.el.style.width = p.w + "px"; p.el.style.height = p.h + "px"; };
 
@@ -232,7 +230,9 @@ function addPanel(type, o, after) {
     const sx = e.clientX - p.x, sy = e.clientY - p.y;
     const grp = p.full ? followers(p).sort((a, b) => a.y - b.y) : [], off = new Map(grp.map(q => [q, q.y - p.y]));
     if (p.full) { el.classList.add("drag"); grp.forEach(q => q.el.classList.add("drag")); }
+    let left = false;
     const mv = ev => {
+      if (!left && p.full) { left = true; if (LAYOUT.inRiga(p, stackOrder())) LAYOUT.esci(p, E.panels, hostWidth()); }      // a panel dragged by its header leaves its row
       p.y = Math.max(0, ev.clientY - sy);
       if (p.full) { p.x = 0; grp.forEach(q => { q.y = Math.max(0, p.y + off.get(q)); q.x = 0; apply(q); }); restack(p, false, grp); } else p.x = Math.max(0, ev.clientX - sx);
       apply(p); fitHost();
@@ -243,7 +243,7 @@ function addPanel(type, o, after) {
   let skip = 2;                                                    // the first notification of each of the two watched elements is the initial size
   const onSize = () => {
     if (skip > 0) { skip--; return; }
-    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
+    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => draw(p));
     fitHdSoon(p);
   };
