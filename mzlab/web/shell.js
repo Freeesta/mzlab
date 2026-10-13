@@ -54,11 +54,11 @@ const CU={mgl:["mg/L",1],ugl:["µg/L",1e-3],ngl:["ng/L",1e-6],gl:["g/L",1e3]},CU
 const CUF={ppm:1,ppb:1e-3,ppt:1e-6,mgl:1,ugl:1e-3,ngml:1e-3,ngl:1e-6,gl:1e3};
 ST.unit="mgl";
 const roundc=v=>v==null?null:+(+v).toPrecision(6);
-const isCal=f=>f.type==="standard"&&f.kind==="mrm";   // concentration exists only for the standards of an MRM experiment (they feed the calibration line)
+const isCal=f=>f.type==="standard";   // concentration exists only for standards (in an MRM experiment they feed the calibration line)
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>{const o=old[f.name],conc=o?o.conc:concFrom(f);return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc,use:o?o.use:true,
-    gT:o?o.gT:f.time!=null&&f.type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
+  ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
+    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
   sortFiles();renderFiles()}
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
@@ -85,7 +85,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
    `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
-   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
+   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
   el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
