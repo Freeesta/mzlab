@@ -6,6 +6,7 @@
 mod datams;
 mod doc;
 pub mod info;
+pub mod lettore;
 pub mod meta;
 pub mod method;
 mod peak;
