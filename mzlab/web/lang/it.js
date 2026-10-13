@@ -1238,6 +1238,8 @@ I18N.add("it", {
   "spec.measure": "Misura da questo picco",
   "spec.measure.toLosses": "Cerca {d} nelle perdite neutre",
   "spec.measure.toLosses.tip": "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca",
+  "pend.peak": "Clic sul secondo picco · Esc annulla",
+  "pend.span": "Secondo tratto: seleziona e clic destro · Esc annulla",
   "spec.measure.clear": "Togli le misure",
   "spec.par.thr.title": "Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati",
   "spec.par.thr": "Etichette: oltre {input} %",

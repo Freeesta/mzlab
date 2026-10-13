@@ -307,7 +307,7 @@ let redrawRaf = 0;
 const redrawSoon = () => { if (!redrawRaf) redrawRaf = FRAME.next(() => { redrawRaf = 0; redrawAll(); }); };
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
+  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset") || E.panels.some(q => pendKey(q))) return;     // a pending two-step action takes this Esc first (eventi.js)
   const m = E.panels.find(q => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false);
 });
 // full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
