@@ -1,6 +1,8 @@
 """Disegno: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
-TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3}; «Remove the brackets» takes them away.
+TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3}; «Remove the brackets» takes them away. Multicentre: ring atoms +
+the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
+positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -61,6 +63,27 @@ try:
             bracket("+Qq"); pg.wait_for_timeout(800)
             n = pg.evaluate(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n}})()"); assert n == 0, n
         step("an unreadable delta is refused", bad)
+        def multi():
+            pg.evaluate(f"{KJ}.editor.selection({{atoms:[6,3,4,5]}})")                # CH2 of the chain + three ring atoms, one of them the drawn attachment
+            menu_on_atom(6); pg.locator("#ctx div", has_text="Attacco su uno di questi").first.click()
+            pg.evaluate(f"{KJ}.editor.selection(null)")
+            pg.wait_for_function("document.querySelector('#kframe').contentDocument.querySelectorAll('#mz-parziali .mz-multicentro circle').length === 3", timeout=8000)
+            assert pg.evaluate("!!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro line[stroke-dasharray]')"), "no dashed bond"
+            o = call("TPDraw.partial()"); mf = o["molfile"]
+            assert o["positionUnknown"] is True and o["level"] == 3 and o["delta"] == "", o
+            lines = mf.split("\n")
+            assert "M  V30 COUNTS 10 9 0 0 0" in mf and any(l.split()[3:4] == ["*"] for l in lines if l.startswith("M  V30 ")), mf
+            assert any("ENDPTS=(3 " in l and l.endswith("ATTACH=ANY") for l in lines), mf
+        step("multicentre: dashed bond, circles on the candidates, V3000 with ENDPTS", multi)
+        def multi_off():
+            for i in range(10):
+                pg.keyboard.press("Escape"); menu_on_atom(6)
+                if pg.locator("#ctx div", has_text="Togli l'attacco").count(): break
+                pg.wait_for_timeout(300)
+            pg.locator("#ctx div", has_text="Togli l'attacco").first.click()
+            pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro')", timeout=8000)
+            o = call("TPDraw.partial()"); assert o["positionUnknown"] is False and o["level"] is None and o["molfile"] == "", o
+        step("«Togli l'attacco variabile» removes it", multi_off)
 finally:
     r.close()
 r.report()
