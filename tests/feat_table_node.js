@@ -21,7 +21,8 @@ const put = (name, text) => {
 const pol = Number(polarity);
 put("view.json", w.table_view(readTable, bytes.length, samples, spec));
 put("report.json", w.table_report(readTable, bytes.length, samples, spec, sha));
-for (const [name, kind] of [["full.csv", "full"], ["full_mzmine.csv", "full_mzmine"], ["quant.csv", "quant"]])
+put("qc.json", w.table_qc(readTable, bytes.length, samples, spec));
+for (const [name, kind] of [["full.csv", "full"], ["full_mzmine.csv", "full_mzmine"], ["quant.csv", "quant"], ["features.csv", "csv_semicolon"], ["features.rows.json", "xlsx_rows"]])
   put(name, w.export_table(readTable, bytes.length, samples, spec, sha, pol, kind));
 for (const [name, kind] of [["ms2.mgf", "mgf"], ["sirius.ms", "sirius"]])
   put(name, w.export_ms2(readTable, bytes.length, samples, spec, sha, pol, kind, readIdx, sizes));

@@ -131,3 +131,21 @@ fn qc_and_report_hold_only_numbers() {
     assert!(report::to_json(&t, &s, None, "x").contains("\"vista\":null"));
     assert!(report::header_lines(&t, &s, Some(&v), "x").iter().all(|l| l.starts_with("# ")));
 }
+
+/// Factors worked out apart from the Rust code with numpy (sum: mean of the totals of the files that decide over the total of each file; median and
+/// internal standard: median of the statistics of the files that decide over the statistic of each file), on the areas of `table()`.
+#[test]
+fn factors_agree_with_the_numpy_reference_within_1e_9() {
+    let (t, s) = (table(), samples());
+    let cases = [
+        (Method::Sum, [2.0372222222222223, 1.93, 1.1112121212121213, 0.6321323909670746]),
+        (Method::Median, [1.0, 0.9473684210526315, 1.125, 1.0]),
+        (Method::Istd(Reference::Id(3)), [1.125, 1.0, 1.125, 1.0]),
+    ];
+    for (m, want) in cases {
+        let got = norm::factors(&t, &s, &m).unwrap();
+        for (g, w) in got.iter().zip(want) {
+            assert!((g - w).abs() < 1e-9, "{m:?}: {g} against {w}");
+        }
+    }
+}
