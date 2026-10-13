@@ -39,4 +39,16 @@ e.route(0, "/api/chrom", "k=0&kind=tic&level=1"); e.index_xic(0, 1, 345.2536, 0.
 e.route(0, "/api/scanlist", "k=0&level=1");  mark("engine_scanlist", engMem);
 const items = JSON.stringify([{ slot: 0, label: "a", time: 0, full: true }]);
 e.map_route("/api/map", items, "k=0&level=1"); e.map_route("/api/map", items, "k=0&level=1&rt0=1&rt1=20&mz0=200&mz1=400&nrt=1024&nmz=512"); e.trim_cache(); mark("engine_map", engMem);
+// subxic of the survey, and the same answers of a second engine with a tiny budget (every cache cut to nothing after each answer): the bytes must not change,
+// and a tiny budget never ends in a trap (the answers below would throw)
+const asks = x => [x.route(0, "/api/chrom", "k=0&kind=tic&level=1"), x.route(0, "/api/scanlist", "k=0&level=1"), x.index_xic(0, 1, 345.2536, 0.35),
+  x.map_route("/api/map", items, "k=0&level=1"), x.map_route("/api/map", items, "k=0&level=1&rt0=1&rt1=20&mz0=200&mz1=400&nrt=1024&nmz=512"),
+  x.subxic(0, 0, "f=C21H32N2O2&ppm=5&z=1")];
+const whole = asks(e); mark("engine_subxic", engMem);
+const small = new eng.Engine(); small.set_budget_mb(0.001);
+small.open_index(0, sizes[0], (off, len) => readK(0)(0, off, len));
+const tiny = asks(small); small.trim_cache(); mark("engine_tiny_budget", engMem);
+whole.forEach((a, i) => {
+  if (!a) throw new Error("the engine does not answer " + i); if (a !== tiny[i]) throw new Error("the answer " + i + " changes with a tiny budget"); });
+if (small.cache_bytes() !== 0) throw new Error("a tiny budget leaves " + small.cache_bytes() + " bytes in the cache");
 console.log(JSON.stringify(peaks));
