@@ -3,7 +3,7 @@
 suppressPackageStartupMessages({library(xcms); library(MSnbase); library(jsonlite)})
 a <- commandArgs(trailingOnly = TRUE)
 par <- fromJSON(a[1]); out <- a[2]; files <- a[-(1:2)]
-register(SerialParam())
+register(if (length(files) > 1 && nzchar(Sys.getenv("BENCH_WORKERS"))) MulticoreParam(as.integer(Sys.getenv("BENCH_WORKERS"))) else SerialParam())
 raw <- readMSData(files, mode = "onDisk", msLevel. = 1)
 cw <- par$CentWaveParam
 x <- findChromPeaks(raw, param = CentWaveParam(ppm = cw$ppm, peakwidth = c(cw$peakwidth_min, cw$peakwidth_max), snthresh = cw$snthresh,
