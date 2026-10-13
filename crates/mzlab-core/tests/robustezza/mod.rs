@@ -306,12 +306,12 @@ pub fn nota<T>(r: Result<T>, chiavi: &mut Vec<String>) -> Option<T> {
 /// The code under test: it receives the members of a case and gives the keys of the errors it met.
 pub type Esegui = fn(&[(String, Vec<u8>)]) -> Vec<String>;
 
-fn un_caso(membri: Vec<(String, Vec<u8>)>, esegui: Esegui) -> Esito {
+fn un_caso(job: Box<dyn FnOnce() -> Vec<String> + Send>) -> Esito {
     VIVI.with(|v| v.set(0));
     PICCO.with(|v| v.set(0));
     GRANDE.with(|v| v.set(0));
     RICHIESTA.with(|v| v.set(0));
-    let chiavi = esegui(&membri);
+    let chiavi = job();
     Esito {
         chiavi,
         picco: PICCO.with(Cell::get).max(0) as usize,
@@ -339,26 +339,33 @@ pub fn corri(seme: &[(String, Vec<u8>)], testo: &[bool], esegui: Esegui) -> (usi
                 eprintln!("caso {etichetta}");
             }
             casi += 1;
-            let (tx, rx) = mpsc::channel();
-            let h = std::thread::Builder::new()
-                .stack_size(8 << 20)
-                .spawn(move || {
-                    let _ = tx.send(un_caso(membri, esegui));
-                })
-                .expect("thread");
-            match rx.recv_timeout(Duration::from_secs(20)) {
-                Err(mpsc::RecvTimeoutError::Timeout) => {
-                    guasti.push(format!("{etichetta}: no answer in 20 s"))
-                }
-                Err(_) => guasti.push(format!("{etichetta}: panic {}", panico(h))),
-                Ok(e) => {
-                    let _ = h.join();
-                    guasti.extend(giudica(&etichetta, &e, totale));
-                }
-            }
+            guasti.extend(uno(&etichetta, totale, Box::new(move || esegui(&membri))));
         }
     }
     (casi, guasti)
+}
+
+/// One case in a thread of its own: panic, hang (20 s), keys, memory and reads are judged against `totale`, the bytes of the input.
+pub fn uno(
+    etichetta: &str,
+    totale: usize,
+    job: Box<dyn FnOnce() -> Vec<String> + Send>,
+) -> Vec<String> {
+    let (tx, rx) = mpsc::channel();
+    let h = std::thread::Builder::new()
+        .stack_size(8 << 20)
+        .spawn(move || {
+            let _ = tx.send(un_caso(job));
+        })
+        .expect("thread");
+    match rx.recv_timeout(Duration::from_secs(20)) {
+        Err(mpsc::RecvTimeoutError::Timeout) => vec![format!("{etichetta}: no answer in 20 s")],
+        Err(_) => vec![format!("{etichetta}: panic {}", panico(h))],
+        Ok(e) => {
+            let _ = h.join();
+            giudica(etichetta, &e, totale)
+        }
+    }
 }
 
 fn panico(h: std::thread::JoinHandle<()>) -> String {
