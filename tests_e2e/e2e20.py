@@ -47,7 +47,7 @@ try:
             assert n1[0] == n0[-1] and n1[1] == "C" + c1 and all(x.startswith("s" + c1 + "_") for x in n1[2:]), n1      # the group moved as a block under the other chromatogram
             # a spectrum dragged alone moves alone
             pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); pg.wait_for_timeout(500); pg.locator("#dpanels .pnl.spec .hd").first.scroll_into_view_if_needed(); pg.wait_for_timeout(300); sp = pg.locator("#dpanels .pnl.spec .hd").first.bounding_box()
-            pg.mouse.move(sp["x"] + 14, sp["y"] + 8); pg.mouse.down(); pg.mouse.move(sp["x"] + 14, max(5, sp["y"] - pg.evaluate("(()=>{const s=E.panels.find(p=>p.type==='spec'&&p.tab===E.tab);const c=E.panels.find(p=>p.id===(s.link||s.src));return s.y-c.y+50})()")), steps=8); pg.mouse.up(); pg.wait_for_timeout(900)
+            pg.mouse.move(sp["x"] + 14, sp["y"] + 8); pg.mouse.down(); pg.mouse.move(sp["x"] + 14, max(5, sp["y"] - 400), steps=8); pg.mouse.up(); pg.wait_for_timeout(900)
             print(sp); n2 = names(); print(n2); assert len(n2) == len(n1) and n2 != n1
         step("dragging a chromatogram moves its spectra with it; a spectrum alone moves alone", group)
         def mv():                           # up/down arrows carry the children

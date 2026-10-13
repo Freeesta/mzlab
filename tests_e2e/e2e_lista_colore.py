@@ -23,6 +23,15 @@ try:
             pg.evaluate("(() => { window.__inp.value = '#112233'; window.__inp.dispatchEvent(new Event('change')); })()")
             assert pg.evaluate(f"E.files[{k}].color") == "#112233" and pg.evaluate(f"E.files[{k}].colorSet") is True
         step("double click on the colour square opens the picker and sets the colour", colour)
+        def margin():
+            for w, h in ((1400, 900), (700, 480)):
+                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
+                pg.evaluate("window.__inp = null")
+                pg.locator("#flst .fl > i").last.scroll_into_view_if_needed(); pg.locator("#flst .fl > i").last.dblclick()
+                r = pg.evaluate("(() => { const b = window.__inp.getBoundingClientRect(); return [b.left, b.top, innerWidth - b.left - 280, innerHeight - b.top - 340]; })()")
+                assert all(v >= 16 for v in r), (w, h, r, pg.evaluate("window.__inp.style.cssText"))      # the picker keeps 16 px from every edge of the window
+                pg.evaluate("window.__inp.remove()")
+        step("the colour picker stays 16 px inside the window", margin)
         def rename():
             pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
             t = pg.inner_text("body"); assert "it is only a label" not in t and "è solo un'etichetta" not in t

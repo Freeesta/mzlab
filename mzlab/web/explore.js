@@ -696,9 +696,17 @@ function renderFileList() {
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
 const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];   // Okabe-Ito + 2: distinguishable with colour-blindness
 async function renameFile(f) { const v = await ask(I18N.t("files.rename.prompt"), f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } }
-// double click on the colour square: the colour picker opens straight away
+// double click on the colour square: the colour picker opens straight away. The browser's own picker hangs from the (invisible) input: the input sits at the square,
+// moved so that the picker (about COLOR_BOX) keeps COLOR_MARGIN px from every edge of the window
+const COLOR_MARGIN = 16, COLOR_BOX = { w: 280, h: 340 };
+function colorSpot(r, w, h) {
+  const x = Math.max(COLOR_MARGIN, Math.min(r.left, innerWidth - COLOR_MARGIN - w));
+  const y = Math.max(COLOR_MARGIN, Math.min(r.bottom + 4, innerHeight - COLOR_MARGIN - h));
+  return { x, y };
+}
 function pickFileColor(f) {
-  const i = document.createElement("input"); i.type = "color"; i.value = /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#0072B2"; i.setAttribute("aria-label", I18N.t("files.color.custom")); i.style.cssText = "position:fixed;left:-99px;opacity:0";
+  const sw = Q(`#flst .fl .nm[data-k="${f.k}"]`)?.closest(".fl")?.querySelector(":scope > i"), r = sw ? sw.getBoundingClientRect() : { left: 0, bottom: 0 }, at = colorSpot(r, COLOR_BOX.w, COLOR_BOX.h);
+  const i = document.createElement("input"); i.type = "color"; i.value = /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#0072B2"; i.setAttribute("aria-label", I18N.t("files.color.custom")); i.style.cssText = `position:fixed;left:${at.x}px;top:${at.y}px;width:1px;height:1px;opacity:0;border:0;padding:0`;
   i.onchange = () => { f.color = i.value; f.colorSet = true; renderFileList(); redrawAll(); uiSave(); };
   i.addEventListener("change", () => i.remove()); document.body.appendChild(i);
   try { i.showPicker(); } catch (_) { i.click(); }
@@ -710,7 +718,7 @@ function colorFile(f, ev) {
   const set = c => { f.color = c; f.colorSet = true; d.remove(); renderFileList(); redrawAll(); uiSave(); };
   d.querySelectorAll("[data-c]").forEach(b => b.onclick = () => set(b.dataset.c));
   d.querySelector("input").onchange = e => set(e.target.value);
-  document.body.appendChild(d); d.style.left = Math.min(ev.clientX, innerWidth - 200) + "px"; d.style.top = Math.min(ev.clientY, innerHeight - 150) + "px";
+  document.body.appendChild(d); const bx = d.getBoundingClientRect(); d.style.left = Math.max(COLOR_MARGIN, Math.min(ev.clientX, innerWidth - COLOR_MARGIN - bx.width)) + "px"; d.style.top = Math.max(COLOR_MARGIN, Math.min(ev.clientY, innerHeight - COLOR_MARGIN - bx.height)) + "px";
   setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 async function removeFile(f) {
