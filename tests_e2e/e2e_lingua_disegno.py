@@ -32,8 +32,8 @@ try:
             pg.click("#tools-card summary"); assert "Quick rings (benzene, cyclohexane...)" in pg.inner_text("#tools-body")
         step("English: static texts, shortcuts, tools card, default file name drawing_...", english)
         def toggle():
-            pg = page("en-US"); pg.click("#side-toggle"); assert pg.inner_text("#side-toggle").strip() == "◂ Show panels"
-            pg.click("#side-toggle"); assert pg.inner_text("#side-toggle").strip() == "Hide panels ▸"
+            pg = page("en-US"); pg.click("#side-toggle"); assert pg.inner_text("#side-toggle").strip() == "Show panels"
+            pg.click("#side-toggle"); assert pg.inner_text("#side-toggle").strip() == "Hide panels"
         step("English: show / hide panels button", toggle)
         def invalid():
             pg = page("en-US"); pg.fill("#ex-smi", "C1CC"); pg.click("#ex-load"); pg.wait_for_timeout(1500)

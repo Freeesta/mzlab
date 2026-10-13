@@ -16,6 +16,7 @@
     "manuale.d.ts",
     "../../mzlab/web/archivio.js",
     "../../mzlab/web/draw.js",
+    "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
