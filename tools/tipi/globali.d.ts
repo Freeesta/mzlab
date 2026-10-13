@@ -53,6 +53,7 @@ declare var QADD_DIFFS: any;
 declare var QICON: any;
 declare var QQQRef: any;
 declare var QQQ_BROWSER: any;
+declare var QQQ_LOADFAIL: any;
 declare var QQRESET: any;
 declare var QQ_RESETTING: any;
 declare var QTOOLS: any;
