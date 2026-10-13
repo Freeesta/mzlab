@@ -34,6 +34,7 @@ I18N.add("it", {
   "draw.props.heading": "Proprietà previste",
   "draw.props.selection": "Selezione",
   "draw.props.structure": "Struttura",
+  "draw.props.select": "Seleziona una molecola",
   "draw.props.da.title": "donatori / accettori di legame H",
   "draw.props.neutral.label": "Escludi la carica",
   "draw.props.neutral.title": "Con la spunta le proprietà sono calcolate sulla forma neutra (COO- diventa COOH, NH3+ diventa NH2); controioni come Cl- o Na+ sono scartati.",

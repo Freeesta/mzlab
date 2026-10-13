@@ -34,6 +34,7 @@ I18N.add("en", {
   "draw.props.heading": "Predicted properties",
   "draw.props.selection": "Selection",
   "draw.props.structure": "Structure",
+  "draw.props.select": "Select a molecule",
   "draw.props.da.title": "H-bond donors / acceptors",
   "draw.props.neutral.label": "Exclude the charge",
   "draw.props.neutral.title": "When ticked, the properties are computed on the neutral form (COO- becomes COOH, NH3+ becomes NH2); counter-ions such as Cl- or Na+ are discarded.",

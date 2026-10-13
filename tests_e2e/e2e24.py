@@ -19,7 +19,7 @@ else:
 STATS = "(async()=>{const k=%s;const s=k.editor.struct();const ids=[...s.atoms.keys()];let fr=new Set();const up=new Map(ids.map(i=>[i,i]));const root=i=>{while(up.get(i)!==i)i=up.get(i);return i};s.bonds.forEach(b=>{const a=root(b.begin),c=root(b.end);if(a!==c)up.set(a,c)});ids.forEach(i=>fr.add(root(i)));return {atoms:ids.length,frags:fr.size,smi:await k.getSmiles()}})()" % KQ
 PROPS = "[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.children].map(c=>c.textContent))"
 def setmol(pg, smi):
-    pg.evaluate(KQ + ".setMolecule('%s')" % smi); pg.wait_for_timeout(1500)
+    pg.evaluate(KQ + ".setMolecule('%s')" % smi); pg.wait_for_timeout(1500); pg.evaluate(KQ + ".editor.selection('all')")      # the table is filled only for a selected molecule
 try:
     with sync_playwright() as p:
         if SITE:

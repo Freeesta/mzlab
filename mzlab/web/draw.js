@@ -392,6 +392,7 @@ async function showInfo1() {
   await loadOCL();
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
   const all = pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) }));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;

@@ -131,7 +131,9 @@ try:
         def sel_smiles():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
             assert not pg.is_visible("#sel-card")
-            # whole drawing: properties table without selection
+            # no selection: only the hint; the table appears once the molecule is selected
+            assert pg.is_visible("#prop-card") and "Seleziona una molecola" in pg.inner_text("#prop-body") and pg.locator("#prop-body table").count() == 0
+            pg.evaluate(KQ + ".editor.selection('all')"); pg.wait_for_timeout(700)
             assert pg.is_visible("#prop-card"); t = pg.inner_text("#prop-body"); print("PROP:", t.replace("\n", " | ")[:200])
             lp = float(pg.inner_text("#prop-body tr:nth-child(2) td:nth-child(2)")); assert 0.3 < lp < 1.8, lp
             # select the 4-aminophenol part (N, ring, OH), acetyl C(=O)CH3 stays out: a PIECE, 1 cut bond
@@ -153,7 +155,7 @@ try:
             pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(500); assert not pg.is_visible("#sel-card")
         step("selection shows its SMILES (also a piece); properties table (logP...)", sel_smiles)
         def props_ion():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_function("document.querySelectorAll('#prop-body tr').length===3", timeout=20000)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_timeout(800); pg.evaluate(KQ + ".editor.selection('all')"); pg.wait_for_function("document.querySelectorAll('#prop-body tr').length===3", timeout=20000)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
             # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
             assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
