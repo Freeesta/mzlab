@@ -68,7 +68,7 @@ fn with_block() -> Aligned {
 #[test]
 fn rows_numbers_and_controls() {
     let t = with_block();
-    let v = parse(table_json(&t, &samples()).unwrap().as_bytes()).unwrap();
+    let v = parse(table_json(&t, &samples(), None).unwrap().as_bytes()).unwrap();
     assert_eq!(v.get("schema").and_then(|x| x.str()), Some("tptab/1"));
     assert_eq!(v.get("parent").and_then(|x| x.f64()), Some(1.0));
     let times: Vec<f64> = v
@@ -108,7 +108,7 @@ fn rows_numbers_and_controls() {
 
 #[test]
 fn without_block_is_an_error() {
-    let e = table_json(&table(), &samples()).unwrap_err();
+    let e = table_json(&table(), &samples(), None).unwrap_err();
     assert_eq!(e.key, "error.tpNoBlock");
 }
 
@@ -126,4 +126,17 @@ fn roles_have_one_reader() {
             Role::Treated(20.0)
         ]
     );
+}
+
+#[test]
+fn given_rows_need_no_block() {
+    let v = parse(table_json(&table(), &samples(), Some(&[2, 1])).unwrap().as_bytes()).unwrap();
+    let rows = v.get("rows").unwrap().arr();
+    assert_eq!(rows.len(), 2);
+    // in the order asked, the contaminant of the blank is there and says so, the status is null without the block
+    assert_eq!(rows[0].get("row").and_then(|x| x.f64()), Some(2.0));
+    assert_eq!(rows[0].get("in_blank").and_then(|x| x.bool()), Some(true));
+    assert!(rows[0].get("status").is_some_and(|x| x.is_null()));
+    assert!(v.get("parent").is_some_and(|x| x.is_null()));
+    assert_eq!(table_json(&table(), &samples(), Some(&[9])).unwrap_err().key, "error.badView");
 }

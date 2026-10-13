@@ -53,11 +53,16 @@ fn largest(t: &Aligned, row: usize, files: &[usize]) -> f64 {
     files.iter().fold(0.0, |m, &k| m.max(measured(t, row, k)))
 }
 
-/// `tptab/1` of a table with its block `tp/1` under the samples `s` (one per file): the rows of status product, formed and not explained, or parent,
-/// in the order of the table. Without the block it is `error.tpNoBlock`.
-pub fn table_json(t: &Aligned, s: &[Sample]) -> Result<String> {
-    if t.tp.is_empty() || t.tp.len() != t.len() {
+/// `tptab/1` of a table under the samples `s` (one per file). With `rows` (indices of the table) those rows, with the status of the block `tp/1` when the table
+/// has one (`null` otherwise); without, the rows of status product, formed and not explained, or parent, in the order of the table, and a table with no
+/// block is `error.tpNoBlock`. A row out of the table is `error.badView`.
+pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<String> {
+    let has_block = !t.tp.is_empty() && t.tp.len() == t.len();
+    if rows.is_none() && !has_block {
         return Err(Error::new("error.tpNoBlock"));
+    }
+    if rows.is_some_and(|r| r.iter().any(|&x| x >= t.len())) {
+        return Err(Error::new("error.badView"));
     }
     let roles: Vec<Role> = s.iter().map(role_of).collect();
     let mut treated: Vec<(f64, usize)> = roles
@@ -78,7 +83,7 @@ pub fn table_json(t: &Aligned, s: &[Sample]) -> Result<String> {
     let tr_files: Vec<usize> = treated.iter().map(|x| x.1).collect();
     let mut o = Out::default();
     o.raw("{\"schema\":").str(TABLE_SCHEMA).raw(",\"parent\":");
-    o.opt((t.tp.parent_row != NO_PARENT).then(|| f64::from(t.id(t.tp.parent_row as usize))));
+    o.opt((has_block && t.tp.parent_row != NO_PARENT).then(|| f64::from(t.id(t.tp.parent_row as usize))));
     o.raw(",\"times\":");
     o.floats(&treated.iter().map(|x| x.0).collect::<Vec<_>>());
     o.raw(",\"controls\":{\"t0\":")
@@ -87,11 +92,15 @@ pub fn table_json(t: &Aligned, s: &[Sample]) -> Result<String> {
         .int(blank.len() as i64)
         .raw("},\"rows\":[");
     let mut first = true;
-    for r in 0..t.len() {
-        let st = t.tp.status[r];
-        if st != ST_TP && st != ST_UNEXPLAINED && st != ST_PARENT {
-            continue;
+    let all: Vec<usize>;
+    let list = match rows {
+        Some(r) => r,
+        None => {
+            all = (0..t.len()).filter(|&r| matches!(t.tp.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT)).collect();
+            &all
         }
+    };
+    for &r in list {
         let series: Vec<f64> = tr_files
             .iter()
             .map(|&k| round(measured(t, r, k), 1))
@@ -115,20 +124,17 @@ pub fn table_json(t: &Aligned, s: &[Sample]) -> Result<String> {
         let n_det = (0..t.n_files).filter(|&k| measured(t, r, k) > 0.0).count();
         o.raw(if first { "{" } else { ",{" });
         first = false;
-        o.raw("\"id\":")
+        o.raw("\"row\":")
+            .int(r as i64)
+            .raw(",\"id\":")
             .int(i64::from(t.id(r)))
             .raw(",\"mz\":")
             .num(round(t.mz[r], 6))
             .raw(",\"rt\":")
             .num(round(t.rt[r], 3));
-        o.raw(",\"status\":")
-            .int(i64::from(st))
-            .raw(",\"kinship\":")
-            .int(i64::from(t.tp.kinship[r]));
-        o.raw(",\"via\":")
-            .int(i64::from(t.tp.via[r]))
-            .raw(",\"notes\":")
-            .int(i64::from(t.tp.notes[r]));
+        let block = |v: &[u8]| has_block.then(|| f64::from(v[r]));
+        o.raw(",\"status\":").opt(block(&t.tp.status)).raw(",\"kinship\":").opt(block(&t.tp.kinship));
+        o.raw(",\"via\":").opt(block(&t.tp.via)).raw(",\"notes\":").opt(block(&t.tp.notes));
         o.raw(",\"n_det\":")
             .int(n_det as i64)
             .raw(",\"max_area\":")
