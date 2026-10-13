@@ -167,6 +167,7 @@ def test_truth_files(tmp_path):
     (tmp_path / "m.tsv").write_text("metabolite_identification\tmass_to_charge\tretention_time\texpected_ratio\nA\t150.05\t120\t2.5\nB\t200.1\t60\t\nC\t210.1\t30\t0.5\n")
     maf = V.da_maf(tmp_path / "m.tsv", rt_secondi=True)
     assert [(c["mz"], c["rt"], c["atteso"]) for c in maf] == [(150.05, 2.0, 2.5), (210.1, 0.5, 0.5)]
+    assert [V.rapporto_atteso(x) for x in ("1\\2", "16\\1", "4/1", "1,5", 2)] == [0.5, 16.0, 4.0, 1.5, 2.0]
 
 
 def test_table_is_sorted_numbered_and_roundtrips(tmp_path):

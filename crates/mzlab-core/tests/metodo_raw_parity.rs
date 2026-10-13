@@ -200,3 +200,56 @@ fn the_pump_pressure_is_the_one_msconvert_wrote_in_the_unit_of_the_file() {
     }
     assert!(checked > 0, "no .raw with a pressure channel");
 }
+
+#[test]
+fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning() {
+    let Some(d) = dati() else {
+        eprintln!("skipped: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut decoded = 0;
+    for (raw_path, _) in pairs(&d) {
+        let reader =
+            opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
+        let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
+        let campi = v.get("campi").map_or(&[][..], |c| c.arr());
+        let warned = v
+            .get("avvisi")
+            .map_or(&[][..], |a| a.arr())
+            .iter()
+            .any(|a| a.get("dove").and_then(|d| d.str()) == Some("Status log"));
+        let Some(log) = &reader.status_log else {
+            assert_eq!(
+                warned,
+                reader.run_header.sample_info.inst_log_length > 0,
+                "{raw_path:?}"
+            );
+            continue;
+        };
+        decoded += 1;
+        assert!(!warned, "{raw_path:?}: decoded log still warned");
+        assert_eq!(
+            log.records.len(),
+            reader.run_header.sample_info.inst_log_length as usize
+        );
+        for f in &log.header.fields {
+            let (name, _) = opentfraw::status_log::split_label(&f.label);
+            let has_value = log.records.iter().any(|r| {
+                r.values.iter().any(|(l, x)| {
+                    *l == f.label && !matches!(x, opentfraw::generic_data::GenericValue::Gap)
+                })
+            });
+            if !has_value || name.is_empty() {
+                continue;
+            }
+            let found = campi.iter().any(|c| {
+                c.get("origine").and_then(|o| o.str()) == Some("thermo-raw:StatusLog")
+                    && c.get("chiave")
+                        .and_then(|k| k.str())
+                        .is_some_and(|k| k.starts_with(&name))
+            });
+            assert!(found, "{raw_path:?}: channel {:?} not in campi", f.label);
+        }
+    }
+    eprintln!("status logs decoded: {decoded}");
+}
