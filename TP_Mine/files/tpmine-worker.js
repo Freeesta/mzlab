@@ -2,9 +2,10 @@
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
-// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
-// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, isf_classify, transitions, ...) goes to Pyodide, and so does
-// every call when the site has no wasm-feat/ (a copy built without it).
+// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file, and any list of transformations (finder_transformations merges the user text into regole_tp.json),
+// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
+// and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
+// every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
 /** @type {any} */ let py = null;
 /** @type {any} */ let api = null;
 /** @type {any} */ let init = null;               // the init message: Pyodide is loaded from it only when needed
@@ -15,8 +16,9 @@
 /** @type {any} */ let featPool = null;
 /** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
 /** @type {any} */ let ingress = null;            // finder-idx.js
+/** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
-let last = "", bigN = 0;                          // the engine of the last run: "rust" | "py"
+let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
 const OF_DIG = new Set(["detail", "inclusion_csv", "frag_tree", "frag_tree_compare"]);
@@ -164,7 +166,9 @@ async function runRust(a) {
   say("Aligning the series...");
   const table = await p.align(stored, paths, ""); lap("align", t); t = performance.now();
   say("Searching the products of the parent...");
-  const rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
+  let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
+  const tr = (a[3] || "").trim();
+  if (tr) rules = f.finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
   const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: NaN, recipe: "", structure: plan.structure });
   const minutes = plan.minutes.map((/** @type {number | null} */ m) => (m == null ? NaN : m));
   const e = await p.evidence({ table, state: h.state, minutes, parentMz: NaN, parentRt: NaN, recipe: "" }); lap("proofs", t); t = performance.now();
@@ -174,28 +178,45 @@ async function runRust(a) {
   lap("dig", t); lap("total", t0); last = "rust";
   return dig.summary(settingsJson || "{}", JSON.stringify(timing));
 }
-/** a run goes to Rust: high-resolution files, all with their .mzidx, no MSn file, the default transformations @param {string[]} a */
+/** a run goes to Rust: high-resolution files, all with their .mzidx, no MSn file @param {string[]} a */
 async function rustRun(a) {
-  const files = JSON.parse(a[0]), tr = (a[3] || "").trim();
+  const files = JSON.parse(a[0]);
   if (!files.some((/** @type {any} */ f) => f.kind === "hr") || files.some((/** @type {any} */ f) => f.kind === "msn")) return false;
-  if (tr && tr !== DEFAULT_TR) return false;
   return !!(await idxFiles(files.map((/** @type {any} */ f) => f.name)));
+}
+
+/** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
+const lrMod = () => import(base() + "mzfinder/finder-lr.js");
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect };
+/** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
+async function waitIdx(names) {
+  for (let i = 0; i < 60; i++) {
+    const r = await idxFiles(names);
+    if (r || !(await idxDir())) return r;
+    await new Promise(res => setTimeout(res, 500));
+  }
+  return null;
 }
 
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
   if (fn === "classify") {
     const names = JSON.parse(a[0]);
     await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));
-    if (await idxFiles(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+    if (await waitIdx(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+    console.warn("mzFinder: no .mzidx yet for", names.filter(n => !held.has(n)).join(", ") || "(all files sent)", "- Pyodide takes over");
   }
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null;
+    const tr = (a[3] || "").trim(), lr = tr && tr !== DEFAULT_TR ? false : await (await lrMod()).run(lrCtx, a);
+    if (lr !== false) { last = "rust-lr"; return lr; }
   }
+  if (OF_DIG.has(fn) && last === "rust-lr") return (await lrMod()).ofDig(lrCtx, fn, a);
   if (OF_DIG.has(fn) && last === "rust") {
     if (fn === "detail") return dig.detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));

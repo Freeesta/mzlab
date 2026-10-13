@@ -16,6 +16,7 @@ const BARRA = (() => {
   const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
+  const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
   const K_LAB = "qqq.barra.etichette";   // words next to the icons: auto (as many as fit) | always | hidden
   const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
@@ -25,6 +26,8 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _open = false;
+  let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
+  let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
   let _w = 260;
   let _last = { scan: "hdr", form: "cmp" };
@@ -148,7 +151,7 @@ const BARRA = (() => {
     s = lsObj(storageKey());
     _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = s.open === undefined ? innerWidth >= 900 : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
+    _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
@@ -156,11 +159,18 @@ const BARRA = (() => {
     let side = null;
     try { side = localStorage.getItem(K_SIDE); } catch (_) { /* none */ }
     _side = side === "right" || side === "left" ? side : s.side === "right" ? "right" : "left";
+    _restore = _forced = false; autoNarrow();
+  }
+
+  // the narrow window hides the panel before anything else; widening gives it back (the saved state never changes)
+  function autoNarrow() {
+    if (window.innerWidth < AUTO_W) { if (_open && !_forced) { _open = false; _restore = true; } }
+    else { _forced = false; if (_restore) { _open = true; _restore = false; } }
   }
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open, w: _w, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open || _restore, w: _w, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
@@ -231,6 +241,7 @@ const BARRA = (() => {
       tg.hidden = !inData();
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
+      const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
     }
     const h = Q1("#sidebar-resize-handle");
     if (h) { h.setAttribute("aria-valuemin", MIN_W); h.setAttribute("aria-valuemax", maxW()); h.setAttribute("aria-valuenow", effW()); }
@@ -354,7 +365,7 @@ const BARRA = (() => {
     if (!inData() || !validTab(id)) return false;
     const wasOpen = _open;
     _tab = id;
-    _open = true;
+    _open = true; _restore = false; _forced = innerWidth < AUTO_W;
     if (!_opener || !wasOpen) _opener = opt.opener || openerFor(id);
     renderPane(id, opt);
     applyLayout();
@@ -379,7 +390,7 @@ const BARRA = (() => {
 
   function close(restoreFocus) {
     if (!_open) return;
-    _open = false;
+    _open = false; _restore = false;
     applyLayout();
     updateButtons();
     saveState();
@@ -922,6 +933,8 @@ const BARRA = (() => {
     }, true);
 
     window.addEventListener("resize", () => {
+      const o = _open; autoNarrow();
+      if (_open !== o) { if (_open && validTab(_tab) && _painted !== _tab) renderPane(_tab); updateButtons(); }
       applyLayout();
       schedFit();
     });

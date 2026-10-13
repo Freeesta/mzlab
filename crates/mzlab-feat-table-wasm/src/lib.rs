@@ -70,6 +70,12 @@ pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &
     core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
 }
 
+/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`; areas, t0 and blank.
+#[wasm_bindgen]
+pub fn tp_table(table_read: Function, size: f64, samples_json: &str, rows_json: &str) -> std::result::Result<String, JsValue> {
+    core::tp_table_json(&mut table_reader(table_read), size as u64, samples_json, rows_json).map_err(js_err)
+}
+
 /// The `campioni/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
 #[wasm_bindgen]
 pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
@@ -98,4 +104,10 @@ pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &st
         Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
     };
     core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
+}
+
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
+#[wasm_bindgen]
+pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
+    core::campioni_json(op, input).map_err(js_err)
 }

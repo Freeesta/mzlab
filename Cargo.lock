@@ -1932,6 +1932,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-feat-import-wasm"
+version = "0.1.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-feat-table-wasm"
 version = "0.1.0"
 dependencies = [
@@ -1949,6 +1958,18 @@ dependencies = [
  "mzlab-core",
  "mzlab-feat",
  "sha2",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-finder-lr-wasm"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-wasm",
+ "serde_json",
  "wasm-bindgen",
 ]
 
