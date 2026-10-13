@@ -4,7 +4,7 @@ Needs the site: python tools/build_site.py; the .wasm is built here when cargo a
 import shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
-from pyref import PyRef
+from golden_ref import PyRef
 
 PORT = 8832
 errs = []
