@@ -1,10 +1,11 @@
 //! The parts of mzFinder ported to Rust (`legacy/`) against the frozen Python answers (`tools/finder_riferimento.py --golden`): `formula_info`, the
-//! names of `classify`, the kinetic descriptors, the MS2 consensus and the three components of the MS2 similarity, numbers within 1e-9.
+//! names of `classify`, the kinetic descriptors, the MS2 consensus, the three components of the MS2 similarity and the MSn tree with its
+//! library and localisation, numbers within 1e-9.
 
 use mzlab_feat::legacy::edge::{origin_evidence, Iimn};
 use mzlab_feat::legacy::fragtree::{elements_of, two_level, vec_of, TwoLevel};
 use mzlab_feat::legacy::{
-    formula_info, identity_graph, kinetics, ms2, polarity_pairs, sample, similarity,
+    formula_info, identity_graph, kinetics, ms2, msn, polarity_pairs, sample, similarity,
 };
 use serde_json::Value;
 
@@ -229,5 +230,144 @@ fn frag_tree_matches_python() {
         };
         let got: Value = serde_json::from_str(&two_level(&t, &losses)).unwrap();
         same(&got, &c["out"], &format!("tree {i}"));
+    }
+}
+
+fn scans_of(v: &Value) -> Vec<msn::MsnScan> {
+    v.as_array()
+        .unwrap()
+        .iter()
+        .map(|s| msn::MsnScan {
+            level: s["level"].as_u64().unwrap() as u8,
+            path: s["path"].as_array().map(|p| {
+                p.iter()
+                    .map(|x| {
+                        (
+                            x[0].as_f64().unwrap(),
+                            x[1].as_str().unwrap().to_string(),
+                            x[2].as_f64().unwrap(),
+                        )
+                    })
+                    .collect()
+            }),
+            mz: floats(&s["mz"]),
+            it: floats(&s["it"]),
+        })
+        .collect()
+}
+
+fn parsed(s: &str) -> Value {
+    serde_json::from_str(s).unwrap()
+}
+
+/// `top_sites` in groups of equal log-likelihood (within 1e-9): the order inside a group comes from the order of the sums (numpy's BLAS
+/// against a plain loop: values equal on paper differ in the last bit), so a group is compared as a set; the last one, cut at six, by size.
+fn same_sites(a: &Value, b: &Value, what: &str) {
+    let groups = |v: &Value| {
+        let mut g: Vec<(f64, Vec<String>)> = Vec::new();
+        for s in v.as_array().unwrap() {
+            let ll = s["ll"].as_f64().unwrap();
+            let name = format!("{}{}", s["site"], s["atoms"]);
+            match g.last_mut() {
+                Some(l) if (l.0 - ll).abs() <= 1e-9 * ll.abs().max(1.0) => l.1.push(name),
+                _ => g.push((ll, vec![name])),
+            }
+        }
+        g.iter_mut().for_each(|x| x.1.sort());
+        g
+    };
+    let (ga, gb) = (groups(a), groups(b));
+    assert_eq!(ga.len(), gb.len(), "{what}: groups");
+    for (k, (x, y)) in ga.iter().zip(&gb).enumerate() {
+        close(x.0, y.0, what);
+        if k + 1 < ga.len() {
+            assert_eq!(x.1, y.1, "{what}: group {k}");
+        } else {
+            assert_eq!(x.1.len(), y.1.len(), "{what}: last group");
+        }
+    }
+}
+
+/// The localisation: `top_sites` by groups, the rest as JSON.
+fn same_localization(mut a: Value, b: &Value, what: &str) {
+    let mut b = b.clone();
+    if let (Some(x), Some(y)) = (a.get("top_sites").cloned(), b.get("top_sites").cloned()) {
+        same_sites(&x, &y, what);
+        a.as_object_mut().unwrap().remove("top_sites");
+        b.as_object_mut().unwrap().remove("top_sites");
+    }
+    same(&a, &b, what);
+}
+
+#[test]
+fn msn_tree_library_and_localization_match_python() {
+    for (i, c) in golden()["msn"].as_array().unwrap().iter().enumerate() {
+        let what = format!("msn case {i}");
+        let smiles = c["smiles"].as_str();
+        let t = msn::build_tree(
+            &scans_of(&c["scans"]),
+            c["ion"].as_str().unwrap(),
+            smiles,
+            c["calibrate"].as_str().unwrap(),
+        )
+        .unwrap();
+        same(
+            &parsed(&msn::json::summary(&t)),
+            &c["summary"],
+            &format!("{what} summary"),
+        );
+        same(
+            &parsed(&msn::json::calibration(&t.cal)),
+            &c["calibration"],
+            &format!("{what} calibration"),
+        );
+        same(
+            &parsed(&msn::json::tree_summary(&t)),
+            &c["tree_summary"],
+            &format!("{what} msn_tree"),
+        );
+        same(
+            &parsed(&msn::json::frag_tree(&t, smiles)),
+            &c["frag_tree"],
+            &format!("{what} frag_tree"),
+        );
+        let Some(subs) = t.subs.as_ref() else {
+            assert!(
+                c.get("library").is_none(),
+                "{what}: library without a structure"
+            );
+            continue;
+        };
+        let dda = c["dda"].as_array().map(|d| (floats(&d[0]), floats(&d[1])));
+        let lib = msn::library::build(&t, dda.as_ref().map(|d| (&d.0[..], &d.1[..])));
+        same(
+            &parsed(&msn::json::library(&lib)),
+            &c["library"],
+            &format!("{what} library"),
+        );
+        let top = vec_of(t.nodes[0].formula.as_deref().unwrap(), &t.els).unwrap();
+        for (j, l) in c["localize"].as_array().unwrap().iter().enumerate() {
+            let tp = vec_of(l["tp"].as_str().unwrap(), &t.els).unwrap();
+            let loc = msn::localize::localize(
+                &tp,
+                &top,
+                &t.els,
+                &floats(&l["mz"]),
+                &floats(&l["rel"]),
+                &lib,
+                subs,
+                l["tp_mz"].as_f64(),
+            );
+            same_localization(
+                parsed(&msn::json::localization(&loc)),
+                &l["out"],
+                &format!("{what} localize {j}"),
+            );
+            same(
+                &parsed(&msn::json::compare(&t, Some(&loc))),
+                &l["compare"],
+                &format!("{what} compare {j}"),
+            );
+        }
     }
 }

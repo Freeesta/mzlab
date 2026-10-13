@@ -1,6 +1,7 @@
 """mzFinder in Rust (TP_Mine/files/tpmine-worker.js): with the .mzidx of a high-resolution series in OPFS, classify, the Dig (run), detail, frag_tree, frag_tree_compare,
 formula_info, identity_graph, polarity_pairs and origin_evidence are answered by the `finder` .wasm and the pool of feat-worker.js, and Pyodide is never downloaded.
-The JSON of the Dig and the details equal the ones of the native build (`cargo run --example finder`) on the same files.
+The JSON of the Dig and the details equal the ones of the native build (`cargo run --example finder`) on the same files. With a synthetic MSn file of the standard
+(TP_Mine/tests/msn_synth.py) the `finder_msn` .wasm gives msn_tree, calibration, detail.localization, frag_tree and frag_tree_compare equal to the Python.
 Builds the site (python3 tools/build_site.py) and static/wasm-feat (tools/build_feat_wasm.sh); SKIP without cargo, wasm-bindgen or numpy. MZLAB_PIPE_SITE=<built site with
 static/wasm-feat> reuses a site (the TP_Mine files are copied over it). Run from the repo root: python3 tests_e2e/e2e_tpmine_rust.py"""
 import json, os, shutil, subprocess, sys, tempfile, time
@@ -45,6 +46,60 @@ nat.mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "finder", "--", str(nat), *map(str, idx), "--parent", PARENT["neutral"],
                 "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
+# the MSn file of the standard: a structure with the formula of the parent, its tree from the substructures (tools/finder_riferimento.py)
+sys.path.insert(0, str(ROOT / "tools")); import finder_riferimento as FR  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+from mzlab.reader import mzidx as MZI  # noqa: E402
+SMI, ION, MSN = "C1CCC(CC1)N(CC)C(=O)c1ccc(cc1)OCCN1CCCC1", "C21H33N2O2", "std_msn.mzML"
+NODES = FR.msn_nodes(numpy.random.default_rng(7), ION, SMI)
+msn_ml = FR.MSY.write_msn(data / MSN, NODES, n_scans=5)
+r = FR.Run(str(msn_ml)); MZI.build(r, data / (MSN + ".mzidx")); r.close()
+r = FR.Run(str(msn_ml)); TREE = FR.MS.build_tree(r, ION, SMI); r.close()
+EX = SimpleNamespace(tree=TREE, smiles=SMI)
+
+
+def ties(a, b, at):
+    """top_sites: the order of sites whose log-likelihoods differ by rounding only (the sums of numpy) is free; the last group may be cut anywhere"""
+    ll = lambda x: next(v for v in x.values() if isinstance(v, float))
+    near = lambda u, v: abs(u - v) <= 1e-9 * max(1.0, abs(u), abs(v))
+    assert len(a) == len(b), (at, len(a), len(b))
+    i = 0
+    while i < len(a):
+        j = i
+        while j < len(a) and near(ll(a[j]), ll(a[i])): j += 1
+        for x, y in zip(a[i:j], b[i:j]): assert near(ll(x), ll(y)), (at, x, y)
+        if j < len(a):
+            key = lambda z: z["site"]
+            close(sorted(a[i:j], key=key), sorted(b[i:j], key=key), f"{at}[{i}:{j}]")
+        i = j
+
+
+def close(a, b, at=""):
+    """the same JSON, numbers to 1e-9 (relative)"""
+    if isinstance(a, dict) and isinstance(b, dict):
+        assert set(a) == set(b), (at, sorted(set(a) ^ set(b)))
+        for k in a:
+            if k == "top_sites" and isinstance(a[k], list): ties(a[k], b[k], f"{at}.{k}")
+            else: close(a[k], b[k], f"{at}.{k}")
+    elif isinstance(a, list) and isinstance(b, list):
+        assert len(a) == len(b), (at, len(a), len(b))
+        for i, (x, y) in enumerate(zip(a, b)): close(x, y, f"{at}[{i}]")
+    elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+        assert abs(a - b) <= 1e-9 * max(1.0, abs(a), abs(b)), (at, a, b)
+    else:
+        assert a == b, (at, a, b)
+
+
+def py_localization(d, lib):
+    """what the Python engine puts in detail.localization for the candidate of detail `d` (its ion = the neutral formula + H)"""
+    els = TREE.els
+    v = FR.FO.vec(d["row"]["formula"], els); v[els.index("H")] += 1
+    m2 = d["ms2"]["candidate"]
+    r = FR.LZ.localize(FR.FO.fmt(v, els), ION, m2["mz"], m2["rel"], lib, FR.FO.FormulaSpace(v, els), groups=None, tp_mz=d["row"]["mz"])
+    r["n_atoms"] = TREE.subs.mol.n
+    if r.get("ok"):
+        r["n_groups"] = sum(1 for g in FR.LZ.default_groups(TREE.subs.mol).values() if g & set(r["region_atoms"]))
+    return FR._plain(r)
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -55,6 +110,16 @@ PUT = """async (names) => {
   for (const n of names) { const w = await (await d.getFileHandle(n + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_finder/" + n + ".mzidx")).body.pipeTo(w); }
 }"""
 PUTF = PUT.replace('"idx"]', '"files"]').replace('n + ".mzidx", { create', 'n, { create').replace('n + ".mzidx")).body', 'n)).body')
+MODULE = """async ([url, idx, parent, dda, cases]) => {
+  const m = await import(url + "mzlab_feat_wasm.js");
+  await m.default({ module_or_path: url + "mzlab_feat_wasm_bg.wasm" });
+  const buf = new Uint8Array(await (await fetch(idx)).arrayBuffer());
+  const f = m.finder_msn((k, off, len) => buf.slice(off, off + len), buf.length, parent);
+  f.set_parent_ms2(Float64Array.from(dda[0]), Float64Array.from(dda[1]));
+  const loc = cases.map((c, i) => ({ l: JSON.parse(f.localize(i, c.neutral, Float64Array.from(c.mz), Float64Array.from(c.rel), c.tp_mz)),
+                                    cmp: JSON.parse(f.frag_tree_compare(i)) }));
+  return { tree: JSON.parse(f.msn_tree()), loc };
+}"""
 IDENT = {"features": [{"k": "F1", "id": "1", "mz": 301.1, "rt": 5.0, "a": [[0, 1e5], [1, 2e5], [2, 3e5]]}, {"k": "F2", "id": "2", "mz": 323.082, "rt": 5.01, "a": [[0, 2e5], [1, 4e5], [2, 6e5]]}],
          "samples": 3, "pol": 1, "edges": []}
 ORIGIN = [c for c in json.loads((ROOT / "tests" / "golden" / "feat" / "finder.json").read_text())["origin"] if c["out"]][:8]
@@ -97,6 +162,53 @@ try:
             assert c == {"ok": False, "note": "no fragment of the product with a known relation to the parent", "marks": {}}, c
         step("frag_tree and frag_tree_compare of the Rust Dig", tree)
 
+        def msn():
+            pg.evaluate(PUT, [MSN])
+            info = call("classify", [MSN])
+            assert info[0].get("hr_kind") == "msn", info
+            files = got["files"] + [{"name": MSN, "type": info[0]["type"], "time": None, "kind": "msn"}]
+            run = call("run", files, {"name": "parent", "smiles": SMI}, {}, "")
+            assert [x["name"] for x in run["files"]] == [x["name"] for x in got["files"]], run["files"]
+            close(run["tree"], FR._plain(FR.ExperimentHR._tree_summary(EX)), "tree")
+            close(run["calibration"], FR._plain(TREE.cal.as_dict()), "calibration")
+            close(call("msn_tree"), run["tree"], "msn_tree")
+            close(call("frag_tree"), FR._plain(FR.FT._hr_msn(EX)), "frag_tree")
+            ds = [call("detail", x["id"]) for x in run["rows"][:12]]
+            pm = next((d["ms2"]["parent"] for d in ds if d.get("ms2")), None)     # the synthetic series has no MS2 of the parent in the Dig: then none is localised
+            lib = pm and FR.iimn.build_library(TREE, dda_peaks=(numpy.array(pm["mz"]), numpy.array(pm["rel"])))
+            rows = {x["id"]: x for x in run["rows"]}
+            for d in ds:
+                if not (d.get("ms2") and d["row"]["formula"]):
+                    assert d["localization"] is None and rows[d["id"]]["region"] is None, d["id"]
+                    close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), None)), f"compare {d['id']}")
+                    continue
+                want = py_localization(d, lib)
+                close(d["localization"], want, f"localization {d['id']}")
+                close(d["ms2"]["evidence"], want.get("evidence", []), f"evidence {d['id']}")
+                ok = want.get("ok")
+                assert rows[d["id"]]["region"] == (want["region"] if ok else None) and rows[d["id"]]["margin"] == (round(want["margin"], 2) if ok else None), ("row", d["id"], rows[d["id"]]["region"], rows[d["id"]]["margin"], want.get("region"), want.get("margin"))
+                close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), want)), f"compare {d['id']}")
+        step("run with an MSn file: tree, calibration, localization, frag_tree and frag_tree_compare (finder_msn = the Python)", msn)
+
+        def module():
+            rng = numpy.random.default_rng(11)
+            dda = FR.dda_of(rng, NODES)
+            lib = FR.iimn.build_library(TREE, dda_peaks=(numpy.array(dda[0]), numpy.array(dda[1])))
+            els, cases, want = TREE.els, [], []
+            for ch in FR.CHANGES:
+                tp, mz, rel = FR.product_ms2(rng, TREE, lib, FR.change_vec(ch, els))
+                neutral = tp.copy(); neutral[els.index("H")] -= 1
+                tp_mz = float(FR.FO.ion_mass(tp, els))
+                cases.append({"neutral": FR.FO.fmt(neutral, els), "mz": mz, "rel": rel, "tp_mz": tp_mz})
+                d = {"row": {"formula": FR.FO.fmt(neutral, els), "mz": tp_mz}, "ms2": {"candidate": {"mz": mz, "rel": rel}}}
+                loc = py_localization(d, lib)
+                want.append({"l": loc, "cmp": FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), loc))})
+            got_ = pg.evaluate(MODULE, ["/static/wasm-feat/finder-msn/", "static/dati_finder/" + MSN + ".mzidx", json.dumps({"name": "parent", "smiles": SMI}), dda, cases])
+            close(got_["tree"], FR._plain(FR.ExperimentHR._tree_summary(EX)), "tree")
+            assert any(w["l"].get("ok") for w in want), [w["l"].get("note") for w in want]
+            for i, (a, w) in enumerate(zip(got_["loc"], want)): close(a, w, f"case {i}")
+        step("finder_msn in the page: localize and frag_tree_compare of synthetic products (= the Python)", module)
+
         def stateless():
             f = call("formula_info", "C21H32N2O2", "[M+H]+")
             assert abs(f["mz"] - 345.2537) < 1e-3, f
@@ -118,7 +230,8 @@ try:
         def no_pyodide():
             py = [u for u in reqs if "pyodide" in u.lower()]
             assert not py, py[:5]
-            assert [u for u in reqs if "wasm-feat/finder" in u], "the finder .wasm was fetched"
+            assert [u for u in reqs if "wasm-feat/finder/" in u], "the finder .wasm was fetched"
+            assert [u for u in reqs if "wasm-feat/finder-msn/" in u], "the finder_msn .wasm was fetched"
         step("no pyodide* request with high-resolution input", no_pyodide)
         b.close()
 finally:

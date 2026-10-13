@@ -189,7 +189,7 @@ function addPanel(type, o, after) {
   if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "lin", gamma: o.gamma, ref: o.ref ?? "", norm: o.norm || "abs", corr: o.corr, bgr: o.bgr || null, zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: ptNorm(o.title) || PT.map });
   if (type !== "map") p.zoomY = Array.isArray(o.zoomY) && o.zoomY.length === 2 ? o.zoomY : null;   // y zoom of the plot (an old notebook's "yz" is simply ignored)
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
-  if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
+  if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", fondo: FONDO.migra(o), clipDraw: FONDO.clipOld(o) });
   if (type !== "spec" && type !== "map") {
     p.pdaAlign = !!o.pdaAlign; p.pdaDelay = typeof o.pdaDelay === "number" ? o.pdaDelay : null; p.overlay = o.overlay === "grad" || o.overlay === "press" ? o.overlay : null; p.gdelay = +o.gdelay || 0;           // gradient over the traces (gradiente.js) and its delay at the column, in min
     p.tl = o.tl ?? true;                                                  // the chromatograms of a view are linked by default (one panel can be unlinked)
@@ -483,7 +483,8 @@ function plotMeta(p) {
   const mzs = a.sr ? [...new Set(a.sr.map(s => s.mz).filter(v => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
-  if (p.ibk) d.push(I18N.t("export.desc.ibk", { text: ibkText(p.ibk) }));
+  if (ibOf(p)) d.push(I18N.t("export.desc.ibk", { text: ibkText(ibOf(p)) }));
+  else if (p.fondo && p.fondo.mode === "auto") d.push(I18N.t("export.desc.fondoAuto", { text: fondoText(p) }));
   if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
   return [["Title", ptitle(p.title) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
@@ -516,12 +517,12 @@ function corrWidget(p, o) {
   const items = [["", "none", I18N.t("corr.none"), I18N.t("corr.none.desc")],
     [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? o.fileDesc || I18N.t("corr.file.desc") : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
-    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])];
+    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));       // parts: only these entries (the trace panels have two menus, «Sottrai» and «Fondo»)
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
-  const tip = I18N.t("corr.button.title") + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
+  const ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
   const sel = fileOpts.length > 1 ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
-  return `<span class="corrw"><button type="button" data-o="corr" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
-    <span class="corrm" role="group" aria-label="${EH(I18N.t("corr.button.title"))}" hidden>${items.map(i => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b><span class="sm muted">${EH(i[3])}</span></span></button>${i[1] === "blank" ? sel : ""}`).join("")}</span></span>`;
+  return `<span class="corrw"><button type="button" data-o="${o.wire || "corr"}" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
+    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${items.map(i => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b><span class="sm muted">${EH(i[3])}</span></span></button>${i[1] === "blank" ? sel : ""}`).join("")}</span></span>`;
 }
 function corrWire(x, pick) {          // pick("" | "f<k>" | "tract" | "snip")
   const m = x.parentNode.querySelector(".corrm"), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
@@ -543,8 +544,8 @@ function ctl(p) {
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
-  if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
-  if (mrmP) { p.bk = ""; p.snip = false; }
+  if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.fondo = { mode: "none", w: p.fondo.w, ib: null }; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
+  if (mrmP) p.bk = "";
   if (p.type === "spec" && T0 === "ms2" && !p.filt) p.level = 2;
   const NOMS2 = I18N.t("ctl.noMs2"), NOMRM = I18N.t("ctl.noMrm");
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
@@ -566,9 +567,10 @@ function ctl(p) {
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:11em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "";
     const blanks = TF.filter(x => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);          // an old notebook may point to a file that is not marked as blank: keep it
-  const cval = bkOn ? "f" + p.bk : p.ibk || p._pickIbk ? "tract" : p.snip ? "snip" : "";
-  const corr = corrWidget(p, { files: bkList, cur: cval, snip: true, dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
-    + `${p.snip && !bkOn ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
+  const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
+  const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
+    + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "snip"], title: I18N.t("corr.fondo.title"), dis: ms2c ? NOMS2 : "", wire: "bkg" })
+    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter(f => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter(f => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
@@ -657,7 +659,9 @@ function ctl(p) {
       if (lo != null && hi != null && hi > lo) { pushZh(p); zoomTo(p, lo, hi); uiSave(); }
     };
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
-    else if (k === "corr") corrWire(x, v => setCorr(p, v));
+    else if (k === "corr") corrWire(x, v => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
+    else if (k === "bkg") corrWire(x, v => setFondo(p, v));
+    else if (k === "snipw") x.onchange = () => { p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
         else x.onchange = () => {
       if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
         p.k = +x.value; STATO.file(+x.value, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
