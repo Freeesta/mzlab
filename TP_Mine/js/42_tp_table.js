@@ -15,7 +15,8 @@
 @media(pointer:coarse){.tp table.tpt button.tpt-tg,.tp table.tpt th button.tpt-sh{min-width:40px;min-height:40px}}
 .tp table.tpt tr.tpt-exp>td{padding:0;border-bottom:2px solid var(--accent);background:var(--bg)}
 .tp table.tpt tr.tpt-exp>td>.tpt-slot{position:sticky;left:0;box-sizing:border-box;width:var(--tpt-w,100%);padding:8px 10px}
-.tp table.tpt .tpt-no{color:var(--muted)}`;
+.tp table.tpt .tpt-no{color:var(--muted)}
+.tp .tpt-colm{margin:0 0 6px;font-size:12px}.tp .tpt-colm summary{cursor:pointer;min-height:24px}.tp .tpt-colm>div{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 0}.tp .tpt-colm label{display:inline-flex;align-items:center;gap:4px;min-height:24px}`;
 
   /**
    * @typedef {{ key: string, label: string, title?: string, num?: boolean, sort?: (r: any) => number | string | null, cell: (r: any) => string }} Col
@@ -49,15 +50,16 @@
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(fitSlot).observe(wrap); else fitSlot();
 
     function drawHead() {
-      head.innerHTML = o.cols.map(c => `<th scope="col" aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title ? ` title="${o.esc(c.title)}"` : ""}>${c.sort ? `<button type="button" class="tpt-sh" data-sh="${c.key}">${c.label}<span aria-hidden="true">${st.sort === c.key ? (st.dir > 0 ? "▲" : "▼") : ""}</span></button>` : c.label}</th>`).join("");
+      head.innerHTML = cols.map(c => `<th scope="col" aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title ? ` title="${o.esc(c.title)}"` : ""}>${c.sort ? `<button type="button" class="tpt-sh" data-sh="${c.key}">${c.label}<span aria-hidden="true">${st.sort === c.key ? (st.dir > 0 ? "▲" : "▼") : ""}</span></button>` : c.label}</th>`).join("");
     }
+    let cols = o.cols.filter(c => !c.off);                 // the visible columns (the others are added from the menu of the page)
     const sorted = () => sortRows(st.rows, o.cols.find(x => x.key === st.sort), st.dir);
     function draw() {
       const had = document.activeElement instanceof HTMLElement && host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
       panel.remove(); drawHead();
       body.innerHTML = sorted().map(r => {
         const id = o.rowId(r), on = st.open === id;
-        return `<tr class="clk${on ? " sel" : ""}" data-id="${id}">${o.cols.map((c, i) => `<td${c.num || i === 0 ? ` class="${[c.num ? "n" : "", i === 0 ? "tpt-c0" : ""].filter(Boolean).join(" ")}"` : ""}>${i === 0 ? `<button type="button" class="tpt-tg" data-tg="${id}" aria-expanded="${on}" aria-controls="${panel.id}" aria-label="Details of ${o.esc(o.name(r))}"><span aria-hidden="true">${on ? "▾" : "▸"}</span></button>` : ""}${c.cell(r)}</td>`).join("")}</tr>${on ? `<tr class="tpt-exp"><td colspan="${o.cols.length}"><div class="tpt-slot"></div></td></tr>` : ""}`;
+        return `<tr class="clk${on ? " sel" : ""}" data-id="${id}">${cols.map((c, i) => `<td${c.num || i === 0 ? ` class="${[c.num ? "n" : "", i === 0 ? "tpt-c0" : ""].filter(Boolean).join(" ")}"` : ""}>${i === 0 ? `<button type="button" class="tpt-tg" data-tg="${id}" aria-expanded="${on}" aria-controls="${panel.id}" aria-label="Details of ${o.esc(o.name(r))}"><span aria-hidden="true">${on ? "▾" : "▸"}</span></button>` : ""}${c.cell(r)}</td>`).join("")}</tr>${on ? `<tr class="tpt-exp"><td colspan="${o.cols.length}"><div class="tpt-slot"></div></td></tr>` : ""}`;
       }).join("");
       const slot = body.querySelector(".tpt-slot"); if (slot) slot.appendChild(panel);
       if (had != null) { const b = body.querySelector(`[data-tg="${had}"]`); if (b instanceof HTMLElement) b.focus(); }
@@ -99,7 +101,9 @@
       if (byUser && o.onSort) o.onSort(key, st.dir);
     }
     drawHead();
-    return {
+    /** @param {string[]} keys */
+    function setCols(keys) { cols = o.cols.filter(c => keys.includes(c.key)); draw(); }
+    return { setCols,
       /** the rows to show (already filtered); the open row stays open if it is still there, else it is closed @param {any[]} rows */
       setRows(rows) { st.rows = rows; if (st.open != null && !rows.some(r => o.rowId(r) === st.open)) { st.open = null; panel.innerHTML = ""; } draw(); },
       open, close, toggle, sortBy,

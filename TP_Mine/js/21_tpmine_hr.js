@@ -51,23 +51,23 @@
     const { esc, fmtA } = h, TPTAB = /** @type {any} */ (window).TPTAB;
     const yn = (r, k) => !r.ctl ? `<span class="tpt-no" title="not available for this run">–</span>` : r.ctl[k] ? `<span title="detected: ${(100 * r.ctl[k + "_ratio"]).toFixed(0)}% of the maximum of the treated samples" aria-label="yes">●</span>` : `<span class="tpt-no" aria-label="no">○</span>`;
     return [
-      { key: "rank", label: "#", num: true, sort: r => rank.get(r), cell: r => String(rank.get(r)) },
+      { key: "rank", off: true, label: "#", num: true, sort: r => rank.get(r), cell: r => String(rank.get(r)) },
       { key: "level", label: "Lvl", sort: r => lvRank(r) * 1e6 + r.score, cell: r => lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "") },
-      { key: "pred", label: "Pred.", title: "prediction level (Löffler et al. 2025)", sort: r => r.pred ?? 9, cell: r => predBadge(r) },
-      { key: "sim", label: "Sim.", title: "modified cosine split in equal / shifted / common neutral loss fragments", sort: r => r.modcos, cell: r => simBar(r.sim) },
+      { key: "pred", off: true, label: "Pred.", title: "prediction level (Löffler et al. 2025)", sort: r => r.pred ?? 9, cell: r => predBadge(r) },
+      { key: "sim", off: true, label: "Sim.", title: "modified cosine split in equal / shifted / common neutral loss fragments", sort: r => r.modcos, cell: r => simBar(r.sim) },
       { key: "score", label: "Score", num: true, sort: r => r.score, cell: r => String(r.score) },
       { key: "mz", label: "<i>m/z</i>", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(4) },
       { key: "formula", label: "Formula (ppm)", sort: r => r.formula || "", cell: r => `${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}` },
       { key: "change", label: "Change", sort: r => r.derivation || r.delta || "", cell: r => `${esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}` },
       { key: "rt", label: "RT", num: true, sort: r => r.rt, cell: r => String(r.rt) },
-      { key: "tmax", label: "t max", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
-      { key: "area", label: "Max area", title: "largest area among the treated samples", num: true, sort: r => r.area_max, cell: r => fmtA(r.area_max || 0) },
+      { key: "tmax", off: true, label: "t max", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
+      { key: "area", off: true, label: "Max area", title: "largest area among the treated samples", num: true, sort: r => r.area_max, cell: r => fmtA(r.area_max || 0) },
       { key: "kin", label: "Kinetics", cell: r => `${TPTAB.spark(r.series, "area")}${r.filled.length ? ` <span class="mut" title="${r.filled.length} area(s) re-integrated where no peak was found (filled)">○${r.filled.length}</span>` : ""}` },
-      { key: "ms2", label: "MS²", title: "MS² scans inside the peak", num: true, sort: r => r.ms2_scans, cell: r => String(r.ms2_scans || "") },
+      { key: "ms2", off: true, label: "MS²", title: "MS² scans inside the peak", num: true, sort: r => r.ms2_scans, cell: r => String(r.ms2_scans || "") },
       { key: "t0", label: "t0", title: "the ion is detected in the t0 file(s)", sort: r => r.ctl ? +r.ctl.in_t0 : null, cell: r => yn(r, "in_t0") },
       { key: "blank", label: "Blank", title: "the ion is detected in the blank or dark control(s)", sort: r => r.ctl ? +r.ctl.in_blank : null, cell: r => yn(r, "in_blank") },
-      { key: "class", label: "Class", sort: r => r.class || "", cell: r => esc(r.class || "") },
-      { key: "region", label: "Region", sort: r => r.region || "", cell: r => esc(r.region || "") },
+      { key: "class", off: true, label: "Class", sort: r => r.class || "", cell: r => esc(r.class || "") },
+      { key: "region", off: true, label: "Region", sort: r => r.region || "", cell: r => esc(r.region || "") },
     ];
   }
   function render(R, s, h) {
@@ -88,6 +88,7 @@
       <div class="card"><div class="row"><label class="mut">Minimum level</label><select id="hr-lv"><option value="5">all</option><option value="4">4 or higher</option><option value="3">3 or higher</option><option value="d">3 with diagnostic evidence only</option></select>
         <input type="text" id="hr-q" placeholder="filter: formula, m/z, region" class="grow"><label class="mut">Sort by</label><select id="hr-ord"><option value="score">score</option><option value="level">level, then score</option><option value="">table column</option></select><label><input type="checkbox" id="hr-loc"> only with region</label>
         <label><input type="checkbox" id="hr-ms2f"> with MS²</label><label><input type="checkbox" id="hr-t0f" disabled> not in t0</label><label><input type="checkbox" id="hr-blf" disabled> not in blank</label><span class="mut" id="hr-cnt" role="status"></span></div>
+        <details class="tpt-colm" id="hr-colm"><summary>Columns</summary><div id="hr-cols"></div></details>
         <div id="hr-tbl"></div></div>
       <div class="card" id="hr-mnet"></div>
       <details class="card"><summary>Applied filters (funnel) and sessions</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("en")} · ${esc(f.text)}</div>`).join("")}
@@ -103,6 +104,8 @@
     const COLS = tableCols(h, rank, lvRank);
     const T = TPTAB.mount($("#hr-tbl"), { id: "hr-t", label: "Possible transformation products", cols: COLS, rowId: r => r.id, esc, name: r => `${r.formula || "m/z " + r.mz}, m/z ${r.mz}`,
       onOpen: (id, panel) => fill(id, panel), onSort: () => { $("#hr-ord").value = ""; } });
+    $("#hr-cols").innerHTML = COLS.map(c => `<label><input type="checkbox" data-col="${c.key}"${c.off ? "" : " checked"}> ${c.label}</label>`).join("");
+    $("#hr-cols").onchange = () => T.setCols([...R.querySelectorAll("#hr-cols input:checked")].map(i => /** @type {HTMLElement} */ (i).dataset.col || ""));
     function table() {
       const k = keep();
       $("#hr-cnt").textContent = `${k.length} of ${rows.length}`;
