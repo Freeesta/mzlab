@@ -13,7 +13,7 @@ onmessage = async ev => {
   const m = ev.data;
   if (m.op === "module") { if (!ready) initWith(m.module); startInit(); return; }
   await waiting; await ready;
-  let ah = null, fullAt = 0;
+  let ah = null, fullAt = 0, endAt = 0;
   try {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("idx", { create: true });
     const fh = await d.getFileHandle(m.part, { create: true });
@@ -26,11 +26,13 @@ onmessage = async ev => {
       if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
       return new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
     };
-    const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } };       // a full disk: not a silently short index
+    const write = (off, data) => { if (writeFull(ah, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } endAt = Math.max(endAt, off + data.length); };       // a full disk: not a silently short index
     const [levels, pols, rt, tic, rows, source, run, hr1] = m.inputs;
     const t0 = performance.now();
     const stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget);
-    ah.flush(); ah.close(); ah = null;
+    ah.flush();
+    if (ah.getSize() < endAt) { fullAt = endAt; throw new Error("storage full"); }           // the browser took the writes but the file is shorter (quota reached): never an index that looks complete
+    ah.close(); ah = null;
     postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
   } catch (e) {
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }

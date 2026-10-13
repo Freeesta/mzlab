@@ -120,14 +120,15 @@ async function lrMigrate() {                                              // wha
   }
 }
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
-  await ARCH.ensureRoom(m.blob.size);                                 // room first (error.quota with the MB needed and free), never write hoping
+  await ARCH.ensureRoom(m.blob.size, m.name);                         // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
   await ARCH.remove("idx", m.name + ".mzidx");
   let f;
   try { f = await ARCH.put("files", m.name, m.blob); }
-  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else throw e; }
+  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await ARCH.put("files", m.name, m.blob); } else { ARCH.release(m.name); throw e; } }
   lrFile.set(m.name, f);
+  if (/\.dam$/i.test(m.name)) ARCH.release(m.name);                    // a method has no index
   await ARCH.persistOnce();
   return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
 }
@@ -145,7 +146,7 @@ async function lrOp(m) {
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
     case "lr_put": return lrPut(m);
-    case "lr_index": {                                                    // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
+    case "lr_index": try {                                                // the scan table (Rust), the index (a short-lived worker of the pool), then the index is opened
       const f = await fileOf(m.name), t0 = performance.now();
       const a = prepare_upload(f.size, readerFor(f), m.name), part = m.name + ".mzidx.part";
       const res = await idxPool().build({ name: m.name, blob: f, inputs: Array.from(a).slice(0, 8), part, onProgress: p => postMessage({ op: "progress", id: m.id, frac: p.frac }) });      // frac: how far the builder has read
@@ -157,9 +158,11 @@ async function lrOp(m) {
         throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
       }
       await ARCH.promote("idx", part, m.name + ".mzidx");
-      if (!(await lrOpen(m.name))) jerr("err.engine.index");
+      let opened = false;
+      try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
+      if (!opened) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
-    }
+    } finally { ARCH.release(m.name); }
     case "lr_entry": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)) }; }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)

@@ -106,7 +106,9 @@ function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
-function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
+// ...and not while files are still being read and indexed: the button would open only the ones already ready (UPBUSY = loadings under way)
+let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();      // names of the files that could not be read: mzFinder warns that they are missing from its series
+function checkGo(){$("#opbtn").disabled=UPBUSY>0||!ST.files.some(usable);$("#gomsg").textContent=UPBUSY>0&&ST.files.some(usable)?I18N.t("load.waitFiles"):""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
@@ -211,7 +213,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidde
 async function loneWiffs(wr,rep){      // a .wiff without its .scan is the method of the mzML files made from it (same SHA-1): else it waits for its .scan
   for(const {e,rb} of wr.lone||[]){try{const r=await rb.metodoWiff(e.wiff);if(r.matched.length){WIFF_WAIT.delete(e.stem.toLowerCase());rep.notes.push(I18N.t("load.note.wiffMethod",{name:e.wiff.name,n:r.matched.length,files:namesCut(r.matched.map(x=>x.name),3)}));continue}}catch(_){}
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
-async function upload(files,into){const box=$("#up");fail();
+async function upload(files,into){UPBUSY++;checkGo();try{return await uploadFiles(files,into)}finally{UPBUSY--;checkGo()}}
+async function uploadFiles(files,into){const box=$("#up");fail();
   const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
@@ -222,8 +225,8 @@ async function upload(files,into){const box=$("#up");fail();
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
+      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
+    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
   let panel=null;const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
   const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
