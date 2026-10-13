@@ -8,15 +8,15 @@ mod info; mod diff; mod items; mod metodo; mod stat;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{analysis, mzidx, mzml, peakq, peaks, raw};
+use mzlab_core::{analysis, mzidx, mzml, peakq, peaks};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod wiff;
-mod agilent;
 mod centroidi; mod panic; mod campioni;
+mod nativi;
+mod nativi_motore;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -167,6 +167,8 @@ pub struct Engine {
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
     pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
+    /// The slots read straight from the files of a maker (`nativi.rs`).
+    pub(crate) nat: nativi::Nativi,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -232,11 +234,13 @@ impl Engine {
     pub fn close(&mut self, slot: u32) {
         self.runs.remove(&slot);
         self.idx.remove(&slot);
+        self.nat.forget(slot);
     }
 
     pub fn close_all(&mut self) {
         self.runs.clear();
         self.idx.clear();
+        self.nat.clear();
     }
 
     /// Opens the `.mzidx` of a file (`size` bytes, read through `read(offset, length)`). Returns `{"scans": n, "hr1": bool}`.
@@ -269,10 +273,9 @@ impl Engine {
         size: f64,
         read: Function,
     ) -> Result<String, JsValue> {
-        let _ = size;
         match self.idx.get(&slot) {
             Some(r) if r.has_scans() => r
-                .scaninfo(sid as usize, &mut JsReader { read })
+                .scaninfo(sid as usize, &mut self.nat.src(slot, read, size)?.0)
                 .map_err(|e| error_json(&e)),
             _ => Ok(String::new()),
         }
@@ -281,7 +284,7 @@ impl Engine {
     /// `/api/spectrum` of a window holding ONE scan of a centroid HR file: the exact peaks come from the mzML (`read`). Empty = Python's.
     pub fn spectrum_exact(&mut self, slot: u32, query: &str, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
-        r.spectrum_exact(&Query::parse(query), &mut JsReader { read }).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
+        r.spectrum_exact(&Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
     }
 
     /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).
@@ -290,7 +293,7 @@ impl Engine {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
         let end = r.idx.scans.last().map_or(0, |s| s.end);
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
         mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms).map_err(|e| error_json(&e))
     }
@@ -306,7 +309,7 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size as u64)
             .map_err(|e| error_json(&e))
     }
@@ -335,7 +338,7 @@ impl Engine {
             cunit: s("cunit"),
             rep: s("rep"),
         };
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let items = mzlab_core::lr::open_items(&mut r.idx, &mut m, name, &sample)
             .map_err(|e| error_json(&e))?;
         let body: Vec<String> = items
@@ -357,33 +360,6 @@ impl Engine {
             return Ok(String::new());
         };
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
-    }
-
-    /// Converts a Thermo `.raw` of `size` bytes (read through `read(offset, length)`) to mzML, sent to `sink(Uint8Array)` piece by piece.
-    /// The `.raw` is never held in memory: only the block being read. Errors are JSON with a key, as in `open`.
-    pub fn raw_to_mzml(
-        &mut self,
-        name: &str,
-        size: f64,
-        read: Function,
-        sink: Function,
-        scans: Function, // scans(done, total): scans converted / scans in the file (first done = 0, last done = total)
-        flags: u32, // bit 0: profile data as stored (else the vendor centroids)
-    ) -> Result<(), JsValue> {
-        let mut out = BlockWriter { sink, buf: Vec::new() };
-        let mut on_scan = |d: u32, t: u32| drop(scans.call2(&JsValue::NULL, &d.into(), &t.into()));
-        raw::to_mzml_progress(BlockReader::new(read, size as u64), &mut out, name, flags & 1 != 0, &mut on_scan)
-            .map_err(|e| error_json(&e))?;
-        out.flush().map_err(|_| {
-            error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))
-        })
-    }
-
-    /// The text of the instrument method of a Thermo `.raw` (read through `read(offset, length)`): the Chromeleon script with the gradient; empty when there is none.
-    pub fn raw_method_text(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        raw::instrument_method_text(BlockReader::new(read, size as u64))
-            .map(|t| t.unwrap_or_default())
-            .map_err(|e| error_json(&e))
     }
 
     /// Number of scans of one level (the capacity a trace needs).

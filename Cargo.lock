@@ -1974,15 +1974,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mzlab-lettori-wasm"
-version = "0.1.0"
-dependencies = [
- "js-sys",
- "mzlab-core",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "mzlab-lib"
 version = "0.1.0"
 dependencies = [

@@ -1,6 +1,6 @@
 //! `/api/fileinfo` for the page: the head of the mzML (read through JS) and the index of the file.
 
-use super::{error_json, Engine, JsReader};
+use super::{error_json, Engine};
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
@@ -11,7 +11,7 @@ impl Engine {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let head = m.info_head().map_err(|e| error_json(&e))?;
         mzlab_core::fileroutes::fileinfo(r, &mut m, name, &head).map_err(|e| error_json(&e))
     }
