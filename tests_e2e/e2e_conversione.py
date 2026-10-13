@@ -87,10 +87,8 @@ try:
         def opened():
             pg.click("text=Carica dati"); ready(pg)
             assert pg.evaluate("E.files.length") == 2
-            assert pg.locator("#flst [data-dl]").count() == 2 and pg.locator("#flst [data-dl-all]").count() == 1
-            with pg.expect_download() as d: pg.evaluate("document.querySelector('#flst [data-dl]').click()")      # the side bar may be folded: the click goes to the button itself
-            assert d.value.suggested_filename.endswith(".mzML")
-        step("the file list has the buttons too", opened)
+            assert pg.locator("#flst [data-dl]").count() == 0 and pg.locator("#flst [data-dl-all]").count() == 0
+        step("the file list of the side bar has no download buttons", opened)
         def same_base():
             pg.set_input_files("#pick", [str(D / "dup.raw"), str(D / "dup.mzML")])
             for _ in range(4): pg.wait_for_function("!!window.__go", timeout=60000); pg.evaluate("window.__go(); window.__go=null")
@@ -111,7 +109,7 @@ try:
         def profile():
             assert pg.evaluate("document.getElementById('rawprof').hidden") is False
             assert pg.evaluate("document.getElementById('rawprofile').checked") is False      # not implicit: the default is the centroids
-            assert "Conserva i dati in profilo (predefinito: centroidi)" in pg.inner_text("#rawprof") and ".wiff" in pg.inner_text("#rawprofnote")      # one option for every format that has both
+            assert "Conserva i dati in profilo (predefinito: centroidi)" in pg.inner_text("#rawprof") and not pg.query_selector("#rawprofnote")      # one option for every format that has both
             cs = pg.evaluate("(() => { const l = getComputedStyle(document.querySelector('#rawprof .convopt-l')), c = getComputedStyle(document.getElementById('rawprofile')); return [l.display, l.alignItems, c.width, c.height]; })()")
             assert cs == ["inline-flex", "center", "16px", "16px"], cs      # the box is centred on the text and big enough to hit
             pg.evaluate("window.__prof=[]; window.__log=[]")

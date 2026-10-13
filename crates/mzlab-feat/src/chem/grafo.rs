@@ -28,14 +28,96 @@ impl Mol {
                 return Err(Error::new("error.grafo.element").with("element", &a.el));
             }
         }
+        Ok(Mol::assemble(raw, written, false))
+    }
+
+    /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
+    /// the file), implicit hydrogens by valence, `M  CHG` charges, bond type 4 aromatic. Disconnected pieces are accepted (the page cuts bonds).
+    pub fn from_molfile(mf: &str) -> Result<Mol> {
+        let bad = || Error::new("error.grafo.molfile");
+        let lines: Vec<&str> = mf.lines().collect();
+        let counts = lines.get(3).ok_or_else(bad)?;
+        let num =
+            |s: &str, a: usize, b: usize| s.get(a..b).and_then(|t| t.trim().parse::<i64>().ok());
+        let (na, nb) = (
+            num(counts, 0, 3).ok_or_else(bad)? as usize,
+            num(counts, 3, 6).ok_or_else(bad)? as usize,
+        );
+        if na > MAX_ATOMS || lines.len() < 4 + na + nb {
+            return Err(if na > MAX_ATOMS {
+                Error::new("error.grafo.tooBig").with("max", MAX_ATOMS)
+            } else {
+                bad()
+            });
+        }
+        let mut raw: Vec<RawAtom> = Vec::new();
+        for l in &lines[4..4 + na] {
+            let el = l.get(31..34).ok_or_else(bad)?.trim().to_string();
+            if elements::mass_of(&el).is_none() || normal_valence(&el).is_none() {
+                return Err(Error::new("error.grafo.element").with("element", &el));
+            }
+            raw.push(RawAtom {
+                el,
+                arom: false,
+                h: None,
+                charge: 0,
+            });
+        }
+        let mut written: Vec<RawBond> = Vec::new();
+        for l in &lines[4 + na..4 + na + nb] {
+            let (a, b, t) = (num(l, 0, 3), num(l, 3, 6), num(l, 6, 9));
+            let (Some(a), Some(b), Some(t)) = (a, b, t) else {
+                return Err(bad());
+            };
+            if a < 1 || b < 1 || a as usize > na || b as usize > na {
+                return Err(bad());
+            }
+            let arom = t == 4;
+            if arom {
+                raw[a as usize - 1].arom = true;
+                raw[b as usize - 1].arom = true;
+            }
+            written.push((
+                a as usize - 1,
+                b as usize - 1,
+                if arom { 1.5 } else { t.clamp(1, 3) as f32 },
+                true,
+            ));
+        }
+        for l in &lines[4 + na + nb..] {
+            if let Some(rest) = l.strip_prefix("M  CHG") {
+                let v: Vec<i32> = rest
+                    .split_whitespace()
+                    .filter_map(|t| t.parse().ok())
+                    .collect();
+                for p in v.get(1..).unwrap_or(&[]).chunks(2) {
+                    if let [i, c] = p {
+                        if *i >= 1 && (*i as usize) <= na {
+                            raw[*i as usize - 1].charge = *c;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(Mol::assemble(raw, written, true))
+    }
+
+    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence; a SMILES atom in brackets already says its hydrogens.
+    fn assemble(raw: Vec<RawAtom>, written: Vec<RawBond>, by_charge: bool) -> Mol {
         let bonds = typed_bonds(&raw, written);
-        let atoms = smiles::fill(&raw, &bonds);
+        let mut atoms = smiles::fill(&raw, &bonds);
+        for a in atoms.iter_mut().filter(|a| by_charge && a.charge != 0) {
+            // a charge moves the valence: N+ and O+ take one more, O- one less, C+/C- one less
+            let up = matches!(a.el.as_str(), "N" | "P" | "O" | "S");
+            let d = if up { a.charge } else { -a.charge.abs() };
+            a.h = (a.h as i32 + d).max(0) as u32;
+        }
         let mut adj = vec![Vec::new(); atoms.len()];
         for (k, b) in bonds.iter().enumerate() {
             adj[b.a].push((b.b, k));
             adj[b.b].push((b.a, k));
         }
-        Ok(Mol { atoms, bonds, adj })
+        Mol { atoms, bonds, adj }
     }
 
     pub fn formula(&self) -> Formula {
@@ -43,7 +125,7 @@ impl Mol {
     }
 
     /// Neutral formula of the atoms in `keep` (heavy atoms and the hydrogens they carry).
-    fn formula_of(&self, keep: &[bool]) -> Formula {
+    pub(super) fn formula_of(&self, keep: &[bool]) -> Formula {
         let mut f: Formula = Vec::new();
         let mut add = |el: &str, n: u64| match f.iter_mut().find(|(e, _)| e == el) {
             Some(x) => x.1 += n,
@@ -96,7 +178,7 @@ impl Mol {
     }
 
     /// Bonds on a ring: cutting one does not split the molecule.
-    fn ring_bonds(&self) -> Vec<bool> {
+    pub(super) fn ring_bonds(&self) -> Vec<bool> {
         (0..self.bonds.len())
             .map(|k| {
                 let (a, b) = (self.bonds[k].a, self.bonds[k].b);
@@ -278,7 +360,7 @@ pub struct Cleavage {
     pub products: Vec<String>,
 }
 
-fn add_h(mut f: Formula, h: u64, o: u64) -> Formula {
+pub(super) fn add_h(mut f: Formula, h: u64, o: u64) -> Formula {
     for (el, n) in [("H", h), ("O", o)] {
         if n == 0 {
             continue;
@@ -291,7 +373,7 @@ fn add_h(mut f: Formula, h: u64, o: u64) -> Formula {
     f
 }
 
-fn hydrolysable(m: &Mol, k: usize) -> &'static str {
+pub(super) fn hydrolysable(m: &Mol, k: usize) -> &'static str {
     let (a, b) = (m.bonds[k].a, m.bonds[k].b);
     let pair = |x: usize, y: usize| -> &'static str {
         // `x` is the O or N, `y` the other end

@@ -110,8 +110,8 @@ fn row_of(al: &Aligned, mz: f64) -> Vec<usize> {
 fn families_end_in_one_row() {
     let files = series();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let fam = align_families(&refs, &FamAlignParams::default());
-    let ion = align(&refs, &AlignParams::default());
+    let fam = align_families(&refs, &FamAlignParams::default()).unwrap();
+    let ion = align(&refs, &AlignParams::default()).unwrap();
     assert!(
         fam.len() * 100 <= ion.len() * 60,
         "{} rows against {} ions",
@@ -142,7 +142,7 @@ fn families_end_in_one_row() {
 fn shared_fragment_does_not_join_two_compounds() {
     let files = series();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let fam = align_families(&refs, &FamAlignParams::default());
+    let fam = align_families(&refs, &FamAlignParams::default()).unwrap();
     let a = row_of(&fam, 400.0);
     let b = row_of(&fam, 450.0);
     assert!(!a.is_empty() && !b.is_empty());
@@ -156,7 +156,7 @@ fn shared_fragment_does_not_join_two_compounds() {
 fn states_follow_the_peaks_and_two_runs_agree() {
     let files = series();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let fam = align_families(&refs, &FamAlignParams::default());
+    let fam = align_families(&refs, &FamAlignParams::default()).unwrap();
     for r in 0..fam.len() {
         for k in 0..FILES {
             let c = fam.cell(r, k);
@@ -169,7 +169,7 @@ fn states_follow_the_peaks_and_two_runs_agree() {
         }
         assert!(!fam.members(r).is_empty());
     }
-    let again = align_families(&refs, &FamAlignParams::default());
+    let again = align_families(&refs, &FamAlignParams::default()).unwrap();
     assert_eq!(fam.to_bytes(), again.to_bytes());
 }
 
@@ -177,7 +177,7 @@ fn states_follow_the_peaks_and_two_runs_agree() {
 fn matches_the_frozen_answer() {
     let files = series();
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    let fam = align_families(&refs, &FamAlignParams::default());
+    let fam = align_families(&refs, &FamAlignParams::default()).unwrap();
     let now =
         serde_json::json!({"rows": fam.len(), "members": fam.member_mz.len(), "sha256": sha(&fam)});
     let p = Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -538,7 +538,7 @@ window.MAPPA = (() => {
     box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { q.note = inp.value; ptsSave(p); } });
     box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; ptsSave(p); tableNow(p); });
     box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
-    box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f)); });
+    box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f), f.polarity); });
     grow(p, "tab", Math.ceil(box.offsetHeight) + 5);                    // the panel grows by the height of the table (it scrolls inside beyond its maximum): the map keeps its size
   }
   async function spectrumAt(p, rt, k) {
@@ -549,12 +549,7 @@ window.MAPPA = (() => {
   // XIC of A and B overlaid: a new XIC panel with the m/z; the files of the panel are those of the tab, A and B among them
   function xicAB(p, mz) { xicDirect(mz, p); }
   // delta m: the sidebar tab of the neutral losses (filtered on |delta m|) or, for the usual adduct differences, the adducts
-  const AD_DIFF = [21.9819, 17.0265, 37.9559];
-  function openDm(dm, hr) {
-    const v = Math.abs(dm), tol = hr ? 0.003 : 0.5, ad = dm > 0 && AD_DIFF.some(x => Math.abs(v - x) <= tol), q = String(+v.toFixed(hr ? 4 : 1));
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
-    else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
-  }
+  const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
   function sheetRows(p) {
     const s = st(p), hr = isHrF(p._a.f);
     return (s.rows || []).map(r => [r.n, r.rt != null ? +r.rt.toFixed(3) : "", r.mz != null ? +r.mz.toFixed(hr ? 5 : 2) : "", r.ia ?? "", r.ib ?? "", r.d ?? "", r.ratio != null ? +r.ratio.toFixed(3) : "", r.sn != null ? +r.sn.toFixed(1) : "", r.g ?? "", r.dm != null ? +r.dm.toFixed(hr ? 5 : 2) : "", r.note || ""]);
@@ -845,7 +840,7 @@ window.MAPPA = (() => {
   const pOf = el => E.panels.find(q => q.el === el);
   const simple = p => !(window.DDA && (DDA.docked(p) || E.panels.some(q => q.dock === p.id && DDA.docked(q))));
   const above = p => { let best = null; for (const q of E.panels) if (q !== p && q.full && simple(q) && q.y < p.y && (!best || q.y > best.y)) best = q; return best; };
-  const done = p => { if (p.full && typeof relayout === "function") relayout(); if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
+  const done = p => { if (p.full && typeof relayout === "function") { LAYOUT.altezza(p, E.panels); relayout(); } if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
   function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");

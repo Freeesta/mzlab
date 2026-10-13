@@ -1,5 +1,6 @@
-//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify` and `formula_info` with the same JSON, and
-//! the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`, `inclusion_csv`). Built only into the `.wasm`
+//! The functions of mzFinder that its Pyodide served and Rust now serves (`mzlab_feat::legacy`): `classify`, `formula_info`, `identity_graph`,
+//! `polarity_pairs` and `origin_evidence` with the same JSON, and the Dig of a high-resolution series already through the pipeline (`FinderDig`: `summary`, `detail`,
+//! `inclusion_csv`, `frag_tree`, `frag_tree_compare`). Built only into the `.wasm`
 //! of the feature `finder`, loaded by the worker of mzFinder when the page asks for one of them. Errors are JavaScript `Error`s with the English text
 //! that the Python raised.
 
@@ -70,6 +71,32 @@ impl FinderDig {
     pub fn inclusion_csv(&self, n: u32) -> String {
         legacy::out::inclusion_csv(&self.inner, n as usize)
     }
+    /// `api.frag_tree()`: the tree of the MS2 of the parent.
+    pub fn frag_tree(&self) -> String {
+        legacy::fragtree::of_dig(&self.inner)
+    }
+    /// `api.frag_tree_compare(id)`: no localisation of the products, the empty answer.
+    pub fn frag_tree_compare(&self, _id: u32) -> String {
+        legacy::fragtree::COMPARE_NONE.into()
+    }
+}
+
+/// `api.identity_graph(payload)`.
+#[wasm_bindgen]
+pub fn finder_identity_graph(payload: &str) -> Result<String, JsValue> {
+    legacy::identity_graph(payload).map_err(user)
+}
+
+/// `api.polarity_pairs(payload)`.
+#[wasm_bindgen]
+pub fn finder_polarity_pairs(payload: &str) -> Result<String, JsValue> {
+    legacy::polarity_pairs(payload).map_err(user)
+}
+
+/// `api.origin_evidence(payload)`: the evidence of the report «where does this ion come from?».
+#[wasm_bindgen]
+pub fn finder_origin_evidence(payload: &str) -> Result<String, JsValue> {
+    legacy::edge::origin_evidence(payload).map_err(user)
 }
 
 /// `api.run` on high-resolution files: `table` = the `.mzfeat` with the proofs of the LC files (in the order of the files of `files_json` that are
@@ -88,4 +115,32 @@ pub fn finder_dig(
     })
     .map_err(user)?;
     Ok(FinderDig { inner })
+}
+
+/// What the worker needs to run the pipeline before `finder_dig`: `{lc: [names of the LC files, in the order of the table], minutes: [time | null],
+/// formula: the neutral formula of the parent, structure: the grafo/1 JSON of its SMILES ("" without one)}`.
+#[wasm_bindgen]
+pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValue> {
+    let lc = legacy::series::lc_files(files_json).map_err(user)?;
+    let p = legacy::series::parent(parent_json).map_err(user)?;
+    let structure = p
+        .smiles
+        .as_deref()
+        .and_then(|s| mzlab_feat::chem::grafo::analyse_json(s).ok())
+        .unwrap_or_default();
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"lc\":[");
+    for (i, f) in lc.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(&f.name);
+    }
+    o.raw("],\"minutes\":[");
+    for (i, f) in lc.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).opt(f.time);
+    }
+    o.raw("],\"formula\":")
+        .str(&p.formula())
+        .raw(",\"structure\":")
+        .str(&structure)
+        .raw("}");
+    Ok(o.0)
 }

@@ -178,7 +178,7 @@ function attach(p) {
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
     if (hit) {
-      const v = await ask("Annotazione", hit.ann.text);
+      const v = await ask(I18N.t("ctx.ann.prompt"), hit.ann.text);
       if (v != null) {
         if (v === "") p.anns = p.anns.filter(a => a !== hit.ann);
         else hit.ann.text = v;
@@ -191,9 +191,10 @@ function attach(p) {
       if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    if (p.type === "mrm") { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // MRM has no spectra (a new one would jump to the Full Scan tab): double click = whole view
+    // one rule for every graph: zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
+    if (p.zoom || p.zoomY) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }
+    if (p.type === "mrm" || p.el.classList.contains("max")) return;       // MRM has no spectra (a new one would jump to the Full Scan tab); full screen: nobody would see the new panel
     if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
-      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
@@ -216,7 +217,7 @@ function attach(p) {
     if (!z) return;
     e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
   });
-  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)
@@ -251,8 +252,8 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
 function stackAfter(p, anchor) {
   if (!p.full || !anchor.full || !p.el || !anchor.el) return;
   const st = stackOrder().filter(q => q !== p); st.splice(st.indexOf(anchor) + 1, 0, p);
-  let y = 0; st.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, st[i + 1]); });
-  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+  placeRows(st);
+  E.panels.sort(LAYOUT.ordine);
 }
 function freezeSpec(s) {
   if (!s.link) return;
@@ -290,6 +291,17 @@ function specPick(p, px, py) {
   if (lb) return lb.m;
   const s = a.snap && a.snap(px); return s ? s.m : null;
 }
+// Low resolution: a peak of a Full Scan spectrum that is the precursor of MS2 scans of an open file (the axis is about 0.3 Da above the nominal mass): the product-ion
+// spectrum of the scan nearest in time to this spectrum
+const ms2OfPeak = (p, m) => p.level === 1 && !(p._a && p._a.hrp) && typeof ms2Exps === "function" ? ms2Exps().find(e => e.prec != null && Math.abs(e.prec - m) <= 0.6) : null;
+async function extractMs2(p, e) {
+  await ms2Goto(e.prec);
+  const c = ms2PairOf(e.prec), sp = c && E.panels.find(q => q.type === "spec" && q.link === c.id && q.el), rt = p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null;
+  if (!c || !sp || rt == null) return;
+  const sn = c._a && c._a.sr ? ms2Near(c, rt, 0) : null; if (!sn) return;
+  c.cur = sn.rt; Object.assign(sp, { k: sn.k, level: 2, r0: sn.rt - sn.g / 2, r1: sn.rt + sn.g / 2, zoom: null });
+  ctl(sp); draw(c); draw(sp); uiSave();
+}
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
   const items = [];
@@ -313,6 +325,7 @@ function ctxFor(p, e, x, px, py) {
     let mark = items.length;                                  // HR: the entries are grouped at the end (tag), the others keep their order
     const tag = g => { for (let i = mark; i < items.length; i++) if (items[i] !== "-" && !items[i].g) items[i].g = g; mark = items.length; };
     if (a.hrp && window.DDA && has) { const q = DDA.ms2For(p, m)[0]; if (q) { items.push({ label: I18N.t("ctx.spec.openMs2", { mz: q.prec.toFixed(mzd(p, 2)) }), aria: I18N.t("ctx.spec.openMs2.aria", { mz: lab }), fn: () => DDA.openMs2(p, q.j) }); tag("ms2"); } }
+    { const e2 = has ? ms2OfPeak(p, m) : null; if (e2) items.push({ label: I18N.t("ctx.spec.extractMs2"), aria: I18N.t("ctx.spec.extractMs2.aria", { mz: lab }), fn: () => extractMs2(p, e2) }); }
     items.push(mi({ label: I18N.t("ctx.spec.xic", { mz: lab }), fn: () => xicDirect(m, p) })); tag("xic");
     if (window.LISTE) {
       const pol = a.data[0].f && a.data[0].f.polarity;

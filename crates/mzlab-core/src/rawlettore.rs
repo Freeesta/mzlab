@@ -209,7 +209,9 @@ impl Lettore for LettoreRaw {
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.one(c)?;
         let m = scan_metadata(&self.raw, self.row(k)?).ok_or_else(|| raw_error("scan metadata"))?;
-        Ok(header_fields(&self.raw, &m))
+        let mut out = header_fields(&self.raw, &m);
+        out.extend(noise_fields(&self.raw, &mut self.src, k as u32));
+        Ok(out)
     }
 
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
@@ -244,6 +246,45 @@ impl Lettore for LettoreRaw {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
     }
+}
+
+fn median(mut v: Vec<f32>) -> f32 {
+    v.sort_by(f32::total_cmp);
+    v[v.len() / 2]
+}
+
+/// The noise and the baseline an FT scan carries (a piecewise-linear function of m/z, a few dozen nodes): `thermo:noise_function` holds every node as
+/// `m/z,noise,baseline` joined by `;` (nothing is lost: the value at a peak is the interpolation), `thermo:noise` and `thermo:baseline` the median of the nodes
+/// for a quick read. A scan without them (ion trap, SRM) gives nothing. The peaks are not touched.
+fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Campo> {
+    let scan = raw.run_header.sample_info.first_scan_number + idx;
+    let Ok(p) = raw.read_scan_labels(src, scan) else {
+        return Vec::new();
+    };
+    let nodes = &p.noise_nodes;
+    if nodes.is_empty() {
+        return Vec::new();
+    }
+    let function = nodes
+        .iter()
+        .map(|n| format!("{},{},{}", n.mz, n.noise, n.baseline))
+        .collect::<Vec<_>>()
+        .join(";");
+    vec![
+        field(
+            "thermo:noise",
+            median(nodes.iter().map(|n| n.noise).collect()),
+            None,
+            None,
+        ),
+        field(
+            "thermo:baseline",
+            median(nodes.iter().map(|n| n.baseline).collect()),
+            None,
+            None,
+        ),
+        field("thermo:noise_function", function, None, None),
+    ]
 }
 
 /// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).

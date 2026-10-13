@@ -1,7 +1,11 @@
 //! The parts of mzFinder ported to Rust (`legacy/`) against the frozen Python answers (`tools/finder_riferimento.py --golden`): `formula_info`, the
 //! names of `classify`, the kinetic descriptors, the MS2 consensus and the three components of the MS2 similarity, numbers within 1e-9.
 
-use mzlab_feat::legacy::{formula_info, kinetics, ms2, sample, similarity};
+use mzlab_feat::legacy::edge::{origin_evidence, Iimn};
+use mzlab_feat::legacy::fragtree::{elements_of, two_level, vec_of, TwoLevel};
+use mzlab_feat::legacy::{
+    formula_info, identity_graph, kinetics, ms2, polarity_pairs, sample, similarity,
+};
 use serde_json::Value;
 
 fn golden() -> Value {
@@ -172,5 +176,58 @@ fn similarity_matches_python() {
         similarity::pair_components(&sa, pa, &sb, pb).json(&mut o);
         let got: Value = serde_json::from_str(&o.0).unwrap();
         same(&got, &c["out"], &format!("similarity case {i}"));
+    }
+}
+
+#[test]
+fn identity_graph_matches_python() {
+    for (i, c) in golden()["identity"].as_array().unwrap().iter().enumerate() {
+        let got: Value =
+            serde_json::from_str(&identity_graph(&c["payload"].to_string()).unwrap()).unwrap();
+        same(&got, &c["out"], &format!("identity case {i}"));
+    }
+}
+
+#[test]
+fn origin_evidence_matches_python() {
+    for (i, c) in golden()["origin"].as_array().unwrap().iter().enumerate() {
+        let got: Value =
+            serde_json::from_str(&origin_evidence(&c["payload"].to_string()).unwrap()).unwrap();
+        same(&got, &c["out"], &format!("origin case {i}"));
+    }
+}
+
+#[test]
+fn polarity_pairs_match_python() {
+    for (i, c) in golden()["polarity"].as_array().unwrap().iter().enumerate() {
+        let got: Value =
+            serde_json::from_str(&polarity_pairs(&c["payload"].to_string()).unwrap()).unwrap();
+        same(&got, &c["out"], &format!("polarity case {i}"));
+    }
+}
+
+#[test]
+fn frag_tree_matches_python() {
+    let losses = Iimn::new().losses;
+    for (i, c) in golden()["tree"].as_array().unwrap().iter().enumerate() {
+        let ion = c["ion"].as_str();
+        let els = ion.map(|f| elements_of(f).unwrap()).unwrap_or_default();
+        let vec = ion.map(|f| vec_of(f, &els).unwrap());
+        let (mzs, rel) = (floats(&c["mzs"]), floats(&c["rel"]));
+        let t = TwoLevel {
+            ion: vec.as_deref(),
+            els: &els,
+            mz0: c["mz0"].as_f64().unwrap(),
+            mzs: &mzs,
+            rel: &rel,
+            smiles: c["smiles"].as_str(),
+            ppm: c["ppm"].as_f64().unwrap(),
+            abs_da: c["abs_da"].as_f64().unwrap(),
+            supposed: c["supposed"].as_bool().unwrap(),
+            mode: c["mode"].as_str().unwrap(),
+            n_scans: c["n_scans"].as_i64(),
+        };
+        let got: Value = serde_json::from_str(&two_level(&t, &losses)).unwrap();
+        same(&got, &c["out"], &format!("tree {i}"));
     }
 }

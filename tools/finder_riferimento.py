@@ -19,7 +19,12 @@ sys.path.insert(0, str(AQUI.parent))
 sys.path.insert(0, str(AQUI.parent / "TP_Mine" / "py"))
 
 from tpmine import api  # noqa: E402
+from tpmine import chem as CH  # noqa: E402
+from tpmine import fragtree as FT  # noqa: E402
 from tpmine.engine import guess_sample  # noqa: E402
+from tpmine.hr import formula as FO  # noqa: E402
+from tpmine.hr import identity as ID  # noqa: E402
+from tpmine.hr import iimn  # noqa: E402
 from tpmine.hr import kinetics as KN  # noqa: E402
 from tpmine.hr import similarity as SM  # noqa: E402
 from tpmine.hr import spectra as SP  # noqa: E402
@@ -112,6 +117,155 @@ def similarity_cases(rng):
     return out
 
 
+def _ms2(rng, prec, frag_of=None):
+    """A synthetic MS2: random fragments, sometimes the lighter ion of the pair or the loss of NH3 from the precursor."""
+    if rng.random() < 0.25:
+        return None
+    mz = list(rng.uniform(50, prec - 2, int(rng.integers(0, 14))))
+    if frag_of is not None and rng.random() < 0.6:
+        mz.append(frag_of + rng.normal(0, 4e-4))
+    if rng.random() < 0.3:
+        mz.append(prec - iimn.NH3 + rng.normal(0, 4e-4))
+    if rng.random() < 0.5:
+        mz.append(prec + rng.normal(0, 3e-4))
+    it = list(rng.uniform(1, 1e5, len(mz)))
+    return {"mz": mz, "it": it}
+
+
+def identity_case(rng, pol, n_mol, S):
+    """A synthetic untargeted table: molecules seen as several ions (adducts, isotopes, in-source losses, dimers) that co-elute and follow the same
+    profile over the samples, plus noise features; some carry an mzMine ion identity, some mzMine edges come along."""
+    forms = ID.FORMS[pol]
+    feats, k = [], 0
+    for m in range(n_mol):
+        M = float(rng.uniform(150, 500))
+        rt = float(rng.uniform(1, 20))
+        prof = rng.uniform(1e4, 1e7, S) * (rng.random(S) < 0.85)
+        ions = [forms[0]] + [forms[int(x)] for x in rng.choice(len(forms) - 1, int(rng.integers(0, 3)), replace=False) + 1]
+        base_mz = M + forms[0][1]
+        extra = []
+        if rng.random() < 0.4:
+            extra.append(("iso", base_mz + 1.003355))
+        if rng.random() < 0.4:
+            nm = list(iimn.LOSSES)[int(rng.integers(0, 8))]
+            extra.append(("loss", base_mz - iimn.LOSSES[nm]))
+        gid = f"g{m}" if rng.random() < 0.3 else (m if rng.random() < 0.1 else None)
+        for name, shift, mult, _ in ions:
+            extra.append((name, mult * M + shift))
+        for _, mz in extra:
+            mz = mz * (1 + rng.normal(0, 1.5e-6))
+            f = rng.uniform(0.1, 2) * (1 + rng.normal(0, 0.05, S))
+            a = [[int(s), float(prof[s] * f[s])] for s in range(S) if prof[s] > 0 and rng.random() < 0.95]
+            fe = {"k": f"F{k}" if k % 7 else k, "id": str(k), "mz": float(mz), "rt": rt + float(rng.normal(0, 0.004)), "a": a, "ms2": _ms2(rng, mz, base_mz)}
+            if gid is not None and rng.random() < 0.8:
+                fe["iin"] = {"id": gid, "ions": "" if rng.random() < 0.3 else f"ion{k}", "neutral": (M if rng.random() < 0.5 else str(M)) if rng.random() < 0.6 else None}
+            elif rng.random() < 0.05:
+                fe["iin"] = {"id": "", "ions": "", "neutral": M}
+            feats.append(fe)
+            k += 1
+    for _ in range(int(n_mol * 1.5)):
+        feats.append({"k": f"F{k}", "id": str(k), "mz": float(rng.uniform(100, 900)), "rt": float(rng.uniform(1, 20)),
+                      "a": [[int(s), float(rng.uniform(1e3, 1e6))] for s in range(S) if rng.random() < 0.7], "ms2": _ms2(rng, 500.0)})
+        k += 1
+    rng.shuffle(feats)
+    edges = []
+    for _ in range(int(rng.integers(0, 6))):
+        a, b = rng.choice(len(feats), 2, replace=False)
+        edges.append({"a": feats[a]["id"], "b": feats[b]["id"], "type": str(rng.choice(["ion identity", "cosine", "", "MS1 annotation"])),
+                      "score": float(rng.random()) if rng.random() < 0.5 else None, "annotation": "ann" if rng.random() < 0.5 else ""})
+    samples = [f"s{i}" for i in range(S)]
+    opt = {"ppm": 5.0, "r_min": float(rng.choice([0.85, 0.5, 0.0])), "apex_scans": 2, "cycle_s": float(rng.choice([1.0, 3.0])), "min_common": 3}
+    return {"pol": pol, "samples": samples, "features": feats, "edges": edges, "opt": opt}
+
+
+def identity_cases(rng):
+    out = []
+    for i in range(24):
+        pol = 1 if i % 3 else -1
+        p = identity_case(rng, pol, int(rng.integers(1, 12)), int(rng.integers(0, 9)))
+        out.append({"payload": p, "out": json.loads(api.identity_graph(json.dumps(p)))})
+    return out
+
+
+def polarity_cases(rng):
+    out = []
+    for i in range(12):
+        pos, neg, num = [], [], i % 4 == 1           # the keys of one table are all text or all numbers
+        for m in range(int(rng.integers(1, 30))):
+            M, rt = float(rng.uniform(100, 600)), float(rng.uniform(1, 20))
+            for name in ID.PAIR_POS[: int(rng.integers(1, 4))]:
+                sh, mult = ID._form_table(1)[name]
+                pos.append({"k": len(pos) if num else f"p{len(pos)}", "mz": (M * mult + sh) * (1 + rng.normal(0, 2e-6)), "rt": rt + float(rng.normal(0, 0.05))})
+            for name in ID.PAIR_NEG[: int(rng.integers(0, 4))]:
+                sh, mult = ID._form_table(-1)[name]
+                neg.append({"k": f"n{len(neg)}", "mz": (M * mult + sh) * (1 + rng.normal(0, 2e-6)), "rt": rt + float(rng.normal(0, 0.1))})
+        d = {"pos": pos, "neg": neg, "ppm": float(rng.choice([5.0, 2.0, 10.0])), "rt_min": float(rng.choice([0.15, 0.05]))}
+        out.append({"payload": d, "out": json.loads(api.polarity_pairs(json.dumps(d)))})
+    return out
+
+
+TREE_SMILES = ["CN1C=NC2=C1C(=O)N(C(=O)N2C)C", "CC(C)NC1=NC(=NC(=N1)Cl)NCC", "NC(=O)N1c2ccccc2C=Cc2ccccc12",
+               "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl", "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1", "CC(=O)Nc1ccc(O)cc1", "OCC(O)CO", "C1CC2CCC1C2"]
+
+
+def tree_case(rng, smiles, use_ion, use_smiles, lr):
+    """A synthetic MS2 of the parent: common losses from the ion and random peaks, for `fragtree._two_level`."""
+    neutral = CH.neutral_formula(smiles)
+    ion = CH.add(neutral, {"H": 1})
+    els = FO.element_order(ion)
+    vec = FO.vec(ion, els)
+    mz0 = float(FO.ion_mass(vec, els))
+    noise = 0.15 if lr else 4e-4
+    mz = [mz0 - m + rng.normal(0, noise) for _, m in list(iimn.LOSSES.items())[: int(rng.integers(2, 12))]]
+    mz += list(rng.uniform(40, mz0 - 0.5, int(rng.integers(0, 10))))
+    mz = [m for m in mz if m > 10]
+    rel = list(rng.uniform(0.5, 100, len(mz)))
+    if lr:
+        mz = [round(m, 1) for m in mz]
+    kw = dict(ppm=0.0 if lr else 5.0, abs_da=FT.LR_TOL if lr else 0.002, supposed=lr, mode="lr" if lr else "hr", n_scans=int(rng.integers(1, 9)))
+    sm = smiles if use_smiles else None
+    out = FT._two_level(vec if use_ion else None, els if use_ion else None, mz0, mz, rel, sm, **kw)
+    return {"ion": FO.fmt(vec, els) if use_ion else None, "mz0": mz0, "mzs": mz, "rel": rel, "smiles": sm, **kw, "out": out}
+
+
+def tree_cases(rng):
+    out = []
+    for s in TREE_SMILES:
+        for use_ion, use_smiles, lr in ((True, True, False), (True, False, False), (False, False, True), (True, True, True), (False, True, False)):
+            out.append(tree_case(rng, s, use_ion, use_smiles, lr))
+    return out
+
+
+def origin_case(rng):
+    """A report «where does this ion come from?»: the ion and its candidate parent a step apart (adduct, loss, isotope, dimer or none), the apex
+    difference, the strongest peaks of the two MS2 and the ratio constancy; any part may be missing."""
+    pol = int(rng.choice([1, 1, -1]))
+    par = float(rng.uniform(120, 600))
+    steps = [21.981944, 17.026549, 37.955882, 18.010565, 43.989829, 46.005479, 27.994915, 35.976678, 1.003355, float(rng.uniform(1, 80))]
+    st = float(rng.choice(steps)) * (1 + rng.normal(0, 2e-6))
+    kind = int(rng.integers(0, 4))
+    mz = par - st if kind == 0 else par + st if kind == 1 else (par - 1.007276) / 2 + 1.007276 if kind == 2 else par + float(rng.uniform(-3, 3))
+    rep = {"mz": mz, "parent_mz": par}
+    if rng.random() < 0.8:
+        rep["profile"] = {"apex_diff_s": None if rng.random() < 0.1 else float(rng.normal(0, 4))}
+    if rng.random() < 0.85:
+        p, x = _ms2(rng, par, mz if mz < par else None), _ms2(rng, mz, par if par < mz else None)
+        if p is not None and rng.random() < 0.3:
+            p = [p["mz"], p["it"]]
+        rep["ms2_peaks"] = {"p": p, "x": x}
+    if rng.random() < 0.8:
+        rep["ratio_constancy"] = {"cv": None if rng.random() < 0.1 else float(rng.uniform(0, 4)), "k": int(rng.integers(0, 12))}
+    return {"report": rep, "pol": pol if rng.random() < 0.9 else None}
+
+
+def origin_cases(rng):
+    out = []
+    for _ in range(60):
+        d = origin_case(rng)
+        out.append({"payload": d, "out": json.loads(api.origin_evidence(json.dumps(d)))})
+    return out
+
+
 def main(argv):
     rng = np.random.default_rng(20261013)
     ref = {
@@ -120,6 +274,10 @@ def main(argv):
         "kinetics": kinetics_cases(rng),
         "consensus": consensus_cases(rng),
         "similarity": similarity_cases(rng),
+        "identity": identity_cases(rng),
+        "polarity": polarity_cases(rng),
+        "tree": tree_cases(rng),
+        "origin": origin_cases(rng),
     }
     text = json.dumps(ref, sort_keys=True, allow_nan=True)
     if "--golden" in argv:

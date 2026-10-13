@@ -29,12 +29,12 @@ fn series(files: usize, peaks: &[f32]) -> Vec<FileFeatures> {
 fn two_isomers_seen_in_many_files_are_two_rows() {
     let files = series(10, &[5.0, 5.06]);
     let refs: Vec<&FileFeatures> = files.iter().collect();
-    assert_eq!(align(&refs, &AlignParams::default()).len(), 1);
+    assert_eq!(align(&refs, &AlignParams::default()).unwrap().len(), 1);
     let split = AlignParams {
         split_gap: Some(0.03),
         ..AlignParams::default()
     };
-    assert_eq!(align(&refs, &split).len(), 2);
+    assert_eq!(align(&refs, &split).unwrap().len(), 2);
 }
 
 #[test]
@@ -47,5 +47,5 @@ fn a_double_peak_in_few_files_stays_one_row() {
         split_gap: Some(0.03),
         ..AlignParams::default()
     };
-    assert_eq!(align(&refs, &split).len(), 1);
+    assert_eq!(align(&refs, &split).unwrap().len(), 1);
 }

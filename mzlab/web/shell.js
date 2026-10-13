@@ -54,11 +54,11 @@ const CU={mgl:["mg/L",1],ugl:["µg/L",1e-3],ngl:["ng/L",1e-6],gl:["g/L",1e3]},CU
 const CUF={ppm:1,ppb:1e-3,ppt:1e-6,mgl:1,ugl:1e-3,ngml:1e-3,ngl:1e-6,gl:1e3};
 ST.unit="mgl";
 const roundc=v=>v==null?null:+(+v).toPrecision(6);
-const isCal=f=>f.type==="standard"&&f.kind==="mrm";   // concentration exists only for the standards of an MRM experiment (they feed the calibration line)
+const isCal=f=>f.type==="standard";   // concentration exists only for standards (in an MRM experiment they feed the calibration line)
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>{const o=old[f.name],conc=o?o.conc:concFrom(f);return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc,use:o?o.use:true,
-    gT:o?o.gT:f.time!=null&&f.type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
+  ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
+    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
   sortFiles();renderFiles()}
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
@@ -85,7 +85,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
    `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
-   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
+   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
   el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
@@ -106,6 +106,8 @@ function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
+// hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
+function loadingStato(text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
@@ -211,7 +213,14 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidde
 async function loneWiffs(wr,rep){      // a .wiff without its .scan is the method of the mzML files made from it (same SHA-1): else it waits for its .scan
   for(const {e,rb} of wr.lone||[]){try{const r=await rb.metodoWiff(e.wiff);if(r.matched.length){WIFF_WAIT.delete(e.stem.toLowerCase());rep.notes.push(I18N.t("load.note.wiffMethod",{name:e.wiff.name,n:r.matched.length,files:namesCut(r.matched.map(x=>x.name),3)}));continue}}catch(_){}
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
-async function upload(files,into){const box=$("#up");fail();
+const INFLIGHT=new Set(),fkey=f=>f.name+"|"+f.size;
+// the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
+function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some(g=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
+  const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
+  dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
+  return files.filter(f=>!dups.includes(f))}
+async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)))}}
+async function upload0(files,into,box){
   const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
@@ -232,7 +241,7 @@ async function upload(files,into){const box=$("#up");fail();
   await Promise.all(early);await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
-$("#pickdirbtn").onclick=()=>$("#pickdir").click();$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
+$("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
@@ -260,7 +269,7 @@ async function openRest(rest,tok){
     added.push(p);if(Date.now()-last>=200)await boot();               // LR: the overlay is redrawn at most every ~200 ms, whatever the number of files that arrived
   }
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
-$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I18N.t("load.reading"));
+$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
@@ -271,7 +280,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I
       const isOpen=f=>typeof E!=="undefined"&&E.files.some(x=>x.file===f.name||x.file.startsWith(f.name+"#"));
       $("#hrmix-cancel").onclick=()=>$("#cancadd").click();
       $("#hrmix-replace").onclick=async()=>{
-        const b=$("#hrmix-replace");b.disabled=true;loading(true,I18N.t("load.closing"));
+        const b=$("#hrmix-replace");b.disabled=true;loading(true);
         try {
           await post("api/new",{});                                 // closes the open files but keeps the uploaded ones on disk
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
