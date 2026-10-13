@@ -1,3 +1,4 @@
+// @ts-strict
 // Page side of the Rust engine: browser.js hands every GET of the routes in RUST_ROUTES to this module first. It answers them from
 // rust-worker.js (the same JSON as mzlab/api.py, the reference of the tests); null = the request is not one it answers.
 //
@@ -21,7 +22,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
   const api = { enabled: true, disabled: false, stats };
-  const base = n => String(n || "").split(/[\\/]/).pop();
+  const base = n => String(n || "").split(/[\\/]/).pop() || "";
 
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
   function spawn() {

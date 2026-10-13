@@ -1,3 +1,4 @@
+// @ts-strict
 // Chart drawing: chromatograms (TIC, XIC, corrections), hover line, zoom, RT x m/z map. Split from explore.js: classic script, loaded after pannelli.js.
 // ------------------------------------------------------------------ disegno dei grafici
 // ---- corrections applied to the traces: blank subtraction and SNIP baseline (both optional, shown in the legend)
@@ -392,9 +393,9 @@ async function drawLines(p) {
     if (ev && window.DDA) DDA.dots(p, g, X, Y, sr, x0, x1, U);
   }
   if (yzf) for (const s of sr) {                                  // a small triangle at the top says: this peak goes on above the graph
-    let seg = null; const tri = x => { g.fillStyle = s.color; g.beginPath(); g.moveTo(X(x) - 4, M.t + 7); g.lineTo(X(x) + 4, M.t + 7); g.lineTo(X(x), M.t); g.closePath(); g.fill(); };
-    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(seg.x); seg = null; } });
-    if (seg) tri(seg.x);
+    /** @type {{ v: number, x: number } | null} */ let seg = null; const tri = x => { g.fillStyle = s.color; g.beginPath(); g.moveTo(X(x) - 4, M.t + 7); g.lineTo(X(x) + 4, M.t + 7); g.lineTo(X(x), M.t); g.closePath(); g.fill(); };
+    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } });
+    if (seg) tri(/** @type {any} */ (seg).x);
   }
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
@@ -516,7 +517,7 @@ function mapImage(p, A, B, scale, norm = "abs") {
   const floor = dop.thr;                                             // sotto questa frazione è rumore: resta bianco
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
-  const ctx = off.getContext("2d"), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
+  const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
   for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
     const x = v[i * nmz + j], t = T(x), q = B ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
     im.data[o] = tab[q * 4]; im.data[o + 1] = tab[q * 4 + 1]; im.data[o + 2] = tab[q * 4 + 2]; im.data[o + 3] = 255;

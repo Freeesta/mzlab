@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Study report (HTML to print + JSON), built from the workflow file of the session and the QA/QC measures; nothing leaves the computer.
 // Sections in the order of the NORMAN guide (Hollender et al., Environ. Sci. Eur. 35:75, 2023) and the BP4NTA Study Reporting Tool:
@@ -38,7 +39,7 @@ const RAPPORTO = (() => {
     const files = (typeof E !== "undefined" ? E.files : []).filter(f => !f.gone);
     const roleOf = n => { const f = files.find(x => x.file === n); return f && window.QAQC ? QAQC.roleOf(f) : "sample"; };
     const hr = isHr();
-    const qa = { ioni: [], rapporto_campione_bianco: null, feature_mzfinder: null };
+    /** @type {any} */ const qa = { ioni: [], rapporto_campione_bianco: null, feature_mzfinder: null };
     if (window.QAQC && qaFeat()) {
       const r = await QAQC.run();
       qa.ioni = r.ions.filter(o => !o.error).map(o => ({ etichetta: o.ion.label, funzione: o.ion.kind === "known" ? "ione noto" : "standard interno", file: o.files, ruoli: o.roles, ...slim(o.r) }));
