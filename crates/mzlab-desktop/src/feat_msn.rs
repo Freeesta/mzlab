@@ -32,12 +32,6 @@ fn truthy(v: &Value) -> bool {
     }
 }
 
-fn floats(v: &Value) -> Vec<f64> {
-    v.as_array()
-        .map(|a| a.iter().map(|x| x.as_f64().unwrap_or(f64::NAN)).collect())
-        .unwrap_or_default()
-}
-
 impl Msn {
     /// The tree of the MSn file `ix` for the parent of `parent_json`, with its library.
     pub(crate) fn new<R: ReadAt>(ix: &mut Index<R>, parent_json: &str) -> Result<Msn, String> {
@@ -98,7 +92,15 @@ impl Msn {
         self.locs.insert(id, loc);
         out
     }
+}
 
+fn floats(v: &Value) -> Vec<f64> {
+    v.as_array()
+        .map(|a| a.iter().map(|x| x.as_f64().unwrap_or(f64::NAN)).collect())
+        .unwrap_or_default()
+}
+
+impl Msn {
     /// The localisation of a candidate from its detail (kept for `frag_tree_compare`); the first MS2 of the parent rebuilds the library.
     fn localize(&mut self, d: &Value) -> Option<Value> {
         let formula = d["row"]["formula"].as_str().filter(|f| !f.is_empty())?;
