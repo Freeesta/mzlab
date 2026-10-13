@@ -289,6 +289,8 @@ I18N.add("it", {
   "pal.grp.app": "Programma",
   "pal.count": "{n, plural, one {# comando} other {# comandi}}",
   "cmd.panel.lab": "Pannello",
+  "cmd.panel.hide": "Nascondi i pannelli",
+  "cmd.panel.show": "Mostra i pannelli",
   "cmd.panel.name": "Pannello laterale",
   "cmd.panel.tip": "Mostra o nasconde il pannello laterale (Ctrl/⌘+B)",
   "cmd.panel.kw": "mostra nascondi pannello laterale side panel show hide toggle",
