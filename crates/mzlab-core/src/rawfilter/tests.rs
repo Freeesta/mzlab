@@ -1,9 +1,9 @@
 use super::*;
 
-fn run(xml: &str, anonymous: bool) -> String {
+fn run(xml: &str) -> String {
     let mut out = Vec::new();
     {
-        let mut f = MzmlFilter::new(&mut out, anonymous);
+        let mut f = MzmlFilter::new(&mut out);
         for part in xml.as_bytes().chunks(7) {
             f.write_all(part).unwrap(); // pieces cut inside the lines
         }
@@ -28,7 +28,7 @@ fn a_precursor_that_points_to_scan_1_points_to_the_survey_scan_before_it() {
         spectrum(6, 3, Some(1)),
     ]
     .concat();
-    let got = run(&xml, false);
+    let got = run(&xml);
     let refs: Vec<u32> = got
         .lines()
         .filter(|l| l.contains("spectrumRef"))
@@ -46,7 +46,7 @@ fn a_real_reference_is_kept() {
         spectrum(4, 2, Some(2)),
     ]
     .concat();
-    let got = run(&xml, false);
+    let got = run(&xml);
     assert!(got.contains("scan=2\">"), "a reference other than 1 stays");
     assert_eq!(got.lines().count(), xml.lines().count());
 }
@@ -56,8 +56,7 @@ fn the_extra_lines_go_right_after_the_run_tag_once() {
     let xml = "<mzML>\n<run id=\"r\">\n<spectrumList count=\"0\"/>\n</run>\n";
     let mut out = Vec::new();
     {
-        let mut f =
-            MzmlFilter::new(&mut out, false).with_run_extra("<userParam name=\"x\"/>".into());
+        let mut f = MzmlFilter::new(&mut out).with_run_extra("<userParam name=\"x\"/>".into());
         f.write_all(xml.as_bytes()).unwrap();
         f.flush().unwrap();
     }
@@ -68,60 +67,13 @@ fn the_extra_lines_go_right_after_the_run_tag_once() {
 }
 
 #[test]
-fn personal_data_are_left_out_only_when_asked() {
-    let xml = "<run>\n    <userParam name=\"opentfraw.computer_name\" value=\"X\"/>\n    <userParam name=\"opentfraw.raw_version\" value=\"66\"/>\n    <userParam name=\"opentfraw.original_file_path\" value=\"C:\\a\"/>\n    <userParam name=\"opentfraw.user_label.0.heading\" value=\"Study\"/>\n    <userParam name=\"opentfraw.user_label.0.value\" value=\"P\"/>\n</run>\n";
-    assert_eq!(run(xml, false), xml);
-    let got = run(xml, true);
-    assert!(
-        !got.contains("computer_name")
-            && !got.contains("original_file_path")
-            && !got.contains("label.0.value")
-    );
-    assert!(got.contains("raw_version") && got.contains("label.0.heading"));
-}
-
-#[test]
 fn the_intensity_array_of_a_pressure_chromatogram_gets_the_pascal_unit() {
     let array =
         "<cvParam cvRef=\"MS\" accession=\"MS:1000515\" name=\"intensity array\" value=\"\"/>\n";
     let tic = format!("<chromatogram id=\"TIC\">\n<cvParam cvRef=\"MS\" accession=\"MS:1000235\" name=\"tic\" value=\"\"/>\n{array}</chromatogram>\n");
     let pressure = format!("<chromatogram id=\"Pump Pressure 1\">\n<cvParam cvRef=\"MS\" accession=\"MS:1003019\" name=\"pressure chromatogram\" value=\"\"/>\n{array}</chromatogram>\n");
-    let got = run(&format!("{tic}{pressure}"), false);
+    let got = run(&format!("{tic}{pressure}"));
     assert_eq!(got.matches("unitName=\"pascal\"").count(), 1);
     assert!(got.find("unitName=\"pascal\"").unwrap() > got.find("Pump Pressure 1").unwrap());
     assert!(got.contains("unitAccession=\"UO:0000110\""));
-}
-
-#[test]
-fn an_anonymous_copy_says_so_in_the_run_and_a_whole_one_does_not() {
-    let xml =
-        "<run id=\"x\">\n<userParam name=\"opentfraw.computer_name\" value=\"PC\"/>\n</run>\n";
-    let anon = run(xml, true);
-    assert!(
-        anon.contains(ANONYMIZED) && !anon.contains("computer_name"),
-        "{anon}"
-    );
-    assert!(anon.find("<run ") < anon.find(ANONYMIZED));
-    let whole = run(xml, false);
-    assert!(
-        !whole.contains("anonimizzato") && whole.contains("computer_name"),
-        "{whole}"
-    );
-}
-
-#[test]
-fn with_a_secret_the_identity_becomes_a_stable_pseudonym() {
-    let xml = "<run>\n<userParam name=\"opentfraw.computer_name\" value=\"LABPC-07\"/>\n<userParam name=\"opentfraw.original_file_path\" value=\"C:\\u\\a.raw\"/>\n<userParam name=\"opentfraw.raw_version\" value=\"66\"/>\n</run>\n";
-    let go = |secret: &[u8]| {
-        let mut out = Vec::new();
-        let mut f = MzmlFilter::new(&mut out, true).with_secret(Some(secret.to_vec()));
-        f.write_all(xml.as_bytes()).unwrap();
-        f.flush().unwrap();
-        String::from_utf8(out).unwrap()
-    };
-    let (a, b) = (go(b"one"), go(b"one"));
-    assert_eq!(a, b);
-    assert!(a.contains("value=\"anon:") && !a.contains("LABPC") && !a.contains("a.raw"));
-    assert!(a.contains("raw_version"));
-    assert_ne!(a, go(b"two"));
 }

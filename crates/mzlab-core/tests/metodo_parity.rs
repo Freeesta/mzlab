@@ -20,7 +20,7 @@ fn dati() -> Option<PathBuf> {
     cands.into_iter().find(|p| p.join("3200 qtrap").is_dir())
 }
 
-fn src(name: &str, bytes: &[u8], sample: u32, anonymous: bool) -> Source {
+fn src(name: &str, bytes: &[u8], sample: u32) -> Source {
     let mut d = bytes.to_vec();
     Source {
         format: "sciex-wiff",
@@ -30,8 +30,6 @@ fn src(name: &str, bytes: &[u8], sample: u32, anonymous: bool) -> Source {
             bytes: bytes.len() as u64,
         }],
         sample: Some(sample),
-        anonymous,
-        secret: None,
     }
 }
 
@@ -73,10 +71,9 @@ fn ms_of(doc: &str) -> String {
     o.0
 }
 
-/// One sample of a `.wiff`: the sections of the document, the method equal to the `.dam` it names, and nothing personal in the anonymous
-/// document. Gives 1 when a `.dam` of the repository was compared.
+/// One sample of a `.wiff`: the sections of the document, the method equal to the `.dam` it names. Gives 1 when a `.dam` of the repository was compared.
 fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
-    let doc = from_wiff(ole, sample, &src(wiff, bytes, sample, false));
+    let doc = from_wiff(ole, sample, &src(wiff, bytes, sample));
     let v =
         json::parse(doc.as_bytes()).unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
     assert_eq!(
@@ -122,23 +119,6 @@ fn check_sample(d: &std::path::Path, ole: &Ole, wiff: &str, bytes: &[u8], sample
             checked = 1;
         }
     }
-    // anonymous: nothing that names a person or a machine (the values are the ones of the full document)
-    let anon = from_wiff(ole, sample, &src(wiff, bytes, sample, true));
-    let secrets = [
-        text("operatore", "utente"),
-        text("operatore", "computer"),
-        text("strumento", "serie"),
-    ];
-    for secret in secrets.into_iter().flatten().filter(|s| s.len() > 3) {
-        assert!(
-            !anon.contains(&secret),
-            "{wiff} {sample}: anonymous document still has a personal value"
-        );
-    }
-    assert!(
-        !anon.contains("\"operatore\"") && !anon.contains("\"serie\""),
-        "{wiff} {sample}: personal sections in the anonymous document"
-    );
     checked
 }
 

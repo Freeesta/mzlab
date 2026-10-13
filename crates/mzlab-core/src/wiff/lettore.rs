@@ -51,7 +51,6 @@ pub struct LettoreWiff {
     scan: Box<dyn ReadAt>,
     scan_len: u64,
     scan_member: u16,
-    anonimo: bool,
     campioni: Vec<Campione>,
     parti: Vec<Parte>,
 }
@@ -65,12 +64,6 @@ pub const VOCE: VoceLettore = VoceLettore {
 };
 
 impl LettoreWiff {
-    /// The same reader asked for an anonymous `metodo/1` (no people, computer, serial number or paths).
-    pub fn anonimo(mut self, on: bool) -> Self {
-        self.anonimo = on;
-        self
-    }
-
     fn parte(&self, c: usize) -> Result<&Parte> {
         self.parti
             .get(c)
@@ -119,8 +112,6 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
             file(format!("{}.scan", l.nome), None, l.scan_len),
         ],
         sample: Some(sample),
-        anonymous: l.anonimo,
-        secret: crate::pseudo::current(),
     }
 }
 
@@ -134,10 +125,6 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
 }
 
 impl Lettore for LettoreWiff {
-    fn imposta_anonimo(&mut self, on: bool) {
-        self.anonimo = on;
-    }
-
     fn formato(&self) -> Formato {
         Formato::SciexWiff
     }
@@ -255,7 +242,6 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         scan,
         scan_len,
         scan_member: membro,
-        anonimo: false,
         campioni,
         parti,
     }))

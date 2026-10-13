@@ -134,8 +134,6 @@ impl AgilentD {
                 })
                 .collect(),
             sample: None,
-            anonymous: self.anonymous,
-            secret: crate::pseudo::current(),
         })
     }
 
@@ -191,10 +189,7 @@ impl AgilentD {
                 ("MS:1000628".into(), "basepeak chromatogram".into()),
             ],
             extra_software: self.acquisition_software().into_iter().collect(),
-            serial: dev
-                .filter(|_| !self.anonymous)
-                .map(|d| d.serial.clone())
-                .filter(|s| !s.is_empty()),
+            serial: dev.map(|d| d.serial.clone()).filter(|s| !s.is_empty()),
             sample: self
                 .sample_name()
                 .map(|n| ("sample1".to_string(), n.to_string())),
@@ -202,10 +197,6 @@ impl AgilentD {
                 .sample_type()
                 .map(|t| ("sample type".to_string(), t.to_string()))
                 .into_iter()
-                .chain(
-                    self.anonymous
-                        .then(|| ("mzLab anonimizzato".to_string(), "true".to_string())),
-                )
                 .chain((!document.is_empty()).then(|| (metodo::USERPARAM.to_string(), document)))
                 .collect(),
             instrument: Some(("MS:1000490".into(), name)),
