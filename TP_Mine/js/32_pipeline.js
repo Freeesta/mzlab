@@ -58,7 +58,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(url);
     const w = m => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs) }, notify: (k, p) => say(msg(k, p)) });
+    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}) }, notify: (k, p) => say(msg(k, p)) });
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }
@@ -176,7 +176,7 @@
     if (!st.files.length) say("No .mzidx file: open an mzML in Data first, its index is made there.");
   }
   async function open() {
-    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : ""); document.head.appendChild(s); }
+    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : "") + (/** @type {any} */ (window).PIPEX ? /** @type {any} */ (window).PIPEX.css : ""); document.head.appendChild(s); }
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");

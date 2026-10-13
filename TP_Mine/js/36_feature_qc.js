@@ -9,7 +9,8 @@
   /** keys of the JSON of the engine that the page shows or uses */
   const CONTRACT = {
     qc: ["schema", "file", "gruppi", "standard_cv"], qcFile: ["file", "rilevati", "mirati", "riempiti", "assenti", "area_totale"], qcGroup: ["tipo", "gruppo", "tempo_min", "file", "righe", "cv_mediano"],
-    view: ["digest", "righe", "fattori", "conteggi"], counts: ["righe", "tenute", "scartate"], rows: ["hojas"], sheet: ["nombre", "filas"],
+    view: ["digest", "righe", "fattori", "conteggi"], counts: ["righe", "tenute", "scartate"],
+    report: ["crate", "tabella_sha256", "campioni_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
   /** @type {any} */ let mod = null;
@@ -40,10 +41,11 @@
     /** @type {(fn: () => string) => any} */ const run = fn => { try { return fn(); } catch (e) { throw fail(e); } };
     const samples = run(() => m.table_samples(JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) })));
     return {
-      samples, sha, size,
+      samples, sha, size, bytes,
       qc: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_qc(read, size, samples, spec))),
       view: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_view(read, size, samples, spec))),
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
+      report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
     };
   }

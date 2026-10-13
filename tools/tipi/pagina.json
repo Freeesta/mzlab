@@ -116,6 +116,7 @@
     "../../TP_Mine/js/34_pipeline_run.js",
     "../../TP_Mine/js/35_pipeline_recipe.js",
     "../../TP_Mine/js/36_feature_qc.js",
-    "../../TP_Mine/js/37_feature_table.js"
+    "../../TP_Mine/js/37_feature_table.js",
+    "../../TP_Mine/js/38_feature_export.js"
   ]
 }
