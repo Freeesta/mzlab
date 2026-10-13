@@ -41,23 +41,47 @@ impl Wiff {
                 if p.mz.is_empty() {
                     continue;
                 }
-                let e = self.experiments.get(r.experiment).cloned().unwrap_or_default();
-                on(Spectrum {
-                    index: n,
-                    id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
-                    level: e.level.max(1),
-                    rt: r.time_min,
-                    polarity: self.polarity,
-                    profile: true,
-                    filter: String::new(),
-                    precursor: e.precursor,
-                    mz: p.mz,
-                    intensity: p.intensity.iter().map(|&v| v as f32).collect(),
-                    wide: Some(p.intensity),
-                })?;
+                on(self.spectrum_of(n, r, p))?;
                 n += 1;
             } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
                 let m = &mut mrm[r.experiment];
+                m.time.push(r.time_min);
+                m.tic.push(r.tic);
+                m.cols.resize(v.len(), Vec::new());
+                v.iter().zip(&mut m.cols).for_each(|(x, col)| col.push(*x));
+            }
+        }
+        let mut chroms = Vec::new();
+        self.add_chromatograms(&mut chroms, mrm);
+        Ok(chroms)
+    }
+
+    /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::LettoreWiff::scansione` serves.
+    pub(super) fn spectrum_of(&self, n: usize, r: &super::Record, p: scan::Points) -> Spectrum {
+        let e = self.experiments.get(r.experiment).cloned().unwrap_or_default();
+        Spectrum {
+            index: n,
+            id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
+            level: e.level.max(1),
+            rt: r.time_min,
+            polarity: self.polarity,
+            profile: true,
+            filter: String::new(),
+            precursor: e.precursor,
+            mz: p.mz,
+            intensity: p.intensity.iter().map(|&v| v as f32).collect(),
+            wide: Some(p.intensity),
+        }
+    }
+
+    /// The chromatograms of the MRM blocks only (no scan is decoded).
+    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
+        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
+        for r in &self.records {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
+                continue;
+            }
+            if let (Some(v), Some(m)) = (scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?, mrm.get_mut(r.experiment)) {
                 m.time.push(r.time_min);
                 m.tic.push(r.tic);
                 m.cols.resize(v.len(), Vec::new());

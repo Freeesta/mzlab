@@ -102,13 +102,37 @@ def regole_statiche() -> list[str]:
 def regole_stato() -> list[str]:
     """E.tab / E.active / E.cur / E.panels and S.view / S.adding are written only by the transitions of mzlab/web/stato.js (docs/agenti/dati.md)."""
     import re
-    rx = re.compile(r"\b(?:E\.(?:tab|active|cur|panels)|S\.(?:view|adding))\s*=(?!=)")
+    rx = re.compile(r"\b(?:E\.(?:tab|active|cur|panels)|S\.(?:view|adding)|UIP\.tog)\s*=(?!=)")
     bad = []
     for f in indice.tracked():
         if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and f != "mzlab/web/stato.js":
             for n, line in enumerate((indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n"), 1):
                 if not line.lstrip().startswith("//") and rx.search(line):
-                    bad.append(f"direct write of the page state outside stato.js: {f}:{n} (use STATO.file/scheda/attiva/pannelli/vista/aggiunta)")
+                    bad.append(f"direct write of the page state outside stato.js: {f}:{n} (use STATO.file/scheda/attiva/pannelli/vista/aggiunta/insieme)")
+    return bad
+
+
+ESP_BASE = indice.ROOT / "tools" / "esperimenti_base.json"
+def confronti_esperimenti() -> dict[str, int]:
+    """Per file of mzlab/web: comparisons of a variable with "full", "ms2" or "mrm" (the experiment type is data of esperimenti.js)."""
+    import re
+    rx = re.compile(r'[=!]==?\s*"(?:full|ms2|mrm)"|"(?:full|ms2|mrm)"\s*[=!]==?')
+    out = {}
+    for f in indice.tracked():
+        if f.endswith(".js") and f.startswith("mzlab/web/") and "/vendor/" not in f and "/teoria/" not in f and f != "mzlab/web/esperimenti.js":
+            n = sum(len(rx.findall(l)) for l in (indice.ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n") if not l.lstrip().startswith("//"))
+            if n:
+                out[f] = n
+    return out
+
+
+def regole_esperimenti(aggiorna: bool = False) -> list[str]:
+    """The comparisons with the experiment names outside esperimenti.js can only go down, file by file (base: tools/esperimenti_base.json)."""
+    now = confronti_esperimenti()
+    base = json.loads(ESP_BASE.read_text(encoding="utf-8")) if ESP_BASE.exists() else dict(now)
+    bad = [f"comparisons with an experiment name grew in {f}: {n} (base {base.get(f, 0)}); read it from ESP in esperimenti.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
+    if aggiorna and not bad:
+        ESP_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
 
@@ -117,7 +141,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato()
+    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv)
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))

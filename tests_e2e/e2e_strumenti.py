@@ -14,7 +14,7 @@ def step(name, fn):
 
 EX = ROOT / "mzlab" / "web" / "esempi" / "FullScan_t15.mzML"
 D = synth("strumenti")
-r = Run(port=8957, wd="/tmp/wd_strumenti", motore="python")
+r = Run(port=8957, wd="/tmp/wd_strumenti")
 
 # a toolbar that fits: one row, every visible button inside the bar, no text cut
 FIT = """(() => {
@@ -257,7 +257,7 @@ try:
                 q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
                 try:
-                    ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
+                    stage(q, [EX]); q.click("text=Carica dati"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)     # the session lives in the browser: a new context opens the file itself
                     q.evaluate("window.scrollTo(0,0)")
                     f = q.evaluate(FIT); assert not f["clipped"] and not f["cut"] and f["wrapped"] == 0, (w, f)
                     small = q.evaluate("[...document.querySelectorAll('#stbar .tb')].filter(b=>!b.hidden&&b.offsetParent).filter(b=>{const r=b.getBoundingClientRect();return r.width<39.5||r.height<39.5}).map(b=>b.dataset.cmd||b.dataset.cmdMain||b.dataset.cmdCar)")
@@ -278,7 +278,7 @@ try:
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)
             try:
-                ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
+                stage(q, [EX]); q.click("text=Carica dati"); ready(q); q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)     # the session lives in the browser: a new context opens the file itself
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "the page does not scroll sideways"
                 vis = q.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
                 assert vis == ["file", "more", "search"], vis

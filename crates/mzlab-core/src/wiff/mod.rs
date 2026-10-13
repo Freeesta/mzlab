@@ -5,6 +5,7 @@
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
 pub mod idx;
+pub mod lettore;
 mod run;
 pub mod scan;
 mod window;
