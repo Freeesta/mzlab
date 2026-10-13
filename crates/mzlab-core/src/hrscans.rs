@@ -23,6 +23,10 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         self.prime_steps(mzml)?;
+        self.con_opz(q, |r| r.mzml_route_in(path, q, mzml))
+    }
+
+    fn mzml_route_in<M: Scansioni + ?Sized>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         match path {
             "/api/spectrum" => match self.spectrum_exact(q, mzml)? {
                 Some(a) => Ok(Some(a)),
@@ -163,8 +167,9 @@ impl<R: ReadAt> Routes<R> {
         }
         let n = sids.len() as f64;
         let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
+        let div = if self.msn.opz.somma { 1.0 } else { n };
         let mz: Vec<f64> = cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect();
-        let y: Vec<f64> = cells.values().map(|(sy, _)| sy / n).collect();
+        let y: Vec<f64> = cells.values().map(|(sy, _)| sy / div).collect();
         let mut o = Out::default();
         o.raw("{\"sids\":[");
         for (k, s) in sids.iter().enumerate() {
