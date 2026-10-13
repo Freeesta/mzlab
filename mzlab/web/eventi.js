@@ -215,7 +215,7 @@ function attach(p) {
     if (!z) return;
     e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
   });
-  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)

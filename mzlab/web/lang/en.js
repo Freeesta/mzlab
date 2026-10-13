@@ -1235,6 +1235,8 @@ I18N.add("en", {
   "spec.measure": "Measure from this peak",
   "spec.measure.toLosses": "Search {d} in the neutral losses",
   "spec.measure.toLosses.tip": "Opens the table of neutral losses with this difference already typed in the search field",
+  "spec.dm.tip.ad": "Right-click: open the adducts",
+  "spec.dm.tip.ls": "Right-click: search the neutral losses",
   "spec.measure.clear": "Remove the measurements",
   "spec.par.thr.title": "Only the peaks above this percentage of the highest peak are labeled; the others stay drawn",
   "spec.par.thr": "Labels: above {input} %",
