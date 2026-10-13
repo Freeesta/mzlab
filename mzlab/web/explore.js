@@ -1,3 +1,4 @@
+// @ts-check
 
 window.toast = function(msg) {
   let t = document.getElementById("toast-container");
@@ -109,6 +110,7 @@ function fdash(f) {
   if (f.kind === "full" && f.type === "standard") return [10, 4];
   return PALS[UIP.pal].dash && f.rank != null ? DASHES[f.rank % 4] : [];
 }
+/** @type {(s: string) => any} */
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
@@ -172,7 +174,7 @@ function loading(on, msg) {
   const bar = () => document.getElementById("busybar"); let pending = 0, timer = 0; const orig = window.fetch.bind(window);
   const update = () => { const b = bar(); if (b) b.hidden = !(pending > 0 && !timer && Q("#loading").hidden); };
   window.fetch = (input, init) => {
-    const url = typeof input === "string" ? input : (input && input.url) || "";
+    const url = typeof input === "string" ? input : (input && /** @type {any} */ (input).url) || "";
     if (!/^(\.\/)?api\//.test(url)) return orig(input, init);
     if (!pending++) timer = setTimeout(() => { timer = 0; update(); }, 1000);
     const done = () => { if (!--pending) { clearTimeout(timer); timer = 0; } update(); };
@@ -337,9 +339,11 @@ async function bootSession0() {
   const idx = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (E.panels.length && oldNames.length) {                // caricamento successivo: i pannelli restano
     E.panels.forEach(p => { if (p.k != null) p.k = idx(oldNames[p.k]); if (p.ref !== "" && p.ref != null) p.ref = idx(oldNames[+p.ref]); });
-    if (S.ref.k !== "auto") S.ref.k = idx(oldNames[S.ref.k]);
+    if (S.ref.k !== "auto") /** @type {any} */ (S.ref).k = idx(oldNames[S.ref.k]);
     STATO.file(Math.min(E.cur, E.files.length - 1), "reload");
-    renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll();
+    renderFileList();
+    // @ts-expect-error toolbar() below is also window.toolbar (a BarProp) for lib.dom
+    toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     return;
   }
@@ -347,7 +351,9 @@ async function bootSession0() {
   STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = "";
   await nbLoad();
   if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
-  ensureLayout(); toolbar(); uiSave();
+  ensureLayout();
+  // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom
+  toolbar(); uiSave();
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
 async function apexSpectrum(c, sp) {
@@ -427,6 +433,7 @@ function paintFiles() {
 }
 // back to the automatic colours of the current palette (the student's own colours are dropped)
 function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFiles(); renderFileList(); redrawAll(); uiSave(); }
+/** @type {(...a: any[]) => string} */
 const modeIcon = () => "";       // the little icons of the three experiments are gone from the tabs and the file list (7 Oct 2026, Federico): they stay only in Teoria, where they are big enough to read
 // go to the tab of a file that is not usable in the current one, with a one-line message
 function goToFileTab(f) {
@@ -559,7 +566,7 @@ function bindFileReorder() {
         }
       }
       if (touchDragging != null) {
-        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)"));
         document.querySelectorAll("#flst .fl").forEach(f => {
           if (f !== target) f.classList.remove("drop-before", "drop-after");
         });
@@ -585,7 +592,7 @@ function bindFileReorder() {
         const fromK = touchDragging;
         touchDragging = null;
         try { el.releasePointerCapture(e.pointerId); } catch (_) {}
-        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)"));
         const isBefore = target?.classList.contains("drop-before");
         document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
         if (target && +target.dataset.k !== fromK) {
@@ -710,14 +717,16 @@ function colorFile(f, ev) {
   d.querySelectorAll("[data-c]").forEach(b => b.onclick = () => set(b.dataset.c));
   d.querySelector("input").onchange = e => set(e.target.value);
   document.body.appendChild(d); d.style.left = Math.min(ev.clientX, innerWidth - 200) + "px"; d.style.top = Math.min(ev.clientY, innerHeight - 150) + "px";
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 async function removeFile(f) {
   if (!await yesno(I18N.t("files.remove.confirm", { label: EH(f.label) }))) return;
   f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
   if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
-  renderTabs(); renderFileList(); renderNav(); toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
+  renderTabs(); renderFileList(); renderNav();
+  // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom
+  toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
@@ -737,7 +746,7 @@ function fileMenu(btn) {
   };
   paint(); document.body.appendChild(d);
   const r = btn.getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 240) + "px"; d.style.top = r.bottom + 4 + "px";
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 const vis = () => tabFiles().filter(f => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
@@ -763,7 +772,7 @@ function renderNav() {
   const nowhy = I18N.t("nav.onlySelected");
   [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; const nav = !b.closest("#fmode"), all = b.dataset.m === "all"; b.disabled = nav ? one || !E.browse : one && all; b.title = one ? (all ? I18N.t("nav.oneFile") : nav ? why : b.dataset.t0) : nav && !E.browse ? nowhy : b.dataset.t0; });
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
-  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (renderNav._sig !== sig) { renderNav._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
+  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
   Q("#fmode").classList.toggle("dis", one);
 }
 function goFile(d) {
@@ -775,7 +784,8 @@ Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = e => { STATO.file(+e.target.value, "file"); renderFileList(); renderNav(); if (E.browse) redrawAll(); uiSave(); };
 Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
-document.addEventListener("mousedown", e => { if (E.active && e.target.closest("#dpanels") && !e.target.closest(".pnl")) setActive(null); });
+document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
+// @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.renderTabs) renderTabs();
   const t = E.tab, empty = !tabFiles().length, scan = t !== "mrm", mrm = t === "mrm";
@@ -858,7 +868,7 @@ document.addEventListener("pointerup", () => { const m = Q("#ctx"); if (m._lp &&
 document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._up && Date.now() - m._up < 400) { m._lp = false; m._up = 0; return; } m.hidden = true; });       // a long press opens the menu: the click that may follow the lifted finger must not close it
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
+document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 function dl(name, text, type = "application/octet-stream") {
   saveBlob(new Blob([text], { type }), name);
 }
@@ -876,6 +886,7 @@ function plotSheets(p) {
   if (!cols.length) return null;
   const n = Math.max(...cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
+  /** @type {any[]} */
   const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],

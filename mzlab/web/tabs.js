@@ -1,3 +1,4 @@
+// @ts-check
 // Sub-tabs of the Dati view: Full Scan, MS2 (Product Ion) and MRM never share a graph. Classic script, loaded after explore.js
 // (uses E, ESP, tabFiles, tabPanels, addPanel, ... from there). Each tab has its own file list, panels and starting layout.
 
@@ -50,7 +51,9 @@ function setTab(t, quiet, motivo) {
   if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
   ensureLayout();
   if (firstLayout) Promise.all(tabPanels().map(p => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
-  renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
+  renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav();
+  // @ts-expect-error toolbar() of explore.js is also window.toolbar (a BarProp) for lib.dom
+  toolbar();
   requestAnimationFrame(() => redrawAll());
   uiSave();
 }

@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Reference tables (header buttons "Tavola periodica" and "Addotti"): periodic table with isotopes, ESI adducts, isotope pattern
 // of a formula (computed here), common neutral losses.
@@ -220,7 +221,7 @@
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
     const show = id => {
-      const t = TABS.find(x => x[0] === id); body.innerHTML = t[2](); if (t[3]) t[3](body, show);
+      const t = TABS.find(x => x[0] === id); if (!t) return; body.innerHTML = t[2](); if (t[3]) t[3](body, show);
       Qs("#reftitle").textContent = t[1];
     };
     Qs("#refx").onclick = () => d.close();

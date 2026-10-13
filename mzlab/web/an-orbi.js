@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: Orbitrap. The central spindle and the outer barrel are drawn from the exact equipotentials of the quadro-logarithmic
 // potential  Phi(r,z) = k/2 (z^2 - r^2/2) + k/2 Rm^2 ln(r/Rm) + C.  With x = r^2/Rm^2 an equipotential through (r0, 0) is  ln x - x = A(z),
 // A(z) = ln x0 - x0 - 2 z^2 / Rm^2,  solved with the Lambert W function: x = -W0(-e^A) (x < 1) or x = -W-1(-e^A) (x > 1).

@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen animation: electrospray source. The liquid leaves the capillary as a Taylor cone (half-angle 49.3 deg), a jet breaks into charged droplets,
 // the droplets lose solvent (they shrink) and the gas-phase ions follow the field lines into the orifice of the sampling cone, behind a curtain plate.
 (function (G) {

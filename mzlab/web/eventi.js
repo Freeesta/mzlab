@@ -1,3 +1,4 @@
+// @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split from explore.js: classic script, loaded after picchi.js.
 // ------------------------------------------------------------------ mouse
 function attach(p) {
@@ -223,8 +224,10 @@ async function nearScan(k, x) {
 }
 const NEAR = 1e-4;                                      // half width (min) of the window around the RT of one exact scan
 const scanStep = () => { const f = scanFiles(tabFiles())[0]; return f ? Math.max((f.rt_max - f.rt_min) / Math.max(f.ms1 + f.ms2 - 1, 1), 0.005) : 0.02; };
+/** @param {Pannello} p @param {number} x */
 function nearestFile(p, x) {
   const a = p._a; if (a && a.map) return a.f.k; if (!a || !a.sr) return scanFiles(shownFor(p))[0]?.k ?? 0;
+  /** @type {{ v: number, k: number } | null} */
   let best = null;
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
   return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
@@ -499,7 +502,7 @@ const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 addEventListener("resize", () => { fitWidth(); redrawSoon(); });
-document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
+document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
@@ -636,7 +639,7 @@ Q("#calcin").oninput = calcRun;
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   document.addEventListener("mouseover", e => {
-    const t = e.target.closest && e.target.closest(SEL);
+    const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (t === cur) return;
     hide();
     if (!t || t.closest("dialog[open]")) return;
