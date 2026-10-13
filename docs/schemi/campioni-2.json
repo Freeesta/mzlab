@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "campioni/2",
+ "title": "campioni/2: roles and times of the files of a series",
+ "description": "One entry per file, in the order of injection: the one model of the roles and times of the Data view and of mzFinder (mzlab-core campioni). Proposed from the names by `proponi` (times never confirmed), migrated from the old places by `da_legacy`, checked by `valida`, read by the TP path through `per_tp`. Canonical JSON: keys in alphabetical order, so the same metadata give the same bytes and the same SHA-256.",
+ "type": "object",
+ "required": ["campioni", "schema"],
+ "properties": {
+  "schema": {"const": "campioni/2"},
+  "campioni": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["composto", "concentrazione", "file", "istd", "note", "ordine_iniezione", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
+     "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
+     "tipo_bianco": {"enum": ["solvent", "procedure", null], "description": "optional, only for a blank: every blank is subtracted the same way"},
+     "tempo": {"type": ["number", "null"], "description": "the time as written or confirmed, in unita_tempo"},
+     "unita_tempo": {"enum": ["s", "min", "h", "d"]},
+     "tempo_min": {"type": ["number", "null"], "description": "derived from tempo and unita_tempo: the only time used in the computations; 0 for a t0"},
+     "tempo_confermato": {"type": "boolean", "description": "false for a time proposed from the name: never used before the user confirms it"},
+     "serie": {"type": "string", "description": "the experiment the file belongs to; empty = the only one, or shared by all"},
+     "replica": {"type": "integer", "minimum": 1},
+     "concentrazione": {"type": ["number", "null"]},
+     "unita": {"type": ["string", "null"]},
+     "ordine_iniezione": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean", "description": "the file is an internal standard"},
+     "note": {"type": "string"},
+     "composto": {"type": "string", "description": "for an infusion: formula or name of the parent"}
+    }
+   }
+  }
+ }
+}

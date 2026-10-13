@@ -38,6 +38,16 @@ def scan_key(s) -> str:
     return f"{pre}ms{s.level} @{act}".rstrip(" @")
 
 
+def part_label(part: dict, scans) -> str:
+    """The name shown for a part of a mixed file: Full Scan, DDA (every MS2 tied to a survey scan), MS2 or MRM, with the polarity suffix of the tag."""
+    mode = part["mode"]
+    ms2 = [x for x in scans if x.level >= 2]
+    dda = any(x.level == 1 for x in scans) and bool(ms2) and all(x.parent is not None for x in ms2)
+    name = "Full Scan" if mode == "ms1" else "MRM" if mode == "mrm" else "DDA" if dda else "MS2"
+    head = "MS1" if mode == "ms1" else "MRM" if mode == "mrm" else "MS2"
+    return name + part["tag"].removeprefix(head)
+
+
 class Item:
     def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None,
                  part: dict | None = None, run: Run | None = None):
@@ -47,8 +57,12 @@ class Item:
         self.rep: str | None = None           # replicate group typed by the user (None = the automatic one: same type, time and concentration)
         self.part = part
         base = label or Path(path).stem
-        self.label = base + (f" · {part['tag']}" if part and not base.endswith(part["tag"]) else "")
         self.run = run or Run(path)
+        if part:
+            shown, base = part_label(part, self.run.scans), base.removesuffix(f" · {part['tag']}")
+            if not base.endswith(shown):
+                base += f" · {shown}"
+        self.label = base
         self.sha256 = getattr(self.run, "sha256", "")
         self.pol = part.get("pol") if part else None
         self.sc = [s for s in self.run.scans if self._match(s)]

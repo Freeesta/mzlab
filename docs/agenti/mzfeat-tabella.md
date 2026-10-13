@@ -6,7 +6,7 @@
   - L'id vale per una ricetta e un insieme di ingressi (stessi byte del `.mzfeat`), non fra ricette diverse.
 - **Conteggi per riga**: `Aligned::state_counts(riga)` = (rilevate, mirate, riempite); la presenza si legge da `state`, mai da `area > 0`.
 - **Campioni** (`samples.rs`, schema `docs/schemi/campioni-1.json`): metadati di ogni file della serie.
-  - `propose(&[(nome, sha256)])` propone tipo (`sample`, `blank`, `dark`, `t0`, `qc`, `std`, `calibration`), tempo, replica, gruppo, concentrazione e ordine di iniezione dai nomi, con le regole di `mzlab_core::project`.
+  - `propose(&[(nome, sha256)])` propone tipo (`sample`, `blank`, `dark`, `t0`, `qc`, `std`, `calibration`), tempo, replica, gruppo, concentrazione e ordine di iniezione dai nomi: è un involucro di `mzlab_core::campioni::proponi` (`campioni/2`, `docs/agenti/campioni.md`) che riporta l'infusione al tipo e al tempo delle regole di `campioni/1` e dà al QC il tempo del nome.
   - La replica è numerata per tipo, tempo e concentrazione; `istd` parte falso.
   - `to_json` è canonico (stesso ordine delle chiavi, stessi byte) e `digest` ne è lo SHA-256, quello registrato dall'operazione `campioni` del `.mzflow`.
   - `from_json` rifiuta schema, tipo e numeri non validi (`error.badCampioni`); `to_tsv` scrive la tabella di metadati nel formato di mzmine.

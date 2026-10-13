@@ -16,7 +16,7 @@ mod scans;
 mod cache;
 mod wiff;
 mod agilent;
-mod centroidi; mod panic;
+mod centroidi; mod panic; mod campioni;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]

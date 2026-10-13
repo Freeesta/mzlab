@@ -133,7 +133,8 @@ function undoZoom(p) {
   const s = h.pop(); p.zoom = s.zoom; p.zoomY = s.zoomY; if (p.type === "spec") p.lock = null; draw(p); uiSave();
 }
 function undoLast(p) {                                                    // Ctrl/Cmd+Z: the last thing done, whether a zoom or an integration
-  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1];
+  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1], n = Math.max(z ? z.n || 0 : 0, i ? i.n || 0 : 0);
+  if (window.AFFIANCA && AFFIANCA.ultimo() > n) { AFFIANCA.annulla(); return; }      // the last thing done was a change of the arrangement
   if (i && (!z || i.n > (z.n || 0))) undoInt(p); else undoZoom(p);
 }
 document.addEventListener("keydown", e => {

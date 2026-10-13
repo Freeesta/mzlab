@@ -2,9 +2,9 @@
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
-// classify when every file has its .mzidx in OPFS (mzlab/idx/); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
+// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
 // then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, isf_classify, transitions, ...) goes to Pyodide, and so does
-// every call when the site has no wasm-feat/ (a copy built without it).
+// every call when the site has no wasm-feat/ (a copy built without it). In the desktop app (init.desktop) every call goes to finder-desktop.js, i.e. to the native engine of the app: no Pyodide, no wasm-feat/.
 /** @type {any} */ let py = null;
 /** @type {any} */ let api = null;
 /** @type {any} */ let init = null;               // the init message: Pyodide is loaded from it only when needed
@@ -13,6 +13,9 @@
 /** @type {any} */ let fin = null;                // the finder module (wasm-bindgen)
 /** @type {any} */ let man = null;                // wasm-feat/manifest.json
 /** @type {any} */ let featPool = null;
+/** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
+/** @type {any} */ let ingress = null;            // finder-idx.js
+/** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
@@ -119,6 +122,11 @@ async function finder() {
   await mod.default({ module_or_path: bytes });
   return (fin = mod);
 }
+/** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
+async function ensureIdx(names) {
+  if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say);
+  await ingress.ensure(names, held);
+}
 async function pool() {
   if (featPool) return featPool;
   const m = await manifest(), url = base() + "mzfinder/feat-worker.js", mine = self.onmessage;
@@ -178,9 +186,14 @@ async function rustRun(a) {
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held, DEFAULT_TR))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
-  if (fn === "classify" && !py) { const names = JSON.parse(a[0]); if (await idxFiles(names)) return classifyRust(names); }
+  if (fn === "classify") {
+    const names = JSON.parse(a[0]);
+    await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));
+    if (await idxFiles(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+  }
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null;
@@ -205,6 +218,7 @@ onmessage = async ev => {
       init = m;
       postMessage({ type: "ready" });
     } else if (m.type === "put") {
+      held.set(m.name, m.blob || m.buf);
       if (py) putPy(m.name, m);
       else { puts.delete(m.name); puts.set(m.name, m); }
       postMessage({ id: m.id, result: true });

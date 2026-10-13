@@ -4,6 +4,8 @@
 
 pub mod cartella;
 pub mod engine;
+mod feat;
+mod feat_finder;
 pub mod idxbuild;
 pub mod librerie;
 pub mod mapped;

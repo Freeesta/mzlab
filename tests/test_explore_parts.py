@@ -54,7 +54,7 @@ def test_tic_of_a_polarity_part_is_not_summed(d):
 def test_notebook_name_opens_one_part(d):
     s = Session([{"file": "ida.mzML#MS2"}], d)
     assert [i.file for i in s.items] == ["ida.mzML#MS2"]
-    assert s.items[0].label.endswith("MS2") and not s.items[0].label.endswith("MS2 · MS2")
+    assert s.items[0].label.endswith("DDA") and not s.items[0].label.endswith("DDA · DDA")
 
 
 def test_dda_precursors_are_grouped(d):
