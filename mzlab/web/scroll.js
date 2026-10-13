@@ -64,6 +64,7 @@ function scAhead(s) {
 }
 
 // ---- frozen intensity axis while walking (the m/z axis is always fixed, see drawSpec). s.lock = {ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
+/** @type {(...a: any[]) => void} */
 function lockStart() { /* the lock never closes by itself (7 Oct 2026, Federico): only the student closes it, with the lock button */ }
 // y = the highest peak of +-20 scans in the visible m/z range (from the cache) x 1.12, and it can only grow (no cut peaks)
 function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
