@@ -4,7 +4,10 @@
 impl El {
     /// `findtext(name)` of the first direct child, "" when it has no text.
     pub fn findtext(&self, name: &str) -> Option<&str> {
-        self.children.iter().find(|c| c.name == name).map(|c| c.text.as_str())
+        self.children
+            .iter()
+            .find(|c| c.name == name)
+            .map(|c| c.text.as_str())
     }
     pub fn find(&self, name: &str) -> Option<&El> {
         self.children.iter().find(|c| c.name == name)
@@ -28,7 +31,9 @@ impl P<'_> {
         self.s[self.i..].starts_with(t.as_bytes())
     }
     fn skip_until(&mut self, t: &str) -> Option<()> {
-        let p = self.s[self.i..].windows(t.len()).position(|w| w == t.as_bytes())?;
+        let p = self.s[self.i..]
+            .windows(t.len())
+            .position(|w| w == t.as_bytes())?;
         self.i += p + t.len();
         Some(())
     }
@@ -39,7 +44,12 @@ impl P<'_> {
     }
     fn name(&mut self) -> Option<String> {
         let a = self.i;
-        while self.i < self.s.len() && !matches!(self.s[self.i], b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/' | b'=') {
+        while self.i < self.s.len()
+            && !matches!(
+                self.s[self.i],
+                b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/' | b'='
+            )
+        {
             self.i += 1;
         }
         (self.i > a).then(|| String::from_utf8_lossy(&self.s[a..self.i]).into_owned())
@@ -81,11 +91,21 @@ impl P<'_> {
     }
 
     fn element(&mut self) -> Option<El> {
-        if self.s.get(self.i) != Some(&b'<') {
+        if self.s.get(self.i) != Some(&b'<') || self.depth >= MAX_DEPTH {
             return None;
         }
+        self.depth += 1;
+        let el = self.element_inner();
+        self.depth -= 1;
+        el
+    }
+
+    fn element_inner(&mut self) -> Option<El> {
         self.i += 1;
-        let mut el = El { name: self.name()?, ..Default::default() };
+        let mut el = El {
+            name: self.name()?,
+            ..Default::default()
+        };
         loop {
             self.ws();
             match self.s.get(self.i)? {
@@ -154,9 +174,13 @@ pub struct El {
     pub children: Vec<El>,
 }
 
+/// How deep elements may nest: the method XML of an instrument has a dozen levels, and a recursion on 10 000 would exhaust the stack of the WASM.
+const MAX_DEPTH: usize = 256;
+
 struct P<'a> {
     s: &'a [u8],
     i: usize,
+    depth: usize,
 }
 
 /// CDATA is literal text: its `&` and `<` must not be read as entities when the buffer is decoded.
@@ -187,7 +211,10 @@ fn decode(b: &[u8]) -> Option<String> {
             "quot" => out.push('"'),
             "apos" => out.push('\''),
             _ => {
-                let n = ent.strip_prefix("#x").map(|h| u32::from_str_radix(h, 16)).or_else(|| ent.strip_prefix('#').map(|d| d.parse()))?;
+                let n = ent
+                    .strip_prefix("#x")
+                    .map(|h| u32::from_str_radix(h, 16))
+                    .or_else(|| ent.strip_prefix('#').map(|d| d.parse()))?;
                 out.push(char::from_u32(n.ok()?)?);
             }
         }
@@ -199,9 +226,16 @@ fn decode(b: &[u8]) -> Option<String> {
 
 /// The root element of a document, or `None` when it is not well formed.
 pub fn parse(text: &str) -> Option<El> {
-    let mut p = P { s: text.as_bytes(), i: 0 };
+    let mut p = P {
+        s: text.as_bytes(),
+        i: 0,
+        depth: 0,
+    };
     p.misc()?;
     let root = p.element()?;
     p.misc()?;
     (p.i == p.s.len()).then_some(root)
 }
+
+#[cfg(test)]
+mod tests;

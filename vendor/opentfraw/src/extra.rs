@@ -208,6 +208,114 @@ const EXTRA_FIELDS: &[(&str, Getter)] = &[
     }),
 ];
 
+/// The labels of the scan trailer that a typed accessor of [`ScanParams`] reads (the registered fields above, or a first-class field of the
+/// mzML). Every other label is written as it is by [`trailer_extras`].
+const READ_LABELS: &[&str] = &[
+    "AGC Fill:",
+    "AGC Target:",
+    "AGC:",
+    "API Source CID Energy:",
+    "Analyzer Temperature:",
+    "CE:",
+    "Charge State:",
+    "Collision Energy (eV):",
+    "Conversion Parameter A:",
+    "Conversion Parameter B:",
+    "Conversion Parameter C:",
+    "Dynamic RT Shift (min):",
+    "Elapsed Scan Time (sec):",
+    "Error in isotopic envelope fit:",
+    "FAIMS CV:",
+    "FAIMS Voltage On:",
+    "FT Resolution:",
+    "HCD Energy (eV):",
+    "HCD Energy V:",
+    "HCD Energy eV:",
+    "HCD Energy:",
+    "Ion Inject Time (ms):",
+    "Ion Injection Time (ms):",
+    "Isolation Center M/Z:",
+    "Isolation Width (M/Z):",
+    "LM Correction (ppm):",
+    "LM m/z-Correction (ppm):",
+    "MS2 Isolation M/Z:",
+    "MS2 Isolation Offset:",
+    "MS2 Isolation Width (M/Z):",
+    "MS2 Isolation Width:",
+    "MSn Isolation Width:",
+    "Master Index:",
+    "Master Scan Number:",
+    "Max. Ion Time (ms):",
+    "Micro Scan Count:",
+    "Monoisotopic M/Z:",
+    "Multi Inject Info:",
+    "Normalized Collision Energy:",
+    "Number of LM Found:",
+    "Number of Lock Masses:",
+    "Orbitrap Resolution:",
+    "PS Inj. Time (ms):",
+    "Possible Charge States:",
+    "Precursor M/Z:",
+    "RawOvFtT:",
+    "Reagent Ion AGC:",
+    "Reagent Ion Injection Time (ms):",
+    "S-Lens RF Level:",
+    "SPS Mass 1:",
+    "SPS Mass 2:",
+    "Scan Description:",
+    "Scan Segment:",
+    "Scan Event:",
+    "Source CID eV:",
+    "Supplemental Activation CE:",
+    "Supplemental Activation:",
+    "Target M/Z:",
+];
+
+fn value_text(v: &crate::generic_data::GenericValue) -> Option<String> {
+    use crate::generic_data::GenericValue as G;
+    let t = match v {
+        G::Gap => return None,
+        G::Bool(x) => x.to_string(),
+        G::String(x) => x.trim().to_string(),
+        G::Float32(x) => x.to_string(),
+        G::Float64(x) => x.to_string(),
+        other => other.as_f64()?.to_string(),
+    };
+    (!t.is_empty()).then_some(t)
+}
+
+/// The trailer fields of a scan that no registered field carries, as `opentfraw.trailer.<label>` (label without the colon, blanks as `_`),
+/// so that none of the values of the trailer is lost. Fields left out by `fields` and empty ones are omitted.
+pub fn trailer_extras(
+    raw: &RawFileReader,
+    scan_number: u32,
+    fields: &ExtraFields,
+) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    let Some(rec) = raw.scan_parameters(scan_number) else {
+        return out;
+    };
+    for (label, value) in &rec.values {
+        if READ_LABELS.contains(&label.as_str()) || label.contains("===") {
+            continue;
+        }
+        let name = label
+            .trim()
+            .trim_end_matches(':')
+            .trim()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join("_");
+        let key = format!("opentfraw.trailer.{name}");
+        if !name.is_empty() && fields.includes(&key) {
+            if let Some(t) = value_text(value) {
+                out.insert(key, t);
+            }
+        }
+    }
+    out
+}
+
 /// Every registered `opentfraw.*` key, in emission order.
 pub fn extra_field_keys() -> impl Iterator<Item = &'static str> {
     EXTRA_FIELDS.iter().map(|(key, _)| *key)
@@ -228,11 +336,13 @@ pub fn scan_extras(
         params: raw.scan_params(meta.scan_number),
         status: raw.status_log_entry(meta.scan_number),
     };
-    EXTRA_FIELDS
+    let mut out: BTreeMap<String, String> = EXTRA_FIELDS
         .iter()
         .filter(|(key, _)| fields.includes(key))
         .filter_map(|(key, get)| get(&scan).map(|value| (key.to_string(), value)))
-        .collect()
+        .collect();
+    out.extend(trailer_extras(raw, meta.scan_number, fields));
+    out
 }
 
 #[cfg(test)]

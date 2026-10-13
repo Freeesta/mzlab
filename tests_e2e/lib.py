@@ -1,4 +1,4 @@
-import os, subprocess, time, sys, shutil
+import os, subprocess, time, sys, shutil, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 # The page has a CSP without unsafe-eval: Playwright's wait_for_function evaluates strings with eval, so it is replaced by a polling version that
@@ -164,8 +164,9 @@ class Run:
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
         if motore == "sito":          # the built site with the Rust engine (tools/prepara_sito.py): what the students get
+            s._log = tempfile.TemporaryFile(mode="w+", encoding="utf-8")       # a file, not a pipe: nobody drains a pipe and the server blocks on its own request log when it fills
             s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
-                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                                     stdout=s._log, stderr=subprocess.STDOUT, text=True)
         else:                         # "python": the page against the Python reference (tools/dev_server.py), for the tests not moved yet
             s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
                                      cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -199,7 +200,8 @@ class Run:
         try: s.b.close()
         except Exception: pass
         s.srv.terminate()
-        s.log = s.srv.stdout.read()
+        if getattr(s, "_log", None): s._log.seek(0); s.log = s._log.read()
+        else: s.log = s.srv.stdout.read()
         shutil.rmtree(s.wd, ignore_errors=True)       # the uploaded files (80 MB each for the high-resolution ones) are not kept: the disk of a session is limited
     def report(s):
         print("--- SERVER LOG (tail)\n", s.log[-1500:])

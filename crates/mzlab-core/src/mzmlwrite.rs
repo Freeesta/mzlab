@@ -122,12 +122,13 @@ impl<W: Write> MzmlWriter<W> {
         self.out.write_all(s.as_bytes()).map_err(io)
     }
 
-    /// TIC, BPC and SRM chromatograms; other kinds are not written.
+    /// TIC, BPC, SIC and SRM chromatograms; other kinds are not written.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
         let kind = match c.kind {
             ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
             ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
             ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
+            ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
             _ => return Ok(()),
         };
         let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{kind}", self.chroms, esc(&c.id), c.time.len());

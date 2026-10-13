@@ -3,7 +3,7 @@
 //! every other field of the container, of the scan trailer and of the method (`metodo_raw/campi.rs`). What is only guessed from position is marked in `docs/agenti/metodo.md`.
 //! The status log is not decoded: `avvisi` says so. An anonymous document leaves out the user, the computer, the serial number and the paths, also inside the texts.
 
-mod campi;
+pub(crate) mod campi;
 mod script;
 
 use crate::metodo::{self, lc_sections, num, obj, text, Source, V};
@@ -147,8 +147,10 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             .iter()
             .map(|p| (*p).clone())
             .collect(),
+        ..Default::default()
     };
     let blocks = raw.instrument_method_blocks(source);
+    let traces = raw.analog_traces(source).unwrap_or_default();
     let by = |b: Block| blocks.iter().find(|t| script::classify(t) == b);
     let script_text = by(Block::Script).map(String::as_str).unwrap_or("");
     let pairs = script::script_pairs(script_text);
@@ -196,7 +198,9 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         ("campionatore", sampler(&pairs)),
         (
             "campi",
-            Some(V::Arr(campi::fields(raw, &pairs, &items, &ident, anon))),
+            Some(V::Arr(campi::fields(
+                raw, &traces, &pairs, &items, &ident, anon,
+            ))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks, &ident, anon)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),

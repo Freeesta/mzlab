@@ -164,6 +164,19 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
 pub struct HypoRun {
     pub registry: Registry,
     pub result: TargetResult,
+    /// The rules as read (bytes of the file) and the profile chosen: the proofs look for their differences of mass among the rows (`tp::rete`).
+    pub rules_src: Vec<u8>,
+    pub profile: Option<String>,
+}
+
+impl HypoRun {
+    /// The rules of the run, parsed again from their bytes; None when the run has none.
+    fn rules(&self) -> Result<Option<Rules>> {
+        if self.rules_src.is_empty() {
+            return Ok(None);
+        }
+        Rules::parse_profile(&self.rules_src, self.profile.as_deref()).map(Some)
+    }
 }
 
 /// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_2.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
@@ -174,7 +187,7 @@ fn hypotheses_setup(
     parent: &str,
     parent_rt: Option<f64>,
     polarity: i8,
-) -> Result<(Registry, TargetParams)> {
+) -> Result<(Registry, TargetParams, Option<String>)> {
     let st = Structure::parse(structure)?;
     st.check_parent(parent)?;
     let inp = HypoInputs {
@@ -199,7 +212,7 @@ fn hypotheses_setup(
         parent_rt,
         ..TargetParams::default()
     };
-    Ok((registry, tp))
+    Ok((registry, tp, st.profile))
 }
 
 /// Hypotheses of the parent searched in every file. `parent_rt` narrows the windows of RT.
@@ -212,7 +225,7 @@ pub fn hypotheses<R: ReadAt>(
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
-    let (mut registry, tp) = hypotheses_setup(
+    let (mut registry, tp, profile) = hypotheses_setup(
         rules,
         structure,
         parent,
@@ -220,7 +233,12 @@ pub fn hypotheses<R: ReadAt>(
         r.detect.polarity.unwrap_or(1),
     )?;
     let result = run(indexes, feats, &mut registry, &tp)?;
-    Ok(HypoRun { registry, result })
+    Ok(HypoRun {
+        registry,
+        result,
+        rules_src: rules.to_vec(),
+        profile,
+    })
 }
 
 /// `hypotheses` with the detection tables read from the stored files one at a time.
@@ -234,11 +252,17 @@ pub fn hypotheses_stored<R: ReadAt>(
     r: &Recipe,
 ) -> Result<HypoRun> {
     let polarity = r.detect.polarity.unwrap_or(1);
-    let (mut registry, tp) = hypotheses_setup(rules, structure, parent, parent_rt, polarity)?;
+    let (mut registry, tp, profile) =
+        hypotheses_setup(rules, structure, parent, parent_rt, polarity)?;
     let n = indexes.len().min(src.count());
     let mut load = |k: usize| Ok(read_file(&src.bytes(k)?)?.0);
     let result = mzlab_feat::target::run_loading(indexes, n, &mut load, &mut registry, &tp)?;
-    Ok(HypoRun { registry, result })
+    Ok(HypoRun {
+        registry,
+        result,
+        rules_src: rules.to_vec(),
+        profile,
+    })
 }
 
 /// Bytes of the memory that an identity of the graph takes while the graph is built whole (its proofs, members and arcs), for the estimate.
@@ -320,7 +344,8 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         }),
         parent,
     };
-    let tp = tp_block(&inp, minutes, &hypo.registry.hyps, parent);
+    let rules = hypo.rules()?;
+    let tp = tp_block(&inp, minutes, &hypo.registry.hyps, parent, rules.as_ref());
     let rows = aligned.len();
     let held = aligned.heap_bytes() + tp.heap_bytes();
     if budget.in_memory(held + rows * IDENTITY_BYTES) {
@@ -339,6 +364,7 @@ fn tp_block(
     minutes: &[f64],
     hyps: &[Hypothesis],
     parent: Option<(f64, f64)>,
+    rules: Option<&Rules>,
 ) -> TpBlock {
     let Some(parent) = parent else {
         return TpBlock::default();
@@ -352,6 +378,7 @@ fn tp_block(
         parent,
         fragments: None,
         params: &TpParams::default(),
+        rules,
     };
     build_tp(&tp).ok().flatten().unwrap_or_default()
 }
