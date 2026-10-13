@@ -29,6 +29,8 @@ try:
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
             assert pg.evaluate("document.getElementById('uip-a11y').open") is False
             assert pg.evaluate("[...document.querySelectorAll('#uip-a11y #uip-font, #uip-a11y #uip-hc, #uip-a11y #uip-pal')].length") == 3
+            assert pg.locator("#uip-lib").count() == 0, "spectral libraries only with HRMS files"
+            assert pg.evaluate("getComputedStyle(document.getElementById('uip-etich')).appearance") == "none", "select without native arrow"
             pg.keyboard.press("Escape")
         step("settings: no storage section, one full reset, accessibility submenu closed", gear)
         def tour_from_draw():

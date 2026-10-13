@@ -47,15 +47,12 @@ const CartPuntVista = (() => {
     return `<li><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button></li>`;
   }
   function render() {
-    const box = document.getElementById("cartbody"), card = document.getElementById("cartcard");
-    if (!box || !card) return;
+    const box = document.getElementById("cartbody"), pick = document.getElementById("cartpick");
+    if (!box || !pick) return;
     const T = (k, p) => I18N.t(k, p), nat = !!S.native;
-    card.hidden = !!window.QQQ_PHONE;
-    const intro = `<p class="sm muted">${T("cartp.intro")}</p>`;
-    if (!nat && !supported()) { box.innerHTML = intro + `<p class="sm" id="cartnosup">${T("cartp.nosupport")}</p>`; return; }
-    if (!S.handle && !nat) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = () => CartPunt.choose(); return; }
-    if (nat && !S.name) { box.innerHTML = intro + `<button type="button" class="sec" id="cartchoose">${T("cartp.choose")}</button>`; box.querySelector("#cartchoose").onclick = () => CartPunt.choose(); return; }
-    const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartchange">${T("cartp.change")}</button> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
+    pick.hidden = !!window.QQQ_PHONE; box.hidden = !!window.QQQ_PHONE;
+    if ((!nat && (!supported() || !S.handle)) || (nat && !S.name)) { box.innerHTML = ""; return; }   // no folder yet: the icon is the way to choose one
+    const head = `<div class="sm"><b>${T("cartp.where", { name: esc(S.name) })}</b> <button type="button" class="sec" id="cartforget">${T("cartp.forget")}</button> <button type="button" class="sec" id="cartrefresh">${T("cartp.refresh")}</button></div>`;
     let body;
     if (!nat && S.perm !== "granted") body = `<p class="sm">${T(S.perm === "denied" ? "cartp.denied" : "cartp.grant", { name: esc(S.name) })}</p><button type="button" class="go" id="cartgrant">${T("cartp.grant.btn")}</button>`;
     else {
@@ -65,8 +62,8 @@ const CartPuntVista = (() => {
         : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
           + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
     }
-    box.innerHTML = intro + head + `<div role="status" aria-live="polite">${body}</div>`;
-    box.querySelector("#cartchange").onclick = () => CartPunt.choose(); box.querySelector("#cartforget").onclick = () => CartPunt.forget(); box.querySelector("#cartrefresh").onclick = () => CartPunt.rescan();
+    box.innerHTML = head + `<div role="status" aria-live="polite">${body}</div>`;
+    box.querySelector("#cartforget").onclick = () => CartPunt.forget(); box.querySelector("#cartrefresh").onclick = () => CartPunt.rescan();
     const g = box.querySelector("#cartgrant"); if (g) g.onclick = () => CartPunt.grant();
     box.querySelectorAll(".cprow").forEach(b => { b.onclick = () => CartPunt.open(S.items[+b.dataset.i]); });
   }

@@ -3,7 +3,11 @@
 //! rows and the detail that `TP_Mine/js/21_tpmine_hr.js` reads.
 
 pub mod dig;
+pub mod edge;
 pub mod formula;
+#[cfg(feature = "chem")]
+pub mod fragtree;
+pub mod identity;
 pub mod kinetics;
 pub mod ms2;
 pub mod out;
@@ -15,6 +19,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
 pub use formula::formula_info;
+pub use identity::{identity_graph, polarity_pairs};
 
 /// Errors of the adapter: the English text the page shows (`str(e)` of the Python).
 pub type Res<T> = std::result::Result<T, String>;

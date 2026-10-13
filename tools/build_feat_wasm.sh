@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, mrm, loaded only for a series of MRM files, and finder, loaded only when the page asks mzFinder for classify, formula_info or a Dig of a high-resolution series; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
+# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
 # and site/static/wasm-feat/manifest.json with their SHA-256 (the worker checks it): tools/build_feat_wasm.sh <site/static>
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480).
