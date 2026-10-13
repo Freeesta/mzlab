@@ -94,14 +94,129 @@ fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
     Ok(b)
 }
 
-pub struct LettoreAgilent {
-    d: AgilentD,
-    peak: Option<Box<dyn ReadAt>>,
-    peak_len: u64,
-    /// Indexes into `d.records` of the scans that have points (the ones the index lists).
-    scans: Vec<usize>,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Campo {
+    Campo {
+        nome: name.into(),
+        valore: value.to_string(),
+        unita: unit.map(str::to_string),
+        cv: cv.map(str::to_string),
+    }
+}
+
+/// Every field of the record of a scan, the extra ones of the xsd included.
+fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Campo> {
+    let mut v = vec![
+        field("ScanID", r.id, None, None),
+        field("ScanMethodID", r.method_id, None, None),
+        field("TimeSegmentID", r.segment, None, None),
+        field("MSLevel", r.level, None, Some("MS:1000511")),
+        field("ScanType", r.scan_type, None, None),
+        field("TIC", r.tic, None, Some("MS:1000285")),
+        field("BasePeakMZ", r.base_mz, None, Some("MS:1000504")),
+        field("BasePeakValue", r.base_value, None, Some("MS:1000505")),
+        field("CycleNumber", r.cycle, None, None),
+        field("IonMode", r.ion_mode, None, None),
+        field("IonPolarity", r.polarity, None, None),
+        field("Fragmentor", r.fragmentor, None, None),
+        field(
+            "CollisionEnergy",
+            r.collision_energy,
+            Some("electron volt"),
+            Some("MS:1000045"),
+        ),
+        field("MzOfInterest", r.mz_of_interest, Some("m/z"), None),
+        field("SpectrumFormatID", r.format, None, None),
+        field("SpectrumOffset", r.offset, None, None),
+        field("ByteCount", r.bytes, None, None),
+        field("PointCount", r.points, None, None),
+        field("MaxY", r.max_y, None, None),
+    ];
+    if let Some(u) = r.uncompressed {
+        v.push(field("UncompressedByteCount", u, None, None));
+    }
+    let extra = d.extra_names.iter().zip(&r.extra);
+    v.extend(extra.map(|(n, x)| field(n, x, None, None)));
+    v
+}
+
+/// The index of the scans that have points: what is known of each before its peaks are read.
+fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<VoceScansione> {
+    scans
+        .iter()
+        .map(|&i| {
+            let r = &d.records[i];
+            VoceScansione {
+                id: format!("scan={}", r.id),
+                rt: r.time_min,
+                livello: r.level.clamp(1, 255) as u8,
+                polarita: d.polarity_of(r),
+                tic: r.tic,
+                picco_base: Some(r.base_mz).filter(|m| *m > 0.0),
+                // a SIM scan says its ions only in its spectrum
+                filtro: d.filter_of(r.scan_type, &[]).trim_end().to_string(),
+                precursore: (r.level >= 2 && r.mz_of_interest > 0.0).then_some(r.mz_of_interest),
+                posizione: d.inline.is_none().then_some(Posizione {
+                    membro: peak_member,
+                    offset: r.offset,
+                    lunghezza: r.bytes,
+                }),
+            }
+        })
+        .collect()
+}
+
+/// The `metodo/1` document; `MSPeak.bin` is listed without a SHA-1 (hashing it would read the whole file).
+fn document(l: &LettoreAgilent) -> String {
+    let mut files: Vec<SrcFile> =
+        l.d.file_sha1
+            .iter()
+            .map(|(name, sha1)| SrcFile {
+                name: name.clone(),
+                sha1: Some(sha1.clone()),
+                bytes: 0,
+            })
+            .collect();
+    if l.d.inline.is_none() {
+        files.push(SrcFile {
+            name: PEAK.into(),
+            sha1: None,
+            bytes: l.peak_len,
+        });
+    }
+    l.d.metodo(&Source {
+        format: "agilent-d",
+        files,
+        sample: None,
+        anonymous: l.d.anonymous,
+    })
+}
+
+/// The chromatogram `id`: the TIC and the BPC from the records, a SIC by reading the SIM scans.
+fn trace(l: &mut LettoreAgilent, id: &str) -> Result<Chromatogram> {
+    let bad = || Error::new("error.badIndex").with("id", id);
+    if let Some(h) = l.d.survey_chromatograms().into_iter().find(|h| h.id == id) {
+        return Ok(h);
+    }
+    let mz: f64 = id
+        .strip_prefix("SIC ")
+        .and_then(|t| t.parse().ok())
+        .ok_or_else(bad)?;
+    let key = (mz * 100.0).round() as i64;
+    let index = 2 + l
+        .sim_ions()
+        .iter()
+        .position(|&k| k == key)
+        .ok_or_else(bad)?;
+    let mut sic: BTreeMap<i64, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
+    for i in l.scans.clone() {
+        let r = l.d.records[i].clone();
+        if r.scan_type == SCAN_SIM {
+            let (m, y) = l.points(&r)?;
+            super::run::add_sic(&mut sic, r.time_min, &m, &y);
+        }
+    }
+    let (time, intensity) = sic.remove(&key).ok_or_else(bad)?;
+    Ok(super::run::sic_chromatogram(index, key, time, intensity))
 }
 
 fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
@@ -163,39 +278,28 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
+pub struct LettoreAgilent {
+    d: AgilentD,
+    peak: Option<Box<dyn ReadAt>>,
+    peak_len: u64,
+    /// Indexes into `d.records` of the scans that have points (the ones the index lists).
+    scans: Vec<usize>,
+    campioni: Vec<Campione>,
+    indice: Vec<VoceScansione>,
+}
+
 impl LettoreAgilent {
     fn new(d: AgilentD, peak: Option<Box<dyn ReadAt>>, peak_member: u16, peak_len: u64) -> Self {
         let scans: Vec<usize> = (0..d.records.len())
             .filter(|&i| d.records[i].points > 0)
             .collect();
-        let indice = scans
-            .iter()
-            .map(|&i| {
-                let r = &d.records[i];
-                VoceScansione {
-                    id: format!("scan={}", r.id),
-                    rt: r.time_min,
-                    livello: r.level.clamp(1, 255) as u8,
-                    polarita: d.polarity_of(r),
-                    tic: r.tic,
-                    picco_base: Some(r.base_mz).filter(|m| *m > 0.0),
-                    // a SIM scan says its ions only in its spectrum
-                    filtro: d.filter_of(r.scan_type, &[]).trim_end().to_string(),
-                    precursore: (r.level >= 2 && r.mz_of_interest > 0.0)
-                        .then_some(r.mz_of_interest),
-                    posizione: d.inline.is_none().then_some(Posizione {
-                        membro: peak_member,
-                        offset: r.offset,
-                        lunghezza: r.bytes,
-                    }),
-                }
-            })
-            .collect();
+        let indice = build_index(&d, &scans, peak_member);
+        let nome = d
+            .sample_name()
+            .map_or_else(|| d.name.clone(), str::to_string);
         let campioni = vec![Campione {
             id: 1,
-            nome: d
-                .sample_name()
-                .map_or_else(|| d.name.clone(), str::to_string),
+            nome,
             scansioni: scans.len(),
         }];
         LettoreAgilent {
@@ -215,11 +319,9 @@ impl LettoreAgilent {
     }
 
     fn one(&self, c: usize) -> Result<()> {
-        if c == 0 {
-            Ok(())
-        } else {
-            Err(Error::new("error.badIndex").with("c", c))
-        }
+        (c == 0)
+            .then_some(())
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
     fn record(&self, k: usize) -> Result<(usize, &ScanRec)> {
@@ -253,13 +355,22 @@ impl LettoreAgilent {
     }
 }
 
-fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Campo {
-    Campo {
-        nome: name.into(),
-        valore: value.to_string(),
-        unita: unit.map(str::to_string),
-        cv: cv.map(str::to_string),
-    }
+/// The chromatograms of the run without their points: the TIC, the BPC and one SIC per ion of the SIM groups.
+fn listed(l: &LettoreAgilent) -> Vec<VoceCromatogramma> {
+    let survey = l.d.survey_chromatograms().into_iter();
+    let mut v: Vec<VoceCromatogramma> = survey
+        .map(|h| VoceCromatogramma {
+            id: h.id,
+            tipo: h.kind,
+            unita: h.unit,
+        })
+        .collect();
+    v.extend(l.sim_ions().into_iter().map(|key| VoceCromatogramma {
+        id: format!("SIC {:.2}", key as f64 / 100.0),
+        tipo: ChromKind::Sic,
+        unita: "number of detector counts".into(),
+    }));
+    v
 }
 
 impl Lettore for LettoreAgilent {
@@ -278,132 +389,28 @@ impl Lettore for LettoreAgilent {
 
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
-        let (i, _) = self.record(k)?;
-        let r = self.d.records[i].clone();
+        let r = self.record(k)?.1.clone();
         let (mz, it) = self.points(&r)?;
         Ok(self.d.spectrum_of(k, &r, mz, it))
     }
 
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.one(c)?;
-        let (_, r) = self.record(k)?;
-        let mut v = vec![
-            field("ScanID", r.id, None, None),
-            field("ScanMethodID", r.method_id, None, None),
-            field("TimeSegmentID", r.segment, None, None),
-            field("MSLevel", r.level, None, Some("MS:1000511")),
-            field("ScanType", r.scan_type, None, None),
-            field("TIC", r.tic, None, Some("MS:1000285")),
-            field("BasePeakMZ", r.base_mz, None, Some("MS:1000504")),
-            field("BasePeakValue", r.base_value, None, Some("MS:1000505")),
-            field("CycleNumber", r.cycle, None, None),
-            field("IonMode", r.ion_mode, None, None),
-            field("IonPolarity", r.polarity, None, None),
-            field("Fragmentor", r.fragmentor, None, None),
-            field(
-                "CollisionEnergy",
-                r.collision_energy,
-                Some("electron volt"),
-                Some("MS:1000045"),
-            ),
-            field("MzOfInterest", r.mz_of_interest, Some("m/z"), None),
-            field("SpectrumFormatID", r.format, None, None),
-            field("SpectrumOffset", r.offset, None, None),
-            field("ByteCount", r.bytes, None, None),
-            field("PointCount", r.points, None, None),
-            field("MaxY", r.max_y, None, None),
-        ];
-        if let Some(u) = r.uncompressed {
-            v.push(field("UncompressedByteCount", u, None, None));
-        }
-        v.extend(
-            self.d
-                .extra_names
-                .iter()
-                .zip(&r.extra)
-                .map(|(n, x)| field(n, x, None, None)),
-        );
-        Ok(v)
+        Ok(header_fields(&self.d, self.record(k)?.1))
     }
 
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.one(c)?;
-        let mut v: Vec<VoceCromatogramma> = self
-            .d
-            .survey_chromatograms()
-            .into_iter()
-            .map(|h| VoceCromatogramma {
-                id: h.id,
-                tipo: h.kind,
-                unita: h.unit,
-            })
-            .collect();
-        v.extend(self.sim_ions().into_iter().map(|key| VoceCromatogramma {
-            id: format!("SIC {:.2}", key as f64 / 100.0),
-            tipo: ChromKind::Sic,
-            unita: "number of detector counts".into(),
-        }));
-        Ok(v)
+        Ok(listed(self))
     }
 
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
-        let bad = || Error::new("error.badIndex").with("id", id);
-        if let Some(h) = self
-            .d
-            .survey_chromatograms()
-            .into_iter()
-            .find(|h| h.id == id)
-        {
-            return Ok(h);
-        }
-        let mz: f64 = id
-            .strip_prefix("SIC ")
-            .and_then(|t| t.parse().ok())
-            .ok_or_else(bad)?;
-        let key = (mz * 100.0).round() as i64;
-        let index = 2 + self
-            .sim_ions()
-            .iter()
-            .position(|&k| k == key)
-            .ok_or_else(bad)?;
-        let mut sic: BTreeMap<i64, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
-        for i in self.scans.clone() {
-            let r = self.d.records[i].clone();
-            if r.scan_type == SCAN_SIM {
-                let (m, y) = self.points(&r)?;
-                super::run::add_sic(&mut sic, r.time_min, &m, &y);
-            }
-        }
-        let (time, intensity) = sic.remove(&key).ok_or_else(bad)?;
-        Ok(super::run::sic_chromatogram(index, key, time, intensity))
+        trace(self, id)
     }
 
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        let mut files: Vec<SrcFile> = self
-            .d
-            .file_sha1
-            .iter()
-            .map(|(name, sha1)| SrcFile {
-                name: name.clone(),
-                sha1: Some(sha1.clone()),
-                bytes: 0,
-            })
-            .collect();
-        if self.d.inline.is_none() {
-            // never hashed here: that would read the whole of MSPeak.bin
-            files.push(SrcFile {
-                name: PEAK.into(),
-                sha1: None,
-                bytes: self.peak_len,
-            });
-        }
-        Ok(self.d.metodo(&Source {
-            format: "agilent-d",
-            files,
-            sample: None,
-            anonymous: self.d.anonymous,
-        }))
+        Ok(document(self))
     }
 }

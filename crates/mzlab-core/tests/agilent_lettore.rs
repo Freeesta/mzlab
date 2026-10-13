@@ -6,8 +6,8 @@ mod agilent_synth;
 
 use agilent_folder::*;
 use agilent_synth::*;
-use mzlab_core::lettori::{self, FileSet, Formato, Limiti, Membro};
-use mzlab_core::mzml::ChromKind;
+use mzlab_core::lettori::{self, FileSet, Formato, Lettore, Limiti, Membro};
+use mzlab_core::mzml::{ChromKind, Run};
 
 /// The files of a real folder as a `FileSet`: the members are read from disk by offset, never loaded.
 fn set_of(dir: &std::path::Path) -> FileSet {
@@ -107,25 +107,29 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
                 .any(|c| c.nome == "TIC" && c.valore == r0.tic.to_string()),
             "{label}"
         );
-        // the chromatograms: the TIC and the BPC from the records, one SIC per ion of a SIM method
-        let listed = l.cromatogrammi(0).unwrap();
-        for c in &run.chromatograms {
-            if matches!(c.kind, ChromKind::Tic | ChromKind::Bpc | ChromKind::Sic) {
-                assert!(
-                    listed.iter().any(|v| v.id == c.id && v.tipo == c.kind),
-                    "{label}: {} is not listed",
-                    c.id
-                );
-                assert_eq!(&l.cromatogramma(0, &c.id).unwrap(), c, "{label}: {}", c.id);
-            }
-        }
-        assert!(l.cromatogramma(0, "nothing").is_err());
-        let doc = l.metodo(0).unwrap();
-        assert!(
-            doc.contains("\"formato\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
-            "{label}"
-        );
+        chromatograms_and_method(l.as_mut(), &run, &label);
     }
+}
+
+/// The TIC and the BPC from the records, one SIC per ion of a SIM method, and the `metodo/1` document.
+fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
+    let listed = l.cromatogrammi(0).unwrap();
+    for c in &run.chromatograms {
+        if matches!(c.kind, ChromKind::Tic | ChromKind::Bpc | ChromKind::Sic) {
+            assert!(
+                listed.iter().any(|v| v.id == c.id && v.tipo == c.kind),
+                "{label}: {} is not listed",
+                c.id
+            );
+            assert_eq!(&l.cromatogramma(0, &c.id).unwrap(), c, "{label}: {}", c.id);
+        }
+    }
+    assert!(l.cromatogramma(0, "nothing").is_err());
+    let doc = l.metodo(0).unwrap();
+    assert!(
+        doc.contains("\"formato\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
+        "{label}"
+    );
 }
 
 #[test]
