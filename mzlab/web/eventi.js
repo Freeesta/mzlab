@@ -192,6 +192,7 @@ function attach(p) {
     }
     if (p.type === "mrm") { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // MRM has no spectra (a new one would jump to the Full Scan tab): double click = whole view
     if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
+      if (p.zoom || p.zoomY) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // zoomed in: double click = whole view, no spectrum
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;

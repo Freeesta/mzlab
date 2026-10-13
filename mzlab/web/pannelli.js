@@ -812,7 +812,12 @@ function openXic(panel, pre = {}) {
     r.inp.value = init.text || "";
     r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
     r.ad.onchange = () => evalRow(r);
-    r.inp.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault(); const i = rows.indexOf(r); if (i < rows.length - 1) rows[i + 1].inp.focus(); else Q("#xic-go").click(); };
+    r.inp.onkeydown = e => {                                                // Enter extracts at once (empty field: only the message); Shift+Enter moves to the next field
+      if (e.key !== "Enter") return; e.preventDefault();
+      if (e.shiftKey) { const i = rows.indexOf(r); if (i < rows.length - 1) rows[i + 1].inp.focus(); return; }
+      if (!r.inp.value.trim()) { err.textContent = I18N.t("xic.err.empty"); return; }
+      Q("#xic-go").click();
+    };
     r.x.onclick = () => { if (rows.length < 2) return; rows.splice(rows.indexOf(r), 1); el.remove(); renumber(); };
     rows.push(r); host.appendChild(el); renumber(); evalRow(r);
     return r;

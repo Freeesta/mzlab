@@ -29,6 +29,13 @@ try:
                 dbl(sel)
                 assert pg.evaluate("E.tab") == t, (t, pg.evaluate("E.tab"))
         step("Full Scan and MS2: double click keeps the tab", others)
+        def zoomed():
+            open_kind(pg, "full"); ready(pg)
+            n = pg.evaluate("E.panels.length"); pg.evaluate("E.panels.find(p=>p.type==='chrom').zoom=[1,2]")
+            dbl(".pnl.chrom")
+            assert pg.evaluate("E.panels.find(p=>p.type==='chrom').zoom") is None, "double click did not reset the zoom"
+            assert pg.evaluate("E.panels.length") == n, "a spectrum was extracted while zoomed"
+        step("Chromatogram zoomed: double click resets the zoom and extracts no spectrum", zoomed)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
