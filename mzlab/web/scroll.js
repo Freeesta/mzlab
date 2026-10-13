@@ -1,3 +1,4 @@
+// @ts-check
 "use strict";
 // Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possible:
 //  - a cache of single scans (api/spectra, blocks of at most 60) so a step never waits for the server;

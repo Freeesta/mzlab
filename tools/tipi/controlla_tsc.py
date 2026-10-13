@@ -28,6 +28,7 @@ def esegui(nome):
 
 
 def misura():
+    subprocess.run(TSC[:-1] + ["-v"], cwd=RADICE, capture_output=True)   # installs tsc once: three npx at the same time corrupt its cache
     ris = {}
     with ThreadPoolExecutor(len(PROGETTI)) as ex:
         for c in ex.map(esegui, PROGETTI):
