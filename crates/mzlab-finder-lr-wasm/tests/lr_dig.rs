@@ -147,10 +147,20 @@ fn dig(files: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, PARENT).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
     let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
+    // as detect_file_to of the pool: the recipe of every file from its own index, the file name as the name
+    let names: Vec<String> = serde_json::from_str::<Value>(files)
+        .unwrap()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["name"].as_str().unwrap().to_string())
+        .collect();
     let stored: Vec<Vec<u8>> = idxs
         .iter()
-        .enumerate()
-        .map(|(k, b)| run::detect(&mut open(b), &format!("f{k}"), &r).unwrap())
+        .zip(&names)
+        .map(|(b, n)| {
+            run::detect(&mut open(b), n, &run::recipe_for("", &mut open(b)).unwrap()).unwrap()
+        })
         .collect();
     let (feats, origin) = run::read_files(&stored).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();

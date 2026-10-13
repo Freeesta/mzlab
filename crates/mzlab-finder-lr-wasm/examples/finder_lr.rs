@@ -51,10 +51,19 @@ fn main() {
         .and_then(|s| s.split('"').next())
         .unwrap_or("");
     let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
+    // as detect_file_to of the pool: the recipe of every file from its own index, the file name as the name
     let stored: Vec<Vec<u8>> = idxs
         .iter()
-        .enumerate()
-        .map(|(k, b)| run::detect(&mut open(b), &format!("f{k}"), &r).unwrap())
+        .zip(&a[4..])
+        .map(|(b, p)| {
+            let name = Path::new(p)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+            let rk = run::recipe_for("", &mut open(b)).unwrap();
+            run::detect(&mut open(b), &name, &rk).unwrap()
+        })
         .collect();
     let (feats, origin) = run::read_files(&stored).unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = idxs.iter().map(|b| open(b)).collect();
