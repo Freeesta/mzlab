@@ -150,12 +150,21 @@ fn decode_array(a: &Array, expected: usize) -> Result<(Vec<f64>, Vec<f32>)> {
         .decode(clean.as_bytes())
         .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
     let bytes = if a.zlib {
+        // an array inflates to what the spectrum declares (64 MB when it declares nothing): a zlib stream may claim far more than the file holds
+        let limit = match expected.saturating_mul(a.num.width()) {
+            0 => 64 << 20,
+            n => n,
+        };
         let mut out = Vec::new();
-        out.try_reserve(expected.saturating_mul(a.num.width()))
+        out.try_reserve(limit.min(raw.len().saturating_mul(1032)))
             .map_err(|_| Error::memory_budget())?;
         flate2::read::ZlibDecoder::new(&raw[..])
+            .take((limit as u64).saturating_add(1))
             .read_to_end(&mut out)
             .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
+        if out.len() > limit {
+            return Err(Error::memory_budget());
+        }
         out
     } else {
         raw

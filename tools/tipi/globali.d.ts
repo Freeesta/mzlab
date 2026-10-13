@@ -112,6 +112,7 @@ declare var fileBase: any;
 declare var fileComparator: any;
 declare var fmtTime: any;
 declare var hdrH: any;
+declare var hi: any;
 declare var hrGroup: any;
 declare var lossCombos: any;
 declare var lsObj: any;

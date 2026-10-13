@@ -123,6 +123,24 @@ def main_cancello_tp(a) -> int:
     return 0
 
 
+def main_lr(a) -> int:
+    import datetime
+    from valida import lr, nativo
+    parent = None
+    if a.verita:
+        p = next((x for x in carica_verita(a.verita) if x.get("parent")), None)
+        if p and p.get("ion"):
+            parent = (nativo.neutra_da_ione(p["ion"]), p["mz"], (p["rt_obs"] or [None])[0])
+    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_lr"
+    c, det = lr.misura(a.serie_lr, parent, lavoro, a.data or datetime.date.today().isoformat(), a.seme)
+    print(f"vista_tabella_lr: {c['vista_tabella_lr']}  (real data: {det['dati_reali']})")
+    for k in c["criteri"]:
+        print(f"  {k['id']:<34} {'skipped' if k['ok'] is None else ('ok' if k['ok'] else 'FAIL'):<8} {k['valore']} (threshold {k['soglia']})")
+    for p in lr.scrivi(Path(a.uscita) if a.uscita else lavoro, c, det, a.lr_json):
+        print(p)
+    return 0
+
+
 def main_hr(a) -> int:
     import datetime
     from valida import hr
@@ -138,7 +156,7 @@ def main_hr(a) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--serie", help="folder with the mzML files of the series (required unless --cancello)")
+    ap.add_argument("--serie", help="folder with the mzML files of the series (required unless --cancello, --cancello-tp or --lr)")
     ap.add_argument("--verita", help="truth JSON (optional)")
     ap.add_argument("--mzmine", help="mzmine CSV export (optional)")
     ap.add_argument("--uscita", help="output folder (default .verifica/valida/<series folder name>)")
@@ -158,10 +176,15 @@ def main(argv=None) -> int:
     cg.add_argument("--cancello-tp", action="store_true", help="measure the raw TP view against the truth (--serie, --verita) and write cancello_tp.json and cancello_tp_rapporto.{json,md}")
     cg.add_argument("--cancello-tp-json", default=str(ROOT / "TP_Mine" / "data" / "cancello_tp.json"))
     cg.add_argument("--dataset", default="D-TIM", help="name of the dataset written in cancello_tp.json")
+    cg.add_argument("--lr", action="store_true", help="measure the low-resolution table view (MRM and full scan; synthetic series always, real ones from --serie-lr or $MZLAB_DATI) and write cancello_lr.json")
+    cg.add_argument("--serie-lr", help="folder with the real LR mzML (B_MRM-*, B_FullMass-*, B_MS2-*); default $MZLAB_DATI/mzML; --verita gives the parent of the full scan")
+    cg.add_argument("--lr-json", help="also write cancello_lr.json here (the tool never commits it)")
     cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
     cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
     cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)
+    if a.lr:
+        return main_lr(a)
     if a.hr:
         return main_hr(a)
     if a.cancello_tp:
