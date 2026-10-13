@@ -65,7 +65,7 @@ try:
             pg.locator('#flist tr', has_text="B_MRM-t15").locator("select[data-k=type]").select_option("sample")
         step("type is editable", standard_off)
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=mrm]"); ready(pg)
+        open_kind(pg, "mrm"); ready(pg)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():
             assert pg.locator("#calbar").count() == 0 and pg.locator("#np-cal").count() == 0 and pg.locator("[data-o=cal]").count() == 0, "the calibration line is made in Excel: no strip, no button"

@@ -161,11 +161,9 @@ interface Window {
   RIFERIMENTO: typeof RIFERIMENTO;
   STAT: typeof STAT;
   TOUCH: typeof TOUCH;
-  emptyTab: typeof emptyTab;
   fmtAdduct: typeof fmtAdduct;
   fmtFormula: typeof fmtFormula;
   isDark: typeof isDark;
   openBT: typeof openBT;
   rh: typeof rh;
-  setTogether: typeof setTogether;
 }

@@ -496,7 +496,7 @@ window.openBT = openBT;
 Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;

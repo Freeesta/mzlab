@@ -15,7 +15,7 @@ try:
         pg.set_input_files("#pick", [mz("B_MS2-t15")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=30000)
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(1500)
+        open_kind(pg, "ms2"); pg.wait_for_timeout(1500)
         def listed():
             pg.wait_for_selector("select[data-o=tr]", timeout=15000)
             n = pg.evaluate("document.querySelectorAll('select[data-o=tr] option').length"); assert n >= 4, n          # none, all, and the pairs

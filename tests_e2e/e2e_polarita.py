@@ -24,7 +24,7 @@ try:
         step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
         pg.click("text=Carica dati"); ready(pg)
         def list_signs():
-            drawer(pg); assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
+            drawer(pg); assert pg.evaluate("[...document.querySelectorAll('#flst .fl .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)
         def legend():
             pg.evaluate("E.files.forEach(f=>f.vis=true)"); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)
@@ -37,10 +37,10 @@ try:
             ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():
-            pg.click("#dtabs [data-t=ms2]"); ready(pg)
-            assert pg.locator("#dtabs sup").count() >= 1 and pg.inner_text("#dtabs").count("\u00b2") == 0, "MS<sup>2</sup>: a real superscript on the tab"
+            open_kind(pg, "ms2"); ready(pg)
+            assert pg.locator("#flst .fgh sup").count() >= 1 and pg.inner_text("#flst .fgh >> nth=1").count("\u00b2") == 0, "MS<sup>2</sup>: a real superscript in the group heading"
             t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
-            pg.click("#dtabs [data-t=full]"); ready(pg)
+            open_kind(pg, "full"); ready(pg)
         step("7.2 MS2 has a real superscript, no Unicode superscripts in the visible text of the Dati tab", simboli)
         step("one polarity only: no badge per file, no ESI in group heading, nothing out of the row", uniform)
         def adduct():

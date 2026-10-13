@@ -62,8 +62,8 @@ const TOUR = (() => {
       target: () => document.getElementById("sb-pane")
     },
     {
-      id: "schede",
-      target: () => document.getElementById("dtabs")
+      id: "gruppi",
+      target: () => document.querySelector("#flst .fgh")
     },
     {
       id: "tic",

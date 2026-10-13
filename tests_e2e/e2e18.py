@@ -15,7 +15,7 @@ try:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=full]"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
+        open_kind(pg, "full"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
             pg.click("#dpanels .pnl.chrom [data-a=xic]"); assert dlg()

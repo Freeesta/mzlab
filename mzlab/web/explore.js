@@ -24,7 +24,7 @@ window.toast = function(msg) {
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
-const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4, tog: false };      // merge = join the centroids of the same nominal mass (centroid files only)
+const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4 };      // merge = join the centroids of the same nominal mass (centroid files only)
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
@@ -119,13 +119,12 @@ const subText = f => String(f || "").replace(/\d/g, d => "₀₁₂₃₄₅₆�
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" };
 const kindOf = f => f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
-// the three kinds of experiment never share a graph: Dati has one sub-tab for each (Full Scan, MS2, MRM); panels and files belong to one
+// the three kinds of experiment never share a graph: Dati has one block of panels for each (Full Scan, MS2, MRM); panels and files belong to one
 const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
-// the panels of a tab; in the high-resolution bench (banco.js) the cells of every experiment are on the page together, so "the panels of the tab" is all of them
-// «Mostra tutti gli esperimenti insieme» (gear, off by default; low-resolution world): one block per experiment type on the same page. A panel still holds ONE experiment type.
-const lrTog = () => !!UIP.tog && !(window.BANCO && BANCO.on());
-const allTabs = () => !!(window.BANCO && BANCO.on()) || !!UIP.tog;
-const tabPanels = t => (t === undefined && allTabs() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
+// the blocks of every experiment type are on the same page (one block per type in the low-resolution world, the cells of the bench in the high-resolution one):
+// tabPanels() without an argument is all the panels. A panel still holds ONE experiment type; E.tab is the type of the current file.
+const lrTog = () => !(window.BANCO && BANCO.on());
+const tabPanels = t => (t === undefined ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
 // group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
 const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
 const GRP_HR = { "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.dda": () => I18N.t("files.group.dda"), "hr.infusion": () => I18N.t("files.group.infusion") };
@@ -396,6 +395,7 @@ function restoreUi() {
   if (window.DDA) DDA.restored(made);
   made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });     // one live spectrum per chromatogram, even in an old notebook
   if (E.files[E.cur]?.kind !== E.tab) STATO.file((tabFiles()[0] || { k: 0 }).k, "notebook");
+  if (typeof stackBlocks === "function") stackBlocks();       // a session saved with one type at a time: the blocks go one under the other
   renderFileList(); return true;
 }
 
@@ -433,12 +433,9 @@ function paintFiles() {
 }
 // back to the automatic colours of the current palette (the student's own colours are dropped)
 function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFiles(); renderFileList(); redrawAll(); uiSave(); }
-/** @type {(...a: any[]) => string} */
-const modeIcon = () => "";       // the little icons of the three experiments are gone from the tabs and the file list (7 Oct 2026, Federico): they stay only in Teoria, where they are big enough to read
-// go to the tab of a file that is not usable in the current one, with a one-line message
+// a file of another experiment type: that type becomes the current one (toolbar, precursor list) and the page goes to its block
 function goToFileTab(f) {
-  setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave();
-  const n = Q("#fnote"); if (n) { n.textContent = I18N.t("files.goTab", { label: f.label, kind: kindOf(f), tab: ESP.etichetta(f.kind) }); clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
+  setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f.kind);
 }
 function reorderFiles(fromK, toK, isBefore) {
   if (fromK == null || toK == null || fromK === toK) return;
@@ -487,7 +484,7 @@ function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSO
 // the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
-  Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
+  Q("#flst").querySelectorAll(".fl:not(.pr)").forEach(row => {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = e => {
       if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
@@ -495,6 +492,7 @@ function bindFileRows() {
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
+      if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
@@ -542,7 +540,7 @@ function bindDragDrop(el, k) {
 function bindFileReorder() {
   // Reorder files via HTML5 drag & drop and touch long-press
   let touchTimer = null, touchDragging = null, touchStartX = 0, touchStartY = 0;
-  Q("#flst").querySelectorAll(".fl[data-k]:not(.ghost):not(.pr)").forEach(el => {
+  Q("#flst").querySelectorAll(".fl[data-k]:not(.pr)").forEach(el => {
     const k = +el.dataset.k;
 
     bindDragDrop(el, k);
@@ -566,7 +564,7 @@ function bindFileReorder() {
         }
       }
       if (touchDragging != null) {
-        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)"));
+        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         document.querySelectorAll("#flst .fl").forEach(f => {
           if (f !== target) f.classList.remove("drop-before", "drop-after");
         });
@@ -592,7 +590,7 @@ function bindFileReorder() {
         const fromK = touchDragging;
         touchDragging = null;
         try { el.releasePointerCapture(e.pointerId); } catch (_) {}
-        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)"));
+        const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         const isBefore = target?.classList.contains("drop-before");
         document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
         if (target && +target.dataset.k !== fromK) {
@@ -611,16 +609,15 @@ function modeTag(f) {
   return `<small class="muted">${I18N.t(f.spectrum_mode === "profile" ? "files.mode.profile" : "files.mode.centroid")}</small>`;
 }
 function renderFileList() {
-  // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
-  // those of the other tabs are greyed and a click takes you to their tab
+  // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = [];
-  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
+  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : E.files.filter(f => !f.gone);       // both worlds list the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });       // a DDA file is ONE row (its Full Scan and MS2 parts open together)
-  if (window.BANCO && BANCO.on() && (E.tab === "mrm" || lrTog())) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
+  if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
-    const hasPr = E.tab === "ms2" && f.precursors && f.precursors.length;
+    const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
@@ -631,39 +628,33 @@ function renderFileList() {
         '</div>' : ""}
     </div>`;
   };
-  const ghost = f => `<div class="fl ghost" data-go="${f.k}" data-tip="${EH(f.label)} (${EH(kindOf(f))})"><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
   const isExpOpen = t => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog());
-  const others = (allTabs() ? [] : ESP.coppie).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => {
-    const open = isExpOpen(t);
-    return `<div class="fgh sep" data-gt="${t}" style="cursor:pointer"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div><div class="grp-files" style="${open ? "" : "display:none"}">${tabFiles(t).map(ghost).join("")}</div>`;
-  }).join("");
-  const isMainOpen = isExpOpen(E.tab);
+  // the open/closed state of a group: one per experiment type in the low-resolution list (its files are of one type), one for the whole list in the bench
+  const gkOf = G => lrTog() ? G.fs[0].kind : E.tab;
   // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
   const compact = !!(window.BANCO && BANCO.on() && flCompact());
   const grpClosed = g => compact && flGrpGet()[g] === 1;
-  const gh = (G, label, cls = "") => {
-    const isSub = !!cls;
-    const open = isSub ? true : isMainOpen;
+  const gh = (G, label) => {
+    const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
     if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv" style="font-size:10px;margin-right:2px">${grpClosed(G.g) ? "▸" : "▾"}</span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
-    return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+    return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
   // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
   const pend = E.pending || [], waiting = pend.filter(x => x.state === "wait").length;
   const pendBar = waiting ? `<div class="pendbar" role="progressbar" aria-label="${EH(I18N.t("files.pendingBar", { done: E.pendN - waiting, n: E.pendN }))}" aria-valuemin="0" aria-valuemax="${E.pendN}" aria-valuenow="${E.pendN - waiting}"><i style="width:${Math.round(100 * (E.pendN - waiting) / E.pendN)}%"></i></div>` : "";
   const pendRows = pend.map((x, i) => `<div class="fl pend ${x.state === "err" ? "err" : ""}" data-pend="${i}" ${x.state === "wait" ? 'aria-busy="true"' : ""}><input type="checkbox" disabled aria-label="${EH(x.label)}"><i></i><div class="fi"><b class="nm">${EH(x.label)}</b><small>${EH(x.state === "err" ? x.msg : I18N.t("files.pending"))}</small></div><button type="button" class="sec sm" data-pend-rm="${i}" aria-label="${EH(I18N.t("files.pendingRemove", { name: x.label }))}">×</button></div>`).join("");
-  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
+  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
-  Q("#flst").innerHTML = pendBar + (CONV.size > 1 ? `<div style="margin:4px 0"><button type="button" class="sec sm" data-dl-all="1" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>` : "") + pre + body + others + pendRows;
+  Q("#flst").innerHTML = pendBar + (CONV.size > 1 ? `<div style="margin:4px 0"><button type="button" class="sec sm" data-dl-all="1" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>` : "") + pre + body + pendRows;
   Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("[data-dl-all]").forEach(b => b.onclick = () => CONV.downloadAll());
   Q("#flst").querySelectorAll("[data-dl]").forEach(b => b.onclick = e => { e.stopPropagation(); CONV.download(b.dataset.dl); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
   Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
-  Q("#flst").querySelectorAll("[data-go]").forEach(x => x.onclick = () => goToFileTab(E.files[+x.dataset.go]));
   Q("#flst").querySelectorAll(".fgh[data-gt]").forEach(el => el.onclick = e => {
     if (e.target.closest("input")) return;
     const t = el.dataset.gt;
@@ -693,7 +684,7 @@ function renderFileList() {
     redrawAll();
     uiSave();
   });
-  Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
+  Q("#flst").querySelectorAll(".fl").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
   bindFileRows();
 
   bindFileReorder();
@@ -724,7 +715,7 @@ async function removeFile(f) {
   f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
   if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
-  renderTabs(); renderFileList(); renderNav();
+  renderFileList(); renderNav();
   // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
 }
@@ -787,12 +778,11 @@ Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse
 document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
 // @ts-expect-error toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
-  if (window.renderTabs) renderTabs();
-  const t = E.tab, empty = !tabFiles().length, scan = t !== "mrm", mrm = t === "mrm";
-  Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = t !== "full"; Q("#np-xic").hidden = !scan;
-  Q("#np-mrm").hidden = !mrm; 
+  if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
+  const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2"), mrm = has("mrm"), empty = !scan && !mrm;       // the buttons follow the experiment types the files have
+  Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !has("full"); Q("#np-xic").hidden = !scan;
+  Q("#np-mrm").hidden = !mrm;
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
-  if (window.emptyTab) emptyTab();
 }
 // ------------------------------------------------------------------ piccole finestre e menu
 function ask(title, def = "") {
