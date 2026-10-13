@@ -24,4 +24,6 @@ mzlab-feat = { path = "../mzlab-feat", default-features = false }
 wasm-bindgen = "0.2"
 
 [dev-dependencies]
+# the example `nativo` reads a SMILES like the page does (the .wasm of the proofs keeps `chem` off)
+mzlab-feat = { path = "../mzlab-feat" }
 sha2 = { version = "0.10", default-features = false }
