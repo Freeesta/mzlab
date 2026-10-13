@@ -20,6 +20,7 @@ SEED = """async () => {
 }"""
 STATE = """async () => ({
   opfs: await (async () => { const out = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) out.push(n); return out.sort(); })(),
+  mzlab: await (async () => { const out = []; const walk = async (d, pre) => { for await (const [n, h] of d.entries()) { if (h.kind === 'file') out.push(pre + n); else await walk(h, pre + n + '/'); } }; try { await walk(await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), ''); } catch (e) {} return out; })(),   // files left under mzlab/: the engine may create its folders again, empty, when the page starts
   idb: (await indexedDB.databases()).map(d => d.name).sort(),
   caches: (await caches.keys()).sort(),
   ls: Object.keys(localStorage).filter(k => /^(qqq|mzlab)/i.test(k)).sort(),
@@ -34,12 +35,15 @@ try:
         def load_files():
             pg.goto(base); pg.wait_for_timeout(800)
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
-            pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
-            pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 2
+            if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
+                stage(pg, [EX / "FullScan_t0.mzML", EX / "FullScan_t30.mzML"])
+                pg.click("#opbtn"); ready(pg)
+            assert pg.evaluate("E.files.length") >= 2
             pg.evaluate(SEED)
         def stay():
             load_files()
-            pg.evaluate("localStorage.removeItem('qqq.reset.note')"); pg.reload(); ready(pg); pg.wait_for_timeout(800)
+            pg.evaluate("localStorage.removeItem('qqq.reset.note')"); saved(pg); pg.reload(); ready(pg)
+            attendi(pg, "E.files.length >= 2", 60000)
             assert pg.evaluate("E.files.length") >= 2, "after a reload the files are still there (this is wanted)"
             assert pg.locator("#resetnote").count() == 1 and "stay in the browser" in pg.inner_text("#resetnote"), "the page says so"
             pg.reload(); ready(pg); pg.wait_for_timeout(500); assert pg.locator("#resetnote").count() == 0, "only once"
@@ -48,7 +52,7 @@ try:
             pg.goto(base + "?reset=files"); pg.wait_for_function("location.search === '' || !location.search.includes('reset')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
             assert "?reset" not in s["url"] and s["files"] == 0 and not s["sess"], s
-            assert "mzlab" not in s["opfs"] and "invented-by-another-part" not in s["opfs"] and "librerie" in s["opfs"], s["opfs"]
+            assert s["mzlab"] == [] and "invented-by-another-part" not in s["opfs"] and "librerie" in s["opfs"], s["opfs"]
             assert "invented-db" not in s["idb"] and "mzlab-libs" in s["idb"] and "mzlab-libdir" in s["idb"], s["idb"]
             assert "qqq-big-x" not in s["caches"] and "other-cache" in s["caches"], s["caches"]
             assert "mzlab.lang" in s["ls"] and "qqq.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
@@ -62,7 +66,7 @@ try:
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("!document.getElementById('resetdlg')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"], s
-            assert s["opfs"] == [], s["opfs"]
+            assert [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], (s["opfs"], s["mzlab"])       # the engine may create its folder again, empty, at start
             assert set(s["idb"]) <= {"qqq_lab"}, s["idb"]
             assert s["caches"] == [] or all(c.startswith("qqq-app") for c in s["caches"]) and "other-cache" not in s["caches"], s["caches"]
             assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "qqq.mappa" not in s["ls"], s["ls"]
@@ -76,7 +80,7 @@ try:
         step("gear: no storage section, one «Full reset…» button (asks, one line)", gear)
         def url_all():
             load_files(); pg.goto(base + "?reset=1"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
-            s = pg.evaluate(STATE); assert s["files"] == 0 and s["opfs"] == [] and "mzlab.lang" not in s["ls"], s
+            s = pg.evaluate(STATE); assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [] and "mzlab.lang" not in s["ls"], s
         step("?reset=1 is the full reset at start", url_all)
         def cancel():
             load_files(); pg.keyboard.press("Control+k"); pg.keyboard.type("reset"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)

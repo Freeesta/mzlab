@@ -16,18 +16,18 @@ def walk(pg, n=8):
     pg.mouse.click(c["x"], c["y"]); pg.wait_for_timeout(1200)
     s0 = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return s?s.si:null})()")
     for _ in range(n): pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(120)
-    pg.wait_for_timeout(800)
+    attendi(pg, "(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return !!s&&s.si!=null&&s.si>=5})()")
     return s0, pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return s?s.si:null})()")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-        reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/api/spectra?" in q.url or "/api/scanbin?" in q.url else None)
+        reqs = lambda: [u for u in pg.evaluate("window.__qqU || []") if "api/spectra?" in u or "api/scanbin?" in u]    # the engine answers in the page: no network request to watch
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def hr():
             s0, s1 = walk(pg)
             assert s1 is not None and s1 >= 5, (s0, s1)          # the arrows set the scan index (it starts empty after a click)
-            assert any("/api/scanbin?" in u for u in reqs), reqs
-            assert not any("/api/spectra?" in u for u in reqs), reqs
+            assert any("api/scanbin?" in u for u in reqs()), reqs()
+            assert not any("api/spectra?" in u for u in reqs()), reqs()
             assert pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.link!=null);return !!(s&&s._a&&s._a.data&&s._a.data[0]&&s._a.data[0].d.mz.length>0)})()")
         step("HR file: arrows move the spectrum; the data come from api/scanbin only", hr)
         def block():
@@ -38,12 +38,12 @@ try:
     r = Run(port=8967, wd="/tmp/wd_hrsb2")
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-        reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/api/spectra?" in q.url or "/api/scanbin?" in q.url else None)
+        reqs = lambda: [u for u in pg.evaluate("window.__qqU || []") if "api/spectra?" in u or "api/scanbin?" in u]    # the engine answers in the page: no network request to watch
         load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
         def lr():
             s0, s1 = walk(pg)
             assert s1 is not None and s1 >= 5, (s0, s1)
-            assert any("/api/spectra?" in u for u in reqs) and not any("/api/scanbin?" in u for u in reqs), reqs
+            assert any("api/spectra?" in u for u in reqs()) and not any("api/scanbin?" in u for u in reqs()), reqs()
         step("LR file: the JSON of always (nothing changes in the low-resolution world)", lr)
     r.close()
 except Exception as e:

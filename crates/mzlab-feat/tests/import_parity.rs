@@ -1,5 +1,5 @@
 //! The readers of the tables of other programs (`mzlab_feat::import`) give the same output as the JS readers they replace: `tests/data/untargeted/golden/golden.json`
-//! (written by `genera.js` from `TP_Mine/js/25_untarget.js` on the fixtures of `tests/data/untargeted/`) holds the answers of the JS; the tables must be equal
+//! (written once from the JS readers of `TP_Mine/js/25_untarget.js` on the fixtures of `tests/data/untargeted/`; frozen: the readers are gone) holds the answers of the JS; the tables must be equal
 //! (the masses come from `mzlab-core`, so the ppm of a structure check may differ in the last digits).
 
 use mzlab_feat::import::*;

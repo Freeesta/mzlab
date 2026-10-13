@@ -53,6 +53,12 @@ try:
             pg.keyboard.press("Escape"); s = call("TPDraw.smiles()"); assert "|" not in s and s, s
             o = call("TPDraw.partial()"); assert o["delta"] == "+O" and o["level"] == 3 and "|" not in o["smiles"], o
         step("TPDraw.smiles() without «|…|», TPDraw.partial() = {smiles, delta, level: 3}", export)
+        def svg_text():                                                   # the exported SVG, as text
+            return call("TPDraw.image('svg').then(b => b.text())")
+        def export_svg():
+            t = svg_text(); assert 'class="mz-parentesi"' in t and ">+O</text>" in t, t[:300]
+            assert t.count("MZLAB") == 0, "DAT text of Ketcher left in the image"
+        step("exported SVG has the brackets and the delta", export_svg)
         def remove():
             menu_on_atom(2); pg.locator("#ctx div", has_text="Togli la parentesi").first.click()
             pg.wait_for_function(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n===0}})()", timeout=8000)
@@ -75,6 +81,9 @@ try:
             assert "M  V30 COUNTS 10 9 0 0 0" in mf and any(l.split()[3:4] == ["*"] for l in lines if l.startswith("M  V30 ")), mf
             assert any("ENDPTS=(3 " in l and l.endswith("ATTACH=ANY") for l in lines), mf
         step("multicentre: dashed bond, circles on the candidates, V3000 with ENDPTS", multi)
+        def multi_svg():
+            t = svg_text(); assert 'class="mz-multicentro"' in t and t.count("<circle") >= 3 and "stroke-dasharray" in t, t[:300]
+        step("exported SVG has the dashed attachment", multi_svg)
         def multi_off():
             for i in range(10):
                 pg.keyboard.press("Escape"); menu_on_atom(6)

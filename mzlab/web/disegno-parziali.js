@@ -5,7 +5,7 @@
 // graph (`partial`, parz/1). A multicentre attachment (a substituent on «any of these ring atoms») is a second data S-group, «MZLAB_ENDPTS», on the candidate
 // atoms and the substituent atom; it is exported as a V3000 molfile with ENDPTS written here (Ketcher has no bond with a variable position).
 // The export for mzFinder is {smiles, delta, level: 3} (level 3 of Schymanski: a candidate class, never one structure), plus positionUnknown and the V3000.
-import { drawBrackets, drawMulticenter } from "./parentesi.js";
+import { drawBrackets, drawMulticenter, bracketBox } from "./parentesi.js";
 import { carica } from "./disegno-frammenti.js";
 
 export const KEY = "MZLAB", KEY_M = "MZLAB_ENDPTS", ANY = "ANY";
@@ -137,6 +137,44 @@ export function drawPartials(/** @type {any} */ K, /** @type {SVGSVGElement} */ 
   for (const p of ps) drawBrackets(g, p.atoms.filter(i => st.atoms.has(i)).map(at), { text: p.delta, pad: sc * 0.45 });
   for (const m of ms) drawMulticenter(g, at(m.sub), m.ends.map(at), { r: sc * 0.12 });
   svg.querySelectorAll("text").forEach(t => { if (!t.closest("#mz-parziali, #qqq-labels")) t.style.visibility = texts.has((t.textContent || "").trim()) ? "hidden" : ""; });
+}
+
+/** the .ket text without the data S-groups of the partial structures: the exported image gets their brackets from `addExportPartials`, not Ketcher's DAT text */
+export function ketWithoutPartials(/** @type {string} */ ket) {
+  const j = JSON.parse(ket);
+  for (const k of Object.keys(j)) if (j[k] && j[k].type === "molecule" && j[k].sgroups) j[k].sgroups = j[k].sgroups.filter((/** @type {any} */ s) => !(s.type === "DAT" && (s.fieldName === KEY || s.fieldName === KEY_M)));
+  return JSON.stringify(j);
+}
+
+/**
+ * Draws the brackets, the delta and the dashed attachment of the partial structures in an exported SVG (same drawing as `drawPartials`, 40 px per unit) and
+ * grows the picture to hold them. `off` is the shift of the structures in the picture (`exportOffset` of draw.js). Returns the text unchanged with nothing to draw.
+ */
+export function addExportPartials(/** @type {any} */ K, /** @type {string} */ svgText, /** @type {{ ox: number, oy: number }} */ off, sc = 40) {
+  const st = K.editor.struct(), ps = partials(K), ms = multis(K);
+  if (!ps.length && !ms.length) return svgText;
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
+  const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some(isNaN)) return svgText;
+  const g = doc.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute("id", "mz-parziali");
+  const at = (/** @type {number} */ i) => { const a = st.atoms.get(i); return { x: a.pp.x * sc + off.ox, y: a.pp.y * sc + off.oy }; };
+  let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
+  for (const p of ps) {
+    const pts = p.atoms.filter(i => st.atoms.has(i)).map(at); if (!pts.length) continue;
+    drawBrackets(g, pts, { text: p.delta, pad: sc * 0.45 });
+    const b = bracketBox(pts, sc * 0.45), w = 13 * 0.6 * p.delta.length + 6;
+    x0 = Math.min(x0, b.x0 - 4); y0 = Math.min(y0, b.y0 - 4); x1 = Math.max(x1, b.x1 + w); y1 = Math.max(y1, b.y1 + 4);
+  }
+  for (const m of ms) drawMulticenter(g, at(m.sub), m.ends.map(at), { r: sc * 0.12 });
+  const bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
+  root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  const pw = parseFloat(root.getAttribute("width") || ""), ph = parseFloat(root.getAttribute("height") || "");
+  if (pw) root.setAttribute("width", String(pw * (x1 - x0) / vb[2])); if (ph) root.setAttribute("height", String(ph * (y1 - y0) / vb[3]));
+  if (bg && bg.getAttribute("fill") && /^(rgb\(100%,\s*100%,\s*100%\)|#fff(fff)?|white)$/i.test(bg.getAttribute("fill") || "")) {
+    bg.setAttribute("x", String(x0)); bg.setAttribute("y", String(y0)); bg.setAttribute("width", String(x1 - x0)); bg.setAttribute("height", String(y1 - y0));
+  }
+  root.appendChild(g);
+  return new XMLSerializer().serializeToString(doc);
 }
 
 /**
