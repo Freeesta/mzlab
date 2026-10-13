@@ -28,8 +28,18 @@ TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
 
 
+def _zlib_stored(raw: bytes) -> bytes:
+    """A valid zlib stream of stored blocks: unlike zlib.compress, the bytes do not depend on the zlib build (zlib, zlib-ng), so the files keep the same hash on every machine (the e2e golden data key on it)."""
+    n = len(raw)
+    out = bytearray(b"\x78\x01")
+    for i in range(0, max(n, 1), 65535):
+        blk = raw[i:i + 65535]
+        out += bytes([1 if i + 65535 >= n else 0]) + len(blk).to_bytes(2, "little") + (len(blk) ^ 0xFFFF).to_bytes(2, "little") + blk
+    return bytes(out) + zlib.adler32(raw).to_bytes(4, "big")
+
+
 def _b64(a, f4=False) -> str:
-    return base64.b64encode(zlib.compress(np.asarray(a, "<f4" if f4 else "<f8").tobytes())).decode()
+    return base64.b64encode(_zlib_stored(np.asarray(a, "<f4" if f4 else "<f8").tobytes())).decode()
 
 
 def _arr(acc, name, data, unit="") -> str:
