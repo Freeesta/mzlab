@@ -5,6 +5,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{round, Out};
 
 use super::labels::Cell;
+use super::ms2;
 use super::summary::{criteria, level, strs};
 use super::{Entry, LrDig};
 use crate::legacy::Res;
@@ -177,7 +178,16 @@ pub fn detail<R: ReadAt>(
         .str(ltxt);
     o.raw(",\"ref_rt\":").opt(e.ref_rt);
     files_json(&mut o, d, e, &mut open)?;
-    o.raw(",\"ms2\":{\"scans\":0,\"fragments\":[],\"precursor\":null},\"transitions\":[]}");
+    let m = ms2::ms2(d, e, &mut open)?;
+    o.raw(",\"ms2\":");
+    ms2::ms2_json(&mut o, &m);
+    o.raw(",\"transitions\":");
+    if e.unexpected || e.steps > 0 || d.entries.first().is_some_and(|p| p.id == e.id) {
+        ms2::transitions_json(&mut o, d, e, &m);
+    } else {
+        o.raw("[]");
+    }
+    o.raw("}");
     Ok(o.0)
 }
 

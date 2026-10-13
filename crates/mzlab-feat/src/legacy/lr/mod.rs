@@ -5,6 +5,7 @@
 pub mod detail;
 pub mod kin;
 pub mod labels;
+pub mod ms2;
 pub mod plan;
 pub mod rows;
 pub mod summary;

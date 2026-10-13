@@ -8,7 +8,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 - `TP_Mine/files/finder-lr.js` (modulo importato da `tpmine-worker.js`): `run(ctx, args)` → JSON di `api.run` oppure `false` (si passa a Pyodide); `ofDig(ctx, fn, args)` per `detail`, `frag_tree`, `frag_tree_compare` quando `last === "rust-lr"`.
 
 ## Scavo LR: quando gira in Rust
-- Tutti i file di tipo `full`, ognuno con il suo `.mzidx` in OPFS (`mzlab/idx/`), progenitore con formula o SMILES (`plan.rust`), trasformazioni predefinite. Altrimenti (file MS2/EPI o MRM, solo m/z del progenitore, trasformazioni proprie) risponde Pyodide.
+- Tutti i file di tipo `full` (e al più `ms2`), ognuno con il suo `.mzidx` in OPFS (`mzlab/idx/`), progenitore con formula o SMILES (`plan.rust`), trasformazioni predefinite. Sono ammessi anche file `ms2` (EPI): non sono colonne della tabella, ma `plan_json` li elenca in `ms2` e il worker ne apre l'indice dopo quello delle colonne. Altrimenti (file MRM, solo m/z del progenitore, trasformazioni proprie) risponde Pyodide.
 - Ordine nel worker: detect (fase `calibration`), ipotesi (`candidates`), allineamento e Scavo (`xic`, con il carico `live()` dei candidati che passano), poi `unexpected`, `ms2`, `tables`.
 
 ## Scavo LR: semantica
@@ -17,6 +17,8 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 - Criteri sulle celle della tabella (stato DETECTED = picco): picco nei trattati, bianco e t0 ≤ 0.2, crescita (Spearman ≥ 0.8 fino al massimo, salita ≥ ×2); punteggio = quota superata (≤ 20 senza picco); forte ≥ 75, possibile ≥ 50, debole.
 - Isotopo: ione più forte (area ≥ 2×) a -1.00335 / -2.0067 / -1.99580 Da entro tolleranza e RT: criterio fallito, punteggio ≤ 40, debole.
 - Ioni inattesi: righe libere che passano i criteri, id da 100001, al più `max_unexpected` per punteggio e area. `insource` = inatteso più leggero del progenitore entro 0.5·`rt_tol_min` da lui; `isf` = null; `mrm` = null.
+- MS2 (`lr/ms2.rs`, `engine.ms2` e `transitions`): le scansioni dei file `ms2` con precursore entro la tolleranza da `mz_x` o `mz` e tempo dentro il picco nei file full (limiti ±0,05 min) si raggruppano in classi di 0,3 Da (frammenti a meno di 1,5 Da dal precursore esclusi, intensità media per scansione, ≥ 5 % del massimo, al più 6).
+- Per un prodotto ogni frammento ha `loss` e `note` («shared with the parent» entro 0,5 Da, oppure spostato della differenza di massa), `detail.transitions` ha una riga per frammento (Q3 consigliato = osservato − offset).
 - Senza MS2: livelli 4/5 come `confidence`, `ms2` vuoto, `frag_tree` con la nota «no MS2 of the parent in the files».
 
 ## Scavo LR: prove
