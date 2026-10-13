@@ -247,6 +247,9 @@ impl Engine {
         Ok(out)
     }
 
+    /// Makes the item at `slot` the polarity part of a mixed file (`1` or `-1`; anything else = the whole file).
+    pub fn set_polarity(&mut self, slot: u32, pol: i32) { if let Some(r) = self.idx.get_mut(&slot) { r.pol = [1, -1].contains(&pol).then_some(pol as i8); } }
+
     /// The answer of an `api/...` route that only needs the index, as JSON text; an empty string = not answered here (Python's).
     pub fn route(&mut self, slot: u32, path: &str, query: &str) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else {

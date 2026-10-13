@@ -63,7 +63,7 @@ impl<R: ReadAt> Routes<R> {
         if pool_has_profile || nscans == 0 || !(hr.on || bin > 0.0) {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         let precursor = q.num("prec")?.or(q.num("precursor")?);
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 && hr.on => (p * hr.ppm * 1e-6).max(1e-3),
