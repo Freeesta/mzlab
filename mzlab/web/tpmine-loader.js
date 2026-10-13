@@ -64,7 +64,7 @@
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
     const old = tabs.get(t.id);
     if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
-      old.t = t; old.ph = false; old.b.title = t.desc || t.name;
+      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name);
       if (old.opened) { old.sec.textContent = ""; openIn(old); }
       return;
     }
@@ -83,7 +83,7 @@
     document.addEventListener("tpview", x.fn);
     tabs.set(t.id, x);
   }
-  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "mzFinder failed: " + (e && e.message || e); } }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
   function removeTabs() {
     for (const x of tabs.values()) {
       const shown = !x.sec.hidden;
@@ -96,7 +96,7 @@
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "mzFinder failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
   }
 
   // ---- loading (once per page): index, then extra files + Python zip + the scripts' downloads in parallel, then the scripts run in order
@@ -113,14 +113,14 @@
     for (const n of js) await runScript(n);
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
-  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading mzFinder…</p>'; } };
+  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
     if (!tabs.size) addTab(PLACEHOLDER);
     try { await loaded; } catch (e) {
-      loaded = null; console.error("mzFinder failed to load:", e);
-      const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "mzFinder failed to load. Reload the page to try again.";
+      loaded = null; console.error("Tabui failed to load:", e);
+      const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "Tabui failed to load. Reload the page to try again.";
       return;
     }
     if (!on) return;
