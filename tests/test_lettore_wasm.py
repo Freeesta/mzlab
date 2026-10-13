@@ -33,6 +33,9 @@ def test_the_registry_recognises_the_folder_and_reads_a_scan(pkg, tmp_path):
     t, pts = kept[2]
     assert a["scan2"]["mz"] == [p[0] for p in pts] and a["scan2"]["it"] == [p[1] for p in pts]
     assert a["metodo"]["schema"]
+    # the mzML written by the .wasm: the header, one spectrum per scan of the index, the progress reaching the end
+    assert a["mzml"].startswith("<?xml") and a["mzml"].rstrip().endswith("</mzML>")
+    assert a["mzml"].count("<spectrum ") == len(kept) and a["ticks"][-1] == [len(kept), len(kept)]
 
 
 def test_a_folder_that_no_reader_knows_is_an_error_with_a_key(pkg, tmp_path):

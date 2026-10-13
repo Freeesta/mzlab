@@ -22,7 +22,7 @@ tools/wasm_opt.sh "$out/grafo/mzlab_feat_grafo_wasm_bg.wasm" $limit "mzFinder gr
 # the readers of the vendor files (.D, .wiff, .raw), loaded only when a dataset is opened through them: crates/mzlab-lettori-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/lettori" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm
-tools/wasm_opt.sh "$out/lettori/mzlab_lettori_wasm_bg.wasm" $limit "lettori"
+tools/wasm_opt.sh "$out/lettori/mzlab_lettori_wasm_bg.wasm" 600000 "lettori"
 python3 - "$out" <<'P'
 import hashlib, json, sys
 o = sys.argv[1]
