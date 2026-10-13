@@ -16,12 +16,12 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def tabs_gone():
-            assert pg.is_visible("#hrbar") and not pg.is_visible("#dtabs"), "the toolbar of the bench replaces the tabs"
+            assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
             n = pg.locator("#hrbar button[data-hb]").count(); assert n >= 14, n
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
-            assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl:not(.ghost)").count() >= 1
+            assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl").count() >= 1
         step("no marks (HR, DDA, profile) in the rows of the files", no_badges)
         def add_del():
             n0 = pg.evaluate("E.panels.length")
@@ -89,7 +89,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def lr():
-            assert pg.is_visible("#dtabs") and not pg.is_visible("#hrbar") and pg.is_visible("#g-add")
+            assert not pg.is_visible("#hrbar") and pg.is_visible("#g-add")
         step("low-resolution world: the tabs and the old buttons are there, no toolbar of the bench", lr)
     r.close()
 except Exception as e:

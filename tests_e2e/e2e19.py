@@ -16,7 +16,7 @@ try:
         step("only the loading screen with the funny phrases exists", load)
         stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=ms2]"); ready(pg)
+        open_kind(pg, "ms2"); ready(pg)
         def pair():
             n = pg.locator("#dpanels .parr").count(); assert n >= 1, n
             c = pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom')"); 

@@ -262,7 +262,7 @@ window.MAPPA = (() => {
     if (!s.t0) s.t0 = performance.now();
     ask.panel = p; ask(pt);
   }
-  const frame = p => { const s = st(p); if (!s.raf) s.raf = requestAnimationFrame(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
+  const frame = p => { const s = st(p); if (!s.raf) s.raf = FRAME.next(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
   const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
   const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
   function canvasOf(c) {
@@ -883,8 +883,8 @@ window.MAPPA = (() => {
     const h = host(); if (!h) return;
     h.querySelectorAll(".pnl").forEach(wire);
     new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(wire); }).observe(h, { childList: true });
-    addEventListener("resize", () => requestAnimationFrame(clamp));
-    new ResizeObserver(() => requestAnimationFrame(clamp)).observe(h);
+    addEventListener("resize", () => FRAME.next(clamp));
+    FRAME.ro(h, () => FRAME.next(clamp));
   }
   window.MAPPA_PNL = { clamp, setH };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();

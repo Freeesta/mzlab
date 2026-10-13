@@ -23,7 +23,7 @@ try:
         def enter():
             pg.evaluate(f"{SPEC}.el.querySelector('[data-a=max]').click()"); pg.wait_for_timeout(900)
             assert pg.evaluate(f"{SPEC}.el.classList.contains('max')")
-            inert = pg.evaluate("[...document.querySelectorAll('header,#dfiles,#dtabs,#tools,#dpanels>.pnl')].filter(e=>!e.classList.contains('max')).every(e=>e.hasAttribute('inert'))")
+            inert = pg.evaluate("[...document.querySelectorAll('header,#dfiles,#tools,#dpanels>.pnl')].filter(e=>!e.classList.contains('max')).every(e=>e.hasAttribute('inert'))")
             assert inert, "everything else is inert"
             assert not pg.evaluate(f"{SPEC}.el.hasAttribute('inert')")
         step("full screen: the rest is inert", enter)

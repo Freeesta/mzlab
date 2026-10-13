@@ -33,7 +33,7 @@ function attach(p) {
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
     p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-    if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
   };
   // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
   if (p.ch) {
@@ -496,7 +496,7 @@ window.openBT = openBT;
 Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;

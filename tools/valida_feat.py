@@ -116,8 +116,22 @@ def main_cancello_tp(a) -> int:
     verita = json.loads(Path(a.verita).read_text(encoding="utf-8"))
     lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
     _, run, trattate = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
-    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat())
+    _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro / "bis")          # a second run: determinism of the TP view
+    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat(), run2)
     for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_tp_json):
+        print(p)
+    return 0
+
+
+def main_hr(a) -> int:
+    import datetime
+    from valida import hr
+    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_hr"
+    c, det = hr.misura(a.robustezza, a.serie, a.mzmine, lavoro, a.data or datetime.date.today().isoformat())
+    print(f"vista_tabella_hr: {c['vista_tabella_hr']}  (DDA files: {det['dati_dda']}; mzmine: {det['csv']})")
+    for k in c["criteri"]:
+        print(f"  {k['id']:<34} {'skipped' if k['ok'] is None else ('ok' if k['ok'] else 'FAIL'):<8} {k['valore']} (threshold {k['soglia']})")
+    for p in hr.scrivi(Path(a.uscita) if a.uscita else lavoro, c, det, a.hr_json):
         print(p)
     return 0
 
@@ -144,7 +158,12 @@ def main(argv=None) -> int:
     cg.add_argument("--cancello-tp", action="store_true", help="measure the raw TP view against the truth (--serie, --verita) and write cancello_tp.json and cancello_tp_rapporto.{json,md}")
     cg.add_argument("--cancello-tp-json", default=str(ROOT / "TP_Mine" / "data" / "cancello_tp.json"))
     cg.add_argument("--dataset", default="D-TIM", help="name of the dataset written in cancello_tp.json")
+    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS/Esempio raw e mzML) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
+    cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
+    cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)
+    if a.hr:
+        return main_hr(a)
     if a.cancello_tp:
         return main_cancello_tp(a)
     if a.cancello:

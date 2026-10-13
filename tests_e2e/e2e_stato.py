@@ -16,13 +16,13 @@ try:
             assert pg.evaluate("STATO.verifica()") == [], pg.evaluate("STATO.verifica()")
         def tabs():
             for t in ("mrm", "ms2", "full"):
-                pg.click("#dtabs [data-t=%s]" % t); ready(pg)
+                open_kind(pg, t); ready(pg)
                 assert pg.evaluate("E.tab") == t
                 inv()
             assert "tab" in pg.evaluate("window.__ev"), "tab switches fire stato:cambiato"
         step("tabs: invariants hold and the switches are events", tabs)
         def dbl():
-            pg.click("#dtabs [data-t=mrm]"); ready(pg); pg.evaluate("window.__ev = []")
+            open_kind(pg, "mrm"); ready(pg); pg.evaluate("window.__ev = []")
             c = pg.locator(".pnl.mrm canvas").first; c.scroll_into_view_if_needed(); b = c.bounding_box()
             pg.mouse.dblclick(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2); pg.wait_for_timeout(500)
             assert pg.evaluate("E.tab") == "mrm" and "tab" not in pg.evaluate("window.__ev"), pg.evaluate("window.__ev")

@@ -65,12 +65,12 @@ try:
             pg.locator('#flist tr', has_text="B_MRM-t15").locator("select[data-k=type]").select_option("sample")
         step("type is editable", standard_off)
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#dtabs [data-t=mrm]"); ready(pg)
+        open_kind(pg, "mrm"); ready(pg)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():
             assert pg.locator("#calbar").count() == 0 and pg.locator("#np-cal").count() == 0 and pg.locator("[data-o=cal]").count() == 0, "the calibration line is made in Excel: no strip, no button"
             assert pg.evaluate("E.panels.some(p=>p.type==='mrm'&&p.imode==='man'&&p.intf==='all')")
-            assert "standard" in pg.inner_text("#flst") and pg.locator("#flst .fgh", has_text="MRM").count() == 1, pg.inner_text("#flst")[:200]      # header = the experiment (MRM), standard / campioni as small sub-groups
+            assert pg.locator("#flst abbr.ftag[title=Standard]").count() >= 1 and pg.locator("#flst abbr.ftag").first.inner_text() == "std" and pg.locator("#flst .fgh", has_text="MRM").count() == 1, pg.inner_text("#flst")[:200]      # header = the experiment (MRM), standard / campioni as small sub-groups
         step("MRM session: no calibration strip, integration tool ready", mrm_ui)
         def integrate():
             pg.evaluate("E.files.filter(f=>f.kind==='mrm').forEach(f=>f.vis=true); redrawAll()")

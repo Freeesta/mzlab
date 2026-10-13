@@ -45,11 +45,6 @@ try:
             pg.click("#backdata"); pg.wait_for_timeout(600)
             assert pg.is_visible("#v-data")
         step("loading page lists loaded files and goes back", adding)
-        def empty():
-            pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(500)
-            pg.click("#tabempty [data-load]"); pg.wait_for_timeout(600)
-            assert pg.is_visible("#loaded")
-        step("empty tab: button to the loading page", empty)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

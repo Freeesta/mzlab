@@ -11,36 +11,34 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1500)
         pg.click("text=Carica dati"); ready(pg)
-        tabs = lambda: pg.evaluate("[...document.querySelectorAll('#dtabs [data-t]')].map(b=>b.dataset.t+':'+b.querySelector('i').innerText)")
+        tabs = lambda: pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(g=>g.dataset.gt+':'+g.querySelector('em').innerText)")
         def t1(): assert tabs() == ["full:3", "ms2:1", "mrm:1"], tabs()
-        step("tab bar with per-type counts", t1)
+        step("file list groups with per-type counts", t1)
         def t2():
             assert pg.evaluate("E.tab") == "full"
-            assert pg.evaluate("E.panels.filter(p=>p.tab==='full'&&p.el.style.display!=='none').length") >= 2
-            assert pg.evaluate("E.panels.every(p=>p.tab==='full'||p.el.style.display==='none')")
-        step("Full Scan tab: chromatogram + spectrum, nothing else", t2)
+            assert pg.evaluate("E.panels.filter(p=>p.tab==='full').length") >= 2
+            assert pg.evaluate("E.panels.every(p=>p.el.style.display!=='none')"), "every block is on the page"
+        step("Full Scan block: chromatogram + spectrum", t2)
         def t3():
-            pg.click("#dtabs [data-t=ms2]"); ready(pg)
+            open_kind(pg, "ms2"); ready(pg)
             assert pg.evaluate("E.tab") == "ms2"
             n = pg.evaluate("E.panels.filter(p=>p.tab==='ms2').length"); assert n >= 2 and n % 2 == 0, n
             assert pg.locator("#expbar").count() == 0                       # the experiments strip was removed (precursors live in the file list)
-            assert pg.evaluate("E.panels.filter(p=>p.tab==='full').every(p=>p.el.style.display==='none')")
-        step("MS2 tab: one chromatogram+spectrum per precursor", t3)
+        step("MS2 block: one chromatogram+spectrum per precursor", t3)
         def t4():
-            pg.click("#dtabs [data-t=mrm]"); ready(pg)
+            open_kind(pg, "mrm"); ready(pg)
             m = pg.evaluate("E.panels.filter(p=>p.tab==='mrm')"); assert len(m) >= 1, len(m)
             trs = pg.evaluate("E.panels.find(p=>p.tab==='mrm')?.tr || []")
             cal = pg.evaluate("[CAL.quant, CAL.qual]")
             assert cal[0] and cal[1], cal
             assert cal[0] in trs and cal[1] in trs, (cal, trs)
-        step("MRM tab: Quantificatore and Qualificatore panels", t4)
+        step("MRM block: Quantificatore and Qualificatore panels", t4)
         def t5():
-            pg.click("#ovbtn"); pg.wait_for_timeout(500)
-            assert pg.locator("#ovw").is_visible()
-            hs = pg.locator("#ovw th").all_inner_texts(); assert len(hs) == 4, hs
-            pg.locator("#ovw button.fc", has_text="MS2").first.click(); pg.wait_for_timeout(1500)
-            assert pg.evaluate("E.tab") == "ms2"
-        step("overview matrix: click opens the file in its tab", t5)
+            open_kind(pg, "full"); pg.wait_for_timeout(1500)
+            assert pg.evaluate("E.tab") == "full"
+            open_kind(pg, "ms2"); pg.wait_for_timeout(1500)
+            assert pg.evaluate("E.tab") == "ms2" and pg.evaluate("E.files[E.cur].kind") == "ms2"
+        step("click on a file of another group: that type becomes the current one", t5)
         def t6():
             pg.evaluate("setTab('full')"); pg.wait_for_timeout(500)
             pg.reload(); pg.wait_for_timeout(1500)
