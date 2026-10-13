@@ -1,0 +1,9 @@
+{
+ "nota": "MZmine 3.9 LC-MS workflow defaults for Orbitrap (documentation: mass detection centroid, ADAP chromatogram builder, local minimum resolver, join aligner, gap filling)",
+ "polarita": "Positive",
+ "MassDetection": {"noise_level": 10000.0},
+ "ADAPChromatogramBuilder": {"min_consecutive_scans": 5, "group_intensity_threshold": 10000.0, "min_highest_intensity": 30000.0, "mz_tol_abs": 0.002, "mz_tol_ppm": 5.0},
+ "MinimumSearchResolver": {"min_data_points": 5, "chromatographic_threshold": 0.85, "search_rt_range": 0.1, "min_relative_height": 0.0, "min_absolute_height": 30000.0, "min_ratio": 1.7, "duration_min": 0.0, "duration_max": 1.0},
+ "JoinAligner": {"mz_tol_abs": 0.0015, "mz_tol_ppm": 5.0, "weight_mz": 3.0, "rt_tol": 0.2, "weight_rt": 1.0},
+ "GapFilling": {"intensity_tolerance": 0.2, "mz_tol_abs": 0.0015, "mz_tol_ppm": 5.0, "rt_tol": 0.2, "min_data_points": 1}
+}

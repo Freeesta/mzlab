@@ -1,0 +1,5 @@
+{
+ "nota": "mzLab (mzFinder) with the recipe chosen by the pipeline itself from the first file (empty recipe = automatic); no parent: the feature table only. With a parent the identities and the candidates are read too",
+ "recipe": "",
+ "regole": "TP_Mine/data/regole_tp.json"
+}
