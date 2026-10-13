@@ -51,7 +51,7 @@ fn campione(raw: &RawFileReader) -> Option<V> {
     ])
 }
 
-fn strumento(raw: &RawFileReader, anon: bool) -> Option<V> {
+fn strumento(raw: &RawFileReader, src: &Source) -> Option<V> {
     let id = |n: usize| {
         raw.inst_id_strings
             .get(n)
@@ -66,7 +66,17 @@ fn strumento(raw: &RawFileReader, anon: bool) -> Option<V> {
     obj(vec![
         ("produttore", Some(V::s("Thermo Fisher Scientific"))),
         ("modello", model),
-        ("serie", if anon { None } else { id(2) }),
+        (
+            "serie",
+            if src.anonymous {
+                raw.inst_id_strings
+                    .get(2)
+                    .and_then(|s| src.alias("serial", s))
+                    .map(V::s)
+            } else {
+                id(2)
+            },
+        ),
         ("hardware", id(4)),
         (
             "software",
@@ -181,11 +191,21 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             metodo::origin(src, campi::clock(raw.header.audit_start.time).as_deref()),
         ),
         ("campione", campione(raw)),
-        ("strumento", strumento(raw, anon)),
+        ("strumento", strumento(raw, src)),
         (
             "operatore",
             if anon {
-                None
+                obj(vec![
+                    (
+                        "utente",
+                        src.alias("user", &raw.header.audit_start.tag2).map(V::s),
+                    ),
+                    (
+                        "computer",
+                        src.alias("computer", &raw.raw_file_info.computer_name)
+                            .map(V::s),
+                    ),
+                ])
             } else {
                 obj(vec![
                     ("utente", text(&raw.header.audit_start.tag2)),

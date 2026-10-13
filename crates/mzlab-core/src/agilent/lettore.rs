@@ -188,6 +188,7 @@ fn document(l: &LettoreAgilent) -> String {
         files,
         sample: None,
         anonymous: l.d.anonymous,
+        secret: crate::pseudo::current(),
     })
 }
 

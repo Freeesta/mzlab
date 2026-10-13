@@ -87,6 +87,7 @@ impl Engine {
             files: vec![file],
             sample: Some(sample),
             anonymous,
+            secret: mzlab_core::pseudo::current(),
         };
         Ok(mzlab_core::metodo_wiff::from_wiff(&ole, sample, &src))
     }
@@ -115,6 +116,7 @@ impl Engine {
                 ..Default::default()
             }],
             anonymous,
+            secret: mzlab_core::pseudo::current(),
             ..Default::default()
         };
         Ok(metodo::from_dam(m, &src))

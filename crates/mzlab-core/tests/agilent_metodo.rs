@@ -16,6 +16,7 @@ fn source(_: &AgilentD, anonymous: bool) -> Source {
         files: vec![],
         sample: None,
         anonymous,
+        secret: None,
     }
 }
 
