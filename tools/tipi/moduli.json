@@ -19,6 +19,7 @@
     "../../mzlab/web/errori.js",
     "../../mzlab/web/disegno-font.js",
     "../../mzlab/web/disegno-barra.js",
+    "../../mzlab/web/disegno-frammenti.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
