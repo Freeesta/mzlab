@@ -52,8 +52,15 @@ def rows_ready(pg):
     pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length >= {len(names) + 1}", timeout=240000)
 
 
-def settr(pg, t):
-    pg.evaluate("document.querySelector('#tp-tr').closest('details').open = true"); pg.fill("#tp-tr", t)
+def settr(pg, t):                                           # the text view of the list (the table is the default)
+    pg.evaluate("document.querySelector('#tp-tr').closest('details').open = true")
+    if pg.get_attribute(".tr-mode", "aria-pressed") != "true": pg.click(".tr-mode")
+    pg.fill("#tp-tr", t)
+
+
+def as_table(pg):
+    pg.evaluate("document.querySelector('#tp-tr').closest('details').open = true")
+    if pg.get_attribute(".tr-mode", "aria-pressed") == "true": pg.click(".tr-mode")
 
 
 def dig(pg, tr=None):
@@ -93,6 +100,43 @@ try:
         def same_list():
             assert dig(pg, base["text"]) == base["rows"], "the default text gives the default Dig"
         step("the default text again: the same Dig", same_list)
+
+        def table_view():
+            settr(pg, base["text"]); as_table(pg)
+            pg.wait_for_selector(".tptr tbody tr:not(.cls)")
+            assert pg.locator(".tptr tbody tr:not(.cls)").count() == 19, "one row per transformation"
+            assert pg.locator(".tptr tr.cls").count() >= 3, "grouped by class"
+            hyd = pg.locator(".tptr tr", has_text="hydroxylation").first.inner_text()
+            assert "15.9949" in hyd, hyd
+            box = pg.locator('.tptr input[aria-label="Search hydroxylation"]').bounding_box()
+            assert box["width"] >= 24 and box["height"] >= 24, box
+            pg.uncheck('.tptr input[aria-label="Search hydroxylation"]')
+            assert pg.input_value("#tp-tr").startswith("# hydroxylation;+O"), pg.input_value("#tp-tr")[:60]
+            assert pg.locator(".tptr tr.off").count() == 1
+            pg.check('.tptr input[aria-label="Search hydroxylation"]')
+            assert pg.input_value("#tp-tr") == base["text"], "on again: the text as it was"
+        step("the table reads the list, a box switches a line off and on", table_view)
+
+        def table_add():
+            as_table(pg)
+            pg.fill(".tr-n", "my C2H2 rule"); pg.fill(".tr-c", "+C2H2")
+            pg.wait_for_function("document.querySelector('.tr-msg').textContent.includes('26.0157')")
+            pg.click(".tr-go")
+            pg.wait_for_selector(".tptr tr:has-text('my C2H2 rule')")
+            assert pg.input_value("#tp-tr").rstrip().endswith("my C2H2 rule;+C2H2"), pg.input_value("#tp-tr")[-60:]
+            pg.fill(".tr-n", "bad one"); pg.fill(".tr-c", "+Zz9"); pg.click(".tr-go")
+            pg.wait_for_selector(".tr-msg.err")
+            assert "bad one" not in pg.input_value("#tp-tr"), "a wrong change is not added"
+            settr(pg, base["text"])
+        step("Add checks the change in Rust, shows Δm and writes the line", table_add)
+
+        def readable_names():
+            g = lambda e: pg.evaluate(e)
+            assert g("TPTR.changeText('rottura+hydration')") == "cleavage + hydration"
+            assert g("TPTR.changeText('loss_of_c2h2+loss_of_c2h2')") == "2 × loss of C2H2"
+            assert g("TPTR.changeText('loss_of_propene_n_deisopropylation')") == "loss of propene n deisopropylation"
+            assert "<sub>3</sub>" in g("TPTR.change('+H2O3')")
+        step("readable names for the column Change", readable_names)
 
         def wrong_line():
             settr(pg, base["text"] + "\nbroken line without a semicolon"); pg.fill("#tp-mol", PARENT); pg.click("#tp-go")
