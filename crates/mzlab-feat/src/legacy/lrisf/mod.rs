@@ -4,19 +4,23 @@
 //! `isf_eval(samples, parent_mz, ions, formula_p) -> Vec<Option<IsfVerdict>>` (`api.classify_ions` with `fam = false`; never panics: on an error
 //! the ion gets `None`), `lr_tree(ms2, mz_x, ion_formula, smiles) -> json` (the supposed tree, `fragtree.lr`) and `compare_lr(tree, tp_mz, dm) -> json`.
 
+#[cfg(feature = "chem")]
 pub mod compare;
 pub mod isf;
 pub mod isf_report;
 pub mod isf_split;
 pub mod isf_text;
+#[cfg(feature = "chem")]
 pub mod tree;
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Value;
 use mzlab_core::origin::{origin_report, Request, Sample};
 
+#[cfg(feature = "chem")]
 pub use compare::compare_lr;
 pub use isf_report::{classify_report, Ramp};
+#[cfg(feature = "chem")]
 pub use tree::{lr_tree, resolve_smiles, ParentMs2};
 
 /// A full-scan file of the series: its label, treatment time (min) and the survey section of its `.mzidx` (what the pipeline has per file).

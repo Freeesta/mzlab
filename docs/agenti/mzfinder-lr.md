@@ -15,3 +15,5 @@
 - `compare_lr(tree: &Value, tp_mz: &[f64], dm: Option<f64>) -> String` = `compare_lr` + `_tally`: un frammento del prodotto entro 0.5 Da dal nodo è `same`, entro 0.5 Da dal nodo più `dm` è `shifted`; senza frammenti `{"ok": false, "note": "no MS2 of the product", "marks": {}}`.
 - Dati d'oro: chiavi `tree` e `compare` di `tests/golden/finder_lrisf.json` (il riferimento chiama `fragtree.lr` con un esperimento finto). Un elemento fuori dall'elenco HR fa sollevare il Python; il Rust disegna l'albero senza formule.
 - Dimensioni di prova (wasm32, `opt-level z`, lto, senza `wasm-opt`; base con solo il lettore JSON 88 KB): `classify_report` +40 KB, `lr_tree` + `compare_lr` +112 KB (grafo chimico e spazio delle formule), `isf_eval` con `origin_report` di `mzlab-core` +145 KB; tutto insieme 378 KB.
+
+`lr_tree` e `compare_lr` (moduli `tree`, `compare`) esistono solo con la feature `chem` (usano `fragtree`); il verdetto ISF compila anche senza, come la build del sito.

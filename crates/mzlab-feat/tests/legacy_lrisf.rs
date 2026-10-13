@@ -2,9 +2,9 @@
 //! the inputs are the reports of `origin_report`, numbers within 1e-9, labels, `doubtful` and texts exactly equal.
 
 use mzlab_core::json::{parse, Value as V};
-use mzlab_feat::legacy::lrisf::{
-    classify_report, compare_lr, lr_tree, resolve_smiles, ParentMs2, Ramp,
-};
+use mzlab_feat::legacy::lrisf::{classify_report, Ramp};
+#[cfg(feature = "chem")]
+use mzlab_feat::legacy::lrisf::{compare_lr, lr_tree, resolve_smiles, ParentMs2};
 use serde_json::Value;
 
 fn golden() -> Value {
@@ -89,6 +89,7 @@ fn damaged_reports_do_not_panic() {
 }
 
 #[test]
+#[cfg(feature = "chem")]
 fn supposed_tree_matches_python() {
     let g = golden();
     let cases = g["tree"].as_array().unwrap();
@@ -124,6 +125,7 @@ fn supposed_tree_matches_python() {
 }
 
 #[test]
+#[cfg(feature = "chem")]
 fn tree_without_ms2_is_the_note() {
     let none: Value =
         serde_json::from_str(&lr_tree(None, 300.3, Some("C10H12N2O3S"), None)).unwrap();
@@ -142,6 +144,7 @@ fn tree_without_ms2_is_the_note() {
 }
 
 #[test]
+#[cfg(feature = "chem")]
 fn comparison_matches_python() {
     let g = golden();
     let cases = g["compare"].as_array().unwrap();
