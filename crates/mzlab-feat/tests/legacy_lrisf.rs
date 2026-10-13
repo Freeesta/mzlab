@@ -2,7 +2,9 @@
 //! the inputs are the reports of `origin_report`, numbers within 1e-9, labels, `doubtful` and texts exactly equal.
 
 use mzlab_core::json::{parse, Value as V};
-use mzlab_feat::legacy::lrisf::{classify_report, Ramp};
+use mzlab_feat::legacy::lrisf::{
+    classify_report, compare_lr, lr_tree, resolve_smiles, ParentMs2, Ramp,
+};
 use serde_json::Value;
 
 fn golden() -> Value {
@@ -83,5 +85,72 @@ fn damaged_reports_do_not_panic() {
     ] {
         let rep: V = parse(s.as_bytes()).unwrap();
         assert!(classify_report(&rep, None, None).is_none());
+    }
+}
+
+#[test]
+fn supposed_tree_matches_python() {
+    let g = golden();
+    let cases = g["tree"].as_array().unwrap();
+    assert!(cases.len() >= 20);
+    let mut with_smiles = 0;
+    for c in cases {
+        let (name, i) = (c["name"].as_str().unwrap(), &c["in"]);
+        let (mz, rel) = (floats(&i["mz"]), floats(&i["rel"]));
+        let ms2 = ParentMs2 {
+            mz: &mz,
+            rel: &rel,
+            scans: i["scans"].as_u64().unwrap() as usize,
+            precursor: i["precursor"].as_f64(),
+        };
+        let smiles = resolve_smiles(i["smiles_in"].as_str(), i["neutral_text"].as_str());
+        assert_eq!(smiles.as_deref(), i["smiles"].as_str(), "{name}: smiles");
+        let got = lr_tree(
+            Some(&ms2),
+            i["mz_x"].as_f64().unwrap(),
+            i["ion"].as_str(),
+            smiles.as_deref(),
+        );
+        let got: Value = serde_json::from_str(&got).unwrap();
+        with_smiles += got["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|n| !n["smiles"].as_array().unwrap().is_empty())
+            .count();
+        same(&got, &c["out"], name);
+    }
+    assert!(with_smiles > 0);
+}
+
+#[test]
+fn tree_without_ms2_is_the_note() {
+    let none: Value =
+        serde_json::from_str(&lr_tree(None, 300.3, Some("C10H12N2O3S"), None)).unwrap();
+    assert_eq!(none["ok"], false);
+    assert_eq!(none["note"], "no MS2 of the parent in the files");
+    let empty = ParentMs2 {
+        mz: &[],
+        rel: &[],
+        scans: 3,
+        precursor: None,
+    };
+    assert_eq!(
+        lr_tree(Some(&empty), 300.3, None, None),
+        lr_tree(None, 300.3, None, None)
+    );
+}
+
+#[test]
+fn comparison_matches_python() {
+    let g = golden();
+    let cases = g["compare"].as_array().unwrap();
+    assert!(cases.len() >= 20);
+    for c in cases {
+        let name = c["name"].as_str().unwrap();
+        let tree = parse(c["tree"].to_string().as_bytes()).unwrap();
+        let got = compare_lr(&tree, &floats(&c["tp_mz"]), c["dm"].as_f64());
+        let got: Value = serde_json::from_str(&got).unwrap();
+        same(&got, &c["out"], name);
     }
 }

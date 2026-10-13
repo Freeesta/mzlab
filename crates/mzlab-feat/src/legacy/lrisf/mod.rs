@@ -2,18 +2,22 @@
 //! `TP_Mine/py/tpmine/isf.py` and `fragtree.py` (`tools/finder_lrisf_riferimento.py`, `tests/golden/finder_lrisf.json`). The verdict (a
 //! probability) lives only here, never in `mzlab-core`, whose `ionfamily` ports measure and do not conclude. The classifier is
 //! `isf_eval(samples, parent_mz, ions, formula_p) -> Vec<Option<IsfVerdict>>` (`api.classify_ions` with `fam = false`; never panics: on an error
-//! the ion gets `None`).
+//! the ion gets `None`), `lr_tree(ms2, mz_x, ion_formula, smiles) -> json` (the supposed tree, `fragtree.lr`) and `compare_lr(tree, tp_mz, dm) -> json`.
 
+pub mod compare;
 pub mod isf;
 pub mod isf_report;
 pub mod isf_split;
 pub mod isf_text;
+pub mod tree;
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Value;
 use mzlab_core::origin::{origin_report, Request, Sample};
 
+pub use compare::compare_lr;
 pub use isf_report::{classify_report, Ramp};
+pub use tree::{lr_tree, resolve_smiles, ParentMs2};
 
 /// A full-scan file of the series: its label, treatment time (min) and the survey section of its `.mzidx` (what the pipeline has per file).
 pub type IsfSample<'a, R> = Sample<'a, R>;
