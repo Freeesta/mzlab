@@ -114,6 +114,11 @@ def open_kind(pg, kind):
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
     if pg.is_visible(sel): pg.click(sel)
+def a11y_open(pg):
+    """The accessibility submenu of the settings is closed at first: open it before touching font, contrast or palette."""
+    pg.evaluate("(d => { if (d) d.open = true; })(document.querySelector('#uip-a11y'))")
+def set_pal(pg, v):
+    a11y_open(pg); pg.select_option("#uip-pal", v)
 def get_env(suffix: str, default=None):
     """Read MZLAB_<suffix> or legacy QQQ_<suffix> (MZLAB_* takes precedence)."""
     return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))

@@ -74,17 +74,15 @@ try:
             assert len(pg.evaluate(LIST, "idx")) == 2 and len(pg.evaluate(LIST, "files")) == 2
         step("the index of a removed file is freed first", removed)
         def gear():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-space-row:not([hidden])", timeout=10000)
-            pg.wait_for_function("document.getElementById('uip-space-val').textContent.includes('MB')", timeout=10000)
-            t = pg.inner_text("#uip-space-val"); assert "MB" in t, t
-            pg.wait_for_selector("#uip-arch-der:not([disabled])", timeout=10000)          # «free the derived data»: the indexes go, the files stay
-            pg.click("#uip-arch-der"); pg.wait_for_selector("#askok", timeout=10000); pg.click("#askok")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=10000)
+            assert pg.locator("#uip-space-val").count() == 0 and pg.locator("#uip-arch-der").count() == 0, "no storage section in the gear"
+            pg.keyboard.press("Escape")
+            pg.evaluate("fetch('api/spazio?derivati=1', {method:'POST'}).then(r=>r.text())")          # the route stays: the indexes go, the files stay
             for _ in range(40):
                 if pg.evaluate(LIST, "idx") == []: break
                 pg.wait_for_timeout(500)
             assert pg.evaluate(LIST, "idx") == [] and len(pg.evaluate(LIST, "files")) == 2, (pg.evaluate(LIST, "idx"), pg.evaluate(LIST, "files"))
-            pg.keyboard.press("Escape")
-        step("the gear shows the space and frees the derived data", gear)
+        step("the gear has no storage section; the derived data are freed by the route", gear)
         def new_session():
             pg.click("#newrun"); pg.wait_for_selector("#askok", timeout=10000); pg.click("#askok")
             ok = False

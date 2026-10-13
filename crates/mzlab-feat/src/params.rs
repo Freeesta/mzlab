@@ -32,6 +32,7 @@ pub struct Hist {
 impl Hist {
     pub fn new() -> Hist {
         Hist {
+            // fixed size: BINS histogram counters
             counts: vec![0; BINS],
         }
     }
@@ -229,7 +230,7 @@ fn measure<R: ReadAt>(
     if apex < from || apex >= to {
         return Ok(None);
     }
-    let mut y = vec![0.0; to - from];
+    let mut y = trace::filled(to - from, 0.0f64)?;
     let half = f.height[i] as f64 * 0.2;
     index.each_peak(si, a, b, |p, m, it| {
         if p >= from && p < to && it > y[p - from] {

@@ -62,9 +62,12 @@ def concordanza_d5(nativa: Tabella, csv: str | None, colonne: list[int]) -> tupl
 
 
 def trova_hr(cartella: str | None) -> Path | None:
-    """The folder of the DDA files: `--robustezza`, else `$MZLAB_DATI/HRMS/Esempio raw e mzML`; None when it does not exist."""
-    base = Path(cartella) if cartella else (Path(os.environ["MZLAB_DATI"]) / "HRMS" / "Esempio raw e mzML" if os.environ.get("MZLAB_DATI") else None)
-    return base if base and base.is_dir() else None
+    """The folder of the DDA files: `--robustezza`, else the first of `$MZLAB_DATI/HRMS` and `$MZLAB_DATI/HRMS/Esempio raw e mzML` that holds the files; None when there is none."""
+    if cartella:
+        return Path(cartella) if Path(cartella).is_dir() else None
+    radice = Path(os.environ["MZLAB_DATI"]) / "HRMS" if os.environ.get("MZLAB_DATI") else None
+    cand = [radice, radice / "Esempio raw e mzML"] if radice else []
+    return next((c for c in cand if c.is_dir() and any(c.glob("Orbitrap_*_DDApos_*.mzML"))), None)
 
 
 def robustezza(cartella: Path | None, lavoro: Path, motivo=("Exploris120", "Fusion")) -> tuple[list[dict], dict]:

@@ -28,7 +28,7 @@ try:
 
         pg.wait_for_selector("#tour-invito", timeout=5000)
         inv_text = pg.inner_text("#tour-invito")
-        assert "Prima volta qui?" in inv_text, inv_text
+        assert "Primo accesso? Un tour guidato degli strumenti." in inv_text and "minut" not in inv_text, inv_text
 
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()

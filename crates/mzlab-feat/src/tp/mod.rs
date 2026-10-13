@@ -16,6 +16,7 @@ pub use rete::{arcs, explain_by_arcs, next_generation, Arc, NetParams};
 
 use mzlab_core::error::Result;
 
+use crate::trace::filled;
 use crate::aligned::Aligned;
 use crate::evid::rowproofs::Signs;
 use crate::hypo::Hypothesis;
@@ -144,10 +145,10 @@ pub fn build(inp: &TpInputs) -> Result<Option<TpBlock>> {
         params: inp.params.clone(),
         ..TpBlock::default()
     };
-    b.status = vec![ST_TP; n];
-    b.notes = vec![0; n];
-    b.via = vec![0; n];
-    b.kinship = vec![KIN_NONE; n];
+    b.status = filled(n, ST_TP)?;
+    b.notes = filled(n, 0)?;
+    b.via = filled(n, 0)?;
+    b.kinship = filled(n, KIN_NONE)?;
     cancelli::formed(inp, parent, &mut b)?;
     cancelli::not_in_source(inp, parent, &mut b);
     cancelli::explained(inp, &mut b);

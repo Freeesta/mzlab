@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
-use crate::trace::{Params, SLAB_PEAKS};
+use crate::trace::{filled, Params, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
 #[derive(Debug, Clone, Copy)]
@@ -195,7 +195,7 @@ pub fn fill_file<R: ReadAt>(
     windows(index, si, &ranges, max_peaks, |q, a, b, slab| {
         let t = &list[q];
         let (s0, s1) = (t.i0.saturating_sub(pad), (t.i1 + pad).min(nscan));
-        let mut y = vec![0.0f64; s1 - s0];
+        let mut y = filled(s1 - s0, 0.0f64)?;
         for j in a..b {
             let s = slab.pos[j] as usize;
             if s >= s0 && s < s1 {
