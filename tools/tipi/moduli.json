@@ -10,6 +10,7 @@
   },
   "include": [
     "globali-nomi.d.ts",
+    "manuale-dom.d.ts",
     "modello.d.ts",
     "globali.d.ts",
     "manuale.d.ts",
