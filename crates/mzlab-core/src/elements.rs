@@ -221,7 +221,7 @@ pub fn fmt(f: &Formula) -> String {
         .map(|(e, _)| e.as_str())
         .filter(|e| *e != "C" && *e != "H")
         .collect();
-    rest.sort();
+    crate::sortc::ord(&mut rest);
     order.extend(rest);
     order
         .into_iter()

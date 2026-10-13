@@ -234,13 +234,13 @@ pub fn format_formula(counts: &[(String, i64)]) -> String {
         .map(|(s, _)| s.as_str())
         .filter(|s| *s != "C" && *s != "H" && iso_info(s).is_none())
         .collect();
-    plain.sort();
+    crate::sortc::ord(&mut plain);
     let mut iso: Vec<&str> = items
         .iter()
         .map(|(s, _)| s.as_str())
         .filter(|s| iso_info(s).is_some())
         .collect();
-    iso.sort();
+    crate::sortc::ord(&mut iso);
     order.extend(plain);
     order.extend(iso);
     order
@@ -523,7 +523,7 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     syms.extend(others.iter().map(|(s, _)| s.clone()));
     let base: Vec<&str> = syms.iter().map(|s| base_of(s)).collect();
     let mut bases: Vec<&str> = base.clone();
-    bases.sort();
+    crate::sortc::ord(&mut bases);
     bases.dedup();
     let a: Vec<i64> = syms
         .iter()
