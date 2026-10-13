@@ -51,7 +51,7 @@ const AgilentD = (() => {
     const ok = [];
     for (const r of runs) {
       if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
-      else if (!rb || rb.disabled || !rb.convertAgilent) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
+      else if (!rb || rb.disabled || !(rb.convertLettori || rb.convertAgilent)) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else ok.push(r);
     }
     const fails = () => out.errs.forEach(([msg, nm]) => { const d = document.createElement("div"); d.className = "fail"; d.textContent = nm + ": " + msg; box.appendChild(d); });
@@ -63,7 +63,9 @@ const AgilentD = (() => {
       const ui = g.start(++i, r.name);
       try {
         const name = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
-        const blob = await rb.convertAgilent(r.name, r.files, p => ui.update(p), g.signal);
+        const blob = rb.convertLettori
+          ? await rb.convertLettori(r.name, Object.entries(r.files).map(([k, f]) => ({ name: NEED[k], blob: f })), p => ui.update(p), g.signal)      // the registry of readers (rust-lettori.js)
+          : await rb.convertAgilent(r.name, r.files, p => ui.update(p), g.signal);
         CONV.add(name, blob);
         out.files.push(new File([blob], name));
         ui.done();
