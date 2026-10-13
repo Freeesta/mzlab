@@ -24,7 +24,7 @@ def main() -> None:
     for vecchia in nat.glob("uscita*"):
         shutil.rmtree(vecchia, ignore_errors=True)
     uscita = nat / "uscita"                                     # asari writes "<output>_asari_project_<time>" next to it
-    exe = Path(sys.executable).parent / "asari"
+    exe = shutil.which("asari") or Path(sys.executable).parent / "asari"
     cmd = [str(exe), "process", "-m", par["mode"], "-i", str(entrata), "-o", str(uscita), "--ppm", str(par["mz_tolerance_ppm"]),
            "--min_peak_height", str(par["min_peak_height"]), "--cal_min_peak_height", str(par["cal_min_peak_height"])]
     r = subprocess.run(cmd, capture_output=True, text=True)
