@@ -6,7 +6,7 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/1";
+const BRIDGE: &str = "mzfeat-grafo/2";
 
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
@@ -27,4 +27,11 @@ pub fn version() -> String {
 #[wasm_bindgen]
 pub fn analyse(smiles: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::grafo::analyse_json(smiles).map_err(js_err)
+}
+
+/// `frag/1` of a V2000 molfile: the two pieces of the bond between atoms `a` and `b` (0-based positions in the file), or every cut outside the rings
+/// when either is negative (see `mzlab_feat::chem::frammenti::fragments_json`).
+#[wasm_bindgen]
+pub fn fragments(molfile: &str, a: i32, b: i32) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::frammenti::fragments_json(molfile, a, b).map_err(js_err)
 }

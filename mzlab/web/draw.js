@@ -4,6 +4,7 @@
 // Module script; helpers come from explore.js (window).
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { mountBar } from "./disegno-barra.js";
+import { fragmentItems } from "./disegno-frammenti.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -164,6 +165,10 @@ function hideMacro(fr) {
         brk.textContent = I18N.t("draw.ctx.breakBonds", { n: nb }); brk.title = I18N.t("draw.ctx.breakBonds.title");
         const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
         m.appendChild(brk);
+      }
+      for (const it of await fragmentItems(K, ev, fragHelpers).catch(() => [])) {                  // the two pieces of the bond under the pointer, and the table of all cuts
+        const row = document.createElement("div"); row.textContent = it.text; if (it.title) row.title = it.title;
+        row.onclick = () => { m.hidden = true; if (it.run) it.run(); }; m.appendChild(row);
       }
       m.hidden = false;
       m.style.left = Math.min(mx, innerWidth - 240) + "px";
@@ -326,6 +331,8 @@ function breakBonds(ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
+const fragHelpers = { pieces: () => pieces(), pieceMolfile: ids => pieceMolfile(ids), t: (k, p) => I18N.t(k, p), copy: s => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
+  num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o) };
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
