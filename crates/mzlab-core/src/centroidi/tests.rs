@@ -433,3 +433,27 @@ fn a_file_that_is_already_centroided_writes_nothing() {
     assert!(!mzml_to_centroids(|| Ok(src.as_slice()), &mut out, "c.mzML", &mut |_, _| {}).unwrap());
     assert!(out.is_empty());
 }
+
+#[test]
+fn a_detector_with_two_scales_is_still_counts() {
+    // About 2 % of the points (the strongest ones) are read on a second scale that is not a whole multiple of the unit: still counts.
+    let mut rng = Rng(5);
+    let scans: Vec<(Vec<f64>, Vec<f64>)> = (0..20)
+        .map(|t| {
+            let (mz, mut y) = scan(&mut rng, 297.0, 120, &[(300.0 + 0.01 * t as f64, 900.0, 0.7), (304.0, 700.0, 0.7)], 0.3, 2.0);
+            for v in y.iter_mut().filter(|v| **v > 1700.0) {
+                *v = (*v * 1.37 * 10.0).round() / 10.0;
+            }
+            (mz, y)
+        })
+        .collect();
+    let refs: Vec<(&[f64], &[f64])> = scans.iter().map(|(a, b)| (a.as_slice(), b.as_slice())).collect();
+    let (all, odd) = scans.iter().flat_map(|s| s.1.iter()).filter(|v| **v > 0.0).fold((0, 0), |(a, o), v| {
+        let q = v / 2.0;
+        (a + 1, o + ((q - q.round()).abs() > 0.01) as usize)
+    });
+    assert!(odd as f64 > 0.005 * all as f64 && (odd as f64) < 0.05 * all as f64, "{odd}/{all}");
+    let e = estimate(&refs, 0.7);
+    assert_eq!(e.params.mode, Mode::Counts);
+    assert!((e.params.unit - 2.0).abs() < 1e-9);
+}
