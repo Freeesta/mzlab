@@ -19,6 +19,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 - Ioni inattesi: righe libere che passano i criteri, id da 100001, al più `max_unexpected` per punteggio e area. `insource` = inatteso più leggero del progenitore entro 0.5·`rt_tol_min` da lui; `isf` = null; `mrm` = null.
 - MS2 (`lr/ms2.rs`, `engine.ms2` e `transitions`): le scansioni dei file `ms2` con precursore entro la tolleranza da `mz_x` o `mz` e tempo dentro il picco nei file full (limiti ±0,05 min) si raggruppano in classi di 0,3 Da (frammenti a meno di 1,5 Da dal precursore esclusi, intensità media per scansione, ≥ 5 % del massimo, al più 6).
 - Per un prodotto ogni frammento ha `loss` e `note` («shared with the parent» entro 0,5 Da, oppure spostato della differenza di massa), `detail.transitions` ha una riga per frammento (Q3 consigliato = osservato − offset).
+- MRM (`lr/mrm.rs`, `lr/peak1d.rs`): `analyse(files, rt_tol)` integra le transizioni SRM di ogni file attorno al tempo del quantificatore (nome «quant…», altrimenti il primo per Q1 e Q3; apice del file più forte): area, tempo, S/N, rapporto qualificatore/quantificatore contro la mediana degli standard (±30 %), nessuna retta di taratura (`calibration: null`). `find_peak` è il porto di `peaks.find_peak` (parità in `tests/lr_mrm.rs`). Non è ancora collegato al Dig: `plan.rust` resta falso con file MRM.
 - Senza MS2: livelli 4/5 come `confidence`, `ms2` vuoto, `frag_tree` con la nota «no MS2 of the parent in the files».
 
 ## Scavo LR: prove

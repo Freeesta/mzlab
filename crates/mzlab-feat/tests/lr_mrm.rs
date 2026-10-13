@@ -1,262 +1,117 @@
-//! The pipeline on an MRM series (`mrm.rs`): six calibration levels and a sample, built here as mzML files with SRM chromatograms and read back with
-//! `read_srm`. A quantifier grows with the concentration, its qualifier is 40 % of it, one transition does not depend on it and is too weak to be picked in one
-//! file (its cell is integrated). The calibration table is long and ready for the line; the line is never computed. Synthetic data only.
+//! The MRM integration of the low-resolution Dig: `find_peak` against the Python engine (`TP_Mine/py/tpmine/peaks.py`, values computed on this very
+//! trace) and the tables of `analyse` on three synthetic files.
 
-use mzlab_core::mzml::{ChromKind, Chromatogram};
-use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter};
-use mzlab_feat::export::Ctx;
-use mzlab_feat::mrm::{
-    align, csv_calibration, detect, fill_file, qualifier_ratios, read_srm, MrmParams, Srm,
-};
-use mzlab_feat::recipe::Recipe;
-use mzlab_feat::samples::Sample;
-use mzlab_feat::store::{read_file, read_table, write_file, write_table, Origin};
-use mzlab_feat::table::{CELL_DETECTED, CELL_FILLED};
+use mzlab_core::json::{self, Value};
+use mzlab_feat::legacy::lr::mrm::{analyse, MrmFile, Trace};
+use mzlab_feat::legacy::lr::peak1d::find_peak;
 
-const CONC: [f64; 7] = [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 7.0];
-/// Transitions: (Q1, Q3, RT, amplitude per unit of concentration, depends on the concentration).
-const TR: [(f64, f64, f64, f64, bool); 3] = [
-    (263.1, 181.1, 5.0, 60.0, true),
-    (263.1, 152.0, 5.02, 24.0, true),
-    (300.2, 120.1, 8.0, 400.0, false),
-];
+const N: usize = 300;
 
-struct Lcg(u64);
-
-impl Lcg {
-    fn next(&mut self) -> f64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64
-    }
+fn rt() -> Vec<f64> {
+    (0..N)
+        .map(|i| 4.0 + 3.0 * i as f64 / (N - 1) as f64)
+        .collect()
 }
 
-fn gauss(t: f64, c: f64, s: f64, a: f64) -> f64 {
-    a * (-0.5 * ((t - c) / s).powi(2)).exp()
-}
-
-/// The SRM chromatograms of file `k`: the quantifier of the lowest level is below the threshold, the flat transition is weak in file 3.
-fn chromatograms(k: usize) -> Vec<Srm> {
-    let mut rng = Lcg(5 + k as u64);
-    let t: Vec<f64> = (0..600).map(|i| 0.5 + 0.02 * i as f64).collect();
-    TR.iter()
-        .map(|&(q1, q3, rt, amp, dep)| {
-            let a = if dep {
-                amp * CONC[k]
-            } else if k == 3 {
-                30.0
-            } else {
-                amp
-            };
-            let a = if dep && k == 0 && q3 > 170.0 { 4.0 } else { a };
-            let y = t
-                .iter()
-                .map(|&x| gauss(x, rt, 0.06, a) + 2.0 * rng.next())
-                .collect();
-            Srm {
-                q1,
-                q3,
-                name: String::new(),
-                t: t.clone(),
-                y,
-            }
+fn trace(c: f64, h: f64) -> Vec<f64> {
+    rt().iter()
+        .enumerate()
+        .map(|(i, t)| {
+            h * (-((t - c) / 0.08).powi(2) / 2.0).exp() + 20.0 + 5.0 * (37.0 * i as f64).sin()
         })
         .collect()
 }
 
-fn params() -> MrmParams {
-    MrmParams {
-        min_height: 50.0,
-        ..MrmParams::default()
-    }
-}
-
-#[test]
-fn the_srm_chromatograms_are_read_from_the_mzml() {
-    let mut w = MzmlWriter::new(
-        Vec::new(),
-        &Header {
-            run: "mrm".into(),
-            ..Default::default()
-        },
-    )
-    .unwrap();
-    let src = chromatograms(2);
-    w.open_chromatograms(src.len()).unwrap();
-    for (i, s) in src.iter().enumerate() {
-        let c = Chromatogram {
-            index: i,
-            id: format!(
-                "SRM SIC Q1={} Q3={} sample=1 period=1 experiment={}",
-                s.q1,
-                s.q3,
-                i + 1
-            ),
-            kind: ChromKind::Srm,
-            q1: Some(s.q1),
-            q3: Some(s.q3),
-            unit: "number of detector counts".into(),
-            time: s.t.clone(),
-            intensity: s.y.clone(),
-        };
-        w.chromatogram(&c).unwrap();
-    }
-    w.close_chromatograms().unwrap();
-    let bytes = w.finish().unwrap();
-    let size = bytes.len() as u64;
-    let got = read_srm(&mut Mzml::new(bytes, size), 0).unwrap();
-    assert_eq!(got.len(), 3);
-    assert_eq!(
-        (got[0].q1, got[0].q3),
-        (263.1, 152.0),
-        "ordered by Q1 then Q3"
+fn near(a: f64, b: f64, what: &str) {
+    assert!(
+        (a - b).abs() <= 1e-4 * b.abs().max(1.0),
+        "{what}: {a} against {b}"
     );
-    assert_eq!(got[1].y.len(), 600);
 }
 
 #[test]
-fn a_series_is_aligned_by_transition_and_the_cells_follow_the_concentration() {
-    let files: Vec<Vec<Srm>> = (0..CONC.len()).map(chromatograms).collect();
-    let feats: Vec<_> = files.iter().map(|f| detect(f, &params())).collect();
-    let refs: Vec<_> = feats.iter().collect();
-    let mut t = align(&refs, &params());
-    assert_eq!(t.len(), 3, "one row per transition");
-    assert_eq!((t.mz[0], t.q3[0]), (263.1, 152.0));
-    let nf = t.n_files;
-    // the quantifier is detected in every level above the lowest, with an area that grows with the concentration
-    let q = (0..t.len()).find(|&r| t.q3[r] == 181.1).unwrap();
-    let levels: Vec<usize> = (1..6).collect();
-    assert!(levels.iter().all(|&k| t.state[q * nf + k] == CELL_DETECTED));
-    assert!(levels
-        .windows(2)
-        .all(|w| t.area[q * nf + w[1]] > t.area[q * nf + w[0]]));
-    // the flat transition is weak in file 3: not picked there, integrated in the pass of the gaps
-    let flat = (0..t.len()).find(|&r| t.q3[r] == 120.1).unwrap();
-    assert_ne!(t.state[flat * nf + 3], CELL_DETECTED);
-    let n = fill_file(&mut t, 3, &files[3], &params());
-    assert!(n >= 1 && t.state[flat * nf + 3] == CELL_FILLED && t.area[flat * nf + 3] > 0.0);
-    // the qualifier over the quantifier is the same at every level (0.4), the quantifier is the larger of the pair
-    let ratios = qualifier_ratios(&t);
-    assert_eq!(ratios.len(), 1);
-    assert_eq!(ratios[0].quantifier, q);
-    for k in 2..6 {
-        assert!(
-            (ratios[0].ratio[k] - 0.4).abs() < 0.05,
-            "ratio {} at level {k}",
-            ratios[0].ratio[k]
-        );
+fn find_peak_as_python() {
+    let t = rt();
+    for (c, h, apex, height, area, fwhm, snr, pts, l, r) in [
+        (
+            5.0,
+            1000.0,
+            5.00334,
+            988.99028,
+            11641.70227,
+            10.83612,
+            257.51634,
+            39,
+            4.76254,
+            5.24415,
+        ),
+        (
+            5.1, 300.0, 5.09365, 294.34832, 3443.76104, 10.83612, 76.99892, 38, 4.86288, 5.34448,
+        ),
+    ] {
+        for center in [None, Some(5.0)] {
+            let p = find_peak(&t, &trace(c, h), center, 0.25, 5, 5).unwrap();
+            near(p.apex_rt, apex, "apex");
+            near(p.height, height, "height");
+            near(p.area, area, "area");
+            near(p.fwhm, fwhm, "fwhm");
+            near(p.snr, snr, "snr");
+            assert_eq!(p.points, pts);
+            near(p.left, l, "left");
+            near(p.right, r, "right");
+            assert!(p.ok);
+        }
     }
+    assert!(find_peak(&t[..2], &[1.0, 2.0], None, 0.25, 5, 5).is_none());
+    assert!(find_peak(&t, &vec![0.0; N], None, 0.25, 5, 5).is_none());
 }
 
-#[test]
-fn the_calibration_table_is_long_and_has_no_line() {
-    let files: Vec<Vec<Srm>> = (0..CONC.len()).map(chromatograms).collect();
-    let feats: Vec<_> = files.iter().map(|f| detect(f, &params())).collect();
-    let refs: Vec<_> = feats.iter().collect();
-    let t = align(&refs, &params());
-    let samples: Vec<Sample> = (0..CONC.len())
-        .map(|k| Sample {
-            file: format!("cal{k}.mzML"),
-            sha256: String::new(),
-            kind: if k < 6 { "calibration" } else { "sample" }.into(),
-            time_min: None,
-            replicate: 1,
-            group: String::new(),
-            conc: (k < 6).then_some(CONC[k]),
-            unit: (k < 6).then(|| "ng/mL".to_string()),
-            order: k as u32 + 1,
-            istd: false,
-            note: String::new(),
-        })
-        .collect();
-    let c = Ctx {
-        table: &t,
-        samples: &samples,
-        view: None,
-        table_sha256: "ab",
-        polarity: 1,
+fn file(name: &str, kind: &str, time: Option<f64>, hs: [f64; 2]) -> MrmFile {
+    let tr = |q3: f64, name: &str, h: f64| Trace {
+        q1: 300.0,
+        q3,
+        ce: Some(25.0),
+        name: name.into(),
+        rt: rt(),
+        y: trace(5.0, h),
     };
-    let csv = csv_calibration(&c);
-    let lines: Vec<&str> = csv.lines().collect();
-    assert_eq!(
-        lines[0],
-        "transition,q1,q3,sample,type,concentration,unit,rt,area,height,state"
-    );
-    assert_eq!(
-        lines.len(),
-        1 + 3 * 6,
-        "three transitions by six calibration files"
-    );
-    assert!(lines
-        .iter()
-        .any(|l| l.starts_with("263.1>181.1,263.1,181.1,\"cal5\",calibration,50,ng/mL,")));
-    assert!(!csv.contains("slope") && !csv.contains("r2"));
+    MrmFile {
+        name: name.into(),
+        label: name.into(),
+        kind_type: kind.into(),
+        time,
+        traces: vec![
+            tr(200.0, "qualifier", hs[1]),
+            tr(150.0, "quantifier", hs[0]),
+        ],
+    }
 }
 
 #[test]
-fn two_runs_give_the_same_bytes() {
-    let go = || {
-        let files: Vec<Vec<Srm>> = (0..CONC.len()).map(chromatograms).collect();
-        let feats: Vec<_> = files.iter().map(|f| detect(f, &params())).collect();
-        let bytes: Vec<u8> = feats.iter().flat_map(|f| f.to_bytes()).collect();
-        let refs: Vec<_> = feats.iter().collect();
-        let t = align(&refs, &params());
-        (bytes, t)
-    };
-    let (a, ta) = go();
-    let (b, tb) = go();
-    assert_eq!(a, b);
-    assert_eq!(format!("{ta:?}"), format!("{tb:?}"));
-}
-
-#[test]
-fn the_q3_survives_the_files() {
-    let files: Vec<Vec<Srm>> = (0..CONC.len()).map(chromatograms).collect();
-    let feats: Vec<_> = files.iter().map(|f| detect(f, &params())).collect();
-    let (back, _) = read_file(&write_file(
-        &feats[2],
-        &Recipe::default(),
-        &Origin::default(),
-    ))
-    .unwrap();
-    assert_eq!(back.q3, feats[2].q3);
-    assert_eq!(back.mz, feats[2].mz);
-    let refs: Vec<_> = feats.iter().collect();
-    let t = align(&refs, &params());
-    let (tb, _) = read_table(&write_table(&t, &Recipe::default(), &Origin::default())).unwrap();
-    assert_eq!(tb.q3, t.q3);
-}
-
-#[test]
-fn the_series_goes_through_the_files_and_the_table() {
-    use mzlab_feat::mrm::{file_bytes, table_bytes};
-    let p = params();
-    let tables: Vec<_> = (0..CONC.len())
-        .map(|k| {
-            read_file(&file_bytes(
-                &chromatograms(k),
-                &format!("f{k}.mzML"),
-                &format!("{k:064x}"),
-                &p,
-            ))
-            .unwrap()
-            .0
-        })
-        .collect();
-    let bytes = table_bytes(&tables, &Origin::default(), &p, |k| Ok(chromatograms(k))).unwrap();
-    let (t, _) = read_table(&bytes).unwrap();
-    assert_eq!((t.len(), t.n_files), (3, 7));
-    assert_eq!(t.q3, [152.0, 181.1, 120.1]);
-    let flat = 2 * t.n_files + 3;
-    assert_eq!(
-        t.state[flat], CELL_FILLED,
-        "the weak cell of the flat transition is integrated"
-    );
-    assert_eq!(
-        bytes,
-        table_bytes(&tables, &Origin::default(), &p, |k| Ok(chromatograms(k))).unwrap()
-    );
+fn tables_of_three_files() {
+    let files = [
+        file("s1", "standard", None, [1000.0, 500.0]),
+        file("s2", "standard", None, [2000.0, 1000.0]),
+        file("x", "sample", Some(10.0), [800.0, 1200.0]),
+    ];
+    let v = json::parse(analyse(&files, 0.25).unwrap().as_bytes()).unwrap();
+    assert_eq!(v.get("quantifier").and_then(Value::str), Some("300>150"));
+    assert!(v
+        .get("calibration")
+        .is_some_and(|c| matches!(c, Value::Null)));
+    let ratio = v
+        .get("ratio_ref")
+        .and_then(|r| r.get("300>200"))
+        .and_then(Value::f64)
+        .unwrap();
+    assert!((ratio - 0.5).abs() < 0.05, "{ratio}");
+    let rows = v.get("rows").map(Value::arr).unwrap();
+    let ok = |k: usize| rows[k].get("ratio_ok").and_then(Value::bool);
+    assert_eq!((ok(0), ok(1), ok(2)), (Some(true), Some(true), Some(false)));
+    assert!(rows[2]
+        .get("ion")
+        .and_then(|i| i.get("300>150"))
+        .and_then(|i| i.get("detected"))
+        .and_then(Value::bool)
+        .unwrap());
 }
