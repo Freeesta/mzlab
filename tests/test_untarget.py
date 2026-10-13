@@ -52,6 +52,10 @@ def test_mzmine_full_table_model():
     assert t["st"]["withMatch"] == 3
 
 
+def test_the_table_can_be_looked_up_by_id():
+    assert js("const t = U.build([F('mzmine/tabella_pos.csv')], {pol: 1}); return [t.byId.get('1').mz, t.byId.has('99')]") == [184.1332, False]
+
+
 def test_mzmine_annotations_complete_the_same_feature_and_name_and_drop_lipids():
     t = js("const t = U.build([F('mzmine/tabella_pos.csv'), F('mzmine/annotazioni_pos.csv')], {pol: 1}); return {a1: t.features[0].ann, a5: t.features[4].ann, st: t.stats}")
     assert len(t["a1"]) == 1 and t["a1"][0]["ik"] == "AAAAAAAAAAAAAA-UHFFFAOYSA-N" and t["a1"][0]["entry"] == "E-1"          # name matched without case; the other name of the same feature is not used

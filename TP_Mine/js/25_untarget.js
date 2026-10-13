@@ -85,7 +85,9 @@
     const w = need(); w.clear();
     for (const f of files) w.add(f.name, f.sha256 || "", f.text);
     const pol = o.pol != null ? o.pol : polOf(o.polarity);
-    try { return JSON.parse(w.build(pol, o.maxFeatures || 0)); } catch (e) { throw asError(e); }
+    let t; try { t = JSON.parse(w.build(pol, o.maxFeatures || 0)); } catch (e) { throw asError(e); }
+    t.byId = new Map(t.features.map(f => [f.id, f]));          // by id, as the page looks the features up
+    return t;
   }
 
   // ------------------------------------------------------------ external evidence read with a profile of livelli/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
