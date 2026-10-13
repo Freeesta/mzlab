@@ -140,6 +140,19 @@ def main_lr(a) -> int:
     return 0
 
 
+def main_hr(a) -> int:
+    import datetime
+    from valida import hr
+    lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_hr"
+    c, det = hr.misura(a.robustezza, a.serie, a.mzmine, lavoro, a.data or datetime.date.today().isoformat())
+    print(f"vista_tabella_hr: {c['vista_tabella_hr']}  (DDA files: {det['dati_dda']}; mzmine: {det['csv']})")
+    for k in c["criteri"]:
+        print(f"  {k['id']:<34} {'skipped' if k['ok'] is None else ('ok' if k['ok'] else 'FAIL'):<8} {k['valore']} (threshold {k['soglia']})")
+    for p in hr.scrivi(Path(a.uscita) if a.uscita else lavoro, c, det, a.hr_json):
+        print(p)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--serie", help="folder with the mzML files of the series (required unless --cancello, --cancello-tp or --lr)")
@@ -165,9 +178,14 @@ def main(argv=None) -> int:
     cg.add_argument("--lr", action="store_true", help="measure the low-resolution table view (MRM and full scan; synthetic series always, real ones from --serie-lr or $MZLAB_DATI) and write cancello_lr.json")
     cg.add_argument("--serie-lr", help="folder with the real LR mzML (B_MRM-*, B_FullMass-*, B_MS2-*); default $MZLAB_DATI/mzML; --verita gives the parent of the full scan")
     cg.add_argument("--lr-json", help="also write cancello_lr.json here (the tool never commits it)")
+    cg.add_argument("--hr", action="store_true", help="measure the high-resolution table view: robustness on the DDA files (--robustezza or $MZLAB_DATI/HRMS/Esempio raw e mzML) and, with --serie and --mzmine, the agreement with mzmine (D5); writes cancello_hr.json")
+    cg.add_argument("--robustezza", help="folder with Orbitrap_{Exploris120,Fusion}_DDApos_*.mzML (no truth)")
+    cg.add_argument("--hr-json", help="also write cancello_hr.json here (the tool never commits it)")
     a = ap.parse_args(argv)
     if a.lr:
         return main_lr(a)
+    if a.hr:
+        return main_hr(a)
     if a.cancello_tp:
         return main_cancello_tp(a)
     if a.cancello:

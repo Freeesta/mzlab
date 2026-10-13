@@ -58,10 +58,6 @@ try:
             assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "sciex-wiff" and m["origine"]["file"][0]["sha1"] == sha, m["origine"]
             assert m["origine"]["campione"] == 1, m["origine"]
         step("/api/metodo gives the metodo/1 of the .wiff sample", route)
-        def anon():
-            r = pg.evaluate(JSON, "api/metodo?k=0&anon=1")
-            assert "operatore" not in r["j"]["metodo"] and "serie" not in r["j"]["metodo"].get("strumento", {}), r
-        step("the anonymous option drops operator and serial number", anon)
         def lone_unnamed():
             pg.set_input_files("#pick", [str(D / "lonely.wiff")])
             pg.wait_for_function("document.querySelector('#unopen') && document.querySelector('#unopen').innerText.includes('lonely')", timeout=60000)

@@ -31,6 +31,7 @@ def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
     qc, view, rows = outs["qc.json"], outs["view.json"], outs["features.rows.json"]
     assert qc["schema"] == "qc/1"
     assert set(c["qc"]) <= set(qc) and qc["file"] and set(c["qcFile"]) <= set(qc["file"][0])
+    assert set(c["blank"]) <= set(qc["bianchi"]) and all(set(c["rejected"]) <= set(x) for x in qc["scartate"]) and qc["scartate"] and (qc["m1_su_m"] is None or set(c["m1"]) <= set(qc["m1_su_m"]))
     assert qc["gruppi"] == [] or set(c["qcGroup"]) <= set(qc["gruppi"][0])
     assert set(c["view"]) <= set(view) and set(c["counts"]) <= set(view["conteggi"])
     assert set(c["rows"]) <= set(rows) and set(c["sheet"]) <= set(rows["hojas"][0])
