@@ -53,6 +53,8 @@ pub struct LettoreWiff {
     scan_member: u16,
     campioni: Vec<Campione>,
     parti: Vec<Parte>,
+    /// SHA-1 of the `.wiff.scan` for the header, read once (the whole member).
+    scan_sha1: Option<Option<String>>,
 }
 
 pub const VOCE: VoceLettore = VoceLettore {
@@ -190,8 +192,11 @@ impl Lettore for LettoreWiff {
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
 fn testata(l: &mut LettoreWiff, c: usize) -> Result<Header> {
     l.parte(c)?;
-    let win = &mut Window::new(&mut l.scan, l.scan_len);
-    let sha = sha1_hex(win, l.scan_len).ok();
+    if l.scan_sha1.is_none() {
+        let win = &mut Window::new(&mut l.scan, l.scan_len);
+        l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
+    }
+    let sha = l.scan_sha1.clone().flatten();
     Ok(l.parte(c)?.w.header(&l.nome, sha, false))
 }
 
@@ -225,7 +230,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     for s in samples(&ole) {
-        let w = Wiff::open(&ole, &nome, Some(scan_len), s)?;
+        let mut w = Wiff::open(&ole, &nome, Some(scan_len), s)?;
+        w.wiff_sha1 = Some(ole.sha1_hex());
         total += w.records.len() as u64;
         limiti.voci_ok(total)?;
         let parte = build(w, &mut scan, scan_len, membro)?;
@@ -244,6 +250,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         scan_member: membro,
         campioni,
         parti,
+        scan_sha1: None,
     }))
 }
 

@@ -317,7 +317,7 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const yzf = !!p.zoomY && !stk && !logy;                       // y zoom (box, or drag on the numbers at the left of the axis): tall peaks are cut at the top
   const nrm = !stk && !!p.norm100 && !p.log;
-  let ymax = stk ? nrow : nrm ? 100 * (p.ints.length ? 1.2 : 1.08) : G * (p.ints.length ? 1.2 : 1.08);   // room above the peaks for the area labels
+  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
   if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] < ymin) ymin = s.ys[i];

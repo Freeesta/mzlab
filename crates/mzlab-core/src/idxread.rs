@@ -13,6 +13,19 @@ pub const FLAG_LETTORE: u32 = 1;
 /// Bytes at an offset. `&mut self` so that a JS callback or a cache can keep state.
 pub trait ReadAt {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()>;
+    /// The reader and the sample behind the bytes when they are not an mzML (`sorgente::Scansioni` reads the scans from it): `None` for a file read as it is.
+    fn lettore(&mut self) -> Option<(&mut dyn crate::lettori::Lettore, usize)> {
+        None
+    }
+}
+
+impl<T: ReadAt + ?Sized> ReadAt for Box<T> {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        (**self).read_at(off, buf)
+    }
+    fn lettore(&mut self) -> Option<(&mut dyn crate::lettori::Lettore, usize)> {
+        (**self).lettore()
+    }
 }
 
 impl ReadAt for Vec<u8> {

@@ -17,6 +17,7 @@ pub mod out;
 pub mod sample;
 pub mod series;
 pub mod similarity;
+pub mod transf;
 
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;

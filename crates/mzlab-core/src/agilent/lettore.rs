@@ -39,12 +39,6 @@ const OTHERS: [&str; 8] = [
     "IndexedDataConverter.log",
 ];
 
-impl ReadAt for Box<dyn ReadAt> {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        (**self).read_at(off, buf)
-    }
-}
-
 /// The index of the member named `name` (a path inside the folder, any case, with or without a folder in front).
 fn find(fs: &FileSet, name: &str) -> Option<usize> {
     let low = name.to_lowercase();
