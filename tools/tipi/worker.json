@@ -18,6 +18,7 @@
     "../../mzlab/web/wiff-worker.js",
     "../../TP_Mine/files/feat-run.js",
     "../../TP_Mine/files/feat-worker.js",
+    "../../TP_Mine/files/finder-idx.js",
     "../../TP_Mine/files/tpmine-worker.js",
     "../../TP_Mine/files/finder-lr.js",
     "../../mzlab/web/libreria-cartella.js",

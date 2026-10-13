@@ -1896,6 +1896,9 @@ version = "0.1.0"
 dependencies = [
  "memmap2",
  "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-table-wasm",
+ "mzlab-feat-wasm",
  "mzlab-lib",
  "rayon",
  "serde",

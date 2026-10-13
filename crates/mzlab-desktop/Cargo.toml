@@ -20,6 +20,10 @@ app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
+# mzFinder natively: the same steps and adapter that the .wasm of mzFinder runs (`run`, `legacy`) and the table views of the Pipeline panel
+mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
+mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder"] }
+mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
 memmap2 = "0.9"
 # the builds of the .mzidx of several files run on a thread pool (native only, never in the WASM graph)
 rayon = "1"
