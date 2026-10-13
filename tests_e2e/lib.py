@@ -158,18 +158,14 @@ def free_port() -> int:
 # because a few tests share the fixed ones (they were written to run one after the other)
 PARALLEL = get_env("E2E_PARALLEL") == "1"
 class Run:
-    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=(), motore="sito"):
+    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True):
         if PARALLEL:
             port = free_port(); wd = f"{wd}_{port}"
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
-        if motore == "sito":          # the built site with the Rust engine (tools/prepara_sito.py): what the students get
-            s._log = tempfile.TemporaryFile(mode="w+", encoding="utf-8")       # a file, not a pipe: nobody drains a pipe and the server blocks on its own request log when it fills
-            s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
-                                     stdout=s._log, stderr=subprocess.STDOUT, text=True)
-        else:                         # "python": the page against the Python reference (tools/dev_server.py), for the tests not moved yet
-            s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
-                                     cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        s._log = tempfile.TemporaryFile(mode="w+", encoding="utf-8")       # the built site with the Rust engine (tools/prepara_sito.py): what the students get; a log file, not a pipe: nobody drains a pipe and the server blocks on its own request log when it fills
+        s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
+                                 stdout=s._log, stderr=subprocess.STDOUT, text=True)
         # ready as soon as the server answers (it was a fixed 2 s wait)
         import urllib.request
         t0 = time.time()
@@ -200,8 +196,7 @@ class Run:
         try: s.b.close()
         except Exception: pass
         s.srv.terminate()
-        if getattr(s, "_log", None): s._log.seek(0); s.log = s._log.read()
-        else: s.log = s.srv.stdout.read()
+        s._log.seek(0); s.log = s._log.read()
         shutil.rmtree(s.wd, ignore_errors=True)       # the uploaded files (80 MB each for the high-resolution ones) are not kept: the disk of a session is limited
     def report(s):
         print("--- SERVER LOG (tail)\n", s.log[-1500:])
