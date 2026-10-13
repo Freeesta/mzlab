@@ -21,6 +21,7 @@ try:
         sel = lambda: pg.evaluate("(() => { const s = Q('#fsel'); return {t: s.options[s.selectedIndex].textContent, w: s.offsetWidth, title: s.title, opts: [...s.options].map(o => o.textContent), bar: Q('#tools').offsetWidth}; })()")
         def name():
             pg.evaluate("E.cur = tabFiles().find(f => /t30/.test(f.label) && !/Campione/.test(f.label)).k; renderNav()")
+            attendi(pg, "Q('#fsel').offsetWidth >= 220")
             s = sel(); assert "B_FullMass-t30 (2)" in s["t"], s
             assert s["w"] >= 220 and s["w"] <= 0.4 * 1280 + 2, s
             tw = pg.evaluate("(() => { const s = Q('#fsel'), g = document.createElement('canvas').getContext('2d'), cs = getComputedStyle(s); g.font = cs.fontSize + ' ' + cs.fontFamily; return g.measureText(s.options[s.selectedIndex].textContent).width; })()")
@@ -40,9 +41,15 @@ try:
         def fold():
             b = "#stbar [data-cmd=file]"
             assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Elenco dei file caricati: scegli, nascondi, rinomina, colora"
-            pg.click(b); pg.wait_for_timeout(500)
+            ready(pg)
+            if pg.is_visible("#flst"):          # the drawer remembers its state: start from the closed one, so the click below opens it
+                pg.click(b); attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
+            pg.click(b)
+            attendi(pg, "(() => { const e = Q('#flst'); return !!e && e.getBoundingClientRect().width > 0 })()")
             assert pg.is_visible("#flst") and pg.is_visible("#sb-x") and pg.evaluate("!!Q('#sb-x svg')") and pg.evaluate("Q('#sb-x').title") == "Chiudi il pannello"
-            pg.click("#sb-x"); pg.wait_for_timeout(400); assert not pg.is_visible("#flst")
+            pg.click("#sb-x")
+            attendi(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
+            assert not pg.is_visible("#flst")
             # the only ◀ ▶ left in the toolbar are the file arrows
             assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /[◀▶]/.test(b.textContent)).map(b => b.id)") == ["fprev", "fnext"]
         step("side-panel icon for the file list", fold)
