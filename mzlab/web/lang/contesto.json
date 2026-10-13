@@ -526,5 +526,8 @@
   "tpmine.feat.degraded": "Avviso di Tabui (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
   "error.featMemory": "Errore di Tabui (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB.",
   "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
-  "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file."
+  "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file.",
+  "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
+  "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
+  "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file."
 }
