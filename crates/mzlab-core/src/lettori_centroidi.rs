@@ -14,22 +14,6 @@ pub struct Centroidato {
     buf: Buf,
 }
 
-/// `l` with its profile scans as centroids.
-pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
-    let n = l.campioni().len();
-    Box::new(Centroidato {
-        l,
-        params: vec![None; n],
-        buf: Buf::default(),
-    })
-}
-
-/// The intensity kept in 32 bits, as the mzML of the conversion writes it.
-#[allow(clippy::cast_possible_truncation)]
-fn narrow(x: f64) -> f32 {
-    x as f32
-}
-
 impl Centroidato {
     fn params(&mut self, c: usize) -> Result<Params> {
         if let Some(Some(p)) = self.params.get(c) {
@@ -55,6 +39,12 @@ impl Centroidato {
         }
         Ok(p)
     }
+}
+
+/// The intensity kept in 32 bits, as the mzML of the conversion writes it.
+#[allow(clippy::cast_possible_truncation)]
+fn narrow(x: f64) -> f32 {
+    x as f32
 }
 
 impl Lettore for Centroidato {
@@ -108,4 +98,14 @@ impl Lettore for Centroidato {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.l.extra_mzml(s)
     }
+}
+
+/// `l` with its profile scans as centroids.
+pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
+    let n = l.campioni().len();
+    Box::new(Centroidato {
+        l,
+        params: vec![None; n],
+        buf: Buf::default(),
+    })
 }
