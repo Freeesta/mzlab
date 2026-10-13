@@ -120,6 +120,7 @@ function closePanel(p) {
   if (p._ac) p._ac.abort();                              // every listener the panel put on document/window goes with it
   p._a = null;
   if (p.el) p.el.remove();
+  if (E.active === p) setActive(null);
   STATO.rimuovi(p, "close");
 }
 
@@ -129,7 +130,7 @@ function closeAllPanels() {
   relayout();
   fitHost();
   uiSave();
-  if (E.tab === "ms2") renderFileList();
+  if (tabFiles("ms2").length) renderFileList();
   redrawAll();
 }
 
@@ -174,7 +175,7 @@ function cleanupOrphanPanels() {
   if (changed) {
     relayout();
     fitHost();
-    if (E.tab === "ms2") renderFileList();
+    if (tabFiles("ms2").length) renderFileList();
   }
 }
 
@@ -222,7 +223,7 @@ function addPanel(type, o, after) {
   p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
-  STATO.aggiungi(p, "open"); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
+  STATO.aggiungi(p, "open"); apply(p); fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", e => {
@@ -294,7 +295,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
-  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
+  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -311,7 +312,7 @@ document.addEventListener("keydown", e => {
 // full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
 const fsPanel = () => E.panels.find(q => q.el && q.el.classList.contains("max"));
 function fsInert(on, closing) {
-  document.querySelectorAll("header,#dfiles,#dtabs,#tools,#dpanels>.pnl").forEach(e => {
+  document.querySelectorAll("header,#dfiles,#tools,#dpanels>.pnl").forEach(e => {
     if (on && e !== on.el) e.setAttribute("inert", ""); else if (!on) e.removeAttribute("inert");
   });
   if (!on && !closing) document.documentElement.classList.remove("fs-on"); else if (on) document.documentElement.classList.add("fs-on");

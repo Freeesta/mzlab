@@ -22,7 +22,7 @@ try:
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)
         def pills_qqq():
-            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
+            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
             assert rows and all(b == [] for a, b in rows), rows
         step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
         def method_qqq():

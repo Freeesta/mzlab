@@ -40,9 +40,9 @@ try:
             assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # the scan line is on the row of the x axis title
         step("2.4: scan line on the row of the x axis title", below)
         def tabs():
-            assert pg.evaluate("document.querySelectorAll('#dtabs .qi, #flst .qi').length") == 0, "no icons in tabs / file list"
+            assert pg.evaluate("document.querySelectorAll('#flst .qi').length") == 0, "no icons in the file list"
             pg.evaluate("scrollTo(0, 0)"); hold(pg, 300)      # a scroll event would cancel the pending tooltip
-            b = pg.locator("#dtabs [data-t=ms2]"); b.hover(); hold(pg, 900)
+            b = pg.locator("#flst .fgh[data-gt=full]"); b.hover(); hold(pg, 900)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "not yet at 0.9 s"
             hold(pg, 800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))
             assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Q1" in t and "Q3" in t, t
@@ -50,9 +50,9 @@ try:
         step("2.3/2.5: no icons, tab label = Q1 -> q2 -> Q3 after TIP_DELAY (1250 ms)", tabs)
         def rows():
             drawer(pg); pg.evaluate("E.cur=E.files.find(f=>f.kind==='full').k;renderFileList()")
-            pg.locator("#flst .fl:not(.ghost) small").nth(2).click(); pg.wait_for_timeout(300)
+            pg.locator("#flst .fl small").nth(2).click(); pg.wait_for_timeout(300)
             c = pg.evaluate("E.cur"); assert c == pg.evaluate("tabFiles('full')[2].k"), c
-            box = pg.locator("#flst .fl:not(.ghost)").nth(1).bounding_box(); pg.mouse.click(box["x"] + box["width"] - 3, box["y"] + 3); pg.wait_for_timeout(300)
+            box = pg.locator("#flst .fl").nth(1).bounding_box(); pg.mouse.click(box["x"] + box["width"] - 3, box["y"] + 3); pg.wait_for_timeout(300)
             assert pg.evaluate("E.cur") == pg.evaluate("tabFiles('full')[1].k")
         step("2.6: the whole row of a file selects it", rows)
         def axis():

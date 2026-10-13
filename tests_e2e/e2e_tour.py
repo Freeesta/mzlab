@@ -67,13 +67,13 @@ try:
         assert ttl == "Qui ci sono i file caricati", ttl
         assert pg.get_attribute("#tour-btn-back", "disabled") is not None, "back disabled on step 1"
 
-        # Advance to Step 2: schede
+        # Advance to Step 2: gruppi
         pg.click("#tour-btn-next")
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 2 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Una scheda per esperimento", ttl
+        assert ttl == "Un gruppo per esperimento", ttl
 
         # Test Back button returns to Step 1
         pg.click("#tour-btn-back")
@@ -243,7 +243,7 @@ try:
                 hd = pg.inner_text("#tour-dialog .tour-hd")
                 assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
                 sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
-                assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i == 0), (cap, i)
+                assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i in (0, 1)), (cap, i)
                 if cap == 2 and i == 5:
                     bar = pg.evaluate("(()=>{const b=document.querySelector('#stbar').getBoundingClientRect();return [Math.round(b.left),Math.round(b.top)]})()")
                     assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar

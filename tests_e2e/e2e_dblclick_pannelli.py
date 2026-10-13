@@ -15,7 +15,7 @@ try:
             c = pg.locator(sel + " canvas").first; c.scroll_into_view_if_needed(); b = c.bounding_box()
             pg.mouse.dblclick(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2); pg.wait_for_timeout(500)
         def mrm():
-            pg.click("#dtabs [data-t=mrm]"); ready(pg)
+            open_kind(pg, "mrm"); ready(pg)
             n = pg.evaluate("E.panels.length"); pg.evaluate("E.panels.find(p=>p.type==='mrm').zoom=[1,2]")
             dbl(".pnl.mrm")
             assert pg.evaluate("E.tab") == "mrm", pg.evaluate("E.tab")
@@ -24,7 +24,7 @@ try:
         step("MRM: double click keeps the tab and resets the zoom", mrm)
         def others():
             for t, sel in (("full", ".pnl.chrom"), ("ms2", ".pnl.chrom")):
-                pg.click("#dtabs [data-t=%s]" % t); ready(pg)
+                open_kind(pg, t); ready(pg)
                 if not pg.locator(sel + ":visible").count(): continue
                 dbl(sel)
                 assert pg.evaluate("E.tab") == t, (t, pg.evaluate("E.tab"))

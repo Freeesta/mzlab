@@ -51,19 +51,13 @@ const TOUR = (() => {
   const STEPS_CAP1 = [
     {
       id: "file",
-      prep: () => {
-        // the file list is a drawer of the toolbar: the tour opens it for this step and closes it again when the step ends
-        if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
-          const wasOpen = BARRA.isOpen();
-          BARRA.show("file", { noFocus: true, instant: true });
-          return () => { if (!wasOpen) BARRA.close(false); };
-        }
-      },
+      prep: openFileDrawer,
       target: () => document.getElementById("sb-pane")
     },
     {
-      id: "schede",
-      target: () => document.getElementById("dtabs")
+      id: "gruppi",
+      prep: openFileDrawer,
+      target: () => document.querySelector("#flst .fgh")
     },
     {
       id: "tic",
@@ -97,7 +91,7 @@ const TOUR = (() => {
       },
       attesa: state => {
         const count = (typeof E !== "undefined" && E.panels) ? E.panels.filter(p => p.type === "xic").length : 0;
-        return count > state.count || document.querySelector(".pnl.xic") != null;
+        return count > state.count;
       }
     },
     {
@@ -150,6 +144,14 @@ const TOUR = (() => {
   let currentTargetEl = null;
   let curLeave = null;      // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
 
+  // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
+  function openFileDrawer() {
+    if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
+      const wasOpen = BARRA.isOpen();
+      BARRA.show("file", { noFocus: true, instant: true });
+      return () => { if (!wasOpen) BARRA.close(false); };
+    }
+  }
   const isReducedMotion = () => {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   };

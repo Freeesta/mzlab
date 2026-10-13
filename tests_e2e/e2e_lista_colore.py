@@ -13,18 +13,33 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
-        pg.wait_for_selector("#flst .fl:not(.ghost) > i", timeout=5000)
+        pg.wait_for_selector("#flst .fl > i", timeout=5000)
         def colour():
-            k = pg.evaluate("+Q('#flst .fl:not(.ghost) .nm').dataset.k")
+            k = pg.evaluate("+Q('#flst .fl .nm').dataset.k")
             pg.evaluate("window.__picked = 0; HTMLInputElement.prototype.showPicker = function () { window.__picked = this.type === 'color' ? 1 : 0; window.__inp = this; }")
-            pg.dblclick("#flst .fl:not(.ghost) > i")
+            pg.dblclick("#flst .fl > i")
             assert pg.evaluate("window.__picked") == 1, "the picker did not open"
             assert not pg.evaluate("!!Q('#colpop')"), "the swatch popup opened instead"
             pg.evaluate("(() => { window.__inp.value = '#112233'; window.__inp.dispatchEvent(new Event('change')); })()")
             assert pg.evaluate(f"E.files[{k}].color") == "#112233" and pg.evaluate(f"E.files[{k}].colorSet") is True
         step("double click on the colour square opens the picker and sets the colour", colour)
+        def margin():
+            for w, h in ((1400, 900), (700, 480)):
+                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
+                pg.evaluate("window.__inp = null")
+                pg.locator("#flst .fl > i").last.scroll_into_view_if_needed(); pg.locator("#flst .fl > i").last.dblclick()
+                r = pg.evaluate("(() => { const b = window.__inp.getBoundingClientRect(); return [b.left, b.top, innerWidth - b.left - 280, innerHeight - b.top - 340]; })()")
+                assert all(v >= 16 for v in r), (w, h, r, pg.evaluate("window.__inp.style.cssText"))      # the picker keeps 16 px from every edge of the window
+                pg.evaluate("window.__inp.remove()")
+        step("the colour picker stays 16 px inside the window", margin)
+        def tags():
+            pg.evaluate("E.files[0].type = 'blank'; E.files[1].type = 'standard'; renderFileList()")
+            t = pg.evaluate("[...document.querySelectorAll('#flst abbr.ftag')].map(e => [e.textContent, e.title])")
+            assert t == [["blk", "Bianco"], ["std", "Standard"]] or t == [["blk", "Blank"], ["std", "Standard"]] or sorted(x[0] for x in t) == ["blk", "std"], t      # 3 letters, the full word in the tooltip
+            assert "Un punto per picco" not in pg.inner_text("#flst") and "One point per peak" not in pg.inner_text("#flst")
+        step("blank and standard files carry blk / std with the full word as tooltip", tags)
         def rename():
-            pg.dblclick("#flst .fl:not(.ghost) .nm"); pg.wait_for_timeout(400)
+            pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
             t = pg.inner_text("body"); assert "it is only a label" not in t and "è solo un'etichetta" not in t
             pg.keyboard.press("Escape")
         step("the rename prompt has no «only a label» note", rename)
