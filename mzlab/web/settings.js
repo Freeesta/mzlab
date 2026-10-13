@@ -147,8 +147,9 @@ function uipOpen(btn) {
   const uipEtich = d.querySelector("#uip-etich");
   if (uipEtich) { uipEtich.value = window.BARRA ? BARRA.labels : "auto"; uipEtich.onchange = e => { if (window.BARRA) BARRA.setLabels(e.target.value); }; }
   const uipTour = d.querySelector("#uip-tour");
-  if (uipTour) uipTour.onclick = () => {      // the tour lives in Dati: from Disegno go there first
+  if (uipTour) uipTour.onclick = () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
+    if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }      // in Disegno the button starts the tour of Disegno
     const go = () => { if (!window.TOUR) return; if (typeof E !== "undefined" && E.files && E.files.length) TOUR.inizia(1, 0); else TOUR.caricaEsempio(); };
     if (typeof S !== "undefined" && S.view !== "data" && typeof setView === "function") { setView("data"); setTimeout(go, 150); } else go();
   };

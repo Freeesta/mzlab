@@ -42,6 +42,26 @@ fn same(path: &str, got: &Value, want: &Value) {
     }
 }
 
+/// Documented exception to the parity: the recognition of an infusion (`infusione.rs`) is Rust only. `explore.py` keeps the rule of
+/// the constant RT and has neither `msn` nor the hint "infusion": the new fields are checked against themselves, then the values of
+/// Python are put back.
+fn infusion_exception(got: &mut Value, want: &Value) {
+    let Some(o) = got.as_object_mut() else {
+        return;
+    };
+    if let Some(m) = o.remove("msn") {
+        if let Some(inf) = o.get("infusion").and_then(Value::as_bool) {
+            assert_eq!(inf, !m.is_null(), "infusion and msn disagree");
+            if m["motivo"] != "rt_costante" {
+                o.insert("infusion".into(), want["infusion"].clone());
+            }
+        }
+    }
+    if o.get("hint").and_then(Value::as_str) == Some("infusion") {
+        o.insert("hint".into(), want["hint"].clone());
+    }
+}
+
 #[test]
 fn session_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-lr-{}", std::process::id()));
@@ -90,11 +110,9 @@ fn session_like_python() {
                 .unwrap();
         let got =
             file_entry(&mut idx, &mut m, &name, size).unwrap_or_else(|e| panic!("{stem}: {e}"));
-        same(
-            &format!("{stem} entry"),
-            &serde_json::from_str(&got).unwrap(),
-            &want["entry"],
-        );
+        let mut got: Value = serde_json::from_str(&got).unwrap();
+        infusion_exception(&mut got, &want["entry"]);
+        same(&format!("{stem} entry"), &got, &want["entry"]);
         let edit = Sample {
             label: Some("my sample".into()),
             typ: Some("standard".into()),
@@ -109,11 +127,9 @@ fn session_like_python() {
             let w = want[k].as_array().unwrap();
             assert_eq!(got.len(), w.len(), "{stem} {k}: items");
             for (i, (g, w)) in got.iter().zip(w).enumerate() {
-                same(
-                    &format!("{stem} {k}[{i}]"),
-                    &serde_json::from_str(&g.info).unwrap(),
-                    w,
-                );
+                let mut g: Value = serde_json::from_str(&g.info).unwrap();
+                infusion_exception(&mut g, w);
+                same(&format!("{stem} {k}[{i}]"), &g, w);
                 items += 1;
             }
         }

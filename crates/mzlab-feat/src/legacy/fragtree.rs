@@ -12,7 +12,7 @@ use crate::chem::grafo;
 mod mol;
 pub use mol::*;
 
-const MIN_REL: f64 = 5.0;
+pub(crate) const MIN_REL: f64 = 5.0;
 const MAX_ALT: usize = 6;
 const MAX_SMILES: usize = 3;
 const LR_NOTE: &str = "supposed: unit resolution";
@@ -79,13 +79,13 @@ pub fn fmt(v: &[i64], els: &[&str]) -> String {
 }
 
 /// `FormulaSpace(upper, els)` with its defaults: every formula below `upper` with carbon and RDBE >= -0.5, sorted by the m/z of the cation.
-struct Space {
-    g: Vec<Vec<i64>>,
-    mass: Vec<f64>,
+pub struct Space {
+    pub(crate) g: Vec<Vec<i64>>,
+    pub(crate) mass: Vec<f64>,
 }
 
 impl Space {
-    fn new(upper: &[i64], els: &[&str]) -> Space {
+    pub(crate) fn new(upper: &[i64], els: &[&str]) -> Space {
         let m: Vec<f64> = els.iter().map(|e| mass_of(e).unwrap_or(f64::NAN)).collect();
         let val: Vec<i64> = els
             .iter()
@@ -145,12 +145,12 @@ impl Space {
 }
 
 /// `_loss_str`: the formula of parent minus fragment, None when it is not a sub-formula or is empty.
-fn loss_str(par: &[i64], v: &[i64], els: &[&str]) -> Option<String> {
+pub(crate) fn loss_str(par: &[i64], v: &[i64], els: &[&str]) -> Option<String> {
     let d: Vec<i64> = par.iter().zip(v).map(|(a, b)| a - b).collect();
     (!d.iter().any(|&x| x < 0) && d.iter().any(|&x| x != 0)).then(|| fmt(&d, els))
 }
 
-fn loss_mass(s: &str) -> Option<f64> {
+pub(crate) fn loss_mass(s: &str) -> Option<f64> {
     parse_formula(s).ok().map(|f| round(mass(&f), 4))
 }
 

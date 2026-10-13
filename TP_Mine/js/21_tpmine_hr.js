@@ -58,7 +58,7 @@
       { key: "score", label: "Score", num: true, sort: r => r.score, cell: r => String(r.score) },
       { key: "mz", label: "<i>m/z</i>", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(4) },
       { key: "formula", label: "Formula (ppm)", sort: r => r.formula || "", cell: r => `${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="possible formulas within 3 ppm">(${r.n_formulas})</span>` : ""}` },
-      { key: "change", label: "Change", sort: r => r.derivation || r.delta || "", cell: r => `${esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}` },
+      { key: "change", label: "Change", sort: r => r.derivation || r.delta || "", cell: r => `${(typeof TPTR !== "undefined") ? TPTR.change(r.derivation || r.delta || "") : esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}` },
       { key: "rt", label: "RT", num: true, sort: r => r.rt, cell: r => String(r.rt) },
       { key: "tmax", off: true, label: "t max", num: true, sort: r => r.tmax, cell: r => String(r.tmax ?? "") },
       { key: "area", off: true, label: "Max area", title: "largest area among the treated samples", num: true, sort: r => r.area_max, cell: r => fmtA(r.area_max || 0) },
@@ -196,7 +196,7 @@
       const comp = Object.keys(w).filter(k => typeof d.components[k] === "number").map(k => [k, d.components[k]]).map(([k, v]) => `<div class="comp" title="${esc((d.components.text || {})[k] || "")}"><span>${esc(k)} <span class="mut">×${w[k]}</span></span><span><i style="width:${Math.round(100 * v)}%"></i></span><span class="mut">${v.toFixed(2)}</span></div>`).join("");
       const kin = d.kinetics || {};
       D.innerHTML = `<div class="card"><h3>${esc(r.formula || "formula not assigned")} ${lvBadge(r, d.level_text || "")} <span class="mut">${esc(d.level_text || "")}</span></h3>
-        <div class="kv"><b><i>m/z</i></b><span>${r.mz}${r.ppm != null ? ` · ${r.ppm >= 0 ? "+" : ""}${r.ppm} ppm` : ""}${r.n_formulas > 1 ? ` · ${r.n_formulas} possible formulas` : ""}</span><b>Change</b><span>${esc(r.derivation || "-")} <span class="mut">(${esc(r.delta || "")})</span></span>
+        <div class="kv"><b><i>m/z</i></b><span>${r.mz}${r.ppm != null ? ` · ${r.ppm >= 0 ? "+" : ""}${r.ppm} ppm` : ""}${r.n_formulas > 1 ? ` · ${r.n_formulas} possible formulas` : ""}</span><b>Change</b><span>${(typeof TPTR !== "undefined") ? TPTR.change(r.derivation || "-") : esc(r.derivation || "-")} <span class="mut">(${(typeof TPTR !== "undefined") ? TPTR.formula(r.delta || "") : esc(r.delta || "")})</span></span>
         <b>RT</b><span>${r.rt} min${s.parent.rt ? ` (${(r.rt - s.parent.rt) >= 0 ? "+" : ""}${(r.rt - s.parent.rt).toFixed(2)} relative to the parent)` : ""}</span>
         <b>Kinetics</b><span>${esc(kin.class_text || "-")}${kin.tmax != null ? ` · maximum at ${kin.tmax} min` : ""}${kin.onset != null ? ` · appears at ${kin.onset} min` : ""}${kin.unimodal === false ? " · not unimodal" : ""}</span>
         <b>Region</b><span>${r.region ? esc(r.region) : "<span class='mut'>not localised</span>"}${loc && loc.ok ? ` <span class="mut">· margin ${loc.margin.toFixed(2)} · ${Math.round(100 * loc.fraction_explained)}% of intensity explained</span>` : (loc && loc.note ? ` <span class="mut">${esc(loc.note)}</span>` : "")}</span>

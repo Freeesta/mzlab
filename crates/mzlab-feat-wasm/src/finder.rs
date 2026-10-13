@@ -150,3 +150,9 @@ pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValu
 pub fn finder_transformations(rules: &[u8], text: &str) -> Result<Vec<u8>, JsValue> {
     legacy::transf::merge(rules, text).map_err(user)
 }
+
+/// The rows of the list of transformations for the table of the page (`legacy::transf::describe`): name, change, Δm, class, on/off, error of the wrong lines.
+#[wasm_bindgen]
+pub fn finder_transf_rows(text: &str) -> String {
+    legacy::transf::describe(text)
+}
