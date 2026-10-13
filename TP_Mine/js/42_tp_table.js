@@ -27,6 +27,17 @@
    * @param {HTMLElement} host
    * @param {Opts} o
    */
+  /** rows ordered by the sort value of a column (empty values last, ties in the original order) */
+  function sortRows(/** @type {any[]} */ rows, /** @type {any} */ c, /** @type {number} */ dir) {
+    if (!c || !c.sort) return rows;
+    const f = c.sort, v = new Map(rows.map((r, i) => [r, { v: f(r), i }]));
+    return [...rows].sort((a, b) => {
+      const x = /** @type {any} */ (v.get(a)), y = /** @type {any} */ (v.get(b));
+      if (x.v == null || y.v == null) return x.v == null && y.v == null ? x.i - y.i : x.v == null ? 1 : -1;
+      const d = typeof x.v === "string" ? x.v.localeCompare(y.v) : x.v - y.v;
+      return d ? d * dir : x.i - y.i;
+    });
+  }
   function mount(host, o) {
     if (!document.getElementById("tpt-css")) { const s = document.createElement("style"); s.id = "tpt-css"; s.textContent = CSS; document.head.appendChild(s); }
     /** @type {{ rows: any[], open: number | null, sort: string | null, dir: number }} */
@@ -40,17 +51,7 @@
     function drawHead() {
       head.innerHTML = o.cols.map(c => `<th scope="col" aria-sort="${st.sort === c.key ? (st.dir > 0 ? "ascending" : "descending") : "none"}"${c.title ? ` title="${o.esc(c.title)}"` : ""}>${c.sort ? `<button type="button" class="tpt-sh" data-sh="${c.key}">${c.label}<span aria-hidden="true">${st.sort === c.key ? (st.dir > 0 ? "▲" : "▼") : ""}</span></button>` : c.label}</th>`).join("");
     }
-    function sorted() {
-      const c = o.cols.find(x => x.key === st.sort);
-      if (!c || !c.sort) return st.rows;
-      const f = c.sort, v = new Map(st.rows.map((r, i) => [r, { v: f(r), i }]));
-      return [...st.rows].sort((a, b) => {
-        const x = /** @type {any} */ (v.get(a)), y = /** @type {any} */ (v.get(b));
-        if (x.v == null || y.v == null) return x.v == null && y.v == null ? x.i - y.i : x.v == null ? 1 : -1;
-        const d = typeof x.v === "string" ? x.v.localeCompare(y.v) : x.v - y.v;
-        return d ? d * st.dir : x.i - y.i;
-      });
-    }
+    const sorted = () => sortRows(st.rows, o.cols.find(x => x.key === st.sort), st.dir);
     function draw() {
       const had = document.activeElement instanceof HTMLElement && host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
       panel.remove(); drawHead();
