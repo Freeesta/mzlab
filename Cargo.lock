@@ -1932,6 +1932,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-feat-import-wasm"
+version = "0.1.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-feat-table-wasm"
 version = "0.1.0"
 dependencies = [
