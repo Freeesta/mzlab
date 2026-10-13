@@ -99,6 +99,8 @@ pub struct State {
     pub(crate) eng: Mutex<crate::rpc::Eng>,
     /// the files and the notebook of the student between two runs (`store.rs`)
     pub(crate) store: Mutex<crate::store::Store>,
+    /// what the steps of mzFinder leave between two calls (`feat.rs`): the `.mzfeatf`, the table, the hypotheses, the Dig
+    pub(crate) feat: Mutex<crate::feat::FeatState>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

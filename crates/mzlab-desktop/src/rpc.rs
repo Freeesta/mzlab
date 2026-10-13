@@ -282,6 +282,9 @@ impl State {
         if op == "lr_index" {
             return self.lr_index(p["name"].as_str().unwrap_or(""));                 // the build takes its time: it does not hold the engine
         }
+        if op.starts_with("feat/") || op.starts_with("finder/") {
+            return self.op_feat(op, p);                                              // mzFinder: long jobs of their own, they do not hold the engine
+        }
         let mut guard = self.eng.lock().unwrap_or_else(|e| e.into_inner());
         let eng = &mut *guard;
         let tries: [fn(&State, &mut Eng, &str, &Value) -> Result<Answer>; 6] = [State::op_index, State::op_session, State::op_diff, State::op_files, State::op_misc, State::op_lab];
