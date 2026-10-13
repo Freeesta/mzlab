@@ -151,7 +151,7 @@ export function createLr({ rb }) {
     return json(state());
   }
 
-  // Returns { status, text } or null (Python answers).
+  // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
     const u = new URL(url, "http://x/"), path = u.pathname.replace(/^\/?(\.\/)?/, "/");
     const text = () => (typeof init.body === "string" ? init.body : null);
@@ -165,7 +165,7 @@ export function createLr({ rb }) {
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
-        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = Python)
+        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = unavailable)
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
         return null;
