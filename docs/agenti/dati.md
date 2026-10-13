@@ -64,6 +64,8 @@ Spostata in `docs/agenti/dati-barra.md` (barra laterale, strumenti, tour, sugger
   Sul telefono `carica.js` NON scarica gli script di Dati, Disegno e Pratica, né la shell della pagina (`shell.js`), né motore o WASM: arriva `telefono-scheda.js` (scheda «Siete su uno smartphone», titolo + una riga + «Vai alla Teoria» + «Apri comunque» che ricarica col sito completo) e, a bassa priorità e senza `saveData`, scalda la home della Teoria.
   Un file di script nuovo di Dati va aggiunto nella lista `L` di `carica.js`, che li inserisce con `async=false` (ordine della lista), poi `shell.js`, poi i moduli `m:`; `carica(nome)` restituisce una Promise (script caricato una volta sola). In `index.html` restano inline solo i frammenti di tema e di indirizzo in testa; la schermata di caricamento sta in `avvio.js`. I giochi (tranne le domande dell'orale) rimandano al computer.
 
+- **Errori**: `errori.js` (modulo, primo della lista di `carica.js`) mostra ogni `error` e `unhandledrejection` in un riquadro `#errbox` (`role=alert`, testo breve `errori.*`, «Copia i dettagli» = versione, rotta, pila); `ERRORI.segnala(e, dove)` per un errore preso da un `catch`. Niente `alert()`: i messaggi usano `info()`/`ask()`.
+
 ## Trappole generali
 - Il service worker tiene in cache l'app: dopo un deploy prova con Cmd/Ctrl+Shift+R. Le anteprime dei link restano in cache presso le app di messaggistica (`?v=2` sul link; con un'immagine nuova cambia anche il `?v=` di `og:image` in `build_site.py`).
 - Un `title` su un iframe diventa un suggerimento su tutto il contenuto: usa `aria-label`. `ask()` restituisce `null` anche per il testo vuoto: per «valore predefinito» usa una parola («auto»).

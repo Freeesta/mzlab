@@ -47,7 +47,7 @@ const WORKFLOW = (() => {
       NB.ops.push({ op, t: new Date().toISOString(), ...details });
       if (NB.ops.length > 500) NB.ops.shift();
       if (typeof nbSave === "function") nbSave();
-    } catch (_) {}
+    } catch (_) { /* the operation log is a convenience: a notebook that cannot be saved must not break the action being logged */ }
   }
 
   // ---------------------------------------------------------------- .mzflow creation & export
@@ -117,8 +117,7 @@ const WORKFLOW = (() => {
 
   function exportWorkflow() {
     if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) {
-      if (typeof info === "function") info(I18N.t("err.workflow.noFiles"));
-      else alert(I18N.t("err.workflow.noFiles"));
+      info(I18N.t("err.workflow.noFiles"));
       return;
     }
     const wf = buildWorkflow();
@@ -150,8 +149,7 @@ const WORKFLOW = (() => {
         const wf = JSON.parse(text);
         await applyWorkflow(wf, file.name);
       } catch (err) {
-        if (typeof info === "function") info(I18N.t("workflow.err.invalidFormat") + " " + (err && err.message || ""));
-        else alert(I18N.t("workflow.err.invalidFormat"));
+        info(EH(I18N.t("workflow.err.invalidFormat") + " " + (err && err.message || "")));
       }
     };
     inp.click();
@@ -159,8 +157,7 @@ const WORKFLOW = (() => {
 
   async function applyWorkflow(wf, wfFileName = "") {
     if (!wf || (wf.formato !== FORMAT && !LEGACY_FORMATS.includes(wf.formato))) {
-      const msg = I18N.t("workflow.err.invalidFormat");
-      if (typeof info === "function") info(msg); else alert(msg);
+      info(I18N.t("workflow.err.invalidFormat"));
       return false;
     }
 
@@ -176,8 +173,7 @@ const WORKFLOW = (() => {
     const missing = neededFiles.filter(nf => !openByName.has(nf.nome));
     if (missing.length && !openFiles.length) {
       // Prompt user to load files first
-      const msg = I18N.t("workflow.needFiles") + "\n" + missing.map(m => "• " + m.nome).join("\n");
-      if (typeof info === "function") info(msg); else alert(msg);
+      info(I18N.t("workflow.needFiles") + "<br>" + missing.map(m => "• " + EH(m.nome)).join("<br>"));
     }
 
     // Check SHA-256 for open matching files
