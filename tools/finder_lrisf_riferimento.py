@@ -19,7 +19,11 @@ sys.path.insert(0, str(AQUI.parent))
 sys.path.insert(0, str(AQUI.parent / "TP_Mine" / "py"))
 
 from mzlab import demo, ionfamily as F  # noqa: E402
-from tpmine import isf  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+import numpy as np  # noqa: E402
+
+from tpmine import chem, fragtree as FT, isf  # noqa: E402
 
 OFF = demo.ISF_OFFSET
 PMZ = demo.ISF_PARENT_MZ + OFF
@@ -109,16 +113,81 @@ def mutated(base):
     return out
 
 
+# ---------------------------------------------------------------------------------------------------------------- supposed tree and comparison
+SMILES = ["CC(C)NC(=O)COc1ccccc1", "CCN(CC)C(=O)c1ccccc1", "OC(=O)c1ccccc1O", "CC(=O)Nc1ccc(O)cc1", "NC(=O)c1ccccc1"]
+
+
+def _ex(mz_x, ms2, neutral, adduct, smiles, neutral_text=None):
+    par = {"smiles": smiles, "neutral": neutral_text if neutral_text is not None else (chem.fmt(neutral) if neutral else "")}
+    return SimpleNamespace(entries=[{"mz_x": mz_x}], ms2=lambda e, top=12, min_rel=0.05: ms2, parent=par, neutral=neutral, adduct=adduct)
+
+
+def tree_case(name, mz_x, ms2, neutral, smiles=None, adduct="[M+H]+", neutral_text=None):
+    ex = _ex(mz_x, ms2, neutral, adduct, smiles, neutral_text)
+    ion = chem.fmt(chem.add(neutral, {"H": 1})) if neutral is not None and adduct == "[M+H]+" else None
+    smi = (smiles or "").strip() or None
+    if smi is None and neutral_text and not neutral_text.strip().replace(" ", "").isalnum():
+        smi = neutral_text.strip()
+    inp = {"mz_x": mz_x, "scans": ms2["scans"], "precursor": ms2["precursor"], "mz": [f["mz"] for f in ms2["fragments"]], "rel": [f["rel"] for f in ms2["fragments"]],
+           "ion": ion, "smiles": smi, "smiles_in": smiles, "neutral_text": neutral_text}
+    return {"name": name, "in": F.to_jsonable(inp), "out": F.to_jsonable(FT.lr(ex))}
+
+
+def tree_cases(rng):
+    out = []
+    forms = [{"C": 11, "H": 15, "N": 1, "O": 2}, {"C": 11, "H": 15, "N": 1, "O": 1}, {"C": 7, "H": 6, "O": 3}, {"C": 8, "H": 9, "N": 1, "O": 2}, {"C": 7, "H": 7, "N": 1, "O": 1}]
+    for i, (f, sm) in enumerate(zip(forms, SMILES)):
+        m = float(sum({"C": 12.0, "H": 1.007825, "N": 14.003074, "O": 15.994915}[e] * n for e, n in f.items()) + 1.007276)
+        for variant in range(4):
+            mzs = sorted({round(m - d + 0.3 + float(rng.normal(0, 0.04)), 2) for d in rng.uniform(2, m - 30, 8 + variant)}, reverse=True)
+            rel = [float(round(x, 1)) for x in rng.uniform(1, 100, len(mzs))]
+            rel[int(rng.integers(len(rel)))] = 100.0
+            frags = [{"mz": a, "rel": b} for a, b in zip(mzs, rel)]
+            ms2 = {"scans": 5 + variant, "precursor": round(m + 0.3, 2) if variant != 3 else None, "fragments": frags}
+            kw = [dict(smiles=sm), dict(smiles=None), dict(smiles="  "), dict(smiles=None, neutral_text=sm)][variant]
+            out.append(tree_case("tree %d.%d" % (i, variant), round(m + 0.3, 2), ms2, f if variant != 1 else None, **kw))
+    # losses of the table at known masses (H2O, NH3, CO2) around the first parent
+    m = 194.1176 + 0.3
+    fr = [{"mz": round(m - 18.0106, 2), "rel": 100.0}, {"mz": round(m - 17.0265, 2), "rel": 40.0}, {"mz": round(m - 43.9898, 2), "rel": 12.0}, {"mz": round(m - 0.5, 2), "rel": 80.0}]
+    out.append(tree_case("losses of the table, no formula", m, {"scans": 3, "precursor": m, "fragments": fr}, None))
+    out.append(tree_case("other adduct", m, {"scans": 3, "precursor": m, "fragments": fr}, forms[0], adduct="[M+Na]+"))
+    out.append(tree_case("no MS2", m, {"scans": 0, "precursor": None, "fragments": []}, forms[0], smiles=SMILES[0]))
+    out.append(tree_case("scans but no fragments", m, {"scans": 4, "precursor": m, "fragments": []}, forms[0]))
+    out.append(tree_case("precursor zero uses mz_x", m, {"scans": 2, "precursor": 0.0, "fragments": fr}, forms[0], smiles=SMILES[0]))
+    return out
+
+
+def compare_cases(trees, rng):
+    out = []
+    for t in trees:
+        tree = t["out"]
+        if not tree.get("ok"):
+            continue
+        nodes = [n for n in tree["nodes"] if n["kind"] == "frag"]
+        for k, dm in enumerate((None, 15.9949, -14.0157)):
+            pick = [n["mz"] + float(rng.normal(0, 0.15)) for n in nodes if rng.random() < 0.5]
+            pick += [n["mz"] + (dm or 0.0) + float(rng.normal(0, 0.15)) for n in nodes if rng.random() < 0.4]
+            if k == 2:
+                pick = []
+            frs = [{"mz": round(float(x), 2), "rel": 50.0} for x in pick]
+            res = FT.compare_lr(tree, {"fragments": frs}, dm)
+            out.append({"name": "%s dm=%s" % (t["name"], dm), "tree": tree, "tp_mz": [f["mz"] for f in frs], "dm": dm, "out": F.to_jsonable(res)})
+    return out
+
+
 def main():
     ser = demo.isf_series(times=(5, 10, 15, 30, 45, 60), seed=777)
     series = [{"label": "t%g" % t, "time": float(t), "table": tb, "key": "tisf_%g" % t} for t, tb, _ in ser]
     base = F.origin_report(series, 346.0 + OFF, PMZ, top=0)
     cases = scene_cases(series) + mutated(base)
+    rng = np.random.default_rng(2026)
+    trees = tree_cases(rng)
+    compares = compare_cases(trees, rng)
     if "--golden" in sys.argv:
         p = AQUI.parent / "tests" / "golden" / "finder_lrisf.json"
-        p.write_text(json.dumps({"cases": cases}, allow_nan=False, separators=(",", ":")), encoding="utf-8")
+        p.write_text(json.dumps({"cases": cases, "tree": trees, "compare": compares}, allow_nan=False, separators=(",", ":")), encoding="utf-8")
         print(p, p.stat().st_size, "bytes")
-    print(len(cases), "cases,", sum(c["expect"] is None for c in cases), "raising")
+    print(len(trees), "trees,", len(compares), "comparisons;", len(cases), "cases,", sum(c["expect"] is None for c in cases), "raising")
 
 
 if __name__ == "__main__":
