@@ -54,10 +54,12 @@ try:
             pg.click("#np-set"); pg.wait_for_timeout(200)
             assert pg.inner_text("#uipset label, #uipset .row >> nth=0").startswith("Lingua / Language")
             assert pg.evaluate("document.querySelector('#uip-lang').value") == "it"
+            saved(pg)        # the open files come back from the saved session: wait until it is written
             with pg.expect_navigation(): pg.select_option("#uip-lang", "en")
-            pg.wait_for_timeout(500); ready(pg)
+            attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
             assert nav(pg) == ["Data", "Drawing", "Theory"]
+            attendi(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#uip-lang').value") == "en"
             assert pg.inner_text("#uipset .row >> nth=0").startswith("Lingua / Language"), "the label stays bilingual"

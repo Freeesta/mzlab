@@ -31,7 +31,8 @@ try:
                 loc = pg.locator(f"#s3 .st:has-text('m/z {mz}') .opts button", has_text=name)
                 if loc.count(): loc.first.click(); pg.wait_for_timeout(150)
             assert pg.evaluate("document.querySelector('#s3').classList.contains('done')"), "key ions step not done"
-            pg.fill("#k-smi", "CC(=O)c1ccccc1"); pg.click("#k-ok"); pg.wait_for_timeout(1500)   # OpenChemLib is loaded here, on demand
+            pg.fill("#k-smi", "CC(=O)c1ccccc1"); pg.click("#k-ok")
+            attendi(pg, "(()=>{const t=document.querySelector('#end').innerText;return t.includes('100')||t.includes('punti')})()", 60000)   # OpenChemLib is loaded here, on demand
             end = pg.inner_text("#end")
             assert "100" in end or "punti" in end, end[:120]
         step("EI game: acetophenone from M to the structure", ei_game)

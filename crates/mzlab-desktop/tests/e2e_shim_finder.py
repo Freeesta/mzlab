@@ -93,10 +93,13 @@ try:
             pg.locator("#hr-t tr.clk").first.click(); pg.wait_for_timeout(1500)
             m = pg.inner_text("#tp-msg"); assert "error" not in m.lower(), m
         step("the page: Dig, table and detail of a candidate", ui)
-        def unsupported():
-            r = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, 'a;+O').then(() => 'ran', e => String(e.message || e))", [got["files"], PARENT])
-            assert "not in the app yet" in r, r
-        step("a modified list of transformations says it is not in the app yet", unsupported)
+        def transformations():
+            user = "my rule;+O;a row of the user"
+            run = pg.evaluate("([f, p, t]) => window.TPCALL('run', f, p, {}, t)", [got["files"], PARENT, user])
+            assert run["n_candidates"] >= 1, run["n_candidates"]
+            r = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, 'no change here').then(() => 'ran', e => String(e.message || e))", [got["files"], PARENT])
+            assert "invalid line" in r, r
+        step("a list of transformations of the user runs; a bad row says what is wrong", transformations)
         def clean():
             bad = [u for u in reqs if re.search(r"pyodide|wasm-feat|mzlab\.zip", u, re.I)]
             assert not bad, bad[:5]
