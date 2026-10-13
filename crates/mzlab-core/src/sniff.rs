@@ -8,7 +8,7 @@ use crate::json::{self, Out};
 use crate::mzmlhead::Mzml;
 use crate::sorgente::Scansioni;
 
-/// The hint the file name gives: "mrm", "ms2" or "full" (the first rule that matches the lower-case stem).
+/// The hint the file name gives: "infusion", "mrm", "ms2" or "full" (the first rule that matches the lower-case stem).
 pub fn hint(file_name: &str) -> Option<&'static str> {
     let base = file_name.rsplit('/').next().unwrap_or(file_name);
     let stem = match base.rfind('.') {
@@ -17,7 +17,9 @@ pub fn hint(file_name: &str) -> Option<&'static str> {
     };
     let n = stem.to_lowercase();
     let has = |ws: &[&str]| ws.iter().any(|w| n.contains(w));
-    if has(&["mrm", "srm"]) {
+    if has(&["infus", "fia", "direct", "syringe"]) {
+        Some("infusion")
+    } else if has(&["mrm", "srm"]) {
         Some("mrm")
     } else if has(&["ms2", "msms", "ms-ms", "product", "epi"]) {
         Some("ms2")
@@ -59,7 +61,7 @@ fn hr_profile<R: ReadAt, M: Scansioni + ?Sized>(
     .any(|w| low.contains(w)))
 }
 
-/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hint}` of a whole file.
+/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hint, msn}` of a whole file (`msn`: `infusione.rs`).
 pub fn sniff<R: ReadAt, M: ReadAt>(
     idx: &mut Index<R>,
     m: &mut Mzml<M>,
@@ -128,6 +130,8 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         Some(h) => o.str(h),
         None => o.raw("null"),
     };
+    let msn = crate::infusione::infusione(&idx.scans, facts.lc, file_name);
+    crate::iteminfo::msn_json(&mut o, msn.as_ref());
     o.raw("}");
     Ok(o.0)
 }
