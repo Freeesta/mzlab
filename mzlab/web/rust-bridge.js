@@ -13,12 +13,11 @@ import { diffRoute } from "./rust-diff.js";
 import { makeConvertRaw } from "./rust-raw.js";
 import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
-import { makeConvertAgilent } from "./rust-agilent.js";
-import { makeConvertLettori } from "./rust-lettori.js";
+import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults } from "./rust-supervisor.js";
 
-export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
+export function createBridge({ workerUrl, notify, onBlocked = () => {}, nativo = false }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
   let worker = null, seq = 0, peakMem = 0;
@@ -93,7 +92,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   api.start = () => { if (!worker && !api.disabled) spawn(); };
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
-  api.noteRemove = name => { blobs.delete(base(name)); };
+  api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
@@ -109,9 +108,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       slots[k].opening = open(k, slots[k]);
     }
   };
-  // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
-  api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
-  Object.assign(api, wiffApi(rpc, base), { convertAgilent: makeConvertAgilent({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertLettori: makeConvertLettori({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertCentroids: makeConvertCentroids({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }) });      // wiffSamples, convertWiff (rust-convert.js); convertAgilent: Agilent .D folder -> Blob of mzML (rust-agilent.js); convertLettori: any dataset of a maker -> Blob of mzML through the readers of the registry (rust-lettori.js); convertCentroids: profile mzML of the archive -> one point per peak (rust-centroidi.js)
+  // a worker busy in one long call cannot hear a message: cancelling stops it and starts a new one (not a fault). nativo (browser): the files of a maker are read as they are (rust-nativo-pagina.js); the desktop app converts a .raw (rust-raw.js)
+  const cancelable = { rpc, base, current: () => worker, abort: (/** @type {any} */ w) => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } };
+  Object.assign(api, wiffApi(rpc, base), { convertCentroids: makeConvertCentroids(cancelable) }, nativo ? makeNativo(cancelable) : { convertRaw: makeConvertRaw(cancelable) });
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

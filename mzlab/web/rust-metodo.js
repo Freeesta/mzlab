@@ -23,7 +23,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
       case "lr_metodo": {                    // { source: "mzml" | "wiff" | "dam" | "none", metodo: {...} }
         await sync();
         const o = await open(m), e = engine();
-        const emb = e.mzml_metodo(o.f.size, o.rd);
+        const emb = e.native_metodo(o.slot) || e.mzml_metodo(o.f.size, o.rd);       // a sample of a maker's file: from its reader
         const doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
         const source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
         return { info: `{"source":"${source}","metodo":${doc || "null"}}` };

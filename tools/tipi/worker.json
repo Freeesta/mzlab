@@ -15,7 +15,6 @@
     "../../mzlab/web/rust-worker-lab.js",
     "../../mzlab/web/rust-worker.js",
     "../../mzlab/web/sw.js",
-    "../../mzlab/web/wiff-worker.js",
     "../../TP_Mine/files/feat-run.js",
     "../../TP_Mine/files/feat-worker.js",
     "../../TP_Mine/files/finder-idx.js",
