@@ -42,6 +42,7 @@ declare var MZLAB_LR_MISS: any;
 declare var MZLAB_RUST: any;
 declare var MZLAB_RUST_ERR: any;
 declare var MZLAB_RUST_READY: any;
+declare var NATIVO: any;
 declare var OCL: any;
 declare var PERF: any;
 declare var PERF_EARLY: any;

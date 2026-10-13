@@ -96,11 +96,17 @@
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
+  async function nativeMzml(name, f) {      // a sample of a maker's file (.raw, .wiff, .D) is a small stub in files/: its mzML is written now, for this use only (docs/agenti/lettura-nativa.md)
+    try {
+      const j = JSON.parse(await f.text()); if (j.mzlab !== "mzlab/nat1") return null;
+      const rb = await window.MZLAB_RUST_READY; return rb && rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null;
+    } catch (_) { return null; }
+  }
   async function opfsFiles() {        // the files of the Data tab kept by the Rust engine (low resolution): OPFS mzlab/files/, as File objects (never read whole here)
     try {
       const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
       const out = [];
-      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) out.push({ name, buf: await h.getFile() });
+      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: (f.size < 65536 && await nativeMzml(name, f)) || f }); }
       return out;
     } catch (_) { return []; }
   }

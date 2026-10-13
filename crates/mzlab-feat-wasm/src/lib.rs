@@ -370,9 +370,18 @@ pub fn run_hypotheses(
 }
 
 #[cfg(feature = "proofs")]
+/// The roles of the files from a `campioni/2` (None or empty = only the minutes, as before).
+fn roles_of(campioni: Option<&str>) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
+    match campioni.filter(|c| !c.is_empty()) {
+        Some(c) => mzlab_feat::tp::TpRoles::from_json(c).map(Some).map_err(js_err),
+        None => Ok(None),
+    }
+}
+
+#[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
-/// parent in the table. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
+/// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
 #[wasm_bindgen]
 pub fn build_evidence_to(
     table_read: Function,
@@ -384,8 +393,10 @@ pub fn build_evidence_to(
     recipe: &str,
     write: Function,
     budget_mb: f64,
+    campioni: Option<String>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref())?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(budget_mb);
     let mut table = JsReader {
@@ -394,11 +405,12 @@ pub fn build_evidence_to(
     };
     to_sink(write, |sink| {
         let size = table_size as u64;
-        run::evidence_to(
+        run::evidence_roles_to(
             &mut table,
             size,
             &hypotheses.inner,
             &minutes,
+            roles.as_ref(),
             parent,
             &r,
             &budget,
@@ -417,17 +429,20 @@ pub fn build_evidence(
     parent_mz: f64,
     parent_rt: f64,
     recipe: &str,
+    campioni: Option<String>,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref())?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut at = mzlab_feat::store::Slice(table);
-    run::evidence_to(
+    run::evidence_roles_to(
         &mut at,
         table.len() as u64,
         &hypotheses.inner,
         &minutes,
+        roles.as_ref(),
         parent,
         &r,
         &budget,
