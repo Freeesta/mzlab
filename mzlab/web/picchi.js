@@ -377,7 +377,7 @@ async function drawSpec(p, snapped) {
   const wide = files.reduce((r, f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
   const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...mzs) - 2, Math.max(...mzs) + 2];
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let ymax = inRange(x0, x1) * 1.12;
+  let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
   const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;
