@@ -19,6 +19,8 @@ pub struct Facts {
     pub srm_rt: Option<(f64, f64)>,
     /// The non-MS traces that are not the PDA (pressure, flow...): chromatogram index, kind, id, unit, first and last time, points.
     pub analog: Vec<Analog>,
+    /// The `.raw` method the file carries (`metodo/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
+    pub lc: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -475,15 +477,7 @@ pub fn item_info<R: ReadAt>(
                 .collect::<Vec<_>>(),
         )
     };
-    let infusion = match all.len() {
-        0 => false,
-        1 => true,
-        _ => {
-            let mx = all.iter().map(|s| s.rt).fold(f64::NEG_INFINITY, f64::max);
-            let mn = all.iter().map(|s| s.rt).fold(f64::INFINITY, f64::min);
-            mx - mn < 1e-6
-        }
-    };
+    let msn = crate::infusione::infusione(&idx.scans, facts.lc, &meta.file);
     let dda = !phys1.is_empty() && !phys2.is_empty() && phys2.iter().all(|s| s.parent.is_some());
     let mode_of = |v: &[&Scan]| {
         if v.iter().take(50).any(|s| s.profile) {
@@ -614,7 +608,8 @@ pub fn item_info<R: ReadAt>(
     o.raw(",\"dda\":")
         .raw(if dda { "true" } else { "false" })
         .raw(",\"infusion\":")
-        .raw(if infusion { "true" } else { "false" });
+        .raw(if msn.is_some() { "true" } else { "false" });
+    crate::infusione::json(&mut o, msn.as_ref());
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
@@ -684,6 +679,7 @@ pub fn facts_from<M: ReadAt>(
             });
         }
     }
+    f.lc = crate::infusione::raw_lc(m)?;
     if need_mrm {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);

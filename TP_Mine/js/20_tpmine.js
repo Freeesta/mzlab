@@ -29,7 +29,7 @@
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
 .hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
 .tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
-.tp-title{margin:12px 16px 2px;font-size:20px}.tp-sub{margin:0 16px;color:var(--muted);font-size:12px}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 14px;min-width:110px}
 .stat b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat.g b{color:var(--ok)}.stat.a b{color:var(--warn)}.stat.v b{color:var(--accent)}
@@ -42,7 +42,6 @@
 .frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
 .ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
-.tp-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-hd .tp-title{margin-right:0}#tp-hd-struct{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}#tp-hd-struct svg{height:48px;width:auto;max-width:120px}
 .tp-ac{position:relative}.tp-ac input{width:100%}#tp-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:2px 0 0;padding:2px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-height:260px;overflow:auto}
 #tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
 #tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
@@ -162,7 +161,6 @@
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     sec.innerHTML = `<div class="tp-wrap">
-<div class="tp-hd"><h2 class="tp-title">mzFinder</h2><div id="tp-hd-struct" aria-live="polite"></div></div><p class="tp-sub">Automated transformation-product discovery</p>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
@@ -286,19 +284,12 @@
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
           if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
-        header(info ? info.formula : (mol || ""), smi);
       }, 350);
     };
     function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
       if (!t) { el.innerHTML = ""; return; }
       ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
-    }
-    function header(formula, smi) {      // small structure + name + formula next to the title
-      const el = $("#tp-hd-struct"); if (!el) return;
-      const nm = $("#tp-name").value.trim();
-      if (!smi) { el.innerHTML = ""; return; }
-      ocl().then(OCL => { el.innerHTML = MOLUI.svg(OCL.Molecule.fromSmiles(smi).toSVG(120, 48)) + `<span>${esc(MOLUI.cap(nm))}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
     }
     $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
 
@@ -345,7 +336,7 @@
       sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(MOLUI.cap(it.c.names[0]))}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
       sugBox.hidden = false; nameIn.setAttribute("aria-expanded", "true"); sugI = -1; sugMark();
     };
-    nameIn.addEventListener("input", () => { delete nameIn.dataset.raw; sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
+    nameIn.addEventListener("input", () => { delete nameIn.dataset.raw; sugShow(); });
     nameIn.addEventListener("keydown", e => {
       if (sugBox.hidden) { if (e.key === "ArrowDown") sugShow(); return; }
       if (e.key === "ArrowDown") { sugI = (sugI + 1) % sugItems.length; sugMark(); e.preventDefault(); }
