@@ -178,7 +178,7 @@ function attach(p) {
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
     if (hit) {
-      const v = await ask("Annotazione", hit.ann.text);
+      const v = await ask(I18N.t("ctx.ann.prompt"), hit.ann.text);
       if (v != null) {
         if (v === "") p.anns = p.anns.filter(a => a !== hit.ann);
         else hit.ann.text = v;
@@ -191,9 +191,10 @@ function attach(p) {
       if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    if (p.type === "mrm") { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // MRM has no spectra (a new one would jump to the Full Scan tab): double click = whole view
+    // one rule for every graph: zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
+    if (p.zoom || p.zoomY) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }
+    if (p.type === "mrm" || p.el.classList.contains("max")) return;       // MRM has no spectra (a new one would jump to the Full Scan tab); full screen: nobody would see the new panel
     if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
-      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
@@ -216,7 +217,7 @@ function attach(p) {
     if (!z) return;
     e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
   });
-  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)

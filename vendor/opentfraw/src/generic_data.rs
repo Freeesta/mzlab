@@ -12,7 +12,7 @@ pub struct GenericDataDescriptor {
 }
 
 /// Self-describing header for GenericRecord streams.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GenericDataHeader {
     pub fields: Vec<GenericDataDescriptor>,
 }
@@ -34,7 +34,7 @@ pub enum GenericValue {
 }
 
 /// A single record decoded using a GenericDataHeader.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GenericRecord {
     pub values: Vec<(String, GenericValue)>,
 }

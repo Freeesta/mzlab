@@ -30,6 +30,14 @@ try:
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
         step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
+        def enter_():
+            n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
+            pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
+            pg.fill("#xic-mz", ""); pg.press("#xic-mz", "Enter"); assert dlg() and pg.inner_text("#xic-err").strip(), "empty field: no extraction, a message"
+            pg.fill("#xic-mz", "364"); pg.press("#xic-mz", "Shift+Enter"); assert dlg(), "Shift+Enter only moves to the next field"
+            pg.press("#xic-mz", "Enter"); ready(pg)
+            assert not dlg() and pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n + 1, "Enter extracts at once"
+        step("XIC window: Enter in an Ion field extracts, Shift+Enter moves on, empty field gives a message", enter_)
         def chrom_menu():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_function("document.querySelectorAll('#ctx div').length>0", timeout=5000)
