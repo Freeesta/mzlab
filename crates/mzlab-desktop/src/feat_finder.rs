@@ -4,6 +4,7 @@
 
 use mzlab_core::{Error, Result};
 use mzlab_feat::legacy;
+use mzlab_feat::store::Slice;
 use serde_json::Value;
 
 use crate::engine::State;
@@ -167,6 +168,22 @@ impl State {
         })
     }
 
+    /// `finder/tp_table`: the `tptab/1` of the rows `rows` of the table of the last `finder/dig` of a high-resolution series (`samples` = its `campioni/1`), as the `.wasm` `table` writes it.
+    fn finder_tp_table(&self, p: &Value) -> Result<Answer> {
+        let g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
+        let table = match (g.dig.as_ref(), g.table.as_deref()) {
+            (Some(_), Some(t)) => t,
+            _ => return text("null".to_string()),
+        };
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        text(mzlab_feat_table_wasm::core::tp_table_json(
+            &mut Slice(table),
+            table.len() as u64,
+            s("samples"),
+            s("rows"),
+        )?)
+    }
+
     pub(crate) fn op_finder(&self, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         match op {
@@ -185,6 +202,8 @@ impl State {
                 }))
             }
             "finder/plan" => self.finder_plan(p),
+            "finder/tp_table" => self.finder_tp_table(p),
+            "finder/campioni" => text(mzlab_core::campioni::route(s("cop"), s("input"))?),
             "finder/transf_rows" => text(legacy::transf::describe(s("text"))),
             "finder/transformations" => {
                 let merged =

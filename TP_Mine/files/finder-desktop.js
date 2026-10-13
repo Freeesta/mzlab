@@ -5,6 +5,8 @@
 // as the Data tab does (`lr_put`, `lr_index`); the bytes of a file that only exists in the page are sent once (`lr/upload`).
 // Imported by tpmine-worker.js from <site>/mzfinder/finder-desktop.js.
 
+import { samplesOfAsync } from "./finder-tabella.js";
+
 const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
 const CHUNK = 32 << 20;
 const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare"]);
@@ -43,8 +45,16 @@ async function rulesOf(base, list) {
   return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
 }
 
+/** the numbers of the table of the products: the roles of campioni/2 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
+async function tpTable(hr, rows) {
+  if (!hr) return "null";
+  const samples = await samplesOfAsync((op, input) => rpc("finder/campioni", { cop: op, input }), hr.lc, hr.files);
+  return rpc("finder/tp_table", { samples, rows: rows || "" });
+}
+
 /** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held */
 export function createDesktop(base, say, held) {
+  /** the series of the last high-resolution Dig, for the roles of the table of the products @type {{lc: string[], files: any[]} | null} */ let lastHr = null;
   /** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {string[]} names */
   async function ensure(names) {
     const boot = /** @type {{name: string, size: number, indexed: boolean, id: number}[]} */ (JSON.parse(await rpc("lr_boot")));
@@ -77,6 +87,7 @@ export function createDesktop(base, say, held) {
     say("Ranking the candidates...");
     const out = await rpc("finder/dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}", msn: msn ? msn.name : "" });
     lap("dig", t); lap("total", t0);
+    lastHr = { lc: names, files: JSON.parse(filesJson) };
     return JSON.stringify({ ...JSON.parse(out), timing });
   }
 
@@ -85,6 +96,7 @@ export function createDesktop(base, say, held) {
     const [filesJson, parentJson, settingsJson] = a, t0 = performance.now(), timing = /** @type {Record<string, number>} */ ({});
     const lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
     const names = /** @type {string[]} */ (plan.lc);
+    lastHr = null;
     await ensure(names);
     let t = performance.now();
     for (const [k, name] of names.entries()) { say(`Detecting the peaks of ${name} (${k + 1} of ${names.length})...`); await rpc("feat/detect", { name, recipe: "" }); }
@@ -101,7 +113,7 @@ export function createDesktop(base, say, held) {
   return {
     /** one call of the page @param {string} fn @param {string[]} a */
     async call(fn, a) {
-      if (fn === "tp_table") return "null";        // the numbers of the table of the products are not native yet: the page keeps a dash
+      if (fn === "tp_table") return tpTable(lastHr, a[0]);
       if (fn === "transf_rows") return rpc("finder/transf_rows", { text: a[0] });
       if (fn === "formula_info") return rpc("finder/formula_info", { text: a[0], adduct: a[1] });
       if (STATELESS.has(fn)) return rpc("finder/" + fn, { payload: a[0] });

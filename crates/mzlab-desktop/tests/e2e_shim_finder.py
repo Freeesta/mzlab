@@ -150,6 +150,13 @@ try:
         def details():
             for d in native["detail"]: assert pg.evaluate("([i]) => window.TPCALL('detail', i)", [d["id"]]) == d, d["id"]
         step("detail of the first candidates equals the native example's", details)
+        def tp_table():
+            ids = [d["id"] for d in native["detail"]]
+            t = pg.evaluate("([i]) => window.TPCALL('tp_table', i)", [ids])
+            assert t and t.get("schema") == "tptab/1" and [x["row"] for x in t["rows"]] == ids, t
+            for x in t["rows"]: assert all(x.get(k) is not None for k in ("in_t0", "in_blank", "t0_ratio", "blank_ratio")), x
+            assert t == pg.evaluate("([i]) => window.TPCALL('tp_table', i)", [ids]), "the table changes between two calls"
+        step("tp_table: the table of the products has the t0 and Blank columns filled", tp_table)
         def ui():
             pg.fill("#tp-mol", PARENT["neutral"]); pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             pg.locator("#hr-t tr.clk").first.click(); pg.wait_for_timeout(1500)
