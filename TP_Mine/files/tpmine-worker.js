@@ -187,7 +187,11 @@ async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
-  if (fn === "classify" && !py) { const names = JSON.parse(a[0]); await ensureIdx(names).catch(() => {}); if (await idxFiles(names)) return classifyRust(names); }
+  if (fn === "classify") {
+    const names = JSON.parse(a[0]);
+    await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));
+    if (await idxFiles(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+  }
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null;

@@ -44,8 +44,6 @@ time.sleep(1); errs = []; reqs = []
 SHAS = """async () => { const out = {}; try { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx');
   for await (const [n, h] of d.entries()) { if (n.endsWith('.part')) continue; const b = await (await h.getFile()).arrayBuffer();
     out[n] = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join(''); } } catch (e) {} return out; }"""
-WIPE = """async () => { const r = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab');
-  for (const k of ['idx', 'files']) { const d = await r.getDirectoryHandle(k); for await (const n of d.keys()) await d.removeEntry(n); } }"""
 # the files of an older visit: the bytes in the object store «files» of qqq_lab
 TO_IDB = """async (list) => { const db = await new Promise((res, rej) => { const q = indexedDB.open('qqq_lab'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
   const bufs = []; for (const u of list) bufs.push([u.split('/').pop(), await (await fetch(u)).arrayBuffer()]);
@@ -65,14 +63,23 @@ def rows_ready(pg):
     assert "LC-HRMS" in pg.inner_text("#tp-fsum"), pg.inner_text("#tp-fsum")
 
 
+INIT = "try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}"
+
+
+def fresh(b):
+    """A new browser profile (empty OPFS and IndexedDB), the page loaded and mzFinder ready."""
+    pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
+    pg.add_init_script(INIT)
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.context.on("request", lambda r: reqs.append(r.url))
+    pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
+    pg.wait_for_function("typeof window.TPCALL === 'function'", timeout=120000)
+    return pg
+
+
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
-        pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.context.on("request", lambda r: reqs.append(r.url))
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-        pg.wait_for_function("typeof window.TPCALL === 'function'", timeout=120000)
+        b = p.chromium.launch(); pg = fresh(b)
         ref = {}
 
         def from_data():                                    # the main program uploads and indexes the files; mzFinder takes them from the Data tab
@@ -89,24 +96,23 @@ try:
             assert ref["table"], "the Dig from the Data tab has no candidate"
         step("reference: the Data tab indexes the files, mzFinder digs from it", from_data)
 
-        def chosen():                                       # no file, no index in OPFS: «Choose mzML...» gives the files to the worker
-            pg.evaluate(WIPE); assert pg.evaluate(SHAS) == {}
-            pg.set_input_files("#tp-in", mzml); rows_ready(pg)
-            got = pg.evaluate(SHAS)
-            assert got == {k: v for k, v in ref.items() if k != "table"}, (got, ref)
-        step("Choose mzML...: the .mzidx is built, byte for byte the one of the main program", chosen)
+        same = lambda got: got == {k: v for k, v in ref.items() if k != "table"}
 
-        def dig_chosen():
-            assert dig(pg) == ref["table"], "the Dig of the chosen files differs from the one from the Data tab"
-        step("Choose mzML...: the Dig equals the one from the Data tab", dig_chosen)
+        def chosen():                                       # a new profile: no file, no index in OPFS; «Choose mzML...» gives the files to the worker
+            q = fresh(b); assert q.evaluate(SHAS) == {}
+            q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
+            q.set_input_files("#tp-in", mzml); rows_ready(q)
+            got = q.evaluate(SHAS); assert same(got), (got, ref)
+            assert dig(q) == ref["table"], "the Dig of the chosen files differs from the one from the Data tab"
+        step("Choose mzML...: the .mzidx equals the one of the main program, the Dig equals the one from the Data tab", chosen)
 
-        def from_idb():                                     # the bytes only in IndexedDB (an older visit), no index in OPFS
-            pg.evaluate(WIPE)
-            pg.evaluate(TO_IDB, [f"static/dati_finder/{n}" for n in names])
-            pg.click("#tp-page"); rows_ready(pg)
-            got = pg.evaluate(SHAS)
-            assert got == {k: v for k, v in ref.items() if k != "table"}, (got, ref)
-            assert dig(pg) == ref["table"], "the Dig of the IndexedDB files differs"
+        def from_idb():                                     # a new profile with the bytes only in IndexedDB (an older visit), no index in OPFS
+            q = fresh(b)
+            q.evaluate(TO_IDB, [f"static/dati_finder/{n}" for n in names])
+            q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
+            q.click("#tp-page"); rows_ready(q)
+            got = q.evaluate(SHAS); assert same(got), (got, ref)
+            assert dig(q) == ref["table"], "the Dig of the IndexedDB files differs"
         step("IndexedDB: same index, same Dig", from_idb)
 
         def no_pyodide():
