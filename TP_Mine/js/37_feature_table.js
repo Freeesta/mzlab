@@ -65,10 +65,10 @@
     let timer = 0;
     const update = () => {
       try {
-        const spec = specOf(q), v = o.session.view(spec), c = v.conteggi;
+        const spec = specOf(q), v = o.session.view(spec), c = v.conteggi, rej = o.session.qc(spec).scartate;
         g.set(o.session.rows(spec).slice(1));
         q("#ft-n").textContent = `${c.tenute.toLocaleString("en")} of ${c.righe.toLocaleString("en")} rows`;
-        q("#ft-why").textContent = c.scartate.length ? "Rejected by each filter, in order: " + c.scartate.join(", ") : "";
+        q("#ft-why").textContent = rej.length ? "Rejected by each filter, in order: " + rej.map((/** @type {any} */ r) => `${G.PIPEQC.WHY[r.regola] || r.regola} (${r.righe.toLocaleString("en")})`).join(", ") : "";
       } catch (/** @type {any} */ e) { q("#ft-n").textContent = ""; q("#ft-why").textContent = o.say ? o.say(e) : String(e.message || e); }
     };
     box.addEventListener("input", () => { clearTimeout(timer); timer = window.setTimeout(update, 250); });

@@ -1,5 +1,5 @@
 //! A Thermo `.raw` in PROFILE against the mzML msconvert made from it (profile, 64-bit, zlib, no peak picking), scan by scan, on the mzML
-//! that `raw::to_mzml_with` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
+//! that `raw::to_mzml_progress` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
 //! the scan it comes from), number of points, m/z and intensity. Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside
 //! this one) with `HRMS/Profile raw/`: without it the test is skipped; no `.raw` lives in this repository.
 use std::collections::BTreeMap;
@@ -292,14 +292,11 @@ fn compare() -> Option<Report> {
         std::env::temp_dir().join(format!("mzlab-profile-parity-{}.mzML", std::process::id()));
     {
         let mut out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
-        raw::to_mzml_with(
+        raw::to_mzml_progress(
             BufReader::new(File::open(&rawp).unwrap()),
             &mut out,
             "profile.raw",
-            raw::Convert {
-                profile: true,
-                anonymous: false,
-            },
+            true,
             &mut |_, _| {},
         )
         .unwrap();

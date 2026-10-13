@@ -33,7 +33,7 @@ pub enum Rule {
 const NAMES: [&str; 7] = ["min_rilevati", "min_area", "min_altezza", "bianco", "mz", "rt", "ms2"];
 
 impl Rule {
-    fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         NAMES[match self {
             Rule::MinDetected(_) => 0,
             Rule::MinArea(_) => 1,

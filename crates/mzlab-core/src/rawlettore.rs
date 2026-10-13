@@ -78,7 +78,6 @@ pub struct LettoreRaw {
     raw: RawFileReader,
     src: Stream,
     nome: String,
-    anonimo: bool,
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
 }
@@ -125,7 +124,6 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         raw,
         src,
         nome,
-        anonimo: false,
         campioni,
         indice,
     }))
@@ -162,12 +160,6 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> VoceScansione {
 }
 
 impl LettoreRaw {
-    /// The same reader asked for an anonymous `metodo/1` (no people, computer, serial number or paths).
-    pub fn anonimo(mut self, on: bool) -> Self {
-        self.anonimo = on;
-        self
-    }
-
     fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
@@ -193,9 +185,6 @@ fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str
 }
 
 impl Lettore for LettoreRaw {
-    fn imposta_anonimo(&mut self, on: bool) {
-        self.anonimo = on;
-    }
     fn formato(&self) -> Formato {
         Formato::ThermoRaw
     }
@@ -253,12 +242,7 @@ impl Lettore for LettoreRaw {
 
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        Ok(crate::raw::metodo_of(
-            &self.raw,
-            &mut self.src,
-            &self.nome,
-            self.anonimo,
-        ))
+        Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
     }
 }
 

@@ -67,7 +67,6 @@ impl Engine {
         read: Function,
         sample: u32,
         sha1: &str,
-        anonymous: bool,
     ) -> Result<String, JsValue> {
         if size as u64 > WIFF_MAX {
             return Err(error_json(&mzlab_core::Error::memory_budget()));
@@ -86,8 +85,6 @@ impl Engine {
             format: "sciex-wiff",
             files: vec![file],
             sample: Some(sample),
-            anonymous,
-            secret: mzlab_core::pseudo::current(),
         };
         Ok(mzlab_core::metodo_wiff::from_wiff(&ole, sample, &src))
     }
@@ -99,7 +96,6 @@ impl Engine {
         item: &str,
         size: f64,
         read: Function,
-        anonymous: bool,
     ) -> Result<String, JsValue> {
         let data = self.item_data(slot, item, size, read)?;
         let labs = self.labs();
@@ -115,8 +111,6 @@ impl Engine {
                 name: labs[i].name.clone(),
                 ..Default::default()
             }],
-            anonymous,
-            secret: mzlab_core::pseudo::current(),
             ..Default::default()
         };
         Ok(metodo::from_dam(m, &src))
