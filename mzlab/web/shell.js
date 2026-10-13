@@ -106,6 +106,8 @@ function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
+// hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
+function loadingStato(text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
 function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
@@ -211,7 +213,14 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#unopen").hidde
 async function loneWiffs(wr,rep){      // a .wiff without its .scan is the method of the mzML files made from it (same SHA-1): else it waits for its .scan
   for(const {e,rb} of wr.lone||[]){try{const r=await rb.metodoWiff(e.wiff);if(r.matched.length){WIFF_WAIT.delete(e.stem.toLowerCase());rep.notes.push(I18N.t("load.note.wiffMethod",{name:e.wiff.name,n:r.matched.length,files:namesCut(r.matched.map(x=>x.name),3)}));continue}}catch(_){}
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
-async function upload(files,into){const box=$("#up");fail();
+const INFLIGHT=new Set(),fkey=f=>f.name+"|"+f.size;
+// the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
+function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some(g=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
+  const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
+  dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
+  return files.filter(f=>!dups.includes(f))}
+async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)))}}
+async function upload0(files,into,box){
   const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
@@ -260,7 +269,7 @@ async function openRest(rest,tok){
     added.push(p);if(Date.now()-last>=200)await boot();               // LR: the overlay is redrawn at most every ~200 ms, whatever the number of files that arrived
   }
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
-$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I18N.t("load.reading"));
+$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
@@ -271,7 +280,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,I
       const isOpen=f=>typeof E!=="undefined"&&E.files.some(x=>x.file===f.name||x.file.startsWith(f.name+"#"));
       $("#hrmix-cancel").onclick=()=>$("#cancadd").click();
       $("#hrmix-replace").onclick=async()=>{
-        const b=$("#hrmix-replace");b.disabled=true;loading(true,I18N.t("load.closing"));
+        const b=$("#hrmix-replace");b.disabled=true;loading(true);
         try {
           await post("api/new",{});                                 // closes the open files but keeps the uploaded ones on disk
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
