@@ -67,6 +67,33 @@ function start() {
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
 let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
+// zoom in / zoom out / reset (100 % and centred) next to the centre button: buttons, no plain-key shortcuts (Ketcher uses «+» and «-» for the charge)
+function addZoomButtons(d, fr, fullBtn, btn) {
+  const ZB = [["zoom-in-tp", "draw.zoom.in", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/>', () => stepZoom(1.25)],
+              ["zoom-out-tp", "draw.zoom.out", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6"/>', () => stepZoom(0.8)],
+              ["zoom-reset-tp", "draw.zoom.reset", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/><text x="11" y="13.6" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif">1:1</text>', () => { fitZoom(K, fr); drawLabels(); }]];
+  let after = btn;
+  ZB.forEach(([id, key, ico, fn]) => {
+    if (d.querySelector('[data-testid="' + id + '"]')) return;
+    const b = d.createElement("button");
+    b.setAttribute("data-testid", id); b.setAttribute("type", "button");
+    b.setAttribute("title", I18N.t(key)); b.setAttribute("aria-label", I18N.t(key));
+    b.className = fullBtn.className;
+    b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + ico + '</svg>';
+    b.onclick = fn;
+    after.after(b); after = b;
+  });
+}
+// the «Show panels» pill (outside the iframe, top right) is centred on the top bar; the bar keeps a free strip under it so no button is covered (icon only on a narrow editor)
+function placePill(d) {
+  const pill = document.querySelector("#side-toggle"), corner = document.querySelector("#side-corner"), top = d.querySelector('[class*="App-module_top"]');
+  if (!pill || !corner || !top) return;
+  const inCorner = pill.parentNode === corner;
+  pill.classList.toggle("ico", inCorner && d.defaultView.innerWidth < 600);
+  const tb = top.getBoundingClientRect();
+  corner.style.top = Math.max(0, Math.round(tb.top + (tb.height - pill.offsetHeight) / 2)) + "px";
+  d.documentElement.style.setProperty("--tpill", inCorner ? pill.offsetWidth + 14 + "px" : "0px");
+}
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(fr) {
   try {
@@ -74,10 +101,10 @@ function hideMacro(fr) {
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
-      '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important}' +
+      '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important;padding-right:var(--tpill,0px)!important}' +
       '[class*="App-module_top"] kbd{display:none!important}' +
-      '[data-testid="fullscreen-mode-button"],[data-testid="center-struct-button"]{display:inline-flex!important;align-items:center;justify-content:center}' +
-      '[data-testid="fullscreen-mode-button"] svg,[data-testid="center-struct-button"] svg{margin:0!important;display:block}' +
+      '[data-testid="fullscreen-mode-button"],[data-testid="center-struct-button"],[data-testid="zoom-in-tp"],[data-testid="zoom-out-tp"],[data-testid="zoom-reset-tp"]{display:inline-flex!important;align-items:center;justify-content:center}' +
+      '[data-testid="fullscreen-mode-button"] svg,[data-testid="center-struct-button"] svg,[data-testid="zoom-in-tp"] svg,[data-testid="zoom-out-tp"] svg,[data-testid="zoom-reset-tp"] svg{margin:0!important;display:block}' +
       '[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
       // the quick rings (Ketcher's bottom bar) become a column on the far left: the bottom row disappears and the canvas gets the whole height
       '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
@@ -128,6 +155,7 @@ function hideMacro(fr) {
         }
       };
       fullBtn.after(btn);
+      addZoomButtons(d, fr, fullBtn, btn);
     }
 
     // Context menu on canvas / molecule
@@ -187,8 +215,8 @@ function hideMacro(fr) {
       const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
       root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
-    kFit = fit;
-    fit(); d.defaultView.addEventListener("resize", fit);
+    const fit0 = fit; kFit = () => { fit0(); placePill(d); };
+    fit(); placePill(d); d.defaultView.addEventListener("resize", () => kFit());
     d.head.appendChild(st);
     kBar = mountBar(d, k => I18N.t(k));
     applyTools();
@@ -255,6 +283,14 @@ function fitZoom(k, fr) {
     try { k.editor.event.zoomChanged.dispatch(); } catch (_) { /* the «100 %» label of Ketcher is only updated by this event */ }
     const st = k.editor.struct();
     if (st && !st.isBlank() && typeof k.editor.zoomAccordingContent === "function") { k.editor.zoomAccordingContent(st); k.editor.centerStruct(); }
+  } catch (_) { /* default zoom */ }
+}
+function stepZoom(f) {
+  try {
+    const e = K && K.editor; if (!e || typeof e.zoom !== "function") return;
+    e.zoom(Math.min(4, Math.max(0.2, e.zoom() * f)));
+    try { e.event.zoomChanged.dispatch(); } catch (_) { /* the zoom label of Ketcher is only updated by this event */ }
+    drawLabels();
   } catch (_) { /* default zoom */ }
 }
 async function restore() {
@@ -750,13 +786,13 @@ function labelMenu(ev, d, fr) {
 const SKEY = "qqq.disegno.riquadri";
 function sideApply(hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
-  const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
+  const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide"); b.setAttribute("aria-label", Q("#side-toggle .tl").textContent);
   Q(hidden ? "#side-corner" : "#side-row").appendChild(b);   // the button sits above the cards, or in the canvas corner when they are hidden
   try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
   setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
 }
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
-try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle .tl").textContent = I18N.t("draw.side.show"); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle .tl").textContent = I18N.t("draw.side.show"); Q("#side-toggle").setAttribute("aria-label", I18N.t("draw.side.show")); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
 function frameExtras(fr) {
   const d = fr.contentDocument; if (!d) return;
