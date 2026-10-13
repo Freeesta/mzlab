@@ -23,6 +23,7 @@ pub mod scan_filter;
 pub mod scan_format;
 pub mod scan_index;
 pub mod seq_row;
+pub mod status_log;
 
 pub use device::{DetectedInstrument, DeviceFamily};
 pub use error::{Error, Result};
