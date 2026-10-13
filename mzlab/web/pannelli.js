@@ -178,7 +178,7 @@ function cleanupOrphanPanels() {
 
 function addPanel(type, o, after) {
   const p = { id: E.seq++, type, anns: [], ints: [], ...o };
-  if (!p.tab) { p.tab = type === "mrm" ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true); }
+  if (!p.tab) { p.tab = type === "mrm" ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true, "new-panel"); }
   const lv0 = (E.files[o?.k ?? 0] || {}).lv || 1;
   if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });

@@ -34,7 +34,7 @@ const HELP = {
     e.preventDefault(); e.stopPropagation();
     if (cur === b) return close();
     const key = b.dataset.help, mk = /^modo-(full|ms2|mrm)$/.exec(key);
-    const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
+    const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[ESP.didattica(mk[1])].name, QMODI.html(ESP.didattica(mk[1]))] : HELP[key]; if (!h) return;
     pop.classList.toggle("wide", !!mk); pop.classList.remove("guide");
     pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;      // no title for the "Informazioni" box (key header)
     pop.querySelector(".x").onclick = close;
@@ -52,7 +52,7 @@ const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1
 function guideHtml() {
   const sec = (title, keys) => `<details open><summary><b>${title}</b></summary>${keys.filter(k => HELP[k]).map(k => `<div class="hp-s"><b>${HELP[k][0]}</b><div>${HELP[k][1]}</div></div>`).join("")}</details>`;
   let modes = "";
-  try { modes = `<details><summary><b>${I18N.t("help.guide.modes")}</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
+  try { modes = `<details><summary><b>${I18N.t("help.guide.modes")}</b></summary>${ESP.ids.map(t => QMODI.html(ESP.didattica(t))).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
   const credits = `<details><summary><b>${I18N.t("help.guide.credits.title")}</b></summary><div class="hp-s">${I18N.t("help.guide.credits.body")}</div></details>`;
   return sec(I18N.t("help.guide.open"), ["start", "filegrandi", "files"]) + sec(I18N.t("help.guide.charts"), ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map", "mappa"]) + sec(I18N.t("help.guide.method"), ["tools", "prop", "language"]) + modes + credits;
 }
