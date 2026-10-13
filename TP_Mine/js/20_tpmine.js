@@ -101,7 +101,8 @@
   }
   async function pageFiles() {
     const o = await opfsFiles(), have = new Set(o.map(f => f.name));
-    return o.concat((await idbFiles()).filter(f => !have.has(f.name)));
+    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it
+    return o.concat((await idbFiles()).filter(f => !have.has(f.name))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   }
   async function idbFiles() {
     try {
