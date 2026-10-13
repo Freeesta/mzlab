@@ -523,6 +523,7 @@
   "settings.cen.done": "Fine della riduzione; {n} = copie create.",
   "settings.cen.stopped": "Riduzione annullata dall'utente; {n} = copie già create.",
   "settings.cen.fail": "Errore su un file della riduzione; {name} = nome del file.",
+  "tpmine.centroided": "Avviso di Tabui quando un file in profilo viene centroidato al caricamento. {name} = nome del file.",
   "tpmine.feat.degraded": "Avviso di Tabui (pipeline) quando la memoria non basta per le prove: la tabella è salvata senza prove. {files} = numero di file, {phase} = fase rifiutata, {stima_mb} = memoria stimata in MB, {budget_mb} = budget in MB.",
   "error.featMemory": "Errore di Tabui (pipeline): una fase non entra nella memoria. {fase} = fase (align, proofs), {files} = numero di file, {stima_mb} e {budget_mb} = memoria stimata e budget in MB.",
   "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
