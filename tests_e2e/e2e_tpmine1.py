@@ -47,7 +47,7 @@ try:
             clicks(pg)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
             assert not pg.query_selector("#mzf-badge")           # no mark next to the logo
-            assert "tpmine" in pg.evaluate("window.QTOOLS.list().map(t=>t.id)")
+            pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)      # the tab shows at once; the tool registers when its scripts have loaded
             assert "mzFinder" in pg.inner_text('#nav button[data-v="tpmine"]')
             assert pg.evaluate("localStorage.getItem('qqq.mzfinder')") == "1"
             assert [u for u in reqs if u.endswith("/mzfinder/indice.json")]
