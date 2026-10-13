@@ -1,5 +1,5 @@
 # mzFinder: tabelle untargeted (HR)
-Stato attuale; riscrivi le righe. Il resto di mzFinder: `mzfinder.md`.
+Stato attuale; riscrivi le righe. Il resto di mzFinder: `mzfinder.md`. Lettori Rust delle tabelle: `mzfinder-import.md`.
 
 - **Tabelle untargeted** (`js/25_untarget.js` = `window.UNT`, puro, senza DOM; prove `tests/test_untarget.py` con i file scritti a mano di `tests/data/untargeted/`): un solo modello di feature `{key "POS:id", id, pol, mz, rt, areas{campione}, detected, ms2{mz,it}, ann[], group, iin, component, nScans}` per tabella `{program, file{name, sha256}, pol, samples, features, edges, stats, warnings}`;
   le annotazioni esterne sono una struttura aperta `{source, type, score, shared, ppm, name, cleanName, ik, smiles, inchi, formula, adduct, analog, propagated, notes}` (SIRIUS entrerà senza cambiare il modello). `UNT.detect` riconosce il file dalle colonne; `UNT.build(files)` unisce tabella principale + MGF + annotazioni + GNPS2 + rete.

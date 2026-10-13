@@ -1896,6 +1896,9 @@ version = "0.1.0"
 dependencies = [
  "memmap2",
  "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-table-wasm",
+ "mzlab-feat-wasm",
  "mzlab-lib",
  "rayon",
  "serde",
@@ -1921,6 +1924,15 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-grafo-wasm"
+version = "0.1.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-feat-import-wasm"
 version = "0.1.0"
 dependencies = [
  "mzlab-core",
