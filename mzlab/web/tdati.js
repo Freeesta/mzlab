@@ -65,10 +65,11 @@ function attach(cv, fn) {
 function open(cv) { const fn = providers.get(cv); const o = fn && fn(); if (o) return table(o); say(T("tdati.none")); return null; }
 
 // a small «Dati» button after the chart (any element: a canvas, an SVG), the chart focusable, T / D on it
-function addButton(el, fn) {
+function addButton(el, fn, quiet) {                       // quiet: no visible button, the table stays on the T key of the focused chart
   if (!el) return;
   attach(el, fn);
   if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
+  if (quiet) return;
   if (el._tdBtn && el._tdBtn.isConnected) return;
   const b = document.createElement("button"); b.type = "button"; b.className = "bt tdbtn"; b.textContent = T("tdati.btn");
   b.title = T("tdati.btn.title"); b.setAttribute("aria-label", T("tdati.btn.title"));
@@ -76,7 +77,7 @@ function addButton(el, fn) {
   (el._desc || el).insertAdjacentElement("afterend", b); el._tdBtn = b;
 }
 // the lines of a small chart made of series [{ x: [], y: [], name? }]: description + table
-function series(cv, o) {
+function series(cv, o, quiet) {
   if (!cv || !o) return;
   const n = (o.series || []).length, xs = (o.series || []).flatMap(s => s.x).filter(isFinite), ys = (o.series || []).flatMap(s => s.y).filter(isFinite);
   const title = o.title || [o.yl, o.xl].filter(Boolean).join(" / ") || T("a11y.chart");
@@ -89,7 +90,7 @@ function series(cv, o) {
       for (let i = 0; i < s.x.length; i += st) if (isFinite(s.y[i])) rows.push([name, num(s.x[i], 4), num(s.y[i], 4)]);
     });
     return { title, head: [T("tdati.col.trace"), o.xl || "x", o.yl || "y"], rows, rowHeader: true };
-  });
+  }, quiet);
 }
 // the table that already sits next to an SVG chart (QA/QC, profile, PCA loadings): the same dialog shows it
 function fromDom(tbl, title) {
