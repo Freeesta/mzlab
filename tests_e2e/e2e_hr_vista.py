@@ -37,28 +37,30 @@ try:
             assert pg.locator("#flst .hrb").count() == 0
             t = pg.inner_text("#flst"); assert "centroidi" not in t and "profilo" not in t, repr(t)
         step("no marks in the rows of the files", no_rows)
+        def go():          # the sub-formulas are measured in the browser: a call takes a while, so wait for the answer (the count line or the message), not for a pause
+            pg.click("#bs-go"); pg.wait_for_function("document.querySelector('#bs-out .muted') || document.querySelector('#bs-err').textContent", timeout=240000)
         def sub():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
             pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC da formula"); pg.wait_for_selector("#bs-f")
-            pg.fill("#bs-f", ION); pg.click("#bs-go"); pg.wait_for_selector("#bs-out table tbody tr", timeout=30000)
+            pg.fill("#bs-f", ION); go()
             heads = pg.inner_text("#bs-out thead"); print(heads)
             for h in ("Sottoformula", "m/z teorica", "Δppm", "Intensità", "RT apice", "r con la formula intera"): assert h in heads, heads
             txt = pg.inner_text("#bs-out").lower(); assert "framment" not in txt and "propost" not in txt, txt[:200]
             assert pg.locator("#bs-out tbody tr", has_text=ION).count() == 1
-            pg.fill("#bs-ppm", "2"); pg.click("#bs-go"); pg.wait_for_timeout(1500)
-            n2 = pg.locator("#bs-out tbody tr").count(); pg.fill("#bs-ppm", "5"); pg.click("#bs-go"); pg.wait_for_timeout(1500)
+            pg.fill("#bs-ppm", "2"); go()
+            n2 = pg.locator("#bs-out tbody tr").count(); pg.fill("#bs-ppm", "5"); go()
             assert pg.locator("#bs-out tbody tr").count() >= n2 > 0
-            pg.fill("#bs-min", "300"); pg.click("#bs-go"); pg.wait_for_timeout(1500)
+            pg.fill("#bs-min", "300"); go()
             mins = pg.evaluate("[...document.querySelectorAll('#bs-out tbody tr')].map(r=>+r.cells[1].textContent)"); assert mins and min(mins) >= 299.99, mins
-            pg.fill("#bs-min", "100"); pg.click("#bs-go"); pg.wait_for_timeout(1500)
-            pg.click("#bs-add"); pg.wait_for_timeout(2500)
+            pg.fill("#bs-min", "100"); go()
+            pg.click("#bs-add"); pg.wait_for_function("E.panels.some(p=>p.ranges&&p.ranges.some(r=>r.kind==='sub')&&p._a&&p._a.sr&&p._a.sr.length)", timeout=240000)
             v = pg.evaluate("(()=>{const c=E.panels.find(p=>p.ranges&&p.ranges.some(r=>r.kind==='sub'));return c&&{n:c._a.sr.length,y:Math.max(...c._a.sr[0].y),lab:c.ranges[0].label}})()"); print(v)
             assert v and v["n"] >= 1 and v["y"] > 0 and "Σ" in v["lab"], v
         step("formula -> XIC: table of measures only, ppm and lower limit change it, the XIC enters the cell", sub)
         def bad():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
             pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC da formula"); pg.wait_for_selector("#bs-f")
-            pg.fill("#bs-f", "Zz9"); pg.click("#bs-go"); pg.wait_for_timeout(800)
+            pg.fill("#bs-f", "Zz9"); go()
             assert pg.inner_text("#bs-err").strip() != ""
             pg.click("#bigx")
         step("a wrong formula gives a message", bad)

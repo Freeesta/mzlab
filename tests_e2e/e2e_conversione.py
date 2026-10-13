@@ -37,8 +37,9 @@ try:
         ctx = r.b.new_context(viewport={"width": 1500, "height": 2000}, accept_downloads=True)
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
-        pg.add_init_script(FAKE)
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+        def fake():          # the engine of the site is there; the simulated one replaces its .raw converter (the conversion, not the reading of the mzML); a reload brings the real one back
+            pg.wait_for_selector("#rawprofile", state="attached"); pg.evaluate("window.MZLAB_RUST_READY"); pg.evaluate(FAKE); pg.wait_for_timeout(300)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); fake()
         pg.set_input_files("#pick", [str(D / "irr_t5.raw"), str(D / "irr_t10.raw")])
         def go(): pg.evaluate("window.__go(); window.__go=null"); 
         def progress():
@@ -122,7 +123,7 @@ try:
             pg.wait_for_function("document.querySelectorAll('.convprog').length==0", timeout=10000)
             pg.evaluate("document.getElementById('rawprofile').click()")
             assert pg.evaluate("localStorage.getItem('qqq.rawprofile')") == "1"
-            pg.reload(); pg.wait_for_timeout(800)
+            pg.reload(); fake()
             assert pg.evaluate("document.getElementById('rawprofile').checked") is True      # remembered
             pg.evaluate("window.__prof=[]")
             pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
@@ -140,7 +141,7 @@ try:
             pg.wait_for_function("document.querySelectorAll('.convprog').length==0", timeout=10000)
             pg.evaluate("document.getElementById('rawanon').click()")
             assert pg.evaluate("localStorage.getItem('qqq.rawanon')") == "1"
-            pg.reload(); pg.wait_for_timeout(800)
+            pg.reload(); fake()
             assert pg.evaluate("document.getElementById('rawanon').checked") is True      # remembered
             pg.evaluate("window.__anon=[]")
             pg.set_input_files("#pick", [str(D / "p1.raw")]); pg.wait_for_function("!!window.__go")
