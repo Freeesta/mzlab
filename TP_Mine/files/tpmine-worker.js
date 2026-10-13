@@ -126,6 +126,13 @@ async function load(key) {
   await mod.default({ module_or_path: bytes });
   return (mods[key] = mod);
 }
+/** @type {any} */ let lastRun = null;           // the .mzfeat and the files of the last Dig in Rust (the numbers of the table of the products)
+/** the numbers of the table of the products for some rows of the last Dig (finder-tabella.js); "null" when there is none @param {string} rows */
+async function tpTable(rows) {
+  if (last !== "rust" || !lastRun) return "null";
+  const m = await import(base() + "mzfinder/finder-tabella.js");
+  return m.tpTable({ manifest, url: featUrl, sha }, lastRun, rows);
+}
 const finder = () => load("finder");
 /** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
 async function ensureIdx(names) {
@@ -181,7 +188,7 @@ async function runRust(a) {
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
-  lap("dig", t); t = performance.now(); last = "rust"; msn = null;
+  lap("dig", t); t = performance.now(); last = "rust"; msn = null; lastRun = { table: e.table, lc: plan.lc, files: JSON.parse(filesJson) };
   if (x) { await msnTree(x.name, parentJson); lap("albero", t); }
   lap("total", t0);
   const s = dig.summary(settingsJson || "{}", JSON.stringify(timing));
@@ -244,6 +251,7 @@ async function waitIdx(names) {
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
+  if (fn === "tp_table" && !init.desktop) return tpTable(a[0]);
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);

@@ -132,10 +132,12 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){{const k=b.convertWiff?"load.dropWiff":"load.dropRaw";d.setAttribute("data-i18n-html",k);d.innerHTML=I18N.t(k)}CONVERT_RAW=true;$("#convhelp").hidden=true;const rp=$("#rawprof"),cb=$("#rawprofile");if(rp&&cb){rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}
+function rawProfileInit(b){const rp=$("#rawprof"),cb=$("#rawprofile");if(!rp||!cb||b.nativo)return;rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}      // the choice of profile or centroids of a converted .raw: only where the app converts (desktop)
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&(b.nativo||b.convertRaw)){{const k=b.nativo||b.convertWiff?"load.dropWiff":"load.dropRaw";d.setAttribute("data-i18n-html",k);d.innerHTML=I18N.t(k)}CONVERT_RAW=true;$("#convhelp").hidden=true;rawProfileInit(b)
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
-async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
+async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!(rb.nativo||rb.convertRaw)||!files.some(f=>/\.raw$/i.test(f.name)))return files;
+  if(rb.nativo)return NATIVO.raws(files,(ST.files||[]).map(x=>x.name));      // read as it is: no mzML is made
   const raws=files.filter(f=>/\.raw$/i.test(f.name)),out=[];let i=0;const g=ConvUI.group(box,raws.map(f=>f.size));
   for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
     if(g.signal.aborted)continue;       // cancelled: the .raw files still to convert are left out
@@ -146,33 +148,22 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
   else if(i)out.panel=g;else g.end();      // the panel stays for the indexing (upload shows it as the last phase of the same bar)
   return out}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
-// SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine makes one mzML per sample (injection). Gives the files to go on with and the notices [message, name]
-async function wiffToMzml(files,box,onFile){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
-  if((rb?(rb.disabled||!rb.convertWiff):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){      // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
+// SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
+async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+  if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){      // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
-  if(!rb||rb.disabled||!rb.convertWiff||!files.some(isW))return res;
+  if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
   res.files=files.filter(f=>!isW(f));const T=(k,p)=>I18N.t(k,p),dropped=new Set();
   for(const f of files.filter(isW)){const sc=/\.scan$/i.test(f.name),stem=f.name.replace(/\.wiff(\.scan)?$/i,""),k=CartCarica.pairKey(f,stem),e=WIFF_WAIT.get(k)||{stem};e[sc?"scan":"wiff"]=f;WIFF_WAIT.set(k,e);dropped.add(k)}
   const taken=[...res.files.map(x=>x.name),...(ST.files||[]).map(x=>x.name)],pairs=[];
   for(const [k,e] of [...WIFF_WAIT]){      // a pair is in the list as soon as its two files are together, before anything is read
     if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait",{name:e.scan.name}),e.scan.name])}continue}      // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open")}
-  const jobs=[];
-  for(const e of pairs){
-    try{const s=await rb.wiffSamples(e.wiff);s.forEach(n=>{const j={e,n,several:s.length>1};j.nm=wiffName(e.stem,n,j.several,taken);taken.push(j.nm);jobs.push(j);CONVROWS.add(j.nm,"wait")})}
+  for(const e of pairs){      // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
+    try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
+      s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken);taken.push(nm);res.files.push(NATIVO.sample(nm,key,mem,i,x.id,false))})}
     catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
     CONVROWS.drop(e.row)}
-  // the samples are converted a few at a time by the engine (they all go to it now and queue there); each is handed to `onFile` (the indexing) as soon as it is converted
-  if(!jobs.length)return res;
-  const g=ConvUI.group(box,[1]),ui=g.start(1,""),part=j=>j.e.scan.size/Math.max(1,jobs.filter(x=>x.e===j.e).length),all=jobs.reduce((a,j)=>a+part(j),0)||1;let nDone=0;
-  const title=()=>ui.title(T("conv.wiff.batch",{done:nDone,n:jobs.length})),total=()=>{let f=0,w=0;for(const j of jobs){f+=part(j)*(j.fr||0);w+=j.written||0}return{scans:Math.round(1000*f/all),scansTotal:1000,written:w,several:true}};
-  title();g.signal.addEventListener("abort",()=>jobs.forEach(j=>{if(!j.over)rb.cancelWiff(j.nm)}));
-  await Promise.all(jobs.map(async j=>{
-    try{const blob=await rb.convertWiff(j.e.wiff,j.e.scan,j.n,p=>{j.fr=convFraction(p);j.written=p.written;ui.update(total());CONVROWS.set(j.nm,"run",convPercent(p))},j.nm,!$("#rawprofile")?.checked);
-      j.over=true;j.fr=1;nDone++;title();ui.update(total());CONV.add(j.nm,blob);const f=new File([blob],j.nm);CONVROWS.set(j.nm,"conv");if(onFile)onFile(f);else res.files.push(f)}
-    catch(x){j.over=true;CONVROWS.drop(j.nm);if(!x.cancelled){const d=document.createElement("div");d.className="fail";d.textContent=j.nm+": "+(x.json?I18N.err(x.json).message:x.message);box.appendChild(d)}}}));
-  ui.done();g.end();
-  if(g.signal.aborted){const d=document.createElement("div");d.className="muted";d.textContent=T("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
   return res}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
@@ -227,20 +218,20 @@ async function upload0(files,into,box){
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
-    if(!pn){row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row)}
+    if(!pn){row.innerHTML=`${esc(f.name)} <span class="muted">${sz(NATIVO.size(f))}</span><div class="prog"><i></i></div>`;box.appendChild(row)}
     CONVROWS.set(f.name,"index",0);if(pn)pn.index(f.name,0);
-    const onIdx=e=>{if(e.detail.name===f.name){const pc=Math.min(99,Math.floor(100*e.detail.frac));CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc);else row.querySelector("i").style.width=pc+"%"}};
+    const onIdx=e=>{if(e.detail.name===f.name){const pc=Math.min(99,Math.floor(100*e.detail.frac));CONVROWS.set(f.name,NATIVO.rowState(e.detail.phase),pc);if(pn)pn.index(f.name,pc);else row.querySelector("i").style.width=pc+"%"}};
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&f.size>300*1048576)rep.big.push(f.name)}
+      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
-  let panel=null;const early=[];       // the converted samples of a .wiff are indexed as soon as each is converted, while the others are still converting
-  const wr=await wiffToMzml(files,box,f=>early.push(one(f)));files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  let panel=null;
+  const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)
-  await Promise.all(early);await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
+  await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};

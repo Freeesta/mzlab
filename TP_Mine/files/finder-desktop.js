@@ -100,6 +100,7 @@ export function createDesktop(base, say, held) {
   return {
     /** one call of the page @param {string} fn @param {string[]} a */
     async call(fn, a) {
+      if (fn === "tp_table") return "null";        // the numbers of the table of the products are not native yet: the page keeps a dash
       if (fn === "transf_rows") return rpc("finder/transf_rows", { text: a[0] });
       if (fn === "formula_info") return rpc("finder/formula_info", { text: a[0], adduct: a[1] });
       if (STATELESS.has(fn)) return rpc("finder/" + fn, { payload: a[0] });
