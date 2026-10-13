@@ -34,6 +34,7 @@ try:
             c, s1, s2 = pg.evaluate(GEO); assert s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)
         step("narrow or wide, the MS2 stays under the Full Scan", narrow)
         def tri():
+            pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');if(!c.ms2tri){c.ms2tri=true;draw(c)}})()"); pg.wait_for_timeout(1000)
             t = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const tr=c._a.tri.filter(q=>q.rt>13.5&&q.rt<15)[0];const r=c.cv.getBoundingClientRect();return {x:r.left+tr.px,y:r.top+M.t+4,sid:tr.sid,rt:tr.rt,n:c._a.tri.length}})()"); print(t)
             assert t["n"] > 50 and t["sid"] is not None
             pg.mouse.click(t["x"], t["y"]); pg.wait_for_timeout(2500)
