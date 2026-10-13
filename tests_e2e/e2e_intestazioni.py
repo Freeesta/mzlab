@@ -13,7 +13,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
 
 D = synth("intestazioni")
-r = Run(port=8958, wd="/tmp/wd_intestazioni", motore="python")
+r = Run(port=8958, wd="/tmp/wd_intestazioni")
 
 # every panel header: one row, every control inside it, no scrolling content, a chart at least 100 px high
 CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {
@@ -96,7 +96,7 @@ try:
                 q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
                 try:
-                    setup(q)                       # the files are already in the session of the server
+                    load(q, [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML"], 4000, 4); setup(q)        # the session lives in the browser: a new context opens the files itself
                     check(q, ("ipad", w))
                     q.evaluate("BARRA.setTab('file',{noFocus:true})"); q.wait_for_timeout(500); check(q, ("ipad drawer", w))
                     q.set_viewport_size({"width": h, "height": w}); q.wait_for_timeout(800); check(q, ("ipad rotated", h))
