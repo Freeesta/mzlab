@@ -140,7 +140,7 @@ pub fn number_replicates(cs: &mut [Campione]) {
     }
 }
 
-/// The bindings: `op` is `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida` or `per_tp` (a `campioni/2`) or `da_legacy`
+/// The bindings: `op` is `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`) or `da_legacy`
 /// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
@@ -161,6 +161,8 @@ pub fn route(op: &str, input: &str) -> Result<String> {
         "valida" => Ok(valida_json(&valida(&from_json(input.as_bytes())?))),
         "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
         "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
+        "canonico" => Ok(to_json(&from_json(input.as_bytes())?)),
+        "digest" => Ok(digest(&from_json(input.as_bytes())?)),
         _ => Err(Error::new("error.badCampioni").with("op", op)),
     }
 }

@@ -100,6 +100,11 @@ impl State {
                 }))
             }
             "finder/plan" => self.finder_plan(p),
+            "finder/transformations" => {
+                let merged =
+                    legacy::transf::merge(s("rules").as_bytes(), s("text")).map_err(user)?;
+                text(String::from_utf8_lossy(&merged).into_owned())
+            }
             "finder/dig" => self.finder_dig(p),
             "finder/detail"
             | "finder/inclusion_csv"
