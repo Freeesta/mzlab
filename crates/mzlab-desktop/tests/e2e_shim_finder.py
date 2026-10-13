@@ -22,7 +22,7 @@ def step(name, fn):
 if not (DIST / "index.html").exists():
     print("  ", ("dist", "FAIL run tools/build_site.py --no-pyodide and crates/mzlab-desktop/prepare.py first")); sys.exit(1)
 try:
-    import numpy  # noqa: F401
+    import numpy
 except ImportError:
     print("SKIP numpy is needed for the synthetic series"); sys.exit(0)
 
@@ -35,6 +35,58 @@ nat.mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "finder", "--", str(nat), *map(str, idx), "--parent", PARENT["neutral"],
                 "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
+# the MSn file of the standard (a structure with the formula of the parent) and the tree of the Python engine (tools/finder_riferimento.py) it is compared with
+sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
+import finder_riferimento as FR  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+SMI, ION = "C1CCC(CC1)N(CC)C(=O)c1ccc(cc1)OCCN1CCCC1", "C21H33N2O2"
+(tmp / "msn").mkdir()
+msn_ml = FR.MSY.write_msn(tmp / "msn" / "std_msn.mzML", FR.msn_nodes(numpy.random.default_rng(7), ION, SMI), n_scans=5)
+r = FR.Run(str(msn_ml)); TREE = FR.MS.build_tree(r, ION, SMI); r.close()
+EX = SimpleNamespace(tree=TREE, smiles=SMI)
+def ties(a, b, at):
+    """top_sites: the order of sites whose log-likelihoods differ by rounding only (the sums of numpy) is free; the last group may be cut anywhere"""
+    ll = lambda x: next(v for v in x.values() if isinstance(v, float))
+    near = lambda u, v: abs(u - v) <= 1e-9 * max(1.0, abs(u), abs(v))
+    assert len(a) == len(b), (at, len(a), len(b))
+    i = 0
+    while i < len(a):
+        j = i
+        while j < len(a) and near(ll(a[j]), ll(a[i])): j += 1
+        for x, y in zip(a[i:j], b[i:j]): assert near(ll(x), ll(y)), (at, x, y)
+        if j < len(a):
+            key = lambda z: z["site"]
+            close(sorted(a[i:j], key=key), sorted(b[i:j], key=key), f"{at}[{i}:{j}]")
+        i = j
+
+
+def close(a, b, at=""):
+    """the same JSON, numbers to 1e-9 (relative)"""
+    if isinstance(a, dict) and isinstance(b, dict):
+        assert set(a) == set(b), (at, sorted(set(a) ^ set(b)))
+        for k in a:
+            if k == "top_sites" and isinstance(a[k], list): ties(a[k], b[k], f"{at}.{k}")
+            else: close(a[k], b[k], f"{at}.{k}")
+    elif isinstance(a, list) and isinstance(b, list):
+        assert len(a) == len(b), (at, len(a), len(b))
+        for i, (x, y) in enumerate(zip(a, b)): close(x, y, f"{at}[{i}]")
+    elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+        assert abs(a - b) <= 1e-9 * max(1.0, abs(a), abs(b)), (at, a, b)
+    else:
+        assert a == b, (at, a, b)
+
+
+def py_localization(d, library):
+    """what the Python engine puts in detail.localization for the candidate of detail `d` (its ion = the neutral formula + H)"""
+    els = TREE.els
+    v = FR.FO.vec(d["row"]["formula"], els); v[els.index("H")] += 1
+    m2 = d["ms2"]["candidate"]
+    r = FR.LZ.localize(FR.FO.fmt(v, els), ION, m2["mz"], m2["rel"], library, FR.FO.FormulaSpace(v, els), groups=None, tp_mz=d["row"]["mz"])
+    r["n_atoms"] = TREE.subs.mol.n
+    if r.get("ok"):
+        r["n_groups"] = sum(1 for g in FR.LZ.default_groups(TREE.subs.mol).values() if g & set(r["region_atoms"]))
+    return FR._plain(r)
+
 # the low-resolution series (TP_Mine/tests/lr_synth.py) and its Dig by the native example of the .wasm (the same pipeline)
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import lr_synth  # noqa: E402
 lrs = lr_synth.write_series(tmp / "lr")
@@ -113,6 +165,35 @@ try:
             rows = json.loads(rows) if isinstance(rows, str) else rows
             assert len(rows["rows"]) >= 1, rows
         step("a list of transformations of the user runs; a bad row says what is wrong", transformations)
+        def msn_standard():
+            pg.set_input_files("#tp-in", [str(msn_ml)])
+            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].some(r => r.textContent.trim().startsWith('std_msn'))", timeout=300000)
+            info = pg.evaluate("([n]) => window.TPCALL('classify', n)", [["std_msn.mzML"]])
+            assert info[0].get("hr_kind") == "msn", info
+            files = got["files"] + [{"name": "std_msn.mzML", "type": info[0]["type"], "time": None, "kind": "msn"}]
+            call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
+            run = call("run", files, {"name": "parent", "smiles": SMI}, {}, "")
+            assert [x["name"] for x in run["files"]] == [x["name"] for x in got["files"]], run["files"]
+            close(run["tree"], FR._plain(FR.ExperimentHR._tree_summary(EX)), "tree")
+            close(run["calibration"], FR._plain(TREE.cal.as_dict()), "calibration")
+            close(call("msn_tree"), run["tree"], "msn_tree")
+            close(call("frag_tree"), FR._plain(FR.FT._hr_msn(EX)), "frag_tree")
+            ds = [call("detail", x["id"]) for x in run["rows"][:12]]
+            pm = next((d["ms2"]["parent"] for d in ds if d.get("ms2")), None)     # the synthetic series has no MS2 of the parent in the Dig: then none is localised
+            library = pm and FR.iimn.build_library(TREE, dda_peaks=(numpy.array(pm["mz"]), numpy.array(pm["rel"])))
+            rows = {x["id"]: x for x in run["rows"]}
+            for d in ds:
+                if not (d.get("ms2") and d["row"]["formula"]):
+                    assert d["localization"] is None and rows[d["id"]]["region"] is None, d["id"]
+                    close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), None)), f"compare {d['id']}")
+                    continue
+                want = py_localization(d, library)
+                close(d["localization"], want, f"localization {d['id']}")
+                close(d["ms2"]["evidence"], want.get("evidence", []), f"evidence {d['id']}")
+                ok = want.get("ok")
+                assert rows[d["id"]]["region"] == (want["region"] if ok else None) and rows[d["id"]]["margin"] == (round(want["margin"], 2) if ok else None), ("row", d["id"])
+                close(call("frag_tree_compare", d["id"]), FR._plain(FR.FT.compare_hr(FR.FT._hr_msn(EX), want)), f"compare {d['id']}")
+        step("run with an MSn file: tree, calibration, localization, frag_tree and frag_tree_compare (= the Python)", msn_standard)
         def lr_series():
             pg.set_input_files("#tp-in", [f["path"] for f in lrs])
             pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => r.textContent.trim().startsWith('lr_')).length >= %d" % len(lrs), timeout=300000)
