@@ -66,7 +66,7 @@ function step(p, d) {
   const o = eff(p), tab = p.tab || E.tab, fs = tabFiles(tab).filter(f => !o || f.k !== o.k); if (fs.length < 1) return;
   E.browse = true;
   const i = fs.findIndex(f => f.k === E.cur);
-  E.cur = fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k;
+  STATO.file(fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k, "browse");
   renderNav(); renderFileList(); redrawAll(); uiSave();
 }
 

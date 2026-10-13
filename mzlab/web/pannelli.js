@@ -118,7 +118,7 @@ function closePanel(p) {
   if (p._ro) p._ro.disconnect();
   if (p._up) removeEventListener("mouseup", p._up);
   if (p.el) p.el.remove();
-  E.panels = E.panels.filter(x => x !== p);
+  STATO.rimuovi(p, "close");
 }
 
 function closeAllPanels() {
@@ -219,7 +219,7 @@ function addPanel(type, o, after) {
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "chrom" || type === "xic" || type === "mrm" ? '<div class="corrbar"></div>' : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
-  E.panels.push(p); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
+  STATO.aggiungi(p, "open"); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", e => {
@@ -359,7 +359,7 @@ function front(el) {
   if (E.z > 5000) { E.panels.slice().sort((a, b) => (+a.el.style.zIndex || 0) - (+b.el.style.zIndex || 0)).forEach((q, i) => { q.el.style.zIndex = 10 + i; }); E.z = 10 + E.panels.length; el.style.zIndex = ++E.z; }
 }
 // active panel (outlined): its cursor can be moved scan by scan with the arrow keys
-function setActive(p) { E.active = p; E.panels.forEach(q => q.el.classList.toggle("act", q === p)); if (window.BANCO) BANCO.sync2(); }
+function setActive(p) { STATO.attiva(p, "activate"); E.panels.forEach(q => q.el.classList.toggle("act", q === p)); if (window.BANCO) BANCO.sync2(); }
 // MS2 precursor chromatograms: scans are sparse (one every few cycles) and many are empty. Nearest scan WITH data, either around x (d = 0)
 // or strictly beyond x in the direction d; g = half the smaller gap to its neighbours, so the spectrum window holds that scan and no other.
 function ms2Near(p, x, d) {
