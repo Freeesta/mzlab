@@ -89,6 +89,7 @@ impl Opened {
             return Err(bad());
         }
         let mut out = mzlab_core::budget::try_vec::<T>(b - a)?;
+        // fixed size: PIECE * N bytes, the piece the reader works on
         let mut buf = vec![0u8; PIECE * N];
         let mut at = a;
         while at < b {

@@ -5,7 +5,7 @@ use crate::sortc;
 use mzlab_core::error::Result;
 
 use crate::axis::{LR_STITCH, LR_TOUCH};
-use crate::trace::{reserve, Params, TOUCH_HEIGHT};
+use crate::trace::{filled, reserve, Params, TOUCH_HEIGHT};
 
 /// A run of scans in one channel.
 #[derive(Clone, Copy)]
@@ -197,13 +197,13 @@ fn join(segs: &[Seg], parent: &mut [u32]) -> Result<Vec<Seg>> {
         }
     }
     let k = k as usize;
-    let mut tots = vec![0.0f64; k];
-    let mut mzw = vec![0.0f64; k];
-    let mut ns = vec![0u32; k];
-    let mut mxs = vec![f64::MIN; k];
-    let mut a2 = vec![u32::MAX; k];
-    let mut z2 = vec![0u32; k];
-    let mut best = vec![usize::MAX; k]; // member with the highest height (the first one on ties)
+    let mut tots = filled(k, 0.0f64)?;
+    let mut mzw = filled(k, 0.0f64)?;
+    let mut ns = filled(k, 0u32)?;
+    let mut mxs = filled(k, f64::MIN)?;
+    let mut a2 = filled(k, u32::MAX)?;
+    let mut z2 = filled(k, 0u32)?;
+    let mut best = filled(k, usize::MAX)?; // member with the highest height (the first one on ties)
     for (i, s) in segs.iter().enumerate() {
         let g = gid[root_of[i] as usize] as usize;
         tots[g] += s.tot;

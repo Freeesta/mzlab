@@ -63,6 +63,7 @@ fn combos(n: usize, k: usize, start: usize, cur: &mut Vec<usize>, f: &mut dyn Fn
 
 fn path_of(rules: &[&Rule], combo: &[usize]) -> Option<(Counts, Path)> {
     let mut net = Counts::new();
+    // fixed size: one counter per rule of the rule set
     let mut uses = vec![0u8; rules.len()];
     for &i in combo {
         uses[i] += 1;
@@ -225,6 +226,7 @@ fn derivable(f: &Counts, parent: &Counts) -> bool {
 /// (b) hits of the suspect index that derive from the parent and have a reaction in Transformations in PubChem; the most cited first, at most
 /// `max_suspects` (the others are counted). Returns (hypotheses, number cut).
 pub fn from_suspects(s: &Suspects, parent: &Counts, p: &HypoParams) -> (Vec<Hypothesis>, u32) {
+    // fixed size: a formula of one parent, empty when it does not parse
     let pm = elements::mass(&to_formula(parent).unwrap_or_default());
     let (lo, hi) = (
         p.min_mz,
