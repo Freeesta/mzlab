@@ -13,6 +13,7 @@ pub mod ms2;
 pub mod out;
 pub mod sample;
 pub mod series;
+pub mod transf;
 pub mod similarity;
 
 use mzlab_core::idxread::{Index, ReadAt};
