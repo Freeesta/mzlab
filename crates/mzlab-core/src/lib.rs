@@ -25,6 +25,7 @@ pub mod hrscans;
 pub mod error;
 pub mod gradient;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+pub mod idxcache;
 pub mod idxread;
 pub mod isoscore;
 pub mod itemroutes;
