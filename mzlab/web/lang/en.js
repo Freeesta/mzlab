@@ -1241,6 +1241,8 @@ I18N.add("en", {
   "spec.measure": "Measure from this peak",
   "spec.measure.toLosses": "Search {d} in the neutral losses",
   "spec.measure.toLosses.tip": "Opens the table of neutral losses with this difference already typed in the search field",
+  "spec.dm.tip.ad": "Right-click: open the adducts",
+  "spec.dm.tip.ls": "Right-click: search the neutral losses",
   "pend.peak": "Click the second peak · Esc cancels",
   "pend.span": "Second stretch: select and right-click · Esc cancels",
   "spec.measure.clear": "Remove the measurements",

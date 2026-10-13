@@ -1241,6 +1241,8 @@ I18N.add("it", {
   "spec.measure": "Misura da questo picco",
   "spec.measure.toLosses": "Cerca {d} nelle perdite neutre",
   "spec.measure.toLosses.tip": "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca",
+  "spec.dm.tip.ad": "Clic destro: apre gli addotti",
+  "spec.dm.tip.ls": "Clic destro: cerca nelle perdite neutre",
   "pend.peak": "Clic sul secondo picco · Esc annulla",
   "pend.span": "Secondo tratto: seleziona e clic destro · Esc annulla",
   "spec.measure.clear": "Togli le misure",
