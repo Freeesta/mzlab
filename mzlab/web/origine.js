@@ -181,7 +181,7 @@ function ogRender() {
   ta.oninput = () => { NB.origin[key] = ta.value; nbSave(); };
   d.querySelector("#og-xlsx").onclick = () => ogXlsx();
   ogEvidence(R, d.querySelector("#og-ev"));
-  requestAnimationFrame(() => {
+  FRAME.next(() => {
     ogDrawXics();
     const pts = F.points || {}, p = pts.p || [], f = pts.f || [], fit = pts.fit || [];
     const order = p.map((v, i) => i).sort((a, b) => p[a] - p[b]);
