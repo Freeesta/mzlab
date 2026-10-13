@@ -70,6 +70,12 @@ pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &
     core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
 }
 
+/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`; areas, t0 and blank.
+#[wasm_bindgen]
+pub fn tp_table(table_read: Function, size: f64, samples_json: &str, rows_json: &str) -> std::result::Result<String, JsValue> {
+    core::tp_table_json(&mut table_reader(table_read), size as u64, samples_json, rows_json).map_err(js_err)
+}
+
 /// The `campioni/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
 #[wasm_bindgen]
 pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {

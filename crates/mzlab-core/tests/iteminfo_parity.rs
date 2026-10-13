@@ -44,6 +44,26 @@ fn s(v: &Value) -> String {
     v.as_str().unwrap_or("").to_string()
 }
 
+/// Documented exception to the parity: the recognition of an infusion (`infusione.rs`) is Rust only. `explore.py` keeps the rule of
+/// the constant RT and has neither `msn` nor the hint "infusion": the new fields are checked against themselves, then the values of
+/// Python are put back.
+fn infusion_exception(got: &mut Value, want: &Value) {
+    let Some(o) = got.as_object_mut() else {
+        return;
+    };
+    if let Some(m) = o.remove("msn") {
+        if let Some(inf) = o.get("infusion").and_then(Value::as_bool) {
+            assert_eq!(inf, !m.is_null(), "infusion and msn disagree");
+            if m["motivo"] != "rt_costante" {
+                o.insert("infusion".into(), want["infusion"].clone());
+            }
+        }
+    }
+    if o.get("hint").and_then(Value::as_str) == Some("infusion") {
+        o.insert("hint".into(), want["hint"].clone());
+    }
+}
+
 #[test]
 fn item_info_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-info-{}", std::process::id()));
@@ -132,7 +152,8 @@ fn item_info_like_python() {
             });
             let got = item_info(&mut idx, &facts, &meta, part.as_ref())
                 .unwrap_or_else(|e| panic!("{stem}: {e}"));
-            let got: Value = serde_json::from_str(&got).unwrap();
+            let mut got: Value = serde_json::from_str(&got).unwrap();
+            infusion_exception(&mut got, &r["info"]);
             same(&format!("{stem} {}", meta.file), &got, &r["info"]);
             items += 1;
             parts_seen += part.is_some() as usize;
@@ -161,11 +182,9 @@ fn item_info_like_python() {
         let want: Value =
             serde_json::from_slice(&std::fs::read(out.join(format!("{stem}.sniff.json"))).unwrap())
                 .unwrap();
-        same(
-            &format!("{stem} sniff"),
-            &serde_json::from_str(&got).unwrap(),
-            &want,
-        );
+        let mut got: Value = serde_json::from_str(&got).unwrap();
+        infusion_exception(&mut got, &want);
+        same(&format!("{stem} sniff"), &got, &want);
         files += 1;
     }
     assert!(
