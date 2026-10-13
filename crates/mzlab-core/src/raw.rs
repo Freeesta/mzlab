@@ -15,7 +15,7 @@ fn raw_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.raw").with("detail", e)
 }
 
-fn spectrum(r: SpectrumRecord) -> Spectrum {
+pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {
     let precursor = r
         .precursor
         .as_ref()
@@ -57,7 +57,7 @@ pub fn metodo<R: Read + Seek>(mut source: R, name: &str, anonymous: bool) -> Res
     Ok(metodo_of(&raw, &mut source, name, anonymous))
 }
 
-fn metodo_of<R: Read + Seek>(
+pub(crate) fn metodo_of<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
     name: &str,

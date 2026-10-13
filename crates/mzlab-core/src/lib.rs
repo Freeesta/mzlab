@@ -73,6 +73,7 @@ pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod raw;
 pub mod rawfilter;
+pub mod rawlettore;
 pub mod rng;
 pub mod rois;
 pub mod roles;
