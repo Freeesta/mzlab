@@ -19,6 +19,14 @@ async function recordedSize(ix) {
   } catch (_) { return null; }
 }
 
+/** the head of an mzML announces profile spectra: the first spectrum carries MS:1000128 (profile) rather than MS:1000127 (centroid) @param {Blob} blob */
+export async function headIsProfile(blob) {
+  const head = await blob.slice(0, 1 << 20).text(), at = head.indexOf("<spectrum ");
+  if (at < 0) return false;
+  const p = head.indexOf("MS:1000128", at), c = head.indexOf("MS:1000127", at);
+  return p >= 0 && (c < 0 || p < c);
+}
+
 /** @param {string} name */
 async function idxFile(name) {
   try {
@@ -27,9 +35,11 @@ async function idxFile(name) {
   } catch (_) { return null; }
 }
 
-/** @param {string} base @param {(text: string) => void} say */
-export function createIngress(base, say) {
+/** @param {string} base @param {(text: string) => void} say @param {(key: string, params: Record<string, string>) => void} [notify] */
+export function createIngress(base, say, notify = () => {}) {
   /** @type {Promise<any> | null} */ let lib = null;
+  /** @type {WeakSet<Blob>} the copies made here: already centroids */ const cens = new WeakSet();
+  /** @type {any} */ let engine = null;
   /** the index builder: the compiled .wasm of the main program, its scan-table function, the pool of workers and the archive helpers (made at the first file that needs an index) */
   const tools = () => lib || (lib = (async () => {
     const url = base + "wasm/mzlab_wasm_bg.wasm";
@@ -39,6 +49,16 @@ export function createIngress(base, say) {
     const pool = pools.createPool({ workerUrl: new URL(base + "idx-worker.js"), moduleUrl: url, module, size: pools.poolSize(false, navigator.hardwareConcurrency), budget: 64 });
     return { wasm, pool, arch };
   })().catch(e => { lib = null; throw e; }));
+
+  /** a profile mzML as a centroid copy, with the centroider of the main program (centroidi/convert.rs); null when the file has no profile spectrum @param {string} name @param {Blob} blob */
+  async function centroid(name, blob) {
+    const { wasm } = await tools();
+    if (!engine) engine = new wasm.Engine();
+    /** @type {BlobPart[]} */ const parts = [];
+    const did = engine.mzml_to_centroids(name, blob.size, readerFor(blob), (/** @type {Uint8Array} */ p) => { parts.push(p.slice()); },
+      (/** @type {number} */ d, /** @type {number} */ t) => say(`Centroiding ${name}... ${Math.round(100 * d / Math.max(t, 1))}%`));
+    return did ? new Blob(parts, { type: "application/xml" }) : null;
+  }
 
   /** the builds under way, by file name @type {Map<string, Promise<void>>} */ const building = new Map();
 
@@ -71,7 +91,12 @@ export function createIngress(base, say) {
       for (const name of names) {
         const src = held.get(name);
         if (!src) continue;                              // not sent by the page: it keeps whatever index it has
-        const blob = src instanceof Blob ? src : new Blob([src]), ix = await idxFile(name);
+        let blob = src instanceof Blob ? src : new Blob([src]);
+        if (!cens.has(blob) && await headIsProfile(blob)) {          // mzFinder works on centroids only: a profile file is reduced here, before it is indexed
+          const cen = await centroid(name, blob);
+          if (cen) { cens.add(cen); held.set(name, cen); blob = cen; notify("tpmine.centroided", { name }); }
+        }
+        const ix = await idxFile(name);
         if (ix && await recordedSize(ix) === blob.size) continue;
         say(`Indexing ${name}...`);
         let job = building.get(name);                    // two classify calls at once (Reload from Data and a restored list) must not write the same .part twice

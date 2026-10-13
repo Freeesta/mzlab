@@ -112,8 +112,10 @@ try:
             ref["py"] = PyRef([str(EX / n.split("#")[0]) for n in dict.fromkeys(ref["names"])], nb)
             py = {"state": ref["py"].get("api/state")["j"], "session": ref["py"].get("api/session")["j"]}
             st = pg.evaluate(JSON, "api/state")["j"]
-            json_close(st["files"], py["state"]["files"], path="state.files")
-            json_close({k: v for k, v in sess.items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+            # the engine reads the infusion MSn of a file (`msn`, mzlab-core/src/infusione.rs); the Python reference does not
+            nomsn = lambda x: {k: nomsn(v) for k, v in x.items() if k != "msn"} if isinstance(x, dict) else [nomsn(v) for v in x] if isinstance(x, list) else x
+            json_close(nomsn(st["files"]), py["state"]["files"], path="state.files")
+            json_close(nomsn({k: v for k, v in sess.items() if k not in ("workdir", "commit")}), {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
         step("api/state and api/session: the JSON of the Python reference", state_same)
         def routes_same():
             names = ref["names"]; k = {n.split("#")[0]: i for i, n in reversed(list(enumerate(names)))}
