@@ -80,8 +80,9 @@ try:
         def map_words():
             M = "E.panels.find(q=>q.type==='map')"
             leg = pg.evaluate(f"{M}.leg.textContent")
-            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "arancio" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
+            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
             assert pg.evaluate(f"!!{M}._a.ref") and "SUB_t0" in pg.evaluate(f"{M}.leg.textContent"), "the map starts as a difference from the reference of the session"
+            assert "arancio" in pg.evaluate("I18N.t('corr.file.mapdesc')")         # the colours are explained in the tooltip, not in the legend
             for k in ("ctl.map.diff.title", "help.pnlMap.body"): assert "rosso" not in pg.evaluate(f"I18N.t('{k}')"), k
         step("map difference: legend in words (▲ sample, ▼ reference), orange not red", map_words)
         def map_menu_and_explain():
