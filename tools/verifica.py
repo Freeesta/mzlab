@@ -200,12 +200,22 @@ def data_dir() -> tuple[Path, str]:
                  ROOT.parent / "esempio_conversione" / "mzml"):
         if cand and (Path(cand) / "B_FullMass-t0.mzML").exists():
             return Path(cand), "veri"
+    return sintetici(), "sintetici"
+
+
+def sintetici() -> Path:
+    """The synthetic look-alikes (tools/dati_sintetici.py), written once into .verifica/dati_sintetici/."""
     syn = OUT / "dati_sintetici"
     if not (syn / "B_FullMass-t0.mzML").exists():
         sys.path.insert(0, str(ROOT / "tools"))
         import dati_sintetici
         dati_sintetici.make(syn)
-    return syn, "sintetici"
+    return syn
+
+
+def con_golden(n: str) -> bool:
+    """An e2e that answers from committed golden data (tests_e2e/golden_ref.py): they exist only for the synthetic files, never for real lab data."""
+    return "golden_ref" in (E2E / f"{n}.py").read_text(encoding="utf-8")
 
 
 def hrms_dirs() -> list[Path]:
@@ -357,8 +367,9 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
             out_by[n] = (n, "SKIP", 0, [why])
         else:
             todo.append(n)
+    env_sint = dict(env, MZLAB_MZML=str(sintetici()), QQQ_MZML=str(sintetici())) if src == "veri" and any(con_golden(n) for n in names) else env
     def one(n):
-        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
+        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env_sint if con_golden(n) else env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
