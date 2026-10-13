@@ -208,7 +208,7 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
 fn snap<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
     let (Some(k), Some(rt), Some(mz)) = (index(q, "k"), number(q, "rt"), number(q, "mz")) else { return Ok(None) };
     let Some(r) = route(items, routes, k) else { return Ok(None) };
-    let found = r.snap(q.level(), rt, mz, number(q, "dmz").unwrap_or(1.0))?;
+    let found = r.snap(q.level(), rt, mz, number(q, "dmz").unwrap_or(1.0), number(q, "drt").unwrap_or(0.2), number(q, "wm").unwrap_or(1.0).max(0.0))?;
     let o = found.map_or_else(Obj::new, |(rt, mz)| Obj::new().n("rt", rt).n("mz", mz));
     Ok(Some(crate::jsonb::write(&o.done())))
 }
