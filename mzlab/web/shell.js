@@ -31,7 +31,7 @@ function applyView(){const v=S.view,d=v==="data";
   const sorry=v==="theory"&&I18N.lang==="en"&&!S.theoryIt;$("#theory-sorry").hidden=!sorry;$("#tframe").hidden=sorry;
   if(v==="theory"&&!sorry&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
-  document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||"mzLab"}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||"mzLab"));   // one title per view (WCAG 2.4.2)
+  document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||""));   // one title per view (WCAG 2.4.2)
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
@@ -128,7 +128,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){d.setAttribute("data-i18n-html",b.convertWiff?"load.dropWiff":"load.dropRaw");I18N.apply(d);CONVERT_RAW=true;$("#convhelp").hidden=true;const rp=$("#rawprof"),cb=$("#rawprofile");if(rp&&cb){rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.convertRaw){{const k=b.convertWiff?"load.dropWiff":"load.dropRaw";d.setAttribute("data-i18n-html",k);d.innerHTML=I18N.t(k)}CONVERT_RAW=true;$("#convhelp").hidden=true;const rp=$("#rawprof"),cb=$("#rawprofile");if(rp&&cb){rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
