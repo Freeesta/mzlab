@@ -366,7 +366,7 @@
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
     };
-    startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); }).catch(e => msg(String(e.message || e), true));
+    startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); if (typeof TPTR !== "undefined") TPTR.mount($("#tp-tr"), callRaw); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };

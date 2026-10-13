@@ -72,6 +72,7 @@ declare var TPDraw: any;
 declare var TPHR: any;
 declare var TPLIVE: any;
 declare var TPMINE_MEM: any;
+declare var TPTR: any;
 declare var TRANS: any;
 declare var UNTUI: any;
 declare var WORKFLOW: any;
