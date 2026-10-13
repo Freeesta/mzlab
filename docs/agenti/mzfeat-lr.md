@@ -15,6 +15,8 @@ La pipeline di `crates/mzlab-feat` gira anche sui dati LR (SCIEX 3200 QTRAP, Q1 
 - Ipotesi (`HypoParams.nominal`): si fondono per massa nominale, addotto e formula; le alternative compaiono come `formula (etichetta)`.
 - Mirato (`TargetParams::lr`): finestre di 0,35 Da; `TargetParams.mz_offset` è l'errore di calibrazione misurato sul progenitore (`target::offset::estimate`, mediana osservato − calcolato, limite ±0,6 Da, finestra RT 0,3 min) e spostato su tutte le ipotesi.
 
+- Stime del Dig dai dati: l'anteprima (`params::preview`, profilo `lr`) riporta `da` (mezza finestra di m/z = 3 sigma robuste degli scarti dei picchi forti dalla loro traccia, 0,1-0,5 Da, `params_unit::da_from_offsets`), `rt_tol` (FWHM mediana dei picchi forti, 0,05-1 min) e `dead` (fine del fronte non trattenuto del TIC nel primo quinto della corsa, `params_unit::dead_time`, null se non c'è). `tpmine-worker.js` (`estimate`) li dà alla pagina, che riempie XIC ±Da, tolleranza RT e «Ignora RT prima di» in giallo finché l'utente non scrive; prova: `lr_fullscan` (`unit_preview_*`) e `params_tests.rs`.
+
 ## Livelli
 - Profilo `lr` di `livelli/1` (nascosto): mai sopra il 3 (`tetto`: tutti i cancelli superati danno 3), 4 se la sola formula nominale spiega lo ione, altrimenti 5. Il profilo non ha `punti`: la tabella `PointsTable::bundled()` legge solo il profilo predefinito.
 

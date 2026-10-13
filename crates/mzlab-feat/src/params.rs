@@ -7,6 +7,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
 use crate::axis::{da, estimate_defect, half, MassAxis, LR_TOL};
+pub use crate::params_unit::{da_from_offsets, dead_time, DA_MAX, DA_MIN, RT_TOL_MAX, RT_TOL_MIN};
 use crate::sortc;
 use crate::table::FileFeatures;
 use crate::trace::{self, Params};
@@ -22,7 +23,6 @@ const STRONG: usize = 80;
 /// Tolerance bounds, ppm.
 const PPM_MIN: f64 = 1.0;
 const PPM_MAX: f64 = 20.0;
-
 /// Histogram of log10 values in bins of `BIN` decades from `LO`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hist {
@@ -125,7 +125,7 @@ pub fn noise_from_hist(h: &Hist) -> Option<Noise> {
 }
 
 /// Median of a slice (sorted in place; `NaN` for an empty one).
-fn median(v: &mut [f64]) -> f64 {
+pub(crate) fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return f64::NAN;
     }
@@ -178,6 +178,14 @@ pub struct Estimate {
     /// Median FWHM of the strong traces, minutes.
     pub fwhm: Option<f64>,
     pub fwhm_n: usize,
+    /// Tolerance of RT, minutes: the FWHM within the bounds.
+    pub rt_tol: Option<f64>,
+    /// Unit axis only: half window of m/z (Da), sigma and count of the offsets of the strong traces.
+    pub da: Option<f64>,
+    pub da_sigma: f64,
+    pub da_n: usize,
+    /// End of the void front, minutes.
+    pub dead: Option<f64>,
     /// Unit axis only: the mass defect of the file (fractional part of m/z where the strong peaks pile up).
     pub defect: Option<f64>,
 }
@@ -236,8 +244,8 @@ fn measure<R: ReadAt>(
         if p >= from && p < to && it > y[p - from] {
             y[p - from] = it;
         }
-        if !da && p >= lo && p <= hi && it >= half {
-            errors.push((m - mz) / mz * 1e6);
+        if p >= lo && p <= hi && it >= half {
+            errors.push(if da { m - mz } else { (m - mz) / mz * 1e6 });
         }
     })?;
     Ok(fwhm_of_trace(&rt[from..to], &y, apex - from))
@@ -253,6 +261,11 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
         ppm_n: 0,
         fwhm: None,
         fwhm_n: 0,
+        rt_tol: None,
+        da: None,
+        da_sigma: 0.0,
+        da_n: 0,
+        dead: None,
         defect: None,
     };
     let Some(si) = index.section_of(1, p.polarity) else {
@@ -267,15 +280,33 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
             widths.push(w);
         }
     }
-    let tol = tolerance_from_errors(&mut errors);
+    let unit = p.axis.is_da();
+    let n_err = errors.len();
+    let tol = if unit {
+        None
+    } else {
+        tolerance_from_errors(&mut errors)
+    };
+    let da = if unit {
+        da_from_offsets(&mut errors)
+    } else {
+        None
+    };
+    let fwhm = (widths.len() >= 5).then(|| median(&mut widths));
+    let arr = index.arrays(si)?;
     Ok(Estimate {
         intensities,
         noise,
         ppm: tol.map(|t| t.0),
         ppm_sigma: tol.map_or(0.0, |t| t.1),
-        ppm_n: errors.len(),
-        fwhm: (widths.len() >= 5).then(|| median(&mut widths)),
+        ppm_n: if unit { 0 } else { n_err },
+        fwhm,
         fwhm_n: widths.len(),
+        rt_tol: fwhm.map(|w| w.clamp(RT_TOL_MIN, RT_TOL_MAX)),
+        da: da.map(|d| d.0),
+        da_sigma: da.map_or(0.0, |d| d.1),
+        da_n: if unit { n_err } else { 0 },
+        dead: dead_time(&arr.rt, &arr.sumint),
         defect: match p.axis {
             MassAxis::Da { .. } => estimate_defect(index, si, p.floor)?,
             MassAxis::Ppm => None,
@@ -403,6 +434,16 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .opt(est.fwhm);
     o.raw(",\"n\":")
         .int(est.fwhm_n as i64)
+        .raw("},\"rt_tol\":")
+        .opt(est.rt_tol)
+        .raw(",\"dead\":")
+        .opt(est.dead)
+        .raw(",\"da\":{\"value\":")
+        .opt(est.da)
+        .raw(",\"sigma\":")
+        .num(est.da_sigma)
+        .raw(",\"n\":")
+        .int(est.da_n as i64)
         .raw("},\"examples\":[");
     for (i, e) in examples.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });

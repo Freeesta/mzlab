@@ -250,8 +250,19 @@ async function waitIdx(names) {
   return null;
 }
 
+/** settings of the low-resolution Dig proposed from the data of one file (the preview of the pool, profile `lr`): JSON {da, rt_tol, dead, fwhm}, "null" when there is none @param {any[]} a */
+async function estimate(a) {
+  if (init.desktop || !(await hasRust())) return "null";
+  const names = JSON.parse(a[0]);
+  await ensureIdx(names).catch(() => { /* no index: no estimate */ });
+  if (!(await waitIdx(names))) return "null";
+  const r = await (await pool()).preview({ name: names[0], path: "mzlab/idx/" + names[0] + ".mzidx" }, "");
+  return JSON.stringify({ da: r.da, rt_tol: r.rt_tol, dead: r.dead, fwhm: r.fwhm });
+}
+
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
+  if (fn === "estimate") return estimate(a);
   if (fn === "default_transformations") return DEFAULT_TR;
   if (fn === "tp_table" && !init.desktop) return tpTable(a[0]);
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)

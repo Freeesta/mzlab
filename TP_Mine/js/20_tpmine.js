@@ -16,6 +16,7 @@
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .tp th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted)}.tp td.n{text-align:right;font-variant-numeric:tabular-nums}
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
+.tp input.tp-est{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
 
@@ -220,6 +221,20 @@
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
+    // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
+    let estSeq = 0;
+    for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) $(id).addEventListener("input", ev => { ev.target.dataset.user = "1"; ev.target.classList.remove("tp-est"); });
+    async function estimateLr() {
+      const lr = st.files.filter(f => f.kind === "full"), f = lr.find(x => x.type === "sample") || lr[0], seq = ++estSeq;
+      if (!f || st.files.some(x => x.kind === "hr")) return;
+      let e = null;
+      try { e = JSON.parse(await callRaw("estimate", JSON.stringify([f.name]))); } catch (_) { /* no estimate: the defaults stay */ }
+      if (!e || seq !== estSeq) return;
+      const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 3 × the scatter of m/z of the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-rtt", e.rt_tol, 2, `From the data: the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
+      put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
+    }
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
       msg("Reading files...");
       try {
@@ -237,6 +252,7 @@
         if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg(""); bar(0);
+        estimateLr();
       } catch (e) { msg(String(e.message || e), true); bar(0); }
     }
     $("#tp-page").onclick = async () => {
