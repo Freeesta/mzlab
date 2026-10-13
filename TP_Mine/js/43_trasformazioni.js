@@ -98,5 +98,5 @@
     render();
   }
 
-  G.TPTR = { mount, change, changeText, formula };
+  window.TPTR = { mount, change, changeText, formula };
 })();
