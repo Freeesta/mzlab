@@ -155,6 +155,7 @@ declare var TYPORD: any;
 declare var UIP: any;
 declare var UIP_KEY: any;
 declare var UNOPEN_RE: any;
+declare var UPBUSY: any;
 declare var VIEW_HASH: any;
 declare var VIRIDIS: any;
 declare var VIRIDIS_DARK: any;

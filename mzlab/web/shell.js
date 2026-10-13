@@ -106,9 +106,11 @@ function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
+// ...and not while files are still being read and indexed: the button would open only the ones already ready (UPBUSY = loadings under way)
+let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();      // names of the files that could not be read: mzFinder warns that they are missing from its series
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back
 function loadingStato(text,pct){ldMsg=text?{text,pct:pct==null?null:pct}:null;ldRefresh()}
-function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
+function checkGo(){$("#opbtn").disabled=UPBUSY>0||!ST.files.some(usable);$("#gomsg").textContent=UPBUSY>0&&ST.files.some(usable)?I18N.t("load.waitFiles"):""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
@@ -210,7 +212,7 @@ function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.fi
   const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
   dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.children[1]&&r.children[1].textContent.trim().startsWith(f.name));if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
   return files.filter(f=>!dups.includes(f))}
-async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)))}}
+async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo()}}
 async function upload0(files,into,box){
   const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
   const one=async f=>{const isDam=isMethodFile(f.name);
@@ -222,8 +224,8 @@ async function upload0(files,into,box){
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
-    catch(e){row.remove();CONVROWS.drop(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
+      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
+    catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx)}};
   let panel=null;
   const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
