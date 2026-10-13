@@ -192,64 +192,6 @@ fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str
     }
 }
 
-/// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).
-fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
-    let mut out = Vec::new();
-    if let Some(p) = &m.precursor {
-        let ce = p.collision_energy.map(|ce| {
-            if p.ce_is_nce {
-                field("normalized collision energy", ce, None, Some("MS:1000138"))
-            } else {
-                field(
-                    "collision energy",
-                    ce,
-                    Some("electronvolt"),
-                    Some("MS:1000045"),
-                )
-            }
-        });
-        out.extend(ce);
-        out.extend(p.target_mz.map(|v| {
-            field(
-                "isolation window target m/z",
-                v,
-                Some("m/z"),
-                Some("MS:1000827"),
-            )
-        }));
-        out.extend(
-            p.isolation_width
-                .map(|v| field("isolation window width", v, Some("m/z"), None)),
-        );
-        out.extend(
-            p.charge
-                .map(|v| field("charge state", v, None, Some("MS:1000041"))),
-        );
-    }
-    out.extend(m.ion_injection_time_ms.map(|v| {
-        field(
-            "ion injection time",
-            v,
-            Some("millisecond"),
-            Some("MS:1000927"),
-        )
-    }));
-    out.extend(m.faims_cv.map(|v| {
-        field(
-            "FAIMS compensation voltage",
-            v,
-            Some("volt"),
-            Some("MS:1001581"),
-        )
-    }));
-    out.extend(
-        scan_extras(raw, m, &ExtraFields::All)
-            .into_iter()
-            .map(|(k, v)| field(&k, v, None, None)),
-    );
-    out
-}
-
 impl Lettore for LettoreRaw {
     fn formato(&self) -> Formato {
         Formato::ThermoRaw
@@ -315,4 +257,62 @@ impl Lettore for LettoreRaw {
             self.anonimo,
         ))
     }
+}
+
+/// The header fields of a scan: what the isolation and the activation say, the injection time, and every `opentfraw.*` value of the scan (the trailer).
+fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
+    let mut out = Vec::new();
+    if let Some(p) = &m.precursor {
+        let ce = p.collision_energy.map(|ce| {
+            if p.ce_is_nce {
+                field("normalized collision energy", ce, None, Some("MS:1000138"))
+            } else {
+                field(
+                    "collision energy",
+                    ce,
+                    Some("electronvolt"),
+                    Some("MS:1000045"),
+                )
+            }
+        });
+        out.extend(ce);
+        out.extend(p.target_mz.map(|v| {
+            field(
+                "isolation window target m/z",
+                v,
+                Some("m/z"),
+                Some("MS:1000827"),
+            )
+        }));
+        out.extend(
+            p.isolation_width
+                .map(|v| field("isolation window width", v, Some("m/z"), None)),
+        );
+        out.extend(
+            p.charge
+                .map(|v| field("charge state", v, None, Some("MS:1000041"))),
+        );
+    }
+    out.extend(m.ion_injection_time_ms.map(|v| {
+        field(
+            "ion injection time",
+            v,
+            Some("millisecond"),
+            Some("MS:1000927"),
+        )
+    }));
+    out.extend(m.faims_cv.map(|v| {
+        field(
+            "FAIMS compensation voltage",
+            v,
+            Some("volt"),
+            Some("MS:1001581"),
+        )
+    }));
+    out.extend(
+        scan_extras(raw, m, &ExtraFields::All)
+            .into_iter()
+            .map(|(k, v)| field(&k, v, None, None)),
+    );
+    out
 }
