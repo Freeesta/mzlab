@@ -37,10 +37,10 @@ try:
         step("Aa button, side panel, Esc, keyboard, no old text-size", panel)
         def fonts():
             q = fresh(); q.click("#a11y-btn")
-            q.check("input[name=a11y-font][value=atkinson]"); q.wait_for_timeout(500)
+            q.check("input[name=a11y-font][value=atkinson]"); attendi(q, "document.fonts.check('16px \"Atkinson Hyperlegible Next\"')", 60000)
             assert "Atkinson" in q.evaluate("getComputedStyle(document.body).fontFamily") and attr(q, "font") == "atkinson"
             assert q.evaluate("document.fonts.check('16px \"Atkinson Hyperlegible Next\"')"), "font not loaded"
-            q.check("input[name=a11y-font][value=dyslexic]"); q.wait_for_timeout(600)
+            q.check("input[name=a11y-font][value=dyslexic]"); attendi(q, "document.fonts.check('16px OpenDyslexic')", 60000)
             assert "OpenDyslexic" in q.evaluate("getComputedStyle(document.body).fontFamily")
             assert q.evaluate("document.fonts.check('16px OpenDyslexic')"), "OpenDyslexic not loaded"
             q.close()
@@ -138,7 +138,8 @@ try:
         step("Aa is on Pratica and on a narrow screen", pratica)
         def inapp():
             pg.evaluate("localStorage.setItem('qqq.a11y', JSON.stringify({bg:'cream',space:true}))")
-            pg.click("#nav button[data-v=theory]"); pg.wait_for_timeout(1800)
+            pg.click("#nav button[data-v=theory]")
+            attendi(pg, "(() => { const f = document.querySelector('#tframe'); try { return f.contentDocument.documentElement.getAttribute('data-a11y-bg') === 'cream' } catch (e) { return false } })()", 60000)
             f = next(x for x in pg.frames if "/teoria/" in x.url)
             assert f.evaluate("document.documentElement.getAttribute('data-a11y-bg')") == "cream" and f.evaluate("document.documentElement.hasAttribute('data-a11y-space')")
             assert f.is_visible("#a11y-btn"); f.click("#a11y-btn"); f.check("input[name=a11y-bg][value=blue]")

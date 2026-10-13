@@ -6,7 +6,7 @@
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { partialItems, drawPartials, plainSmiles, partialExport } from "./disegno-parziali.js";
+import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -675,10 +675,11 @@ function noBackground(svgText) {
 }
 async function image(format) {
   await start();
-  const raw = await K.getKet(), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
+  const raw = ketWithoutPartials(await K.getKet()), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
+  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportPartials(K, svgText, po);       // brackets and Δ of the partial structures (disegno-parziali.js)
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
