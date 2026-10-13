@@ -76,3 +76,49 @@ fn fwhm_of_a_gaussian_trace() {
     assert!((w - 2.3548 * s).abs() < 0.01, "{w}");
     assert!(fwhm_of_trace(&x, &vec![1e6; 200], 100).is_none());
 }
+
+#[test]
+fn the_window_of_mz_is_three_robust_sigma_inside_the_bounds() {
+    let mut r = Pcg64::new(11);
+    let mut e: Vec<f64> = (0..400).map(|_| 0.08 * gauss(&mut r)).collect();
+    e.extend([2.0, -1.5]); // outliers must not move it
+    let (da, sigma) = da_from_offsets(&mut e).unwrap();
+    assert!(
+        (sigma - 0.08).abs() < 0.02 && (da - 0.24).abs() < 0.06,
+        "{da} {sigma}"
+    );
+    let mut tight: Vec<f64> = (0..50).map(|i| 0.001 * (i % 3) as f64).collect();
+    assert_eq!(da_from_offsets(&mut tight).unwrap().0, DA_MIN);
+    let mut wide: Vec<f64> = (0..400).map(|_| 0.5 * gauss(&mut r)).collect();
+    assert_eq!(da_from_offsets(&mut wide).unwrap().0, DA_MAX);
+    assert!(da_from_offsets(&mut [0.0; 5]).is_none());
+}
+
+/// A run of 20 minutes, a point every 0.1 min, a flat TIC of 1e5; `void` adds a front of height 1e6 that falls off over `width` minutes.
+fn run(void: Option<(f64, f64)>) -> (Vec<f64>, Vec<f64>) {
+    let rt: Vec<f64> = (0..200).map(|i| i as f64 * 0.1).collect();
+    let tic = rt
+        .iter()
+        .map(|&t| {
+            1e5 + void.map_or(0.0, |(at, w)| {
+                if t >= at {
+                    1e6 * libm::exp(-(t - at) / w)
+                } else {
+                    0.0
+                }
+            })
+        })
+        .collect();
+    (rt, tic)
+}
+
+#[test]
+fn the_void_front_ends_where_the_tic_comes_back() {
+    let (rt, tic) = run(Some((0.6, 0.2)));
+    let d = dead_time(&rt, &tic).unwrap();
+    assert!((1.0..=2.0).contains(&d), "{d}");
+    let (rt, tic) = run(None);
+    assert!(dead_time(&rt, &tic).is_none());
+    let (rt, tic) = run(Some((0.6, 5.0))); // a front that lasts beyond a third of the run is not a void
+    assert!(dead_time(&rt, &tic).is_none());
+}

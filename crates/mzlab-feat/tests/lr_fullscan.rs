@@ -222,3 +222,25 @@ fn unit_profile_does_not_name_an_adduct_without_ms2() {
         "the step of +22 is not named an adduct without an MS2"
     );
 }
+
+#[test]
+fn unit_preview_proposes_the_window_and_the_tolerance_of_rt() {
+    let idx = index_of(Some(30.0), 14);
+    let mut ix = open(&idx);
+    let r = Recipe::for_index(&mut ix).unwrap();
+    let json = mzlab_feat::params::preview(&mut ix, &r.detect).unwrap();
+    let v = mzlab_core::json::parse(json.as_bytes()).unwrap();
+    let num = |a: &str, b: &str| v.get(a).and_then(|x| x.get(b)).and_then(|x| x.f64());
+    let da = num("da", "value").expect("window of m/z");
+    assert!((0.1..=0.5).contains(&da), "{da}");
+    assert!(num("da", "n").unwrap() >= 20.0);
+    let tol = v
+        .get("rt_tol")
+        .and_then(|x| x.f64())
+        .expect("tolerance of RT");
+    assert!((0.05..=1.0).contains(&tol), "{tol}");
+    assert!(v
+        .get("ppm")
+        .and_then(|x| x.get("value"))
+        .is_none_or(|x| x.f64().is_none()));
+}
