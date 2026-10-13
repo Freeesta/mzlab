@@ -74,3 +74,15 @@ pub fn dig<R: ReadAt>(
         open,
     )
 }
+
+/// The peak of the parent in the aligned table of the series (before the proofs): `(m/z, RT)` of its row, None when the table has no row there. The
+/// proofs need it to read the kinetics against the parent and to run the gate of the in-source fragments.
+pub fn parent_peak(files_json: &str, parent_json: &str, table: &[u8]) -> Res<Option<(f64, f64)>> {
+    let files = series::lc_files(files_json)?;
+    let parent = series::parent(parent_json)?;
+    let (t, _) = crate::store_read::read_table(table).map_err(|e| e.to_string())?;
+    if t.n_files != files.len() {
+        return Ok(None);
+    }
+    Ok(dig::parent_row(&t, &parent, &files).map(|r| (parent.mz, t.rt[r])))
+}

@@ -56,3 +56,18 @@ fn parent_adducts() {
     let d = super::super::series::parent(r#"{"neutral": "C10H18O5"}"#).unwrap();
     assert_eq!((d.adduct.as_str(), d.mz), ("[M+H]+", h.mz));
 }
+
+/// The rows that the TP view marks as in-source fragments are the ones left out of the candidates, in order of m/z.
+#[test]
+fn isf_rows_are_the_marked_ones() {
+    use crate::tp::{TpBlock, ST_TP};
+    let t = Aligned {
+        n_files: 1,
+        mz: vec![257.102, 200.0, 113.06],
+        rt: vec![13.4, 5.0, 13.3],
+        tp: TpBlock { status: vec![ST_ISF, ST_TP, ST_ISF], ..TpBlock::default() },
+        ..Aligned::default()
+    };
+    assert_eq!(isf_rows(&t), vec![2, 0]);
+    assert!(isf_rows(&Aligned { n_files: 1, mz: vec![1.0], ..Aligned::default() }).is_empty());
+}

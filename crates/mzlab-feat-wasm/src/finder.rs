@@ -117,6 +117,16 @@ pub fn finder_dig(
     Ok(FinderDig { inner })
 }
 
+/// The peak of the parent in the aligned `table` (`.mzfeat` of the LC files): `{"mz", "rt"}` of its row, `{"mz", "rt": null}` when there is none.
+#[wasm_bindgen]
+pub fn finder_parent(files_json: &str, parent_json: &str, table: &[u8]) -> Result<String, JsValue> {
+    let p = legacy::series::parent(parent_json).map_err(user)?;
+    let peak = legacy::parent_peak(files_json, parent_json, table).map_err(user)?;
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"mz\":").num(p.mz).raw(",\"rt\":").opt(peak.map(|x| x.1)).raw("}");
+    Ok(o.0)
+}
+
 /// What the worker needs to run the pipeline before `finder_dig`: `{lc: [names of the LC files, in the order of the table], minutes: [time | null],
 /// formula: the neutral formula of the parent, structure: the grafo/1 JSON of its SMILES ("" without one), mz: the ion of the parent, rt: the RT the user gave | null}`.
 #[wasm_bindgen]

@@ -272,7 +272,15 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
         o.raw(if i > 0 { "," } else { "" });
         row(&mut o, c, d.files.len());
     }
-    o.raw("],\"mass_network\":null,\"isf_hidden\":[],\"tree\":null,\"calibration\":null,\"inclusion\":[");
+    o.raw("],\"mass_network\":null,\"isf_hidden\":[");
+    for (i, (mz, rt)) in d.isf_hidden.iter().enumerate() {
+        o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
+            .num(round(*mz, 4))
+            .raw(",\"rt\":")
+            .num(round(*rt, 2))
+            .raw(",\"candidate\":false}");
+    }
+    o.raw("],\"tree\":null,\"calibration\":null,\"inclusion\":[");
     for (i, c) in inclusion(d).iter().enumerate() {
         let (a, b) = rt_span(c);
         o.raw(if i > 0 { ",{\"mz\":" } else { "{\"mz\":" })
