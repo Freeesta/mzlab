@@ -62,21 +62,28 @@
   const tabs = new Map();         // id -> {b, sec, fn}
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
-    if (!nav || !anchor || tabs.has(t.id) || document.getElementById("v-" + t.id)) return;
+    const old = tabs.get(t.id);
+    if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
+      old.t = t; old.ph = false; old.b.title = t.desc || t.name;
+      if (old.opened) { old.sec.textContent = ""; openIn(old); }
+      return;
+    }
+    if (!nav || !anchor || old || document.getElementById("v-" + t.id)) return;
     const b = document.createElement("button"); b.dataset.v = t.id; b.title = t.desc || t.name;
     b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
     nav.appendChild(b);
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
-    let opened = false;
+    /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false };
     b.onclick = () => setView(t.id);
-    const fn = ev => {
+    x.fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
-      if (show && !opened) { opened = true; try { t.open(sec, reg.ctx); } catch (e) { sec.textContent = "mzFinder failed: " + (e && e.message || e); } }
-      else if (show && t.onShow) try { t.onShow(); } catch (_) { /* ignore */ }
+      if (show && !x.opened) { x.opened = true; openIn(x); }
+      else if (show && x.t.onShow) try { x.t.onShow(); } catch (_) { /* ignore */ }
     };
-    document.addEventListener("tpview", fn);
-    tabs.set(t.id, { b, sec, fn });
+    document.addEventListener("tpview", x.fn);
+    tabs.set(t.id, x);
   }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "mzFinder failed: " + (e && e.message || e); } }
   function removeTabs() {
     for (const x of tabs.values()) {
       const shown = !x.sec.hidden;
@@ -102,10 +109,17 @@
     reg.ctx = { pyZip, base: BASE, meta: idx.meta || {}, files };
     for (const n of idx.js || []) await runScript(n);
   }
+  // the tab appears at once with a short loading note; the real tool takes its place when its script registers
+  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading mzFinder…</p>'; } };
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
-    try { await loaded; } catch (e) { loaded = null; console.error("mzFinder failed to load:", e); return; }
+    if (!tabs.size) addTab(PLACEHOLDER);
+    try { await loaded; } catch (e) {
+      loaded = null; console.error("mzFinder failed to load:", e);
+      const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "mzFinder failed to load. Reload the page to try again.";
+      return;
+    }
     if (!on) return;
     for (const t of tools) if (t.nav) addTab(t);
     render();
