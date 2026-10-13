@@ -51,18 +51,13 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
     Ok(raw.instrument_method_text(&mut source))
 }
 
-/// The `metodo/1` document of a `.raw` (`metodo_raw.rs`); `name` is the file name, `anonymous` leaves out the people, the computer, the serial number and the paths.
-pub fn metodo<R: Read + Seek>(mut source: R, name: &str, anonymous: bool) -> Result<String> {
+/// The `metodo/1` document of a `.raw` (`metodo_raw.rs`); `name` is the file name.
+pub fn metodo<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
     let raw = open(&mut source)?;
-    Ok(metodo_of(&raw, &mut source, name, anonymous))
+    Ok(metodo_of(&raw, &mut source, name))
 }
 
-pub(crate) fn metodo_of<R: Read + Seek>(
-    raw: &RawFileReader,
-    source: &mut R,
-    name: &str,
-    anonymous: bool,
-) -> String {
+pub(crate) fn metodo_of<R: Read + Seek>(raw: &RawFileReader, source: &mut R, name: &str) -> String {
     let bytes = source.seek(SeekFrom::End(0)).unwrap_or(0);
     let src = crate::metodo::Source {
         format: "thermo-raw",
@@ -72,20 +67,13 @@ pub(crate) fn metodo_of<R: Read + Seek>(
             bytes,
         }],
         sample: None,
-        anonymous,
-        secret: crate::pseudo::current(),
     };
     crate::metodo_raw::from_raw(raw, source, &src)
 }
 
 /// The `userParam` line that carries the `metodo/1` document in the `<run>` of the mzML (`metodo::from_userparam` reads it back).
-fn method_userparam<R: Read + Seek>(
-    raw: &RawFileReader,
-    source: &mut R,
-    name: &str,
-    anonymous: bool,
-) -> String {
-    crate::metodo::userparam_xml(&metodo_of(raw, source, name, anonymous))
+fn method_userparam<R: Read + Seek>(raw: &RawFileReader, source: &mut R, name: &str) -> String {
+    crate::metodo::userparam_xml(&metodo_of(raw, source, name))
 }
 
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.
@@ -107,8 +95,8 @@ pub fn read<R: Read + Seek>(source: R) -> Result<Run> {
 /// Writes the file as mzML to `out` without holding the `.raw` in memory; `name` is the source file name.
 pub fn to_mzml<R: Read + Seek, W: Write>(mut source: R, out: &mut W, name: &str) -> Result<()> {
     let raw = open(&mut source)?;
-    let doc = method_userparam(&raw, &mut source, name, false);
-    let mut filter = MzmlFilter::new(out, false).with_run_extra(doc);
+    let doc = method_userparam(&raw, &mut source, name);
+    let mut filter = MzmlFilter::new(out).with_run_extra(doc);
     opentfraw::write_mzml(&raw, &mut source, &mut filter, name, false).map_err(raw_error)?;
     filter.flush().map_err(raw_error)
 }
@@ -148,38 +136,10 @@ impl<R: Seek> Seek for Counted<'_, R> {
 /// then `on_scan(done, total)` as the scans go by (never backwards), and `on_scan(total, total)` at the end.
 /// `profile` keeps the profile data of the file (much larger); otherwise the vendor centroids are written.
 pub fn to_mzml_progress<R: Read + Seek, W: Write>(
-    source: R,
-    out: &mut W,
-    name: &str,
-    profile: bool,
-    on_scan: &mut dyn FnMut(u32, u32),
-) -> Result<()> {
-    to_mzml_with(
-        source,
-        out,
-        name,
-        Convert {
-            profile,
-            anonymous: false,
-        },
-        on_scan,
-    )
-}
-
-/// What `to_mzml_with` does besides the conversion: `profile` as above; `anonymous` leaves the personal data of the acquisition
-/// (computer, user folders, paths, the values of the user labels) out of the mzML (`rawfilter`): they stay in the `.raw`.
-#[derive(Clone, Copy, Default)]
-pub struct Convert {
-    pub profile: bool,
-    pub anonymous: bool,
-}
-
-/// `to_mzml_progress` with the options of `Convert`.
-pub fn to_mzml_with<R: Read + Seek, W: Write>(
     mut source: R,
     out: &mut W,
     name: &str,
-    opt: Convert,
+    profile: bool,
     on_scan: &mut dyn FnMut(u32, u32),
 ) -> Result<()> {
     let raw = open(&mut source)?;
@@ -191,7 +151,7 @@ pub fn to_mzml_with<R: Read + Seek, W: Write>(
     starts.sort_unstable();
     let total = starts.len() as u32;
     on_scan(0, total);
-    let doc = method_userparam(&raw, &mut source, name, opt.anonymous);
+    let doc = method_userparam(&raw, &mut source, name);
     let mut counted = Counted {
         inner: source,
         starts,
@@ -199,8 +159,8 @@ pub fn to_mzml_with<R: Read + Seek, W: Write>(
         done: 0,
         on_scan,
     };
-    let mut filter = MzmlFilter::new(&mut *out, opt.anonymous).with_run_extra(doc);
-    opentfraw::write_mzml(&raw, &mut counted, &mut filter, name, opt.profile).map_err(raw_error)?;
+    let mut filter = MzmlFilter::new(&mut *out).with_run_extra(doc);
+    opentfraw::write_mzml(&raw, &mut counted, &mut filter, name, profile).map_err(raw_error)?;
     filter.flush().map_err(raw_error)?;
     (counted.on_scan)(total, total);
     Ok(())

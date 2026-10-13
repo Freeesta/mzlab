@@ -183,19 +183,6 @@ fn filetime(ft: u64) -> String {
     )
 }
 
-fn blank_identity(t: &str) -> String {
-    let mut s = t.to_string();
-    for k in ["User=", "Computer=", "Serial Number:"] {
-        if let Some(p) = s.find(k) {
-            let e = s[p + k.len()..]
-                .find([':', ',', '\n'])
-                .map_or(s.len(), |e| p + k.len() + e);
-            s.replace_range(p + k.len()..e, "");
-        }
-    }
-    s
-}
-
 /// The instrument model (`Component ID` of the mass spectrometer in the Log of sample `n`) and the creation time of the file
 /// (`YYYY-MM-DDTHH:MM:SS`, local time of the instrument PC): what the mzML header says about the run.
 pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
@@ -247,22 +234,21 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         .iter()
         .find(|s| s.contains('\\') && !s.contains(':'))
         .and_then(|s| s.rsplit('\\').next());
-    let anon = src.anonymous;
 
     let source_type = source_type(&log);
     let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
     let autosampler = autosampler(&entries);
 
     let registro = run_records(&ms_rec);
-    let raw = raw_log(&log, anon);
+    let raw = raw_log(&log);
     let warn = warnings(ole, &sample, log.is_empty());
 
     let doc = obj(vec![
         ("schema", Some(V::s(crate::metodo::SCHEMA))),
         ("origine", crate::metodo::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
-        ("strumento", strumento(cfg, version, src)),
-        ("operatore", operatore(user.or(domain_user), computer, src)),
+        ("strumento", strumento(cfg, version)),
+        ("operatore", operatore(user.or(domain_user), computer)),
         (
             "ms",
             method
@@ -369,7 +355,7 @@ fn source_type(log: &[String]) -> Option<String> {
 }
 
 /// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
-fn strumento(cfg: Option<&String>, version: Option<&String>, src: &Source) -> Option<V> {
+fn strumento(cfg: Option<&String>, version: Option<&String>) -> Option<V> {
     obj(vec![
         (
             "produttore",
@@ -379,14 +365,10 @@ fn strumento(cfg: Option<&String>, version: Option<&String>, src: &Source) -> Op
             "modello",
             cfg.and_then(|r| field(r, "Component ID:")).and_then(text),
         ),
-        ("serie", {
-            let serial = cfg.and_then(|r| field(r, "Serial Number:"));
-            if src.anonymous {
-                serial.and_then(|s| src.alias("serial", s)).map(V::s)
-            } else {
-                serial.and_then(text)
-            }
-        }),
+        (
+            "serie",
+            cfg.and_then(|r| field(r, "Serial Number:")).and_then(text),
+        ),
         (
             "firmware",
             cfg.and_then(|r| field(r, "Firmware Version:"))
@@ -403,17 +385,8 @@ fn strumento(cfg: Option<&String>, version: Option<&String>, src: &Source) -> Op
     ])
 }
 
-/// The `operatore` section (pseudonyms in an anonymous document).
-fn operatore(user: Option<&str>, computer: Option<&str>, src: &Source) -> Option<V> {
-    if src.anonymous {
-        return obj(vec![
-            ("utente", user.and_then(|v| src.alias("user", v)).map(V::s)),
-            (
-                "computer",
-                computer.and_then(|v| src.alias("computer", v)).map(V::s),
-            ),
-        ]);
-    }
+/// The `operatore` section.
+fn operatore(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
         ("utente", user.and_then(text)),
         ("computer", computer.and_then(text)),
@@ -439,12 +412,9 @@ fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
     .collect()
 }
 
-/// The raw log joined and cut to `GRAW_MAX`, with the identity blanked when the source is anonymous.
-fn raw_log(log: &[String], anon: bool) -> String {
+/// The raw log joined and cut to `GRAW_MAX`.
+fn raw_log(log: &[String]) -> String {
     let mut raw = log.join("\n");
-    if anon {
-        raw = blank_identity(&raw);
-    }
     raw.truncate(
         raw.char_indices()
             .map(|(i, _)| i)

@@ -99,17 +99,6 @@ pub struct Source {
     pub format: &'static str,
     pub files: Vec<SrcFile>,
     pub sample: Option<u32>,
-    /// `true`: leave out what identifies people (user, computer, serial number, paths).
-    pub anonymous: bool,
-    /// With `anonymous`: the secret of the pseudonyms (`pseudo`); without it the identity is left out.
-    pub secret: Option<Vec<u8>>,
-}
-
-impl Source {
-    /// The pseudonym of `value` as a `kind` when the document is anonymous and has a secret, else nothing.
-    pub fn alias(&self, kind: &str, value: &str) -> Option<String> {
-        crate::pseudo::alias(self.secret.as_deref(), kind, value)
-    }
 }
 
 /// `origine`; `created` = when the source file was made, as the file says (local time of the instrument PC, no zone).

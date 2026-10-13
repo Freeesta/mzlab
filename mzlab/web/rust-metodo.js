@@ -12,7 +12,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
       if (!g) continue;
       const s = JSON.parse(e.mzml_sources(g.size, readerFor(g)));
       if (!s.sources.some(q => q.sha1 === sha) || !s.sample) continue;
-      wiffDocs.set(x.name, e.wiff_metodo(f.name, f.size, rd, s.sample, sha, !!m.anonymous));
+      wiffDocs.set(x.name, e.wiff_metodo(f.name, f.size, rd, s.sample, sha));
       found.push({ name: x.name, sample: s.sample });
     }
     return { info: JSON.stringify({ sha1: sha, matched: found }) };
@@ -24,7 +24,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
         await sync();
         const o = await open(m), e = engine();
         const emb = e.mzml_metodo(o.f.size, o.rd);
-        const doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd, !!m.anonymous);
+        const doc = emb || wiffDocs.get(base(m.name)) || e.lab_metodo(o.slot, m.name, o.f.size, o.rd);
         const source = emb ? "mzml" : wiffDocs.has(base(m.name)) ? "wiff" : doc ? "dam" : "none";
         return { info: `{"source":"${source}","metodo":${doc || "null"}}` };
       }

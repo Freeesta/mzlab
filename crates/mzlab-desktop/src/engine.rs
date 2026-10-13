@@ -217,7 +217,7 @@ impl State {
 
     /// Converts a Thermo `.raw` of the disk (any size: the file is mapped, not read into memory) to an mzML in the temporary
     /// folder, registered like a picked file. Returns `(number, size)`; the page reads it with `chunk`.
-    pub fn raw_to_mzml(&self, id: u32, profile: bool, anonymous: bool) -> Result<(u32, u64)> {
+    pub fn raw_to_mzml(&self, id: u32, profile: bool) -> Result<(u32, u64)> {
         let p = self.picked(id)?;
         let map = Mapped::open(&p.path).map_err(|e| io_error(&e))?;
         let progress = Arc::new(Progress::default());
@@ -240,7 +240,7 @@ impl State {
             pr.scans.store(u64::from(done), Ordering::Relaxed);
             pr.scans_total.store(u64::from(total), Ordering::Relaxed);
         };
-        raw::to_mzml_with(source, &mut out, stem, raw::Convert { profile, anonymous }, &mut on_scan)?;
+        raw::to_mzml_progress(source, &mut out, stem, profile, &mut on_scan)?;
         progress
             .read
             .store(map.bytes().len() as u64, Ordering::Relaxed);

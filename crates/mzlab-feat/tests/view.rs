@@ -149,3 +149,19 @@ fn factors_agree_with_the_numpy_reference_within_1e_9() {
         }
     }
 }
+
+/// The share of the rows with a peak in a blank, the rows each rule rejected and the absence of M+1/M without summaries of the rows.
+#[test]
+fn qc_json_has_the_blank_share_the_rejections_and_no_isotope_ratio_without_summaries() {
+    use mzlab_feat::qc;
+    let (t, s) = (table(), samples());
+    assert_eq!(qc::blank_share(&t, &s, None), (1, 4, 2));
+    assert!(qc::isotope_ratio(&t, None).is_none());
+    let v = view::build(&t, &s, &Method::None, &[Rule::MinDetected(2)]).unwrap();
+    let j = parse(qc::to_json(&t, &s, Some(&v)).as_bytes()).unwrap();
+    assert_eq!(j.get("bianchi").and_then(|b| b.get("righe_con_picco")).and_then(|x| x.f64()), Some(qc::blank_share(&t, &s, Some(&v)).2 as f64));
+    let sc = j.get("scartate").unwrap().arr();
+    assert_eq!(sc.len(), 1);
+    assert_eq!(sc[0].get("regola").and_then(|x| x.str()), Some("min_rilevati"));
+    assert!(j.get("m1_su_m").unwrap().is_null());
+}

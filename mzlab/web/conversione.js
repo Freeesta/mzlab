@@ -5,8 +5,7 @@
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
 const CONV = {
   files: new Map(),
-  anon: new Set(),                                           // the names made without personal data ("Esporta senza dati personali")
-  add(name, blob, anon) { this.files.set(name, blob); if (anon) this.anon.add(name); else this.anon.delete(name); },
+  add(name, blob) { this.files.set(name, blob); },
   has(name) { return this.files.has(name); },
   get size() { return this.files.size; },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
@@ -14,18 +13,11 @@ const CONV = {
     const blob = this.files.get(name); if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !window.MZLAB_SAVE_MZML) return false;
-      try { const ok = !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); if (ok) this.note(name); return ok; }
+      try { const ok = !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
       catch (e) { const n = document.getElementById("up"); if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); n.appendChild(d); setTimeout(() => d.remove(), 12000); } return false; }
     }
     saveBlob(blob, name, 60000);
-    this.note(name);
     return true;
-  },
-  // what the saved file says about the people of the acquisition (a note in the loading area for a few seconds)
-  note(name) {
-    const n = document.getElementById("up"); if (!n) return;
-    const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status");
-    d.textContent = I18N.t(this.anon.has(name) ? "conv.dl.anon" : "conv.dl.personal"); n.appendChild(d); setTimeout(() => d.remove(), 12000);
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)
   async downloadAll() { for (const n of [...this.files.keys()]) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },

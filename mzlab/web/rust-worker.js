@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, set_pseudo_secret, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
+import init, { Engine, version, prepare_upload, formula_mz, composition, stat_post, mrm_diff_post } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -32,7 +32,7 @@ function readerFor(blob) {
 }
 
 
-// ---- the flow without Pyodide (?lr=1, lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
+// ---- the flow of the page (lr.js): the mzML files and their indexes live in OPFS (archivio.js), the list of the files, the items of the
 // session and the state of the page come from here. The slots of these files are numbered above LR_BASE, apart from the ones of the session (k).
 const LR_BASE = 1000000;
 const lrSlot = new Map(), lrFile = new Map();
@@ -182,7 +182,6 @@ onmessage = async ev => {
   const m = ev.data;
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
   await ready;
-  if (m.secret) set_pseudo_secret(m.secret);
   const { id } = m;
   try {
     let out = null, n = 0, info = null;
@@ -197,7 +196,7 @@ onmessage = async ev => {
         const total = m.blob.size, rd = readerFor(m.blob), sink = await rawSink(m.dest);
         let read = 0, written = 0, last = 0, scans = 0, scansTotal = null;
         const tick = (force) => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total, read, written, scans, scansTotal }); } };     // the page shows how far the conversion has got
-        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, (m.profile ? 1 : 0) | (m.anonymous ? 2 : 0)); }      // scans: converted / in the file, from the scan index
+        try { engine.raw_to_mzml(m.name, total, (o, l) => { const b = rd(o, l); read = Math.max(read, o + b.length); tick(); return b; }, piece => { sink.write(piece); written += piece.length; tick(); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }, (m.profile ? 1 : 0)); }      // scans: converted / in the file, from the scan index
         catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }      // q: the disk is full (error.quota)
         const r = await sink.finish();
         postMessage({ id, op: m.op, n: r.parts ? r.parts.length : 1, parts: r.parts || null, file: r.file || null }, r.parts ? r.parts.map(a => a.buffer) : []);
