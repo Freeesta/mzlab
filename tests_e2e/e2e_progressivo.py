@@ -10,13 +10,13 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_progressivo.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]
-r = Run(port=8931, wd="/tmp/wdprogressivo", motore="python")
+r = Run(port=8931, wd="/tmp/wdprogressivo")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.add_init_script("""(()=>{window.__hold=new Promise(r=>{window.__release=r});window.__appends=0;const f=window.fetch;
-          window.fetch=function(u,o){if(typeof u==='string'&&u.includes('api/explore')&&o&&typeof o.body==='string'&&o.body.includes('"append":true')){window.__appends++;return window.__hold.then(()=>f.call(this,u,o))}return f.call(this,u,o)}})()""")
         pg.goto(f"http://127.0.0.1:{r.port}/?progressivo=1"); pg.wait_for_selector("#drop")
+        pg.evaluate("""(()=>{window.__hold=new Promise(r=>{window.__release=r});window.__appends=0;const f=window.fetch;
+          window.fetch=function(u,o){if(typeof u==='string'&&u.includes('api/explore')&&o&&typeof o.body==='string'&&o.body.includes('"append":true')){window.__appends++;return window.__hold.then(()=>f.call(this,u,o))}return f.call(this,u,o)}})()""")       # on the outermost fetch, after the page is up: browser.js answers api/ routes itself and never reaches an earlier wrapper
         stage(pg, FILES)
         pg.click("#opbtn")
         pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
@@ -59,8 +59,8 @@ try:
         step("the session is the same as opening the files in one call", same_as_all_at_once)
         def failing():
             pg.evaluate("S.adding=true")
-            import shutil; shutil.copy(FILES[0], r.wd + "/ok.mzML"); shutil.copy(FILES[1], r.wd + "/ok2.mzML")
-            pg.evaluate("exploreList([{file:'ok.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'missing.mzML',time:null,type:'sample',conc:null,cunit:null,label:null},{file:'ok2.mzML',time:null,type:'sample',conc:null,cunit:null,label:null}]).then(f=>f&&f())")
+            it = lambda f: "{file:'%s',time:null,type:'sample',conc:null,cunit:null,label:null}" % f
+            pg.evaluate("exploreList([%s]).then(r=>r&&r())" % ",".join(it(f) for f in ("B_FullMass-t0.mzML", "missing.mzML", "B_FullMass-t15.mzML")))
             pg.wait_for_function("E.pending.some(x=>x.state==='err')", timeout=60000)
             assert pg.locator("#flst .fl.pend.err").count() == 1
             assert pg.locator("#flst .fl.pend.err small").inner_text().strip() != ""

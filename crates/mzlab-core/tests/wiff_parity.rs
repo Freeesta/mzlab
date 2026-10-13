@@ -18,7 +18,9 @@ fn close(a: f64, b: f64, tol: f64) -> bool {
 }
 
 fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_{}", std::process::id()));
+    // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_{}_{}", std::process::id(), CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
     let ok = Command::new("python3").arg(root().join("tools/wiff_riferimento.py")).arg(&out).output().ok().filter(|o| o.status.success());
     if ok.is_none() {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
