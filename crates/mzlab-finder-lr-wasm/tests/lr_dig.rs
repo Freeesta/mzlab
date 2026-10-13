@@ -304,3 +304,83 @@ fn deterministic() {
     let (a, b) = (dig(&files, &idxs), dig(&files, &idxs));
     assert_eq!(summary(&a, "{}"), summary(&b, "{}"));
 }
+
+/// An EPI file: product-ion scans of `precursor` every 0.02 min around `rt`, fragments 17, 44 and 61 Da under it (the first two shared with a
+/// product at the same precursor), as the 3200 writes them (`precursor` = the selected ion).
+fn ms2_index(precursor: f64, rt: f64) -> Vec<u8> {
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "lr_epi".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let n = 21;
+    w.open_spectra(n).unwrap();
+    for i in 0..n {
+        let frag = [
+            (precursor - 17.0, 900.0f32),
+            (precursor - 44.0, 500.0),
+            (precursor - 61.0, 120.0),
+        ];
+        w.spectrum(&Spectrum {
+            index: i,
+            id: format!("sample=1 period=1 cycle={} experiment=2", i + 1),
+            level: 2,
+            rt: rt - 0.2 + 0.02 * i as f64,
+            polarity: 1,
+            profile: false,
+            filter: "+ EPI".into(),
+            precursor: Some(precursor),
+            mz: frag.iter().map(|f| f.0).collect(),
+            intensity: frag.iter().map(|f| f.1).collect(),
+            wide: None,
+        })
+        .unwrap();
+    }
+    w.close_spectra().unwrap();
+    let mzml = w.finish().unwrap();
+    let size = mzml.len() as u64;
+    let mut src = mzml.clone();
+    let p = prepare(&mut src, size, "lr_epi.mzML").unwrap();
+    build_mzml_to_vec(&p.table, &mzml, 64 << 20).unwrap().0
+}
+
+#[test]
+fn ms2_files_give_the_fragments_and_the_transitions() {
+    let (files, idxs) = series();
+    let plain = dig(&files, &idxs);
+    let parent = &plain.entries[0];
+    let epi = ms2_index(parent.mz_x, parent.ref_rt.expect("RT of the parent"));
+    let with = files.replace(
+        ']',
+        r#",{"name": "lr_EPI.mzML", "time": null, "type": "sample", "kind": "ms2"}]"#,
+    );
+    let plan: Value = serde_json::from_str(&lr::plan::plan_json(&with, PARENT).unwrap()).unwrap();
+    assert_eq!(plan["rust"], true);
+    assert_eq!(plan["ms2"][0], "lr_EPI.mzML");
+    assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
+    let d = dig(&with, &idxs);
+    let n = idxs.len();
+    let mut get = |id: i64| -> Value {
+        let s = detail(&d, id, |k| {
+            Ok(if k < n { open(&idxs[k]) } else { open(&epi) })
+        })
+        .unwrap();
+        serde_json::from_str(&s).unwrap()
+    };
+    let p = get(parent.id);
+    let m = &p["ms2"];
+    assert!(m["scans"].as_i64().unwrap() >= 15, "{m}");
+    assert!((m["precursor"].as_f64().unwrap() - parent.mz_x).abs() < 0.01);
+    let frags = m["fragments"].as_array().unwrap();
+    assert_eq!(frags.len(), 3);
+    assert_eq!(frags[0]["rel"], 100.0);
+    assert!((frags[0]["mz"].as_f64().unwrap() - (parent.mz_x - 17.0)).abs() < 0.01);
+    let t = p["transitions"].as_array().unwrap();
+    assert_eq!(t.len(), 3);
+    assert!((t[0]["Q3_consigliato"].as_f64().unwrap() - (parent.mz_x - 17.0 - SHIFT)).abs() < 0.1);
+    let other = d.entries.iter().find(|e| e.steps > 0).expect("a product");
+    assert_eq!(get(other.id)["ms2"]["scans"], 0);
+}

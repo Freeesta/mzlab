@@ -33,13 +33,13 @@ const progress = (text, frac, phase, payload) => postMessage({ type: "progress",
 /** the plan of a run, null when Rust does not serve it @param {Ctx} c @param {string[]} a */
 async function plan(c, a) {
   const files = JSON.parse(a[0]);
-  if (!files.length || files.some((/** @type {any} */ f) => f.kind !== "full")) return null;
+  if (!files.length || files.some((/** @type {any} */ f) => !["full", "ms2"].includes(f.kind))) return null;
   const x = await load(c);
   if (!x) return null;
   const p = JSON.parse(x.finder_lr_plan(a[0], a[1]));
   if (!p.rust) return null;
   const idx = await c.idxFiles(p.lc);
-  return idx ? { p, idx, x } : null;
+  return idx && (!p.ms2.length || await c.idxFiles(p.ms2)) ? { p, idx, x } : null;
 }
 
 /**
@@ -60,7 +60,7 @@ export async function run(c, a) {
   const h = await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" }); lap("candidates", t); t = performance.now();
   progress("Aligning the peaks of the series...", 0.6, "xic");
   const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now();
-  dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry); cols = p.lc;
+  dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry); cols = [...p.lc, ...p.ms2];
   progress("", null, "xic", JSON.parse(dig.live()));
   progress("Searching for unexpected ions...", 0.9, "unexpected");
   progress("Looking for MS2 scans...", 0.95, "ms2");

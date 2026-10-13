@@ -172,12 +172,19 @@ pub fn plan_json(files_json: &str, parent_json: &str) -> Res<String> {
     let fs = files(files_json)?;
     let p = parent(parent_json)?;
     let lc = columns(&fs);
-    let rust = !lc.is_empty() && !p.formula.is_empty() && fs.iter().all(|f| f.kind == "full");
+    let ms2: Vec<&FileLr> = fs.iter().filter(|f| f.kind == "ms2").collect();
+    let rust = !lc.is_empty()
+        && !p.formula.is_empty()
+        && fs.iter().all(|f| f.kind == "full" || f.kind == "ms2");
     let mut o = Out::default();
     o.raw("{\"rust\":")
         .raw(if rust { "true" } else { "false" })
         .raw(",\"lc\":[");
     for (i, f) in lc.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(&f.name);
+    }
+    o.raw("],\"ms2\":[");
+    for (i, f) in ms2.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(&f.name);
     }
     o.raw("],\"minutes\":[");
