@@ -2494,6 +2494,8 @@ I18N.add("en", {
   "spec.contRemoved": " · {n} contaminant peaks removed",
   "ctx.spec.openMs2": "Open the MS² scan (precursor {mz})",
   "ctx.spec.openMs2.aria": "Open the MS² scan of the precursor m/z {mz}",
+  "ctx.spec.extractMs2": "Extract MS2 scan",
+  "ctx.spec.extractMs2.aria": "Extract the MS2 scan of the precursor m/z {mz}",
   "ctx.spec.marker": "Scan markers",
   "ctx.spec.marker.aria": "Show or hide the markers (triangles) of the MS² scans on the spectrum",
   "ctx.spec.noCont": "Remove contaminants",

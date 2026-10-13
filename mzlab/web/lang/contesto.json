@@ -150,6 +150,8 @@
   "cursor.handle.value": "Valore letto da un lettore di schermo sul pallino del cursore del cromatogramma; {rt} = tempo di ritenzione in minuti.",
   "spec.contRemoved": "Nota nella legenda dello spettro; {n} = numero di picchi tolti perché compatibili con un contaminante Keller.",
   "ctx.spec.openMs2": "Voce del clic destro su un picco dello spettro; {mz} = m/z del precursore della scansione MS².",
+  "ctx.spec.extractMs2": "Voce del clic destro su un picco di uno spettro Full Scan (bassa risoluzione) il cui m/z è precursore di scansioni MS2 caricate.",
+  "ctx.spec.extractMs2.aria": "Etichetta per lettori di schermo; {mz} = m/z del picco.",
   "ctx.spec.openMs2.aria": "Etichetta per lettori di schermo; {mz} = m/z del picco.",
   "grad.src.dam": "Origine del gradiente mostrato nella finestra Metodo.",
   "gradient.err.point": "Errore di un punto del gradiente; {t} = tempo, {b} = %B.",
