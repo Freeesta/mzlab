@@ -321,8 +321,6 @@ I18N.add("en", {
   "load.restart": "Start from scratch",
   "load.slow": "The first visit downloads about 15 MB: it may take a minute.",
   "busy.aria": "Working",
-  "load.reading": "Reading the files and preparing the chromatograms...",
-  "load.closing": "Closing and loading...",
   "load.err.oldBrowser": "this browser is too old: use a recent version of Chrome, Edge, Firefox or Safari.",
   "load.err.engineStart": "Cannot start the calculation engine: reload the page.",
   "load.err.engineMissing": "This browser cannot start the calculation engine: use a recent version of Chrome, Edge, Firefox or Safari.",
