@@ -125,7 +125,7 @@ async function finder() {
 }
 /** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
 async function ensureIdx(names) {
-  if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say);
+  if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say, (key, params) => postMessage({ type: "notice", key, params }));
   await ingress.ensure(names, held);
 }
 async function pool() {
