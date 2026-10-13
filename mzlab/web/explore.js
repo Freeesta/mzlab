@@ -150,7 +150,7 @@ const IC_RANGE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" st
 const IC_FIT = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
 const IC_LOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 5 0v1.9"/></svg>';
 const IC_UNLOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 4.8-1"/></svg>';
-// PHRASES and ldNext() are in index.html, right after #loading: the first phrase shows before the ~600 kB of scripts arrive
+// the loading phrases (ldNext, ldShow, ldRefresh) are in avvio.js: the first one shows at once, then one every 5 s; a status text or loading(true) never swaps the phrase early
 let ldSlow = 0;
 function loading(on, msg) {
   const L = Q("#loading");
@@ -158,7 +158,7 @@ function loading(on, msg) {
     ldSince = Date.now(); ldMsg = msg ? { text: msg, pct: null } : null; ldRefresh();
     clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !ldMsg && !window.qqPhaseCur) { ldMsg = { text: I18N.t("load.slow"), pct: null }; ldRefresh(); } }, 20000);
     ldIon(true);                                                     // engine start and data loading: the ions (one analyser per load)
-    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
+    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) goes on with its 5 s clock
   } else {
     if (window.qqFailed) return;                                   // a failed engine start keeps its message (and the «start from scratch» button) on screen
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
