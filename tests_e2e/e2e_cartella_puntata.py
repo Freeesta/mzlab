@@ -29,10 +29,10 @@ try:
         r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="cartp_prof_"), viewport={"width": 1500, "height": 2200}, locale="it-IT", reduced_motion="reduce")
         pg = r.b.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}"); pg.add_init_script(INIT)
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#cartchoose", timeout=60000)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#cartpick", timeout=60000)
         for a in (["a.mzML", A, None], ["sub/b.mzML", A, None], ["m.dam", None, "x"], ["l.msp", None, "Name: x\n"], ["t.csv", None, "a,b\n"], ["note.txt", None, "x"], ["sub/.hid.mzML", A, None]): pg.evaluate(PUT, a)
         def grey():
-            pg.click("#cartchoose"); pg.wait_for_selector("#cartbody .cprow")
+            pg.click("#cartpick"); pg.wait_for_selector("#cartbody .cprow")
             assert rows(pg) == ["a.mzML", "sub/b.mzML", "l.msp", "m.dam", "t.csv"], rows(pg)
             t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" in t and "non caricato" in t, t
             assert pg.evaluate("getComputedStyle(document.querySelector('.cprow')).color") != pg.evaluate("getComputedStyle(document.body).color")
@@ -62,13 +62,15 @@ try:
             pg.click("#cartgrant"); pg.wait_for_selector("#cartbody .cprow", timeout=30000)
         step("permission asked again with one click", grant)
         def forget():
-            pg.click("#cartforget"); pg.wait_for_selector("#cartchoose"); pg.reload(); pg.wait_for_selector("#cartchoose", timeout=60000)
+            pg.click("#cartforget"); pg.wait_for_selector("#cartforget", state="detached"); pg.reload(); pg.wait_for_selector("#cartpick", timeout=60000)
             assert not pg.query_selector("#cartbody .cprow")
         step("«Forget the folder» is kept across a reload", forget)
         def nosup():
-            pg.evaluate("localStorage.setItem('nopicker','1')"); pg.reload(); pg.wait_for_selector("#cartnosup", timeout=60000)
-            assert "Carica una cartella" in pg.inner_text("#cartnosup") and pg.is_visible("#pickdirbtn")
-        step("a browser without the API gets a clear message and the other way", nosup)
+            pg.evaluate("localStorage.setItem('nopicker','1')"); pg.reload(); pg.wait_for_selector("#cartpick", timeout=60000)
+            assert not pg.query_selector("#cartnosup") and not pg.query_selector("#cartbody .cprow")
+            with pg.expect_file_chooser() as fc: pg.click("#cartpick")
+            assert fc.value.is_multiple(), "the icon falls back to the one-time folder picker"
+        step("a browser without the API: the icon opens the one-time folder picker", nosup)
         r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
