@@ -376,6 +376,9 @@
       const hrMode = st.files.some(f => f.kind === "hr");
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
+      const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
+      const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
+      $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
       setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
