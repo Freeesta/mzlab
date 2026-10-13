@@ -5,6 +5,7 @@ use mzlab_core::json::Out;
 use mzlab_feat::export::{self, Ctx};
 use mzlab_feat::export_ms;
 use mzlab_feat::ms2spec;
+use mzlab_feat::qc;
 use mzlab_feat::report;
 use mzlab_feat::samples::{self, Sample};
 use mzlab_feat::store::read_table_from;
@@ -55,7 +56,28 @@ pub fn report_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &s
     Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
 }
 
-/// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells) or `quant` (FBMN).
+/// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
+pub fn samples_json(files_json: &str) -> Result<String> {
+    let v = mzlab_core::json::parse(files_json.as_bytes())?;
+    let files: Vec<(String, String)> = v
+        .get("files")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .map(|f| (f.get("name").and_then(|x| x.str()).unwrap_or("").to_string(), f.get("sha256").and_then(|x| x.str()).unwrap_or("").to_string()))
+        .collect();
+    Ok(samples::to_json(&samples::propose(&files)))
+}
+
+/// The `qc/1` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
+pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    Ok(qc::to_json(&t, &s, v.as_ref()))
+}
+
+/// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),
+/// `csv_semicolon` (the sheet of features as text with `;`) or `xlsx_rows` (the same sheet as JSON rows for the page to zip).
 pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
@@ -64,6 +86,8 @@ pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &st
         "full" => Ok(export::csv_full(&c, false)),
         "full_mzmine" => Ok(export::csv_full(&c, true)),
         "quant" => Ok(export::quant(&c)),
+        "csv_semicolon" => Ok(export::csv_semicolon(&c)),
+        "xlsx_rows" => Ok(export::xlsx_rows(&c)),
         _ => Err(Error::new("error.badView")),
     }
 }

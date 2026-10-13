@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+use super::run::sha1_of;
 use super::scan::ScanRec;
 use super::{AgilentD, Files, SCAN_SIM};
 use crate::error::{Error, Result};
@@ -14,6 +15,8 @@ use crate::lettori::{
 };
 use crate::metodo::{Source, SrcFile};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::mzmlwrite::{Header, SpectrumExtra};
+use crate::window::Windowed;
 
 const SCAN: &str = "AcqData/MSScan.bin";
 const XSD: &str = "AcqData/MSScan.xsd";
@@ -375,6 +378,10 @@ fn listed(l: &LettoreAgilent) -> Vec<VoceCromatogramma> {
 }
 
 impl Lettore for LettoreAgilent {
+    fn imposta_anonimo(&mut self, on: bool) {
+        self.d.anonymous = on;
+    }
+
     fn formato(&self) -> Formato {
         Formato::AgilentD
     }
@@ -413,5 +420,18 @@ impl Lettore for LettoreAgilent {
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(document(self))
+    }
+
+    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+        self.one(c)?;
+        let sha = match (&mut self.peak, self.d.inline.is_some()) {
+            (Some(p), false) => sha1_of(&mut Windowed::new(p, self.peak_len), self.peak_len)?,
+            _ => String::new(),
+        };
+        Ok(Some(self.d.header(&sha)))
+    }
+
+    fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
+        self.d.extra_of(s)
     }
 }

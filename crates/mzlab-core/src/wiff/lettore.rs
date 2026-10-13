@@ -9,8 +9,9 @@ use crate::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Membro, Posizione,
     VoceCromatogramma, VoceLettore, VoceScansione, CONTRATTO,
 };
-use crate::metodo::{Source, SrcFile};
+use crate::metodo::{sha1_hex, Source, SrcFile};
 use crate::mzml::{Chromatogram, Spectrum};
+use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
 const SCAN: &str = ".wiff.scan";
@@ -123,7 +124,20 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
     }
 }
 
+fn field(nome: &str, valore: impl ToString) -> Campo {
+    Campo {
+        nome: nome.into(),
+        valore: valore.to_string(),
+        unita: None,
+        cv: None,
+    }
+}
+
 impl Lettore for LettoreWiff {
+    fn imposta_anonimo(&mut self, on: bool) {
+        self.anonimo = on;
+    }
+
     fn formato(&self) -> Formato {
         Formato::SciexWiff
     }
@@ -172,6 +186,10 @@ impl Lettore for LettoreWiff {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
 
+    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+        testata(self, c).map(Some)
+    }
+
     fn metodo(&mut self, c: usize) -> Result<String> {
         let sample = self.parte(c)?.w.sample;
         Ok(crate::metodo_wiff::from_wiff(
@@ -180,6 +198,14 @@ impl Lettore for LettoreWiff {
             &source(self, sample),
         ))
     }
+}
+
+/// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
+fn testata(l: &mut LettoreWiff, c: usize) -> Result<Header> {
+    l.parte(c)?;
+    let win = &mut Window::new(&mut l.scan, l.scan_len);
+    let sha = sha1_hex(win, l.scan_len).ok();
+    Ok(l.parte(c)?.w.header(&l.nome, sha, false))
 }
 
 fn member(fs: &mut FileSet, i: usize) -> Result<&mut Membro> {
@@ -272,13 +298,4 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
         indice,
         chroms: None,
     })
-}
-
-fn field(nome: &str, valore: impl ToString) -> Campo {
-    Campo {
-        nome: nome.into(),
-        valore: valore.to_string(),
-        unita: None,
-        cv: None,
-    }
 }

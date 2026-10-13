@@ -90,6 +90,15 @@ fn same(dir: &Path, name: &str) -> usize {
         for want in &run.chromatograms {
             assert_eq!(&l.cromatogramma(c, &want.id).unwrap(), want);
         }
+        let mut direct = Vec::new();
+        w.to_mzml(&mut scan, &mut direct, &format!("{name}.wiff"))
+            .unwrap();
+        let via = mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&via),
+            String::from_utf8_lossy(&direct),
+            "{name}/{s}: mzML"
+        );
         let doc = l.metodo(c).unwrap();
         assert!(
             doc.contains("sciex-wiff") && doc.contains(&format!("{name}.wiff")),

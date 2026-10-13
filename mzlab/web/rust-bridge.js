@@ -12,6 +12,7 @@ import { makeConvertRaw } from "./rust-raw.js";
 import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeConvertAgilent } from "./rust-agilent.js";
+import { makeConvertLettori } from "./rust-lettori.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { pseudoSecret } from "./pseudo-secret.js";
 
@@ -76,7 +77,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r.dead || r.error) {
         s.bad = true;
         let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
-        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is left to Python
+        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is not opened (the page tells the user)
         return;
       }
       s.info = JSON.parse(r.info);
@@ -109,7 +110,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
   api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
-  Object.assign(api, wiffApi(rpc, base), { convertAgilent: makeConvertAgilent({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertCentroids: makeConvertCentroids({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }) });      // wiffSamples, convertWiff (rust-convert.js); convertAgilent: Agilent .D folder -> Blob of mzML (rust-agilent.js); convertCentroids: profile mzML of the archive -> one point per peak (rust-centroidi.js)
+  Object.assign(api, wiffApi(rpc, base), { convertAgilent: makeConvertAgilent({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertLettori: makeConvertLettori({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }), convertCentroids: makeConvertCentroids({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } }) });      // wiffSamples, convertWiff (rust-convert.js); convertAgilent: Agilent .D folder -> Blob of mzML (rust-agilent.js); convertLettori: any dataset of a maker -> Blob of mzML through the readers of the registry (rust-lettori.js); convertCentroids: profile mzML of the archive -> one point per peak (rust-centroidi.js)
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
@@ -118,7 +119,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   api.crash =() => rpc({ op: "crash" });
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
-  api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
+  api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
@@ -140,7 +141,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis)$/;
   const hasRef = q => !!q.get("ref");
-  // Returns { status, text } or null (Pyodide answers).
+  // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url) => {
     if (!api.enabled || api.disabled || method !== "GET" || !worker) return null;
     const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;

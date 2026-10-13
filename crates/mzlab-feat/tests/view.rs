@@ -131,3 +131,37 @@ fn qc_and_report_hold_only_numbers() {
     assert!(report::to_json(&t, &s, None, "x").contains("\"vista\":null"));
     assert!(report::header_lines(&t, &s, Some(&v), "x").iter().all(|l| l.starts_with("# ")));
 }
+
+/// Factors worked out apart from the Rust code with numpy (sum: mean of the totals of the files that decide over the total of each file; median and
+/// internal standard: median of the statistics of the files that decide over the statistic of each file), on the areas of `table()`.
+#[test]
+fn factors_agree_with_the_numpy_reference_within_1e_9() {
+    let (t, s) = (table(), samples());
+    let cases = [
+        (Method::Sum, [2.0372222222222223, 1.93, 1.1112121212121213, 0.6321323909670746]),
+        (Method::Median, [1.0, 0.9473684210526315, 1.125, 1.0]),
+        (Method::Istd(Reference::Id(3)), [1.125, 1.0, 1.125, 1.0]),
+    ];
+    for (m, want) in cases {
+        let got = norm::factors(&t, &s, &m).unwrap();
+        for (g, w) in got.iter().zip(want) {
+            assert!((g - w).abs() < 1e-9, "{m:?}: {g} against {w}");
+        }
+    }
+}
+
+/// The share of the rows with a peak in a blank, the rows each rule rejected and the absence of M+1/M without summaries of the rows.
+#[test]
+fn qc_json_has_the_blank_share_the_rejections_and_no_isotope_ratio_without_summaries() {
+    use mzlab_feat::qc;
+    let (t, s) = (table(), samples());
+    assert_eq!(qc::blank_share(&t, &s, None), (1, 4, 2));
+    assert!(qc::isotope_ratio(&t, None).is_none());
+    let v = view::build(&t, &s, &Method::None, &[Rule::MinDetected(2)]).unwrap();
+    let j = parse(qc::to_json(&t, &s, Some(&v)).as_bytes()).unwrap();
+    assert_eq!(j.get("bianchi").and_then(|b| b.get("righe_con_picco")).and_then(|x| x.f64()), Some(qc::blank_share(&t, &s, Some(&v)).2 as f64));
+    let sc = j.get("scartate").unwrap().arr();
+    assert_eq!(sc.len(), 1);
+    assert_eq!(sc[0].get("regola").and_then(|x| x.str()), Some("min_rilevati"));
+    assert!(j.get("m1_su_m").unwrap().is_null());
+}
