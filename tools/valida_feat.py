@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import resource
 import sys
 import time
 from pathlib import Path
@@ -20,6 +19,30 @@ import numpy as np                                          # noqa: E402
 
 from valida import PPM, ROOT, RT_TOL, isotopologhi, metriche, rapporto, tabelle      # noqa: E402
 from mzlab.chem import elements as E                         # noqa: E402
+
+
+def _memoria_massima_mb() -> float:
+    """Peak resident memory of this process in MB (`resource` on Unix, the peak working set through ctypes on Windows)."""
+    try:
+        import resource
+    except ImportError:
+        import ctypes
+        from ctypes import wintypes
+
+        class Contatori(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t), ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                        ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+
+        c = Contatori()
+        c.cb = ctypes.sizeof(c)
+        k32 = ctypes.WinDLL("kernel32")
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        ok = ctypes.WinDLL("psapi").GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+        return c.PeakWorkingSetSize / 1048576 if ok else 0.0
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak / (1048576 if sys.platform == "darwin" else 1024)
 
 
 def carica_verita(path) -> list[dict]:
@@ -93,7 +116,7 @@ def valida(serie: list[dict], ioni: list[dict] | None = None, mzmine: str | None
             tp = metriche.tp_veri(ioni, x.riempita, tr_c, x.candidati)["riassunto"] if ioni else {}
             r["sensibilita"][f"{f:g}"] = {"righe": len(x.allineata), "candidati": int(len(x.candidati)), "tp_trovati": tp.get("trovati"), "tp_nei_candidati": tp.get("nei_candidati")}
             fasi[f"sensibilita_{f:g}"] = time.perf_counter() - t1
-    r["prestazioni"] = {"totale_s": time.perf_counter() - t0, "fasi_s": fasi, "memoria_massima_mb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024}
+    r["prestazioni"] = {"totale_s": time.perf_counter() - t0, "fasi_s": fasi, "memoria_massima_mb": _memoria_massima_mb()}
     return r
 
 
