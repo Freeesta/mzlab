@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // Experiment types of the Dati view: Full Scan, MS2 (Product Ion) and MRM never share a graph. Classic script, loaded after explore.js
 // (uses E, ESP, tabFiles, tabPanels, addPanel, ... from there). Each type has its own block of panels (and starting layout) on the same page; E.tab is the type of the current file.
@@ -71,7 +72,7 @@ function stackBlocks() {
 }
 // transitions of the MRM files and which one is the quantifier / qualifier (by the name in the method: Quant, Qual; otherwise the first and the second).
 // The calibration line itself is NOT made by the program: the students do it in Excel from the integration table.
-const CAL = { quant: null, qual: null, trs: [] };
+const CAL = { quant: null, qual: null, trs: /** @type {any[]} */ ([]) };
 function calPick() {
   const t = CAL.trs;
   if (!t.some(x => x.key === CAL.quant)) CAL.quant = (t.find(x => /quant/i.test(x.name)) || t[0] || {}).key || null;

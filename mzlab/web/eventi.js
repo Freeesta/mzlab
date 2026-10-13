@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split from explore.js: classic script, loaded after picchi.js.
 // ------------------------------------------------------------------ mouse
@@ -230,7 +231,7 @@ function nearestFile(p, x) {
   /** @type {{ v: number, k: number } | null} */
   let best = null;
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
-  return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
+  return best ? /** @type {{ k: number }} */ (best).k : (scanFiles(tabFiles())[0]?.k ?? 0);
 }
 function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
@@ -412,7 +413,7 @@ function lcHtml(lc, row) {
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">${I18N.t("method.time")}</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
   const pda = lc.pda || {};
   const tbl = `<table class="lct"><tr><th class="num">${I18N.t("method.time")}</th><th class="num">% A</th><th class="num">% B</th><th class="num">${I18N.t("method.flow")}</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  const chips = [lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean);
+  const chips = /** @type {string[][]} */ ([lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean));
   return `<section class="msec"><h4>${I18N.t("method.lc.title")}</h4>
    <div class="sm" style="margin:0 0 8px">A = H<sub>2</sub>O + 0.1% FA &nbsp;&middot;&nbsp; B = ACN + 0.1% FA</div>
    <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">${svg}<div style="flex:1 1 300px;max-width:520px">${tbl}</div></div>
@@ -476,7 +477,7 @@ async function showMethod(sel) {
 function loadDam() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dam,.DAM";
   inp.onchange = async () => {
-    const fl = inp.files[0]; if (!fl) return;
+    const fl = /** @type {FileList} */ (inp.files)[0]; if (!fl) return;
     try {
       const j = await (await fetch("api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
       if (j.error) throw I18N.err(j);
@@ -546,7 +547,7 @@ document.addEventListener("keydown", e => {
   if (calcBox.hidden) return;
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
-const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
+const CALC = { ans: 0, tape: /** @type {{ e: any, r: any }[]} */ ([]), fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
 let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 // the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
 function calcTape() {
@@ -643,12 +644,12 @@ Q("#calcin").oninput = calcRun;
     if (t === cur) return;
     hide();
     if (!t || t.closest("dialog[open]")) return;
-    if (t.hasAttribute("title")) { t.dataset.tip = t.getAttribute("title"); t.removeAttribute("title"); }
+    if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
     timer = setTimeout(() => {
-      if (html) tip.innerHTML = html; else tip.textContent = txt;
+      if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
       tip.hidden = false;
       const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
       tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
