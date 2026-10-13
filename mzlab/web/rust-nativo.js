@@ -47,10 +47,7 @@ export function buildNative(/** @type {{ st: Stub, files: Blob[] }} */ j, /** @t
 export function createNativo({ ARCH, readerFor, fileOf, jerr }) {
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
-  const stubOf = async (/** @type {string} */ name) => {
-    if (!stubs.has(name)) stubs.set(name, await readStub(await fileOf(name)));
-    return stubs.get(name);
-  };
+  const stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);
 
   /** the Files of the members of a stub (read from OPFS) */
   async function memberFiles(/** @type {Stub} */ st) {
