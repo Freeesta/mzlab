@@ -260,4 +260,6 @@ pub struct FeatState {
     pub(crate) dig: Option<Dig>,
     /// the Dig of a low-resolution series (`finder/lr_dig`); `dig` and `lr` are never both held, and `lr` holds the names of its columns
     pub(crate) lr: Option<(LrDig, Vec<String>)>,
+    /// the MSn tree of the standard of the last `finder/dig` (none without an MSn file)
+    pub(crate) msn: Option<crate::feat_msn::Msn>,
 }

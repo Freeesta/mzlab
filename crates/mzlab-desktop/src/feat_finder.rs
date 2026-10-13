@@ -7,6 +7,8 @@ use mzlab_feat::legacy;
 use serde_json::Value;
 
 use crate::engine::State;
+use crate::feat::FeatState;
+use crate::feat_msn::Msn;
 use crate::rpc::{text, Answer};
 
 impl State {
@@ -36,8 +38,20 @@ impl State {
                 s("timing")
             },
         );
+        // with an MSn file of the standard (`msn` = its name) the summary gets the tree, the calibration and the localisation of the rows
+        let (out, msn) = match s("msn") {
+            "" => (out, None),
+            name => {
+                let mut m = Msn::new(&mut self.open_idx(name)?, s("parent")).map_err(user)?;
+                let out = m
+                    .summary(&out, |id| legacy::out::detail(&d, id as usize))
+                    .map_err(user)?;
+                (out, Some(m))
+            }
+        };
         g.dig = Some(d);
         g.lr = None;
+        g.msn = msn;
         text(out)
     }
 
@@ -71,6 +85,7 @@ impl State {
         let names = d.lc.iter().map(|f| f.name.clone()).collect();
         g.lr = Some((d, names));
         g.dig = None;
+        g.msn = None;
         text(out)
     }
 
@@ -100,22 +115,32 @@ impl State {
         text(o.0)
     }
 
-    /// The answers about the Dig of the last `finder/dig`.
+    /// The answers about the Dig of the last `finder/dig` (with its MSn tree, if it had one).
     fn finder_of_dig(&self, op: &str, p: &Value) -> Result<Answer> {
-        let g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
+        let mut g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
         if let Some((d, names)) = g.lr.as_ref() {
-            return self.finder_of_lr(op, p, d, names);
+            return if op == "finder/msn_tree" {
+                text("null".to_string())
+            } else {
+                self.finder_of_lr(op, p, d, names)
+            };
         }
-        let d = g
-            .dig
-            .as_ref()
-            .ok_or_else(|| Error::new("error.featState"))?;
+        let FeatState { dig, msn, .. } = &mut *g;
+        let d = dig.as_ref().ok_or_else(|| Error::new("error.featState"))?;
         let id = p["id"].as_u64().unwrap_or(0) as usize;
-        text(match op {
-            "finder/detail" => legacy::out::detail(d, id).map_err(user)?,
-            "finder/inclusion_csv" => legacy::out::inclusion_csv(d, id),
-            "finder/frag_tree" => legacy::fragtree::of_dig(d),
-            _ => legacy::fragtree::COMPARE_NONE.to_string(),
+        text(match (op, msn.as_mut()) {
+            ("finder/msn_tree", m) => m.map_or("null".to_string(), |m| m.msn_tree()),
+            ("finder/detail", None) => legacy::out::detail(d, id).map_err(user)?,
+            ("finder/detail", Some(m)) => m.detail(&legacy::out::detail(d, id).map_err(user)?),
+            ("finder/inclusion_csv", _) => legacy::out::inclusion_csv(d, id),
+            ("finder/frag_tree", None) => legacy::fragtree::of_dig(d),
+            ("finder/frag_tree", Some(m)) => m.frag_tree(),
+            (_, None) => legacy::fragtree::COMPARE_NONE.to_string(),
+            (_, Some(m)) => {
+                // "candidate not found", and the localisation the comparison uses
+                m.detail(&legacy::out::detail(d, id).map_err(user)?);
+                m.frag_tree_compare(id as u32)
+            }
         })
     }
 
@@ -160,6 +185,7 @@ impl State {
                 }))
             }
             "finder/plan" => self.finder_plan(p),
+            "finder/transf_rows" => text(legacy::transf::describe(s("text"))),
             "finder/transformations" => {
                 let merged =
                     legacy::transf::merge(s("rules").as_bytes(), s("text")).map_err(user)?;
@@ -170,6 +196,7 @@ impl State {
             "finder/lr_dig" => self.finder_lr_dig(p),
             "finder/detail"
             | "finder/inclusion_csv"
+            | "finder/msn_tree"
             | "finder/frag_tree"
             | "finder/frag_tree_compare" => self.finder_of_dig(op, p),
             "finder/formula_info" => text(legacy::formula_info(s("text"), s("adduct"))),

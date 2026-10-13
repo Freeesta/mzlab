@@ -6,6 +6,7 @@ pub mod cartella;
 pub mod engine;
 mod feat;
 mod feat_finder;
+mod feat_msn;
 pub mod idxbuild;
 pub mod librerie;
 pub mod mapped;
