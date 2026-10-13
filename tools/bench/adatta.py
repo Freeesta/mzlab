@@ -72,7 +72,7 @@ def corri_mzfinder_sintetico(seme: int, profilo: str, lavoro, dataset: str = "D2
 # ---------------------------------------------------------------------------------------------------------------- other tools
 # column rules: (m/z column, RT column, regex of an area column with the file name in group 1, RT in seconds)
 REGOLE = {
-    "mzmine": ("row m/z", "row retention time", r"^(?:datafile:)?(.+?)(?::area| Peak area)$", False),
+    "mzmine": ("mz", "rt", r"^datafile:(.+?):area$", False),
     "xcms": ("mzmed", "rtmed", r"^(?!mz|rt|npeaks)(.+)$", True),
     "openms": ("mz", "rt", r"^intensity_(.+)$", True),
     "asari": ("mz", "rtime", r"^(?!id_|mz$|rtime|rt_|snr|selectivity|detection|goodness|cSelectivity|cValue|charge|ion_|parent_|neutral|name|identifier|m_|mass_|ion$)(.+)$", True),

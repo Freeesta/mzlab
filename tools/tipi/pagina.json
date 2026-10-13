@@ -38,6 +38,7 @@
     "../../mzlab/web/explore.js",
     "../../mzlab/web/layout.js",
     "../../mzlab/web/pannelli.js",
+    "../../mzlab/web/affianca.js",
     "../../mzlab/web/grafici.js",
     "../../mzlab/web/picchi.js",
     "../../mzlab/web/eventi.js",
