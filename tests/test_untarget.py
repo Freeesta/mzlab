@@ -1,5 +1,6 @@
 """Untargeted tables (TP_Mine/js/25_untarget.js): the readers recognise the columns by name (mzMine full table, annotations, FBMN quant + MGF + IIN edges, MS-DIAL alignment, GNPS2
 library and network), the rules of Attributio on structures / lipids / propagated names / analogues, and the external evidence read with the profile «attributio» of livelli/1.
+The readers are Rust (crates/mzlab-feat/src/import; the .wasm for node is built by tests/conftest.py); whole tables, quoted fields and CRLF are compared with the answers of the old JS readers by crates/mzlab-feat/tests/import_parity.rs.
 The fixtures in tests/data/untargeted/ are written by hand in the format of each program (nothing real). The parity with the synthetic campaign of the data repository runs only with MZLAB_DATI."""
 import csv
 import json
@@ -38,7 +39,7 @@ def test_detect_recognises_every_file_by_its_columns():
 
 
 def test_mzmine_full_table_model():
-    t = js("const t = U.readMzmineFull(rd('mzmine/tabella_pos.csv'), {name: 't', pol: 1}); return {n: t.features.length, s: t.samples, f1: t.features[0], f4: t.features[3], f6: t.features[5], st: t.stats}")
+    t = js("const t = U.build([F('mzmine/tabella_pos.csv', 't')], {pol: 1}); return {n: t.features.length, s: t.samples, f1: t.features[0], f4: t.features[3], f6: t.features[5], st: t.stats}")
     assert t["n"] == 6 and t["s"] == ["Campione_A_pos", "Campione_B_pos"]
     f1 = t["f1"]
     assert f1["key"] == "POS:1" and f1["mz"] == 184.1332 and f1["rt"] == 5.2 and f1["areas"] == {"Campione_A_pos": 100000} and f1["nScans"] == 3
@@ -76,23 +77,23 @@ def test_check_structure_adducts_and_tolerance():
 
 
 def test_mgf_ms2_only_and_most_peaks_per_feature():
-    d = js("const m = U.readMgf(rd('mzmine/fbmn.mgf')); return {n: m.spectra.size, blocks: m.blocks, notMs2: m.notMs2, s1: m.spectra.get('1'), s5: m.spectra.get('5')}")
-    assert d["blocks"] == 4 and d["notMs2"] == 1 and d["n"] == 2
-    assert d["s1"]["mz"] == [56.05, 84.08, 156.1] and d["s1"]["it"] == [120.5, 800, 300]          # the block with 3 peaks wins over the one with 1; the MS1 block is out
-    assert d["s5"]["merged"] == 3
+    d = js("const t = U.build([F('mzmine/tabella_pos.csv'), F('mzmine/fbmn.mgf')], {pol: 1}); return {blocks: t.stats.mgfBlocks, notMs2: t.stats.mgfNotMs2, f: t.features.map(f => f.ms2)}")
+    assert d["blocks"] == 4 and d["notMs2"] == 1 and len([m for m in d["f"] if m]) == 2
+    s1 = d["f"][0]
+    assert s1["mz"] == [56.05, 84.08, 156.1] and s1["it"] == [120.5, 800, 300]          # the block with 3 peaks wins over the one with 1; the MS1 block is out
     t = js("const t = U.build(ALL(), {pol: 1}); return {ms2: t.features.map(f => !!f.ms2), n: t.features.map(f => f.nScans), st: t.stats}")
     assert t["ms2"] == [True, False, False, False, True, False] and t["n"][0] == 3 and t["n"][4] == 3 and t["st"]["ms2"] == 2
 
 
 def test_fbmn_quant_and_iin_edges():
-    d = js("const t = U.readMzmineQuant(rd('mzmine/fbmn_quant.csv'), {pol: 1}); const e = U.readEdges(t, rd('mzmine/fbmn_edges.csv')); return {f: t.features.map(f => [f.id, f.group, f.iin && f.iin.id, f.areas]), s: t.samples, e: t.edges, n: e}")
+    d = js("const t = U.build([F('mzmine/fbmn_quant.csv'), F('mzmine/fbmn_edges.csv')], {pol: 1}); return {f: t.features.map(f => [f.id, f.group, f.iin && f.iin.id, f.areas]), s: t.samples, e: t.edges, n: t.stats.edges}")
     assert d["s"] == ["Campione_A_pos", "Campione_B_pos"] and d["n"] == 2
     assert d["f"][0] == ["1", "3", "7", {"Campione_A_pos": 100000}] and d["f"][1][1] is None          # −1 = no group
     assert d["e"][0] == {"a": "1", "b": "6", "type": "MS1 annotation", "score": 0.97, "annotation": "[M+H]+ [M+Na]+ dm/z=21.98"}
 
 
 def test_msdial_alignment_skips_the_metadata_rows():
-    t = js("const t = U.readMsdial(rd('msdial/allineamento.txt'), {name: 'a', pol: 1}); return {f: t.features, s: t.samples}")
+    t = js("const t = U.build([F('msdial/allineamento.txt', 'a')], {pol: 1}); return {f: t.features, s: t.samples}")
     assert t["s"] == ["Campione_A", "Campione_B"] and len(t["f"]) == 4
     f0 = t["f"][0]
     assert f0["mz"] == 184.1332 and f0["rt"] == 5.2 and f0["ms2"]["mz"] == [56.05, 84.08, 156.1] and f0["ms2"]["it"] == [120, 800, 300] and f0["areas"] == {"Campione_A": 100000}
@@ -128,11 +129,6 @@ def test_build_rejects_without_a_table_and_keeps_going_with_a_bad_side_file():
     assert js("try { U.build([F('mzmine/fbmn.mgf')]); return 'no'; } catch (e) { return e.key; }") == "noTable"
     t = js("const t = U.build([F('mzmine/tabella_pos.csv'), {name: 'x.tsv', text: 'a\\tb\\n1\\t2\\n'}], {pol: 1}); return {used: t.used, ign: t.ignored}")
     assert t["used"] == ["tabella_pos.csv"] and t["ign"] == ["x.tsv"]
-
-
-def test_quoted_fields_with_commas_and_newlines():
-    d = js("const rows = []; U.eachRow('a,b,c\\n1,\"x,y\",3\\n2,\"line1\\nline2\",4\\n', ',', h => null, r => rows.push(r)); return rows")
-    assert d == [["1", "x,y", "3"], ["2", "line1\nline2", "4"]]
 
 
 def test_external_levels_with_the_attributio_profile_on_our_fixtures():
