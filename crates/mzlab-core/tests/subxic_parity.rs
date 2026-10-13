@@ -58,15 +58,15 @@ fn subxic_like_python() {
     for c in &cases {
         let (k, query) = (c["k"].as_i64().unwrap(), c["query"].as_str().unwrap());
         let t = std::time::Instant::now();
-        let got = subxic(&mut routes[k as usize / 2], k, &Query::parse(query)).unwrap();
+        let got = subxic(&mut routes[k as usize / 2], k, &Query::parse(query));
         eprintln!("k={k} {query}: rust {:.0} ms, python {:.0} ms", t.elapsed().as_secs_f64() * 1e3, c["py_s"].as_f64().unwrap_or(f64::NAN) * 1e3);
         if c["status"] != 200 {
-            if got.is_some() {
+            if matches!(got, Ok(Some(_))) {
                 bad.push(format!("k={k} {query}: Python refuses, Rust answers"));
             }
             continue;
         }
-        let Some(got) = got else {
+        let Some(got) = got.unwrap() else {
             bad.push(format!("k={k} {query}: Rust gave it to Python"));
             continue;
         };

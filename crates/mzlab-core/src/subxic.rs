@@ -1,9 +1,9 @@
 //! `api/subxic` over the index of a high-resolution survey: the XIC that sums every sub-formula of an ion and the measures of each one
 //! (`App.subxic` and `chem.subformulas.measure` of Python). A search tool: masses and what the file shows at them, no labels.
-//! `Ok(None)` = Python's (profile or unit-resolution files, a request Python must refuse).
+//! Profile or unit-resolution files, a ppm out of range and a formula without sub-formulas answer with their error (`err.subxic.*`), as in Python.
 
 use crate::elements::fmt;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::group_is_hr;
 use crate::json::{round, Value};
@@ -84,13 +84,17 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
     let (Some(formula), Some(ppm)) = (q.some("f"), q.get("ppm").map_or(Some(5.0), |s| s.trim().parse::<f64>().ok())) else { return Ok(None) };
     let (Some(min_mz), Some(z)) = (q.get("min").map_or(Some(100.0), |s| s.trim().parse::<f64>().ok()), q.get("z").map_or(Some(1), |s| s.trim().parse::<i32>().ok())) else { return Ok(None) };
     let survey = r.idx.scans.iter().filter(|s| s.level == 1);
-    if !(0.0 < ppm && ppm <= 100.0) || survey.clone().any(|s| s.profile) || !group_is_hr(&r.idx.scans, true) {
-        return Ok(None);
+    if survey.clone().any(|s| s.profile) || !group_is_hr(&r.idx.scans, true) {
+        return Err(Error::new("err.subxic.lr"));
     }
-    let (Some(si), Ok((f, subs))) = (r.idx.section_of(1, None), subformulas(formula, z, min_mz)) else { return Ok(None) };
+    if !(0.0 < ppm && ppm <= 100.0) {
+        return Err(Error::new("err.subxic.ppm"));
+    }
+    let (f, subs) = subformulas(formula, z, min_mz)?;
     if subs.is_empty() {
-        return Ok(None);
+        return Err(Error::new("err.subxic.none").with("mz", min_mz));
     }
+    let Some(si) = r.idx.section_of(1, None) else { return Err(Error::new("err.subxic.lr")) };
     let rt = r.idx.arrays(si)?.rt.clone();
     let mut spans: Vec<(usize, usize)> = Vec::with_capacity(subs.len());
     for (_, mz) in &subs {
