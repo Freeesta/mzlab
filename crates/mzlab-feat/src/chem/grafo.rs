@@ -28,7 +28,7 @@ impl Mol {
                 return Err(Error::new("error.grafo.element").with("element", &a.el));
             }
         }
-        Ok(Mol::assemble(raw, written))
+        Ok(Mol::assemble(raw, written, false))
     }
 
     /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
@@ -99,13 +99,14 @@ impl Mol {
                 }
             }
         }
-        Ok(Mol::assemble(raw, written))
+        Ok(Mol::assemble(raw, written, true))
     }
 
-    fn assemble(raw: Vec<RawAtom>, written: Vec<RawBond>) -> Mol {
+    /// `by_charge`: the hydrogens are implicit (a molfile), so a charge moves the valence; a SMILES atom in brackets already says its hydrogens.
+    fn assemble(raw: Vec<RawAtom>, written: Vec<RawBond>, by_charge: bool) -> Mol {
         let bonds = typed_bonds(&raw, written);
         let mut atoms = smiles::fill(&raw, &bonds);
-        for a in atoms.iter_mut().filter(|a| a.charge != 0) {
+        for a in atoms.iter_mut().filter(|a| by_charge && a.charge != 0) {
             // a charge moves the valence: N+ and O+ take one more, O- one less, C+/C- one less
             let up = matches!(a.el.as_str(), "N" | "P" | "O" | "S");
             let d = if up { a.charge } else { -a.charge.abs() };
