@@ -124,6 +124,10 @@ fn source(l: &LettoreWiff, sample: u32) -> Source {
 }
 
 impl Lettore for LettoreWiff {
+    fn imposta_anonimo(&mut self, on: bool) {
+        self.anonimo = on;
+    }
+
     fn formato(&self) -> Formato {
         Formato::SciexWiff
     }
