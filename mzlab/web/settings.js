@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after explore.js/tabs.js
 // (uses UIP, PALS, setPal, paintFiles, Q, redrawAll from there). Everything is stored in localStorage inside try/catch: it may be blocked
@@ -10,7 +11,7 @@ function a11yApply(o) {
   const r = document.documentElement;
   if (o.font) r.setAttribute("data-a11y-font", o.font); else r.removeAttribute("data-a11y-font");
   if (o.bg === "hc") r.setAttribute("data-a11y-bg", "hc"); else r.removeAttribute("data-a11y-bg");
-  const rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const rm = /** @type {any} */ (window).matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (o.motion === "always" || (rm && o.motion !== "never")) r.setAttribute("data-a11y-reduce", ""); else r.removeAttribute("data-a11y-reduce");
 }
 function a11yWrite(o) {
@@ -34,7 +35,7 @@ window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.the
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
-  const tf = document.getElementById("tframe");                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
+  const tf = /** @type {HTMLIFrameElement | null} */ (document.getElementById("tframe"));                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
   if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: "qqq-theme", theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
@@ -90,10 +91,10 @@ function uipArchivio(d) {
       let line;
       if (j && j.opfs) line = size > 0 ? I18N.t("settings.arch.line", { files: mb(j.files || 0), idx: mb(j.idx || 0) }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
       else line = n ? I18N.t("settings.arch.nosize", { n }) + " " + I18N.t("settings.arch.keep") : I18N.t("settings.arch.none");
-      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || est.usage / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
+      try { const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null; if (est && est.quota && (est.quota < 5e9 || (est.usage || 0) / est.quota > 0.8)) line += " " + I18N.t("settings.arch.quota", { used: mb(est.usage || 0), quota: mb(est.quota) }); } catch (e) { /* no estimate */ }
       if (j && j.feat > 0) line += " " + I18N.t("settings.arch.feat", { feat: mb(j.feat) });
       if (j && j.opfs && j.persisted === false) line += " " + I18N.t("settings.arch.notpersisted");
-      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
+      try { const ios = /iPad|iPhone/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); if (ios && !(/** @type {any} */ (navigator).standalone || matchMedia("(display-mode: standalone)").matches)) line += " " + I18N.t("settings.arch.ios"); } catch (_) { /* optional */ }
       val.textContent = line; rm.disabled = !(size > 0 || n > 0); rm.dataset.size = size ? mb(size) : ""; const dsz = j && j.opfs ? (j.idx || 0) + (j.feat || 0) : 0; der.disabled = !(dsz > 0); der.dataset.size = dsz ? mb(dsz) : "";
     };
     const refresh = () => { if (window.MZLAB_BROWSER) fetch("api/spazio").then(r => r.json()).then(paint).catch(() => {}); };
@@ -192,7 +193,7 @@ function uipOpen(btn) {
     uipApply();
   };
   document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { d.remove(); btn.focus(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 
 uipLoad();
@@ -201,7 +202,7 @@ uipLoad();
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
   nav.insertAdjacentElement("afterend", b); b.onclick = e => {      // in the Teoria the gear opens the settings of the Teoria, elsewhere the ones of the program
     e.stopPropagation();
-    const tw = document.documentElement.classList.contains("in-theory") && document.getElementById("tframe").contentWindow;
+    const tw = /** @type {any} */ (document.documentElement.classList.contains("in-theory") && /** @type {HTMLIFrameElement} */ (document.getElementById("tframe")).contentWindow);
     if (tw && tw.TEORIA && tw.TEORIA.settings) tw.TEORIA.settings(); else uipOpen(b);
   };
   uipApply();
