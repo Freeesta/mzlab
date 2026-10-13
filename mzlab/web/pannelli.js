@@ -659,8 +659,7 @@ function ctl(p) {
     else if (k === "corr") corrWire(x, v => setCorr(p, v));
         else x.onchange = () => {
       if (k === "tr" && x.value === "__quant_qual") {
-        // @ts-ignore CAL is a const of tabs.js, so window.CAL is undefined at run time (kept as is: no change of behavior)
-        p.tr = [window.CAL?.quant, window.CAL?.qual].filter(Boolean);
+        p.tr = [CAL.quant, CAL.qual].filter(Boolean);                // CAL is a const of tabs.js: a global lexical binding, not a property of window
       } else {
         p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       }
