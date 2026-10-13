@@ -298,6 +298,7 @@ AREE = [
     ("mzlab/web/affianca.js", {"e2e_affianca", "e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_a11y_dati"}), ("tests_e2e/e2e_affianca.py", {"e2e_affianca"}),
     ("mzlab/web/layout.js", {"e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_hr_dda"}), ("tests_e2e/e2e_righe.py", {"e2e_righe"}),
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
+    ("mzlab/web/fondo.js", {"e2e5", "e2e23", "e2e_header", "e2e_intestazione_cromato", "e2e_sottrazione"}),
     ("mzlab/web/grafici.js", {"e2e_sottrazione", "e2e_cromato", "e2e_mappa", "e2e_mappa3d", "e2e_nitido", "e2e_assi", "e2e_integrazioni", "e2e_picchi", "e2e_tour", "e2e_asse_x"}),
     ("mzlab/web/picchi.js", {"e2e_picchi_qualita", "e2e_picchi", "e2e_integrazioni", "e2e_spettro", "e2e_contaminanti", "e2e_assi", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
     ("mzlab/web/eventi.js", {"e2e_calc", "e2e_scroll", "e2e_spettro", "e2e_cromato", "e2e_tocco", "e2e_barra", "e2e_tour", "e2e_cursore", "e2e_spettro_hr"}),
