@@ -10,6 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use super::fragtree::{elements_of, fmt, substructures, vec_of, Graph, Space, Subs};
 use super::ms2::consensus_arrays;
 use super::Res;
+use mzlab_core::msnalbero::{albero_di, Raggruppa};
 
 mod atoms;
 pub mod json;
@@ -99,44 +100,6 @@ struct Info {
     rel: Vec<f64>,
 }
 
-fn node_key(path: &[(f64, String, f64)]) -> Key {
-    path.iter()
-        .map(|(mz, act, ce)| (mz.round_ties_even() as i64, act.clone(), ce.to_bits()))
-        .collect()
-}
-
-/// `node_id`: `195@cid30>138@cid35`, `MS1` for the root.
-pub fn node_id(key: &[(i64, String, u64)]) -> String {
-    if key.is_empty() {
-        return "MS1".into();
-    }
-    key.iter()
-        .map(|(mz, act, ce)| {
-            format!(
-                "{mz}@{}{}",
-                act.to_lowercase(),
-                mzlab_core::json::fmt_g(f64::from_bits(*ce))
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(">")
-}
-
-fn key_cmp(a: &Key, b: &Key) -> std::cmp::Ordering {
-    a.len().cmp(&b.len()).then_with(|| {
-        for (x, y) in a.iter().zip(b) {
-            let o =
-                x.0.cmp(&y.0)
-                    .then_with(|| x.1.cmp(&y.1))
-                    .then_with(|| f64::from_bits(x.2).total_cmp(&f64::from_bits(y.2)));
-            if o.is_ne() {
-                return o;
-            }
-        }
-        std::cmp::Ordering::Equal
-    })
-}
-
 /// First index of the largest value (`np.argmax`).
 fn argmax(v: &[f64], idx: &[usize]) -> usize {
     let mut best = idx[0];
@@ -148,54 +111,12 @@ fn argmax(v: &[f64], idx: &[usize]) -> usize {
     best
 }
 
-/// The scans of the file grouped by path (level 1 = the root), with the number of MSn scans that have no usable path.
-fn groups(scans: &[MsnScan]) -> (Vec<Key>, HashMap<Key, Vec<usize>>, usize) {
-    let (mut g, mut skipped): (HashMap<Key, Vec<usize>>, usize) = (HashMap::new(), 0);
-    for (i, s) in scans.iter().enumerate() {
-        match &s.path {
-            _ if s.level == 1 => g.entry(Vec::new()).or_default().push(i),
-            Some(p) if !p.is_empty() && p.len() + 1 == s.level as usize => {
-                g.entry(node_key(p)).or_default().push(i)
-            }
-            _ => skipped += 1,
-        }
-    }
-    let mut keys: Vec<Key> = g.keys().cloned().collect();
-    keys.sort_by(key_cmp);
-    (keys, g, skipped)
-}
-
-fn nominals(k: &[(i64, String, u64)]) -> Vec<i64> {
-    k.iter().map(|x| x.0).collect()
-}
-
-/// `find_parent`: the node of path[:-1] (the same energy if it exists, else the one with the most scans); the nearest ancestor when that
-/// generation is not in the file. Returns it and the depth.
-fn find_parent(
-    k: &Key,
-    by_nominal: &HashMap<Vec<i64>, Vec<Key>>,
-    groups: &HashMap<Key, Vec<usize>>,
-) -> (Key, usize) {
-    let (mut pk, mut depth) = (k[..k.len() - 1].to_vec(), 1);
-    loop {
-        if pk.is_empty() {
-            return (pk, depth);
-        }
-        if let Some(cand) = by_nominal.get(&nominals(&pk)).filter(|c| !c.is_empty()) {
-            if cand.contains(&pk) {
-                return (pk, depth);
-            }
-            let mut best = &cand[0];
-            for c in cand {
-                if groups[c].len() > groups[best].len() {
-                    best = c;
-                }
-            }
-            return (best.clone(), depth);
-        }
-        pk.pop();
-        depth += 1;
-    }
+/// `node_key` of a path of the tree (`mzlab_core::msnalbero`): nominal m/z, activation, collision energy (as bits, to be hashed).
+fn key_of(chiave: &[(f64, String, f64)]) -> Key {
+    chiave
+        .iter()
+        .map(|(mz, act, ce)| (mz.round_ties_even() as i64, act.clone(), ce.to_bits()))
+        .collect()
 }
 
 /// m/z of the singly charged cation with these counts.
@@ -275,7 +196,7 @@ fn sift(sp: &Space, mz: &[f64], prec: f64, fvec: &[i64]) -> (Vec<bool>, [usize; 
 fn grow(tree: &MsnTree, k: &Key, par: &Info, cons: &Cons, mz: &[f64]) -> (Node, Info) {
     let (mz_raw, rel, nsc) = cons;
     let mut node = Node {
-        id: node_id(k),
+        id: String::new(),
         path: k.clone(),
         level: k.len() + 1,
         ce: Some(f64::from_bits(k[k.len() - 1].2)),
@@ -387,10 +308,19 @@ pub fn build_tree(
     let top = vec_of(ion, &els).ok_or_else(|| format!("unknown formula: {ion}"))?;
     let space = Space::new(&top, &els);
     let ion_mz = ion_mass(&top, &els);
-    let (keys, groups, _) = groups(scans);
-    let mut by_nominal: HashMap<Vec<i64>, Vec<Key>> = HashMap::new();
-    for k in &keys {
-        by_nominal.entry(nominals(k)).or_default().push(k.clone());
+    let a = albero_di(
+        scans.iter().map(|s| (s.level, s.path.as_deref())),
+        &Raggruppa::default(),
+    );
+    let mut keys: Vec<Key> = Vec::new();
+    let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
+    if !a.ms1.is_empty() {
+        keys.push(Vec::new());
+        groups.insert(Vec::new(), a.ms1.clone());
+    }
+    for n in &a.nodi {
+        keys.push(key_of(&n.chiave));
+        groups.insert(key_of(&n.chiave), n.scansioni.clone());
     }
     let cons: HashMap<Key, Cons> = keys
         .iter()
@@ -417,14 +347,19 @@ pub fn build_tree(
     let (r, ri) = root(&tree, &top, n_root, cons.get(&Vec::new()), root_obs);
     tree.nodes.push(r);
     info.insert(Vec::new(), ri);
-    for k in keys.iter().filter(|k| !k.is_empty()) {
-        let (pk, depth) = find_parent(k, &by_nominal, &groups);
+    for n in &a.nodi {
+        let k = &key_of(&n.chiave);
+        let (pk, parent) = match n.genitore {
+            Some(g) => (key_of(&a.nodi[g].chiave), a.nodi[g].id.clone()),
+            None => (Vec::new(), "MS1".to_string()),
+        };
         let c = &cons[k];
         let mz: Vec<f64> = c.0.iter().map(|&m| tree.cal.apply(m)).collect();
         let (mut node, inf) = grow(&tree, k, &info[&pk], c, &mz);
-        node.parent = Some(node_id(&pk));
-        node.via = depth - 1;
-        node.n_scans = groups[k].len();
+        node.id = n.id.clone();
+        node.parent = Some(parent);
+        node.via = usize::from(n.salto);
+        node.n_scans = n.scansioni.len();
         tree.nodes.push(node);
         info.insert(k.clone(), inf);
     }
