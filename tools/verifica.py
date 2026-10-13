@@ -294,6 +294,7 @@ AREE = [
     ("mzlab/web/transizioni", {"e2e_transizioni", "e2e_pannello", "e2e_cassetto"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti", "e2e_teoria_contesto"}), ("mzlab/web/barra.js", {"e2e_teoria_contesto", "e2e_strumenti", "e2e_pannello", "e2e_cassetto", "e2e_barra_hint", "e2e_barra", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
     ("mzlab/web/legende.js", {"e2e_legende", "e2e_axe_grafici", "e2e_spettro_hr", "e2e20", "e2e16"}), ("tests_e2e/e2e_legende.py", {"e2e_legende"}),
+    ("tests_e2e/e2e_mrm_layout.py", {"e2e_mrm_layout"}),
     ("mzlab/web/affianca.js", {"e2e_affianca", "e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_a11y_dati"}), ("tests_e2e/e2e_affianca.py", {"e2e_affianca"}),
     ("mzlab/web/layout.js", {"e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_hr_dda"}), ("tests_e2e/e2e_righe.py", {"e2e_righe"}),
     ("mzlab/web/pannelli.js", {"e2e_sottrazione", "e2e_intestazioni", "e2e_intestazione_cromato", "e2e_header", "e2e_pannelli", "e2e_pannelli2", "e2e_fisso", "e2e_blocco1", "e2e_blocco2", "e2e_blocco3", "e2e_tour", "e2e_tocco", "e2e_cursore", "e2e_asse_x"}),
