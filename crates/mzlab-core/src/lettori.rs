@@ -191,10 +191,8 @@ pub trait Lettore {
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>>;
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>>;
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
-    /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`), anonymous when the reader was asked for it.
+    /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
     fn metodo(&mut self, c: usize) -> Result<String>;
-    /// Asks for an anonymous `metodo/1` (pseudonyms or nothing for people, computer, serial number and paths); a reader without them ignores it.
-    fn imposta_anonimo(&mut self, _on: bool) {}
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.
     fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(None)

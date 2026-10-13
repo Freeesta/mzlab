@@ -57,17 +57,9 @@ pub struct AgilentD {
     pub file_sha1: Vec<(String, String)>,
     /// The points of every scan when the run comes from `data.ms` (m/z and abundances; `MSPeak.bin` does not exist then).
     pub(crate) inline: Option<Vec<(Vec<f64>, Vec<f64>)>>,
-    /// Leave out what identifies people (user, computer, serial number, paths) from the mzML and the `metodo/1` document it carries.
-    pub anonymous: bool,
 }
 
 impl AgilentD {
-    /// The same run with `anonymous` set (see the field).
-    pub fn anonymous(mut self, on: bool) -> AgilentD {
-        self.anonymous = on;
-        self
-    }
-
     /// `name`: the folder name (`xxx.D`). A folder without `AcqData/MSScan.bin` is `err.file.notAgilentD`, an index that is not understood is `err.file.agilent`.
     pub fn open(name: &str, f: &Files) -> Result<AgilentD> {
         if f.ms_scan.is_empty() {
@@ -98,7 +90,6 @@ impl AgilentD {
             extra_names: layout.extra_names(),
             file_sha1: hashes(f),
             inline: None,
-            anonymous: false,
         })
     }
 

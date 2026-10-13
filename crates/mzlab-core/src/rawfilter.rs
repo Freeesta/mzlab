@@ -2,29 +2,12 @@
 //! - the `spectrumRef` of a precursor names the scan it was selected from: the writer takes it from the trailer field "Master Index",
 //!   which is not a scan number (it reads 1 for every MS2 of a data-dependent run), so a reference of 1 is replaced by the last
 //!   scan of the level above that came before; any other reference is kept (it comes from a real "Master Scan Number");
-//! - the personal data of the acquisition (computer, user folders and the paths of the files and of the methods, the values of the
-//!   user labels) are left out of the `<run>` when `anonymous` is set; they stay in the `.raw`.
 
 use std::io::{self, Write};
-
-/// `userParam` names (after `opentfraw.`) that identify a person, a computer or a path.
-const IDENTITY: [&str; 5] = [
-    "computer_name",
-    "original_file_name",
-    "original_file_path",
-    "instrument_method_file",
-    "processing_method_file",
-];
-
-/// The `userParam` of the `<run>` of an exported copy without personal data (the originals keep them).
-pub const ANONYMIZED: &str = "<userParam name=\"mzLab anonimizzato\" value=\"true\"/>";
 
 pub struct MzmlFilter<W: Write> {
     inner: W,
     line: Vec<u8>,
-    anonymous: bool,
-    /// With `anonymous`: the secret of the pseudonyms that replace the identity values (none: they are dropped).
-    secret: Option<Vec<u8>>,
     /// Lines written right after the `<run ...>` tag (the `metodo/1` document as a `userParam`).
     run_extra: Option<String>,
     /// Inside a `pressure chromatogram` (MS:1003019): its intensity array gets the unit.
@@ -43,23 +26,15 @@ fn number_after(s: &str, key: &str) -> Option<u32> {
 }
 
 impl<W: Write> MzmlFilter<W> {
-    pub fn new(inner: W, anonymous: bool) -> Self {
+    pub fn new(inner: W) -> Self {
         MzmlFilter {
             inner,
             line: Vec::new(),
-            anonymous,
-            secret: crate::pseudo::current(),
             run_extra: None,
             pressure: false,
             current: 0,
             last: [0; 8],
         }
-    }
-
-    /// The secret of the pseudonyms (the default is the one set by `pseudo::set_current`).
-    pub fn with_secret(mut self, secret: Option<Vec<u8>>) -> Self {
-        self.secret = secret;
-        self
     }
 
     /// Writes `extra` (complete lines) after the `<run ...>` tag.
@@ -108,16 +83,8 @@ impl<W: Write> MzmlFilter<W> {
     fn rewrite(&mut self, l: &str) -> Option<String> {
         let t = l.trim_start();
         if t.starts_with("<run ") {
-            let mark = if self.anonymous {
-                format!("{ANONYMIZED}\n")
-            } else {
-                String::new()
-            };
             if let Some(extra) = self.run_extra.take() {
-                return Some(format!("{l}\n{mark}{extra}\n"));
-            }
-            if self.anonymous {
-                return Some(format!("{l}\n{mark}"));
+                return Some(format!("{l}\n{extra}\n"));
             }
         } else if t.starts_with("<chromatogram ") {
             self.pressure = false;
@@ -153,30 +120,9 @@ impl<W: Write> MzmlFilter<W> {
                     l.replacen("scan=1\"", &format!("scan={parent}\""), 1)
                 ));
             }
-        } else if self.anonymous && t.starts_with("<userParam name=\"opentfraw.") {
-            let name = t
-                .split('"')
-                .nth(1)
-                .unwrap_or("")
-                .trim_start_matches("opentfraw.");
-            if is_identity(name) {
-                let kind = if name == "computer_name" {
-                    "computer"
-                } else {
-                    "path"
-                };
-                let v = value_of(t)?;
-                let alias = crate::pseudo::alias(self.secret.as_deref(), kind, v)?;
-                return Some(format!("{}\n", l.replacen(v, &alias, 1)));
-            }
         }
         Some(format!("{l}\n"))
     }
-}
-
-/// Whether the `userParam` `opentfraw.<name>` carries personal data: the computer, the user folders, the paths, the user-label values.
-fn is_identity(name: &str) -> bool {
-    IDENTITY.contains(&name) || (name.starts_with("user_label.") && name.ends_with(".value"))
 }
 
 #[cfg(test)]

@@ -190,8 +190,6 @@ fn document(l: &LettoreAgilent) -> String {
         format: "agilent-d",
         files,
         sample: None,
-        anonymous: l.d.anonymous,
-        secret: crate::pseudo::current(),
     })
 }
 
@@ -316,12 +314,6 @@ impl LettoreAgilent {
         }
     }
 
-    /// The same reader asked for an anonymous `metodo/1` (no people, computer, serial number or paths).
-    pub fn anonimo(mut self, on: bool) -> Self {
-        self.d.anonymous = on;
-        self
-    }
-
     fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
@@ -378,10 +370,6 @@ fn listed(l: &LettoreAgilent) -> Vec<VoceCromatogramma> {
 }
 
 impl Lettore for LettoreAgilent {
-    fn imposta_anonimo(&mut self, on: bool) {
-        self.d.anonymous = on;
-    }
-
     fn formato(&self) -> Formato {
         Formato::AgilentD
     }

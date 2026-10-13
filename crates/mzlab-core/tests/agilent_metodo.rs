@@ -1,5 +1,5 @@
 //! The `metodo/1` document of the real Agilent runs (skipped without the data repository): what the sections say, that no field of the side files is
-//! left out of `campi`, that an anonymous document keeps no person or place, and that the mzML carries the same document.
+//! left out of `campi`, and that the mzML carries the same document.
 
 mod agilent_folder;
 
@@ -10,13 +10,11 @@ use serde_json::Value;
 
 const TEXTS: [&str; 3] = ["acqmeth.txt", "runstart.txt", "IndexedDataConverter.log"];
 
-fn source(_: &AgilentD, anonymous: bool) -> Source {
+fn source(_: &AgilentD) -> Source {
     Source {
         format: "agilent-d",
         files: vec![],
         sample: None,
-        anonymous,
-        secret: None,
     }
 }
 
@@ -30,7 +28,7 @@ fn the_document_of_a_real_run_says_what_the_files_say() {
     for f in all {
         let d = Folder::load(&f).open();
         let label = d.name.clone();
-        let doc = parse(&d.metodo(&source(&d, false)));
+        let doc = parse(&d.metodo(&source(&d)));
         assert_eq!(doc["schema"], "metodo/1", "{label}");
         assert_eq!(doc["origine"]["formato"], "agilent-d", "{label}");
         // every key of the document and of its sections is one the schema knows
@@ -102,7 +100,7 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
     let Some(all) = folders() else { return };
     for f in all {
         let d = Folder::load(&f).open();
-        let doc = parse(&d.metodo(&source(&d, false)));
+        let doc = parse(&d.metodo(&source(&d)));
         let campi = doc["campi"].as_array().unwrap();
         let in_campi = |i: &&mzlab_core::agilent::meta::Item| {
             !(i.name == "text" && TEXTS.contains(&i.origin.as_str())) && !i.value.is_empty()
@@ -139,57 +137,6 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
 }
 
 #[test]
-fn an_anonymous_document_keeps_no_person_or_place() {
-    let Some(all) = folders() else { return };
-    for f in all {
-        let d = Folder::load(&f).open();
-        let anon = d.metodo(&source(&d, true));
-        let who = [
-            d.device.as_ref().unwrap().serial.clone(),
-            d.field(
-                "AcqData-CumulativeAuditTrail.xml",
-                "AuditTrailDataSet/AuditTrailEntry/ComputerName",
-            )
-            .unwrap()
-            .to_string(),
-            d.field(
-                "AcqData/sequence.xml",
-                "SequenceTableDataSet@SequenceOperator",
-            )
-            .unwrap()
-            .to_string(),
-        ];
-        for w in who.iter().filter(|w| w.len() >= 3) {
-            // a user name is a word of its own: «Manu» is not «Manual»
-            let whole = anon
-                .match_indices(w.as_str())
-                .any(|(at, m)| !anon[at + m.len()..].starts_with(|c: char| c.is_alphanumeric()));
-            assert!(!whole, "{}: {w} is still in the anonymous document", d.name);
-        }
-        let doc = parse(&anon);
-        assert!(
-            doc["operatore"].is_null() && doc["strumento"]["serie"].is_null(),
-            "{}",
-            d.name
-        );
-        // the paths the folder names (data, method, sequence) are gone; the install folder of the acquisition program in the run start is no person
-        for i in d
-            .metadata
-            .iter()
-            .filter(|i| i.value.get(1..3) == Some(":\\"))
-        {
-            let escaped = i.value.replace('\\', "\\\\");
-            assert!(
-                !anon.contains(&escaped),
-                "{}: path {} is left",
-                d.name,
-                i.value
-            );
-        }
-    }
-}
-
-#[test]
 fn the_mzml_carries_the_same_document() {
     let Some(all) = folders() else { return };
     let mut fo = Folder::load(&all[0]);
@@ -207,12 +154,4 @@ fn the_mzml_carries_the_same_document() {
         .iter()
         .any(|f| f["nome"] == "AcqData/MSPeak.bin"
             && f["sha1"].as_str().is_some_and(|h| h.len() == 40)));
-    // an anonymous conversion has the serial number neither in the header nor in the document
-    let serial = d.device.as_ref().unwrap().serial.clone();
-    let mut fo = Folder::load(&all[0]);
-    let anon = fo.open().anonymous(true);
-    let mut out = Vec::new();
-    let n = fo.peak.len() as u64;
-    anon.to_mzml(&mut fo.peak, n, &mut out).unwrap();
-    assert!(!String::from_utf8(out).unwrap().contains(&serial));
 }

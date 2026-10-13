@@ -58,14 +58,13 @@ const AgilentD = (() => {
     if (!ok.length) { fails(); return []; }
     const g = ConvUI.group(box, ok.map(r => (r.files.peak || r.files.datams).size));
     let i = 0;
-    const anon = !!/** @type {HTMLInputElement | null} */ (document.getElementById("rawanon"))?.checked;
     for (const r of ok) {
       if (g.signal.aborted) break;
       const ui = g.start(++i, r.name);
       try {
         const name = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
-        const blob = await rb.convertAgilent(r.name, r.files, p => ui.update(p), g.signal, { anonymous: anon });
-        CONV.add(name, blob, anon);
+        const blob = await rb.convertAgilent(r.name, r.files, p => ui.update(p), g.signal);
+        CONV.add(name, blob);
         out.files.push(new File([blob], name));
         ui.done();
         if (typeof renderFiles === "function") renderFiles();

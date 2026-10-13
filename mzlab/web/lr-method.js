@@ -34,7 +34,7 @@ export function createMethodRoutes({ rpc, json, items }) {
         return json({ gradient: g || gradients.get(name) || null });
       }
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
-      if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name, anonymous: q.get("anon") === "1" }));      // metodo/1 of the item (docs/agenti/metodo.md)
+      if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));      // metodo/1 of the item (docs/agenti/metodo.md)
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
       return raw(await rpc({ op: "lr_delay", name }));                                 // a part of a mixed file with a PDA reads its own scans: not served (null)
