@@ -144,3 +144,9 @@ pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValu
         .raw("}");
     Ok(o.0)
 }
+
+/// The list of transformations of the page (`name;change;comment` per line) added to the `regole_tp` file `rules` as extra rules of the hypotheses.
+#[wasm_bindgen]
+pub fn finder_transformations(rules: &[u8], text: &str) -> Result<Vec<u8>, JsValue> {
+    legacy::transf::merge(rules, text).map_err(user)
+}

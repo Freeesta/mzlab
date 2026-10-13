@@ -17,9 +17,13 @@ pub trait Scansioni {
     fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>>;
 }
 
-/// An mzML read by offset: the row gives `start..end` of the `<spectrum>`.
+/// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
+/// of an index of version 2, the peaks of its `Lettore` and the header fields the mzML of `lettori_mzml::scrivi` would have (`testo_scansione`).
 impl<M: ReadAt> Scansioni for M {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
+        if let (Some(_), Some((l, c))) = (sc.k, self.lettore()) {
+            return SorgenteLettore { l, c }.spettro(sc);
+        }
         let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
         self.read_at(sc.start, &mut buf)?;
         let mut found = None;
@@ -37,9 +41,24 @@ impl<M: ReadAt> Scansioni for M {
     }
 
     fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
+        if sc.k.is_some() && self.lettore().is_some() {
+            return Ok(crate::scaninfo::campi(&testo_scansione(self, sc)?));
+        }
         let head = crate::scaninfo::header(self, sc.start, sc.end)?;
         Ok(crate::scaninfo::campi(&head))
     }
+}
+
+/// The text of the `<spectrum>` of a row up to its arrays, as the mzML has it: read by offset, or written for a scan of a `Lettore` as
+/// `lettori_mzml::scrivi` writes it (the header only, no arrays). For what is searched in the text of the scans (scan window, injection time).
+pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
+    if let (Some(k), Some((l, c))) = (sc.k, m.lettore()) {
+        let s = crate::mzidx_lettore::spettro(&mut *l, c, k)?;
+        return Ok(crate::mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
+    }
+    let mut b = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
+    m.read_at(sc.start, &mut b)?;
+    Ok(String::from_utf8_lossy(&b).into_owned())
 }
 
 /// The chromatograms of a file and its header.
