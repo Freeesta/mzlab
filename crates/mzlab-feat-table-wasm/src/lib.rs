@@ -70,7 +70,13 @@ pub fn table_report(table_read: Function, size: f64, samples_json: &str, spec: &
     core::report_json(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256).map_err(js_err)
 }
 
-/// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells) or `quant` (FBMN).
+/// The `qc/1` of a table under the view `spec` (empty = the whole table).
+#[wasm_bindgen]
+pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str) -> std::result::Result<String, JsValue> {
+    core::qc_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
+}
+
+/// A table file: `kind` is `full`, `full_mzmine`, `quant`, `csv_semicolon` or `xlsx_rows` (see `core::table_file`).
 #[wasm_bindgen]
 pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {
     core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)

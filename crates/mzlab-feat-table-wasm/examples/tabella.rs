@@ -21,7 +21,8 @@ fn main() {
     let r = || Slice(&table);
     put("view.json", core::view_json(&mut r(), size, &samples, &spec).expect("view"));
     put("report.json", core::report_json(&mut r(), size, &samples, &spec, &sha).expect("report"));
-    for (name, kind) in [("full.csv", "full"), ("full_mzmine.csv", "full_mzmine"), ("quant.csv", "quant")] {
+    put("qc.json", core::qc_json(&mut r(), size, &samples, &spec).expect("qc"));
+    for (name, kind) in [("full.csv", "full"), ("full_mzmine.csv", "full_mzmine"), ("quant.csv", "quant"), ("features.csv", "csv_semicolon"), ("features.rows.json", "xlsx_rows")] {
         put(name, core::table_file(&mut r(), size, &samples, &spec, &sha, pol, kind).expect("file"));
     }
     let open = |k: usize| {

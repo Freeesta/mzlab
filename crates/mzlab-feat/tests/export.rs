@@ -6,7 +6,7 @@ use std::process::Command;
 
 use mzlab_core::idxread::Index;
 use mzlab_feat::table::{RowIdent, RowQ, NO_FILE};
-use mzlab_feat::export::{csv_full, quant, Ctx};
+use mzlab_feat::export::{self, csv_full, quant, Ctx};
 use mzlab_feat::export_ms::{mgf, mgf_unit, sirius, Ms2};
 use mzlab_feat::filters::Rule;
 use mzlab_feat::norm::Method;
@@ -126,4 +126,21 @@ fn the_ms2_of_a_row_comes_from_its_file() {
     let c = Ctx { table: &t, samples: &s[..1], view: None, table_sha256: "ab", polarity: 1 };
     assert!(mzlab_feat::ms2spec::spectra(&c, |_| Ok(open())).unwrap()[0].is_none());
     let _ = std::fs::remove_dir_all(&out);
+}
+
+#[test]
+fn the_sheet_is_the_same_in_the_rows_for_xlsx_and_in_the_csv_with_semicolons() {
+    let (t, s) = (table(), samples());
+    let c = Ctx { table: &t, samples: &s, view: None, table_sha256: "ab", polarity: 1 };
+    let csv = export::csv_semicolon(&c);
+    let lines: Vec<&str> = csv.lines().collect();
+    assert_eq!(lines[0], "id;mz;rt;rt_range:min;rt_range:max;charge;a,b area;a,b state;t10 area;t10 state;t20 area;t20 state");
+    assert_eq!(lines[1], "1;200.12346;5.5;;;;1234567.9;DETECTED;2000000;FILLED;3000000;TARGETED");
+    let rows = export::xlsx_rows(&c);
+    let v = mzlab_core::json::parse(rows.as_bytes()).unwrap();
+    let sheet = v.get("hojas").unwrap().at(0).unwrap().get("filas").unwrap();
+    assert_eq!(sheet.arr().len(), 3);
+    assert_eq!(sheet.at(1).unwrap().at(1).unwrap().f64(), Some(200.123456789));
+    assert!(sheet.at(2).unwrap().at(6).unwrap().is_null());
+    assert_eq!(export::xlsx_rows(&c), rows);
 }

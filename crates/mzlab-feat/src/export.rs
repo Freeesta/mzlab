@@ -149,3 +149,83 @@ pub fn quant(c: &Ctx) -> String {
     }
     out
 }
+
+/// Header and rows of the sheet that the page writes as xlsx and as CSV with `;`: `id, mz, rt, rt_range:min, rt_range:max, charge` and, for every file,
+/// `<F> area` and `<F> state`. Cells are None where there is nothing to write; the rows are those of the view and the areas the ones of `Ctx::area`.
+fn sheet(c: &Ctx) -> (Vec<String>, Vec<Vec<Option<Cell>>>) {
+    let t = c.table;
+    let mut head: Vec<String> = ["id", "mz", "rt", "rt_range:min", "rt_range:max", "charge"].map(String::from).to_vec();
+    for s in c.samples {
+        head.push(format!("{} area", stem(&s.file)));
+        head.push(format!("{} state", stem(&s.file)));
+    }
+    let rows = c
+        .rows()
+        .into_iter()
+        .map(|r| {
+            let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
+            let edge = |v: Option<f32>| v.filter(|x| x.is_finite()).map(|x| Cell::Num(f64::from(x)));
+            let mut row = vec![Some(Cell::Num(f64::from(t.id(r)))), Some(Cell::Num(t.mz[r])), Some(Cell::Num(t.rt[r])), edge(q.map(|q| q.rt_lo)), edge(q.map(|q| q.rt_hi)), q.map(|q| Cell::Num(f64::from(q.charge)))];
+            for k in 0..t.n_files {
+                let a = c.area(r, k);
+                row.push(a.map(Cell::Num));
+                row.push(Some(Cell::Text(state_word(if a.is_some() { t.state[r * t.n_files + k] } else { CELL_ABSENT }, false).into())));
+            }
+            row
+        })
+        .collect();
+    (head, rows)
+}
+
+/// One cell of the sheet.
+enum Cell {
+    Num(f64),
+    Text(String),
+}
+
+/// The rows of the sheet of features for the xlsx that the page zips: `{"hojas":[{"nombre":"Features","filas":[[header],[row]...]}]}`, a cell with nothing is `null`.
+pub fn xlsx_rows(c: &Ctx) -> String {
+    use mzlab_core::json::Out;
+    let (head, rows) = sheet(c);
+    let mut o = Out::default();
+    o.raw("{\"hojas\":[{\"nombre\":\"Features\",\"filas\":[[");
+    for (i, h) in head.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(h);
+    }
+    o.raw("]");
+    for row in rows {
+        o.raw(",[");
+        for (i, cell) in row.iter().enumerate() {
+            o.raw(if i > 0 { "," } else { "" });
+            match cell {
+                Some(Cell::Num(v)) => o.opt(Some(*v).filter(|v| v.is_finite())),
+                Some(Cell::Text(s)) => o.str(s),
+                None => o.raw("null"),
+            };
+        }
+        o.raw("]");
+    }
+    o.raw("]}]}");
+    o.0
+}
+
+/// The same sheet as text for a spreadsheet: UTF-8, `;` between cells, a cell with `;`, quote or line break between quotes, numbers as `fix`/`sig8` would.
+pub fn csv_semicolon(c: &Ctx) -> String {
+    let (head, rows) = sheet(c);
+    let q = |s: &str| if s.contains([';', '"', '\r', '\n']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s.to_string() };
+    let mut out = head.iter().map(|h| q(h)).collect::<Vec<_>>().join(";");
+    out.push('\n');
+    for row in rows {
+        let cells: Vec<String> = row
+            .iter()
+            .map(|cell| match cell {
+                Some(Cell::Num(v)) => sig8(*v),
+                Some(Cell::Text(s)) => q(s),
+                None => String::new(),
+            })
+            .collect();
+        out.push_str(&cells.join(";"));
+        out.push('\n');
+    }
+    out
+}
