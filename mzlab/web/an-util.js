@@ -1,3 +1,4 @@
+// @ts-strict
 // Small drawing helpers shared by the loading-screen analysers (an-*.js, used by ldIon in index.html).
 (function (G) {
   "use strict";

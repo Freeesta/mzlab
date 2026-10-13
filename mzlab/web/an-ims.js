@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: drift-tube ion mobility. A gate releases a packet; in the uniform field E, set by the ring electrodes, the ions cross a buffer gas
 // and reach a constant drift speed v = K E, with K ~ 1 / (collision cross-section): the compact ion arrives first, whatever its m/z. Collisions make the path zigzag.
 (function (G) {

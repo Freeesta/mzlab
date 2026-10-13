@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: reflectron time of flight. Ions of equal charge leave the pulser with the same kinetic energy, so v ~ 1/sqrt(m); the uniform
 // field of the mirror stops them at the SAME depth (set by the energy) but a heavier ion decelerates more slowly (a ~ 1/m): the flight time grows with sqrt(m/z).
 (function (G) {

@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: FT-ICR cell. A strong static field B along the axis makes every ion turn at the cyclotron frequency omega_c = qB/m (lighter ions
 // faster); the two end plates trap them axially. An RF pulse on the excitation plates (top and bottom) opens the orbit coherently; the detection plates
 // (front and back) then see the image current, which a Fourier transform turns into a spectrum.

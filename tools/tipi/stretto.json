@@ -1,0 +1,34 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "moduleDetection": "force",
+    "strictNullChecks": true
+  },
+  "include": [
+    "globali.d.ts",
+    "globali-nomi.d.ts",
+    "modello.d.ts",
+    "manuale.d.ts",
+    "manuale-dom.d.ts",
+    "../../mzlab/web/i18n.js",
+    "../../mzlab/web/stat.js",
+    "../../mzlab/web/tables.js",
+    "../../mzlab/web/an-esi.js",
+    "../../mzlab/web/an-fticr.js",
+    "../../mzlab/web/an-ims.js",
+    "../../mzlab/web/an-maldi.js",
+    "../../mzlab/web/an-orbi.js",
+    "../../mzlab/web/an-paul.js",
+    "../../mzlab/web/an-qqq.js",
+    "../../mzlab/web/an-quad.js",
+    "../../mzlab/web/an-settore.js",
+    "../../mzlab/web/an-tof.js",
+    "../../mzlab/web/an-trappola.js",
+    "../../mzlab/web/an-util.js"
+  ]
+}

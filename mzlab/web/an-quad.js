@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: quadrupole mass filter. Four round rods of radius 1.1469 r0 (best approximation of the hyperbolae) at distance r0 from the axis,
 // length about 50 r0; opposite rods share the same RF + DC potential, neighbouring ones the opposite sign. A stable ion crosses the rods with a slow
 // secular oscillation (Mathieu: beta ~ q / sqrt 2) carrying the fast RF micromotion (amplitude ~ q/2).
