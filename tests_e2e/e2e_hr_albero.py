@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from playwright.sync_api import sync_playwright
 from lib import ROOT
-from pyref import PyRef
+from golden_ref import PyRef
 
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
 PORT = 8839
