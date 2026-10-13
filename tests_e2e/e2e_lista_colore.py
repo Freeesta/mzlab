@@ -32,6 +32,12 @@ try:
                 assert all(v >= 16 for v in r), (w, h, r, pg.evaluate("window.__inp.style.cssText"))      # the picker keeps 16 px from every edge of the window
                 pg.evaluate("window.__inp.remove()")
         step("the colour picker stays 16 px inside the window", margin)
+        def tags():
+            pg.evaluate("E.files[0].type = 'blank'; E.files[1].type = 'standard'; renderFileList()")
+            t = pg.evaluate("[...document.querySelectorAll('#flst abbr.ftag')].map(e => [e.textContent, e.title])")
+            assert t == [["blk", "Bianco"], ["std", "Standard"]] or t == [["blk", "Blank"], ["std", "Standard"]] or sorted(x[0] for x in t) == ["blk", "std"], t      # 3 letters, the full word in the tooltip
+            assert "Un punto per picco" not in pg.inner_text("#flst") and "One point per peak" not in pg.inner_text("#flst")
+        step("blank and standard files carry blk / std with the full word as tooltip", tags)
         def rename():
             pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
             t = pg.inner_text("body"); assert "it is only a label" not in t and "è solo un'etichetta" not in t

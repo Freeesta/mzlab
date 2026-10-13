@@ -606,11 +606,13 @@ function bindFileReorder() {
   });
 }
 
-// «Profilo» / «Un punto per picco» on the card of a low-resolution full-scan file (a centroid file is one whose peaks are single points)
+// «Profilo» on the card of a low-resolution full-scan file written as a profile (a centroid file, the usual one, says nothing)
 function modeTag(f) {
-  if (!(ESP.voce(f.kind) || {}).spettri || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
-  return `<small class="muted">${I18N.t(f.spectrum_mode === "profile" ? "files.mode.profile" : "files.mode.centroid")}</small>`;
+  if (!(ESP.voce(f.kind) || {}).spettri || f.hr_profile || (window.HR && HR.isHr(f)) || f.spectrum_mode !== "profile") return "";
+  return `<small class="muted">${I18N.t("files.mode.profile")}</small>`;
 }
+// short tag of a standard / blank file (3 letters, the full word in the tooltip)
+const typeTag = blank => `<abbr class="ftag" title="${blank ? I18N.t("files.type.blk.title") : I18N.t("files.type.std.title")}">${blank ? I18N.t("files.type.blk") : I18N.t("files.type.std")}</abbr>`;
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed, all of them live
   const groups = [];
@@ -618,7 +620,7 @@ function renderFileList() {
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   groups.forEach(G => { if (G.g === "hr.dda") G.fs = G.fs.filter((f, i, a) => a.findIndex(x => fileBase(x.file) === fileBase(f.file)) === i); });       // a DDA file is ONE row (its Full Scan and MS2 parts open together)
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
-  const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
+  const sub = f => f.type === "sample" ? fmtTime(f.time) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
     const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
