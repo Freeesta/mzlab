@@ -64,7 +64,7 @@
     if (ready) return ready;
     ready = (async () => {
       const c = ctx(), base = c.base;
-      const [qq, tpz] = [await fetch(base + "mzfinder/mzlab.zip").then(r => { if (!r.ok) throw new Error("the in-browser compute engine is missing (use the website, not the local program)"); return r.arrayBuffer(); }), c.pyZip];
+      const [qq, tpz] = [window.MZLAB_DESKTOP ? new ArrayBuffer(0) : await fetch(base + "mzfinder/mzlab.zip").then(r => { if (!r.ok) throw new Error("the in-browser compute engine is missing (use the website, not the local program)"); return r.arrayBuffer(); }), c.pyZip];
       const url = URL.createObjectURL(new Blob([c.files["tpmine-worker.js"]], { type: "text/javascript" }));
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
@@ -78,7 +78,7 @@
       await new Promise((res, rej) => {
         pending.set("init", { res, rej });
         worker.onerror = e => rej(new Error(e.message || "worker"));
-        worker.postMessage({ type: "init", pyodideMjs: new URL("mzfinder/pyodide/pyodide.mjs", base).href, indexURL: new URL("mzfinder/pyodide/", base).href, qqqZip: qq, tpZip: tpz });
+        worker.postMessage({ type: "init", desktop: !!window.MZLAB_DESKTOP, pyodideMjs: new URL("mzfinder/pyodide/pyodide.mjs", base).href, indexURL: new URL("mzfinder/pyodide/", base).href, qqqZip: qq, tpZip: tpz });
       });
       URL.revokeObjectURL(url);
     })();

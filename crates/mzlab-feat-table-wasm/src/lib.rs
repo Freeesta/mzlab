@@ -105,3 +105,9 @@ pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &st
     };
     core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
 }
+
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
+#[wasm_bindgen]
+pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
+    core::campioni_json(op, input).map_err(js_err)
+}
