@@ -1,5 +1,5 @@
 """mzFinder in Rust (TP_Mine/files/tpmine-worker.js): with the .mzidx of a high-resolution series in OPFS, classify, the Dig (run), detail, frag_tree, frag_tree_compare,
-formula_info, identity_graph and polarity_pairs are answered by the `finder` .wasm and the pool of feat-worker.js, and Pyodide is never downloaded.
+formula_info, identity_graph, polarity_pairs and origin_evidence are answered by the `finder` .wasm and the pool of feat-worker.js, and Pyodide is never downloaded.
 The JSON of the Dig and the details equal the ones of the native build (`cargo run --example finder`) on the same files.
 Builds the site (python3 tools/build_site.py) and static/wasm-feat (tools/build_feat_wasm.sh); SKIP without cargo, wasm-bindgen or numpy. MZLAB_PIPE_SITE=<built site with
 static/wasm-feat> reuses a site (the TP_Mine files are copied over it). Run from the repo root: python3 tests_e2e/e2e_tpmine_rust.py"""
@@ -57,6 +57,7 @@ PUT = """async (names) => {
 PUTF = PUT.replace('"idx"]', '"files"]').replace('n + ".mzidx", { create', 'n, { create').replace('n + ".mzidx")).body', 'n)).body')
 IDENT = {"features": [{"k": "F1", "id": "1", "mz": 301.1, "rt": 5.0, "a": [[0, 1e5], [1, 2e5], [2, 3e5]]}, {"k": "F2", "id": "2", "mz": 323.082, "rt": 5.01, "a": [[0, 2e5], [1, 4e5], [2, 6e5]]}],
          "samples": 3, "pol": 1, "edges": []}
+ORIGIN = [c for c in json.loads((ROOT / "tests" / "golden" / "feat" / "finder.json").read_text())["origin"] if c["out"]][:8]
 POL = {"pos": [{"k": "p1", "mz": 301.1, "rt": 5.0}], "neg": [{"k": "n1", "mz": 299.0854, "rt": 5.02}], "ppm": 5, "rt_min": 0.15}
 try:
     with sync_playwright() as p:
@@ -101,7 +102,8 @@ try:
             assert abs(f["mz"] - 345.2537) < 1e-3, f
             g = call("identity_graph", IDENT); assert "identities" in g and "edges" in g, g
             q = call("polarity_pairs", POL); assert len(q) == 1 and q[0]["pos"] == "p1" and q[0]["neg"] == "n1", q
-        step("formula_info, identity_graph, polarity_pairs", stateless)
+            for c in ORIGIN: assert call("origin_evidence", c["payload"]) == c["out"], c["payload"]
+        step("formula_info, identity_graph, polarity_pairs, origin_evidence (= the Python of tests/golden/feat/finder.json)", stateless)
 
         def ui():
             pg.evaluate(PUTF, names)

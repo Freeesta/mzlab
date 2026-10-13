@@ -1,7 +1,7 @@
 //! The parts of mzFinder ported to Rust (`legacy/`) against the frozen Python answers (`tools/finder_riferimento.py --golden`): `formula_info`, the
 //! names of `classify`, the kinetic descriptors, the MS2 consensus and the three components of the MS2 similarity, numbers within 1e-9.
 
-use mzlab_feat::legacy::edge::Iimn;
+use mzlab_feat::legacy::edge::{origin_evidence, Iimn};
 use mzlab_feat::legacy::fragtree::{elements_of, two_level, vec_of, TwoLevel};
 use mzlab_feat::legacy::{
     formula_info, identity_graph, kinetics, ms2, polarity_pairs, sample, similarity,
@@ -185,6 +185,15 @@ fn identity_graph_matches_python() {
         let got: Value =
             serde_json::from_str(&identity_graph(&c["payload"].to_string()).unwrap()).unwrap();
         same(&got, &c["out"], &format!("identity case {i}"));
+    }
+}
+
+#[test]
+fn origin_evidence_matches_python() {
+    for (i, c) in golden()["origin"].as_array().unwrap().iter().enumerate() {
+        let got: Value =
+            serde_json::from_str(&origin_evidence(&c["payload"].to_string()).unwrap()).unwrap();
+        same(&got, &c["out"], &format!("origin case {i}"));
     }
 }
 
