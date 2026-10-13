@@ -93,11 +93,14 @@ try:
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
         # the Python reference on the same files: the JSON must be the same
         ref = PyRef(FILES, pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"])         # the same samples as the page posted
+        def no_msn(x):   # `msn` (infusion recognised from the index, `infusione.rs`) is the engine's alone, wherever a file is described: the reference has no such field
+            if isinstance(x, dict): return {k: no_msn(v) for k, v in x.items() if k != "msn"}
+            return [no_msn(v) for v in x] if isinstance(x, list) else x
         def classic():
             py = {"state": ref.get("api/state")["j"], "session": ref.get("api/session")["j"]}
-            json_close(lr_snap["state"]["files"], py["state"]["files"], path="state.files")
-            json_close({k: v for k, v in lr_snap["state"].items() if k not in ("files", "workdir")}, {k: v for k, v in py["state"].items() if k not in ("files", "workdir")}, path="state")
-            json_close({k: v for k, v in lr_snap["session"].items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+            json_close(no_msn(lr_snap["state"]["files"]), py["state"]["files"], path="state.files")
+            json_close(no_msn({k: v for k, v in lr_snap["state"].items() if k not in ("files", "workdir")}), {k: v for k, v in py["state"].items() if k not in ("files", "workdir")}, path="state")
+            json_close(no_msn({k: v for k, v in lr_snap["session"].items() if k not in ("workdir", "commit")}), {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
         step("the JSON of state and session equals the Python reference", classic)
         def same_as_classic():
             urls = ["api/spectrum?k=0&rt0=0&rt1=1000&level=1&precursor=&merge=1", "api/spectrum?k=1&rt0=1&rt1=2.5&level=1&bin=0.5", "api/spectrum?k=0&rt0=3&rt1=3&level=1",
