@@ -139,7 +139,7 @@ impl AgilentD {
         })
     }
 
-    fn header(&self, peak_sha1: &str) -> Header {
+    pub(crate) fn header(&self, peak_sha1: &str) -> Header {
         let base = self
             .name
             .strip_suffix(".D")
@@ -304,7 +304,7 @@ pub(crate) fn add_sic(
 }
 
 /// SHA-1 (hex) of the first `len` bytes of a reader, read in blocks of 1 MB.
-fn sha1_of<R: ReadAt>(r: &mut R, len: u64) -> Result<String> {
+pub(crate) fn sha1_of<R: ReadAt>(r: &mut R, len: u64) -> Result<String> {
     use sha1::{Digest as _, Sha1};
     let mut h = Sha1::new();
     let mut buf = vec![0u8; 1 << 20];
@@ -320,7 +320,7 @@ fn sha1_of<R: ReadAt>(r: &mut R, len: u64) -> Result<String> {
 
 impl AgilentD {
     /// SIM mark, observed range and scan window of a spectrum: the window of the method for a scan run, the lowest and highest ion for SIM.
-    fn extra_of(&self, s: &Spectrum) -> SpectrumExtra {
+    pub(crate) fn extra_of(&self, s: &Spectrum) -> SpectrumExtra {
         let sim = s.filter.contains("SIM");
         let window = match (&self.method, s.mz.first(), s.mz.last()) {
             (Some(m), _, _) if !sim && m.low_mass.is_some() && m.high_mass.is_some() => {

@@ -54,6 +54,7 @@ pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
 pub mod lettori;
+pub mod lettori_mzml;
 pub mod metodo;
 pub mod pseudo;
 pub mod metodo_raw;

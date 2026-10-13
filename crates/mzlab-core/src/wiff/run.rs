@@ -130,22 +130,7 @@ impl Wiff {
     /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
     pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, centroid: bool, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
         let mut scan = Window::new(scan, self.scan_len);
-        let (instrument, run_params) = self.instrument_terms();
-        let header = Header {
-            run: name.trim_end_matches(".wiff").to_string(),
-            sources: vec![name.to_string(), format!("{name}.scan")],
-            source_sha1: self.wiff_sha1.iter().cloned().chain(sha1_hex(&mut scan, self.scan_len).ok()).collect(),
-            acquired: self.created.clone(),
-            run_params,
-            instrument: Some(instrument),
-            components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
-                .iter()
-                .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
-                .collect(),
-            software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
-            centroided: centroid,
-            ..Default::default()
-        };
+        let header = self.header(name, sha1_hex(&mut scan, self.scan_len).ok(), centroid);
         let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };
         let mut buf = Buf::default();
         let mut w = MzmlWriter::new(out, &header)?;
@@ -184,6 +169,26 @@ impl Wiff {
         }
         w.finish()?;
         Ok(())
+    }
+
+    /// The header of the mzML of `name` (the `.wiff`); `scan_sha1`: SHA-1 of the `.wiff.scan` when it could be read.
+    pub(crate) fn header(&self, name: &str, scan_sha1: Option<String>, centroid: bool) -> Header {
+        let (instrument, run_params) = self.instrument_terms();
+        Header {
+            run: name.trim_end_matches(".wiff").to_string(),
+            sources: vec![name.to_string(), format!("{name}.scan")],
+            source_sha1: self.wiff_sha1.iter().cloned().chain(scan_sha1).collect(),
+            acquired: self.created.clone(),
+            run_params,
+            instrument: Some(instrument),
+            components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
+                .iter()
+                .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
+                .collect(),
+            software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            centroided: centroid,
+            ..Default::default()
+        }
     }
 
     /// The instrument of the header: the CV term of the model the Log names (the known models), otherwise the generic `instrument model` and
