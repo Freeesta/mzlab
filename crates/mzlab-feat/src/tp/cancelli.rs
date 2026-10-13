@@ -63,6 +63,49 @@ pub(super) fn formed(inp: &TpInputs, parent: usize, b: &mut TpBlock) -> Result<(
     Ok(())
 }
 
+/// Gate 1 with the roles: the treated files must beat each reference by `ratio`, in order the blank, the t0 and the dark, and the first that wins takes
+/// the row out with its note. A row in the t0 that passes stays with `NOTE_T0_PRESENT`. Without a t0 the gate runs on the blank and the dark and every
+/// row carries `NOTE_NO_T0`. The infusion is neither a reference nor a treated file.
+pub(super) fn formed_by_role(inp: &TpInputs, roles: &TpRoles, parent: usize, b: &mut TpBlock) -> Result<RoleCounts> {
+    let t = inp.aligned;
+    let refs = [(&roles.blank, NOTE_BLANK), (&roles.t0, NOTE_T0), (&roles.dark, NOTE_DARK)];
+    if roles.treated.is_empty() || refs.iter().all(|(f, _)| f.is_empty()) || roles.minutes.len() != t.n_files {
+        return Err(Error::new("error.tpNoControls"));
+    }
+    let mut c = RoleCounts { no_t0: roles.t0.is_empty(), blank_kinds: roles.blank_kinds.clone(), ..RoleCounts::default() };
+    for r in 0..t.len() {
+        if c.no_t0 {
+            b.notes[r] |= NOTE_NO_T0;
+        }
+        if r == parent {
+            b.status[r] = ST_PARENT;
+            continue;
+        }
+        let high = peak(t, r, &roles.treated);
+        let by = refs.iter().find(|(files, _)| {
+            let v = peak(t, r, files);
+            v > 0.0 && high < inp.params.ratio * v
+        });
+        match by {
+            Some(&(_, bit)) => {
+                b.status[r] = ST_CONTROL;
+                b.notes[r] |= bit;
+                match bit {
+                    NOTE_BLANK => c.by_blank += 1,
+                    NOTE_T0 => c.by_t0 += 1,
+                    _ => c.by_dark += 1,
+                }
+            }
+            None if high <= 0.0 => b.status[r] = ST_CONTROL,
+            None if peak(t, r, &roles.t0) > 0.0 => b.notes[r] |= NOTE_T0_PRESENT,
+            None => {}
+        }
+    }
+    let (dark, t0) = (peak(t, parent, &roles.dark), peak(t, parent, &roles.t0));
+    c.dark_over_t0 = (dark > 0.0 && t0 > 0.0).then(|| dark / t0);
+    Ok(c)
+}
+
 /// Times (files, in time order) at which both rows have a peak, with the ratio of their areas `a / p`.
 fn ratios(inp: &TpInputs, a: usize, p: usize) -> Vec<f64> {
     let mut files: Vec<usize> = (0..inp.minutes.len())

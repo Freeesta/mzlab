@@ -136,8 +136,9 @@ try:
             assert len(xlsx_sheets(path)) == 2, xlsx_sheets(path)                                              # points + metadata
         step("the table goes to Excel with a metadata sheet", excel)
         def persist():
-            pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change"); pg.wait_for_timeout(1500)
-            pg.reload(); ready(pg); pg.wait_for_timeout(1500)
+            pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change")
+            attendi(pg, f"MAPPA.pts({M}).some(q=>q.note==='prova')"); saved(pg)
+            pg.reload(); ready(pg)
             pg.wait_for_function(f"!!({M} && MAPPA.pts({M}).length===3)", timeout=20000)
             assert pg.evaluate(f"MAPPA.pts({M}).some(q=>q.note==='prova')")
             pg.wait_for_selector(".pnl.map .mztab tbody tr", timeout=15000)

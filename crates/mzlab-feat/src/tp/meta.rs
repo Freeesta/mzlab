@@ -1,4 +1,4 @@
-//! The meta of the block `tp/1` in the `.mzfeat`: the thresholds used and the counts, and back.
+//! The meta of the block `tp/1` in the `.mzfeat`: the thresholds used and the counts (with the roles, the rows each reference took out), and back.
 
 use mzlab_core::json::{Out, Value};
 
@@ -34,8 +34,11 @@ impl TpBlock {
         j.raw(",\"isf\":")
             .int(self.count(ST_ISF) as i64)
             .raw(",\"non_spiegate\":")
-            .int(self.count(ST_UNEXPLAINED) as i64)
-            .raw("}}");
+            .int(self.count(ST_UNEXPLAINED) as i64);
+        if let Some(c) = &self.roles {
+            roles_json(&mut j, c);
+        }
+        j.raw("}}");
         j.0
     }
 
@@ -59,7 +62,47 @@ impl TpBlock {
                     .and_then(Value::bool)
                     .unwrap_or(false),
             },
+            roles: v.get("ruoli").map(|o| roles_from(v, o)),
             ..TpBlock::default()
         }
+    }
+}
+
+/// The counts of gate 1 by role (inside `conteggi`) and the object `ruoli`: no t0, parent in the dark over the t0, kinds of the blanks.
+fn roles_json(j: &mut Out, c: &RoleCounts) {
+    j.raw(",\"scartate_bianco\":").int(c.by_blank as i64);
+    j.raw(",\"scartate_t0\":").int(c.by_t0 as i64);
+    j.raw(",\"scartate_buio\":").int(c.by_dark as i64);
+    j.raw("},\"ruoli\":{\"senza_t0\":")
+        .raw(if c.no_t0 { "true" } else { "false" });
+    j.raw(",\"buio_su_t0\":")
+        .opt(c.dark_over_t0)
+        .raw(",\"bianchi\":[");
+    for (i, k) in c.blank_kinds.iter().enumerate() {
+        j.raw(if i > 0 { "," } else { "" }).str(k);
+    }
+    j.raw("]");
+}
+
+fn roles_from(v: &Value, o: &Value) -> RoleCounts {
+    let n = |k: &str| {
+        v.get("conteggi")
+            .and_then(|c| c.get(k))
+            .and_then(Value::f64)
+            .unwrap_or(0.0) as usize
+    };
+    RoleCounts {
+        by_blank: n("scartate_bianco"),
+        by_t0: n("scartate_t0"),
+        by_dark: n("scartate_buio"),
+        no_t0: o.get("senza_t0").and_then(Value::bool).unwrap_or(false),
+        dark_over_t0: o.get("buio_su_t0").and_then(Value::f64),
+        blank_kinds: o
+            .get("bianchi")
+            .map(|a| a.arr())
+            .unwrap_or_default()
+            .iter()
+            .map(|x| x.str().unwrap_or("").to_string())
+            .collect(),
     }
 }

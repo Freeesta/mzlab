@@ -21,12 +21,11 @@ try:
         pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); } catch (_) {}")
 
         # 1. First load of LR data shows invitation
-        pg.set_input_files("#pick", [TMP_LR])
-        pg.wait_for_timeout(800)
+        stage(pg, [TMP_LR])
         pg.click("text=Carica dati")
         ready(pg)
 
-        pg.wait_for_selector("#tour-invito", timeout=5000)
+        pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
         inv_text = pg.inner_text("#tour-invito")
         assert "Primo accesso? Un tour guidato degli strumenti." in inv_text and "minut" not in inv_text, inv_text
 

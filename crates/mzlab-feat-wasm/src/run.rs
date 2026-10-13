@@ -23,7 +23,7 @@ use mzlab_feat::store::{
 use mzlab_feat::table::{FileFeatures, RowIdent};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::target::{run, TargetParams, TargetResult};
-use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
+use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
 pub fn recipe_from_json(text: &str) -> Result<Recipe> {
@@ -359,18 +359,30 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
     budget: &MemBudget,
     sink: &mut W,
 ) -> Result<()> {
+    evidence_roles_to(table, size, hypo, minutes, None, parent, r, budget, sink)
+}
+
+/// `evidence_to` with the roles of the files (`campioni/2`): gate 1 of the view of the products reads them (`tp::build_by_role`).
+#[allow(clippy::too_many_arguments)]
+pub fn evidence_roles_to<R: ReadAt, W: WriteAt>(
+    table: &mut R,
+    size: u64,
+    hypo: &HypoRun,
+    minutes: &[f64],
+    roles: Option<&TpRoles>,
+    parent: Option<(f64, f64)>,
+    r: &Recipe,
+    budget: &MemBudget,
+    sink: &mut W,
+) -> Result<()> {
     let (mut aligned, meta) = read_table_from(table, size)?;
     hypo.result
         .add_missing_to(&mut aligned, &JoinParams::default());
     aligned.sort_rows();
     let origin = origin_from_meta(&meta);
     let points = points_and_identity(&mut aligned, hypo, &meta)?;
-    let treated: Vec<usize> = (0..minutes.len())
-        .filter(|&k| minutes[k].is_finite())
-        .collect();
-    let controls: Vec<usize> = (0..minutes.len())
-        .filter(|&k| !minutes[k].is_finite())
-        .collect();
+    let minutes = roles.map_or(minutes, |ro| &ro.minutes);
+    let (treated, controls) = TpRoles::kinetic_files(minutes, roles);
     let times: Vec<f64> = treated.iter().map(|&k| minutes[k]).collect();
     let (forms, chain) = (FormBank::new(&times), ChainBank::new(&times, K_PARENT_MIN));
     let y = parent
@@ -405,7 +417,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         parent,
     };
     let rules = hypo.rules()?;
-    let tp = tp_block(&inp, minutes, &hypo.registry.hyps, parent, rules.as_ref());
+    let tp = tp_block(&inp, minutes, roles, &hypo.registry.hyps, parent, rules.as_ref());
     let rows = aligned.len();
     let held = aligned.heap_bytes() + tp.heap_bytes();
     if budget.in_memory(held + rows * IDENTITY_BYTES) {
@@ -422,6 +434,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
 fn tp_block(
     inp: &Inputs,
     minutes: &[f64],
+    roles: Option<&TpRoles>,
     hyps: &[Hypothesis],
     parent: Option<(f64, f64)>,
     rules: Option<&Rules>,
@@ -440,7 +453,13 @@ fn tp_block(
         params: &TpParams::default(),
         rules,
     };
-    build_tp(&tp).ok().flatten().unwrap_or_default()
+    match roles {
+        Some(ro) => build_by_role(&tp, ro),
+        None => build_tp(&tp),
+    }
+    .ok()
+    .flatten()
+    .unwrap_or_default()
 }
 
 /// The row within 5 ppm and 0.3 min of the parent with the largest area (the parent decay is read from it).

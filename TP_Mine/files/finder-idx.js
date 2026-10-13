@@ -40,6 +40,8 @@ export function createIngress(base, say) {
     return { wasm, pool, arch };
   })().catch(e => { lib = null; throw e; }));
 
+  /** the builds under way, by file name @type {Map<string, Promise<void>>} */ const building = new Map();
+
   /** @param {string} name @param {Blob} blob */
   async function build(name, blob) {
     const { wasm, pool, arch } = await tools(), part = name + ".mzidx.mzf.part";
@@ -72,7 +74,9 @@ export function createIngress(base, say) {
         const blob = src instanceof Blob ? src : new Blob([src]), ix = await idxFile(name);
         if (ix && await recordedSize(ix) === blob.size) continue;
         say(`Indexing ${name}...`);
-        jobs.push(build(name, blob));                    // the scan table is read here, the index is built by the pool while the next file is prepared
+        let job = building.get(name);                    // two classify calls at once (Reload from Data and a restored list) must not write the same .part twice
+        if (!job) { job = build(name, blob).finally(() => building.delete(name)); building.set(name, job); }
+        jobs.push(job);                                  // the scan table is read here, the index is built by the pool while the next file is prepared
       }
       await Promise.all(jobs);
     },

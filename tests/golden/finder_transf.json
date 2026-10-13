@@ -1,0 +1,917 @@
+{
+ "cases": [
+  {
+   "literature": [],
+   "name": "default",
+   "new": [],
+   "rows": [
+    {
+     "comment": "one extra oxygen (aromatic or aliphatic OH)",
+     "delta": {
+      "O": 1
+     },
+     "name": "hydroxylation"
+    },
+    {
+     "comment": "two extra oxygens",
+     "delta": {
+      "O": 2
+     },
+     "name": "dihydroxylation"
+    },
+    {
+     "comment": "loss of H2 (double bond, ring closure)",
+     "delta": {
+      "H": -2
+     },
+     "name": "dehydrogenation"
+    },
+    {
+     "comment": "alcohol -> ketone or aldehyde",
+     "delta": {
+      "H": -2,
+      "O": 1
+     },
+     "name": "oxidation to carbonyl"
+    },
+    {
+     "comment": "N- or O-demethylation",
+     "delta": {
+      "C": -1,
+      "H": -2
+     },
+     "name": "demethylation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "H": 2
+     },
+     "name": "methylation"
+    },
+    {
+     "comment": "loss of the isopropyl group",
+     "delta": {
+      "C": -3,
+      "H": -6
+     },
+     "name": "loss of propene (N-deisopropylation)"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "O": -2
+     },
+     "name": "decarboxylation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "O": 2
+     },
+     "name": "carboxylation"
+    },
+    {
+     "comment": "addition of water, hydrolysis without cleavage",
+     "delta": {
+      "H": 2,
+      "O": 1
+     },
+     "name": "hydration"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -2,
+      "O": -1
+     },
+     "name": "dehydration"
+    },
+    {
+     "comment": "SO2 extrusion (sulfonamides, sulfones)",
+     "delta": {
+      "O": -2,
+      "S": -1
+     },
+     "name": "loss of SO2"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "O": -1
+     },
+     "name": "loss of CO"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -3,
+      "N": -1,
+      "O": 1
+     },
+     "name": "oxidative deamination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Cl": -1,
+      "H": 1
+     },
+     "name": "reductive dechlorination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Cl": -1,
+      "H": 1,
+      "O": 1
+     },
+     "name": "hydrolytic dechlorination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Br": -1,
+      "H": 1
+     },
+     "name": "reductive debromination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "F": -1,
+      "H": 1,
+      "O": 1
+     },
+     "name": "hydrolytic defluorination"
+    },
+    {
+     "comment": "cleavage of the amide/ester bond (same mass as hydration)",
+     "delta": {
+      "H": 2,
+      "O": 1
+     },
+     "name": "amide hydrolysis"
+    }
+   ],
+   "text": "hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)\ndihydroxylation;+O2;two extra oxygens\ndehydrogenation;-H2;loss of H2 (double bond, ring closure)\noxidation to carbonyl;+O-H2;alcohol -> ketone or aldehyde\ndemethylation;-CH2;N- or O-demethylation\nmethylation;+CH2\nloss of propene (N-deisopropylation);-C3H6;loss of the isopropyl group\ndecarboxylation;-CO2\ncarboxylation;+CO2\nhydration;+H2O;addition of water, hydrolysis without cleavage\ndehydration;-H2O\nloss of SO2;-SO2;SO2 extrusion (sulfonamides, sulfones)\nloss of CO;-CO\noxidative deamination;-NH+O-H2\nreductive dechlorination;-Cl+H\nhydrolytic dechlorination;-Cl+OH\nreductive debromination;-Br+H\nhydrolytic defluorination;-F+OH\namide hydrolysis;+H2O;cleavage of the amide/ester bond (same mass as hydration)"
+  },
+  {
+   "literature": [],
+   "name": "empty",
+   "new": [],
+   "rows": [],
+   "text": ""
+  },
+  {
+   "literature": [],
+   "name": "new rows",
+   "new": [
+    {
+     "delta": {
+      "O": 3,
+      "S": 1
+     },
+     "name": "sulfation"
+    },
+    {
+     "delta": {
+      "H": -1,
+      "N": 1,
+      "O": 2
+     },
+     "name": "nitration"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "one extra oxygen (aromatic or aliphatic OH)",
+     "delta": {
+      "O": 1
+     },
+     "name": "hydroxylation"
+    },
+    {
+     "comment": "two extra oxygens",
+     "delta": {
+      "O": 2
+     },
+     "name": "dihydroxylation"
+    },
+    {
+     "comment": "loss of H2 (double bond, ring closure)",
+     "delta": {
+      "H": -2
+     },
+     "name": "dehydrogenation"
+    },
+    {
+     "comment": "alcohol -> ketone or aldehyde",
+     "delta": {
+      "H": -2,
+      "O": 1
+     },
+     "name": "oxidation to carbonyl"
+    },
+    {
+     "comment": "N- or O-demethylation",
+     "delta": {
+      "C": -1,
+      "H": -2
+     },
+     "name": "demethylation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "H": 2
+     },
+     "name": "methylation"
+    },
+    {
+     "comment": "loss of the isopropyl group",
+     "delta": {
+      "C": -3,
+      "H": -6
+     },
+     "name": "loss of propene (N-deisopropylation)"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "O": -2
+     },
+     "name": "decarboxylation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "O": 2
+     },
+     "name": "carboxylation"
+    },
+    {
+     "comment": "addition of water, hydrolysis without cleavage",
+     "delta": {
+      "H": 2,
+      "O": 1
+     },
+     "name": "hydration"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -2,
+      "O": -1
+     },
+     "name": "dehydration"
+    },
+    {
+     "comment": "SO2 extrusion (sulfonamides, sulfones)",
+     "delta": {
+      "O": -2,
+      "S": -1
+     },
+     "name": "loss of SO2"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "O": -1
+     },
+     "name": "loss of CO"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -3,
+      "N": -1,
+      "O": 1
+     },
+     "name": "oxidative deamination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Cl": -1,
+      "H": 1
+     },
+     "name": "reductive dechlorination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Cl": -1,
+      "H": 1,
+      "O": 1
+     },
+     "name": "hydrolytic dechlorination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Br": -1,
+      "H": 1
+     },
+     "name": "reductive debromination"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "F": -1,
+      "H": 1,
+      "O": 1
+     },
+     "name": "hydrolytic defluorination"
+    },
+    {
+     "comment": "cleavage of the amide/ester bond (same mass as hydration)",
+     "delta": {
+      "H": 2,
+      "O": 1
+     },
+     "name": "amide hydrolysis"
+    },
+    {
+     "comment": "a note",
+     "delta": {
+      "C": 1,
+      "H": 2
+     },
+     "name": "my methylation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "O": 3,
+      "S": 1
+     },
+     "name": "sulfation"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -1,
+      "N": 1,
+      "O": 2
+     },
+     "name": "nitration"
+    }
+   ],
+   "text": "hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)\ndihydroxylation;+O2;two extra oxygens\ndehydrogenation;-H2;loss of H2 (double bond, ring closure)\noxidation to carbonyl;+O-H2;alcohol -> ketone or aldehyde\ndemethylation;-CH2;N- or O-demethylation\nmethylation;+CH2\nloss of propene (N-deisopropylation);-C3H6;loss of the isopropyl group\ndecarboxylation;-CO2\ncarboxylation;+CO2\nhydration;+H2O;addition of water, hydrolysis without cleavage\ndehydration;-H2O\nloss of SO2;-SO2;SO2 extrusion (sulfonamides, sulfones)\nloss of CO;-CO\noxidative deamination;-NH+O-H2\nreductive dechlorination;-Cl+H\nhydrolytic dechlorination;-Cl+OH\nreductive debromination;-Br+H\nhydrolytic defluorination;-F+OH\namide hydrolysis;+H2O;cleavage of the amide/ester bond (same mass as hydration)\nmy methylation;+CH3-H;a note\nsulfation;+SO3\n# a comment\n\nnitration;+NO2-H"
+  },
+  {
+   "literature": [],
+   "name": "only new",
+   "new": [
+    {
+     "delta": {
+      "C": -1,
+      "O": 2
+     },
+     "name": "ring opening"
+    },
+    {
+     "delta": {
+      "C": 2,
+      "H": 2,
+      "O": 1
+     },
+     "name": "acetylation"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "O": 2
+     },
+     "name": "ring opening"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 2,
+      "H": 2,
+      "O": 1
+     },
+     "name": "acetylation"
+    }
+   ],
+   "text": "ring opening;+O2-C\nacetylation;+C2H2O"
+  },
+  {
+   "literature": [],
+   "name": "duplicate of a known change",
+   "new": [],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "O": 1
+     },
+     "name": "oxygen"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "H": -2,
+      "O": -1
+     },
+     "name": "water loss"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "O": 1
+     },
+     "name": "O again"
+    }
+   ],
+   "text": "oxygen;+O\nwater loss;-H2O\nO again;+ O"
+  },
+  {
+   "literature": [],
+   "name": "duplicate inside",
+   "new": [
+    {
+     "delta": {
+      "N": 1
+     },
+     "name": "a"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "N": 1
+     },
+     "name": "a"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "N": 1
+     },
+     "name": "b"
+    },
+    {
+     "comment": "",
+     "delta": {},
+     "name": "c"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "N": 1
+     },
+     "name": "d"
+    }
+   ],
+   "text": "a;+N\nb;+N\nc;-N+N\nd;+N+C-C"
+  },
+  {
+   "literature": [],
+   "name": "signs",
+   "new": [
+    {
+     "delta": {
+      "C": -1,
+      "H": -4
+     },
+     "name": "x"
+    },
+    {
+     "delta": {
+      "C": 1,
+      "H": 4
+     },
+     "name": "y"
+    },
+    {
+     "delta": {
+      "C": 2,
+      "H": 4
+     },
+     "name": "w"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "C": -1,
+      "H": -4
+     },
+     "name": "x"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "H": 4
+     },
+     "name": "y"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "Cl": -1,
+      "H": 1
+     },
+     "name": "z"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 2,
+      "H": 4
+     },
+     "name": "w"
+    },
+    {
+     "comment": "",
+     "delta": {},
+     "name": "v"
+    }
+   ],
+   "text": "x;-C-H4\ny;+C+H4\nz;-Cl+H\nw;C2H4\nv;+O-O"
+  },
+  {
+   "literature": [],
+   "name": "spaces and tabs",
+   "new": [],
+   "rows": [
+    {
+     "comment": "note",
+     "delta": {
+      "H": 2,
+      "O": 1
+     },
+     "name": "spaced"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1,
+      "H": 2
+     },
+     "name": "tabbed"
+    }
+   ],
+   "text": "  spaced  ;  + O H2 ; note  \n\ttabbed;\t+CH2\t"
+  },
+  {
+   "literature": [
+    {
+     "delta": {
+      "O": 1
+     },
+     "source": "Smith 2020"
+    },
+    {
+     "delta": {
+      "C": 2,
+      "H": 4,
+      "O": 1
+     },
+     "source": "Jones 1999, doi"
+    }
+   ],
+   "name": "literature",
+   "new": [
+    {
+     "delta": {
+      "C": 2,
+      "H": 4,
+      "O": 1
+     },
+     "name": "new lit"
+    },
+    {
+     "delta": {
+      "C": 3
+     },
+     "name": "empty lit"
+    },
+    {
+     "delta": {
+      "C": 4
+     },
+     "name": "not lit"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "lit: Smith 2020",
+     "delta": {
+      "O": 1
+     },
+     "name": "hydroxylation"
+    },
+    {
+     "comment": "LIT : Jones 1999, doi",
+     "delta": {
+      "C": 2,
+      "H": 4,
+      "O": 1
+     },
+     "name": "new lit"
+    },
+    {
+     "comment": "lit:",
+     "delta": {
+      "C": 3
+     },
+     "name": "empty lit"
+    },
+    {
+     "comment": "literature: x",
+     "delta": {
+      "C": 4
+     },
+     "name": "not lit"
+    }
+   ],
+   "text": "hydroxylation;+O;lit: Smith 2020\nnew lit;+C2H4O;LIT : Jones 1999, doi\nempty lit;+C3;lit:\nnot lit;+C4;literature: x"
+  },
+  {
+   "literature": [
+    {
+     "delta": {
+      "C": 5,
+      "H": 2
+     },
+     "source": "second"
+    }
+   ],
+   "name": "literature twice",
+   "new": [
+    {
+     "delta": {
+      "C": 5,
+      "H": 2
+     },
+     "name": "a"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "lit: first",
+     "delta": {
+      "C": 5,
+      "H": 2
+     },
+     "name": "a"
+    },
+    {
+     "comment": "lit: second",
+     "delta": {
+      "C": 5,
+      "H": 2
+     },
+     "name": "b"
+    }
+   ],
+   "text": "a;+C5H2;lit: first\nb;+C5H2;lit: second"
+  },
+  {
+   "literature": [],
+   "name": "junk characters",
+   "new": [
+    {
+     "delta": {
+      "C": 1
+     },
+     "name": "l"
+    },
+    {
+     "delta": {
+      "N": 1
+     },
+     "name": "n"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "n",
+     "delta": {
+      "O": 1
+     },
+     "name": "k"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 1
+     },
+     "name": "l"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "O": 1
+     },
+     "name": "m"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "N": 1
+     },
+     "name": "n"
+    }
+   ],
+   "text": "k;+O?;n\nl;+C!H2\nm;+O.\nn;%+N"
+  },
+  {
+   "literature": [],
+   "name": "empty change",
+   "new": [],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {},
+     "name": "e"
+    },
+    {
+     "comment": "",
+     "delta": {},
+     "name": "f"
+    }
+   ],
+   "text": "e;+\nf;-"
+  },
+  {
+   "literature": [],
+   "name": "windows lines",
+   "new": [
+    {
+     "delta": {
+      "C": 7
+     },
+     "name": "r1"
+    },
+    {
+     "delta": {
+      "C": 8
+     },
+     "name": "r2"
+    },
+    {
+     "delta": {
+      "C": 9
+     },
+     "name": "r3"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "C": 7
+     },
+     "name": "r1"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 8
+     },
+     "name": "r2"
+    },
+    {
+     "comment": "",
+     "delta": {
+      "C": 9
+     },
+     "name": "r3"
+    }
+   ],
+   "text": "r1;+C7\r\nr2;+C8\rr3;+C9\n"
+  },
+  {
+   "error": "invalid line (expected «name;change»): just a name",
+   "name": "bad: no change",
+   "text": "just a name"
+  },
+  {
+   "error": "invalid line (expected «name;change»): name;",
+   "name": "bad: empty change",
+   "text": "name;"
+  },
+  {
+   "error": "invalid line (expected «name;change»): bad line without semicolon",
+   "name": "bad: second line",
+   "text": "ok;+O\nbad line without semicolon"
+  },
+  {
+   "error": "unknown element 'X' in 'XX'",
+   "name": "bad: element",
+   "text": "q;+Xx"
+  },
+  {
+   "literature": [],
+   "name": "a bracket ends the change",
+   "new": [
+    {
+     "delta": {
+      "C": 1
+     },
+     "name": "q"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "C": 1
+     },
+     "name": "q"
+    }
+   ],
+   "text": "q;+C(H2"
+  },
+  {
+   "error": "cannot read the formula '2O'",
+   "name": "bad: starts with a digit",
+   "text": "q;+2O"
+  },
+  {
+   "literature": [],
+   "name": "a sign then a bracket",
+   "new": [],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {},
+     "name": "q"
+    }
+   ],
+   "text": "q;+("
+  },
+  {
+   "literature": [],
+   "name": "unicode",
+   "new": [
+    {
+     "delta": {
+      "C": 10,
+      "H": 3
+     },
+     "name": "ñ"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "",
+     "delta": {
+      "O": 1
+     },
+     "name": "épox"
+    },
+    {
+     "comment": "ünï",
+     "delta": {
+      "C": 10,
+      "H": 3
+     },
+     "name": "ñ"
+    }
+   ],
+   "text": "épox;+O\nñ;+C10H3;ünï"
+  },
+  {
+   "literature": [],
+   "name": "semicolons in the comment",
+   "new": [
+    {
+     "delta": {
+      "C": 6
+     },
+     "name": "s"
+    }
+   ],
+   "rows": [
+    {
+     "comment": "one",
+     "delta": {
+      "C": 6
+     },
+     "name": "s"
+    }
+   ],
+   "text": "s;+C6;one;two;three"
+  }
+ ]
+}
