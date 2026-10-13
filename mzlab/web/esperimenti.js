@@ -3,9 +3,9 @@
 // Classic script, loaded after stato.js. A new experiment type is one entry here plus its texts in modi.js (didattica = key of QMODI.M).
 const ESP = (() => {
   const voci = [
-    { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full" },
-    { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod" },
-    { id: "mrm", ordine: 3, etichetta: "MRM", didattica: "mrm" },
+    { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full", spettri: true },
+    { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod", spettri: true },
+    { id: "mrm", ordine: 3, etichetta: "MRM", didattica: "mrm", spettri: false },
   ];
   const voce = id => voci.find(v => v.id === id);
   return {

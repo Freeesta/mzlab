@@ -600,7 +600,7 @@ function bindFileReorder() {
 
 // «Profilo» / «Un punto per picco» on the card of a low-resolution full-scan file (a centroid file is one whose peaks are single points)
 function modeTag(f) {
-  if ((f.kind !== "full" && f.kind !== "ms2") || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
+  if (!(ESP.voce(f.kind) || {}).spettri || f.hr_profile || (window.HR && HR.isHr(f)) || (f.spectrum_mode !== "profile" && f.spectrum_mode !== "centroid")) return "";
   return `<small class="muted">${I18N.t(f.spectrum_mode === "profile" ? "files.mode.profile" : "files.mode.centroid")}</small>`;
 }
 function renderFileList() {
