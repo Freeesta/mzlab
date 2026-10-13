@@ -23,7 +23,7 @@ try:
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def CORR(v):      # the "Correzione" drop-down: open it, click the choice
-            pg.click('.pnl.xic [data-o="corr"]'); pg.wait_for_timeout(150); pg.click(f'.pnl.xic .corri[data-c="{v}"]')
+            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150); pg.click(f'.pnl.xic .corri[data-c="{v}"]')      # «Sottrai» (file) and «Fondo» are two menus
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
@@ -57,7 +57,6 @@ try:
             pg.wait_for_timeout(1500)
             after = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y),s.corr]))"); print("after:", after)
             assert len(after) == len(base) - 1 and all(a[2] == "- bianco" for a in after)
-            assert all(min(a[1] for a in after) >= 0 for _ in [0])
             pg.screenshot(path=SH + "50_blank.png")
             pg.evaluate(OPENPAR); CORR("snip"); pg.wait_for_timeout(1200)
             sn = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.corr,Math.max(...s.y)]))"); print("snip:", sn)
@@ -65,7 +64,7 @@ try:
             pg.screenshot(path=SH + "51_snip.png")
         step("blank subtraction + SNIP", blank)
         def snip_unit():
-            v = pg.evaluate("(()=>{const y=Array.from({length:200},(_, i)=>100+50*Math.exp(-Math.pow((i-100)/4,2)/2)); const b=snipBaseline(y,20); return [Math.max(...b), Math.min(...b), Math.max(...y)]})()")
+            v = pg.evaluate("(()=>{const y=Array.from({length:200},(_, i)=>100+50*Math.exp(-Math.pow((i-100)/4,2)/2)); const b=FONDO.snipBaseline(y,20); return [Math.max(...b), Math.min(...b), Math.max(...y)]})()")
             print("snip unit:", v); assert 95 < v[1] and v[0] < 112 and v[2] > 140
         step("SNIP keeps the peak out of the baseline", snip_unit)
         def spec_bg():

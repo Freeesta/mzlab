@@ -70,6 +70,11 @@
         const m = ev.data;
         if (m.type === "progress") return onProgress(m.text, m.frac, m);
         if (m.type === "step") return onProgress(m.text, null);
+        if (m.type === "notice") {            // a short notice of the worker (a profile file reduced to centroids): its text comes from the catalogs
+          let t = m.key; try { t = window.I18N.t(m.key, m.params || {}) || t; } catch (_) { /* the key is shown */ }
+          const d = document.createElement("div"); d.className = "tp-toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d);
+          setTimeout(() => d.classList.add("out"), 4200); setTimeout(() => d.remove(), 4800); return;
+        }
         if (m.type === "ready") { const p = pending.get("init"); pending.delete("init"); return p && p.res(); }
         const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
         m.error ? p.rej(new Error(m.error)) : p.res(m.result);
@@ -101,7 +106,8 @@
   }
   async function pageFiles() {
     const o = await opfsFiles(), have = new Set(o.map(f => f.name));
-    return o.concat((await idbFiles()).filter(f => !have.has(f.name)));
+    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it
+    return o.concat((await idbFiles()).filter(f => !have.has(f.name))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   }
   async function idbFiles() {
     try {
