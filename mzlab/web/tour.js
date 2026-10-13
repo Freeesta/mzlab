@@ -48,21 +48,23 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
 const TOUR = (() => {
   const STORAGE_KEY = "qqq.tour.lr";
 
+  // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
+  const openFileDrawer = () => {
+    if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
+      const wasOpen = BARRA.isOpen();
+      BARRA.show("file", { noFocus: true, instant: true });
+      return () => { if (!wasOpen) BARRA.close(false); };
+    }
+  };
   const STEPS_CAP1 = [
     {
       id: "file",
-      prep: () => {
-        // the file list is a drawer of the toolbar: the tour opens it for this step and closes it again when the step ends
-        if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
-          const wasOpen = BARRA.isOpen();
-          BARRA.show("file", { noFocus: true, instant: true });
-          return () => { if (!wasOpen) BARRA.close(false); };
-        }
-      },
+      prep: openFileDrawer,
       target: () => document.getElementById("sb-pane")
     },
     {
       id: "gruppi",
+      prep: openFileDrawer,
       target: () => document.querySelector("#flst .fgh")
     },
     {
@@ -97,7 +99,7 @@ const TOUR = (() => {
       },
       attesa: state => {
         const count = (typeof E !== "undefined" && E.panels) ? E.panels.filter(p => p.type === "xic").length : 0;
-        return count > state.count || document.querySelector(".pnl.xic") != null;
+        return count > state.count;
       }
     },
     {
