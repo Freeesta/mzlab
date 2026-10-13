@@ -31,6 +31,8 @@
     "../../mzlab/web/migra.js",
     "../../mzlab/web/origine.js",
     "../../mzlab/web/perf.js",
+    "../../mzlab/web/pfas-calc.js",
+    "../../mzlab/web/pfas.js",
     "../../mzlab/web/pulizia.js",
     "../../mzlab/web/qqq-db.js",
     "../../mzlab/web/qualita.js",
