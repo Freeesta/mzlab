@@ -17,6 +17,7 @@
     "../../mzlab/web/archivio.js",
     "../../mzlab/web/draw.js",
     "../../mzlab/web/errori.js",
+    "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
