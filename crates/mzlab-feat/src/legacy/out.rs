@@ -240,7 +240,9 @@ pub fn summary(d: &Dig, settings: &str, timing: &str) -> String {
     o.raw("{\"mode\":\"hr\",\"engine\":\"rust\",\"parent\":{\"formula\":")
         .str(&p.formula())
         .raw(",\"ion\":")
-        .str(&p.ion_formula());
+        .str(&p.ion_formula())
+        .raw(",\"adduct\":")
+        .str(&p.adduct);
     o.raw(",\"mz\":").num(round(p.mz, 4)).raw(",\"rt\":");
     o.opt(d.parent_rt.map(|r| round(r, 2)));
     o.raw(",\"name\":").str(&p.name).raw("},\"files\":");

@@ -142,12 +142,12 @@ async function classifyRust(names) {
   const f = await finder(), ix = await openIdx(names);
   try { return f.finder_classify(names, ix.read, ix.sizes); } finally { ix.close(); }
 }
-/** L1-L3 of the files, reusing the .mzfeatf of a .mzidx already detected @param {any} p @param {{name: string, path: string}[]} files @param {File[]} idx */
-async function detect(p, files, idx) {
-  const key = (/** @type {number} */ k) => `${files[k].name}|${idx[k].size}|${idx[k].lastModified}`;
+/** L1-L3 of the files, reusing the .mzfeatf of a .mzidx already detected @param {any} p @param {{name: string, path: string}[]} files @param {File[]} idx @param {string} recipe */
+async function detect(p, files, idx, recipe) {
+  const key = (/** @type {number} */ k) => `${files[k].name}|${idx[k].size}|${idx[k].lastModified}|${recipe}`;
   const todo = files.map((_, k) => k).filter(k => !detected.has(key(k)));
   if (todo.length) {
-    const got = await p.detectAll(todo.map(k => files[k]), "");
+    const got = await p.detectAll(todo.map(k => files[k]), recipe);
     todo.forEach((k, i) => detected.set(key(k), got[i]));
   }
   return files.map((_, k) => /** @type {Uint8Array} */ (detected.get(key(k))));
@@ -161,16 +161,17 @@ async function runRust(a) {
   const timing = /** @type {Record<string, number>} */ ({}), lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
   let t = performance.now();
   say(`Detecting the features of ${files.length} files...`);
-  const stored = await detect(p, files, idx); lap("feature", t); t = performance.now();
+  const recipe = JSON.parse(parentJson).adduct?.endsWith("-") ? '{"polarity":-1}' : "";       // an anion parent: the negative scans
+  const stored = await detect(p, files, idx, recipe); lap("feature", t); t = performance.now();
   say("Aligning the series...");
-  const table = await p.align(stored, paths, ""); lap("align", t); t = performance.now();
+  const table = await p.align(stored, paths, recipe); lap("align", t); t = performance.now();
   say("Searching the products of the parent...");
   let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp.json")).arrayBuffer());
   const tr = (a[3] || "").trim();
   if (tr) rules = f.finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
-  const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: NaN, recipe: "", structure: plan.structure });
+  const h = await p.hypotheses({ stored, paths, rules, parent: plan.formula, parentRt: NaN, recipe, structure: plan.structure });
   const minutes = plan.minutes.map((/** @type {number | null} */ m) => (m == null ? NaN : m));
-  const e = await p.evidence({ table, state: h.state, minutes, parentMz: NaN, parentRt: NaN, recipe: "" }); lap("proofs", t); t = performance.now();
+  const e = await p.evidence({ table, state: h.state, minutes, parentMz: NaN, parentRt: NaN, recipe }); lap("proofs", t); t = performance.now();
   say("Ranking the candidates...");
   const ix = await openIdx(plan.lc);
   try { dig = f.finder_dig(filesJson, parentJson, e.table, h.registry, ix.read, ix.sizes); } finally { ix.close(); }
