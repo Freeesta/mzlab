@@ -1,3 +1,4 @@
+// @ts-strict
 // The files and the session of the browser version, answered by the Rust engine. browser.js asks this module: upload, the list of the files, the session (explore, meta, remove, new), the state and the notebook are answered here, from the
 // scan table and the index that the Rust engine reads (rust-worker.js, `lr_*` operations; files and indexes live in OPFS, archivio.js).
 // What this module cannot answer it returns null for: browser.js then answers with the error `err.route.unavailable`.
@@ -8,7 +9,7 @@ const WORKDIR = "/work/sessione";
 const ACCEPT = /\.(mzml|dam)$/i;
 
 // the developer text that Python's UserError carries for the errors of /api/formula (the page translates the key)
-const formulaText = ({ error_key: k, params: p = {} }) => ({
+const formulaText = ({ error_key: k, params: p = /** @type {any} */ ({}) }) => ({
   "err.formula.empty": "empty formula",
   "err.formula.unreadable": `cannot read the formula '${p.formula}'`,
   "err.formula.element": `unknown element '${p.element}' in '${p.formula}'`,
@@ -28,7 +29,7 @@ export function createLr({ rb }) {
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const api = { files };
   const rpc = async (msg, onp) => {
-    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
+    const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);
     if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
     if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
@@ -39,7 +40,7 @@ export function createLr({ rb }) {
   const sorted = () => [...files.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   const state = () => ({ error: null, phase: "start", app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION });
   const session = () => ({ session: items, app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION, commit: "dev" });
-  const base = n => String(n || "").split(/[\\/]/).pop();
+  const base = n => String(n || "").split(/[\\/]/).pop() || "";
   // App.safe_name: the name of a file we accept, or null
   const safeName = name => {
     const n = base(name).trim();

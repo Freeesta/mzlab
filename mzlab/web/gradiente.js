@@ -1,3 +1,4 @@
+// @ts-strict
 // LC gradient (%B) of a file: read from the .dam by the server, or typed / pasted / imported by the student here (a .raw script, a CSV, the course method).
 // mzML files carry no gradient; Thermo .raw files keep it as UTF-16 text of the Chromeleon script (the first ~2 MB are read in the browser, the file is neither
 // opened nor copied). The model is {source, points: [{t, b, flow?, curve?}], run_time?, solvents?}; the server keeps it per file (api/gradient) and the notebook
@@ -63,7 +64,7 @@ function bind(f, again) {
   const save = async (model, all) => { try { await set(f, model, all); again(); } catch (e) { err(e); } };
   const ask = (accept, onText, binary) => {
     const inp = document.createElement("input"); inp.type = "file"; inp.accept = accept;
-    inp.onchange = async () => { const fl = inp.files[0]; if (fl) { try { await onText(fl); } catch (e) { err(e); } } };
+    inp.onchange = async () => { const fl = /** @type {FileList} */ (inp.files)[0]; if (fl) { try { await onText(fl); } catch (e) { err(e); } } };
     inp.click();
   };
   const parse = async (text, fmt) => (await post("api/gradient_parse", { text, fmt })).gradient;
@@ -81,7 +82,7 @@ function bind(f, again) {
         save({ source: "manual", points: pts.map(p => ({ t: String(p.t).replace(",", "."), b: String(p.b).replace(",", "."), flow: p.flow == null ? null : String(p.flow).replace(",", ".") })) }, Q("#grad-all").checked);
       };
       ed.onpaste = async e => {                              // a block copied from Excel: time TAB %B [TAB flow] per line
-        const t = (e.clipboardData || window.clipboardData).getData("text"); if (!/\n|\t/.test(t.trim())) return;
+        const t = (e.clipboardData || /** @type {any} */ (window).clipboardData).getData("text"); if (!/\n|\t/.test(t.trim())) return;
         e.preventDefault();
         try { draft = toDraft(await parse(t, "csv")); paint(); } catch (er) { err(er); }
       };
@@ -129,7 +130,7 @@ function curve(p) {
 }
 function at(m, t) {                                          // {b, flow?} on the straight ramps; null outside the programmed time
   const pts = m.points; if (!pts.length || t < pts[0].t || t > pts[pts.length - 1].t) return null;
-  let r = null;
+  /** @type {{ b: number, flow?: number } | null} */ let r = null;
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1]; if (t < a.t || t > b.t) continue;
     const w = b.t === a.t ? 1 : (t - a.t) / (b.t - a.t);
@@ -211,12 +212,12 @@ function draw(p, g, a) {
 // the box that follows the mouse near the curve (8 px)
 function hover(p, t, py) {
   if (p.overlay === "press") return hoverPress(p, t, py);
-  const r = reading(p, t), a = p._a; if (!r || !a) return "";
+  const r = /** @type {any} */ (reading(p, t)), a = p._a; if (!r || !a) return "";
   const ph = a.H - M.t - M.b, Y = v => a.H - M.b - v / 100 * ph, vals = [r.b, r.bcol].filter(v => v != null);
   if (!vals.some(v => Math.abs(Y(v) - py) <= 8)) return "";
   return `<div><i style="background:${colorOf(p)}"></i>${T("grad.read", { t: t.toFixed(2), b: vals.length === 2 ? `${r.b.toFixed(1)} / ${r.bcol.toFixed(1)}` : vals[0].toFixed(1) })}${r.flow != null ? " · " + r.flow.toFixed(2) + " mL/min" : ""}</div>`;
 }
-const cursorText = p => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
+const cursorText = p => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: /** @type {number} */ (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
 
 const exportState = () => (NB.gradienti && Object.keys(NB.gradienti).length ? NB.gradienti : null);
 function importState(o) { if (o && typeof o === "object") { NB.gradienti = { ...(NB.gradienti || {}), ...o }; forget(); nbSave(); } }

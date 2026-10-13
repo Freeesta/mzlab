@@ -1,3 +1,4 @@
+// @ts-strict
 // Smooth layout changes without redrawing the plots on every frame: FLIP with transform only (Web Animations API).
 // The layout jumps to its final state at once (one refit + redraw), then the elements slide and stretch from where they were.
 // Tokens (--t-med, --ease-out) come from transizioni.css; duration 0 (reduced motion) or the first paint = no animation.
@@ -54,10 +55,10 @@ function watchPanels() {
   const born = new WeakSet();
   const opt = { attributes: true, attributeFilter: ["style"], attributeOldValue: true };
   mo = new MutationObserver(recs => {
-    const skip = suppress || pressed || still(), seen = new Set(), jobs = [];
+    const skip = suppress || pressed || still(), seen = new Set(), jobs = /** @type {any[]} */ ([]);
     for (const r of recs) {
-      if (r.type === "childList") { r.addedNodes.forEach(n => { if (n.classList && n.classList.contains("pnl")) { born.add(n); mo.observe(n, opt); } }); continue; }
-      const el = r.target;
+      if (r.type === "childList") { r.addedNodes.forEach((/** @type {any} */ n) => { if (n.classList && n.classList.contains("pnl")) { born.add(n); mo.observe(n, opt); } }); continue; }
+      const el = /** @type {HTMLElement} */ (r.target);
       if (skip || seen.has(el) || el.classList.contains("max")) continue;
       seen.add(el);
       const a = geom(r.oldValue), b = geom(el.getAttribute("style"));
