@@ -3,7 +3,7 @@
 document.title = I18N.t("app.title", { app: window.APP_NAME || "" });
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
-let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
+let ldTimer = null, ldDotTimer = null, ldShown = "", ldSince = 0, ldBag = [], ldLast = -1;
 // data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), advancing and weaving together.
 // The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
 const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
@@ -56,7 +56,12 @@ function ldRefresh() {
   const ph = window.qqPhaseCur, cur = ldMsg || (ph && window.I18N ? { text: I18N.t(ph.key, ph.params), pct: ph.pct } : null);
   const el = document.getElementById("ldmsg");
   if (!el || window.qqFailed) return;
-  if (!cur) { el.setAttribute("aria-live", "off"); if (!ldTimer) return; return ldNext(); }
+  if (!cur) {                                                     // no status text: a phrase keeps running as it is; after a status text the SAME phrase comes back (never a new one before its time)
+    el.setAttribute("aria-live", "off");
+    if (ldTimer && ldShown === "msg") ldShow(ldLast);
+    return;
+  }
+  ldShown = "msg";
   clearInterval(ldDotTimer); const pct = cur.pct == null ? null : Math.max(0, Math.min(100, Math.round(cur.pct)));
   el.setAttribute("aria-live", "polite"); el.textContent = cur.text;
   if (pct != null) { const s = document.createElement("span"); s.setAttribute("aria-hidden", "true"); s.textContent = ` ${pct}%`; el.appendChild(s); }   // the percentage is shown, not announced at every tick
@@ -71,10 +76,13 @@ function ldNext() {
     ldBag = Array.from({ length: NPHRASES }, (_, i) => i).sort(() => Math.random() - 0.5);
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
   }
-  ldLast = ldBag.pop();
-  const el = document.getElementById("ldmsg"); el.innerHTML = I18N.t(`load.phrase.${ldLast + 1}`);
+  ldShow(ldBag.pop());
+}
+function ldShow(i) {                                              // phrase i (0-based) with its three dots
+  ldLast = i; ldShown = "phrase";
+  const el = document.getElementById("ldmsg"); el.innerHTML = I18N.t(`load.phrase.${i + 1}`);
   const dots = document.createElement("span");
-  for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
+  for (let k = 0; k < 3; k++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
   el.appendChild(dots);
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
