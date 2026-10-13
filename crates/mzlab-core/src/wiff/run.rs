@@ -9,6 +9,7 @@ use crate::centroidi::{self, Buf};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
+use crate::metodo::sha1_hex;
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter};
 
@@ -104,10 +105,15 @@ impl Wiff {
 
     /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
     pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, centroid: bool, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
+        let mut scan = Window::new(scan, self.scan_len);
+        let (instrument, run_params) = self.instrument_terms();
         let header = Header {
             run: name.trim_end_matches(".wiff").to_string(),
             sources: vec![name.to_string(), format!("{name}.scan")],
-            instrument: Some(("MS:1000651".into(), "3200 QTRAP".into())),
+            source_sha1: self.wiff_sha1.iter().cloned().chain(sha1_hex(&mut scan, self.scan_len).ok()).collect(),
+            acquired: self.created.clone(),
+            run_params,
+            instrument: Some(instrument),
             components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
                 .iter()
                 .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
@@ -116,7 +122,6 @@ impl Wiff {
             centroided: centroid,
             ..Default::default()
         };
-        let mut scan = Window::new(scan, self.scan_len);
         let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };
         let mut buf = Buf::default();
         let mut w = MzmlWriter::new(out, &header)?;
@@ -155,6 +160,16 @@ impl Wiff {
         }
         w.finish()?;
         Ok(())
+    }
+
+    /// The instrument of the header: the CV term of the model the Log names (the known models), otherwise the generic `instrument model` and
+    /// the name as a userParam of the run; without a Log, the 3200 QTRAP this reader was written for.
+    fn instrument_terms(&self) -> ((String, String), Vec<(String, String)>) {
+        match self.model.as_deref() {
+            None => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            Some(m) if m.replace(' ', "").contains("3200QTRAP") => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            Some(m) => (("MS:1000031".into(), "instrument model".into()), vec![("instrument model".into(), m.to_string())]),
+        }
     }
 
     fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {

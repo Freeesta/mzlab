@@ -201,3 +201,27 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
     assert!(after > 0 && after < before, "{after} against {before}");
     assert_eq!(got.chromatograms, want.chromatograms);
 }
+
+/// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
+#[test]
+fn the_header_of_a_real_file_carries_model_time_and_hashes() {
+    let Some(d) = dati() else { return };
+    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else { return };
+    let ole = container(bytes.clone(), "MRM.wiff").unwrap();
+    let mut scan = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();
+    let s = samples(&ole)[0];
+    let mut w = Wiff::open(&ole, "MRM.wiff", Some(scan.len() as u64), s).unwrap();
+    w.wiff_sha1 = Some(ole.sha1_hex());
+    let mut xml = Vec::new();
+    w.to_mzml(&mut scan, &mut xml, "MRM.wiff").unwrap();
+    let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
+    assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
+    assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");
+    let hashes = mzlab_core::metodo::source_sha1s(&head);
+    assert_eq!(hashes.len(), 2);
+    assert_eq!(hashes[0].1, ole.sha1_hex());
+    let n = scan.len() as u64;
+    assert_eq!(hashes[1].1, mzlab_core::metodo::sha1_hex(&mut scan, n).unwrap());
+    eprintln!("model {:?} created {:?}", w.model, w.created);
+}

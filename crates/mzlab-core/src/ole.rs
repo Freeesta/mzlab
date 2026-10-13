@@ -171,6 +171,15 @@ impl Ole {
         self.streams.iter().map(|(p, _)| p.as_str())
     }
 
+    /// SHA-1 (lower-case hex) of the whole container file.
+    pub fn sha1_hex(&self) -> String {
+        use sha1::{Digest as _, Sha1};
+        Sha1::digest(&self.data)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    }
+
     pub fn has(&self, path: &str) -> bool {
         self.streams.iter().any(|(p, _)| p == path)
     }
