@@ -1,5 +1,5 @@
 """Controls of the RT x m/z map: they sit in the toolbar of the panel head (same .bt size as the others), nothing floats over the plot, there is no
-«How it is extracted» button, and zoom, reset, lock and full screen still work."""
+«How it is extracted» button, and zoom, reset, lock (L) and full screen still work."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -31,8 +31,8 @@ try:
               return {n:bs.length,inHead:bs.every(b=>b.closest('.hd')),overlap:ov,floating:bs.some(b=>b.closest('.mzgrid')),
                 h:bs.map(b=>b.getBoundingClientRect().height),ho:o.map(b=>b.getBoundingClientRect().height),names:bs.map(b=>b.dataset.nav),explain:!!el.querySelector('[data-nav=mapexplain]'),
                 row:bs.every(b=>{const r=b.getBoundingClientRect();return r.top>=hd.top-1&&r.bottom<=hd.bottom+1})}})()""")
-            assert r["n"] >= 4 and r["inHead"] and not r["floating"] and not r["overlap"] and r["row"], r
-            assert r["names"][:3] == ["mapzin", "mapzout", "maplock"] and not r["explain"], r
+            assert r["n"] >= 3 and r["inHead"] and not r["floating"] and not r["overlap"] and r["row"], r
+            assert r["names"][:2] == ["mapzin", "mapzout"] and "maplock" not in r["names"] and not r["explain"], r
             assert abs(r["h"][0] - r["ho"][0]) <= 1, r
         step("controls are in the panel head, none over the plot, no «How it is extracted»", place)
         def works():
@@ -42,12 +42,13 @@ try:
             pg.click(".pnl.map [data-nav=mapzout]"); settle(); z3 = z(); assert not z3[0] or z3[0][1] - z3[0][0] > z2[0][1] - z2[0][0], z3
             pg.click(".pnl.map [data-nav=mapzin]"); settle()
             pg.click(".pnl.map [data-a=fit]"); settle(); assert z() == [None, None], z()
-            pg.click(".pnl.map [data-nav=maplock]"); settle(); assert pg.evaluate(f"!!{M}._mz.lock") and pg.get_attribute(".pnl.map [data-nav=maplock]", "aria-pressed") == "true"
-            pg.click(".pnl.map [data-nav=maplock]"); settle(); assert not pg.evaluate(f"!!{M}._mz.lock")
+            assert pg.locator(".pnl.map [data-nav=maplock]").count() == 0                  # no padlock button on the 2D map: the lock is in the menu and on L
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("l"); settle(); assert pg.evaluate(f"!!{M}._mz.lock")
+            pg.keyboard.press("l"); settle(); assert not pg.evaluate(f"!!{M}._mz.lock")
             w0 = pg.evaluate(f"{M}.el.getBoundingClientRect().width")
             pg.click(".pnl.map [data-a=max]"); settle(); assert pg.evaluate(f"{M}.el.getBoundingClientRect().width") > w0 + 50
             pg.click(".pnl.map [data-a=max]"); settle()
-        step("zoom, reset, lock and full screen still work", works)
+        step("zoom, reset, lock (L) and full screen still work", works)
         b.close()
     r.close()
 except Exception as e:
