@@ -33,7 +33,7 @@ function attach(p) {
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
     p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-    if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
   };
   // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
   if (p.ch) {

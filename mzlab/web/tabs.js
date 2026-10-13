@@ -54,7 +54,7 @@ function setTab(t, quiet, motivo) {
   renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav();
   // @ts-expect-error toolbar() of explore.js is also window.toolbar (a BarProp) for lib.dom
   toolbar();
-  requestAnimationFrame(() => redrawAll());
+  FRAME.next(() => redrawAll());
   uiSave();
 }
 
@@ -146,12 +146,12 @@ function defaultLayoutTab(t) {
     let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
     const fix = () => {
       if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;      // the student already resized them
-      if (!dp.offsetParent) { if (++tries < 60) requestAnimationFrame(fix); return; }
+      if (!dp.offsetParent) { if (++tries < 60) FRAME.next(fix); return; }
       const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
       const g = pnlGap(); if (c.h + sp.h + g <= av) return;
       c.h = Math.max(190, Math.round((av - g) * 0.5)); sp.h = Math.max(190, Math.round(av - g - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
-    requestAnimationFrame(fix);
+    FRAME.next(fix);
     if (window.BANCO) BANCO.afterLayout();       // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
