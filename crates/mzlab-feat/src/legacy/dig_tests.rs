@@ -31,7 +31,13 @@ fn parent_row_by_rt_and_by_t0() {
         area: vec![8e6, 1e6, 1e6, 9e6],
         ..Aligned::default()
     };
-    let f = |t: f64| FileIn { name: String::new(), label: String::new(), kind: "hr".into(), time: Some(t), t };
+    let f = |t: f64| FileIn {
+        name: String::new(),
+        label: String::new(),
+        kind: "hr".into(),
+        time: Some(t),
+        t,
+    };
     let files = [f(0.0), f(30.0)];
     assert_eq!(parent_row(&t, &p, &files), Some(0), "the t0 decides");
     assert_eq!(parent_row(&t, &p, &[]), Some(1), "no t0: the whole series");
@@ -65,9 +71,17 @@ fn isf_rows_are_the_marked_ones() {
         n_files: 1,
         mz: vec![257.102, 200.0, 113.06],
         rt: vec![13.4, 5.0, 13.3],
-        tp: TpBlock { status: vec![ST_ISF, ST_TP, ST_ISF], ..TpBlock::default() },
+        tp: TpBlock {
+            status: vec![ST_ISF, ST_TP, ST_ISF],
+            ..TpBlock::default()
+        },
         ..Aligned::default()
     };
     assert_eq!(isf_rows(&t), vec![2, 0]);
-    assert!(isf_rows(&Aligned { n_files: 1, mz: vec![1.0], ..Aligned::default() }).is_empty());
+    assert!(isf_rows(&Aligned {
+        n_files: 1,
+        mz: vec![1.0],
+        ..Aligned::default()
+    })
+    .is_empty());
 }

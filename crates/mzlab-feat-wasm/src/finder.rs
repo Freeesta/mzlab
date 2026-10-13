@@ -123,7 +123,11 @@ pub fn finder_parent(files_json: &str, parent_json: &str, table: &[u8]) -> Resul
     let p = legacy::series::parent(parent_json).map_err(user)?;
     let peak = legacy::parent_peak(files_json, parent_json, table).map_err(user)?;
     let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"mz\":").num(p.mz).raw(",\"rt\":").opt(peak.map(|x| x.1)).raw("}");
+    o.raw("{\"mz\":")
+        .num(p.mz)
+        .raw(",\"rt\":")
+        .opt(peak.map(|x| x.1))
+        .raw("}");
     Ok(o.0)
 }
 

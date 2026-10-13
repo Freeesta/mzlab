@@ -66,7 +66,11 @@ fn steps_of_the_table() {
         "the lowest step when none is reached"
     );
     let ctl = |fc: f64| t.grade(Kind::Controls, fc, None).points;
-    assert_eq!((ctl(3.5), ctl(1.5), ctl(0.5), ctl(f64::NAN)), (2.0, 1.0, 0.0, 0.0), "the controls weigh: 8 times over the blank, 2 times");
+    assert_eq!(
+        (ctl(3.5), ctl(1.5), ctl(0.5), ctl(f64::NAN)),
+        (2.0, 1.0, 0.0, 0.0),
+        "the controls weigh: 8 times over the blank, 2 times"
+    );
     assert_eq!((t.mass_ppm, t.ms2_margin), (5.0, 0.05));
 }
 

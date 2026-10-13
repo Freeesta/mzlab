@@ -166,7 +166,9 @@ pub(super) fn parent_row(t: &Aligned, p: &Parent, files: &[FileIn]) -> Option<us
 
 /// The rows that the gate of the TP view took for in-source fragments of the parent or of a product, by m/z.
 fn isf_rows(t: &Aligned) -> Vec<usize> {
-    let mut rows: Vec<usize> = (0..t.len()).filter(|&r| t.tp.status.get(r) == Some(&ST_ISF)).collect();
+    let mut rows: Vec<usize> = (0..t.len())
+        .filter(|&r| t.tp.status.get(r) == Some(&ST_ISF))
+        .collect();
     rows.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]));
     rows
 }
