@@ -1,6 +1,6 @@
 """The endpoints of the program, independent of the transport.
 
-`dispatch` is used by the test server (tools/dev_server.py) and by the references of the tests (tests_e2e/pyref.py); the site and the desktop
+`dispatch` is used by the references of the tests (tests_e2e/pyref.py); the site and the desktop
 app answer with the Rust engine, which the parity tests compare with this one.
 """
 from __future__ import annotations
