@@ -32,9 +32,11 @@ const minutes = Float64Array.from(files, f => { const m = /_t(\d+)min/.exec(base
 feat.build_evidence_to((_, off, len) => { const b = new Uint8Array(len); fs.readSync(fd, b, 0, len, off); return b; }, fs.fstatSync(fd).size, h, minutes, 345.253655, 1.0, recipe, s.write, budget);
 fs.closeSync(s.fd); mark("proofs", featMem);
 
-// the engine: the index of a file open, its TIC and an XIC, a scan list
+// the engine: the index of a file open, its TIC and an XIC, a scan list, then the whole map and a region of the session (the cache is one LRU)
 const e = new eng.Engine();
 e.open_index(0, sizes[0], (off, len) => readK(0)(0, off, len)); mark("engine_open", engMem);
 e.route(0, "/api/chrom", "k=0&kind=tic&level=1"); e.index_xic(0, 1, 345.2536, 0.35); mark("engine_tic_xic", engMem);
 e.route(0, "/api/scanlist", "k=0&level=1");  mark("engine_scanlist", engMem);
+const items = JSON.stringify([{ slot: 0, label: "a", time: 0, full: true }]);
+e.map_route("/api/map", items, "k=0&level=1"); e.map_route("/api/map", items, "k=0&level=1&rt0=1&rt1=20&mz0=200&mz1=400&nrt=1024&nmz=512"); e.trim_cache(); mark("engine_map", engMem);
 console.log(JSON.stringify(peaks));

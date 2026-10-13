@@ -8,7 +8,8 @@
   "proofs": 33554432,
   "engine_open": 33554432,
   "engine_tic_xic": 33554432,
-  "engine_scanlist": 33554432
+  "engine_scanlist": 33554432,
+  "engine_map": 33554432
  },
  "completo": {
   "detect": 33554432,
@@ -17,7 +18,8 @@
   "proofs": 45154304,
   "engine_open": 33554432,
   "engine_tic_xic": 33554432,
-  "engine_scanlist": 33554432
+  "engine_scanlist": 33554432,
+  "engine_map": 33554432
  },
  "completo_blocchi": {
   "detect": 33554432,
@@ -26,6 +28,7 @@
   "proofs": 33554432,
   "engine_open": 33554432,
   "engine_tic_xic": 33554432,
-  "engine_scanlist": 33554432
+  "engine_scanlist": 33554432,
+  "engine_map": 33554432
  }
 }
