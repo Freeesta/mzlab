@@ -1,6 +1,6 @@
 // TPMINE-PRIVATE  «Run» section of the panel Pipeline (window.PIPER): runs L1-L9 (feat-run.js, pool of PIPE) on every .mzidx in OPFS, shows the result with PIPEV (list of identities or, without the
 // gate of quality, of rows), the detail of a row (proofs, cells per file, XIC and MS2 of the file chosen, from the routes api/xic and api/spectrum of the file open in Data) and sends the table to
-// the window of the feature tables (UNT, model «mzlab»). Texts in English (mzFinder convention).
+// the window of the feature tables (UNT, model «mzlab»). Above the run: the roles and times of the files (campioni/2, TP_Mine/files/finder-ruoli.js; the Rust proposes and checks). Texts in English (mzFinder convention).
 (() => {
   "use strict";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -12,7 +12,12 @@
     <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="e.g. C9H11NO2" autocomplete="off"><span class="why">only with the gate open: hypotheses of transformation</span></label>
       <label>Parent SMILES<input id="pipe-psmi" type="text" placeholder="optional" autocomplete="off" spellcheck="false"><span class="why">the structure: fragments and groups of the rules</span></label>
       <label>Parent m/z<input id="pipe-pmz" type="number" step="any"></label><label>Parent RT (min)<input id="pipe-prt" type="number" step="any"></label>
-      <label>Treatment time of each file (min, empty = control)<input id="pipe-times" type="text" autocomplete="off"></label></div>
+</div>
+    <div id="pipe-roles" class="roles"><style>#pipe-roles table{border-collapse:collapse;font-size:12px}#pipe-roles th,#pipe-roles td{padding:2px 6px;text-align:left}#pipe-roles tr.pr-prop input{background:color-mix(in srgb,var(--warn) 30%,transparent)}
+      #pipe-roles input,#pipe-roles select{min-height:28px;min-width:28px}#pipe-roles input.pr-time{width:6em}#pr-warn{font-size:12px}#pr-warn .w{color:var(--warn)}#pr-warn .e{color:var(--bad)}</style>
+      <div class="row"><strong>Roles and times</strong><label>Time unit <select id="pr-unit" aria-label="Unit of the times of the files">${["min", "s", "h", "d"].map(u => `<option>${u}</option>`).join("")}</select></label>
+        <button type="button" id="pr-all" title="Accept the times proposed from the names (yellow)">Confirm times</button></div>
+      <table id="pr-tab"><caption class="mut">Role and treatment time of each file; a time proposed from the name is yellow until you confirm it (Enter or «Confirm times»)</caption></table><div id="pr-warn" role="status"></div></div>
     <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
     <div id="pipe-res"></div></details>`;
 
@@ -20,8 +25,10 @@
     st.ctx = ctx; box.innerHTML = html(); st.box = box;
     $("#pipe-run-go").onclick = () => run();
     $("#pipe-again").onclick = again; ctx.onRefresh(armAgain); armAgain();
-    const sync = async () => { st.files = await ctx.listIdx(); $("#pipe-times").value = st.files.map(n => { const m = /_t(\d+)(?:min)?\.mzidx$/.exec(n); return m ? String(+m[1]) : ""; }).join(","); };
+    const sync = async () => { st.files = await ctx.listIdx(); await loadRoles(); };
     ctx.onRefresh(sync); sync();
+    $("#pr-all").onclick = () => edit(() => st.R.confirmAll(st.cs));
+    $("#pr-unit").onchange = () => edit(() => st.R.setUnit(st.cs, $("#pr-unit").value));
   }
   const msg = (t, err) => { const e = $("#pipe-run-msg"); if (e) { e.textContent = t || ""; e.className = err ? "err" : "mut"; } };
 
@@ -43,15 +50,16 @@
   async function parentOf(files) {
     const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
     if (!st.gated || !f || !rules) return null;
-    const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; }, t = $("#pipe-times").value.split(",").map(s => s.trim());
+    const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
-    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => (t[i] === "" || t[i] == null ? NaN : +t[i])),
+    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minuti[i] : null; return m == null ? NaN : m; }),
       smiles, structure: await structureOf(smiles) };
   }
   async function run(op) {
     if (st.busy) return;
     const files = st.files.map(n => ({ name: n, path: "mzlab/idx/" + n }));
     if (!files.length) return msg("No .mzidx file: open an mzML in Data first.", true);
+    if (!st.cs || st.block) return msg(st.block || "The roles and times are not ready.", true);
     st.busy = true; st.gated = st.ctx.gate().ok; $("#pipe-run-go").disabled = $("#pipe-again").disabled = true; $("#pipe-res").innerHTML = "";
     try {
       const pool = await st.ctx.pool(), url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-run.js"]], { type: "text/javascript" })), mod = await import(url);
@@ -61,7 +69,50 @@
       msg(`${st.data.rows.toLocaleString("en")} rows in ${(out.totalMs / 1000).toFixed(1)} s`); show();
       await recordRun(recipe, parent, op);
     } catch (e) { msg(st.ctx.msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || "")), true); }
-    st.busy = false; $("#pipe-run-go").disabled = false; armAgain();
+    st.busy = false; $("#pipe-run-go").disabled = !!st.block; armAgain();
+  }
+
+  // ------------------------------------------------------------ roles and times (campioni/2): the Rust proposes and checks, the page packs and shows
+  const WARN = { noT0: "No t0: more false positives", noBlank: "No blank: background stays", onePoint: "One time point: no kinetics", timeUnconfirmed: "Times not confirmed", timeMissing: "Time missing",
+    t0WithTime: "A t0 has a time other than 0", noControls: "No t0, blank or dark control", noTreated: "No treated sample" };
+  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem("qqq.qaqc") || "{}").roles || null; } catch (_) { return null; } };
+  const fail = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {}); };
+  async function loadRoles() {
+    try {
+      if (!st.R) { const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })); st.R = await import(url); }
+      const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base);
+      st.call = (op, j) => { try { return m.campioni(op, j); } catch (e) { throw fail(e); } };
+      st.cs = st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
+      drawRoles();
+    } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
+  }
+  /** one change of the model: apply it, keep it in the notebook, draw again with the focus where it was */
+  function edit(change, focusId) {
+    if (!st.cs) return;
+    change(); if (typeof NB !== "undefined") { st.R.store(NB, st.cs); if (typeof nbSave === "function") nbSave(); }
+    drawRoles(focusId);
+  }
+  function drawRoles(focusId) {
+    const tab = $("#pr-tab"), warn = $("#pr-warn"), go = $("#pipe-run-go"); if (!tab) return;
+    const cs = st.cs || [], R = st.R;
+    tab.innerHTML = tab.querySelector("caption").outerHTML + (cs.length ? `<tr><th scope="col">File</th><th scope="col">Role</th><th scope="col">Time</th></tr>` : "")
+      + cs.map((c, i) => { const timed = ["sample", "t0", "dark"].includes(c.tipo), prop = timed && c.tempo != null && !c.tempo_confermato, n = esc(st.files[i]);
+        return `<tr${prop ? ' class="pr-prop"' : ""}><td>${n}</td><td><select class="pr-role" data-i="${i}" id="pr-r${i}" aria-label="Role of ${n}">${R.ROLES.map(r => `<option${r === c.tipo ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
+          + `<td><input class="pr-time" data-i="${i}" id="pr-t${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n}"${timed ? "" : " disabled"} value="${c.tempo == null ? "" : c.tempo}"${prop ? ' title="Proposed from the name: Enter confirms"' : ""}></td></tr>`; }).join("");
+    const u = cs.find(c => c.tempo != null); if (u) $("#pr-unit").value = u.unita_tempo;
+    tab.querySelectorAll(".pr-role").forEach(e => { e.onchange = () => edit(() => R.setRole(st.cs, +e.dataset.i, e.value), e.id); });
+    tab.querySelectorAll(".pr-time").forEach(e => { e.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); edit(() => R.setTime(st.cs, +e.dataset.i, e.value.trim() === "" ? null : parseFloat(e.value.replace(",", ".")), $("#pr-unit").value), e.id); } }; });
+    let list = [], block = "";
+    if (st.cs) {
+      try {
+        const v = R.check(st.call, cs); st.tp = R.forTp(st.call, cs);
+        const by = new Map(); v.avvisi.filter(a => WARN[a.codice]).forEach(a => { const k = a.codice; by.set(k, { sev: a.gravita, n: (by.get(k) || { n: 0 }).n + 1 }); });
+        list = [...by].map(([k, o]) => `<span class="${o.sev === "error" ? "e" : "w"}">${esc(WARN[k])}${o.n > 1 ? " (" + o.n + ")" : ""}</span>`);
+        if (v.bloccante) block = [...by].filter(([, o]) => o.sev === "error").map(([k]) => WARN[k]).join("; ");
+      } catch (e) { block = st.ctx.msg(e.key || "error.featFailed", e.params); }
+    } else block = st.block || "The roles of the files are not ready.";
+    st.block = block; warn.innerHTML = list.join(" · "); if (go) { go.disabled = !!st.busy || !!block; go.title = block ? "Run is off: " + block : ""; }
+    if (focusId) { const f = $("#" + focusId); if (f) f.focus(); }
   }
 
   // ------------------------------------------------------------ recipe: the record goes to the log of operations (.mzflow), «Re-apply» runs the last one again
@@ -70,7 +121,7 @@
     const rec = await window.PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = window.PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
-    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); }
+    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(st.R.canonical(st.call, st.cs))); }
     st.last = rec; armAgain();
   }
   const lastOp = () => (typeof NB !== "undefined" && window.WORKFLOW ? window.PIPEREC.lastOp(NB.ops, window.WORKFLOW.checkFeatureOp) : null);
@@ -79,7 +130,7 @@
     const op = lastOp(); if (!op) return;
     st.ctx.apply(op.parametri);
     const g = op.genitore; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : ""; $("#pipe-psmi").value = g && g.smiles ? g.smiles : "";
-    $("#pipe-times").value = g ? g.minuti.map(m => (m == null ? "" : m)).join(",") : $("#pipe-times").value; run(op);
+    if (g && st.cs) edit(() => g.minuti.forEach((m, i) => { if (m != null && st.cs[i]) { st.R.setRole(st.cs, i, m === 0 ? "t0" : "sample"); st.R.setTime(st.cs, i, m, "min"); } })); run(op);
   }
 
   // ------------------------------------------------------------ result: toolbar, list, detail
@@ -99,7 +150,7 @@
   async function tableSteps() {
     const gate = st.ctx.gate(), chart = st.ctx.chart, say = e => st.ctx.msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || ""));
     try {
-      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], pol: st.ctx.values().polarity });
+      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity });
       st.session = session; const g = { ...gate, table: gate.table === true };
       /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });

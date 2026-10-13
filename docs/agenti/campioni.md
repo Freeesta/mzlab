@@ -32,5 +32,10 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - I tempi della sessione e del `.mzflow` sono confermati (scritti dall'utente), quelli di `campioni/1` no. Un `sample` a 0 minuti diventa `t0`; bianchi, standard, QC e infusioni perdono il tempo; la replica scritta resta, le altre si numerano.
 
 ## Binding
-- Una funzione per motore: `campioni(op, json)` in `mzlab-wasm/src/campioni.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp` (un `campioni/2`), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
-- Nessuna pagina li chiama ancora; `mzlab-core/src/project.rs` resta per la parità col Python del programma principale.
+- Una funzione per motore: `campioni(op, json)` in `mzlab-wasm/src/campioni.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` (`{"files":[{"name","sha256","kind"}]}`), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
+- `mzlab-core/src/project.rs` resta per la parità col Python del programma principale.
+
+## Pannello Pipeline di mzFinder (`TP_Mine/files/finder-ruoli.js`, `TP_Mine/js/34_pipeline_run.js`)
+- Il taccuino tiene i ruoli in `NB.campioni` (`campioni/2` canonico, una voce per file, chiave = nome `.mzML`). `build` parte da lì; per i file senza voce migra `NB.session` (v1) e i ruoli di `qqq.qaqc` con `da_legacy` (tempi confermati) e propone dai nomi gli altri con `proponi` (tempi non confermati).
+- Il pannello mostra una tabella file/ruolo/tempo (`select` e `input` nativi, `aria-label`, fuoco ripristinato dopo ogni modifica) con un solo selettore d'unità; il tempo proposto è giallo finché non lo confermi (Invio o «Confirm times»). Gli avvisi brevi in `role=status` vengono dai codici di `valida`; «Run» è spento, con il motivo nel `title`, se `valida` è bloccante.
+- La pipeline riceve `minuti[]` di `per_tp` (l'infusione è `null`: i ruoli veri arrivano con il cancello per ruolo); il registro dell'esecuzione porta anche l'operazione `campioni` (JSON canonico e SHA-256 del Rust); il Feature QC usa ruoli e minuti del modello.
