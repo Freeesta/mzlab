@@ -8,9 +8,9 @@ name: sito-rust
 on:
   push:
     branches: [main]
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", ".github/workflows/sito-rust.yml"]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", ".github/workflows/sito-rust.yml"]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
   workflow_dispatch:
     inputs:
       solo:
