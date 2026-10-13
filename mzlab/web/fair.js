@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Open data: files for MassBank (record, text format 2.x) and SIRIUS 6 (.ms) from ONE high-resolution MS2 spectrum. Nothing is sent anywhere: the files are downloaded and the user
 // decides if and where to upload them (NORMAN 2023 guidance, FAIR data). Never in low resolution (Principle 1: no record with annotations there).
@@ -127,7 +128,7 @@ const FAIR = (() => {
     const mem0 = mem.get(); let info = {};
     try { if (spec.k != null && window.J) info = await J(`api/fileinfo?k=${spec.k}`); } catch (_) { /* optional */ }
     const mb = kind === "massbank";
-    let d = document.getElementById("fairdlg"); if (!d) { d = document.createElement("dialog"); d.id = "fairdlg"; document.body.appendChild(d); }
+    let d = /** @type {HTMLDialogElement | null} */ (document.getElementById("fairdlg")); if (!d) { d = document.createElement("dialog"); d.id = "fairdlg"; document.body.appendChild(d); }
     const f = (id, label, val, extra = "") => `<label class="fr"><span>${T(label)}</span><input id="fa-${id}" value="${EHt(val == null ? "" : val)}" ${extra}></label>`;
     const sel = (id, label, opts, val) => `<label class="fr"><span>${T(label)}</span><select id="fa-${id}">${opts.map(v => `<option${v === val ? " selected" : ""}>${EHt(v)}</option>`).join("")}</select></label>`;
     const pol = spec.polarity < 0 ? "-" : "+";

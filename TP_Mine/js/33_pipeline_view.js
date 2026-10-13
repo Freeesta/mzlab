@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  View of the result of the feature pipeline (window.PIPEV): reads the .mzfeat of a series (table + section `evid`, evid/1), builds the rows and draws them in a virtualized
 // list. With the gate of quality open (PIPE.gateState) the unit is the identity: the column of the contributions of every proof (never the total alone), 1/N, the states of the cells per
 // file (D detected, T targeted, F filled, A absent), the filter «discarded» with the reason code, the proofs «against» in red. Without the gate only the rows of the table (traces and
@@ -87,7 +88,7 @@
   const HEAD_PLAIN = ["ID", "m/z", "RT (min)", "Members", "Cells"], HEAD_CAND = ["ID", "Neutral mass", "Formula", "Points", "Contributions", "1/N", "Cells", "Reason"];
 
   /** mounts the list in `el`; `opts.onPick(row)` on click or Enter. Returns {set(list), pick(i), count()} */
-  function mount(el, { gated, onPick = () => {} }) {
+  function mount(el, { gated, onPick = /** @type {(row?: any, i?: number) => void} */ (() => {}) }) {
     const head = gated ? HEAD_CAND : HEAD_PLAIN;
     el.innerHTML = `<div class="pv-head" role="rowgroup"><div role="row" class="pv-hrow">${head.map(h => `<span role="columnheader">${h}</span>`).join("")}</div></div><div class="pv-scroll" role="rowgroup"><div class="pv-space"><div class="pv-win"></div></div></div>`;
     el.setAttribute("role", "grid"); el.setAttribute("aria-label", "Identities"); el.setAttribute("aria-rowcount", "0"); el.tabIndex = 0;
