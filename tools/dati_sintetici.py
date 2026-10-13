@@ -245,6 +245,14 @@ HR_PARENT = "C14H13F4N3O2S"       # formula of the invented "parent" of the HR f
 HR_NAMES = {"exploris": "HR_DDA-Exploris-t30.mzML", "fusion": "HR_DDA-Fusion-t30.mzML", "broken": "HR_rotto-t30.mzML"}
 
 
+def hr_parent_mz() -> float:
+    """[M+H]+ of HR_PARENT rounded to 1e-6: mass() adds with sum(), whose last bit changes from Python 3.12 on (compensated sum),
+    and the files and the URLs of the golden e2e must not depend on the Python version."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from mzlab.chem.elements import ion_mz, mass, parse_formula
+    return round(ion_mz(mass(parse_formula(HR_PARENT)), "[M+H]+"), 6)
+
+
 def _cvp(acc, name, value="", unit=""):
     return f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value="{value}"{unit}/>'
 
@@ -294,11 +302,8 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
     parent [M+H]+ at RT 14.3 (with 13C and 34S isotopes); isobars 305.0702 (RT 9.0) and 305.1066 (RT 12.0); isobars at the same RT
     412.1000 and 412.1364 (RT 16.0); co-isolation: 229.0500 (weak, 4e4: never picked) beside 229.6000 (5x) at RT 7.07;
     250.1234 at 3e4 (RT 11.0), never fragmented; a few other ions and two constant background ions to keep the cycles busy."""
-    import sys as _sys
-    _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from mzlab.chem.elements import ion_mz, mass, parse_formula
     fus, sd = kind == "fusion", 0.8e-6
-    mz_par = ion_mz(mass(parse_formula(HR_PARENT)), "[M+H]+")
+    mz_par = hr_parent_mz()
     sys_ppm = 3e-6 if fus else 0.0
     # (m/z, RT, sigma, amplitude, selectable); the background ions have sigma = 0 -> constant
     ions = [(mz_par, 14.3, 0.07, 3.0e7, True), (305.0702, 9.0, 0.07, 4.0e6, True), (305.1066, 12.0, 0.07, 3.0e6, True),
