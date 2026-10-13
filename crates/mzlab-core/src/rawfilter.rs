@@ -16,6 +16,9 @@ const IDENTITY: [&str; 5] = [
     "processing_method_file",
 ];
 
+/// The `userParam` of the `<run>` of an exported copy without personal data (the originals keep them).
+pub const ANONYMIZED: &str = "<userParam name=\"mzLab anonimizzato\" value=\"true\"/>";
+
 pub struct MzmlFilter<W: Write> {
     inner: W,
     line: Vec<u8>,
@@ -96,8 +99,16 @@ impl<W: Write> MzmlFilter<W> {
     fn rewrite(&mut self, l: &str) -> Option<String> {
         let t = l.trim_start();
         if t.starts_with("<run ") {
+            let mark = if self.anonymous {
+                format!("{ANONYMIZED}\n")
+            } else {
+                String::new()
+            };
             if let Some(extra) = self.run_extra.take() {
-                return Some(format!("{l}\n{extra}\n"));
+                return Some(format!("{l}\n{mark}{extra}\n"));
+            }
+            if self.anonymous {
+                return Some(format!("{l}\n{mark}"));
             }
         } else if t.starts_with("<chromatogram ") {
             self.pressure = false;

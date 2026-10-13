@@ -4,7 +4,7 @@
 //! operation `op` and its parameters, see `rpc.rs`) and `lr/upload` (a file that reaches the app as bytes).
 //!
 //! Routes (all GET): `open?slot&id`, `close?slot`, `reset`, `tic?slot&level&px`, `xic?slot&level&mz&tol&px`,
-//! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size), `raw2mzml?id`
+//! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size), `raw2mzml?id&profile&anon`
 //! (a converted mzML is a file like the others), `file?id&off&len`, and the folder of the libraries under `lib/` (see `lib_route`).
 
 use std::collections::HashMap;
@@ -129,7 +129,7 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
             _ => bad(),
         },
         "raw2mzml" => match u("id") {
-            Some(id) => match state.raw_to_mzml(id, u("profile") == Some(1)) {
+            Some(id) => match state.raw_to_mzml(id, u("profile") == Some(1), u("anon") == Some(1)) {
                 Ok((tid, size)) => json(200, format!("{{\"id\":{tid},\"size\":{size}}}")),
                 Err(e) => error(&e),
             },
