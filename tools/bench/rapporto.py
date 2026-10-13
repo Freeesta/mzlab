@@ -4,6 +4,8 @@ compounds, exact McNemar, Holm over the primary endpoints x competitors, pre-reg
 numbers, no date, no time) and a Markdown summary. It writes numbers, not sentences of §3.5: those are decided by people on the numbers.
 
     python3 tools/bench/rapporto.py --d2 --seme 7 --profilo piccolo --out DIR      # mzFinder on a synthetic series: DIR/bench1.json + rapporto.json/.md
+    python3 tools/bench/rapporto.py --verita D1.json --tipo d1 --rt-tol 0.2 --gruppi A=SA1,SA2 B=SB1,SB2 --tabelle mzlab.json openms.json --out DIR
+                                                                                    # tables already written by the runners; the first one is the tool under test
 """
 from __future__ import annotations
 
@@ -109,8 +111,38 @@ def a_markdown(r: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def verita_di(path, tipo: str, solo_visti: bool = True) -> list[dict]:
+    """The truth of a file of the private repository: `d1` (`bench/verita/1`, the compounds seen in the data: the others cannot be measured), `d2`/`d3` (`da_json`)."""
+    if tipo == "d1":
+        import json
+        d = json.loads(Path(path).read_text(encoding="utf-8"))
+        return [{"id": str(c["id"]), "mz": c["mz"], "rt": c["rt"], "ruolo": "tp1", "fascia": None, "atteso": c["atteso"], "area_attesa": None}
+                for c in d["composti"] if c["visto"] or not solo_visti]
+    from .verita import da_json
+    return da_json(path)
+
+
+def da_tabelle(verita: list[dict], percorsi: list[str], gruppi: dict | None, rt_tol: float, dataset: str) -> dict:
+    """The report of tables written by the runners (`bench/1` files): the first is compared with the others."""
+    from .adatta import leggi
+    ms = [misura_tol(verita, leggi(p), gruppi, rt_tol) for p in percorsi]
+    return rapporto(dataset, ms[0], ms[1:])
+
+
+def misura_tol(verita: list[dict], t: dict, gruppi: dict | None, rt_tol: float) -> dict:
+    """`gruppi` give file names; the metrics want column indices of the table."""
+    if gruppi:
+        gruppi = {k: [t["file"].index(n) for n in v] for k, v in gruppi.items()}
+    return {"strumento": t["strumento"], "config": t["config"], "dataset": t["dataset"], **metriche.tutte(verita, t, gruppi, rt_tol=rt_tol)}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--verita", help="truth file (with --tabelle)")
+    ap.add_argument("--tipo", choices=("d1", "d2", "d3"), default="d1")
+    ap.add_argument("--rt-tol", type=float, default=0.15)
+    ap.add_argument("--gruppi", nargs="*", default=[], help="NAME=COL1,COL2 (D1: A=SA1,SA2.. B=SB1,SB2..)")
+    ap.add_argument("--tabelle", nargs="*", default=[], help="bench/1 tables; the first is the tool under test")
     ap.add_argument("--d2", action="store_true", help="run mzFinder on a synthetic series")
     ap.add_argument("--seme", type=int, default=7)
     ap.add_argument("--profilo", default="piccolo")
@@ -118,6 +150,13 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    if a.tabelle:
+        g = {k: v.split(",") for k, v in (x.split("=", 1) for x in a.gruppi)} or None
+        r = da_tabelle(verita_di(a.verita, a.tipo), a.tabelle, g, a.rt_tol, a.tipo.upper())
+        (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
+        (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
+        print(a_markdown(r))
+        return 0
     t, verita = corri_mzfinder_sintetico(a.seme, a.profilo, out / "lavoro")
     (out / "bench1.json").write_text(tabella_a_json(t), encoding="utf-8")
     r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(verita, t))

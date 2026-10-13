@@ -1,0 +1,7 @@
+{
+ "nota": "XCMS 3/4 centWave workflow defaults for HPLC-Orbitrap (vignette 'LC-MS preprocessing with xcms'): centWave, obiwarp, peak density, fillChromPeaks; ppm 5 as for the other tools",
+ "CentWaveParam": {"ppm": 5, "peakwidth_min": 10, "peakwidth_max": 60, "snthresh": 10, "prefilter_k": 3, "prefilter_i": 10000, "mzdiff": -0.001, "noise": 0, "integrate": 1},
+ "ObiwarpParam": {"binSize": 0.6},
+ "PeakDensityParam": {"bw": 5, "binSize": 0.015, "minFraction": 0.5, "minSamples": 1},
+ "ChromPeakAreaParam": {"expandMz": 0, "expandRt": 0}
+}
