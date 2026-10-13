@@ -71,9 +71,17 @@ fn isf_rows_are_the_marked_ones() {
         n_files: 1,
         mz: vec![257.102, 200.0, 113.06],
         rt: vec![13.4, 5.0, 13.3],
-        tp: TpBlock { status: vec![ST_ISF, ST_TP, ST_ISF], ..TpBlock::default() },
+        tp: TpBlock {
+            status: vec![ST_ISF, ST_TP, ST_ISF],
+            ..TpBlock::default()
+        },
         ..Aligned::default()
     };
     assert_eq!(isf_rows(&t), vec![2, 0]);
-    assert!(isf_rows(&Aligned { n_files: 1, mz: vec![1.0], ..Aligned::default() }).is_empty());
+    assert!(isf_rows(&Aligned {
+        n_files: 1,
+        mz: vec![1.0],
+        ..Aligned::default()
+    })
+    .is_empty());
 }
