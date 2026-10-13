@@ -183,7 +183,7 @@ def test_table_is_sorted_numbered_and_roundtrips(tmp_path):
 
 
 def test_csv_adapters(tmp_path):
-    (tmp_path / "mm.csv").write_text("row ID,row m/z,row retention time,S1.mzML Peak area,S2.mzML Peak area\n1,100.1,2.5,10,\n2,200.2,3.5,20,30\n")
+    (tmp_path / "mm.csv").write_text("id,mz,rt,datafile:S1.mzML:area,datafile:S2.mzML:area\n1,100.1,2.5,10,\n2,200.2,3.5,20,30\n")
     t = A.da_csv("mzmine", tmp_path / "mm.csv", ["S1.mzML", "S2.mzML", "S3.mzML"], "T")
     assert [(r["mz"], r["rt"], r["aree"]) for r in t["righe"]] == [(100.1, 2.5, [10.0, 0.0, 0.0]), (200.2, 3.5, [20.0, 30.0, 0.0])] and t["file"] == ["S1", "S2", "S3"]
     (tmp_path / "x.csv").write_text("mzmed,rtmed,npeaks,S1,S2\n100.1,150,2,5,6\n")
@@ -249,3 +249,29 @@ def test_cli_writes_the_files(tmp_path):
     assert R.main(["--d2", "--seme", "7", "--profilo", "piccolo", "--out", str(tmp_path)]) == 0
     assert A.leggi(tmp_path / "bench1.json")["strumento"] == "mzfinder"
     assert json.loads((tmp_path / "rapporto.json").read_text())["dataset"] == "D2/piccolo/7" and (tmp_path / "rapporto.md").read_text().startswith("# Benchmark")
+
+
+# ---------------------------------------------------------------------------------------------------------------- B3: competitors and report from tables
+def test_mzmine_batch_has_the_seven_steps_and_the_parameter_names(tmp_path):
+    from bench import corri, corri_mzmine
+    x = corri_mzmine.batch_xml([tmp_path / "a.mzML", tmp_path / "b.mzML"], tmp_path / "out.csv", corri.parametri("mzmine", "predefinita"))
+    import xml.dom.minidom
+    xml.dom.minidom.parseString(x)                                                              # well-formed
+    pas = re.findall(r'method="[^"]*\.(\w+)"', x)
+    assert pas == ["MSDKmzMLImportModule", "MassDetectionModule", "ModularADAPChromatogramBuilderModule", "MinimumSearchFeatureResolverModule", "JoinAlignerModule",
+                   "MultiThreadPeakFinderModule", "CSVExportModularModule"]
+    assert x.count('name="m/z tolerance (sample-to-sample)"') == 2 and 'unit="MINUTES"' in x                  # the names the headless batch accepts
+
+
+def test_report_from_tables_with_groups(tmp_path):
+    """Two tables of the same three files and a truth with expected ratios: the CLI of the tables writes the report; the group names become column indices."""
+    verita = {"composti": [{"id": f"c{i}", "mz": 100.0 + i, "rt": 2.0, "atteso": 2.0, "visto": True} for i in range(6)] + [{"id": "x", "mz": 500.0, "rt": 3.0, "atteso": 1.0, "visto": False}]}
+    (tmp_path / "v.json").write_text(json.dumps(verita))
+    for nome, fattore in (("mzlab", 2.0), ("altro", 3.0)):
+        righe = [{"mz": 100.0 + i, "rt": 2.0, "aree": [fattore * 100.0, fattore * 100.0, 50.0, 50.0]} for i in range(6)]
+        (tmp_path / f"{nome}.json").write_text(A.a_json(A.tabella(nome, "D1", "predefinita", ["SA1", "SA2", "SB1", "SB2"], righe)))
+    assert R.main(["--verita", str(tmp_path / "v.json"), "--tipo", "d1", "--rt-tol", "0.2", "--gruppi", "A=SA1,SA2", "B=SB1,SB2", "--tabelle", str(tmp_path / "mzlab.json"),
+                   str(tmp_path / "altro.json"), "--out", str(tmp_path / "o")]) == 0
+    r = json.loads((tmp_path / "o" / "rapporto.json").read_text())
+    assert r["strumenti"]["mzlab/predefinita"]["P1"]["n"] == 6 and r["strumenti"]["mzlab/predefinita"]["P1"]["valore"] == 1.0   # the unseen compound is left out
+    assert abs(r["strumenti"]["mzlab/predefinita"]["P2"]["valore"] - 1.0) < 1e-9 and abs(r["strumenti"]["altro/predefinita"]["P2"]["valore"] - np.log2(3)) < 1e-5

@@ -49,6 +49,7 @@ pub mod origin;
 pub mod originroute;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzidx;
+pub mod mzidx_lettore;
 pub mod msnroute;
 pub mod msntree;
 pub mod methodcheck;
@@ -82,11 +83,13 @@ pub mod rois;
 pub mod roles;
 pub mod routes;
 pub mod scaninfo;
+pub(crate) mod scanrow;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod scanparams;
 pub mod mrmroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod sniff;
+pub mod sorgente;
 pub mod scantable;
 pub mod specdiff;
 pub mod specpeaks;

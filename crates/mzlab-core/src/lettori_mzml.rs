@@ -20,6 +20,14 @@ fn semplice(l: &dyn Lettore, c: usize) -> Header {
     }
 }
 
+/// The header `scrivi` writes for sample `c`.
+pub(crate) fn testata(l: &mut dyn Lettore, c: usize) -> Result<Header> {
+    Ok(match l.testata_mzml(c)? {
+        Some(h) => h,
+        None => semplice(l, c),
+    })
+}
+
 /// Writes sample `c` of `l` as mzML to `out`; `progress(done, total)` counts the spectra.
 pub fn scrivi<W: Write>(
     l: &mut dyn Lettore,
@@ -30,11 +38,7 @@ pub fn scrivi<W: Write>(
     if c >= l.campioni().len() {
         return Err(Error::new("error.badIndex").with("c", c));
     }
-    let testata = match l.testata_mzml(c)? {
-        Some(h) => h,
-        None => semplice(l, c),
-    };
-    let mut w = MzmlWriter::new(out, &testata)?;
+    let mut w = MzmlWriter::new(out, &testata(l, c)?)?;
     let n = l.indice(c)?.len();
     if n > 0 {
         w.open_spectra(n)?;

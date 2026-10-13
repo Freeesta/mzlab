@@ -6,10 +6,11 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
+use crate::sorgente::Scansioni;
 
 impl<R: ReadAt> Routes<R> {
     /// The block of the scans asked for, from the mzML by offset.
-    pub fn scanbin_route<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<Vec<u8>>> {
+    pub fn scanbin_route<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<Vec<u8>>> {
         if !self.has_scans() {
             return Ok(None);
         }
