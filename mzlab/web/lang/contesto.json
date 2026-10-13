@@ -116,6 +116,7 @@
   "method.source.from": "{name} = nome del .dam (protetto).",
   "chk.precursorsN": "{list} = m/z dei precursori separati da virgole.",
   "chk.reachesTo": "{t} = ultimo RT del file in minuti.",
+  "aff.where": "Annuncio per i lettori di schermo dopo uno spostamento; {n} = numero del pannello, {r} = riga, {t} = righe totali, {i} = posizione nella riga, {m} = pannelli nella riga.",
   "panel.num.title": "Suggerimento sul numerino del pannello; {n} = numero (1-9), è anche il tasto da premere.",
   "spec.follow": "Chip nell'intestazione di uno spettro agganciato; {n} = numero del pannello del cromatogramma.",
   "spec.follow.aria": "Etichetta accessibile del chip dello spettro agganciato; {n} = numero del pannello.",
