@@ -40,3 +40,15 @@ def test_parent_through_wasm(pkg):
 def test_error_is_json(pkg):
     assert analyse(pkg, "C1CC")["error_key"] == "error.grafo.smiles"
     assert analyse(pkg, "C.C")["error_key"] == "error.grafo.mixture"
+
+
+ETHANOL = "\n  qqq\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n" + "".join(f"{x:10.4f}{0:10.4f}{0:10.4f} {el:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for x, el in ((0, "C"), (1, "C"), (2, "O"))) + "  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\nM  END"
+
+
+def test_fragments_of_a_molfile(pkg):
+    r = json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), ETHANOL, "1", "2"))
+    (cut,) = r["cuts"]
+    assert r["format"] == "frag/1" and (cut["a"], cut["b"]) == (1, 2)
+    assert [s["formula"] for s in cut["sides"]] == ["C2H6", "H2O"] and cut["sides"][0]["atoms"] == [0, 1]
+    assert cut["sides"][1]["mz"] == pytest.approx(19.0178, abs=1e-3)
+    assert len(json.loads(run("node", "tests/feat_grafo_node.js", str(pkg), ETHANOL, "-1", "-1"))["cuts"]) == 2

@@ -136,8 +136,8 @@ fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
         .collect::<Result<Vec<_>>>()?;
     let refs: Vec<&FileFeatures> = files.iter().collect();
     Ok(match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion),
-        Mode::Family => align_families(&refs, &r.align),
+        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Family => align_families(&refs, &r.align)?,
     })
 }
 
@@ -158,7 +158,7 @@ fn slabs(src: &mut dyn Stored, n: usize, cuts: &[f64], budget: &MemBudget, r: &R
         let rows: usize = files.iter().map(FileFeatures::len).sum();
         let _g = budget.reserve("align", rows * (LEAN_ROW + WORK_ROW))?;
         let refs: Vec<&FileFeatures> = files.iter().collect();
-        table.append(&align(&refs, &r.align.ion));
+        table.append(&align(&refs, &r.align.ion)?);
     }
     Ok(table)
 }

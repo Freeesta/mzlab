@@ -11,6 +11,8 @@ use super::rel::{RKind, Tables};
 use super::Arc;
 use crate::sortc;
 use crate::table::*;
+use crate::trace::filled;
+use mzlab_core::error::Result;
 
 pub(super) const NO_PARENT: u32 = u32::MAX;
 
@@ -86,7 +88,7 @@ fn excluded(f: &FileFeatures, i: usize) -> bool {
     f.flags[i] & (FLAG_BACKGROUND | FLAG_FT_LOBE) != 0
 }
 
-pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
+pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Result<Assigned> {
     let n = f.len();
     let mut deps: Vec<Dep> = arcs
         .iter()
@@ -108,10 +110,9 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
             .then(f.height[b.par as usize].total_cmp(&f.height[a.par as usize]))
             .then(a.par.cmp(&b.par))
     });
-    let mut parent = vec![NO_PARENT; n];
-    let mut role = vec![ROLE_NONE; n];
-    // one byte per feature of the file whose table the `detect` phase already counted
-    let mut alt = vec![0u8; n];
+    let mut parent = filled(n, NO_PARENT)?;
+    let mut role = filled(n, ROLE_NONE)?;
+    let mut alt = filled(n, 0u8)?;
     for i in (0..n).filter(|&i| !excluded(f, i)) {
         role[i] = ROLE_M;
     }
@@ -127,12 +128,12 @@ pub(super) fn assign(f: &FileFeatures, arcs: &[Arc], factor: f32) -> Assigned {
     pick_parents(f, &deps, &mut parent, &mut role, &mut alt);
     open_readings(arcs, &mut alt);
     let family = family_ids(&parent, &role);
-    Assigned {
+    Ok(Assigned {
         parent,
         role,
         alt,
         family,
-    }
+    })
 }
 
 /// Each dependent takes its best parent (not taken, no cycle, not excluded); equal-rank parents of another row set `ALT_PARENT`.
