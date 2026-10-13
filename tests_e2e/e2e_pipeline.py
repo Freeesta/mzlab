@@ -69,7 +69,7 @@ try:
         pg.evaluate(PUT, names)
 
         def gate_absent():
-            pg.evaluate("PIPE.open()"); pg.wait_for_selector("#pipe[open]")
+            pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open()"); pg.wait_for_selector("#pipe[open]")
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
             assert pg.locator("#pipe-file option").count() >= 1
         step("without cancello.json the panel says «not validated»", gate_absent)

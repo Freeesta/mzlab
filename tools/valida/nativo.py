@@ -96,11 +96,11 @@ def costruisci_esempio() -> None:
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo"], cwd=ROOT, check=True)
 
 
-def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_genitore: float, uscita: Path) -> Serie:
-    """Runs the example on the indexes (in this order) and reads the result from `uscita`."""
+def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_genitore: float, uscita: Path, smiles: str = "") -> Serie:
+    """Runs the example on the indexes (in this order) and reads the result from `uscita`; `smiles` is the structure of the parent, as the page passes it."""
     costruisci_esempio()
     uscita.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)],
+    subprocess.run([str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)],
                    cwd=ROOT, check=True, capture_output=True)
     return leggi_serie(uscita, [Path(x).name for x in percorsi_idx])
 

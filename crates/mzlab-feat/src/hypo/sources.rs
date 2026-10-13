@@ -211,6 +211,35 @@ pub fn from_fragments(
     Ok(out)
 }
 
+/// (a'') one reaction of the rules on a cleavage product: the second step of a path that starts with the cleavage (the cleavage is the first). Only
+/// the rules that need no groups apply (the groups known are those of the parent, not of the fragment).
+pub fn from_fragment_products(
+    rules: &Rules,
+    frags: &[String],
+    parent: &Counts,
+    p: &HypoParams,
+) -> Result<Vec<Hypothesis>> {
+    if p.max_steps < 2 {
+        return Ok(Vec::new());
+    }
+    let one = HypoParams {
+        max_steps: 1,
+        ..p.clone()
+    };
+    let mut out = Vec::new();
+    for h in from_fragments(frags, parent, p)? {
+        let counts = counts_of(&elements::parse_formula(&h.formula)?);
+        for mut r in from_rules(rules, &counts, None, &one) {
+            r.label = format!("{}+{}", h.label, r.label);
+            r.sources = SRC_CLEAVAGE;
+            r.steps = 2;
+            r.level = r.level.max(h.level);
+            out.push(r);
+        }
+    }
+    Ok(out)
+}
+
 /// A suspect can derive from the parent: no element the parent lacks, none in larger number (oxygens up to +3, hydrogens up to +4).
 fn derivable(f: &Counts, parent: &Counts) -> bool {
     f.iter().all(|(e, n)| {
