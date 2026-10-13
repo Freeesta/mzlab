@@ -20,9 +20,10 @@ _Page.wait_for_function = _wff
 # instead of a fixed pause (the fixed pauses were more than half of the time of the e2e).
 # A page that replaces window.fetch (browser.js answers `api/...` itself, with the Rust engine) is counted too: the assignment goes through a setter that wraps it.
 _TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();"
-          "const wrap=f=>function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
+          "const wrap=f=>function(...a){window.__qqF++;(window.__qqU=window.__qqU||[]).push(String((a[0]&&a[0].url)||a[0]));window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
           "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})};let cur=wrap(window.fetch);"
           "Object.defineProperty(window,'fetch',{configurable:true,get:()=>cur,set:f=>{cur=wrap(f)}})})()")
+# The URL of every fetch is kept in window.__qqU (the Rust engine answers `api/...` in the page, so Playwright's request events never see those calls).
 # Short timers pending (<= 0.4 s: debounces, redraws, toasts) and the time of the last DOM change are tracked as well: pg.wait_for_timeout(ms) below returns
 # as soon as the page has been quiet for a moment (no fetch, no pending short timer, no DOM change) instead of sleeping for the whole `ms`.
 _TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=new Map(),st=window.setTimeout,ct=window.clearTimeout;"
@@ -83,6 +84,11 @@ def stage(pg, files, timeout=90000):
     """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
     pg.set_input_files("#pick", [str(f) for f in files])
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
+
+
+def attendi(pg, expr, timeout=30000):
+    """Wait until the JavaScript expression is truthy: the state-based way to wait (never a fixed pause, never a raised timeout)."""
+    pg.wait_for_function(expr, timeout=timeout)
 
 
 def saved(pg, timeout=60000):
