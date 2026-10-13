@@ -15,7 +15,7 @@ on:
     inputs:
       solo:
         description: "e2e to run (comma separated)"
-        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_transf"
 
 permissions:
   contents: read
@@ -79,7 +79,7 @@ jobs:
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso' }}"
+          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_transf' }}"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

@@ -2,7 +2,7 @@
 // TPMINE-PRIVATE  Web Worker of mzFinder: it routes the calls of the page between Rust and its own Pyodide (Python + numpy, the private engine on the mzML bytes
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
-// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file,
+// classify (after finder-idx.js has built the .mzidx of OPFS mzlab/idx/ that a file sent by the page lacks); run on high-resolution files with their .mzidx, no MSn file, and any list of transformations (finder_transformations merges the user text into regole_tp.json),
 // then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, isf_classify, transitions, ...) goes to Pyodide, and so does
 // every call when the site has no wasm-feat/ (a copy built without it).
 /** @type {any} */ let py = null;
