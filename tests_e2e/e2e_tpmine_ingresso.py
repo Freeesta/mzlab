@@ -55,7 +55,19 @@ for f in mzml: shutil.copy2(f, data / Path(f).name)
 
 def dig(pg):
     pg.fill("#tp-mol", PARENT); pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
-    return pg.evaluate(TABLE)
+    t = pg.evaluate(TABLE)
+    for _ in range(40):                                     # some cells (t0, Blank) arrive a moment after the rows: read until two reads agree
+        pg.wait_for_timeout(500); u = pg.evaluate(TABLE)
+        if u == t: break
+        t = u
+    return t
+
+
+def diff(a, b):                                           # the first row that differs, for the log of a red run
+    for i in range(max(len(a), len(b))):
+        x, y = (a[i] if i < len(a) else None), (b[i] if i < len(b) else None)
+        if x != y: return f"{len(a)} vs {len(b)} rows; row {i}: {x!r} vs {y!r}"
+    return "same rows"
 
 
 def rows_ready(pg):
@@ -111,7 +123,7 @@ try:
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.set_input_files("#tp-in", mzml); rows_ready(q)
             got = settle(q); assert same(got), (got, ref)
-            assert dig(q) == ref["table"], "the Dig of the chosen files differs from the one from the Data tab"
+            t = dig(q); assert t == ref["table"], "the Dig of the chosen files differs from the one from the Data tab: " + diff(t, ref["table"])
         step("Choose mzML...: the .mzidx equals the one of the main program, the Dig equals the one from the Data tab", chosen)
 
         def from_idb():                                     # a new profile with the bytes only in IndexedDB (an older visit), no index in OPFS
@@ -120,7 +132,8 @@ try:
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.click("#tp-page"); rows_ready(q)
             got = settle(q); assert same(got), (got, ref)
-            assert dig(q) == ref["table"], "the Dig of the IndexedDB files differs"
+            t = dig(q)
+            assert t == ref["table"], "the Dig of the IndexedDB files differs: " + diff(t, ref["table"]) + " | files: " + q.inner_text("#tp-files")[:300].replace("\n", " ")
         step("IndexedDB: same index, same Dig", from_idb)
 
         def no_pyodide():

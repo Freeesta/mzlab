@@ -1,6 +1,7 @@
 """Reference answers of the parts of mzFinder ported to Rust (`crates/mzlab-feat/src/legacy/`) for their parity test
 (crates/mzlab-feat/tests/legacy_parity.rs): `api.formula_info`, the names of `api.classify` (`guess_sample`), the kinetic descriptors, the MS2
-consensus and the three components of the MS2 similarity.
+consensus and the three components of the MS2 similarity; the MSn tree (`hr/msn.py`), its fragment library (`hr/iimn.py`), the localisation
+(`hr/localize.py`) and the trees of `fragtree._hr_msn` / `compare_hr` on synthetic MSn files (`TP_Mine/tests/msn_synth.py`).
 
     python3 tools/finder_riferimento.py [--golden]
 
@@ -10,7 +11,9 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -28,6 +31,14 @@ from tpmine.hr import iimn  # noqa: E402
 from tpmine.hr import kinetics as KN  # noqa: E402
 from tpmine.hr import similarity as SM  # noqa: E402
 from tpmine.hr import spectra as SP  # noqa: E402
+from tpmine.hr import localize as LZ  # noqa: E402
+from tpmine.hr import molgraph as MG  # noqa: E402
+from tpmine.hr import msn as MS  # noqa: E402
+from tpmine.hr.engine import ExperimentHR  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
+
+sys.path.insert(0, str(AQUI.parent / "TP_Mine" / "tests"))
+import msn_synth as MSY  # noqa: E402
 
 FORMULAS = [
     ("C10H12N2O3S", "[M+H]+"), ("C6H6O", "[M+H]+"), ("c1ccccc1O", "[M+H]+"), ("CC(=O)Oc1ccccc1C(=O)O", "[M+Na]+"), ("CCN(CC)CC", "[M-H]-"),
@@ -266,6 +277,138 @@ def origin_cases(rng):
     return out
 
 
+def _plain(x):
+    return json.loads(json.dumps(x, default=lambda v: v.tolist() if hasattr(v, "tolist") else float(v)))
+
+
+def msn_nodes(rng, ion, smiles):
+    """A synthetic MSn experiment on the ion: an MS2 of the parent, two MS3 and one MS4, with fragment formulas taken from the substructures."""
+    subs = MG.substructures(MG.parse_smiles(smiles))
+    els, top = subs.els, FO.vec(ion, subs.els)
+    iH, iC = els.index("H"), els.index("C")
+    frags = {}
+    for row in subs.F:
+        v = np.array(row, np.int64)
+        v[iH] += 1
+        if v[iC] > 0 and np.all(v <= top) and np.all(v >= 0):
+            m = float(FO.ion_mass(v, els))
+            if 50 < m < float(FO.ion_mass(top, els)) - 10:
+                frags[FO.fmt(v, els)] = (m, v)
+    names = sorted(frags, key=lambda f: frags[f][0])
+    pick = [names[int(i)] for i in sorted(rng.choice(len(names), size=min(7, len(names)), replace=False))]
+    nom = lambda f: int(round(frags[f][0]))
+    p0 = nom(ion) if ion in frags else int(round(float(FO.ion_mass(top, els))))
+    sub = lambda a, pool: [f for f in pool if f != a and np.all(frags[f][1] <= frags[a][1])]
+    rel = lambda: float(rng.uniform(3, 100))
+    nodes = {(): [(ion, 100.0), (float(rng.uniform(300, 390)), 3.0)], ((p0, 30),): [(ion, 100.0)] + [(f, rel()) for f in pick]}
+    big = [f for f in pick[::-1] if len(sub(f, pick)) >= 2][:2]
+    for b in big:
+        nodes[((p0, 30), (nom(b), 35))] = [(b, 60.0)] + [(f, rel()) for f in sub(b, pick)] + [(float(rng.uniform(60, 300)), 15.0)]
+    if big:
+        kids = sub(big[0], pick)
+        k = kids[-1]
+        nodes[((p0, 30), (nom(big[0]), 35), (nom(k), 35))] = [(k, 100.0)] + [(f, rel()) for f in sub(k, kids)]
+    return nodes
+
+
+def msn_scans(run):
+    out = []
+    for s in run.scans:
+        mz, it = run.read(s.index)
+        out.append({"level": s.level, "path": [list(x) for x in s.path] if s.path else None, "mz": _list(mz), "it": _list(it)})
+    return out
+
+
+def product_ms2(rng, tree, lib, delta):
+    """A synthetic MS2 of a product: library fragments unshifted or shifted by the change (or the change minus water), plus noise."""
+    els = tree.els
+    tp = FO.vec(tree.nodes[0]["formula"], els) + delta
+    mz, rel = [], []
+    for f, e in lib.entries.items():
+        v = e["vec"] + (delta if rng.random() < 0.5 else 0)
+        if rng.random() < 0.2 and delta[els.index("O")] > 0:
+            v = v - FO.vec({"H": 2, "O": 1}, els)
+        if np.all(v >= 0) and np.all(v <= tp) and v[els.index("C")] > 0:
+            mz.append(float(FO.ion_mass(v, els)) * (1 + rng.normal(0, 1e-6)))
+            rel.append(float(rng.uniform(1, 100)))
+    for _ in range(int(rng.integers(0, 4))):
+        mz.append(float(rng.uniform(60, 300)))
+        rel.append(float(rng.uniform(1, 30)))
+    if rel:
+        rel[int(np.argmax(rel))] = 100.0
+    return tp, mz, rel
+
+
+CHANGES = ["+O", "-CH2", "-H2", "+O-H2", "-C2H4", "+O2", "+C"]
+
+
+def change_vec(c, els):
+    v = np.zeros(len(els), np.int64)
+    for e, n in CH.parse_delta(c).items():
+        v[els.index(e)] += n
+    return v
+
+
+def localize_cases(rng, tree, lib, smiles):
+    out = []
+    groups = LZ.default_groups(tree.subs.mol)
+    ftree = FT._hr_msn(SimpleNamespace(tree=tree, smiles=smiles))
+    for c in CHANGES:
+        tp, mz, rel = product_ms2(rng, tree, lib, change_vec(c, tree.els))
+        tpf = FO.fmt(tp, tree.els)
+        tp_mz = float(FO.ion_mass(tp, tree.els))
+        r = LZ.localize(tpf, tree.nodes[0]["formula"], mz, rel, lib, FO.FormulaSpace(tp, tree.els), groups=None, tp_mz=tp_mz)
+        r["n_atoms"] = tree.subs.mol.n
+        if r.get("ok"):
+            r["n_groups"] = sum(1 for g in groups.values() if g & set(r["region_atoms"]))
+        out.append({"tp": tpf, "mz": mz, "rel": rel, "tp_mz": tp_mz, "out": _plain(r), "compare": _plain(FT.compare_hr(ftree, r))})
+    return out
+
+
+def msn_case(rng, nodes, ion, smiles, calibrate, ppm, seed, dda):
+    with tempfile.TemporaryDirectory() as d:
+        run = Run(MSY.write_msn(Path(d) / "msn.mzML", nodes, ppm_offset=ppm, n_scans=5, seed=seed))
+        scans = msn_scans(run)
+        tree = MS.build_tree(run, ion, smiles, calibrate=calibrate)
+        run.close()
+    case = {"ion": ion, "smiles": smiles, "calibrate": calibrate, "scans": scans, "summary": _plain(tree.summary()), "calibration": tree.cal.as_dict(),
+            "tree_summary": _plain(ExperimentHR._tree_summary(SimpleNamespace(tree=tree))), "frag_tree": _plain(FT._hr_msn(SimpleNamespace(tree=tree, smiles=smiles)))}
+    if tree.subs is not None:
+        lib = iimn.build_library(tree, dda_peaks=dda)
+        case["dda"] = None if dda is None else [_list(dda[0]), _list(dda[1])]
+        case["library"] = [{"formula": f, "mz": e["mz"], "source": sorted(e["source"]), "rel": e["rel"], "idx": None if e["idx"] is None else _list(e["idx"]),
+                            "w": None if e["w"] is None else _list(e["w"])} for f, e in lib.entries.items()]
+        case["localize"] = localize_cases(rng, tree, lib, smiles)
+    return case
+
+
+def dda_of(rng, nodes):
+    """The DDA MS2 of the parent: the peaks of the MS2 node, slightly moved, some weak."""
+    mz, rel = [], []
+    for p, r in next(v for k, v in nodes.items() if len(k) == 1):
+        if isinstance(p, str):
+            mz.append(MSY.mass_of(p) * (1 + rng.normal(0, 1e-6)))
+            rel.append(float(min(100.0, r * rng.uniform(0.3, 1.2))))
+    mz.append(float(rng.uniform(60, 150)))
+    rel.append(0.5)
+    return mz, rel
+
+
+def msn_cases():
+    rng = np.random.default_rng(20261014)
+    caf = MSY.caffeine_nodes()
+    out = [msn_case(rng, caf, MSY.CAFFEINE_ION, MSY.CAFFEINE_SMILES, "auto", -3.0, 3, None),
+           msn_case(rng, caf, MSY.CAFFEINE_ION, MSY.CAFFEINE_SMILES, "constant", 4.0, 5, dda_of(rng, caf)),
+           msn_case(rng, caf, MSY.CAFFEINE_ION, None, "linear", -3.0, 7, None),
+           msn_case(rng, caf, MSY.CAFFEINE_ION, MSY.CAFFEINE_SMILES, "none", 1.0, 9, dda_of(rng, caf))]
+    for i, smi in enumerate(TREE_SMILES[1:6]):
+        ion_d = CH.add(CH.neutral_formula(smi), {"H": 1})
+        ion = FO.fmt(FO.vec(ion_d, FO.element_order(ion_d)), FO.element_order(ion_d))
+        nodes = msn_nodes(rng, ion, smi)
+        out.append(msn_case(rng, nodes, ion, smi, "auto", float(rng.uniform(-4, 4)), 11 + i, dda_of(rng, nodes) if i % 2 == 0 else None))
+    return out
+
+
 def main(argv):
     rng = np.random.default_rng(20261013)
     ref = {
@@ -278,6 +421,7 @@ def main(argv):
         "polarity": polarity_cases(rng),
         "tree": tree_cases(rng),
         "origin": origin_cases(rng),
+        "msn": msn_cases(),
     }
     text = json.dumps(ref, sort_keys=True, allow_nan=True)
     if "--golden" in argv:

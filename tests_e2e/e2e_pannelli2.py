@@ -16,18 +16,18 @@ try:
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
         pg.click("text=Carica dati"); ready(pg)
         def corr_out():
-            assert pg.is_visible(".pnl.chrom .corrb"), "Correzione is in the header, not hidden in the popover"
+            assert pg.is_visible(".pnl.chrom [data-o=corr]"), "Correzione is in the header, not hidden in the popover"
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")
-            pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200)
-            t = pg.inner_text(".pnl.chrom .corrm"); print(t)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
+            t = pg.inner_text(".pnl.chrom .corrw >> nth=0 >> .corrm"); print(t)
             assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
         step("Correzione: in the header, one entry and a chooser with the 3 files", corr_out)
         def subtract():
-            pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
             pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_timeout(1500)
             assert pg.evaluate(f"{CH}.bk") not in ("", None), "a file was chosen"
-            pg.click(".pnl.chrom .corrb"); pg.wait_for_timeout(200); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_timeout(800)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_timeout(800)
         step("a non-blank file is subtracted from the chromatogram", subtract)
         def rt():
             pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_timeout(200)

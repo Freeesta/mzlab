@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Agilent MassHunter .D folders (docs/agenti/agilent.md): a folder loaded with «Load a folder» (cartella-carica.js) holds a run as many files; the ones the Rust engine reads
-// (AcqData/MSScan.bin, MSPeak.bin, ...) are grouped by their .D folder here, converted to one mzML each in the engine (rust-agilent.js) and handed to upload() like any mzML.
+// (AcqData/MSScan.bin, MSPeak.bin, ...) are grouped by their .D folder here, read as they are by the engine (rust-nativo.js) and handed to upload() as one sample each.
 // The pure parts (locate, group, mzmlName) have no DOM and are tested in node (tests/test_agilent_d.py).
 
 const AgilentD = (() => {
@@ -48,35 +48,20 @@ const AgilentD = (() => {
     if (!runs.length) return [];
     const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null;
     const taken = (ST.files || []).map(x => x.name);
-    const ok = [];
     for (const r of runs) {
       if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
-      else if (!rb || rb.disabled || !(rb.convertLettori || rb.convertAgilent)) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
-      else ok.push(r);
-    }
-    const fails = () => out.errs.forEach(([msg, nm]) => { const d = document.createElement("div"); d.className = "fail"; d.textContent = nm + ": " + msg; box.appendChild(d); });
-    if (!ok.length) { fails(); return []; }
-    const g = ConvUI.group(box, ok.map(r => (r.files.peak || r.files.datams).size));
-    let i = 0;
-    for (const r of ok) {
-      if (g.signal.aborted) break;
-      const ui = g.start(++i, r.name);
-      try {
-        const name = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
-        const blob = rb.convertLettori
-          ? await rb.convertLettori(r.name, Object.entries(r.files).map(([k, f]) => ({ name: NEED[k], blob: f })), p => ui.update(p), g.signal)      // the registry of readers (rust-lettori.js)
-          : await rb.convertAgilent(r.name, r.files, p => ui.update(p), g.signal);
-        CONV.add(name, blob);
-        out.files.push(new File([blob], name));
-        ui.done();
-        if (typeof renderFiles === "function") renderFiles();
-      } catch (e) {
-        if (e.cancelled) { ui.done(); continue; }
-        ui.fail(e.json ? I18N.err(e.json).message : e.message);
+      else if (!rb || rb.disabled || !rb.nativeSamples) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
+      else {
+        // the folder is read as it is: its files are the members, a run is one sample
+        const mem = Object.entries(r.files).map(([k, f]) => ({ name: r.name + "/" + NEED[k], blob: f }));
+        try {
+          const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
+          const s = (await rb.nativeSamples(mem)).samples;
+          out.files.push(NATIVO.sample(nm, NATIVO.key(r.name), mem, 0, s.length ? s[0].id : 1, false));
+        } catch (e) { out.errs.push([e.json ? I18N.err(e.json).message : e.message, r.name]); }
       }
     }
-    g.end();
-    fails();
+    out.errs.forEach(([msg, nm]) => { const d = document.createElement("div"); d.className = "fail"; d.textContent = nm + ": " + msg; box.appendChild(d); });
     return out.files;
   }
 

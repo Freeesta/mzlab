@@ -5,12 +5,25 @@
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
 const CONV = {
   files: new Map(),
+  made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
   add(name, blob) { this.files.set(name, blob); },
-  has(name) { return this.files.has(name); },
-  get size() { return this.files.size; },
+  // the samples of the maker's files of this page: their mzML is written when it is asked for
+  native() { const rb = typeof window !== "undefined" && window.MZLAB_RUST; return rb && rb.nativeNames ? rb.nativeNames() : []; },
+  has(name) { return this.files.has(name) || this.native().includes(name); },
+  get size() { return new Set([...this.files.keys(), ...this.native()]).size; },
+  // the mzML of a sample of a maker's file, written now into the box of the loading (a panel with the scans done and the cancel button); null if it was cancelled or failed
+  async make(name) {
+    const rb = window.MZLAB_RUST, box = document.getElementById("up");
+    if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
+    const f = (typeof ST !== "undefined" && ST.files || []).find(x => x.name === name), g = ConvUI.group(box, [1]), ui = g.start(1, name);
+    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, p => ui.update(p), g.signal); ui.done(); g.end(); this.made.set(name, blob); return blob; }
+    catch (e) { if (e.cancelled) { ui.done(); g.end(); } else ui.fail(e.json ? I18N.err(e.json).message : e.message); return null; }
+  },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(name) {
-    const blob = this.files.get(name); if (!blob) return false;
+    let blob = this.files.get(name) || this.made.get(name);
+    if (!blob && this.native().includes(name)) blob = await this.make(name);
+    if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !window.MZLAB_SAVE_MZML) return false;
       try { const ok = !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
@@ -20,7 +33,7 @@ const CONV = {
     return true;
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)
-  async downloadAll() { for (const n of [...this.files.keys()]) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
+  async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
 // the files being converted (the samples of a SCIEX .wiff), as rows of the list of the files (index.html renderFiles) from the moment their .wiff and .wiff.scan are paired
@@ -168,7 +181,7 @@ function wiffName(stem, sample, several, taken) {
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index" }[state] || "conv.row.wait"; }
+function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;

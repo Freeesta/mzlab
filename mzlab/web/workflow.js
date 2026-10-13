@@ -90,8 +90,7 @@ const WORKFLOW = (() => {
       level: p.level,
       prec: p.prec,
       filt: p.filt,
-      snip: p.snip,
-      snipw: p.snipw,
+      fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined,
     }));
 
     const ops = (typeof NB !== "undefined" && NB.ops && NB.ops.length)

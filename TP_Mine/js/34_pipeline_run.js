@@ -53,7 +53,7 @@
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
     return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minuti[i] : null; return m == null ? NaN : m; }),
-      smiles, structure: await structureOf(smiles) };
+      smiles, structure: await structureOf(smiles), campioni: st.cs ? st.R.canonical(st.call, st.cs).json : "" };
   }
   async function run(op) {
     if (st.busy) return;

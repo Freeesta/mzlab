@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
+# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation); fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt -Oz,
 # and site/static/wasm-feat/manifest.json with their SHA-256 (the worker checks it): tools/build_feat_wasm.sh <site/static>
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480).
 limit=512000
 out=${1:-site/static}/wasm-feat
-for which in detect proofs mrm finder; do
+for which in detect proofs mrm finder finder_msn; do
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  dir=$out/$([ $which = detect ] && echo feat || echo $which)
+  dir=$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)
   wasm-bindgen --target web --no-typescript --out-dir "$dir" target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm
   tools/wasm_opt.sh "$dir/mzlab_feat_wasm_bg.wasm" $limit "mzFinder $which"
 done
@@ -19,10 +19,6 @@ tools/wasm_opt.sh "$out/table/mzlab_feat_table_wasm_bg.wasm" $limit "mzFinder ta
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/grafo" target/wasm32-unknown-unknown/release/mzlab_feat_grafo_wasm.wasm
 tools/wasm_opt.sh "$out/grafo/mzlab_feat_grafo_wasm_bg.wasm" $limit "mzFinder grafo"
-# the readers of the vendor files (.D, .wiff, .raw), loaded only when a dataset is opened through them: crates/mzlab-lettori-wasm
-cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out/lettori" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm
-tools/wasm_opt.sh "$out/lettori/mzlab_lettori_wasm_bg.wasm" 600000 "lettori"
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/import" target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm
@@ -43,10 +39,9 @@ m["table"] = {"js": "table/mzlab_feat_table_wasm.js", "wasm": "table/mzlab_feat_
               "sha256": hashlib.sha256(open(f"{o}/table/mzlab_feat_table_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["mrm"] = {"js": "mrm/mzlab_feat_wasm.js", "wasm": "mrm/mzlab_feat_wasm_bg.wasm", "sha256": sha("mrm")}
 m["finder"] = {"js": "finder/mzlab_feat_wasm.js", "wasm": "finder/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder")}
+m["finder_msn"] = {"js": "finder-msn/mzlab_feat_wasm.js", "wasm": "finder-msn/mzlab_feat_wasm_bg.wasm", "sha256": sha("finder-msn")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
-m["lettori"] = {"js": "lettori/mzlab_lettori_wasm.js", "wasm": "lettori/mzlab_lettori_wasm_bg.wasm",
-              "sha256": hashlib.sha256(open(f"{o}/lettori/mzlab_lettori_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/mzlab_finder_lr_wasm_bg.wasm",
