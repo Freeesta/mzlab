@@ -526,5 +526,6 @@
   "error.quota": "Errore al caricamento di un file grande: lo spazio del browser non basta. {serve_mb} = MB necessari (file + indice), {libero_mb} = MB liberi.",
   "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file.",
   "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
-  "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati."
+  "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
+  "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file."
 }
