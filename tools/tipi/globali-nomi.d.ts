@@ -462,6 +462,8 @@ declare var pairArrows: any;
 declare var palCss: any;
 declare var parseDecimal: any;
 declare var peakParams: any;
+declare var pendHint: any;
+declare var pendKey: any;
 declare var pickFileColor: any;
 declare var pickTab: any;
 declare var pkSave: any;
