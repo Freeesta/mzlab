@@ -55,7 +55,11 @@ try:
             ys = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab===E.tab&&p.type==='chrom');return [c.y,...E.panels.filter(p=>p.src===c.id||p.link===c.id).map(p=>p.y)]})()"); print(ys)
         step("movePanel keeps the group", mv)
         def reload():
-            pg.wait_for_timeout(1200); o1 = order(); pg.reload(); pg.wait_for_timeout(4000); o2 = order(); print(o1, o2); assert o1 == o2, (o1, o2)
+            o1 = order(); n = pg.evaluate("E.panels.length")
+            pg.evaluate("uiSave(true)")         # the notebook is written in the background (two delays in a row): wait until it holds the panels as they are, then reload
+            pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(j => JSON.stringify(((j.ui || {}).panels || []).map(p => [p.type, p.y])) === JSON.stringify(E.panels.map(p => [p.type, p.y])))", timeout=60000)
+            pg.reload(); pg.wait_for_function(f"typeof E !== 'undefined' && E.panels.length === {n} && (E.pending || []).length === 0", timeout=60000); ready(pg)      # the files come back one by one, the panels with the last one
+            o2 = order(); print(o1, o2); assert o1 == o2, (o1, o2)
         step("reload restores order, link and src", reload)
         # MS2 arrows (nearest scan with data): covered by e2e_scroll «MS2: arrows jump over empty scans»
         pg.screenshot(path=SH + "200_ms2.png", full_page=True)
