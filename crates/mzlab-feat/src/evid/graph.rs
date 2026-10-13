@@ -18,6 +18,8 @@ pub const HYPOTHESIS_RT: f64 = 0.3;
 pub const RT_MARGIN: f64 = 0.05;
 /// The highest level reachable with and without an MS2 proof (no library match without an MS2).
 pub const MAX_LEVEL_WITH_MS2: &str = "2a";
+/// At unit resolution a library match on nominal masses is never above 3.
+pub const MAX_LEVEL_UNIT: &str = "3";
 pub const MAX_LEVEL_WITHOUT_MS2: &str = "4";
 
 /// Measurements that need the data of the files and are made by the caller; absent = not measured.
@@ -144,12 +146,17 @@ pub struct Identity {
 
 /// Row -> index of the hypothesis it confirms: the closest in m/z within the window (and in RT when the hypothesis has one).
 pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<usize>> {
+    match_hypotheses_in(hyps, aligned, HYPOTHESIS_PPM)
+}
+
+/// `match_hypotheses` with the window of m/z given (ppm, or minus Da at unit resolution).
+pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> Vec<Option<usize>> {
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
     by_mz.sort_by(|&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
     (0..aligned.len())
         .map(|r| {
             let (mz, rt) = (aligned.mz[r], aligned.rt[r]);
-            let tol = mz * HYPOTHESIS_PPM * 1e-6;
+            let tol = crate::axis::half(mz, win);
             let from = by_mz.partition_point(|&h| hyps[h].mz < mz - tol);
             by_mz[from..]
                 .iter()
@@ -183,7 +190,7 @@ pub(super) fn counts_of_n(table: &PointsTable, c: &[Candidate]) -> Vec<usize> {
     order.sort_by(|&a, &b| c[a].mass.total_cmp(&c[b].mass));
     let mut n = vec![1; c.len()];
     for (k, &i) in order.iter().enumerate() {
-        let reach = c[i].mass * table.mass_ppm * 1e-6;
+        let reach = crate::axis::half(c[i].mass, table.mass_ppm);
         let below = order[..k]
             .iter()
             .rev()
@@ -271,7 +278,7 @@ fn internal_edges(inp: &Inputs, row: usize, members: &[Member]) -> Vec<Edge> {
 
 pub(super) fn parent_row(inp: &Inputs) -> Option<usize> {
     let (mz, rt) = inp.parent?;
-    let tol = mz * HYPOTHESIS_PPM * 1e-6;
+    let tol = crate::axis::half(mz, inp.table.window(HYPOTHESIS_PPM));
     (0..inp.aligned.len()).find(|&r| {
         (inp.aligned.mz[r] - mz).abs() <= tol && (inp.aligned.rt[r] - rt).abs() <= HYPOTHESIS_RT
     })
@@ -309,7 +316,7 @@ fn gather(
         .map(|i| &inp.registry.hyps[i])
         .map(|h| (inp.aligned.mz[row] - h.mz) / h.mz * 1e6)
         .or(lib.map(|l| inp.libs[l].ppm));
-    if let Some(p) = ppm {
+    if let Some(p) = ppm.filter(|_| !inp.table.unit) {
         ev.push(graded(inp, Kind::Mass, p, None, false, vec![]));
     }
     let opt = |k, v: Option<f64>| v.map(|v| graded(inp, k, v, None, false, vec![]));
@@ -446,7 +453,9 @@ pub(super) fn identity_of(
         breakdown,
         edges,
         area_max: area_max(inp.aligned, row),
-        max_level: if has_ms2 {
+        max_level: if has_ms2 && inp.table.unit {
+            MAX_LEVEL_UNIT
+        } else if has_ms2 {
             MAX_LEVEL_WITH_MS2
         } else {
             MAX_LEVEL_WITHOUT_MS2

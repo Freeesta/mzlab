@@ -2,6 +2,7 @@
 //! `.mzfeat` of the browser and the one of the desktop come from the same code and the same bytes.
 
 use mzlab_core::budget::{MemBudget, WriteAt};
+use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
@@ -26,12 +27,21 @@ use mzlab_feat::tp::{build as build_tp, TpBlock, TpInputs, TpParams};
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
 pub fn recipe_from_json(text: &str) -> Result<Recipe> {
+    recipe_on(text, Recipe::default())
+}
+
+/// `recipe_from_json` on the recipe that fits the index: the default one for high resolution, the unit-resolution one (m/z axis in Da) otherwise.
+pub fn recipe_for<R: ReadAt>(text: &str, index: &mut Index<R>) -> Result<Recipe> {
+    recipe_on(text, Recipe::for_index(index)?)
+}
+
+fn recipe_on(text: &str, base: Recipe) -> Result<Recipe> {
     let v = if text.trim().is_empty() {
         Value::Null
     } else {
         json::parse(text.as_bytes()).map_err(|_| Error::new("error.badRecipe"))?
     };
-    let mut r = Recipe::default();
+    let mut r = base;
     r.detect.polarity = match v.get("polarity").and_then(Value::f64) {
         Some(p) if p < 0.0 => Some(-1),
         Some(_) => Some(1),
@@ -64,7 +74,7 @@ fn apply_params(r: &mut Recipe, v: &Value) {
         r.detect.min_points = x as u32;
         r.fill.min_points = x as usize;
     }
-    if let Some(x) = num("ppm") {
+    if let Some(x) = num("ppm").filter(|_| r.align.ion.ppm > 0.0) {
         r.align.ion.ppm = x;
         r.fill.ppm = x;
     }
@@ -179,6 +189,16 @@ impl HypoRun {
     }
 }
 
+/// Offset of the calibration of a unit-resolution instrument, measured on the parent (0 when the parent is not seen or the formula is not valid).
+fn parent_offset(feats: &[&FileFeatures], parent: &str, polarity: i8, rt: Option<f64>) -> f64 {
+    let adduct = if polarity < 0 { "[M-H]-" } else { "[M+H]+" };
+    elements::parse_formula(parent)
+        .ok()
+        .and_then(|f| elements::ion_mz(elements::mass(&f), adduct))
+        .and_then(|mz| mzlab_feat::target::offset::estimate(feats, mz, rt))
+        .unwrap_or(0.0)
+}
+
 /// The registry of the hypotheses of the parent (rules as the bytes of `regole_tp_2.json`; `structure` is the `grafo/1` JSON of its SMILES, or empty) and
 /// the parameters of the targeted pass.
 fn hypotheses_setup(
@@ -187,6 +207,7 @@ fn hypotheses_setup(
     parent: &str,
     parent_rt: Option<f64>,
     polarity: i8,
+    unit: bool,
 ) -> Result<(Registry, TargetParams, Option<String>)> {
     let st = Structure::parse(structure)?;
     st.check_parent(parent)?;
@@ -200,6 +221,7 @@ fn hypotheses_setup(
     };
     let hp = HypoParams {
         polarity,
+        nominal: unit,
         ..HypoParams::default()
     };
     let registry = generate(
@@ -210,7 +232,11 @@ fn hypotheses_setup(
     let tp = TargetParams {
         polarity,
         parent_rt,
-        ..TargetParams::default()
+        ..if unit {
+            TargetParams::lr(mzlab_feat::trace::FLOOR)
+        } else {
+            TargetParams::default()
+        }
     };
     Ok((registry, tp, st.profile))
 }
@@ -225,13 +251,17 @@ pub fn hypotheses<R: ReadAt>(
     parent_rt: Option<f64>,
     r: &Recipe,
 ) -> Result<HypoRun> {
-    let (mut registry, tp, profile) = hypotheses_setup(
+    let (mut registry, mut tp, profile) = hypotheses_setup(
         rules,
         structure,
         parent,
         parent_rt,
         r.detect.polarity.unwrap_or(1),
+        r.align.ion.ppm < 0.0,
     )?;
+    if r.align.ion.ppm < 0.0 {
+        tp.mz_offset = parent_offset(feats, parent, tp.polarity, parent_rt);
+    }
     let result = run(indexes, feats, &mut registry, &tp)?;
     Ok(HypoRun {
         registry,
@@ -252,10 +282,21 @@ pub fn hypotheses_stored<R: ReadAt>(
     r: &Recipe,
 ) -> Result<HypoRun> {
     let polarity = r.detect.polarity.unwrap_or(1);
-    let (mut registry, tp, profile) =
-        hypotheses_setup(rules, structure, parent, parent_rt, polarity)?;
+    let (mut registry, mut tp, profile) = hypotheses_setup(
+        rules,
+        structure,
+        parent,
+        parent_rt,
+        polarity,
+        r.align.ion.ppm < 0.0,
+    )?;
     let n = indexes.len().min(src.count());
     let mut load = |k: usize| Ok(read_file(&src.bytes(k)?)?.0);
+    if r.align.ion.ppm < 0.0 {
+        let feats = (0..n).map(&mut load).collect::<Result<Vec<_>>>()?;
+        let refs: Vec<&FileFeatures> = feats.iter().collect();
+        tp.mz_offset = parent_offset(&refs, parent, polarity, parent_rt);
+    }
     let result = mzlab_feat::target::run_loading(indexes, n, &mut load, &mut registry, &tp)?;
     Ok(HypoRun {
         registry,
@@ -285,6 +326,26 @@ pub fn evidence(
     Ok(out)
 }
 
+/// Computes the identity columns of the table and gives the table of points: the unit-resolution one (windows in Da) when the recipe in the meta says so.
+fn points_and_identity(
+    aligned: &mut mzlab_feat::table::Aligned,
+    hypo: &HypoRun,
+    meta: &Value,
+) -> Result<PointsTable> {
+    let unit = meta
+        .get("recipe")
+        .and_then(Value::str)
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    let win = if unit {
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    } else {
+        mzlab_feat::evid::HYPOTHESIS_PPM
+    };
+    aligned.ident = RowIdent::compute_in(aligned, &hypo.registry.hyps, hypo.registry.polarity, win);
+    let points = PointsTable::bundled()?;
+    Ok(if unit { points.with_unit() } else { points })
+}
+
 /// `evidence` over a table read by offsets and an output written to `sink`. The graph is built whole and written when its estimate fits in half of the
 /// budget; else its identities are made twice, once for the order and the length, once for the bytes (`GraphStream`), and only one is held. Same bytes.
 #[allow(clippy::too_many_arguments)]
@@ -303,8 +364,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         .add_missing_to(&mut aligned, &JoinParams::default());
     aligned.sort_rows();
     let origin = origin_from_meta(&meta);
-    aligned.ident = RowIdent::compute(&aligned, &hypo.registry.hyps, hypo.registry.polarity);
-    let points = PointsTable::bundled()?;
+    let points = points_and_identity(&mut aligned, hypo, &meta)?;
     let treated: Vec<usize> = (0..minutes.len())
         .filter(|&k| minutes[k].is_finite())
         .collect();

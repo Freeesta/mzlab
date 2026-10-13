@@ -108,8 +108,13 @@ pub fn isolated(al: &Aligned, ppm: f64, rt: f64) -> Vec<bool> {
         if mz[s].is_nan() {
             continue;
         }
-        let lo = mz.partition_point(|&v| v < mz[s] * (1.0 - tol));
-        let hi = mz.partition_point(|&v| v <= mz[s] * (1.0 + tol));
+        let (from, to) = if ppm < 0.0 {
+            (mz[s] + ppm, mz[s] - ppm)
+        } else {
+            (mz[s] * (1.0 - tol), mz[s] * (1.0 + tol))
+        };
+        let lo = mz.partition_point(|&v| v < from);
+        let hi = mz.partition_point(|&v| v <= to);
         let crowded = (lo..hi).any(|j| j != s && (al.rt[ord[j]] - al.rt[g]).abs() <= rt);
         out[g] = !crowded;
     }

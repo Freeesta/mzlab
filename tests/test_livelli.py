@@ -28,7 +28,7 @@ def lv(code):
 
 def test_data_file_is_versioned_and_has_two_profiles():
     d = run("console.log(JSON.stringify({f: L.data.formato, p: Object.keys(L.data.profili), vis: L.names(), def: L.profileName(), order: L.ORDER}))")
-    assert d["f"] == "livelli/1" and d["p"] == ["mzlab", "attributio"] and d["vis"] == ["mzlab"] and d["def"] == "mzlab"
+    assert d["f"] == "livelli/1" and d["p"] == ["mzlab", "attributio", "lr"] and d["vis"] == ["mzlab"] and d["def"] == "mzlab"
     assert d["order"] == ["1", "2a", "2b", "3", "4", "5", "0"]
 
 
@@ -131,6 +131,15 @@ def test_attributio_profile_cascade():
     assert conflict["proposed"] == "3" and conflict["why"] == "confirm"                                           # a name conflict: the best is ahead by less than 0.05
     near = lv("return L.assess({cands: [c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .62})]}, 'attributio')")
     assert near["decisive"].startswith("Nessuna fonte sopra i cancelli; la più vicina: A: coseno 0.62 vs 0.70 ✗")
+
+
+def test_lr_profile_never_goes_above_3():
+    """Unit resolution: every gate passed gives 3 (never 2a); no source gives 4 with a unique nominal formula, else 5."""
+    passed = lv("return L.assess({cands: [c(.9, 8, 100)], nScans: 3}, 'lr')")
+    assert passed["proposed"] == "3" and passed["why"] == "tetto"
+    assert lv("return L.assess({cands: [c(.3, 1, 500)], nScans: 3, formulaUnique: true}, 'lr')")["proposed"] == "4"
+    assert lv("return L.assess({cands: [], nScans: 1}, 'lr')")["proposed"] == "5"
+    assert lv("return L.assess({cands: [c(.9, 8, 2)], nScans: 3}, 'mzlab')")["proposed"] == "2a"
 
 
 def test_colour_class_and_sentence_never_say_it_is():

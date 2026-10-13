@@ -360,6 +360,71 @@
     "suspect-RT": "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, Lvl 0)",
     "none": "Unannotated (DETECTED)"
    }
+  },
+  "lr": {
+   "visibile": false,
+   "fonte": "unit resolution (triple quadrupole, nominal masses): never above 3, a nominal mass is a candidate and not an identification; 4 when the nominal formula alone explains the ion; 5 otherwise",
+   "tetto": "3",
+   "soglie": {
+    "entropia_min": 0.75,
+    "picchi_min": 6,
+    "picchi_min_pochi": 3,
+    "precursore_ppm_max": 350,
+    "scansioni_min": 2,
+    "margine_min": 0.05,
+    "entropia_provvisorio": 0.6,
+    "analogo_mcos_min": 0.6
+   },
+   "cancelli": [
+    {
+     "id": "prec",
+     "campo": "ppm",
+     "op": "<=",
+     "soglia": "precursore_ppm_max",
+     "assoluto": true,
+     "unita": "mDa",
+     "ruolo": "source"
+    },
+    {
+     "id": "score",
+     "campo": "ent",
+     "op": ">=",
+     "soglia": "entropia_min",
+     "ruolo": "source"
+    },
+    {
+     "id": "shared",
+     "campo": "shared",
+     "op": ">=",
+     "soglia": "picchi_min",
+     "ridotta": {
+      "se_campo": "nlib",
+      "minore_di": 6,
+      "soglia": "picchi_min_pochi"
+     },
+     "ruolo": "source"
+    },
+    {
+     "id": "scans",
+     "campo": "nScans",
+     "op": ">=",
+     "soglia": "scansioni_min",
+     "ruolo": "confirm"
+    },
+    {
+     "id": "distinct",
+     "campo": "margin",
+     "op": ">=",
+     "soglia": "margine_min",
+     "ruolo": "confirm"
+    }
+   ],
+   "standard": [],
+   "provvisorio": {
+    "campo": "ent",
+    "soglia": "entropia_provvisorio"
+   },
+   "senza_prove": "5"
   }
  }
 }

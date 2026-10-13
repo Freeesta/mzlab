@@ -1917,6 +1917,7 @@ I18N.add("en", {
   "lv.gate.stdppm": "|Δm| from the standard",
   "lv.dec.1": "1: the standard {name} marked by you passes every gate",
   "lv.dec.2a": "2a: the library{lib} passes every gate ({name})",
+  "lv.dec.tetto": "{lv}: {name} passes every gate, but at unit resolution a nominal mass is a candidate: the level does not go above {lv}",
   "lv.dec.3conf": "3: {name} passes the gates of the source but not the confirmation ones: {gates}",
   "lv.dec.3prov": "3: tentative; {name} does not pass: {gates}",
   "lv.dec.3an": "3: an analog only: {name} (modified cosine {cos}, Δm {delta})",

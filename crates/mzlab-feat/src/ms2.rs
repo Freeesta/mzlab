@@ -12,6 +12,7 @@ use crate::sortc;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
+use crate::axis::half;
 use crate::sweep::windows;
 use crate::table::{FileFeatures, FLAG_PURITY_EST};
 use crate::trace::{reserve, Params};
@@ -20,6 +21,7 @@ use crate::trace::{reserve, Params};
 pub struct Ms2Params {
     /// Half width of the isolation window assumed when the index has none, m/z.
     pub default_half_window: f64,
+    /// Tolerance of m/z, ppm or minus Da. In Da (unit resolution) an MS2 scan without a parent MS1 scan belongs to the survey just before it.
     pub tol_ppm: f64,
     /// Purity below which an MS2 is weak evidence.
     pub weak: f32,
@@ -64,6 +66,7 @@ struct Cand {
 fn candidates<R: ReadAt>(
     index: &Index<R>,
     ids: &[i64],
+    rt: &[f64],
     pol: Option<i8>,
     q: &Ms2Params,
 ) -> Result<Vec<Cand>> {
@@ -82,10 +85,13 @@ fn candidates<R: ReadAt>(
             Some(1) => s.polarity >= 0,
             Some(x) => s.polarity == x,
         };
-        let ppos = s
+        let mut ppos = s
             .parent
             .and_then(|p| pos_of.get(p as usize).copied())
             .unwrap_or(u32::MAX);
+        if ppos == u32::MAX && s.parent.is_none() && q.tol_ppm < 0.0 && !rt.is_empty() {
+            ppos = rt.partition_point(|&t| t <= s.rt).saturating_sub(1) as u32;
+        }
         if s.level != 2 || !ok_pol || ppos == u32::MAX {
             continue;
         }
@@ -178,7 +184,7 @@ fn purities<R: ReadAt>(
         let total: f64 = win.iter().map(|w| w.1).sum();
         for &(_, fi) in &prs[from..to] {
             let i = fi as usize;
-            let tol = f.mz[i] * q.tol_ppm * 1e-6;
+            let tol = half(f.mz[i], q.tol_ppm);
             let own: f64 = win
                 .iter()
                 .filter(|w| (w.0 - f.mz[i]).abs() <= tol)
@@ -209,8 +215,11 @@ pub fn link<R: ReadAt>(
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(links);
     };
-    let ids = index.arrays(si)?.scan_ids.clone();
-    let cands = candidates(index, &ids, p.polarity, q)?;
+    let (ids, rt) = {
+        let a = index.arrays(si)?;
+        (a.scan_ids.clone(), a.rt.clone())
+    };
+    let cands = candidates(index, &ids, &rt, p.polarity, q)?;
     let prs = pairs(f, &cands, ids.len())?;
     let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
     let mut tri = purities(index, si, f, &cands, &prs, q, max_peaks)?;

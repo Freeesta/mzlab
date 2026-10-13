@@ -1917,6 +1917,7 @@ I18N.add("it", {
   "lv.gate.stdppm": "|Δm| dallo standard",
   "lv.dec.1": "1: lo standard {name} segnato da te passa ogni cancello",
   "lv.dec.2a": "2a: la libreria{lib} passa ogni cancello ({name})",
+  "lv.dec.tetto": "{lv}: {name} passa tutti i cancelli, ma a risoluzione unitaria una massa nominale è un candidato: il livello non supera {lv}",
   "lv.dec.3conf": "3: {name} passa i cancelli della fonte ma non quelli di conferma: {gates}",
   "lv.dec.3prov": "3: provvisorio; {name} non passa: {gates}",
   "lv.dec.3an": "3: solo un analogo: {name} (coseno modificato {cos}, Δm {delta})",

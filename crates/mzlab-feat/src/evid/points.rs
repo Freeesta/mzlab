@@ -47,6 +47,8 @@ pub struct PointsTable {
     pub ms2_margin: f64,
     /// Kinetics counted with the ceiling `cap_if_weighed` instead of `cap` (decision K1: off).
     pub weighed: bool,
+    /// Unit resolution: windows of m/z in Da (`window`), no proof of mass (a nominal mass is not evidence) and no level above 3 with an MS2.
+    pub unit: bool,
 }
 
 fn bad(what: &str) -> Error {
@@ -137,6 +139,7 @@ impl PointsTable {
                 soglie,
             )?,
             weighed: false,
+            unit: false,
         })
     }
 
@@ -156,6 +159,22 @@ fn lowest(rule: &Rule) -> Option<f64> {
 }
 
 impl PointsTable {
+    /// The table for a unit-resolution series: tolerances in Da.
+    pub fn with_unit(mut self) -> PointsTable {
+        self.unit = true;
+        self.mass_ppm = crate::axis::da(crate::axis::LR_TOL);
+        self
+    }
+
+    /// A window of m/z of `ppm` for a high-resolution series, `LR_TOL` Da for a unit one (the sign convention of `axis::half`).
+    pub fn window(&self, ppm: f64) -> f64 {
+        if self.unit {
+            crate::axis::da(crate::axis::LR_TOL)
+        } else {
+            ppm
+        }
+    }
+
     /// Points of a measured `value` (NaN: not measured, no points); `support` is the second measurement of the types that need one.
     pub fn grade(&self, kind: Kind, value: f64, support: Option<f64>) -> Grade {
         let Some(rule) = self.rule(kind) else {
