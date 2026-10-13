@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Context help: every <button class="hq" data-help="key"> opens a short explanation (HELP[key]) next to it.
 // Texts for students, in the catalogs (keys help.<key>.title / .body). To add one: a key here and a "?" button where it is needed. Classic script.
@@ -29,11 +30,11 @@ const HELP = {
   let cur = null;
   const close = () => { pop.hidden = true; cur = null; };
   document.addEventListener("click", e => {
-    const b = e.target.closest(".hq[data-help]");
-    if (!b) { if (!pop.contains(e.target)) close(); return; }
+    const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".hq[data-help]"));
+    if (!b) { if (!pop.contains(/** @type {Node} */ (e.target))) close(); return; }
     e.preventDefault(); e.stopPropagation();
     if (cur === b) return close();
-    const key = b.dataset.help, mk = /^modo-(full|ms2|mrm)$/.exec(key);
+    const key = /** @type {string} */ (b.dataset.help), mk = /^modo-(full|ms2|mrm)$/.exec(key);
     const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[ESP.didattica(mk[1])].name, QMODI.html(ESP.didattica(mk[1]))] : HELP[key]; if (!h) return;
     pop.classList.toggle("wide", !!mk); pop.classList.remove("guide");
     pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="${I18N.t("help.close")}">&times;</button></div><div>${h[1]}</div>`;      // no title for the "Informazioni" box (key header)
@@ -45,7 +46,7 @@ const HELP = {
     pop.style.left = left + "px"; pop.style.top = top + "px";
   }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
-  addEventListener("scroll", e => { if (!pop.contains(e.target)) close(); }, true);
+  addEventListener("scroll", e => { if (!pop.contains(/** @type {Node} */ (e.target))) close(); }, true);
 })();
 const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1].replace(/<br>.*/s, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); return t.length > 190 ? t.slice(0, t.lastIndexOf(" ", 187)) + "…" : t; };
 // the general guide, now the first chapter of the Teoria ("Come si usa QqQ lab", teoria/00-uso.html): all the explanations in one place, by topic

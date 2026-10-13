@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Reproducibility (.mzflow) and MGF / MSP spectral export.
 //
@@ -132,7 +133,7 @@ const WORKFLOW = (() => {
 
   // ---------------------------------------------------------------- .mzflow open & apply
   function openWorkflow() {
-    let inp = document.getElementById("wf-open-input");
+    let inp = /** @type {HTMLInputElement | null} */ (document.getElementById("wf-open-input"));
     if (!inp) {
       inp = document.createElement("input");
       inp.type = "file";

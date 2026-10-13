@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Tools for the mass spectrum (Full Scan and MS2) and for the time axes. Classic script, loaded after scroll.js: it uses the globals of explore.js
 // (E, Q, EH, M, css, fmt, draw, uiSave, ctl, big, dlx, info, shown, tabPanels, IC_DL, IC_TAB).
@@ -45,7 +46,7 @@ function drawMeas(p, g, X, Y, W) {
 }
 function specClick(p, px, py) {                  // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
-  let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  /** @type {any} */ let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
   (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });
   if (lb) { measClick(p, lb.m); return; }
   const s = p._a.snap(px); if (s) measClick(p, s.m);
@@ -109,7 +110,7 @@ function undoLast(p) {                                                    // Ctr
 }
 document.addEventListener("keydown", e => {
   const a = E.active; if (!a || !a.el || !Q("#dpanels").offsetParent || a.type === "map" && false) return;
-  if (e.target.closest && e.target.closest("input,textarea,select,[contenteditable='true']")) return;
+  if (/** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
   if (document.querySelector("dialog[open]")) return;
   const chosen = a.isel != null && a.ints && a.ints.find(i => i.id === a.isel);
   if ((e.key === "Delete" || e.key === "Backspace") && chosen && !e.ctrlKey && !e.metaKey) { e.preventDefault(); delInts(a, [chosen]); return; }      // with a peak selected, Delete/Backspace remove it (before "whole view")

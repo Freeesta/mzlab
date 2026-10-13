@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Agilent MassHunter .D folders (docs/agenti/agilent.md): a folder loaded with «Load a folder» (cartella-carica.js) holds a run as many files; the ones the Rust engine reads
 // (AcqData/MSScan.bin, MSPeak.bin, ...) are grouped by their .D folder here, converted to one mzML each in the engine (rust-agilent.js) and handed to upload() like any mzML.
@@ -43,7 +44,7 @@ const AgilentD = (() => {
 
   // ---- page part: converts the runs with the engine into the box of the loading (#up); resolves to the Files of mzML (a run that fails shows its notice there)
   async function toMzml(runs) {
-    const T = (k, p) => I18N.t(k, p), out = { files: [], errs: [] }, box = document.getElementById("up");
+    const T = (k, p) => I18N.t(k, p), out = /** @type {{ files: File[], errs: any[] }} */ ({ files: [], errs: [] }), box = /** @type {HTMLElement} */ (document.getElementById("up"));
     if (!runs.length) return [];
     const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null;
     const taken = (ST.files || []).map(x => x.name);
@@ -57,7 +58,7 @@ const AgilentD = (() => {
     if (!ok.length) { fails(); return []; }
     const g = ConvUI.group(box, ok.map(r => (r.files.peak || r.files.datams).size));
     let i = 0;
-    const anon = !!document.getElementById("rawanon")?.checked;
+    const anon = !!/** @type {HTMLInputElement | null} */ (document.getElementById("rawanon"))?.checked;
     for (const r of ok) {
       if (g.signal.aborted) break;
       const ui = g.start(++i, r.name);
