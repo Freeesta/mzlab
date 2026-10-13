@@ -83,7 +83,10 @@ pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<S
     let tr_files: Vec<usize> = treated.iter().map(|x| x.1).collect();
     let mut o = Out::default();
     o.raw("{\"schema\":").str(TABLE_SCHEMA).raw(",\"parent\":");
-    o.opt((has_block && t.tp.parent_row != NO_PARENT).then(|| f64::from(t.id(t.tp.parent_row as usize))));
+    o.opt(
+        (has_block && t.tp.parent_row != NO_PARENT)
+            .then(|| f64::from(t.id(t.tp.parent_row as usize))),
+    );
     o.raw(",\"times\":");
     o.floats(&treated.iter().map(|x| x.0).collect::<Vec<_>>());
     o.raw(",\"controls\":{\"t0\":")
@@ -96,62 +99,97 @@ pub fn table_json(t: &Aligned, s: &[Sample], rows: Option<&[usize]>) -> Result<S
     let list = match rows {
         Some(r) => r,
         None => {
-            all = (0..t.len()).filter(|&r| matches!(t.tp.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT)).collect();
+            all = (0..t.len())
+                .filter(|&r| matches!(t.tp.status[r], ST_TP | ST_UNEXPLAINED | ST_PARENT))
+                .collect();
             &all
         }
     };
+    let cx = Cx {
+        has_block,
+        treated: &treated,
+        tr_files: &tr_files,
+        t0: &t0,
+        blank: &blank,
+    };
     for &r in list {
-        let series: Vec<f64> = tr_files
-            .iter()
-            .map(|&k| round(measured(t, r, k), 1))
-            .collect();
-        let (mut max_a, mut tmax) = (0.0, None);
-        for (i, &a) in series.iter().enumerate() {
-            if a > max_a {
-                max_a = a;
-                tmax = Some(treated[i].0);
-            }
-        }
-        let max_h = tr_files.iter().fold(0.0f64, |m, &k| {
-            let c = t.cell(r, k);
-            if t.state[c] == CELL_ABSENT {
-                m
-            } else {
-                m.max(f64::from(t.height[c]))
-            }
-        });
-        let (m_t0, m_bl) = (largest(t, r, &t0), largest(t, r, &blank));
-        let n_det = (0..t.n_files).filter(|&k| measured(t, r, k) > 0.0).count();
-        o.raw(if first { "{" } else { ",{" });
+        row_json(&mut o, t, r, &cx, first);
         first = false;
-        o.raw("\"row\":")
-            .int(r as i64)
-            .raw(",\"id\":")
-            .int(i64::from(t.id(r)))
-            .raw(",\"mz\":")
-            .num(round(t.mz[r], 6))
-            .raw(",\"rt\":")
-            .num(round(t.rt[r], 3));
-        let block = |v: &[u8]| has_block.then(|| f64::from(v[r]));
-        o.raw(",\"status\":").opt(block(&t.tp.status)).raw(",\"kinship\":").opt(block(&t.tp.kinship));
-        o.raw(",\"via\":").opt(block(&t.tp.via)).raw(",\"notes\":").opt(block(&t.tp.notes));
-        o.raw(",\"n_det\":")
-            .int(n_det as i64)
-            .raw(",\"max_area\":")
-            .num(max_a)
-            .raw(",\"max_height\":")
-            .num(round(max_h, 1));
-        o.raw(",\"tmax\":").opt(tmax);
-        o.raw(",\"in_t0\":")
-            .raw(if m_t0 > 0.0 { "true" } else { "false" });
-        o.raw(",\"in_blank\":")
-            .raw(if m_bl > 0.0 { "true" } else { "false" });
-        o.raw(",\"t0_ratio\":")
-            .opt((max_a > 0.0).then(|| round(m_t0 / max_a, 4)));
-        o.raw(",\"blank_ratio\":")
-            .opt((max_a > 0.0).then(|| round(m_bl / max_a, 4)));
-        o.raw(",\"series\":").floats(&series).raw("}");
     }
     o.raw("]}");
     Ok(o.0)
+}
+
+/// What every row of the table shares: the block flag, the treated files in time order, and the t0 / blank files.
+struct Cx<'a> {
+    has_block: bool,
+    treated: &'a [(f64, usize)],
+    tr_files: &'a [usize],
+    t0: &'a [usize],
+    blank: &'a [usize],
+}
+
+fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
+    let Cx {
+        has_block,
+        treated,
+        tr_files,
+        t0,
+        blank,
+    } = *cx;
+    let series: Vec<f64> = tr_files
+        .iter()
+        .map(|&k| round(measured(t, r, k), 1))
+        .collect();
+    let (mut max_a, mut tmax) = (0.0, None);
+    for (i, &a) in series.iter().enumerate() {
+        if a > max_a {
+            max_a = a;
+            tmax = Some(treated[i].0);
+        }
+    }
+    let max_h = tr_files.iter().fold(0.0f64, |m, &k| {
+        let c = t.cell(r, k);
+        if t.state[c] == CELL_ABSENT {
+            m
+        } else {
+            m.max(f64::from(t.height[c]))
+        }
+    });
+    let (m_t0, m_bl) = (largest(t, r, t0), largest(t, r, blank));
+    let n_det = (0..t.n_files).filter(|&k| measured(t, r, k) > 0.0).count();
+    o.raw(if first { "{" } else { ",{" });
+    o.raw("\"row\":")
+        .int(r as i64)
+        .raw(",\"id\":")
+        .int(i64::from(t.id(r)))
+        .raw(",\"mz\":")
+        .num(round(t.mz[r], 6))
+        .raw(",\"rt\":")
+        .num(round(t.rt[r], 3));
+    let block = |v: &[u8]| has_block.then(|| f64::from(v[r]));
+    o.raw(",\"status\":")
+        .opt(block(&t.tp.status))
+        .raw(",\"kinship\":")
+        .opt(block(&t.tp.kinship));
+    o.raw(",\"via\":")
+        .opt(block(&t.tp.via))
+        .raw(",\"notes\":")
+        .opt(block(&t.tp.notes));
+    o.raw(",\"n_det\":")
+        .int(n_det as i64)
+        .raw(",\"max_area\":")
+        .num(max_a)
+        .raw(",\"max_height\":")
+        .num(round(max_h, 1));
+    o.raw(",\"tmax\":").opt(tmax);
+    o.raw(",\"in_t0\":")
+        .raw(if m_t0 > 0.0 { "true" } else { "false" });
+    o.raw(",\"in_blank\":")
+        .raw(if m_bl > 0.0 { "true" } else { "false" });
+    o.raw(",\"t0_ratio\":")
+        .opt((max_a > 0.0).then(|| round(m_t0 / max_a, 4)));
+    o.raw(",\"blank_ratio\":")
+        .opt((max_a > 0.0).then(|| round(m_bl / max_a, 4)));
+    o.raw(",\"series\":").floats(&series).raw("}");
 }
