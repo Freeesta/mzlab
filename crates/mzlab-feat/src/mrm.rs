@@ -1,15 +1,19 @@
 //! MRM files (one chromatogram per transition Q1 > Q3, no scans): the same table as the other files, with the transition as the unit.
 //!
-//! A peak is a peak of the chromatogram of a transition (`peakq::detect_prominence`, the resolver of the traces of the other files, with the noise of
-//! the chromatogram as threshold); its `mz` is the Q1 and its `q3` the Q3. There are no isotopes, no MS2 and no families: the Q3 is already the proof.
+//! A peak is a peak of the chromatogram of a transition, found by its own resolver: the 3200 reports multiples of one count, mostly zeros, so the
+//! chromatogram is averaged over seconds and its counting noise made even (`Stabilise`) before the peaks are measured in standard deviations; its `mz`
+//! is the Q1 and its `q3` the Q3. There are no isotopes, no MS2 and no families: the Q3 is already the proof.
 //! The series are aligned by transition (Q1, Q3 to 0.01) and RT, and the cells without a peak are integrated on the chromatogram of the transition.
 //! The qualifier/quantifier ratios and the long table of the calibration standards are here too; the calibration line is never computed.
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::peakq::{detect_prominence, quality, ProminenceParams};
+use mzlab_core::peakq::{quality, Quality};
 use mzlab_core::peaks::noise_level;
+
+mod resolver;
+use resolver::{area_above, boxcar, odd_points, resolve, Span, Stabilise};
 
 use crate::export::{fix, Ctx};
 use crate::gapfill::{expected_window, trace_area, FillParams};
@@ -54,9 +58,16 @@ pub fn read_srm<M: ReadAt>(m: &mut Mzml<M>, scans_end: u64) -> Result<Vec<Srm>> 
 
 #[derive(Debug, Clone)]
 pub struct MrmParams {
-    pub prom: ProminenceParams,
+    /// Rise of a peak over the higher of its valleys, in standard deviations of the noise of the averaged chromatogram (`Stabilise`). The rise is the
+    /// difference of two noisy points (x 1.4) picked as the extremes among the thousands of windows of a chromatogram, and with a few counts per window
+    /// the Poisson tail is longer than the Gaussian one: 10 keeps that noise out.
+    pub snr: f64,
     /// Lowest height of a peak, counts; the noise of the chromatogram sets the real threshold above it.
     pub min_height: f64,
+    /// Shortest LC peak at its base, seconds: the chromatogram is smoothed over half of it and a peak spans at least all of it. A peak of liquid
+    /// chromatography lasts seconds (a few in UHPLC, tens in HPLC) while an MRM chromatogram has a point every few hundredths of a second: a width in
+    /// points would let an isolated count through.
+    pub min_width_s: f64,
     /// Peaks of one transition closer than this (minutes) are one row.
     pub rt_gap: f64,
     /// Half width added to the window of the peak when a cell is integrated (minutes).
@@ -67,11 +78,9 @@ pub struct MrmParams {
 impl Default for MrmParams {
     fn default() -> Self {
         MrmParams {
-            prom: ProminenceParams {
-                rel_prominence: 0.02,
-                ..ProminenceParams::default()
-            },
+            snr: 10.0,
             min_height: 10.0,
+            min_width_s: 3.0,
             rt_gap: 0.15,
             fill_tol: 0.1,
             fill: true,
@@ -91,50 +100,68 @@ fn interval(t: &[f64]) -> f64 {
     d.get(d.len() / 2).copied().unwrap_or(0.0)
 }
 
-/// The peaks of every transition of a file, ordered by Q1, Q3 and RT. Area in counts x seconds.
+/// The peaks of every transition of a file, ordered by Q1, Q3 and RT. Area in counts x seconds. The chromatogram is averaged over half the shortest
+/// peak (`MrmParams.min_width_s`) and stabilised (`Stabilise`); a peak rises `MrmParams.snr` standard deviations over its valleys and spans at least
+/// `min_width_s`. Height and area are taken on the averaged chromatogram (the moving average keeps the area); a peak without area is dropped.
 pub fn detect(traces: &[Srm], p: &MrmParams) -> FileFeatures {
     let mut f = FileFeatures {
         dt: traces.first().map_or(0.0, |s| interval(&s.t)),
         ..FileFeatures::default()
     };
     for s in traces {
-        let noise = noise_level(&s.y);
-        let mut peaks: Vec<_> = detect_prominence(&s.t, &s.y, p.prom)
-            .into_iter()
-            .filter(|k| k.height >= p.min_height && k.height >= 3.0 * noise)
-            .collect();
-        peaks.sort_by(|a, b| s.t[a.apex_i].total_cmp(&s.t[b.apex_i]));
-        for k in peaks {
-            let q = quality(&s.t, &s.y, k.lo, k.hi, noise);
-            f.mz.push(s.q1);
-            f.q3.push(s.q3);
-            f.rt.push(s.t[k.apex_i] as f32);
-            f.left.push(s.t[k.lo] as f32);
-            f.right.push(s.t[k.hi] as f32);
-            f.apex.push(k.apex_i as u32);
-            f.scan_lo.push(k.lo as u32);
-            f.scan_hi.push(k.hi as u32);
-            f.area.push(k.area * 60.0);
-            f.height.push(k.height as f32);
-            f.npts.push(k.n_scans.min(usize::from(u16::MAX)) as u16);
-            f.flags.push(FLAG_GOOD);
-            f.iso_group.push(0);
-            f.charge.push(1);
-            f.shape.push(q.gaussian as f32);
-            f.snr.push(k.snr as f32);
-            f.fwhm.push(0.0);
-            f.asym.push(q.asymmetry.unwrap_or(0.0) as f32);
-            f.gaps.push(0);
-            f.qreason.push(0);
-            f.ms2_n.push(0);
-            f.purity.push(-1.0);
-            f.area_win.push(k.area * 60.0);
-            f.family_id.push(0);
-            f.role.push(ROLE_M);
-            f.alt.push(0);
+        let dt = interval(&s.t);
+        let n = s.y.len().min(s.t.len());
+        let w = odd_points(p.min_width_s / 2.0, dt);
+        let ys = boxcar(&s.y[..n], w);
+        let st = Stabilise::new(&s.y[..n], w);
+        let zs: Vec<f64> = ys.iter().map(|&v| st.z(v)).collect();
+        let min_pts = if dt > 0.0 {
+            (p.min_width_s / dt).ceil() as usize
+        } else {
+            0
+        }
+        .max(3);
+        for k in resolve(&zs, p.snr, min_pts) {
+            let area = area_above(&s.t, &ys, k.lo, k.hi) * 60.0;
+            if ys[k.apex] < p.min_height || area <= 0.0 {
+                continue;
+            }
+            let q = quality(&s.t, &ys, k.lo, k.hi, st.sigma);
+            push_peak(&mut f, s, &k, (ys[k.apex], area), &q);
         }
     }
     f
+}
+
+/// Appends the peak `k` of the transition `s` to `f`, with its height and its area in counts x seconds.
+fn push_peak(f: &mut FileFeatures, s: &Srm, k: &Span, (height, area): (f64, f64), q: &Quality) {
+    f.mz.push(s.q1);
+    f.q3.push(s.q3);
+    f.rt.push(s.t[k.apex] as f32);
+    f.left.push(s.t[k.lo] as f32);
+    f.right.push(s.t[k.hi] as f32);
+    f.apex.push(k.apex as u32);
+    f.scan_lo.push(k.lo as u32);
+    f.scan_hi.push(k.hi as u32);
+    f.area.push(area);
+    f.height.push(height as f32);
+    f.npts
+        .push((k.hi - k.lo + 1).min(usize::from(u16::MAX)) as u16);
+    f.flags.push(FLAG_GOOD);
+    f.iso_group.push(0);
+    f.charge.push(1);
+    f.shape.push(q.gaussian as f32);
+    f.snr.push(k.rise as f32);
+    f.fwhm.push(0.0);
+    f.asym.push(q.asymmetry.unwrap_or(0.0) as f32);
+    f.gaps.push(0);
+    f.qreason.push(0);
+    f.ms2_n.push(0);
+    f.purity.push(-1.0);
+    f.area_win.push(area);
+    f.family_id.push(0);
+    f.role.push(ROLE_M);
+    f.alt.push(0);
 }
 
 /// (key of Q1, key of Q3, RT, file, position in the file) of a peak, and the transition key with the (file, position) of the peaks of a row.

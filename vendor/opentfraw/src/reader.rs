@@ -336,6 +336,8 @@ pub struct RawFileReader {
     // Instrument log uses same structure
     pub inst_log_header: GenericDataHeader,
     pub inst_log: Vec<GenericRecord>,
+    /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
+    pub status_log: Option<crate::status_log::StatusLog>,
     /// Raw file version from the header.
     pub version: u32,
     /// Number of scans.
@@ -674,6 +676,8 @@ impl RawFileReader {
             (GenericDataHeader { fields: Vec::new() }, Vec::new())
         };
 
+        let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)?;
+
         // Detect flat-peak (TSQ/SRM) format.
         // Reliable indicator: ntrailer == 0 means no scan event trailer was written, which
         // is the case for all TSQ/triple-quad SRM instruments.
@@ -849,6 +853,7 @@ impl RawFileReader {
             error_log,
             inst_log_header,
             inst_log,
+            status_log,
             version,
             num_scans,
             data_addr,
@@ -861,6 +866,26 @@ impl RawFileReader {
             srm_q3_windows,
             srm_ce_by_event,
         })
+    }
+
+    /// The status log: the per-scan records already read at `inst_log_addr`, else the ones whose schema ends there (v66).
+    fn read_status_log<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        run_header: &RunHeader,
+        header: &GenericDataHeader,
+        records: &[GenericRecord],
+    ) -> Result<Option<crate::status_log::StatusLog>> {
+        if !records.is_empty() {
+            return Ok(Some(crate::status_log::StatusLog {
+                header: header.clone(),
+                times_min: Vec::new(),
+                records: records.to_vec(),
+            }));
+        }
+        let (addr, next) = (run_header.inst_log_addr, run_header.error_log_addr);
+        let region = next.checked_sub(addr).unwrap_or(0);
+        let n = run_header.sample_info.inst_log_length;
+        Ok(crate::status_log::read_before(r, addr, n, region).unwrap_or(None))
     }
 
     /// Open a RAW file from a path.
