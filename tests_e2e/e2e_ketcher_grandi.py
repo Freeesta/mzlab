@@ -25,7 +25,7 @@ try:
                 o = pg.evaluate(JS)
                 for id in ("hand", "erase"): assert o[id] and min(o[id][2], o[id][3]) >= (33 if touch else 27), (id, o[id])                      # in top toolbar
                 assert o["undo"] and min(o["undo"][2], o["undo"][3]) >= (33 if touch else 27), o["undo"]                       # the top one grows only when it has the room (a tablet gives it the whole width)
-                assert o["bonds-drop-down-button"] and o["bonds-drop-down-button"][2] >= 40, o["bonds-drop-down-button"]
+                assert o["bonds-drop-down-button"] and o["bonds-drop-down-button"][2] >= (40 if touch else 34), o["bonds-drop-down-button"]       # 40 px for touch (WCAG 2.5.8)
                 for id in ("fullscreen-mode-button", "zoom-selector"): assert o[id] and o[id][0] + o[id][2] <= o["fw"] + 1, (id, o[id], o["fw"])       # reachable: inside the editor
                 assert o["help-button"] is None, "Ketcher's own help is hidden (the program has its own)"
                 assert o["leftBottom"] <= o["fh"] + 2 and o["rightBottom"] <= o["fh"] + 2, ("the toolbars fit the height", o["leftBottom"], o["rightBottom"], o["fh"])
