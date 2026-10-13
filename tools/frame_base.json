@@ -2,15 +2,11 @@
  "mzlab/web/avvio.js": 3,
  "mzlab/web/banco.js": 3,
  "mzlab/web/barra.js": 6,
- "mzlab/web/draw.js": 3,
- "mzlab/web/eventi.js": 1,
  "mzlab/web/mappa-estrai.js": 1,
  "mzlab/web/mappa.js": 4,
  "mzlab/web/mappa3d.js": 7,
  "mzlab/web/origine.js": 1,
- "mzlab/web/pannelli.js": 10,
  "mzlab/web/shell.js": 1,
- "mzlab/web/tabs.js": 3,
  "mzlab/web/touch.js": 1,
  "mzlab/web/tour.js": 2
 }
