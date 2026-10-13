@@ -52,7 +52,7 @@ Stato attuale. Il crate porta `TP_Mine/py/tpmine/hr/features.py::detect` (livell
 
 ## Determinismo e WASM
 - Una lastra finisce solo dove due picchi consecutivi sopra la soglia distano ≥ 50 ppm (nessuna traccia attraversa quel salto: i canali sono di 4 ppm), quindi il risultato non dipende dalla dimensione delle lastre. Le righe delle due griglie si raccolgono per griglia e non per lastra, così anche l'ordine di ingresso è indipendente dalle lastre.
-- `ln` e `log1p` da `libm` (Rust puro); somme `f64` in ordine fisso; nessun `HashMap`; ordinamenti stabili. La memoria si riserva con `try_reserve` e l'errore è `error.memoryBudget`, mai il panico. Le tabelle di lavoro proporzionali ai dati nascono con `trace::filled(n, v)` (`try_reserve` + riempimento) o `reserve`; `vec![0; n]` e `unwrap_or_default` restano solo a taglia fissa o per riga di una tabella già contata, ciascuno con il suo commento.
+- `ln` e `log1p` da `libm` (Rust puro); somme `f64` in ordine fisso; nessun `HashMap`; ordinamenti stabili. La memoria si riserva con `try_reserve` e l'errore è `error.memoryBudget`, mai il panico. Le tabelle di lavoro proporzionali ai dati nascono con `trace::filled(n, v)` (`try_reserve` + riempimento) o `reserve`; `vec![0; n]` e `unwrap_or_default` restano solo a taglia fissa, ciascuno con il suo commento; `align`, `align_grouped`, `align_families`, `isotopes::group`, `family::build_families` e `tp::explain_by_arcs` tornano `Result`.
 - Dipendenze: `mzlab-core` e `libm`. `cargo check --target wasm32-unknown-unknown -p mzlab-feat` e il controllo del grafo (nessun `memmap2`, `zstd-sys`, `libz-sys`, `cc`) stanno in `rust.yml`.
 
 ## Parità con Python
