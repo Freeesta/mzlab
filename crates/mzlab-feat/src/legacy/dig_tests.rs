@@ -31,7 +31,13 @@ fn parent_row_by_rt_and_by_t0() {
         area: vec![8e6, 1e6, 1e6, 9e6],
         ..Aligned::default()
     };
-    let f = |t: f64| FileIn { name: String::new(), label: String::new(), kind: "hr".into(), time: Some(t), t };
+    let f = |t: f64| FileIn {
+        name: String::new(),
+        label: String::new(),
+        kind: "hr".into(),
+        time: Some(t),
+        t,
+    };
     let files = [f(0.0), f(30.0)];
     assert_eq!(parent_row(&t, &p, &files), Some(0), "the t0 decides");
     assert_eq!(parent_row(&t, &p, &[]), Some(1), "no t0: the whole series");
