@@ -1,0 +1,1 @@
+{"nota": "asari defaults for Orbitrap (documentation: mode pos, mz_tolerance_ppm 5)", "mode": "pos", "mz_tolerance_ppm": 5, "min_peak_height": 100000, "cal_min_peak_height": 1000000, "min_intensity_threshold": 10000}

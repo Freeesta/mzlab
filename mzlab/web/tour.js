@@ -158,14 +158,14 @@ const TOUR = (() => {
 
   let memState = null;   // fallback when localStorage is unavailable: the invitation must not return at every step
   const readState = () => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return v; } catch (_) {}
+    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return v; } catch (_) { /* storage blocked: the tour state is simply not remembered */ }
     return memState;
   };
   const saveState = status => {
     memState = status;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ stato: status, data: new Date().toISOString() }));
-    } catch (_) {}
+    } catch (_) { /* storage blocked: the tour state is simply not saved */ }
   };
 
   const ensureStyles = () => {
@@ -579,7 +579,7 @@ const TOUR = (() => {
       };
 
       document.addEventListener("keydown", onInvKeyDown);
-      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) {}
+      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the invitation works without it */ }
       ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));      // whoever is reading or choosing keeps it
 
       div.querySelector("#tour-inv-si").onclick = () => {
@@ -588,7 +588,7 @@ const TOUR = (() => {
       };
       div.querySelector("#tour-inv-no").onclick = () => {
         closeInv();
-        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) {}
+        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the settings panel works without it */ }
       };
     },
 
@@ -683,7 +683,7 @@ const TOUR = (() => {
 
       const targetFocus = (prevFocus && document.body.contains(prevFocus) && prevFocus !== document.body) ? prevFocus : document.getElementById("np-set");
       if (targetFocus) {
-        try { targetFocus.focus(); } catch (_) {}
+        try { targetFocus.focus(); } catch (_) { /* focus is only a help: the target may be hidden or removed */ }
       }
     },
 
@@ -722,7 +722,7 @@ if (typeof window !== "undefined") {
   // «New session» / «Start from scratch»: the invitation is a user datum too, so it comes back with the clean slate
   const hard = window.qqHardReset;
   if (typeof hard === "function") {
-    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) {} return hard(); };
+    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
   }
 }
 

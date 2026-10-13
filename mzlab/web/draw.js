@@ -3,6 +3,7 @@
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
 // Module script; helpers come from explore.js (window).
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
+import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
@@ -35,7 +36,7 @@ function start() {
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
-    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
+    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
@@ -239,7 +240,7 @@ function toolCard() {
   Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
   Q("#tools-def").onclick = () => { try { localStorage.removeItem(TKEY); } catch (_) { /* nothing saved */ } applyTools(); toolCard(); };
 }
-toolCard();
+toolCard(); mountFont(Q("#font-body"), () => K, k => I18N.t(k));
 // Zoom preset: 100%. Re-centres if there is content.
 function fitZoom(k, fr) {
   try {

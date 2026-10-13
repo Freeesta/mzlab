@@ -106,12 +106,12 @@ function proofOps(submit, call, copy, opts) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
     // when it has answered (its memory goes back) and the state it leaves (small) is loaded by the worker of the proofs. Each can be refused with `error.featMemory`.
-    // `hypotheses(...)` resolves with { state, tried, found, registry, ms }; `evidence(...)` with { table }.
-    hypotheses({ stored, paths, rules, parent, parentRt, recipe }) {
+    // `structure`: grafo/1 JSON of the SMILES of the parent (optional). `hypotheses(...)` resolves with { state, tried, found, registry, ms }; `evidence(...)` with { table }.
+    hypotheses({ stored, paths, rules, parent, parentRt, recipe, structure = "" }) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe });
+        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe, structure });
         slot.recycle = true;                    // the memory of the .wasm is not given back: the worker is closed
         if (opts.onProgress) opts.onProgress({ phase: "hypotheses", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: h.mem / 1048576 });
         return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
