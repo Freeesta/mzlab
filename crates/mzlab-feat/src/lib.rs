@@ -21,6 +21,7 @@ pub mod family;
 pub mod filters;
 pub mod gapfill;
 pub mod hypo;
+pub mod import;
 pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;
