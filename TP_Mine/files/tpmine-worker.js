@@ -3,7 +3,8 @@
 // sent by the page), which starts only when a call needs it. Rust = the `finder` .wasm (crates/mzlab-feat-wasm, wasm-feat/manifest.json) and, for a Dig, the
 // pool of feat-worker.js (detection, alignment, hypotheses, proofs). Rust serves: formula_info, identity_graph, polarity_pairs, origin_evidence and default_transformations always;
 // classify when every file has its .mzidx in OPFS (mzlab/idx/); run on high-resolution files with their .mzidx, no MSn file and the default transformations,
-// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run. Everything else (the low-resolution engine, isf_classify, transitions, ...) goes to Pyodide, and so does
+// then detail, inclusion_csv, frag_tree and frag_tree_compare of that run; run on low-resolution full-scan files with their .mzidx (finder-lr.js, then detail, frag_tree
+// and frag_tree_compare of that run). Everything else (MS2/MRM low-resolution files, isf_classify, transitions, ...) goes to Pyodide, and so does
 // every call when the site has no wasm-feat/ (a copy built without it).
 /** @type {any} */ let py = null;
 /** @type {any} */ let api = null;
@@ -14,7 +15,7 @@
 /** @type {any} */ let man = null;                // wasm-feat/manifest.json
 /** @type {any} */ let featPool = null;
 /** @type {any} */ let dig = null;                // FinderDig of the last run in Rust
-let last = "", bigN = 0;                          // the engine of the last run: "rust" | "py"
+let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
 const OF_DIG = new Set(["detail", "inclusion_csv", "frag_tree", "frag_tree_compare"]);
@@ -175,6 +176,9 @@ async function rustRun(a) {
   return !!(await idxFiles(files.map((/** @type {any} */ f) => f.name)));
 }
 
+/** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
+const lrMod = () => import(base() + "mzfinder/finder-lr.js");
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect };
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
@@ -184,7 +188,10 @@ async function call(fn, a) {
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
     last = "py"; dig = null;
+    const tr = (a[3] || "").trim(), lr = tr && tr !== DEFAULT_TR ? false : await (await lrMod()).run(lrCtx, a);
+    if (lr !== false) { last = "rust-lr"; return lr; }
   }
+  if (OF_DIG.has(fn) && last === "rust-lr") return (await lrMod()).ofDig(lrCtx, fn, a);
   if (OF_DIG.has(fn) && last === "rust") {
     if (fn === "detail") return dig.detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));

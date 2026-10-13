@@ -9,6 +9,7 @@ pub mod formula;
 pub mod fragtree;
 pub mod identity;
 pub mod kinetics;
+pub mod lr;
 pub mod ms2;
 pub mod out;
 pub mod sample;
