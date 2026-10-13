@@ -183,6 +183,16 @@ async function rustRun(a) {
   return !!(await idxFiles(files.map((/** @type {any} */ f) => f.name)));
 }
 
+/** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
+async function waitIdx(names) {
+  for (let i = 0; i < 60; i++) {
+    const r = await idxFiles(names);
+    if (r || !(await idxDir())) return r;
+    await new Promise(res => setTimeout(res, 500));
+  }
+  return null;
+}
+
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
@@ -192,7 +202,8 @@ async function call(fn, a) {
   if (fn === "classify") {
     const names = JSON.parse(a[0]);
     await ensureIdx(names).catch(e => console.warn("mzFinder: indexing failed, Pyodide takes over:", e));
-    if (await idxFiles(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+    if (await waitIdx(names)) { const r = classifyRust(names); if (py) await toPy(fn, a); return r; }       // a Pyodide that is already running learns the kinds of the files too
+    console.warn("mzFinder: no .mzidx yet for", names.filter(n => !held.has(n)).join(", ") || "(all files sent)", "- Pyodide takes over");
   }
   if (fn === "run") {
     if (await rustRun(a)) return runRust(a);
