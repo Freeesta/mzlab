@@ -556,7 +556,7 @@ function bindFileReorder() {
       touchTimer = setTimeout(() => {
         touchDragging = k;
         el.classList.add("fl-dragging");
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        try { el.setPointerCapture(e.pointerId); } catch (_) { /* the pointer is already gone: dragging still works without capture */ }
       }, 350);
     };
 
@@ -593,7 +593,7 @@ function bindFileReorder() {
       if (touchDragging != null) {
         const fromK = touchDragging;
         touchDragging = null;
-        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        try { el.releasePointerCapture(e.pointerId); } catch (_) { /* capture already released with the pointer */ }
         const target = /** @type {HTMLElement | null | undefined} */ (document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.pr)"));
         const isBefore = target?.classList.contains("drop-before");
         document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));

@@ -15,7 +15,7 @@ function a11yApply(o) {
   if (o.motion === "always" || (rm && o.motion !== "never")) r.setAttribute("data-a11y-reduce", ""); else r.removeAttribute("data-a11y-reduce");
 }
 function a11yWrite(o) {
-  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) {}
+  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* storage blocked: the setting applies now and is not remembered */ }
   a11yApply(o);
 }
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
