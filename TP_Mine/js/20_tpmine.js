@@ -184,7 +184,7 @@
   <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
   <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
-  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
+  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
@@ -399,7 +399,6 @@
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
-          if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), $("#tp-tr").value));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           if (window.TPLIVE) TPLIVE.stop(true);

@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use mzlab_core::elements::{fmt, ion_mz, mass, Formula};
+use mzlab_core::elements::{fmt, ion_mz, mass, parse_formula, Formula};
 use mzlab_core::json::{self, Value};
 
 use super::formula::{neutral_formula, smiles_formula};
@@ -66,13 +66,15 @@ pub fn lc_files(files_json: &str) -> Res<Vec<FileIn>> {
     Ok(out)
 }
 
-/// The parent of `api.run`: name, neutral formula (from the formula or the SMILES), ion [M+H]+.
+/// The parent of `api.run`: name, neutral formula (from the formula or the SMILES), ion of the adduct chosen ([M+H]+ when none).
 #[derive(Debug, Clone)]
 pub struct Parent {
     pub name: String,
     pub neutral: Formula,
     pub ion: Formula,
     pub mz: f64,
+    /// The adduct of `ion` and `mz`, one of `elements::adducts`.
+    pub adduct: String,
     /// The SMILES of the parent (`smiles`, or `neutral` when it is not a formula), for the fragmentation tree.
     pub smiles: Option<String>,
 }
@@ -94,12 +96,9 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
             )
         }
     };
-    let mut ion = neutral.clone();
-    match ion.iter_mut().find(|e| e.0 == "H") {
-        Some(h) => h.1 += 1,
-        None => ion.push(("H".into(), 1)),
-    }
-    let mz = ion_mz(mass(&neutral), "[M+H]+").unwrap_or(f64::NAN);
+    let adduct = text("adduct").unwrap_or("[M+H]+").to_string();
+    let ion = adduct_ion(&neutral, &adduct)?;
+    let mz = ion_mz(mass(&neutral), &adduct).ok_or_else(|| format!("unknown adduct {adduct}"))?;
     let name = text("name").unwrap_or_default().to_string();
     let is_formula = |t: &str| {
         t.chars().next().is_some_and(|c| c.is_ascii_uppercase())
@@ -113,8 +112,44 @@ pub fn parent(parent_json: &str) -> Res<Parent> {
         neutral,
         ion,
         mz,
+        adduct,
         smiles,
     })
+}
+
+/// Formula of the ion of `adduct` (`[M+H]+`, `[M+NH4]+`, `[M-H]-`, `[M+HCOO]-`...): the groups after `+` are added, the ones after `-` taken away.
+fn adduct_ion(neutral: &Formula, adduct: &str) -> Res<Formula> {
+    let bad = || format!("unknown adduct {adduct}");
+    let body = adduct
+        .strip_prefix("[M")
+        .and_then(|a| a.rsplit_once(']'))
+        .map(|a| a.0)
+        .ok_or_else(bad)?;
+    let mut ion = neutral.clone();
+    let mut sign = 1i64;
+    let mut group = String::new();
+    for ch in body.chars().chain(std::iter::once('+')) {
+        if ch != '+' && ch != '-' {
+            group.push(ch);
+            continue;
+        }
+        if !group.is_empty() {
+            for (el, n) in parse_formula(&group).map_err(|_| bad())? {
+                let k = ion.iter().position(|e| e.0 == el);
+                let cur = k.map_or(0, |k| ion[k].1) as i64 + sign * n as i64;
+                if cur < 0 {
+                    return Err(bad());
+                }
+                match k {
+                    Some(k) => ion[k].1 = cur as u64,
+                    None => ion.push((el, cur as u64)),
+                }
+            }
+            group.clear();
+        }
+        sign = if ch == '-' { -1 } else { 1 };
+    }
+    Ok(ion)
 }
 
 impl Parent {
