@@ -37,6 +37,7 @@
     "../../mzlab/web/agilent-d.js",
     "../../mzlab/web/explore.js",
     "../../mzlab/web/layout.js",
+    "../../mzlab/web/fondo.js",
     "../../mzlab/web/pannelli.js",
     "../../mzlab/web/affianca.js",
     "../../mzlab/web/legende.js",

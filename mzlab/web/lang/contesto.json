@@ -86,6 +86,8 @@
   "export.desc.chrom": "Descrizione nei metadati del PNG; {kind} = TIC, BPC o PDA.",
   "export.desc.spec": "Descrizione nei metadati del PNG; {ms} = MS1 o MS2.",
   "export.desc.ibk": "{text} = descrizione del bianco interno.",
+  "export.desc.fondoAuto": "{text} = descrizione del fondo automatico (finestra in min).",
+  "fondo.auto.text": "{w} = larghezza della finestra SNIP, in min.",
   "export.desc.axis": "{a} e {b} = estremi dell'asse orizzontale.",
   "corr.file": "Voce del menu Correzione; {label} = nome del campione.",
   "corr.file.short": "Etichetta breve del pulsante Correzione quando è attiva la sottrazione di un file.",
