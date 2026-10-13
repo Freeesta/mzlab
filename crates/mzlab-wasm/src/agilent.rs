@@ -27,7 +27,6 @@ impl Engine {
         data_ms: &[u8],
         peak_size: f64,
         peak_read: Function,
-        anonymous: bool,
         sink: Function,
         progress: Function,
     ) -> Result<(), JsValue> {
@@ -43,9 +42,7 @@ impl Engine {
             data_ms: some(data_ms),
             others: &[],
         };
-        let run = AgilentD::open(name, &files)
-            .map_err(|e| error_json(&e))?
-            .anonymous(anonymous);
+        let run = AgilentD::open(name, &files).map_err(|e| error_json(&e))?;
         let mut out = BlockWriter {
             sink,
             buf: Vec::new(),
@@ -68,10 +65,4 @@ impl Engine {
             error_json(&mzlab_core::Error::new("err.file.agilent").with("detail", "write"))
         })
     }
-}
-
-/// Sets the secret of the pseudonyms (`anon:<8 hex>`) that replace the identity in anonymous exports of this instance; empty clears it (identity left out).
-#[wasm_bindgen]
-pub fn set_pseudo_secret(secret: &[u8]) {
-    mzlab_core::pseudo::set_current(secret);
 }

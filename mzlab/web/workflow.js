@@ -74,7 +74,6 @@ const WORKFLOW = (() => {
       tema: typeof UIP !== "undefined" && UIP.theme ? UIP.theme : "auto",
       tavolozza: typeof UIP !== "undefined" && UIP.pal ? UIP.pal : "time",
       fusione_isotopi: typeof UIP !== "undefined" ? UIP.merge !== false : true,
-      mostra_tutti: typeof UIP !== "undefined" ? !!UIP.tog : false,
       picchi: typeof PK !== "undefined" ? { ...PK } : {},
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
@@ -214,7 +213,6 @@ const WORKFLOW = (() => {
       if (p.tema) UIP.theme = p.tema;
       if (p.tavolozza) UIP.pal = p.tavolozza;
       if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
-      if (typeof p.mostra_tutti === "boolean") STATO.insieme(p.mostra_tutti, "workflow");
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
     }

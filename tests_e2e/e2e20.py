@@ -41,12 +41,12 @@ try:
             names = lambda: pg.evaluate("(()=>{const ps=E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y);return ps.map(p=>p.type==='chrom'?'C'+p.id:p.type==='spec'?'s'+(p.src||p.link||'-')+'_'+p.id:'?')})()")
             n0 = names(); print(n0); assert n0[0].startswith("C") and n0[-1].startswith("C") and n0[0] != n0[-1], n0
             pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); pg.wait_for_timeout(700); box = pg.locator("#dpanels .pnl.chrom .hd").first.bounding_box()
-            pg.mouse.move(box["x"] + 8, box["y"] + 8); pg.mouse.down(); pg.mouse.move(box["x"] + 8, box["y"] + 8 + 1950, steps=10); pg.mouse.up(); pg.wait_for_timeout(900)
+            pg.mouse.move(box["x"] + 8, box["y"] + 8); pg.mouse.down(); pg.mouse.move(box["x"] + 8, box["y"] + 8 + pg.evaluate("(()=>{const c=E.panels.filter(p=>p.tab===E.tab&&p.type==='chrom').sort((a,b)=>a.y-b.y);return c[1].y+c[1].h-c[0].y})()"), steps=10); pg.mouse.up(); pg.wait_for_timeout(900)
             n1 = names(); print(n1)
             c1 = n0[0][1:]
             assert n1[0] == n0[-1] and n1[1] == "C" + c1 and all(x.startswith("s" + c1 + "_") for x in n1[2:]), n1      # the group moved as a block under the other chromatogram
             # a spectrum dragged alone moves alone
-            pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); pg.wait_for_timeout(500); sp = pg.locator("#dpanels .pnl.spec .hd").first.bounding_box()
+            pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); pg.wait_for_timeout(500); pg.locator("#dpanels .pnl.spec .hd").first.scroll_into_view_if_needed(); pg.wait_for_timeout(300); sp = pg.locator("#dpanels .pnl.spec .hd").first.bounding_box()
             pg.mouse.move(sp["x"] + 14, sp["y"] + 8); pg.mouse.down(); pg.mouse.move(sp["x"] + 14, max(5, sp["y"] - 400), steps=8); pg.mouse.up(); pg.wait_for_timeout(900)
             print(sp); n2 = names(); print(n2); assert len(n2) == len(n1) and n2 != n1
         step("dragging a chromatogram moves its spectra with it; a spectrum alone moves alone", group)

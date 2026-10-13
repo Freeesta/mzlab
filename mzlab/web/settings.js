@@ -21,12 +21,11 @@ function a11yWrite(o) {
 window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.tog === true) STATO.insieme(true, "load");  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
-  if (UIP.tog) o.tog = true;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
@@ -103,7 +102,6 @@ function uipOpen(btn) {
     </details>
     <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
-    ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.together.title")}"><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>${I18N.t("settings.together")}</span></label>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || (f.ms2_exps && f.ms2_exps.length))) ? `
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
@@ -156,7 +154,6 @@ function uipOpen(btn) {
   };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
-  const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
   uipReset(d);
   const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {

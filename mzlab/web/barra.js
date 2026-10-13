@@ -180,11 +180,11 @@ const BARRA = (() => {
   }
   function refit() {
     if (_refitRaf) return;
-    _refitRaf = requestAnimationFrame(() => { _refitRaf = 0; paintFit(); });
+    _refitRaf = FRAME.next(() => { _refitRaf = 0; paintFit(); });
   }
   // a layout change that is animated (transizioni.js) is refitted at once, in the same frame: one redraw, then the panels slide
   function refitNow() {
-    if (_refitRaf) { cancelAnimationFrame(_refitRaf); _refitRaf = 0; }
+    if (_refitRaf) { FRAME.cancel(_refitRaf); _refitRaf = 0; }
     paintFit();
   }
   // The panels' own observers read a width change that is not theirs (the page narrowed under them) as «resized by hand» and
@@ -206,7 +206,7 @@ const BARRA = (() => {
   function watchWorkspace() {
     const dp = Q1("#dpanels");
     if (!dp || typeof ResizeObserver === "undefined") return;
-    new ResizeObserver(() => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } }).observe(dp);
+    FRAME.ro(dp, () => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } });
   }
 
   function applyLayout() {
@@ -572,7 +572,7 @@ const BARRA = (() => {
   }
   function schedFit() {
     if (_fitRaf) return;
-    _fitRaf = requestAnimationFrame(() => { _fitRaf = 0; fit(); });
+    _fitRaf = FRAME.next(() => { _fitRaf = 0; fit(); });
   }
   function fit() {
     const bar = Q1("#stbar");
@@ -981,7 +981,7 @@ const BARRA = (() => {
     document.removeEventListener("keydown", hintOnKey);
     window.removeEventListener("resize", hintPlace);
     document.removeEventListener("fullscreenchange", hintPlace);
-    if (_hintRo) { _hintRo.disconnect(); _hintRo = null; }
+    if (_hintRo) { _hintRo(); _hintRo = null; }
     if (mark) hintMark();
   }
   function hintShow() {
@@ -1006,7 +1006,7 @@ const BARRA = (() => {
     document.addEventListener("keydown", hintOnKey);
     window.addEventListener("resize", hintPlace);
     document.addEventListener("fullscreenchange", hintPlace);
-    if (typeof ResizeObserver !== "undefined") { _hintRo = new ResizeObserver(hintPlace); [bar, document.querySelector("header"), el].forEach(x => x && _hintRo.observe(x)); }      // the header or toolbar change size: the arrow follows
+    { const offs = [bar, document.querySelector("header"), el].map(x => x && FRAME.ro(x, hintPlace)); _hintRo = () => offs.forEach(f => f && f()); }      // the header or toolbar change size: the arrow follows
     return true;
   }
   function init() {
@@ -1033,7 +1033,7 @@ const BARRA = (() => {
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
       const bar = Q1("#stbar");
-      if (bar) new ResizeObserver(() => schedFit()).observe(bar);
+      if (bar) FRAME.ro(bar, () => schedFit());
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);

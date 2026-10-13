@@ -106,6 +106,11 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def open_kind(pg, kind):
+    """As a student does: click, in the file list, the first file of an experiment type ('full', 'ms2', 'mrm'): that type becomes the current one."""
+    k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
+    assert k is not None, f"no {kind} file loaded"
+    pg.click(f"#flst .fl[data-k='{k}'] .nm")
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
     if pg.is_visible(sel): pg.click(sel)

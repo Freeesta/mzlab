@@ -32,7 +32,7 @@ try:
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
         step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
-            pg.click("#dtabs [data-t=mrm]"); ready(pg)
+            open_kind(pg, "mrm"); ready(pg)
             with pg.expect_download() as d: dlmenu(pg, ".pnl.mrm", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]

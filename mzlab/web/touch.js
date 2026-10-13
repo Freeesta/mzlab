@@ -57,7 +57,7 @@ const TOUCH = (() => {
     function move(e) {
       const q = pts.get(e.pointerId); if (!q) return;
       q.x = e.clientX; q.y = e.clientY;
-      if (G && G.two) { if (!G.raf) { const g = G; g.raf = requestAnimationFrame(() => { g.raf = 0; if (G === g) moveTwo(); }); } return; }      // once per frame: both fingers have reported
+      if (G && G.two) { if (!G.raf) { const g = G; g.raf = FRAME.next(() => { g.raf = 0; if (G === g) moveTwo(); }); } return; }      // once per frame: both fingers have reported
       if (!G || e.pointerId !== G.id) return;
       if (G.mode === "wait" && Math.hypot(e.clientX - G.x0, e.clientY - G.y0) > MOVE) {
         clearTimeout(G.timer); G.mode = "drag";                                          // the drag starts where the finger first touched

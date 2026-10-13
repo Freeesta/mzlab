@@ -73,13 +73,3 @@ fn the_creation_time_of_a_property_set_is_a_local_timestamp() {
         vec![(12, "2025-11-11T13:15:22".to_string())]
     );
 }
-
-#[test]
-fn identity_is_blanked_in_the_text_of_the_log() {
-    let t = blank_identity("driver:User=jdoe:Computer=PC-7,x,Serial Number: AF1\nnext");
-    assert!(
-        !t.contains("jdoe") && !t.contains("PC-7") && !t.contains("AF1"),
-        "{t}"
-    );
-    assert!(t.contains("next"));
-}
