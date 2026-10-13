@@ -44,7 +44,8 @@ const CartPuntVista = (() => {
   function rowHtml(x, i) {
     const T = (k, p) => I18N.t(k, p), done = isLoaded(x), st = S.stats.get(x.path), size = st && typeof sz === "function" ? " · " + sz(st.size) : "";
     const kind = KIND[x.kind] ? ` · ${T(KIND[x.kind])}` : "", state = T(done ? "cartp.loaded" : "cartp.notloaded");
-    return `<li><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button></li>`;
+    const one = x.kind === "table" || done ? "" : `<button type="button" class="sec sm cpone" data-i="${i}" aria-label="${esc(T("cartp.one.aria", { name: x.name }))}">${T("cartp.one")}</button>`;
+    return `<li class="cpli"><button type="button" class="cprow${done ? " done" : ""}" data-i="${i}" aria-label="${esc(T("cartp.row.label", { name: x.name, state }))}"><span class="cpn">${esc(x.dir + x.name)}</span><span class="cpm">${esc(state + kind + size)}</span></button>${one}</li>`;
   }
   function render() {
     const box = document.getElementById("cartbody"), pick = document.getElementById("cartpick");
@@ -62,12 +63,12 @@ const CartPuntVista = (() => {
         : `<h4>${T("cartp.data")} <span class="muted">${T("cartp.count", { n: data.length })}</span></h4>${data.length ? list(data) : ""}`
           + `<h4>${T("cartp.others")} <span class="muted">${T("cartp.count", { n: other.length })}</span></h4><p class="sm muted">${T("cartp.others.hint")}</p>${other.length ? list(other) : ""}`;
     }
-    const go = nat || S.perm === "granted" ? `<p class="sm muted">${T("cartp.go.hint")}</p><button type="button" class="go" id="cartgo" ${document.getElementById("opbtn") && document.getElementById("opbtn").disabled === false ? "" : "disabled"}>${T("cartp.go")}</button>` : "";
+    const todo = visible(S.items).filter(x => x.kind === "data" && !isLoaded(x)), go = (nat || S.perm === "granted") && todo.length ? `<button type="button" class="go" id="cartgo">${T("cartp.all")}</button>` : "";
     box.innerHTML = head + go + `<div role="status" aria-live="polite">${body}</div>`;
-    const cg = box.querySelector("#cartgo"); if (cg) cg.onclick = () => document.getElementById("opbtn").click();
+    const cg = box.querySelector("#cartgo"); if (cg) cg.onclick = async () => { cg.disabled = true; for (const x of todo) await CartPunt.open(x); };
     box.querySelector("#cartforget").onclick = () => CartPunt.forget(); box.querySelector("#cartrefresh").onclick = () => CartPunt.rescan();
     const g = box.querySelector("#cartgrant"); if (g) g.onclick = () => CartPunt.grant();
-    box.querySelectorAll(".cprow").forEach(b => { b.onclick = () => CartPunt.open(S.items[+b.dataset.i]); });
+    box.querySelectorAll(".cprow, .cpone").forEach(b => { b.onclick = () => CartPunt.open(S.items[+b.dataset.i]); });
   }
   return { render };
 })();

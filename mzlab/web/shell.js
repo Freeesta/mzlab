@@ -106,7 +106,7 @@ function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
-function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent="";const g=$("#cartgo");if(g)g.disabled=$("#opbtn").disabled}
+function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
