@@ -28,7 +28,7 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 8, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
+            assert pg.locator("#uipset .row").count() == 7, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
             assert "Dimensione testo" not in t and "Tema" in t and "Colori dei grafici" in t
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad

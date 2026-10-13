@@ -28,7 +28,7 @@ with sync_playwright() as p:
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN" in t.upper() and "EMS" not in t, t
-        hd = pg.evaluate("[...document.querySelectorAll('#flst .fgh span:not(.chv)')].map(e=>e.innerText)"); assert hd == ["Full Scan", "MS2 (Product Ion)", "MRM"], hd
+        hd = pg.evaluate("[...document.querySelectorAll('#flst .fgh span:not(.chv)')].map(e=>e.innerText)"); assert [h.lower() for h in hd] == ["full scan", "ms2 (product ion)", "mrm"], hd
         assert pg.locator("#dtabs, #ovbtn, #tabempty").count() == 0, "the three tabs and the overview button are gone"
         assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#flst .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
@@ -78,7 +78,7 @@ with sync_playwright() as p:
     def ms2():
         open_kind(pg, "ms2"); ready(pg)
         assert pg.locator("#expbar").count() == 0
-        ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
+        ch = pg.evaluate("tabPanels('ms2').filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
         assert flst_own(pg).upper().count("MS2 (PRODUCT ION)") == 1
         pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parametri popover

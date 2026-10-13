@@ -42,7 +42,7 @@ try:
         def tabs():
             assert pg.evaluate("document.querySelectorAll('#flst .qi').length") == 0, "no icons in the file list"
             pg.evaluate("scrollTo(0, 0)"); hold(pg, 300)      # a scroll event would cancel the pending tooltip
-            b = pg.locator("#flst .fgh[data-gt=ms2]"); b.hover(); hold(pg, 900)
+            b = pg.locator("#flst .fgh[data-gt=full]"); b.hover(); hold(pg, 900)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "not yet at 0.9 s"
             hold(pg, 800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))
             assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Q1" in t and "Q3" in t, t

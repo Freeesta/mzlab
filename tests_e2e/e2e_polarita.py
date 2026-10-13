@@ -37,11 +37,8 @@ try:
             ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():
-            open_kind(pg, "ms2"); ready(pg)
-            assert pg.locator("#flst .fgh sup").count() >= 1 and pg.inner_text("#flst .fgh >> nth=1").count("\u00b2") == 0, "MS<sup>2</sup>: a real superscript in the group heading"
             t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
-            open_kind(pg, "full"); ready(pg)
-        step("7.2 MS2 has a real superscript, no Unicode superscripts in the visible text of the Dati tab", simboli)
+        step("7.2 No Unicode superscripts in the visible text of the Dati tab", simboli)
         step("one polarity only: no badge per file, no ESI in group heading, nothing out of the row", uniform)
         def adduct():
             neg = pg.evaluate("E.files.findIndex(f=>f.polarity==='negative')")

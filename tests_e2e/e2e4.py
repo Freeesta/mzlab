@@ -28,7 +28,7 @@ try:
             assert pg.locator('[data-o="peaks"]').count() == 0
         step("no peak-label option anywhere", nopeaks)
         def stack():
-            pg.locator('.pnl.chrom [data-o="mode"]').select_option("stk"); pg.wait_for_timeout(800); pg.screenshot(path=SH + "43_stack.png")
+            pg.locator('.pnl.chrom [data-o="mode"]').first.select_option("stk"); pg.wait_for_timeout(800); pg.screenshot(path=SH + "43_stack.png")
             assert pg.evaluate("E.panels[0]._a.stk === true")
         step("stacked view", stack)
         def stack_int():
@@ -40,9 +40,9 @@ try:
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)
         def logv():
-            pg.locator('.pnl.chrom [data-o="mode"]').select_option("ovl"); pg.click('.pnl.chrom [data-a="log"]'); pg.wait_for_timeout(800)
+            pg.locator('.pnl.chrom [data-o="mode"]').first.select_option("ovl"); pg.locator('.pnl.chrom [data-a="log"]').first.click(); pg.wait_for_timeout(800)
             pg.screenshot(path=SH + "44_log.png"); assert pg.evaluate("E.panels[0]._a.logy === true")
-            pg.click('.pnl.chrom [data-a="log"]'); pg.wait_for_timeout(300)
+            pg.locator('.pnl.chrom [data-a="log"]').first.click(); pg.wait_for_timeout(300)
         step("log scale", logv)
         def legtoggle():
             n0 = pg.evaluate("E.panels[0]._a.sr.length")   # full-scan and MS2 files (MRM files have their own panel)

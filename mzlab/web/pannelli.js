@@ -120,6 +120,7 @@ function closePanel(p) {
   if (p._ac) p._ac.abort();                              // every listener the panel put on document/window goes with it
   p._a = null;
   if (p.el) p.el.remove();
+  if (E.active === p) setActive(null);
   STATO.rimuovi(p, "close");
 }
 

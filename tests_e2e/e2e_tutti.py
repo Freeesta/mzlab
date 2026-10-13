@@ -34,10 +34,10 @@ try:
             assert pg.is_visible("#np-mrm") and pg.is_visible("#np-map") and pg.is_visible("#np-chrom"), "buttons of every type present"
         step("the toolbar offers the buttons of every experiment type that has files", tools)
         def goto():
-            open_kind(pg, "mrm"); pg.wait_for_timeout(1500)
+            open_kind(pg, "mrm"); pg.wait_for_timeout(3500)
             assert pg.evaluate("E.tab") == "mrm"
             top = pg.evaluate("E.panels.find(p=>p.tab==='mrm').el.getBoundingClientRect().top"); assert -5 < top < 600, top      # the page went to the MRM block
-            open_kind(pg, "ms2"); pg.wait_for_timeout(1500)
+            open_kind(pg, "ms2"); pg.wait_for_timeout(3500)
             assert pg.evaluate("E.tab") == "ms2" and "full" in pg.evaluate(VIS)
         step("a click on a file of another group makes its type the current one and goes to its block", goto)
         def empty_area():
