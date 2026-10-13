@@ -10,7 +10,6 @@
       "Read(./tests_e2e/shots/**)",
       "Read(./.verifica/cache_massbank/**)",
       "Read(./site/**)",
-      "Read(./.verifica/**)",
       "Read(./.git/**)",
       "Read(./**/__pycache__/**)",
       "Read(./.pytest_cache/**)",
