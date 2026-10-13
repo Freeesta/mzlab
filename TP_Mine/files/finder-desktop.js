@@ -37,6 +37,12 @@ async function upload(name, blob) {
   return id;
 }
 
+/** the rules of the hypotheses: regole_tp.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
+async function rulesOf(base, list) {
+  const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text(), tr = (list || "").trim();
+  return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
+}
+
 /** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held */
 export function createDesktop(base, say, held) {
   /** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {string[]} names */
@@ -65,10 +71,7 @@ export function createDesktop(base, say, held) {
     lap("feature", t); t = performance.now();
     say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
-    let rules = await (await fetch(base + "mzfinder/regole_tp.json")).text();
-    const tr = (a[3] || "").trim();
-    if (tr) rules = await rpc("finder/transformations", { rules, text: tr });     // the user's list: its rows become rules of the hypotheses
-    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules, structure: plan.structure, parent: plan.formula, recipe: "" }));
+    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: plan.structure, parent: plan.formula, recipe: "" }));
     await rpc("feat/evidence", { minutes: plan.minutes, recipe: "" }); lap("proofs", t); t = performance.now();
     say("Ranking the candidates...");
     const out = await rpc("finder/dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}" });
@@ -76,9 +79,29 @@ export function createDesktop(base, say, held) {
     return JSON.stringify({ ...JSON.parse(out), timing });
   }
 
+  /** the Dig of a low-resolution series (full scans only): detection, alignment and the hypotheses of the parent in the app, then the Dig of the low-resolution adapter @param {string[]} a @param {any} plan */
+  async function runLr(a, plan) {
+    const [filesJson, parentJson, settingsJson] = a, t0 = performance.now(), timing = /** @type {Record<string, number>} */ ({});
+    const lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
+    const names = /** @type {string[]} */ (plan.lc);
+    await ensure(names);
+    let t = performance.now();
+    for (const [k, name] of names.entries()) { say(`Detecting the peaks of ${name} (${k + 1} of ${names.length})...`); await rpc("feat/detect", { name, recipe: "" }); }
+    lap("feature", t); t = performance.now();
+    say("Aligning the peaks of the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
+    say("Generating candidates...");
+    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: "", parent: plan.formula, recipe: "" })); lap("candidates", t); t = performance.now();
+    say("Computing the tables...");
+    const out = await rpc("finder/lr_dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}" });
+    lap("dig", t); lap("total", t0);
+    return JSON.stringify({ ...JSON.parse(out), timing });
+  }
+
   return {
     /** one call of the page @param {string} fn @param {string[]} a */
     async call(fn, a) {
+      if (fn === "tp_table") return "null";        // the numbers of the table of the products are not native yet: the page keeps a dash
+      if (fn === "transf_rows") return rpc("finder/transf_rows", { text: a[0] });
       if (fn === "formula_info") return rpc("finder/formula_info", { text: a[0], adduct: a[1] });
       if (STATELESS.has(fn)) return rpc("finder/" + fn, { payload: a[0] });
       if (OF_DIG.has(fn)) return rpc("finder/" + fn, { id: +(a[0] || 0) });
@@ -86,7 +109,11 @@ export function createDesktop(base, say, held) {
       if (fn === "run") {
         const files = JSON.parse(a[0]);
         if (files.some((/** @type {any} */ f) => f.kind === "msn")) throw new Error("MSn files are not in the app yet: use the website for this series");
-        if (!files.some((/** @type {any} */ f) => f.kind === "hr")) throw new Error("low-resolution series are not in the app yet: use the website for this series");
+        if (!files.some((/** @type {any} */ f) => f.kind === "hr")) {
+          const plan = files.length && files.every((/** @type {any} */ f) => f.kind === "full") ? JSON.parse(await rpc("finder/lr_plan", { files: a[0], parent: a[1] })) : null;
+          if (!plan || !plan.rust) throw new Error("this low-resolution series (MS2 or MRM files, or a parent without formula) is not in the app yet: use the website for this series");
+          return runLr(a, plan);
+        }
         return run(a);
       }
       throw new Error(`${fn} is not in the app`);

@@ -10,6 +10,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
 use mzlab_core::{Error, Result};
 use mzlab_feat::legacy::dig::Dig;
+use mzlab_feat::legacy::lr::LrDig;
 use mzlab_feat::store::Slice;
 use mzlab_feat_wasm::run::{self, HypoRun};
 use serde_json::Value;
@@ -70,6 +71,7 @@ impl State {
         g.table = Some(out);
         g.hypo = None;
         g.dig = None;
+        g.lr = None;
         a
     }
 
@@ -134,6 +136,7 @@ impl State {
         let a = written(&out);
         g.table = Some(out);
         g.dig = None;
+        g.lr = None;
         a
     }
 
@@ -255,4 +258,6 @@ pub struct FeatState {
     pub(crate) table: Option<Vec<u8>>,
     pub(crate) hypo: Option<HypoRun>,
     pub(crate) dig: Option<Dig>,
+    /// the Dig of a low-resolution series (`finder/lr_dig`); `dig` and `lr` are never both held, and `lr` holds the names of its columns
+    pub(crate) lr: Option<(LrDig, Vec<String>)>,
 }

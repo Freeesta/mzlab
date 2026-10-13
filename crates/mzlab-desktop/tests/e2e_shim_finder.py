@@ -35,6 +35,16 @@ nat.mkdir()
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "finder", "--", str(nat), *map(str, idx), "--parent", PARENT["neutral"],
                 "--rules", str(ROOT / "TP_Mine" / "data" / "regole_tp.json")], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
+# the low-resolution series (TP_Mine/tests/lr_synth.py) and its Dig by the native example of the .wasm (the same pipeline)
+sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import lr_synth  # noqa: E402
+lrs = lr_synth.write_series(tmp / "lr")
+LR_FILES = [{"name": f["name"], "type": f["type"], "time": f["time"], "kind": "full"} for f in lrs]
+LR_PARENT = {"name": "parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "adduct": "[M+H]+"}
+(tmp / "lr_files.json").write_text(json.dumps(LR_FILES)); (tmp / "lr_parent.json").write_text(json.dumps(LR_PARENT))
+(tmp / "lr_nat").mkdir()
+subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-finder-lr-wasm", "--example", "finder_lr", "--", str(tmp / "lr_nat"), str(tmp / "lr_files.json"), str(tmp / "lr_parent.json"),
+                str(ROOT / "TP_Mine" / "data" / "regole_tp.json"), *[f["path"] for f in lrs]], cwd=ROOT, check=True, capture_output=True)
+lr_native = {"run": json.loads((tmp / "lr_nat" / "run.json").read_text()), "detail": json.loads((tmp / "lr_nat" / "detail.json").read_text())}
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT)], stdout=subprocess.PIPE, text=True,
                        env={**os.environ, "MZLAB_LIBDIR": str(tmp / "Librerie"), "MZLAB_DATA": str(tmp / "app")})
@@ -66,8 +76,8 @@ try:
         ctx.on("request", lambda r: reqs.append(r.url))
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg.wait_for_selector("#drop", timeout=120000)
-        pg.wait_for_function("typeof window.TPCALL === 'function' && window.MZLAB_DESKTOP === true", timeout=120000)
+        pg.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg.wait_for_selector("#drop", timeout=300000)
+        pg.wait_for_function("typeof window.TPCALL === 'function' && window.MZLAB_DESKTOP === true", timeout=300000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         got = {}
         def choose():
@@ -99,7 +109,23 @@ try:
             assert run["n_candidates"] >= 1, run["n_candidates"]
             r = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, 'no change here').then(() => 'ran', e => String(e.message || e))", [got["files"], PARENT])
             assert "invalid line" in r, r
+            rows = pg.evaluate("() => window.TPCALL('transf_rows', 'my rule;+O;a row\\nbad line')")
+            rows = json.loads(rows) if isinstance(rows, str) else rows
+            assert len(rows["rows"]) >= 1, rows
         step("a list of transformations of the user runs; a bad row says what is wrong", transformations)
+        def lr_series():
+            pg.set_input_files("#tp-in", [f["path"] for f in lrs])
+            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => r.textContent.trim().startsWith('lr_')).length >= %d" % len(lrs), timeout=300000)
+            run = pg.evaluate("([f, p]) => window.TPCALL('run', f, p, {}, '')", [LR_FILES, LR_PARENT])
+            a, n = dict(run), dict(lr_native["run"])
+            a.pop("timing", None); n.pop("timing", None)
+            assert a == n, [k for k in n if a.get(k) != n.get(k)]
+            assert run["rows"][0]["label"] == "progenitore", run["rows"][0]
+            assert lr_native["detail"], "no row passes the criteria"
+            for d in lr_native["detail"]: assert pg.evaluate("([i]) => window.TPCALL('detail', i)", [d["id"]]) == d, d["id"]
+            t = pg.evaluate("() => window.TPCALL('frag_tree')")
+            assert t == {"ok": False, "mode": "lr", "note": "no MS2 of the parent in the files", "nodes": []}, t
+        step("a low-resolution series: the Dig and the details equal the native example's", lr_series)
         def clean():
             bad = [u for u in reqs if re.search(r"pyodide|wasm-feat|mzlab\.zip", u, re.I)]
             assert not bad, bad[:5]

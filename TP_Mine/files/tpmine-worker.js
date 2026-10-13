@@ -251,8 +251,8 @@ async function waitIdx(names) {
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
   if (fn === "default_transformations") return DEFAULT_TR;
-  if (fn === "tp_table") return tpTable(a[0]);
-  if (fn === "transf_rows") return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (the text is parsed by the same .wasm in the desktop app)
+  if (fn === "tp_table" && !init.desktop) return tpTable(a[0]);
+  if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)
   if (init.desktop) return (desk || (desk = (await import(base() + "mzfinder/finder-desktop.js")).createDesktop(base(), say, held))).call(fn, a);
   if (!(await hasRust())) return toPy(fn, a);
   if (ALWAYS.has(fn)) { const f = await finder(); return fn === "formula_info" ? f.finder_formula_info(a[0], a[1]) : f["finder_" + fn](a[0]); }
