@@ -1,11 +1,10 @@
 //! Builds the `.mzidx` of an mzML: `cargo run --release --example mzidx -- FILE.mzML [OUT.mzidx] [BUDGET_MB]`.
-//! Prints the time and the peak memory of the process. The scan table is a plain one (level, polarity, RT, summed intensity as TIC):
-//! the browser gets the real one from the Python reader.
+//! Prints the time and the peak memory of the process. The scan table is the one of the browser (`upload::prepare`).
 use std::fs::File;
 use std::time::Instant;
 
-use mzlab_core::mzidx::{build_mzml, ScanTable};
-use mzlab_core::mzml::{parse, Item};
+use mzlab_core::mzidx::build_mzml;
+use mzlab_core::upload;
 
 fn peak_rss_mb() -> f64 {
     std::fs::read_to_string("/proc/self/status")
@@ -37,21 +36,14 @@ fn main() {
         << 20;
 
     let t0 = Instant::now();
-    let mut table = ScanTable {
-        scans_json: b"[]".to_vec(),
-        source_json: "{}".into(),
-        run_json: "{}".into(),
-        ..Default::default()
-    };
-    parse(File::open(&path).expect("file"), |item| {
-        if let Item::Spectrum(s) = item {
-            table.level.push(s.level);
-            table.polarity.push(s.polarity);
-            table.rt.push(s.rt);
-            table.tic.push(s.intensity.iter().map(|&v| v as f64).sum());
-        }
-    })
-    .expect("mzML");
+    // the same scan table as the browser (`prepare_upload`): levels, polarity, RT, TIC, the run flags (`hr1`) and the source fingerprints
+    let size = std::fs::metadata(&path).expect("size").len();
+    let name = std::path::Path::new(&path)
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let table = upload::prepare(&mut File::open(&path).expect("file"), size, &name)
+        .expect("scan table")
+        .table;
     let t_table = t0.elapsed().as_secs_f64();
 
     let t1 = Instant::now();

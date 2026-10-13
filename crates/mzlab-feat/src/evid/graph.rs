@@ -144,7 +144,8 @@ pub struct Identity {
     pub max_level: &'static str,
 }
 
-/// Row -> index of the hypothesis it confirms: the closest in m/z within the window (and in RT when the hypothesis has one).
+/// Row -> index of the hypothesis it confirms: the closest in m/z within the window (and in RT when the hypothesis has one). A row stands for its whole
+/// family: the ion that roots it (the [M+H]+ of a product) confirms first, then the reference ion of the row (an [M+Na]+, say), then the others.
 pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<usize>> {
     match_hypotheses_in(hyps, aligned, HYPOTHESIS_PPM)
 }
@@ -153,21 +154,30 @@ pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<us
 pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> Vec<Option<usize>> {
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
     crate::sortc::by(&mut by_mz, |&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
+    let closest = |mz: f64, rt: f64| {
+        let tol = crate::axis::half(mz, win);
+        let from = by_mz.partition_point(|&h| hyps[h].mz < mz - tol);
+        by_mz[from..]
+            .iter()
+            .take_while(|&&h| hyps[h].mz <= mz + tol)
+            .copied()
+            .filter(|&h| {
+                hyps[h]
+                    .rt_ref
+                    .is_none_or(|x| (f64::from(x) - rt).abs() <= HYPOTHESIS_RT)
+            })
+            .min_by(|&a, &b| (hyps[a].mz - mz).abs().total_cmp(&(hyps[b].mz - mz).abs()))
+    };
     (0..aligned.len())
         .map(|r| {
-            let (mz, rt) = (aligned.mz[r], aligned.rt[r]);
-            let tol = crate::axis::half(mz, win);
-            let from = by_mz.partition_point(|&h| hyps[h].mz < mz - tol);
-            by_mz[from..]
-                .iter()
-                .take_while(|&&h| hyps[h].mz <= mz + tol)
-                .copied()
-                .filter(|&h| {
-                    hyps[h]
-                        .rt_ref
-                        .is_none_or(|x| (f64::from(x) - rt).abs() <= HYPOTHESIS_RT)
-                })
-                .min_by(|&a, &b| (hyps[a].mz - mz).abs().total_cmp(&(hyps[b].mz - mz).abs()))
+            let at = |k: usize| closest(aligned.member_mz[k], f64::from(aligned.member_rt[k]));
+            let roots = aligned.members(r).filter(|&k| aligned.member_role[k] == ROLE_M);
+            // the root of the family speaks first, then the reference ion of the row, then the other ions
+            roots
+                .clone()
+                .find_map(at)
+                .or_else(|| closest(aligned.mz[r], aligned.rt[r]))
+                .or_else(|| aligned.members(r).filter(|&k| aligned.member_role[k] != ROLE_M).find_map(at))
         })
         .collect()
 }

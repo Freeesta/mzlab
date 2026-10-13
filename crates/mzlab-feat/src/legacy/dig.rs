@@ -280,10 +280,20 @@ fn candidate(
         .clone()
         .or_else(|| hyp.as_ref().map(|h| h.formula.clone()))
         .filter(|f| !f.is_empty());
+    // a row stands for its family: the ion of the hypothesis may be one of its members (the [M+H]+ of a product whose row is led by its [M+Na]+)
+    let mz = hyp
+        .as_ref()
+        .filter(|h| h.mz.is_finite())
+        .map_or(t.mz[r], |h| {
+            std::iter::once(t.mz[r])
+                .chain(t.members(r).map(|k| t.member_mz[k]))
+                .min_by(|a, b| (a - h.mz).abs().total_cmp(&(b - h.mz).abs()))
+                .unwrap_or(t.mz[r])
+        });
     let ppm = hyp
         .as_ref()
         .filter(|h| h.mz.is_finite())
-        .map(|h| (t.mz[r] - h.mz) / h.mz * 1e6);
+        .map(|h| (mz - h.mz) / h.mz * 1e6);
     let delta = formula
         .as_deref()
         .and_then(|f| parse_formula(f).ok())
@@ -293,7 +303,7 @@ fn candidate(
         .collect();
     Cand {
         row: r,
-        mz: t.mz[r],
+        mz,
         rt: t.rt[r],
         areas,
         area_max,
