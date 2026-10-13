@@ -68,7 +68,7 @@ pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &st
     }
 }
 
-/// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). `open(k)` gives the index of file `k`, which holds the best MS2 of some rows.
+/// An MS2 file: `kind` is `mgf` (FBMN), `mgf_unit` (the same with the note of unit resolution; there is no `sirius` version) or `sirius` (`.ms`). `open(k)` gives the index of file `k`, which holds the best MS2 of some rows.
 #[allow(clippy::too_many_arguments)]
 pub fn ms2_file<R: ReadAt, I: ReadAt>(
     r: &mut R,
@@ -86,6 +86,7 @@ pub fn ms2_file<R: ReadAt, I: ReadAt>(
     let sp = ms2spec::spectra(&c, open)?;
     match kind {
         "mgf" => Ok(export_ms::mgf(&c, &sp)),
+        "mgf_unit" => Ok(export_ms::mgf_unit(&c, &sp)),
         "sirius" => Ok(export_ms::sirius(&c, &sp)),
         _ => Err(Error::new("error.badView")),
     }

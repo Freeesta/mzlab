@@ -291,3 +291,19 @@ fn a_file_without_points_or_of_another_format_is_refused() {
     .is_err());
     assert!(PointsTable::parse(b"not json").is_err());
 }
+
+#[test]
+fn the_unit_table_uses_windows_in_da() {
+    let hr = table();
+    assert_eq!(hr.window(5.0), 5.0);
+    let unit = table().with_unit();
+    assert!(unit.unit);
+    assert_eq!(
+        unit.window(5.0),
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    );
+    assert_eq!(
+        unit.mass_ppm,
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    );
+}

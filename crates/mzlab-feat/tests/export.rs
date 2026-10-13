@@ -7,7 +7,7 @@ use std::process::Command;
 use mzlab_core::idxread::Index;
 use mzlab_feat::table::{RowIdent, RowQ, NO_FILE};
 use mzlab_feat::export::{csv_full, quant, Ctx};
-use mzlab_feat::export_ms::{mgf, sirius, Ms2};
+use mzlab_feat::export_ms::{mgf, mgf_unit, sirius, Ms2};
 use mzlab_feat::filters::Rule;
 use mzlab_feat::norm::Method;
 use mzlab_feat::pipeline::{analyse, Steps};
@@ -76,6 +76,9 @@ fn mgf_and_sirius_hold_only_the_rows_with_a_spectrum() {
     assert!(m.starts_with("# mzFinder feature table"));
     assert!(m.contains("BEGIN IONS\nFEATURE_ID=2\nPEPMASS=300.2001\nSCANS=2\nRTINSECONDS=420.00\nCHARGE=1-\nMSLEVEL=2\nIONMODE=Negative\nMERGED_ACROSS_N_SAMPLES=1\n100 10\n150.12346 55.6\nEND IONS\n"));
     assert!(!m.contains("FEATURE_ID=1"));
+    assert!(!m.contains("unit resolution"));
+    let u = mgf_unit(&c, &sp);
+    assert!(u.contains("# unit resolution, tolerance 0.5 Da\n") && u.replace("# unit resolution, tolerance 0.5 Da\n", "") == m);
     let ms = sirius(&c, &sp);
     assert!(ms.contains("\n>compound feature_2\n>parentmass 300.2001\n>ionization [M-H]-\n>rt 420s\n>ms2\n100 10\n"));
     assert!(!ms.contains("feature_1"));

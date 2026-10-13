@@ -20,4 +20,6 @@ La pipeline di `crates/mzlab-feat` gira anche sui dati LR (SCIEX 3200 QTRAP, Q1 
 
 ## Prova
 - `cargo test -p mzlab-feat --test lr_fullscan`: serie sintetica (5 tempi + bianco, 270 scansioni Q1, rumore deterministico, spostamento di calibrazione +0,30 Da) costruita in Rust con `MzmlWriter` → `upload::prepare` → `mzidx`.
-- Non ancora in LR: le prove L8 nominali (massa nominale, M+2 degli alogeni, MS2 EPI) e l'esportazione MGF con nota di risoluzione unitaria.
+- Prove L8: `PointsTable::with_unit()` (scelta in `run::evidence_to` dal testo della ricetta nel meta della tabella, `recipe::is_unit_text`) mette le finestre di m/z in Da (`PointsTable::window`, `match_hypotheses_in`, `RowIdent::compute_in`, `parent_row`, `counts_of_n`), toglie la prova di massa (una massa nominale non è un'evidenza) e porta il livello massimo con MS2 a 3 (`MAX_LEVEL_UNIT`). Restano in ppm le viste che non passano da qui: `tp/` (vista dei prodotti), `evid/arcs.rs` e `evid/producers.rs` (non usati nel flusso del sito).
+- Esportazione: `export_ms::mgf_unit` (formato `mgf_unit` di `ms2_file`) scrive lo stesso MGF con la riga `# unit resolution, tolerance 0.5 Da`; si sceglie in modo esplicito e non esiste una versione SIRIUS.
+- Dimensione dei `.wasm` (grezzi, prima di `wasm-opt`): detect +14 KB e proofs +24 KB (circa +1-2 %) rispetto a prima del profilo unitario, dentro i tetti di `tools/build_feat_wasm.sh`.

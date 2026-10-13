@@ -67,6 +67,18 @@ fn identity_follows_the_matched_hypothesis() {
 }
 
 #[test]
+fn a_unit_resolution_row_is_matched_within_the_window_in_da() {
+    let mut t = table();
+    let na = hyp(177.0, "[M+Na]+", SRC_RULE);
+    t.mz[0] = na.mz + 0.3;
+    let hyps = [na.clone()];
+    let ppm = RowIdent::compute(&t, &hyps, 1);
+    assert_eq!(ppm.src[0], SRC_DETECTED, "5 ppm does not reach a calibration error of 0.3 Da");
+    let unit = RowIdent::compute_in(&t, &hyps, 1, mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL));
+    assert_eq!((unit.neutral[0], unit.src[0]), (177.0, SRC_RULE << 1 | SRC_DETECTED));
+}
+
+#[test]
 fn identity_and_facts_survive_the_file() {
     let mut t = table();
     t.ident = RowIdent::compute(&t, &[hyp(149.0, "[M+H]+", SRC_RULE)], 1);

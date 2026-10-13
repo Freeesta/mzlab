@@ -344,8 +344,22 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
         .add_missing_to(&mut aligned, &JoinParams::default());
     aligned.sort_rows();
     let origin = origin_from_meta(&meta);
-    aligned.ident = RowIdent::compute(&aligned, &hypo.registry.hyps, hypo.registry.polarity);
-    let points = PointsTable::bundled()?;
+    let unit = meta
+        .get("recipe")
+        .and_then(Value::str)
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    let win = if unit {
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    } else {
+        mzlab_feat::evid::HYPOTHESIS_PPM
+    };
+    aligned.ident =
+        RowIdent::compute_in(&aligned, &hypo.registry.hyps, hypo.registry.polarity, win);
+    let points = if unit {
+        PointsTable::bundled()?.with_unit()
+    } else {
+        PointsTable::bundled()?
+    };
     let treated: Vec<usize> = (0..minutes.len())
         .filter(|&k| minutes[k].is_finite())
         .collect();

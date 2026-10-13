@@ -128,6 +128,11 @@ impl Recipe {
 }
 
 /// FNV-1a over `text` in two 64-bit lanes with different seeds: 32 hex digits.
+/// True when the recipe text stored in the meta of a file or a table is the one of the unit-resolution profile (m/z axis in Da).
+pub fn is_unit_text(text: &str) -> bool {
+    text.contains("axis: Da {")
+}
+
 pub fn fingerprint(text: &str) -> String {
     let (mut a, mut b) = (0xcbf29ce484222325u64, 0x84222325cbf29ce4u64);
     for &c in text.as_bytes() {
