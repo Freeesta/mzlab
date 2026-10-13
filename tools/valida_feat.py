@@ -116,7 +116,8 @@ def main_cancello_tp(a) -> int:
     verita = json.loads(Path(a.verita).read_text(encoding="utf-8"))
     lavoro = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
     _, run, trattate = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro)
-    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat())
+    _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), lavoro / "bis")          # a second run: determinism of the TP view
+    c, det = cancello_tp.misura(verita, run, trattate, a.dataset, a.data or datetime.date.today().isoformat(), run2)
     for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else lavoro, c, det, a.cancello_tp_json):
         print(p)
     return 0
