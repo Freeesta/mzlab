@@ -146,6 +146,9 @@ pub fn read_file_from<R: ReadAt>(r: &mut R, size: u64, want: Want) -> Result<(Fi
             flags: u8, iso_group: u32, charge: i8, shape: f32, snr: f32, fwhm: f32, asym: f32, gaps: u16, qreason: u8, ms2_n: u16, purity: f32,
             area_win: f64, family_id: u32, role: u8, alt: u8)
     };
+    if o.has("q3") {
+        f.q3 = o.col(r, size, "q3", "f64", rows, f64::from_le_bytes)?;
+    }
     f.dt = o
         .col(r, size, "dt", "f64", None, f64::from_le_bytes)?
         .first()
@@ -181,6 +184,7 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         apex_rt: o.col(r, size, "apex_rt", "f32", rows, f32::from_le_bytes)?,
         width: o.col(r, size, "width", "f32", rows, f32::from_le_bytes)?,
         state: o.col(r, size, "state", "u8", rows, |b: [u8; 1]| b[0])?,
+        q3: if o.has("q3") { o.col(r, size, "q3", "f64", rows, f64::from_le_bytes)? } else { Vec::new() },
         member_start: o.col(r, size, "member_start", "u32", rows, u32::from_le_bytes)?,
         member_mz: o.col(r, size, "member_mz", "f64", rows, f64::from_le_bytes)?,
         member_rt: o.col(r, size, "member_rt", "f32", rows, f32::from_le_bytes)?,

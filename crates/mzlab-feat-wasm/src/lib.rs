@@ -231,6 +231,68 @@ pub fn align_series(
     Ok(out)
 }
 
+#[cfg(feature = "detect")]
+fn mrm_params(min_height: f64) -> mzlab_feat::mrm::MrmParams {
+    let mut p = mzlab_feat::mrm::MrmParams::default();
+    if min_height.is_finite() && min_height > 0.0 {
+        p.min_height = min_height;
+    }
+    p
+}
+
+#[cfg(feature = "detect")]
+/// L1-L3 of an MRM file (the mzML of `size` bytes read with `read(0, offset, length)`) written to `write(offset, bytes)`: `{"bytes", "sha256"}` of its
+/// `.mzfeatf`, one peak list for every transition. `sha256` is the one of the source (it goes in the meta); `min_height` NaN = the default.
+#[wasm_bindgen]
+pub fn detect_mrm_file(
+    read: Function,
+    size: f64,
+    name: &str,
+    sha256: &str,
+    min_height: f64,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read, k: 0 }, size as u64);
+    let traces = mzlab_feat::mrm::read_srm(&mut m, 0).map_err(js_err)?;
+    let p = mrm_params(min_height);
+    to_sink(write, |sink| {
+        mzlab_feat::mrm::file_to(&traces, name, sha256, &p, sink)
+    })
+}
+
+#[cfg(feature = "detect")]
+/// L4-L6 of an MRM series: the `.mzfeatf` (an `Array` of `Uint8Array`) aligned by transition and RT, the cells without a peak integrated on the
+/// chromatogram of their mzML (`read(k, offset, length)`, `sizes[k]` bytes), written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`.
+#[wasm_bindgen]
+pub fn align_mrm_series(
+    files: Array,
+    read: Function,
+    sizes: Vec<f64>,
+    min_height: f64,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let mut src = JsStored { files };
+    let origin = run::origin_of(&mut src).map_err(js_err)?;
+    let tables = (0..src.count())
+        .map(|k| mzlab_feat::store::read_file(&src.bytes(k)?).map(|x| x.0))
+        .collect::<Result<Vec<_>>>()
+        .map_err(js_err)?;
+    let load = |k: usize| {
+        let mut m = mzlab_core::mzmlhead::Mzml::new(
+            JsReader {
+                read: read.clone(),
+                k: k as u32,
+            },
+            sizes[k] as u64,
+        );
+        mzlab_feat::mrm::read_srm(&mut m, 0)
+    };
+    let p = mrm_params(min_height);
+    to_sink(write, |sink| {
+        mzlab_feat::mrm::table_to(&tables, &origin, &p, load, sink)
+    })
+}
+
 #[cfg(feature = "proofs")]
 /// The hypotheses of a parent searched in a series: kept in the memory of the worker for `build_evidence`.
 #[wasm_bindgen]

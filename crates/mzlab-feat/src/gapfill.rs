@@ -61,7 +61,7 @@ fn median32(mut v: Vec<f32>) -> f32 {
 }
 
 /// Where the peak of `row` is expected in `file`: (centre, half width) in minutes, `None` when no file saw the row.
-fn expected_window(
+pub(crate) fn expected_window(
     al: &Aligned,
     row: usize,
     file: usize,
@@ -88,7 +88,14 @@ fn expected_window(
 }
 
 /// Area (counts x seconds) of the strongest trace whose apex lies in the scans `i0..i1`; `y` holds the summed intensity of the scans `s0..`.
-fn trace_area(y: &[f64], s0: usize, i0: usize, i1: usize, dt: f64, p: &FillParams) -> Option<f64> {
+pub(crate) fn trace_area(
+    y: &[f64],
+    s0: usize,
+    i0: usize,
+    i1: usize,
+    dt: f64,
+    p: &FillParams,
+) -> Option<f64> {
     let x: Vec<f64> = y
         .iter()
         .map(|&v| if v >= p.floor { v } else { 0.0 })

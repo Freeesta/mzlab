@@ -23,6 +23,7 @@ pub mod gapfill;
 pub mod hypo;
 pub mod isotopes;
 pub mod kinetic;
+pub mod mrm;
 pub mod ms2;
 pub mod ms2spec;
 pub mod norm;

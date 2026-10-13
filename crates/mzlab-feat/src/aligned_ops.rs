@@ -25,7 +25,14 @@ impl Aligned {
 
     /// Whether the rows are in the order that defines the ids: m/z ascending, ties by RT ascending.
     pub fn is_id_ordered(&self) -> bool {
-        (1..self.len()).all(|i| (self.mz[i - 1], self.rt[i - 1]) <= (self.mz[i], self.rt[i]))
+        let key = |i: usize| {
+            (
+                self.mz[i],
+                self.q3.get(i).copied().unwrap_or(0.0),
+                self.rt[i],
+            )
+        };
+        (1..self.len()).all(|i| key(i - 1) <= key(i))
     }
 
     /// Copies the cells of row `r` of `src` to the end of `self` (columns only, not the members).
@@ -36,6 +43,9 @@ impl Aligned {
         self.apex_rt.extend_from_slice(&src.apex_rt[c.clone()]);
         self.width.extend_from_slice(&src.width[c.clone()]);
         self.state.extend_from_slice(&src.state[c]);
+        if !src.q3.is_empty() {
+            self.q3.push(src.q3[r]);
+        }
     }
 
     /// Whether a row has the m/z (within `ppm`, as reference ion or member) and the RT (within `rt_tol` minutes) of an ion.
@@ -134,8 +144,10 @@ impl Aligned {
         let mut order: Vec<u32> = (0..self.len() as u32).collect();
         crate::sortc::by(&mut order, |&a, &b| {
             let (a, b) = (a as usize, b as usize);
+            let q3 = |i: usize| self.q3.get(i).copied().unwrap_or(0.0);
             self.mz[a]
                 .total_cmp(&self.mz[b])
+                .then(q3(a).total_cmp(&q3(b)))
                 .then(self.rt[a].total_cmp(&self.rt[b]))
         });
         let nf = self.n_files;
