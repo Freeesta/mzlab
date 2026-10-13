@@ -55,14 +55,13 @@ try:
         def locked():
             x, y = at(.45, .4); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(200); pick("Lock the sight")
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk
-            assert pg.get_attribute(".pnl.map [data-nav=maplock]", "aria-pressed") == "true"
             x2, y2 = at(.7, .6); pg.mouse.click(x2, y2, button="right"); pg.wait_for_timeout(200)
             its = menu_items(); assert any("Unlock the sight" in i[0] and i[3] == "true" for i in its), its
             assert "Locked sight" in its[0][0]
             n0 = npan("xic"); pick("XIC"); assert npan("xic") == n0 + 1               # still works with the sight locked, on the locked point
             mz = pg.evaluate("E.panels.filter(q=>q.type==='xic').sort((a,b)=>b.id-a.id)[0].traces[0].mz"); assert abs(mz - lk["mz"]) < 1.0, (mz, lk)
             pg.mouse.click(x2, y2, button="right"); pg.wait_for_timeout(200); pick("Unlock the sight")
-            assert pg.evaluate(f"{M}._mz.lock") is None and pg.get_attribute(".pnl.map [data-nav=maplock]", "aria-pressed") == "false"
+            assert pg.evaluate(f"{M}._mz.lock") is None
         step("lock from the menu: state on the bar (aria-pressed), commands still work, unlock", locked)
         def resets():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); zoom_in()
@@ -74,15 +73,13 @@ try:
         step("Copy coordinates", copy)
         def bar():
             btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
-            assert [b[0] for b in btns] == ["mapzin", "mapzout", "maplock", "maphelp"], btns
+            assert [b[0] for b in btns] == ["mapzin", "mapzout", "maphelp"], btns
             assert all(b[1] for b in btns), btns
             zoom_in(); pg.click(".pnl.map [data-a=fit]"); pg.wait_for_timeout(300); assert z() == [None, None]
             pg.click(".pnl.map [data-nav=mapzin]"); pg.wait_for_timeout(300); zz = z(); assert zz[0] and zz[1], zz
             pg.click(".pnl.map [data-nav=mapzout]"); pg.wait_for_timeout(300)
-            pg.click(".pnl.map [data-nav=maplock]"); pg.wait_for_timeout(200); assert pg.evaluate(f"!!{M}._mz.lock")
-            pg.click(".pnl.map [data-nav=maplock]"); pg.wait_for_timeout(200); assert pg.evaluate(f"!{M}._mz.lock")
             pg.evaluate("MAPPA.whole(" + M + ")"); pg.wait_for_timeout(200)
-        step("bar on the map: reset, +, −, padlock, gestures", bar)
+        step("bar on the map: reset, +, −, gestures (no padlock)", bar)
         def sheet():
             pg.click(".pnl.map [data-nav=maphelp]"); pg.wait_for_timeout(400)
             assert pg.evaluate("document.getElementById('bigdlg').open")
