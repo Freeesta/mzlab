@@ -15,7 +15,7 @@ pub struct Estimate {
 
 /// Value of the highest frequency among `v` rounded to 6 significant digits (the smallest on a tie).
 fn mode_of(v: &mut [f64]) -> f64 {
-    v.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(v, f64::total_cmp);
     let key = |x: f64| format!("{x:.5e}");
     let (mut best, mut best_n, mut i) = (v[0], 0, 0);
     while i < v.len() {
@@ -77,7 +77,7 @@ fn step_and_grid(scans: &[(&[f64], &[f64])]) -> (f64, bool) {
     if d.is_empty() {
         return (1.0, false);
     }
-    d.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(&mut d, f64::total_cmp);
     let min = d[0];
     let regular = d.iter().all(|&x| {
         let q = x / min;
@@ -168,7 +168,7 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
     }
     let peaks = if widths.len() >= 8 { widths.len() } else { 0 };
     if peaks > 0 {
-        widths.sort_by(|a, b| a.total_cmp(b));
+        crate::sortc::by(&mut widths, f64::total_cmp);
         p.w = widths[(widths.len() - 1) / 2].max(3.0 * step);
     }
     p.area = !p.hr();

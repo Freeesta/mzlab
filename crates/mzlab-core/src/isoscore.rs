@@ -82,7 +82,7 @@ pub struct IsoScore {
 }
 
 fn sort_pairs(v: &mut [(f64, f64)]) {
-    v.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+    crate::sortc::by(v, |a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
 }
 
 fn join(mut items: Vec<(f64, f64)>) -> Vec<(f64, f64)> {

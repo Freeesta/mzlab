@@ -20,7 +20,7 @@ const NONE: Saturation = Saturation {
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut s, f64::total_cmp);
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]

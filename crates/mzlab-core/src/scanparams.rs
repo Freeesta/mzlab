@@ -12,7 +12,7 @@ fn med(mut v: Vec<f64>) -> Option<f64> {
     if v.is_empty() {
         return None;
     }
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut v, f64::total_cmp);
     let n = v.len();
     Some(if n % 2 == 1 { v[n / 2] } else { (v[n / 2 - 1] + v[n / 2]) / 2.0 })
 }
@@ -34,7 +34,7 @@ fn vals<M: ReadAt>(sc: &[&crate::idxread::Scan], acc: &str, mzml: &mut M) -> Res
 
 fn sorted_set(v: impl Iterator<Item = f64>) -> Vec<f64> {
     let mut v: Vec<f64> = v.collect();
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut v, f64::total_cmp);
     v.dedup();
     v
 }

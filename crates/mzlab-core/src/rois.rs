@@ -134,7 +134,7 @@ pub fn build_rois<R: ReadAt>(
         let mut act: Vec<usize> = (0..n_roi).filter(|&r| r_last[r] >= min_last).collect();
         let mut near = vec![false; m];
         if !act.is_empty() {
-            act.sort_by(|&p, &q| r_mz[p].total_cmp(&r_mz[q]));
+            crate::sortc::by(&mut act, |&p, &q| r_mz[p].total_cmp(&r_mz[q]));
             let am: Vec<f64> = act.iter().map(|&r| r_mz[r]).collect();
             let last = am.len() - 1;
             let mut jb = vec![0usize; m];
@@ -148,8 +148,8 @@ pub fn build_rois<R: ReadAt>(
             }
             let mut order: Vec<usize> = (0..m).filter(|&i| near[i]).collect();
             if !order.is_empty() {
-                order.sort_by(|&p, &q| py[q].total_cmp(&py[p])); // stable: -py ascending
-                                                                 // the first (strongest) centroid of each target ROI
+                crate::sortc::by(&mut order, |&p, &q| py[q].total_cmp(&py[p])); // stable: -py ascending
+                                                                                // the first (strongest) centroid of each target ROI
                 let mut seen: Vec<usize> = Vec::new();
                 let mut strong = vec![false; m];
                 for &i in &order {
@@ -233,7 +233,7 @@ pub fn build_rois<R: ReadAt>(
         .map(|g| wsum[g] / x[g * n..(g + 1) * n].iter().sum::<f64>().max(1e-12))
         .collect();
     let mut ord: Vec<usize> = (0..m_good).collect();
-    ord.sort_by(|&p, &q| centre[p].total_cmp(&centre[q]));
+    crate::sortc::by(&mut ord, |&p, &q| centre[p].total_cmp(&centre[q]));
     let mut xs = Vec::with_capacity(x.len());
     for &g in &ord {
         xs.extend_from_slice(&x[g * n..(g + 1) * n]);

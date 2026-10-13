@@ -212,7 +212,7 @@ fn snap<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resu
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut s, f64::total_cmp);
     match s.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => s[n / 2],

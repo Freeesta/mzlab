@@ -40,10 +40,10 @@ impl Rules {
         }
         let mut k: Vec<usize> = (0..mz.len()).collect();
         if mz.len() > self.max_peaks {
-            k.sort_by(|&a, &b| it[b].total_cmp(&it[a]));
+            crate::sortc::by(&mut k, |&a, &b| it[b].total_cmp(&it[a]));
             k.truncate(self.max_peaks);
         }
-        k.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]).then(a.cmp(&b)));
+        crate::sortc::by(&mut k, |&a, &b| mz[a].total_cmp(&mz[b]).then(a.cmp(&b)));
         Some(Spec {
             mz: k.iter().map(|&i| mz[i]).collect(),
             it: k.iter().map(|&i| it[i]).collect(),

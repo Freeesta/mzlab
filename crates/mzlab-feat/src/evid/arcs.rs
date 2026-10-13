@@ -41,7 +41,9 @@ fn ions(t: &Aligned) -> Vec<(f64, f64, usize, usize)> {
             v.push((t.member_mz[k], f64::from(t.member_rt[k]), r, pos));
         }
     }
-    v.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.2.cmp(&b.2)).then(a.3.cmp(&b.3)));
+    crate::sortc::by(&mut v, |a, b| {
+        a.0.total_cmp(&b.0).then(a.2.cmp(&b.2)).then(a.3.cmp(&b.3))
+    });
     v
 }
 
@@ -88,7 +90,7 @@ pub fn arcs_from_families(t: &Aligned, files: &[FileFamilies]) -> Vec<RowArc> {
             }
         }
     }
-    out.sort_by_key(|a| (a.row, a.lo, a.up));
+    crate::sortc::any_by_key(&mut out, |a| (a.row, a.lo, a.up));
     out
 }
 

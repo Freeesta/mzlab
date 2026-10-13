@@ -275,7 +275,7 @@ fn reasons_of(rows: &[Evidence], against: usize, n: usize, table: &PointsTable) 
 /// The contributions of a candidate: rows in the order of the types (stable inside a type), total = points of the proofs "for" (never reduced by the
 /// others; 0 when the only one is the frequency), proofs against counted apart.
 pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Breakdown {
-    rows.sort_by_key(|e| e.kind);
+    crate::sortc::any_by_key(&mut rows, |e| e.kind);
     let points = |skip_frequency: bool| {
         rows.iter()
             .filter(|e| e.sign == Sign::For && !(skip_frequency && e.kind == Kind::Frequency))

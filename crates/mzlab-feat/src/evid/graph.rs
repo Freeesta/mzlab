@@ -152,7 +152,7 @@ pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<us
 /// `match_hypotheses` with the window of m/z given (ppm, or minus Da at unit resolution).
 pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> Vec<Option<usize>> {
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
-    by_mz.sort_by(|&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
+    crate::sortc::by(&mut by_mz, |&a, &b| hyps[a].mz.total_cmp(&hyps[b].mz));
     (0..aligned.len())
         .map(|r| {
             let (mz, rt) = (aligned.mz[r], aligned.rt[r]);
@@ -187,7 +187,7 @@ pub(super) fn best_hits(inp: &Inputs) -> Vec<Option<usize>> {
 /// rule as `indistinguishable`, with the masses sorted once.
 pub(super) fn counts_of_n(table: &PointsTable, c: &[Candidate]) -> Vec<usize> {
     let mut order: Vec<usize> = (0..c.len()).collect();
-    order.sort_by(|&a, &b| c[a].mass.total_cmp(&c[b].mass));
+    crate::sortc::by(&mut order, |&a, &b| c[a].mass.total_cmp(&c[b].mass));
     let mut n = vec![1; c.len()];
     for (k, &i) in order.iter().enumerate() {
         let reach = crate::axis::half(c[i].mass, table.mass_ppm);
@@ -291,7 +291,7 @@ pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
     let mut ids: Vec<Identity> = (0..inp.aligned.len())
         .map(|r| prep.identity(inp, r))
         .collect();
-    ids.sort_by(|a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
+    crate::sortc::any_by(&mut ids, |a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
     ids
 }
 

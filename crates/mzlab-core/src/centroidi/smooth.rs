@@ -34,7 +34,7 @@ pub(super) fn smooth(buf: &mut Buf, l: usize) {
 
 /// Element of rank `floor(q (n-1))` of the sorted values (the 'lower' percentile).
 pub(super) fn lower(tmp: &mut [f64], q: f64) -> f64 {
-    tmp.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(tmp, f64::total_cmp);
     tmp[((tmp.len() - 1) as f64 * q).floor() as usize]
 }
 
@@ -77,7 +77,7 @@ pub(super) fn background(buf: &mut Buf, wb: usize, mean: bool) {
 }
 
 fn median(tmp: &mut [f64]) -> f64 {
-    tmp.sort_by(|a, b| a.total_cmp(b));
+    crate::sortc::by(tmp, f64::total_cmp);
     tmp[(tmp.len() - 1) / 2]
 }
 

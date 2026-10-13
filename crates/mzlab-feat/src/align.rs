@@ -194,7 +194,7 @@ fn split_duplicates(
     let mut out = Vec::with_capacity(groups.len());
     for (a, b) in groups {
         let mut by_file: Vec<(u32, usize)> = (a..b).map(|i| (sorted[i].1 .0, i)).collect();
-        by_file.sort_unstable();
+        sortc::ord(&mut by_file);
         let mut straddle = vec![0i32; b - a + 1];
         for w in by_file.chunk_by(|x, y| x.0 == y.0) {
             let (lo, hi) = (w[0].1, w[w.len() - 1].1);

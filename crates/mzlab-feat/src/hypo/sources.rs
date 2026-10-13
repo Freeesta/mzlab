@@ -240,7 +240,7 @@ pub fn from_suspects(s: &Suspects, parent: &Counts, p: &HypoParams) -> (Vec<Hypo
             derivable(&counts_of(&f), parent).then_some((h, f))
         })
         .collect();
-    hits.sort_by(|a, b| {
+    crate::sortc::any_by(&mut hits, |a, b| {
         b.0.pubmed
             .cmp(&a.0.pubmed)
             .then(a.0.mass.total_cmp(&b.0.mass))

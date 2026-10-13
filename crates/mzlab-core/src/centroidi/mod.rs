@@ -71,7 +71,7 @@ impl Params {
 }
 
 /// One peak of a scan.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Centroid {
     pub mz: f64,
     /// What is written in the file (`Params::area`).
@@ -109,6 +109,6 @@ pub fn centroids(mz: &[f64], y: &[f64], p: &Params, buf: &mut Buf) -> Vec<Centro
     };
     let groups = detect::groups(buf, p, sigma);
     let mut out = emit::emit(buf, p, sigma, &groups);
-    out.sort_by(|a, b| a.mz.total_cmp(&b.mz));
+    crate::sortc::by(&mut out, |a, b| a.mz.total_cmp(&b.mz));
     out
 }

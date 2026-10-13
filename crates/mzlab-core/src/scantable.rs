@@ -289,7 +289,7 @@ fn is_hr(rows: &[&Row]) -> bool {
                 .filter_map(|r| r.res)
                 .filter(|v| *v != 0.0)
                 .collect();
-            res.sort_by(|a, b| a.total_cmp(b));
+            crate::sortc::by(&mut res, |a, b| a.total_cmp(b));
             !res.is_empty() && res[res.len() / 2] >= 10000.0
         }
         _ => false,

@@ -37,7 +37,7 @@ fn matches(
             }
         }
     }
-    cand.sort_by(|x, y| {
+    crate::sortc::by(&mut cand, |x, y| {
         y.2.partial_cmp(&x.2)
             .unwrap_or(std::cmp::Ordering::Equal)
             .then(x.0.cmp(&y.0))
