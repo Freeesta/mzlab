@@ -321,8 +321,6 @@ I18N.add("it", {
   "load.restart": "Riparti da zero",
   "load.slow": "La prima apertura scarica circa 15 MB: può volerci un minuto.",
   "busy.aria": "Elaborazione in corso",
-  "load.reading": "Leggo i file e preparo i cromatogrammi...",
-  "load.closing": "Chiudo e carico...",
   "load.err.oldBrowser": "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari.",
   "load.err.engineStart": "Non riesco ad avviare il motore di calcolo: ricarica la pagina.",
   "load.err.engineMissing": "Questo browser non può avviare il motore di calcolo: usa una versione recente di Chrome, Edge, Firefox o Safari.",

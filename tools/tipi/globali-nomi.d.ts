@@ -424,6 +424,7 @@ declare var linked: any;
 declare var liveSpec: any;
 declare var loadDam: any;
 declare var loading: any;
+declare var loadingStato: any;
 declare var lockButton: any;
 declare var lockStart: any;
 declare var lockSync: any;
