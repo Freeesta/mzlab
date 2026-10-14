@@ -14,7 +14,7 @@ def step(name, fn):
 WORDS = ci.ITALIAN_WORDS - {"come", "dati", "file-non", "ora", "sia", "tra", "fra", "anche", "solo", "poi"}
 def italian_on_screen(pg):
     t = pg.evaluate("""() => { const out = []; const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
-        for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style,#theory-sorry')) continue; if (!e.checkVisibility()) continue;
+        for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style')) continue; if (!e.checkVisibility()) continue;
           for (const n of e.childNodes) if (n.nodeType === 3) out.push(n.nodeValue);
           for (const a of ['title', 'placeholder', 'aria-label', 'alt']) if (e.getAttribute(a)) out.push(e.getAttribute(a)); }
         return out.join(' | '); }""")
@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Load the data files (.mzML)", "Drop .mzML, .raw or .wiff files here", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("1. Load the data files (.mzML", "Drop .mzML, .raw, .wiff files or .D folders (Agilent) here", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():

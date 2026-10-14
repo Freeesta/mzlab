@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Part D: compare a MS2 spectrum with the spectral libraries (MSP, MGF) the user has loaded. Classic script, loaded after settings.js/explore.js.
 // The reading, the archive (OPFS) and the search live in libreria-worker.js (no Pyodide); here: the «Librerie» window (gear), the window with the
@@ -16,7 +17,7 @@ const LIB = (() => {
       if (m.type === "progress") { r.prog && r.prog(m); return; }
       pend.delete(m.reqId); if (m.type === "error") { const er = I18N.err(m); er.fatal = !!m.fatal; r.no(er); } else r.ok(m);
     };
-    me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); er.fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
+    me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); /** @type {any} */ (er).fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
     me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });      // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js) and in the app
     me.postMessage({ cmd: "folder", reqId: 0, ...folderMsg });                         // the folder of the libraries (chosen before the first call: call1 waits for folderStart)
     return me;
@@ -41,7 +42,7 @@ const LIB = (() => {
     #libdlg table,#libres table{border-collapse:collapse;width:100%}#libdlg td,#libdlg th,#libres td,#libres th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}#libres td.num,#libres th.num,#libdlg td.num,#libdlg th.num{text-align:right;font-variant-numeric:tabular-nums}
     #libres tr.row{cursor:pointer}#libres tr.row.sel{background:var(--sel)}#libres tr.row:hover{background:var(--sel)}#libres .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}#libres .qbar input{width:90px}#libres canvas{width:100%;height:300px;display:block;border:1px solid var(--line);border-radius:6px;margin-top:8px}
     #libres .tbl{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px}#libdlg .err{color:var(--bad)}#libdlg progress{width:100%}#libdlg .sbadge{border:1px solid currentColor;border-radius:10px;padding:1px 8px;font-size:11px;white-space:nowrap}#libdlg .st-ok{color:var(--ok)}#libdlg .st-warn{color:var(--warn)}#libdlg .st-bad{color:var(--bad)}#libdlg fieldset{border:1px solid var(--line);border-radius:8px;margin:8px 0}</style>`;
-  const ensureCss = () => { if (!document.getElementById("libcss")) { const s = document.createElement("div"); s.id = "libcss"; s.innerHTML = dlgCss; document.head.appendChild(s.firstChild); } };
+  const ensureCss = () => { if (!document.getElementById("libcss")) { const s = document.createElement("div"); s.id = "libcss"; s.innerHTML = dlgCss; document.head.appendChild(/** @type {Node} */ (s.firstChild)); } };
 
   // ------------------------------------------------------------ the folder of the libraries (libreria-cartella.js in the worker)
   // desktop: the native folder (the app keeps the path); Chrome / Edge: a folder chosen once (the handle lives in IndexedDB, the permission is asked at the first click of the visit);
@@ -51,13 +52,13 @@ const LIB = (() => {
   const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* no storage */ } } };
   const dirDb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libdir", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
   const dirGet = async () => { try { const db = await dirDb(); return await new Promise(ok => { const r = db.transaction("h").objectStore("h").get("dir"); r.onsuccess = () => { db.close(); ok(r.result || null); }; r.onerror = () => { db.close(); ok(null); }; }); } catch (e) { return null; } };
-  const dirPut = async h => { try { const db = await dirDb(); await new Promise(ok => { const t = db.transaction("h", "readwrite"); if (h) t.objectStore("h").put(h, "dir"); else t.objectStore("h").delete("dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); } catch (e) { /* no storage */ } };
+  const dirPut = async h => { try { const db = await dirDb(); await new Promise(/** @type {(v?: any) => void} */ ok => { const t = db.transaction("h", "readwrite"); if (h) t.objectStore("h").put(h, "dir"); else t.objectStore("h").delete("dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); } catch (e) { /* no storage */ } };
   let folderMsg = { mode: "opfs" }, folderInit = null, waiting = null;     // what the worker is told; `waiting` = a remembered folder that needs a click to be allowed again
   const folderInfo = { mode: "opfs", name: "", needsGrant: false };
   function folderStart() {
     if (!folderInit) folderInit = (async () => {
       if (window.MZLAB_DESKTOP) { folderMsg = { mode: "native", base: BASE }; folderInfo.mode = "native"; return; }
-      if (window.showDirectoryPicker && LS.get("qqq.lib.cartella") === "fs") {
+      if (/** @type {any} */ (window).showDirectoryPicker && LS.get("qqq.lib.cartella") === "fs") {
         const h = await dirGet();
         if (h) {
           let perm = "prompt"; try { perm = await h.queryPermission({ mode: "readwrite" }); } catch (e) { /* old handle */ }
@@ -77,7 +78,7 @@ const LIB = (() => {
   const listeners = []; const changed = () => listeners.forEach(f => { try { f(); } catch (e) { /* a window that is gone */ } });
   async function chooseFolder() {
     if (T()) { const r = await T().invoke("lib_choose_dir"); if (r) { folderMsg = { mode: "native", base: BASE }; await pushFolder(); } return; }
-    const h = await window.showDirectoryPicker({ id: "mzlab-libs", mode: "readwrite" });
+    const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-libs", mode: "readwrite" });
     await dirPut(h); LS.set("qqq.lib.cartella", "fs"); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "fs"; folderInfo.name = h.name; folderMsg = { mode: "fs", handle: h }; await pushFolder();
   }
   async function useBrowserFolder() { await dirPut(null); LS.set("qqq.lib.cartella", null); waiting = null; folderInfo.needsGrant = false; folderInfo.mode = "opfs"; folderInfo.name = ""; folderMsg = { mode: "opfs" }; await pushFolder(); }
@@ -87,7 +88,7 @@ const LIB = (() => {
   const stLabel = st => ({ pronta: I18N.t("lib.st.pronta"), da_indicizzare: I18N.t("lib.st.da_indicizzare"), aggiornamento: I18N.t("lib.st.aggiornamento"), danneggiata: I18N.t("lib.st.danneggiata") })[st] || st;
   async function open() {
     ensureCss(); await folderStart();
-    let d = document.getElementById("libdlg");
+    let d = /** @type {any} */ (document.getElementById("libdlg"));
     if (!d) {
       d = document.createElement("dialog"); d.id = "libdlg"; document.body.appendChild(d);
       d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.title")}</h3><button class="x" id="lib-x" title="${I18N.t("common.close")}">&times;</button></div>
@@ -125,14 +126,14 @@ const LIB = (() => {
   }
   let toIndex = [];
   async function refresh() {
-    const d = document.getElementById("libdlg"); if (!d) return;
+    const d = /** @type {any} */ (document.getElementById("libdlg")); if (!d) return;
     const box = d.querySelector("#lib-list");
     try {
       const r = await call("list"), L = r.libs, V = r.voci || [], inV = new Set(V.map(v => v.id));
       const f = r.folder || { mode: folderInfo.mode, name: "" };
       d.querySelector("#lib-fwhere").innerHTML = `<b>${EHt(f.mode === "native" ? I18N.t("lib.folder.native", { name: f.name }) : f.mode === "fs" ? I18N.t("lib.folder.fs", { name: folderInfo.name || f.name }) : I18N.t("lib.folder.opfs"))}</b>${r.folderError ? ` · <span class="err">${EHt(I18N.t("lib.folder.error", { name: r.folderError }))}</span>` : ""}`;
-      const bc = d.querySelector("#lib-fchoose"); bc.hidden = !(T() || window.showDirectoryPicker); bc.textContent = I18N.t(T() ? "lib.folder.change" : "lib.folder.choose");
-      d.querySelector("#lib-fgrant").hidden = !folderInfo.needsGrant; d.querySelector("#lib-fbrowser").hidden = !(window.showDirectoryPicker && !T() && (folderInfo.mode === "fs" || folderInfo.needsGrant));
+      const bc = d.querySelector("#lib-fchoose"); bc.hidden = !(T() || /** @type {any} */ (window).showDirectoryPicker); bc.textContent = I18N.t(T() ? "lib.folder.change" : "lib.folder.choose");
+      d.querySelector("#lib-fgrant").hidden = !folderInfo.needsGrant; d.querySelector("#lib-fbrowser").hidden = !(/** @type {any} */ (window).showDirectoryPicker && !T() && (folderInfo.mode === "fs" || folderInfo.needsGrant));
       d.querySelector("#lib-fnote").textContent = f.mode === "opfs" ? I18N.t("lib.folder.noteOpfs") : "";
       toIndex = V.filter(v => v.tipo === "sorgente" && (v.stato === "da_indicizzare" || v.stato === "danneggiata")).map(v => v.nome);
       d.querySelector("#lib-fall").hidden = toIndex.length < 2;
@@ -146,7 +147,7 @@ const LIB = (() => {
       box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { b.disabled = true; await call("remove", { id: b.dataset.rm }); refresh(); });
       box.querySelectorAll("[data-idx]").forEach(b => b.onclick = () => indexOne(b.dataset.idx));
       if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = f.mode === "opfs" || f.mode == null ? I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")) : ""; }
-      if (f.mode === "opfs" && navigator.storage && navigator.storage.persist) { await (await import("./archivio.js")).persistOnce(); const p = await navigator.storage.persisted(); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
+      if (f.mode === "opfs" && navigator.storage && /** @type {any} */ (navigator.storage).persist) { await (await import("./archivio.js")).persistOnce(); const p = await navigator.storage.persisted(); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
     } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   const CARTELLA_stem = n => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
@@ -173,7 +174,7 @@ const LIB = (() => {
     return j;
   }
   async function loadCatalog() {
-    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list");
+    const d = /** @type {any} */ (document.getElementById("libdlg")), box = d.querySelector("#lib-avail-list");
     box.innerHTML = `<p class="sm muted">${I18N.t("lib.reading")}</p>`;
     try {
       avail = T() ? await call("catalog", { cat: (await nativeJson("lib_catalog")).catalog }) : await call("catalog");
@@ -182,7 +183,7 @@ const LIB = (() => {
     } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
   }
   function renderAvail() {
-    const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
+    const d = /** @type {any} */ (document.getElementById("libdlg")), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
     const rows = A.cat.librerie.map(p => { const s = st.get(p.id) || "new";
       return `<tr><td><input type="checkbox" data-dl="${EHt(p.id)}" ${s === "installed" ? "disabled" : ""} aria-label="${EHt(p.nome)}"></td><td>${EHt(p.nome)}</td><td>${EHt(p.versione)}</td><td class="num">${fmtN(p.spettri)}</td><td class="num">${mb(p.dimensione)} MB</td><td title="${EHt(p.licenza)}">${EHt(p.licenza.split(";")[0].split(":")[0])}</td><td><span class="sbadge st-${s === "installed" ? "ok" : s === "damaged" ? "bad" : "warn"}">${EHt(avLabel(s))}</span></td></tr>`; });
     const ext = A.cfg && A.cfg.external ? A.cat.esterne : [];
@@ -195,7 +196,7 @@ const LIB = (() => {
   }
   async function downloadTicked() {
     if (busy) return;
-    const d = document.getElementById("libdlg"), st = d.querySelector("#lib-avail-st"), go = d.querySelector("#lib-avail-go"), cn = d.querySelector("#lib-avail-cancel");
+    const d = /** @type {any} */ (document.getElementById("libdlg")), st = d.querySelector("#lib-avail-st"), go = d.querySelector("#lib-avail-go"), cn = d.querySelector("#lib-avail-cancel");
     const ids = [...d.querySelectorAll("[data-dl]:checked")].map(c => c.dataset.dl), xids = [...d.querySelectorAll("[data-dlx]:checked")].map(c => c.dataset.dlx);
     if (!ids.length && !xids.length) return;
     busy = true; go.disabled = true; cn.hidden = false;
@@ -219,7 +220,7 @@ const LIB = (() => {
     await refresh();
   }
   async function addFiles(files) {
-    const d = document.getElementById("libdlg"), st = d.querySelector("#lib-st");
+    const d = /** @type {any} */ (document.getElementById("libdlg")), st = d.querySelector("#lib-st");
     for (const f of files) {
       st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.reading")}</div><progress max="1" value="0"></progress>`;
       try {
@@ -335,9 +336,9 @@ const LIB = (() => {
     const q = queryOf(p);
     if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
     if (profOf(q.f).hr) return whatIs(p);                // high resolution: «What is it?» (identity and analogs together, level and evidence)
-    let d = document.getElementById("libres");
+    let d = /** @type {any} */ (document.getElementById("libres"));
     if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
-    const prof = profOf(q.f), st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: 0.5, res: null, sel: 0 };
+    const prof = profOf(q.f), st = /** @type {any} */ ({ prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: 0.5, res: null, sel: 0 });
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.search.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
       <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> <select id="lr-unit"><option value="ppm">ppm</option><option value="Da">Da</option></select></label>
@@ -403,9 +404,10 @@ const LIB = (() => {
   async function whatIs(p) {
     ensureCss();
     const q = queryOf(p); if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
-    let d = document.getElementById("libres");
+    let d = /** @type {any} */ (document.getElementById("libres"));
     if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
     const prof = profOf(q.f), top = q.peaks.reduce((x, y) => Math.max(x, y[0]), 0);
+    /** @type {any} */
     const st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, frag: Math.max(0.005, +(10e-6 * top).toFixed(4)), res: null, an: null, sel: { k: "id", i: 0 }, n: 1, lo: null, decided: "", open: new Set() };
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.what.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
@@ -513,7 +515,7 @@ const LIB = (() => {
     const f = E.files[k]; if (!f) return;
     const k2 = (E.files.find(x => phys(x) === phys(f) && x.kind === "ms2" && !x.gone) || {}).k;
     if (k2 == null) return info(I18N.t("lib.noMs2"));
-    let d = document.getElementById("libid");
+    let d = /** @type {any} */ (document.getElementById("libid"));
     if (!d) { d = document.createElement("dialog"); d.id = "libid"; document.body.appendChild(d); }
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.all.title")}</h3><button class="x" id="li-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" style="margin-top:4px">${EHt(f.label || f.file)} · ${I18N.t("lib.all.sub", { ppm: profOf(f).v })}</div>

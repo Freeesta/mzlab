@@ -23,14 +23,15 @@ async function init(){try{loading(true);await bootSession();await Promise.all(E.
   const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
+let _lastV="";
 function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
-  // The Teoria is Italian only: in English a courtesy page is shown, with a button that opens the Italian Teoria for this visit only
-  if(v!=="theory")S.theoryIt=false;
-  const sorry=v==="theory"&&I18N.lang==="en"&&!S.theoryIt;$("#theory-sorry").hidden=!sorry;$("#tframe").hidden=sorry;
-  if(v==="theory"&&!sorry&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
+  // The Teoria is Italian only: in English it opens at once in Italian, with a short toast each time the student enters it
+  if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
+  if(v==="theory"&&_lastV!=="theory"&&I18N.lang==="en"&&window.toast)toast(I18N.t("theory.onlyItalian"));
+  _lastV=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||""));   // one title per view (WCAG 2.4.2)
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
@@ -45,7 +46,6 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.data
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
-$("#theory-it").onclick=()=>{S.theoryIt=true;applyView()};
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
@@ -79,14 +79,14 @@ const expCell=f=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}<
 function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">${I18N.t("load.exp.nameHint",{hint:expn(f.hint),kind:expn(f.kind)})}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
-  const ncol=6+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;
+  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;
   let last=-1,rows="";
   F.forEach((f,i)=>{const g=EXPORD[f.kind]??3;
     if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??3)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??3)===g).length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
    `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
-   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
+   (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
   el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
@@ -96,8 +96,11 @@ function renderFiles(){const F=ST.files,el=$("#flist");
       f[k]=k==="use"?x.checked:v;
       if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
       if(k==="type"){if(f.type!=="sample"){f.time=null;f.gT=false}if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
-      sortFiles();renderFiles();                              // the table is sorted again when a value is committed (change/blur/Enter), never while typing
-      if(keep){const i=F.findIndex(q=>q.name===keep.name),b=el.querySelector(`[data-i="${i}"][data-k="${keep.k}"]`);if(b)b.focus()}};
+      // the table is sorted again when a value is committed (change/blur/Enter), never while typing. A change caused by leaving the field (click on another field, Tab) is applied
+      // once the focus has moved, and the focus goes back to the field that received it: the rebuilt table must not swallow the click
+      const go=()=>{const a=/** @type {HTMLElement} */(document.activeElement),ok=a&&el.contains(a),nk=ok&&a.dataset.k?{name:F[+(a.dataset.i||0)].name,k:a.dataset.k}:ok&&a.dataset.rm?{name:F[+a.dataset.rm].name,rm:1}:keep;sortFiles();renderFiles();
+        if(nk){const i=F.findIndex(q=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
+      if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
   el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
@@ -140,7 +143,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");CONVERT_RAW=true;$("#convhelp").hidden=true
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;

@@ -173,12 +173,33 @@ try:
                 const rules = new Uint8Array(await (await fetch(rulesUrl)).arrayBuffer());
                 const h = await pool.hypotheses({ rules, parent, parentRt: NaN, paths: files.map(f => f.path), recipe: '', structure: '' });
                 const e = await pool.evidence({ minutes: files.map(() => NaN), parentMz: NaN, parentRt: NaN, recipe: '' });
-                return { list, crate: await pool.crateVersion(), prev: Object.keys(prev), n: stored.length, table: table.length, evid: e.table.length, tried: h.tried, reg: !!h.registry };
+                const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', e.table))).map(x => x.toString(16).padStart(2, '0')).join('');
+                const smp = await pool.table('samples', { files: JSON.stringify({ files: names.map(n => ({ name: n, sha256: '' })) }) });
+                const qc = JSON.parse(await pool.table('qc', { samples: smp, spec: '', sha256: sha, polarity: 1 }));
+                const csv = await pool.table('export', { samples: smp, spec: '', sha256: sha, polarity: 1, export_kind: 'full_mzmine' });
+                let wrong = ''; try { await pool.table('qc', { samples: smp, spec: '', sha256: '0'.repeat(64), polarity: 1 }); } catch (x) { wrong = x.key || String(x); }
+                return { qc: Array.isArray(qc.file) ? qc.file.length : -1, csv: csv.length, wrong, list, crate: await pool.crateVersion(), prev: Object.keys(prev), n: stored.length, table: table.length, evid: e.table.length, tried: h.tried, reg: !!h.registry };
             }""", [[f.name for f in files], "/static/mzfinder/regole_tp.json", PARENT["neutral"]])
             assert all(f.name + ".mzidx" in r["list"] for f in files), r["list"]
             assert r["n"] == len(files) and r["table"] > 100 and r["evid"] >= r["table"] and r["reg"] and r["crate"], r
+            assert r["qc"] == len(files) and r["csv"] > 100 and r["wrong"] == "error.featState", (r["qc"], r["csv"], r["wrong"])
             assert "ms" in r["prev"] and "crate" in r["prev"], r["prev"]
-        step("Pipeline panel pool: listIdx, preview, detect, align, hypotheses and proofs on the native routes", pipeline_pool)
+        step("Pipeline panel pool: listIdx, preview, detect, align, hypotheses, proofs and the views of the table on the native routes", pipeline_pool)
+        def pipeline_panel():
+            pg.evaluate("PIPE.open()"); pg.wait_for_function("PIPE.state.crate", timeout=60000); crate = pg.evaluate("PIPE.state.crate")
+            gate = {"format": "cancello/2", "crate_version": crate, "data": "2026-10-12", "vista_candidati": True, "vista_tabella": True, "concordanza_mzmine": "passa", "criteri": []}
+            pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", gate)
+            pg.wait_for_function("document.querySelectorAll('#pr-tab .pr-role').length === %d" % len(files), timeout=60000)
+            pg.click("#pr-all"); pg.wait_for_function("PIPER.state.cs.every(c => c.tempo == null || c.tempo_confermato)", timeout=60000)
+            try: pg.wait_for_function("!document.querySelector('#pipe-run-go').disabled", timeout=20000)
+            except Exception: raise AssertionError(pg.evaluate("[PIPER.state.block, document.querySelector('#pr-warn').textContent, document.querySelector('#pipe-run-msg').textContent, PIPER.state.files]"))
+            pg.click("#pipe-run-go")
+            pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=600000)
+            pg.wait_for_function("(document.querySelector('#ft-n') || {}).textContent && document.querySelector('#ft-n').textContent.includes(' of ')", timeout=120000)
+            pg.click("#px-report")
+            pg.wait_for_function("!document.querySelector('#pipe-exp .err')", timeout=60000)
+            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), "miss"
+        step("Pipeline panel in the app: roles from the native engine, Run, quality control, table, report", pipeline_panel)
         def transformations():
             user = "my rule;+O;a row of the user"
             run = pg.evaluate("([f, p, t]) => window.TPCALL('run', f, p, {}, t)", [got["files"], PARENT, user])

@@ -60,6 +60,7 @@ jobs:
             ~/Library/Caches/ms-playwright
             ~\AppData\Local\ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-${{ matrix.browser }}-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         run: rustup show
       - uses: actions/cache@v4
@@ -71,6 +72,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen.exe
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: sito-e2e-${{ runner.os }}-
       - name: Install
         run: |
           python -m pip install -e ".[test]" playwright axe-playwright-python pillow
@@ -121,6 +123,7 @@ jobs:
             ~/Library/Caches/ms-playwright
             ~\AppData\Local\ms-playwright
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         run: rustup show
       - uses: actions/cache@v4
@@ -132,6 +135,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen.exe
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: sito-e2e-${{ runner.os }}-
       - name: Install
         run: |
           python -m pip install -e ".[test]" playwright axe-playwright-python pillow

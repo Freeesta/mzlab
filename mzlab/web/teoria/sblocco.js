@@ -4,18 +4,18 @@
    No animation under reduced motion (the system setting or data-a11y-reduce). Classic script, no network: it works from file:// too. */
 "use strict";
 (function () {
-  const logo = document.getElementById("logo"), img = logo && logo.querySelector("img");
-  if (!img || TEORIA.esteso()) return;
+  const target = document.getElementById("tab-teoria") || document.getElementById("logo");
+  if (!target || TEORIA.esteso()) return;
   const note = document.createElement("div"); note.id = "sblocco"; note.setAttribute("role", "status"); document.body.appendChild(note);
-  const still = () => document.documentElement.hasAttribute("data-a11y-reduce") || !img.animate || (matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const still = () => document.documentElement.hasAttribute("data-a11y-reduce") || !target.animate || (matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let n = 0, t = 0;
-  logo.addEventListener("click", e => {
+  target.addEventListener("click", e => {
     if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;   // «open in a new tab» and the like keep working
     e.preventDefault(); clearTimeout(t); n++;
-    const s = 1 + 0.25 * n;
-    if (n < 5) { if (!still()) img.animate([{ transform: "scale(" + (s - 0.25) + ")" }, { transform: "scale(" + s + ")" }], { duration: 140, fill: "forwards", easing: "ease-out" }); t = setTimeout(() => { location.href = logo.href; }, 600); return; }
+    const s = 1 + 0.15 * n;
+    if (n < 5) { if (!still()) target.animate([{ transform: "scale(" + (s - 0.15) + ")" }, { transform: "scale(" + s + ")" }], { duration: 140, fill: "forwards", easing: "ease-out" }); t = setTimeout(() => { location.href = target.href; }, 600); return; }
     try { localStorage.setItem("qqq.teoria.esteso", "1"); } catch (_) { /* not stored: the reload shows nothing new */ }
-    if (!still()) img.animate([{ transform: "scale(2.25)", opacity: 1 }, { transform: "scale(4)", opacity: 0 }], { duration: 320, fill: "forwards", easing: "ease-out" });
+    if (!still()) target.animate([{ transform: "scale(1.5)", opacity: 1 }, { transform: "scale(2)", opacity: 0 }], { duration: 320, fill: "forwards", easing: "ease-out" });
     note.textContent = "Teoria estesa sbloccata"; note.className = "on";
     setTimeout(() => location.reload(), 900);
   });

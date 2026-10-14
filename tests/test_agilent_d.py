@@ -37,3 +37,21 @@ def test_runs_are_grouped_and_the_other_files_pass():
 def test_the_name_of_the_mzml():
     r = run("[a.mzmlName({name:'x.D',root:'t/x.D/'},[]), a.mzmlName({name:'x.D',root:'t/s2/x.D/'},['x.mzML']), a.mzmlName({name:'x.D',root:'x.D/'},['X.mzML'])]")
     assert r == ["x.mzML", "x (s2).mzML", "x (1).mzML"]
+
+
+def test_method_folders_are_held_not_ignored():
+    code = """(()=>{const fs=[F('Acq.RTP.xml','t/Geosmin method for scan.m/'),F('7890Method.bin','t/Geosmin method for scan.m/'),F('.DS_Store','t/Geosmin method for scan.m/'),
+      F('x.mzML','t/'),F('m.m','t/'),F('AcqMethod.xml','t/b.M/DaMethod/'),F('acqmeth.txt','t/a.D/')];const g=a.groupMethods(fs);
+      return [g.rest.map(f=>f.name),g.methods.map(m=>[m.name,m.root,m.files.map(f=>f.name)])]})()"""
+    rest, methods = run(code)
+    assert rest == ["x.mzML", "m.m", "acqmeth.txt"]      # a lone «m.m» file is not a folder; the .D files are left to group()
+    assert methods == [["Geosmin method for scan.m", "t/Geosmin method for scan.m/", ["Acq.RTP.xml", "7890Method.bin"]], ["b.M", "t/b.M/", ["AcqMethod.xml"]]]
+
+
+def test_uppercase_d_folders_with_acqdata_are_runs():
+    code = """(()=>{const fs=['MSScan.bin','MSPeak.bin'].map(n=>F(n,'Dichloromethane/dichloromethane.D/AcqData/')).concat([F('acqmeth.txt','Dichloromethane/dichloromethane.D/'),
+      F('MSScan.bin','blank m6en3.D/ACQDATA/'),F('MSPeak.bin','blank m6en3.D/ACQDATA/')]);const g=a.group(fs);
+      return [g.rest.length,g.runs.map(r=>[r.name,Object.keys(r.files).sort(),r.missing])]})()"""
+    rest, runs = run(code)
+    assert rest == 0
+    assert runs == [["dichloromethane.D", ["acqmeth", "peak", "scan"], []], ["blank m6en3.D", ["peak", "scan"], []]]

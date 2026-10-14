@@ -93,8 +93,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: actions/cache@v4
+        with:
+          path: .pyodide-cache
+          key: pyodide-${{ hashFiles('tools/build_site.py') }}
       - name: Build the site (downloads Pyodide from jsDelivr)
-        run: python tools/build_site.py
+        run: |
+          # Pyodide files are checked against the SHA-256 pinned in tools/build_site.py, so a cached copy is as safe as a download
+          if [ -f .pyodide-cache/pyodide.mjs ]; then
+            python tools/build_site.py --pyodide-dir .pyodide-cache
+          else
+            python tools/build_site.py
+            mkdir -p .pyodide-cache && cp site/static/mzfinder/pyodide/* .pyodide-cache/
+          fi
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - uses: actions/cache@v4
@@ -105,6 +116,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: pages-rust-${{ runner.os }}-
       - name: Build the WASM engine (only in the published site, never committed)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')

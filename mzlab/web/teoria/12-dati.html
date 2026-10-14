@@ -7,11 +7,6 @@
 <h1>Full scan, MS2 e MRM: leggere i dati</h1>
 <p class="lead">Che cosa contiene ciascun tipo di file, come si estrae l'informazione utile e quali trappole tipiche della risoluzione unitaria evitare.</p>
 
-<div class="obj"><b>In questo capitolo impari a</b><ul>
-<li>distinguere full scan, MS2 e MRM e i cromatogrammi che se ne ottengono (TIC, XIC, BPC);</li>
-<li>dedurre da uno spettro a risoluzione unitaria che cosa si può e non si può dire;</li>
-<li>costruire una retta di taratura e stimare LOD e LOQ.</li></ul></div>
-
 <h2>Tre tipi di dato, tre forme</h2>
 <table>
 <tr><th>Esperimento</th><th>Che cosa registra</th><th>Forma del dato</th><th>Domanda a cui risponde</th></tr>
@@ -78,7 +73,7 @@
 <h2>MRM e quantificazione</h2>
 <h3>La retta di taratura</h3>
 <p class="sm">In QqQ lab si integrano i picchi MRM e si esporta la tabella delle integrazioni (aree e concentrazioni degli standard) in Excel: la retta la costruisci tu, lì.</p>
-<p>Si iniettano standard a concentrazione nota (nell'esperienza, una serie dal decimo di mg/L a decine di mg/L) e si costruisce area contro concentrazione. Per una retta affidabile:</p>
+<p>Si iniettano standard a concentrazione nota (ad esempio, una serie scalare dal decimo di mg/L a decine di mg/L) e si costruisce area contro concentrazione. Per una retta affidabile:</p>
 <ul>
 <li>almeno 5–6 livelli che coprano l'intervallo dei campioni (non estrapolare);</li>
 <li>controllare i <b>residui</b> (area misurata − area dalla retta) in funzione della concentrazione: un andamento sistematico (a "U" o a gomito) indica non linearità, tipicamente saturazione dell'ESI o del rivelatore ai livelli alti; R<sup>2</sup> = 0,99 non basta a escluderla;</li>
@@ -88,12 +83,12 @@
 <span class="eq">LOD ≈ <span class="frac"><span>3,3 <i>s</i></span><span><i>b</i></span></span>, &nbsp;&nbsp; LOQ ≈ <span class="frac"><span>10 <i>s</i></span><span><i>b</i></span></span><span class="no">(12.1)</span></span>
 <p>con <i>b</i> pendenza della retta e <i>s</i> deviazione standard della risposta (del bianco o dell'intercetta). In alternativa si usa il rapporto segnale/rumore (3 e 10) su standard di bassa concentrazione.</p>
 <h3>Conferma dell'identità</h3>
-<p>Il picco nel campione è il vostro analita se: RT uguale a quello dello standard (entro pochi secondi), entrambe le transizioni presenti, rapporto qual/quant entro la tolleranza (capitolo 10).</p>
+<p>L'identità dell'analita è confermata se: RT coincide con quello dello standard (entro pochi secondi), entrambe le transizioni sono presenti, rapporto qual/quant entro la tolleranza (capitolo 10).</p>
 <h3>Dalla quantificazione alla cinetica</h3>
 <p>Con le concentrazioni del parent si traccia <i>C</i>/<i>C</i><sub>0</sub> e ln(<i>C</i><sub>0</sub>/<i>C</i>) in funzione del tempo (capitolo 2). Per i TP, senza standard, si tracciano le aree degli XIC (dal full scan) o delle transizioni MRM, eventualmente normalizzate al loro massimo: si confronta la forma della curva, non l'altezza tra TP diversi.</p>
 <div class="box lab"><b>In QqQ lab</b>
 <p><p class="sm"><b>Figure del picco</b> (colonne facoltative della tabella delle integrazioni): <b>S/N</b> = altezza del picco sopra la linea di base diviso la deviazione standard del segnale in una zona senza picchi scelta da te (tolta la deriva); <b>w<sub>½</sub></b> = larghezza a metà altezza; <b>N</b> = 5,54 (t<sub>R</sub> / w<sub>½</sub>)<sup>2</sup> piatti teorici; <b>coda USP</b> T = W<sub>0,05</sub> / 2f, con W<sub>0,05</sub> la larghezza e f la parte anteriore del picco a 5% dell'altezza (T = 1 per un picco simmetrico). Il programma calcola, tu interpreti.</p>
-<p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di irraggiamento: è il punto di partenza per i grafici della relazione e si esporta in Excel. Il menu «Correzione» offre tre modi (uno alla volta): sottrarre un <b>file bianco</b> (segue il tempo: utile quando il fondo cambia lungo la corsa), sottrarre il <b>fondo di un tratto</b> (un solo numero, la media di un tratto senza picchi: utile se il fondo è piatto) oppure la <b>linea di base automatica</b> (SNIP: toglie la base che sale sotto i picchi). Aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
+<p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di campionamento: è il punto di partenza per i grafici cinetici e si esporta in Excel. Il menu «Correzione» offre tre modi (uno alla volta): sottrarre un <b>file bianco</b> (segue il tempo: utile quando il fondo cambia lungo la corsa), sottrarre il <b>fondo di un tratto</b> (un solo numero, la media di un tratto senza picchi: utile se il fondo è piatto) oppure la <b>linea di base automatica</b> (SNIP: toglie la base che sale sotto i picchi). Aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
 
 <p class="note"><b>I tuoi file non lasciano il tuo computer.</b> Nella versione online i dati vengono letti dal browser e non sono inviati a nessun server; nella versione locale il programma risponde solo a questo computer.</p>
 
@@ -127,7 +122,7 @@
 <h2>Per approfondire</h2>
 <ul class="refs">
 <li><span class="tag">terminologia</span>Murray K.K. et al. (2013) Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013). <i>Pure Appl. Chem.</i> 85, 1515–1609. <a href="https://doi.org/10.1351/PAC-REC-06-04-06" target="_blank" rel="noopener">doi:10.1351/PAC-REC-06-04-06</a></li>
-<li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books, 1993 (presente nel materiale del corso: cartella "Spettro di Massa").</li>
+<li><span class="tag">libro</span>McLafferty F.W., Tureček F. <i>Interpretation of Mass Spectra</i>, 4ª ed., University Science Books, 1993.</li>
 <li><span class="tag">validazione</span>Eurachem, guida <i>The Fitness for Purpose of Analytical Methods</i> (validazione, LOD, LOQ, linearità): <a href="https://www.eurachem.org" target="_blank" rel="noopener">eurachem.org</a></li>
 <li><span class="tag">banche dati</span><a href="https://massbank.eu/MassBank/" target="_blank" rel="noopener">MassBank Europe</a> (spettri MS/MS liberi, molti di contaminanti ambientali); <a href="https://pubchem.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubChem</a> (formule, masse, proprietà).</li>
 </ul>

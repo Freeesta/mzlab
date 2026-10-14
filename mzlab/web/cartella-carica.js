@@ -67,12 +67,12 @@ const CartCarica = (() => {
   // ---- page part (only where there is a DOM)
   function note(text) { const n = document.getElementById("cartinfo"); if (!n) return; n.textContent = text; n.hidden = !text; }
   async function load(files, name) {
-    const ag = AgilentD.group(files), T = (k, p) => I18N.t(k, p), { ok, ignored } = split(ag.rest);     // Agilent .D folders are converted by agilent-d.js
-    const ig = ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "";
-    const n = ok.length + ag.runs.length;
-    if (!n) { note(T("cart.none", { name }) + ig); return; }
-    note(T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig);
-    await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs)], null);
+    const ag = AgilentD.group(files), T = (k, p) => I18N.t(k, p), mm = AgilentD.groupMethods(ag.rest), { ok, ignored } = split(mm.rest);     // Agilent .D folders are converted by agilent-d.js, .m method folders are held there
+    const kept = mm.methods.filter(m => m.files.length), meth = kept.map(m => m.name); AgilentD.held.push(...kept);
+    const ig = (ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "") + (meth.length ? " " + T(meth.length === 1 ? "cart.method.one" : "cart.method", { n: meth.length, name: meth.join(", ") }) : "");
+    const n = ok.length + ag.runs.length; if (!n) { note(meth.length ? ig.trim() : T("cart.none", { name }) + ig); return; }
+    const msg = T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig; note(msg); await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs)], null);
+    if (!ig && document.getElementById("cartinfo")?.textContent === msg) note("");      // loaded: «n files to load» is done; the summary of the ignored files and later notices stay
   }
   function fromDrop(e) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
     const es = entriesOf(e.dataTransfer);

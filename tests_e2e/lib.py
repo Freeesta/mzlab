@@ -124,6 +124,8 @@ def open_kind(pg, kind):
     """As a student does: click, in the file list, the first file of an experiment type ('full', 'ms2', 'mrm'): that type becomes the current one."""
     k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
     assert k is not None, f"no {kind} file loaded"
+    if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")      # the file list is a drawer: open it first
+    pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")
     pg.click(f"#flst .fl[data-k='{k}'] .nm")
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""

@@ -65,8 +65,8 @@ try:
         def jump():
             q.click("#menu"); q.click("#side a[href='09-quadrupolo.html']"); q.wait_for_url("**/09-quadrupolo.html")
             q.wait_for_selector("#menu"); assert "Il quadrupolo" in q.inner_text("#menu") and "Il quadrupolo" in q.title()
-            q.click("#menu"); q.click("#side .toc a >> nth=1"); q.wait_for_timeout(300)
-            assert q.is_hidden("#side") and q.is_hidden("#sheetbg"), "sheet/backdrop stays after an in-page link"
+            q.click("#menu"); q.click("#side a[href='10-qqq.html']"); q.wait_for_timeout(300)
+            assert q.is_hidden("#side") and q.is_hidden("#sheetbg"), "sheet/backdrop stays after a chapter link"
         step("jump to a chapter and to a section; title and button follow", jump)
 
         def memory():

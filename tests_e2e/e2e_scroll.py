@@ -103,8 +103,9 @@ try:
         step("cursor line is an overlay following the cursor", cursor_overlay)
         pg.screenshot(path=SH + "scroll_full.png")
         def ms2():
-            pg.evaluate("window.setTab('ms2')"); pg.wait_for_timeout(3500)
-            info = pg.evaluate("""()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!p&&!!p._a}"""); assert info, "ms2 chromatogram"
+            open_kind(pg, "ms2")          # at the first load only the first file is open: a click in the list opens the MS2 file
+            attendi(pg, """(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!p&&!!p._a})()""")
+            info = True
             c = pg.evaluate("()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'),s=p._a.sr[0];let j=s.y.indexOf(Math.max(...s.y)),r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(s.x[j]),py:r.top+r.height/2,j}}")
             pg.mouse.click(c["px"], c["py"]); pg.wait_for_timeout(900)
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'))")

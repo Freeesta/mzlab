@@ -5,13 +5,7 @@
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 3</div>
 <h1>Fondamenti di cromatografia</h1>
-<p class="lead">GC e LC sono due versioni dello stesso fenomeno: molecole che si ripartiscono fra una fase che si muove e una che sta ferma. Le grandezze di questo capitolo (k, α, N, H, R<sub>s</sub>) valgono per entrambe e sono la base di ogni domanda di cromatografia all'orale.</p>
-
-<div class="obj"><b>In questo capitolo impari a</b><ul>
-<li>calcolare fattore di ritenzione, selettività, numero di piatti e risoluzione da un cromatogramma;</li>
-<li>spiegare i tre termini dell'equazione di van Deemter e che cosa cambia fra colonna impaccata (LC) e capillare (GC);</li>
-<li>usare l'equazione di Purnell per decidere come migliorare una separazione;</li>
-<li>scegliere fra GC e LC per una molecola e passare dall'area di un picco a una concentrazione.</li></ul></div>
+<p class="lead">GC e LC sono due versioni dello stesso fenomeno: molecole che si ripartiscono fra una fase che si muove e una che sta ferma. Le grandezze di questo capitolo (k, α, N, H, R<sub>s</sub>) valgono per entrambe e costituiscono i parametri essenziali per comprendere e ottimizzare qualsiasi separazione cromatografica.</p>
 
 <h2>Che cos'è una separazione cromatografica</h2>
 <p>Un campione viene introdotto in testa a una <b>colonna</b> che contiene una <b>fase stazionaria</b>; una <b>fase mobile</b> (un gas in GC, un liquido in LC) la attraversa e trascina le molecole. Ogni molecola passa continuamente dall'una all'altra fase: avanza solo quando è nella fase mobile. Molecole che preferiscono la fase stazionaria restano indietro. All'uscita un rivelatore registra il segnale nel tempo: il <b>cromatogramma</b>.</p>
@@ -91,7 +85,7 @@
 <tr><td><b>Fronte</b> (fronting, A<sub>s</sub> &lt; 1)</td><td>Sovraccarico di massa (troppa sostanza: la fase stazionaria si satura), solvente di iniezione più forte della fase mobile (LC), condensazione in testa alla colonna (GC)</td></tr>
 <tr><td><b>Picco sdoppiato</b></td><td>Iniezione in un solvente troppo forte, colonna con un vuoto in testa, due composti quasi coeluiti</td></tr>
 </table>
-<p>Il programma calcola N, w½ e il fattore di coda dei picchi integrati (capitolo 12): servono per descrivere la qualità del vostro cromatogramma nella relazione.</p>
+<p>Il programma calcola N, w½ e il fattore di coda dei picchi integrati (capitolo 12): parametri utili per valutare e documentare la qualità del cromatogramma e delle separazioni.</p>
 
 <h2>Il problema generale dell'eluizione</h2>
 <p>Con condizioni costanti (eluizione <b>isocratica</b> in LC, <b>isoterma</b> in GC) un campione con composti di polarità o volatilità molto diverse dà un cromatogramma sbilanciato: i primi picchi escono vicini e mal risolti (k piccolo), gli ultimi larghi, bassi e in ritardo (k grande). La soluzione è cambiare le condizioni durante la corsa in modo che ogni composto esca con un k «buono»:</p>
@@ -106,7 +100,7 @@
 <li><b>Standard interno</b>: una quantità nota di un composto simile (ideale: lo stesso analita marcato con <sup>2</sup>H o <sup>13</sup>C, che coeluisce e si ionizza allo stesso modo) aggiunta a tutti i campioni; si usa il rapporto delle aree. Corregge perdite nella preparazione, variazioni di iniezione ed effetto matrice.</li>
 <li><b>Aggiunte standard</b> e <b>taratura in matrice</b>: quando la matrice cambia la risposta e non c'è uno standard marcato.</li>
 </ul>
-<p>Limiti di rivelabilità e di quantificazione (LOD ≈ 3,3 σ/pendenza, LOQ ≈ 10 σ/pendenza, oppure da S/N = 3 e 10), linearità e campo di lavoro si ricavano dalla retta: nel vostro esperimento la costruite in Excel con le aree MRM (capitolo 12).</p>
+<p>Limiti di rivelabilità e di quantificazione (LOD ≈ 3,3 σ/pendenza, LOQ ≈ 10 σ/pendenza, oppure da S/N = 3 e 10), linearità e campo di lavoro si ricavano dalla retta di taratura costruita con le aree MRM (capitolo 12).</p>
 
 <h2>GC o LC?</h2>
 <table>
@@ -115,13 +109,13 @@
 <tr><td>Che cosa si analizza</td><td>Molecole volatili o rese volatili (derivatizzazione), termostabili; in pratica massa molare fino a ~500-600</td><td>Molecole polari, ioniche, termolabili, non volatili, anche grandi (peptidi, proteine)</td></tr>
 <tr><td>Efficienza tipica</td><td>Molto alta (colonne capillari lunghe 30 m, N ≈ 10<sup>5</sup>)</td><td>Più bassa (N ≈ 10<sup>4</sup>), compensata dalla selettività regolabile della fase mobile</td></tr>
 <tr><td>Accoppiamento con la MS</td><td>Naturale: il gas entra nel vuoto; ionizzazione EI riproducibile, librerie di spettri</td><td>Bisogna eliminare il solvente: sorgenti a pressione atmosferica (ESI, APCI), ioni [M+H]<sup>+</sup>, pochi frammenti</td></tr>
-<tr><td>Esempi ambientali</td><td>Solventi clorurati, IPA, PCB, pesticidi organoclorurati, idrocarburi</td><td>Farmaci, pesticidi polari (come quelli dell'esperienza), i loro prodotti di trasformazione, PFAS</td></tr>
+<tr><td>Esempi ambientali</td><td>Solventi clorurati, IPA, PCB, pesticidi organoclorurati, idrocarburi</td><td>Farmaci, pesticidi polari, prodotti di trasformazione idrofili, metaboliti, PFAS</td></tr>
 </table>
-<div class="box lab"><b>Nella vostra esperienza</b>
-<p>L'inquinante e i suoi TP sono polari e alcuni termolabili: per questo si usa LC-ESI-MS. I TP sono in genere <em>più</em> polari del parent (capitolo 4), un motivo in più per non pensare alla GC senza derivatizzazione.</p></div>
+<div class="box key"><b>Applicazione pratica: LC-MS vs GC-MS</b>
+<p>Quando le molecole d'interesse e i rispettivi prodotti di degradazione sono specie polari o termolabili, la scelta d'elezione è la LC-ESI-MS. I prodotti di trasformazione sono in genere <em>più</em> polari del composto di partenza (capitolo 4), rendendo l'analisi in GC complessa o impraticabile senza preventiva derivatizzazione chimica.</p></div>
 
-<div class="box oral"><b>All'orale</b>
-<p>Domande tipiche: definire k, α, N, H, R<sub>s</sub> e saperle ricavare da un cromatogramma disegnato; disegnare la curva di van Deemter e spiegare i tre termini (e perché in GC capillare manca A); usare l'equazione di Purnell per dire che cosa conviene cambiare; spiegare isocratica contro gradiente, isoterma contro programmata; scegliere fra GC e LC per un composto dato; standard interno contro esterno.</p></div>
+<div class="box oral"><b>Concetti chiave e domande di ripasso</b>
+<p>Punti essenziali da dominare: definire k, α, N, H, R<sub>s</sub> e saperle ricavare da un cromatogramma; comprendere l'origine fisica dei tre termini della curva di van Deemter (e perché in GC capillare manca il termine di impaccamento A); applicare l'equazione di Purnell per individuare il parametro più efficace da ottimizzare; distinguere tra eluizione isocratica e a gradiente (o isoterma e programmata in GC); argomentare la scelta motivata tra GC e LC; comprendere vantaggi e limiti della taratura con standard interno rispetto allo standard esterno.</p></div>
 
 <h2>Verifica</h2>
 <details class="q"><summary>Un picco esce a 7,5 min, il tempo morto è 1,5 min e w½ = 6 s. Calcola k e N.</summary>
@@ -140,7 +134,7 @@
 <li><span class="tag">articolo</span>Purnell J.H. (1960) The correlation of separating power and efficiency of gas-chromatographic columns. <i>J. Chem. Soc.</i> 1268. <a href="https://doi.org/10.1039/jr9600001268" target="_blank" rel="noopener">doi:10.1039/jr9600001268</a></li>
 <li><span class="tag">libro</span>Snyder L.R., Kirkland J.J., Dolan J.W. <i>Introduction to Modern Liquid Chromatography</i>, 3ª ed., Wiley, 2010.</li>
 <li><span class="tag">libro</span>Harris D.C. <i>Analisi chimica quantitativa</i>, Zanichelli (capitoli sulla cromatografia): un buon ripasso in italiano.</li>
-<li><span class="tag">dispense</span>Sbobine del corso, capitolo "Analisi GC/LC".</li>
+<li><span class="tag">libro</span>Grob R.L., Barry E.F. <i>Modern Practice of Gas Chromatography</i>, 4ª ed., Wiley, 2004.</li>
 </ul>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-chrom.js"></script>

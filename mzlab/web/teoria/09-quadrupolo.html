@@ -7,12 +7,6 @@
 <h1>Il quadrupolo: la teoria vera</h1>
 <p class="lead">Quattro barre, una tensione continua e una a radiofrequenza: perché solo gli ioni di un certo m/z attraversano il filtro, da dove viene il famoso triangolo di stabilità e che cosa decide risoluzione e sensibilità.</p>
 
-<div class="obj"><b>In questo capitolo impari a</b><ul>
-<li>scrivere il potenziale del quadrupolo e i parametri di Mathieu a e q;</li>
-<li>leggere il diagramma di stabilità e la linea di scansione, con i valori del vertice;</li>
-<li>spiegare il compromesso fra risoluzione e trasmissione e il funzionamento «solo RF»;</li>
-<li>calcolare la tensione RF necessaria per una data m/z.</li></ul></div>
-
 <h2>Un filtro, non una bilancia</h2>
 <p>Il quadrupolo non "pesa" gli ioni e non misura il tempo di volo: in ogni istante lascia passare solo gli ioni il cui m/z cade in una finestra stretta e scarica tutti gli altri sulle barre. Lo spettro si ottiene spostando la finestra nel tempo (<b>scansione</b>), oppure tenendola ferma su un m/z (<b>SIM</b>, e in MS/MS <b>MRM</b>). Ne seguono due proprietà che userete ogni giorno:</p>
 <ul>
@@ -117,13 +111,13 @@
 <div class="box warn"><b>Conseguenza pratica: il taglio di bassa massa nella cella</b>
 <p>Nella cella di collisione il <i>q</i> è fissato per il precursore: frammenti molto più leggeri del precursore possono avere <i>q</i> &gt; 0,908 ed essere persi. Nei QqQ moderni il problema è contenuto (la RF della cella viene adattata), mentre è un limite noto delle trappole ioniche ("regola di un terzo").</p></div>
 
-<h2>Il quadrupolo del laboratorio</h2>
-<div class="box lab"><b>Che cosa significa per i vostri dati</b>
+<h2>Caratteristiche operative e particolarità pratiche</h2>
+<div class="box key"><b>Implicazioni per l'elaborazione dei dati</b>
 <ul>
-<li><b>Risoluzione</b>: Q1 e Q3 lavorano in risoluzione "Unit" (≈ 0,7 Da FWHM). Ogni picco nello spettro ha una larghezza di quasi una unità di massa: vedrete M, M+1, M+2 separati, ma nessuna informazione sulla formula dalla massa sola.</li>
-<li><b>Offset di massa</b>: sullo strumento del laboratorio l'asse m/z risulta spostato di circa +0,3 Da (per esempio un [M+H]<sup>+</sup> teorico a 300,1 appare intorno a 300,4). È un problema di calibrazione, non di chimica: in QqQ lab usate una finestra XIC di ±1 Da (o ±0,5 centrata sul valore osservato).</li>
-<li><b>Scansione</b>: un full scan da, per esempio, m/z 100 a 400 dura tipicamente qualche centinaio di millisecondi; il tempo per ogni m/z è una piccola frazione del ciclo (capitolo 10).</li>
-<li><b>QTRAP</b>: nello strumento del laboratorio Q3 può funzionare anche come trappola ionica lineare (modalità "enhanced"); nell'esperienza lo usiamo come normale quadrupolo.</li>
+<li><b>Risoluzione unitaria</b>: Q1 e Q3 lavorano tipicamente a risoluzione unitaria (FWHM ≈ 0,7 Da). Ogni picco nello spettro ha una larghezza di quasi un'unità di massa: si risolvono M, M+1, M+2, ma non si ottiene la massa accurata necessaria per risalire direttamente alla formula elementare.</li>
+<li><b>Calibrazione dell'asse m/z</b>: può capitare che l'asse di massa mostri un lieve offset sperimentale rispetto al valore teorico esatto. È un fattore strumentale da considerare quando si estraggono i cromatogrammi XIC, impostando tolleranze adeguate (es. ±0,5 o ±1 Da).</li>
+<li><b>Velocità di scansione</b>: una scansione completa da m/z 100 a 1000 dura tipicamente poche centinaia di millisecondi; il tempo effettivo dedicato a ciascuna frazione di m/z è solo una piccola quota del ciclo totale (capitolo 10).</li>
+<li><b>Configurazioni ibride (QTRAP)</b>: negli strumenti QTRAP, Q3 può funzionare alternativamente sia come quadrupolo a trasmissione sia come trappola ionica lineare (modalità "enhanced").</li>
 </ul></div>
 
 <h2>Verifica</h2>
@@ -143,7 +137,7 @@
 <li><span class="tag">storico</span>Paul W. (1990) Electromagnetic traps for charged and neutral particles (lezione Nobel). <i>Rev. Mod. Phys.</i> 62, 531. <a href="https://doi.org/10.1103/RevModPhys.62.531" target="_blank" rel="noopener">doi:10.1103/RevModPhys.62.531</a></li>
 <li><span class="tag">libro</span>Dawson P.H. (ed.) <i>Quadrupole Mass Spectrometry and its Applications</i>, Elsevier 1976 (ristampa AIP 1995): il trattato classico.</li>
 <li><span class="tag">web</span><a href="https://en.wikipedia.org/wiki/Quadrupole_mass_analyzer" target="_blank" rel="noopener">Quadrupole mass analyzer</a> e <a href="https://en.wikipedia.org/wiki/Mathieu_function" target="_blank" rel="noopener">Mathieu function</a> (Wikipedia).</li>
-<li><span class="tag">dispense</span>Sbobine del corso, capitolo "Analizzatori di massa" (singolo quadrupolo, triplo quadrupolo, trappola ionica).</li>
+<li><span class="tag">libro</span>De Hoffmann E., Stroobant V. <i>Mass Spectrometry: Principles and Applications</i>, 3ª ed., Wiley, 2007.</li>
 </ul>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-quad.js"></script>

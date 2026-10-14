@@ -65,10 +65,8 @@ const toggle = (tab = E.tab) => set(tab, !isOn(tab));
 // ◀ ▶: the file shown goes through the files of the tab (t1 … tn) while the reference stays; the reference itself is skipped
 function step(p, d) {
   const o = eff(p), tab = p.tab || E.tab, fs = tabFiles(tab).filter(f => !o || f.k !== o.k); if (fs.length < 1) return;
-  E.browse = true;
   const i = fs.findIndex(f => f.k === E.cur);
-  STATO.file(fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k, "browse");
-  renderNav(); renderFileList(); redrawAll(); uiSave();
+  activeFile(fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k);
 }
 
 // ---- the chip in the legend of a panel and its popover (one popover for the page, positioned under the chip)

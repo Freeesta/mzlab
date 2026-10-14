@@ -7,11 +7,6 @@
 <h1>Fotocatalisi con TiO<sub>2</sub></h1>
 <p class="lead">Come un semiconduttore illuminato genera ossidanti fortissimi in acqua, quali reazioni subisce una molecola organica e che forma hanno le curve concentrazione–tempo dei prodotti.</p>
 
-<div class="obj"><b>In questo capitolo impari a</b><ul>
-<li>spiegare come il TiO<sub>2</sub> illuminato produce lacune e radicali •OH (band gap, λ massima);</li>
-<li>prevedere le trasformazioni tipiche di una molecola organica (idrossilazione, dealchilazione, decarbossilazione...);</li>
-<li>ricavare una costante cinetica di pseudo-primo ordine e descrivere l'andamento di un intermedio A → B → C.</li></ul></div>
-
 <h2>Il semiconduttore e la luce</h2>
 <p>Il biossido di titanio è un semiconduttore: tra la <b>banda di valenza</b> (BV), piena, e la <b>banda di conduzione</b> (BC), vuota, c'è una banda proibita (<i>band gap</i>) <i>E</i><sub>g</sub> di circa 3,2 eV per l'anatasio e 3,0 eV per il rutilo. Un fotone con energia ≥ <i>E</i><sub>g</sub> promuove un elettrone in BC e lascia una <b>lacuna</b> (h<sup>+</sup>) in BV. La lunghezza d'onda massima utile si ricava da</p>
 <span class="eq"><i>λ</i><sub>max</sub> (nm) ≈ <span class="frac"><span>1240</span><span><i>E</i><sub>g</sub> (eV)</span></span> &nbsp;→&nbsp; anatasio: ≈ 387 nm; &nbsp;rutilo: ≈ 413 nm<span class="no">(2.1)</span></span>
@@ -80,20 +75,20 @@
 <h3>Gli intermedi: crescono e poi calano</h3>
 <p>Per una sequenza A → B → C con costanti di primo ordine <i>k</i><sub>1</sub> e <i>k</i><sub>2</sub>, l'intermedio B segue</p>
 <span class="eq">[B](<i>t</i>) = [A]<sub>0</sub> <span class="frac"><span><i>k</i><sub>1</sub></span><span><i>k</i><sub>2</sub> − <i>k</i><sub>1</sub></span></span> (e<sup>−<i>k</i><sub>1</sub><i>t</i></sup> − e<sup>−<i>k</i><sub>2</sub><i>t</i></sup>), &nbsp;&nbsp; <i>t</i><sub>max</sub> = <span class="frac"><span>ln(<i>k</i><sub>2</sub>/<i>k</i><sub>1</sub>)</span><span><i>k</i><sub>2</sub> − <i>k</i><sub>1</sub></span></span><span class="no">(2.4)</span></span>
-<p>Il profilo a campana è la firma di un intermedio. Un TP di seconda generazione (C, se a sua volta degradabile) parte con pendenza nulla: compare in ritardo. Nella figura potete variare le costanti e vedere che cosa catturano i vostri sette tempi di campionamento.</p>
+<p>Il profilo a campana è la firma di un intermedio. Un TP di seconda generazione (C, se a sua volta degradabile) parte con pendenza nulla: compare in ritardo. Nella figura potete variare le costanti e vedere come la frequenza dei campionamenti influisce sulla risoluzione temporale della cinetica.</p>
 <div class="sim" id="sim-kin"><h4>Cinetica A → B → C → D</h4>
-<p class="note">Concentrazioni relative ad [A]<sub>0</sub>. I punti sono i tempi di prelievo dell'esperienza. Nella realtà ogni TP ha anche altre vie di formazione e scomparsa: il modello serve a capire la forma delle curve, non a fittare i dati.</p></div>
+<p class="note">Concentrazioni relative ad [A]<sub>0</sub>. I punti rappresentano tempi di campionamento tipici in uno studio cinetico. Nella realtà ogni TP ha anche altre vie di formazione e scomparsa: il modello serve a capire la forma delle curve, non a fittare i dati.</p></div>
 
-<div class="box lab"><b>Dal modello ai vostri dati</b>
-<p>Per i TP non avete standard, quindi non avete concentrazioni ma <b>aree</b> di XIC. L'area di un TP è proporzionale alla sua concentrazione solo a parità di risposta ESI, che cambia da molecola a molecola (capitolo 6). Potete confrontare l'andamento nel tempo dello stesso TP, non le quantità di TP diversi tra loro o rispetto al parent. In QqQ lab la tabella delle integrazioni nel tempo serve proprio a questo.</p></div>
+<div class="box key"><b>Dal modello cinetico ai dati strumentali</b>
+<p>Per i prodotti di trasformazione spesso non sono disponibili standard analitici puri, quindi non si misurano concentrazioni assolute dirette ma <b>aree</b> dei picchi XIC. L'area di un TP è proporzionale alla concentrazione solo a parità di risposta di ionizzazione ESI, che varia sensibilmente tra composti diversi (capitolo 6). Si può quindi confrontare l'andamento nel tempo dello stesso TP, mentre il confronto quantitativo tra TP differenti richiede cautela. Nel software la tabella delle integrazioni temporali serve proprio a tracciare queste cinetiche relative.</p></div>
 
-<h2>Aspetti pratici dell'esperienza</h2>
+<h2>Aspetti operativi e pratici</h2>
 <ul>
-<li><b>Carico di catalizzatore</b> (400 mg/L in sospensione, 200 mg/L in cuvetta dopo la diluizione 1:1): più TiO<sub>2</sub> assorbe più luce, ma oltre un certo carico la sospensione diffonde la radiazione e la velocità satura.</li>
-<li><b>Sonicazione</b>: disperde gli aggregati e rende la sospensione omogenea e riproducibile.</li>
-<li><b>Tempo zero</b>: il campione t0 è stato a contatto con il TiO<sub>2</sub> ma non irradiato. Se il parent a t0 è più basso dello standard, una parte si è <em>adsorbita</em> sul catalizzatore (e viene rimossa dalla filtrazione).</li>
-<li><b>Filtrazione 0,45 µm</b>: rimuove il catalizzatore (che sporcherebbe colonna e sorgente) e ferma la reazione. Il filtro stesso può trattenere molecole idrofobe: un controllo con lo standard filtrato lo verifica.</li>
-<li><b>Controlli utili</b> (se il tempo lo consente): fotolisi senza TiO<sub>2</sub> (quanto degrada la sola luce?) e TiO<sub>2</sub> al buio (quanto è solo adsorbimento?).</li>
+<li><b>Carico di catalizzatore</b>: all'aumentare della concentrazione di TiO<sub>2</sub> aumenta la frazione di luce assorbita, ma oltre una concentrazione ottimale la torbidità della sospensione diffonde la radiazione (scattering) e la velocità di reazione satura.</li>
+<li><b>Sonicazione</b>: disperde gli aggregati di particelle e rende la sospensione omogenea e riproducibile.</li>
+<li><b>Tempo zero</b>: il campione t0 è stato a contatto con il fotocatalizzatore al buio. Se il precursore a t0 risulta inferiore allo standard iniziale, una frazione si è <em>adsorbita</em> sulla superficie del TiO<sub>2</sub> (e viene rimossa dalla filtrazione).</li>
+<li><b>Filtrazione 0,45 µm</b>: rimuove le particelle solide di catalizzatore (che danneggerebbero colonna e sorgente) e arresta la reazione. È opportuno verificare che la membrana filtrante non adsorba il composto analizzato iniettando uno standard di controllo pre e post-filtrazione.</li>
+<li><b>Controlli in bianco</b>: fotolisi diretta senza catalizzatore (per quantificare la degradazione per sola luce) e adsorbimento con TiO<sub>2</sub> al buio.</li>
 </ul>
 
 <h2>Verifica</h2>

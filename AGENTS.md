@@ -51,6 +51,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
+| primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |

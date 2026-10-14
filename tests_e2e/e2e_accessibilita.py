@@ -1,5 +1,5 @@
 """«Lettura facilitata» of Teoria and Pratica: Aa panel, fonts, WCAG spacing, backgrounds (contrast), ruler that never takes clicks, concentration mode,
-reduced motion (simulations start paused), screen readers (landmarks, names, canvas labels), keyboard, high-contrast figures, reading aloud (speechSynthesis stubbed), persistence, Ripristina, and the Teoria inside the app (#tframe)."""
+reduced motion (simulations start paused), screen readers (landmarks, names, canvas labels), keyboard, high-contrast figures, persistence, Ripristina, and the Teoria inside the app (#tframe)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import json
@@ -82,8 +82,8 @@ try:
             assert q.evaluate("getComputedStyle(document.getElementById('a11y-ruler')).display") == "block"
             q.mouse.move(700, 400); q.wait_for_timeout(100); q.screenshot(path=SH + "a11y_righello.png")
             assert q.evaluate("document.getElementById('a11y-ruler').style.getPropertyValue('--ry')") not in ("", "40%")
-            q.click("#side .toc a >> nth=1"); q.wait_for_timeout(400)            # a click through the ruler still works
-            assert q.evaluate("location.hash") != ""
+            q.click("#side ol a >> nth=1"); q.wait_for_timeout(400)            # a click through the ruler still works
+            assert q.evaluate("location.pathname") != ""
             q.close()
         step("reading ruler follows the mouse and never blocks clicks", ruler)
         def focus():
@@ -114,17 +114,12 @@ try:
             q = fresh("09-quadrupolo.html", motion="no-preference", prefs={"motion": "always"}); assert attr(q, "reduce") is not None; q.close()
         step("reduced motion (system or «Sempre»): simulations start paused", motion)
         def speech():
-            q = fresh(); assert q.evaluate("'speechSynthesis' in window")
-            q.click("main h2 .a11y-say >> nth=0"); q.wait_for_timeout(300)
-            said = q.evaluate("window.__said"); assert said and said[0]["l"] == "it-IT" and len(said[0]["t"]) > 3, said
-            q.click("#a11y-btn"); q.check("input[name=a11y-rate][value='1.2']")
-            q.evaluate("(()=>{const p=document.querySelector('main p');const r=document.createRange();r.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(r)})()")
-            q.click("#a11y-sel"); q.wait_for_timeout(200)
-            last = q.evaluate("window.__said.at(-1)"); assert abs(last["r"] - 1.2) < 1e-3, last
+            q = fresh()
+            assert q.locator(".a11y-say").count() == 0
+            q.click("#a11y-btn"); q.wait_for_selector("#a11y-panel:not([hidden])")
+            assert q.locator("#a11y-tts").count() == 0
             q.close()
-            q = fresh(); q.evaluate("delete window.speechSynthesis") ; q.reload(); q.wait_for_timeout(600)       # no Web Speech: the option is not there
-            q.close()
-        step("reading aloud: ▶ next to headings, selection, speed (stub)", speech)
+        step("speech synthesis removed: no ▶ and no TTS panel", speech)
         def reset():
             q = fresh(prefs={"font": "atkinson", "space": True, "bg": "cream", "ruler": True, "focus": True, "nums": True})
             q.click("#a11y-btn"); q.click("#a11y-reset"); q.wait_for_timeout(200)

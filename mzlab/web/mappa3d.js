@@ -444,9 +444,9 @@ export function open(p, opener) {
     // the marked points (the same list as the 2D map) that fall in the region
     try {
       MAPPA.pts(p).forEach((s, n) => {
-        const i = iOf(s.rt), j = jOf(s.mz); if (i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1) return;
-        const z = heightAt(i, j), q = project(px(i), z * b.y, pz(j)), q0 = project(px(i), 0, pz(j));
-        c.strokeStyle = strong; c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q[0], q[1]); c.stroke(); c.fillStyle = css("--panel"); c.beginPath(); c.arc(q[0], q[1], 8, 0, 7); c.fill(); c.stroke();
+        const m = markCell(s); if (!m) return;
+        const q = project(px(m.i), m.z * b.y, pz(m.j)), q0 = project(px(m.i), 0, pz(m.j));
+        c.strokeStyle = strong; c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q[0], q[1]); c.stroke(); c.fillStyle = css("--panel"); MAPPA.shapePath(c, MAPPA.grpShape(p, n), q[0], q[1], 8); c.fill(); c.stroke();
         c.fillStyle = strong; c.textAlign = "center"; c.font = "bold 10px system-ui, sans-serif"; c.fillText(String(n + 1), q[0], q[1] + 3.5); c.font = "11px system-ui, sans-serif";
       });
     } catch (err) { /* no points */ }
@@ -458,6 +458,8 @@ export function open(p, opener) {
     }
     c.restore();
   }
+  // a marked point sits on the CELL that holds it, at the height of that cell (the grid keeps the maximum per cell, so the marker is on the top of the peak, not on the interpolated slope)
+  const markCell = s => { const g = V.g, i = Math.round(iOf(s.rt)), j = Math.round(jOf(s.mz)); return i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1 ? null : { i, j, z: V.Z[i * g.nmz + j] }; };
   const heightAt = (fi, fj) => {
     const g = V.g, i0 = clamp(Math.floor(fi), 0, g.nrt - 2), j0 = clamp(Math.floor(fj), 0, g.nmz - 2), u = clamp(fi - i0, 0, 1), w = clamp(fj - j0, 0, 1), Z = V.Z, n = g.nmz;
     return (Z[i0 * n + j0] * (1 - u) + Z[(i0 + 1) * n + j0] * u) * (1 - w) + (Z[i0 * n + j0 + 1] * (1 - u) + Z[(i0 + 1) * n + j0 + 1] * u) * w;
@@ -490,7 +492,7 @@ export function open(p, opener) {
     if (!V.cur || !V.g) { rd.textContent = ""; return; }
     const g = V.g, { i, j } = V.cur, v = V.raw[i * g.nmz + j], rt = rtAt(i), mz = mzAt(j);
     const cell = !hr && g.dmz >= 0.9 ? T("m3d.read.nom", { n: Math.round(g.mz0 + j * g.dmz + 0.2) }) : "";
-    rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}`;
+    rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}` + ASSE.tag();
     Q("ti").value = String(i); Q("tt").textContent = `RT ${rt.toFixed(2)}`;
     mini();
   }
@@ -506,7 +508,7 @@ export function open(p, opener) {
   const ptrs = new Map(); let drag = null, moved = 0, lastPinch = 0, lpT = 0, lpDone = false;
   glc.addEventListener("pointerdown", e => {
     glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); moved = 0;
-    drag = { x: e.offsetX, y: e.offsetY, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
+    drag = { x: e.offsetX, y: e.offsetY, g: ASSE.gest(true), ox: 0, oy: 0, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
     clearTimeout(lpT); lpDone = false;
     if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }       // long press = the menu
   });
@@ -517,7 +519,7 @@ export function open(p, opener) {
     if (ptrs.size === 2) {                                  // two fingers: move, and pinch = zoom
       const [A, B] = [...ptrs.values()], dist = Math.hypot(A.x - B.x, A.y - B.y); if (lastPinch) V.cam.d = clamp(V.cam.d * lastPinch / dist, 0.2, 12); lastPinch = dist; panBy(dx / 2, dy / 2); V.dirty = true; return;
     }
-    if (drag && drag.pan) panBy(dx, dy); else { V.cam.az -= dx * 0.4; V.cam.el = clamp(V.cam.el + dy * 0.4, -89, 89); }
+    if (drag && drag.pan) { drag.ox += dx; drag.oy += dy; const c = ASSE.clip(drag.g, e, dx, dy, drag.ox, drag.oy); panBy(c.dx, c.dy); } else { V.cam.az -= dx * 0.4; V.cam.el = clamp(V.cam.el + dy * 0.4, -89, 89); }
     V.dirty = true;
   });
   const up = e => {
@@ -542,7 +544,7 @@ export function open(p, opener) {
   glc.addEventListener("dblclick", e => {
     const h = pick(e.offsetX, e.offsetY); if (!h) return;
     const g = V.g, b = box(); let near = -1, bd = 14 * 14;
-    try { MAPPA.pts(p).forEach((s, n) => { const i = iOf(s.rt), j = jOf(s.mz); if (i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1) return; const q = project(px(i), heightAt(i, j) * b.y, pz(j)), d2 = (q[0] - e.offsetX) ** 2 + (q[1] - e.offsetY) ** 2; if (d2 < bd) { bd = d2; near = n; } }); } catch (err) { /* none */ }
+    try { MAPPA.pts(p).forEach((s, n) => { const m = markCell(s); if (!m) return; const q = project(px(m.i), m.z * b.y, pz(m.j)), d2 = (q[0] - e.offsetX) ** 2 + (q[1] - e.offsetY) ** 2; if (d2 < bd) { bd = d2; near = n; } }); } catch (err) { /* none */ }
     if (near >= 0) { const s = MAPPA.pts(p)[near]; close(); MAPPA.spectrumAt(p, s.rt); return; }
     close(); MAPPA.spectrumAt(p, rtAt(h.i));       // double click = the spectrum of that point
   });
@@ -550,6 +552,8 @@ export function open(p, opener) {
   dlg.addEventListener("keydown", e => {
     if (e.target.matches("input[type=text],input.mzf,select") ) return;
     const k = e.key; let used = true;
+    if (ASSE.key(e)) { e.preventDefault(); readout(); return; }
+    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) { e.preventDefault(); return; }       // the locked axis keeps the other one still
     if (k === "ArrowLeft") stepCur(-1, 0); else if (k === "ArrowRight") stepCur(1, 0); else if (k === "ArrowUp") stepCur(0, 1); else if (k === "ArrowDown") stepCur(0, -1);
     else if (k === "+" || k === "=") V.cam.d = clamp(V.cam.d * 0.85, 0.2, 12); else if (k === "-" || k === "_") V.cam.d = clamp(V.cam.d / 0.85, 0.2, 12);
     else if (k >= "1" && k <= "4") setView(+k); else if (k === "r" || k === "R") reset();
@@ -636,7 +640,7 @@ export function open(p, opener) {
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });
-  window.__m3d = { V, P, ptrs, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
+  window.__m3d = { V, P, ptrs, markCell, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
   dlg.showModal(); resize(); offRo = FRAME.ro(main, () => resize()); glc.focus({ preventScroll: true });
   if (!window.ResizeObserver) resize();
   load().then(() => { raf = FRAME.next(loop); });
