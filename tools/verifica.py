@@ -19,6 +19,7 @@ Exit code 0 only if nothing failed. `.verifica/` is not committed (.gitignore).
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -128,6 +129,30 @@ def noti_rossi() -> dict[str, str]:
                 n, _, why = l.partition("|")
                 out[n.strip()] = why.strip()
     return out
+
+
+NOTI_VERDI_GIRI = 3
+
+
+def noti_verdi(results, noti: dict[str, str]):
+    """A line of noti_rossi.txt whose e2e passes for NOTI_VERDI_GIRI runs in a row becomes a FAIL until the line is removed (streaks in .verifica/noti_verdi.json)."""
+    f = OUT / "noti_verdi.json"
+    try:
+        serie = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        serie = {}
+    stato = {n: st for n, st, _dt, _notes in results}
+    serie = {n: c for n, c in serie.items() if n in noti}
+    for n in noti:
+        if stato.get(n) == "OK":
+            serie[n] = serie.get(n, 0) + 1
+        elif stato.get(n) == "FAIL":
+            serie[n] = 0
+    try:
+        f.write_text(json.dumps(serie), encoding="utf-8")
+    except OSError:
+        pass
+    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in serie.items() if c >= NOTI_VERDI_GIRI]
 
 
 def teoria(results) -> None:
@@ -440,9 +465,10 @@ def main() -> None:
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
     noti = noti_rossi()
+    extra = noti_verdi(results, noti)
     results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
-               for n, st, dt, notes in results]
+               for n, st, dt, notes in results] + extra
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
