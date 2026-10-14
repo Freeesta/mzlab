@@ -23,7 +23,7 @@ const CAMPIONI = (() => {
   }
   // TSV (or CSV with ; or ,) -> {rows: [{filename, type, time (minutes), conc, cunit, rep}], warnings: [text]}
   function parseTsv(text) {
-    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "");
+    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "" && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
     const warn = [];
     if (!lines.length) return { rows: [], warnings: ["empty"] };
     const sep = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
@@ -178,10 +178,9 @@ const CAMPIONI = (() => {
     };
     box.onclick = e => {
       if (e.target.id === "cmp-exp") {
-        saveBlob(new Blob([tsvText()], { type: "text/tab-separated-values" }), "metadata.tsv", 2000);
+        dl("metadata.tsv", tsvText(), "text/tab-separated-values", { table: "metadata" });
       } else if (e.target.id === "cmp-copy") {
-        const tx = tsvText();
-        (navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
+        PROV.tsv(tsvText(), { table: "metadata" }).then(tx => navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
       }
     };
   }

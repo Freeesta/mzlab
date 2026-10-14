@@ -307,7 +307,7 @@ function addPanel(type, o, after) {
         });
       }},
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.excel"), icon: IC_DL, fn: () => {
-        const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t); else info(I18N.t("panel.dl.nodata"));
+        const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
       }}])
     ]);
   };

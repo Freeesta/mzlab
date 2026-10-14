@@ -200,8 +200,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       const b = e.target.closest("button");
       if (b && b.id === "ref-default") { st.ref = null; save(); refresh(box); return; }
       if (b && b.dataset.sort) { st.dir = st.sort === b.dataset.sort ? -st.dir : (b.dataset.sort === "id" || b.dataset.sort === "shape" || b.dataset.sort === "state" ? 1 : -1); st.sort = b.dataset.sort; save(); box.querySelector("#ref-tbl").innerHTML = tableHtml(); const nb = box.querySelector(`button[data-sort="${st.sort}"]`); if (nb) nb.focus(); return; }
-      if (b && b.id === "ref-xlsx" && res) { const w = [10, 12, 10, 14, 14, 10, 10, 10, 16, 8, 8, 18, 8, 10, 24, 40, 30]; dlx("reference-difference.xlsx", [{ name: "Features", head: head(), rows: body(), widths: w }, { name: "Parameters", head: [t("mappa.meta.what"), t("mappa.meta.value")], rows: params(), widths: [34, 70] }]); return; }
-      if (b && b.id === "ref-tsv" && res) { dl("reference-difference.tsv", tsv(), "text/tab-separated-values"); return; }
+      if (b && b.id === "ref-xlsx" && res) { const w = [10, 12, 10, 14, 14, 10, 10, 10, 16, 8, 8, 18, 8, 10, 24, 40, 30]; dlx("reference-difference.xlsx", [{ name: "Features", head: head(), rows: body(), widths: w }, { name: "Parameters", head: [t("mappa.meta.what"), t("mappa.meta.value")], rows: params(), widths: [34, 70] }], { table: "reference-difference" }); return; }
+      if (b && b.id === "ref-tsv" && res) { dl("reference-difference.tsv", tsv(), "text/tab-separated-values", { table: "reference-difference" }); return; }
       const tr = e.target.closest("#ref-tab tbody tr");
       if (tr && res) inspect(res.rows[+tr.dataset.i], box);
     };

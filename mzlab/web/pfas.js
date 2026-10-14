@@ -182,7 +182,7 @@ function xlsx() {
   if (!res) return;
   dlx("pfas.xlsx", [{ name: "Features", head: ["ID", "m/z", "RT", "Formula", "ppm", "N", "C", "m/C", "MD/C", t("kmd.col.series")], rows: res.rows.map(r => [r.id, r.mz, r.rt, r.formula || "", r.ppm == null ? "" : r.ppm, r.nCand, r.c, r.mc == null ? "" : r.mc, r.mdc == null ? "" : r.mdc, r.series || ""]), widths: [10, 12, 8, 16, 8, 6, 6, 10, 10, 8] },
     { name: "MS2", head: ["ID", "m/z", "RT", t("pfas.col.frags"), t("pfas.col.losses"), t("pfas.col.cf2"), t("pfas.col.evidence")], rows: res.rows.filter(r => r.ms2).map(r => [r.id, r.mz, r.rt, evText(r.ms2.ev), lossText(r.ms2.ev), r.ms2.ev.cf2, r.ms2.ev.n]), widths: [10, 12, 8, 40, 30, 8, 10] },
-    { name: "Parameters", head: [t("kmd.param"), t("kmd.value")], rows: [[t("pfas.ion"), st.ion], [t("pfas.tol"), st.tol], [t("pfas.ms2tol"), st.ms2tol], [t("pfas.minrel"), st.minRel], ["Elements", ELEMENTS]], widths: [30, 40] }]);
+    { name: "Parameters", head: [t("kmd.param"), t("kmd.value")], rows: [[t("pfas.ion"), st.ion], [t("pfas.tol"), st.tol], [t("pfas.ms2tol"), st.ms2tol], [t("pfas.minrel"), st.minRel], ["Elements", ELEMENTS]], widths: [30, 40] }], { table: "pfas" });
 }
 function mount(/** @type {HTMLElement} */ box) {
   curBox = box;

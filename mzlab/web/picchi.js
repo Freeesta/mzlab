@@ -274,7 +274,7 @@ async function showInts() {
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : [])],
-      rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }]);
+      rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }], { table: "integration" });
   });
 }
 
