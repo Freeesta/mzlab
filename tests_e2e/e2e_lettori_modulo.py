@@ -2,7 +2,7 @@
 (tools/agilent_sintetico.py, no laboratory data) goes to the module, which writes its mzML in OPFS; the file enters the list as any mzML, gives the same TIC as the engine's own path, «Download .mzML» gives it
 byte for byte as the engine writes it and without converting again, and nothing misses the engine (MZLAB_LR_MISS empty). Needs the site and both .wasm: python tools/build_site.py, tools/build_lettori_wasm.sh
 (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
-import os, shutil, subprocess, sys, tempfile, time
+import os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -29,7 +29,10 @@ top = folder.parent
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []; asked = []
+for _ in range(100):   # the server answers
+    try: socket.create_connection(("127.0.0.1", PORT), 1).close(); break
+    except OSError: threading.Event().wait(0.1)
+errs = []; asked = []
 LOAD = """async () => {
   const rb = await window.MZLAB_RUST_READY;
   await new Promise(r => setTimeout(r, 300));

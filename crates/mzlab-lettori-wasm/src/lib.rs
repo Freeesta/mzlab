@@ -200,7 +200,9 @@ pub fn to_mzml(
 thread_local! { static SESSIONI: std::cell::RefCell<Sessioni> = std::cell::RefCell::new(Sessioni::default()); }
 
 fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, JsValue> {
-    SESSIONI.with(|s| f(&mut s.borrow_mut())).map_err(|e| error_json(&e))
+    SESSIONI
+        .with(|s| f(&mut s.borrow_mut()))
+        .map_err(|e| error_json(&e))
 }
 
 /// Opens a dataset and keeps it under a handle (`chiudi` frees it); `campioni(h)` says what it holds.

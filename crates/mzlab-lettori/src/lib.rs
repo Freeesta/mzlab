@@ -53,7 +53,10 @@ pub fn registro() -> Vec<&'static VoceLettore> {
 /// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
 pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     let mut best: Option<(Fiducia, &'static VoceLettore)> = None;
-    for v in registro().into_iter().filter(|v| v.contratto == lettori::CONTRATTO) {
+    for v in registro()
+        .into_iter()
+        .filter(|v| v.contratto == lettori::CONTRATTO)
+    {
         let f = (v.riconosci)(fs);
         if f > Fiducia::No && best.is_none_or(|(b, _)| f > b) {
             best = Some((f, v));
