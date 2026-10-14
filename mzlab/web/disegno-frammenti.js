@@ -14,9 +14,25 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
+/** the app: the same two functions as the .wasm, asked of the native engine (`feat/grafo`); an error is thrown as the text `{error_key, params}`, as the .wasm throws it */
+function nativo() {
+  const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
+  const ask = async (/** @type {Record<string, any>} */ body) => {
+    const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", ...body }) });
+    const t = await r.text();
+    if (r.status !== 200) throw t;
+    return t;
+  };
+  return {
+    fragments: (/** @type {string} */ molfile, /** @type {number} */ a, /** @type {number} */ b) => ask({ kind: "fragments", molfile, a, b }),
+    partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
+  };
+}
+
 /** the graph module, loaded on the first cut; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json */
 export function carica() {
   if (modulo) return modulo;
+  if (/** @type {any} */ (window).MZLAB_DESKTOP) return (modulo = Promise.resolve(nativo()));
   modulo = (async () => {
     const base = new URL("./wasm-feat/", import.meta.url), man = await (await fetch(new URL("manifest.json", base))).json(), e = man.grafo;
     if (!e) throw new Error("grafo");
@@ -37,7 +53,7 @@ export function carica() {
 export async function cutsOf(/** @type {string} */ molfile, /** @type {number} */ a = -1, /** @type {number} */ b = -1) {
   try {
     const mod = await carica();
-    return JSON.parse(mod.fragments(molfile, a, b)).cuts;
+    return JSON.parse(await mod.fragments(molfile, a, b)).cuts;
   } catch (e) {
     return typeof e === "string" && e.includes("error.grafo.ring") ? "ring" : null;
   }

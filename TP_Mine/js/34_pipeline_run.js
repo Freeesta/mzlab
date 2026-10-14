@@ -38,6 +38,7 @@
   let grafo = null;
   async function structureOf(smiles) {
     if (!smiles) return "";
+    if (window.MZLAB_DESKTOP) return (await st.ctx.pool()).analyse(smiles);      // the app: the native route feat/grafo
     if (!grafo) {
       const u = p => new URL("wasm-feat/" + p, window.QTOOLS.ctx.base).href, g = (await (await fetch(u("manifest.json"))).json()).grafo;
       if (!g) throw Object.assign(new Error("error.featFailed"), { key: "error.featFailed" });

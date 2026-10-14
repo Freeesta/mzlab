@@ -174,6 +174,11 @@ const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); re
 const analogTitle = (p, sr) => (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
+  if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
+    const t = performance.now();
+    if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
+    p._drawAt = t;
+  }
   try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
