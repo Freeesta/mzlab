@@ -148,6 +148,12 @@ const ELEM = (() => {
     if (window.BARRA) BARRA.setTab("cmp");
     if (window.BANCO) BANCO.renderInfo();
   }
+  // the actions of the spectrum menu (registry azioni/1, high resolution): «Generate formula» for the peak, clear the formulas drawn
+  if (typeof AZIONI !== "undefined") {
+    AZIONI.registra({ id: "spec.generate", gruppo: "gen", ordine: 1, viste: ["spec"], visibile: c => !!c.a.hrp, disponibile: c => c.has, nome: c => I18N.t("ctx.spec.generate", { mz: c.lab }),
+      esegui: c => generate({ mz: c.m, sp: c.p, spec: c.a.data[0].d, polarity: c.pol }) });
+    AZIONI.registra({ id: "spec.fmClear", gruppo: "gen", ordine: 2, viste: ["spec"], visibile: c => !!c.a.hrp && !!(c.p.fm && c.p.fm.length), nome: () => I18N.t("cx.clear"), esegui: c => { c.p.fm = []; draw(c.p); } });
+  }
   return { panel, generate, takeCtx, bindEls, bindPeriodic, DEFAULT_ELS, parse, ser, applyTo, peakFor };
 })();
 window.ELEM = ELEM;

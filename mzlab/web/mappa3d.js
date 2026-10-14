@@ -566,12 +566,12 @@ export function open(p, opener) {
   });
   function reset() { Object.assign(P, { ex: 1, asp: DEF.asp }); Q("ex").value = 1; Q("asp").value = DEF.asp; P.sig = hr ? 0 : 1; Q("sig").value = P.sig; V.rt = [a.x0, a.x1]; V.mz = [a.y0, a.y1]; resetCam(35, 32); savePrefs(); load(); }
 
-  // ---- navigation: the commands, the menu and the bar are the ones of the 2D map (MAPPA.CMDS in mappa.js)
+  // ---- navigation: the commands, the menu and the bar are the ones of the 2D map (actions of azioni.js registered by mappa.js)
   const cellOf = h => h && { rt: rtAt(h.i), mz: mzAt(h.j), v: V.raw[h.i * V.g.nmz + h.j] };
   const ctxEl = () => document.getElementById("ctx");
   function ad3(hit) {
     return {
-      kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
+      vista: "map3d", kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
       resetAll: () => { resetCam(35, 32); },
       view: n => setView(n), zoomBy: f => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
       host: () => dlg.appendChild(/** @type {any} */ (ctxEl())),                    // the menu must live inside the modal dialog to be seen and used

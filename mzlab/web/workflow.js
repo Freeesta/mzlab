@@ -417,3 +417,10 @@ const WORKFLOW = (() => {
   };
 })();
 window.WORKFLOW = WORKFLOW;
+// the actions of the spectrum menu (registry azioni/1): an MS2 spectrum as MGF or MSP
+if (typeof AZIONI !== "undefined") {
+  /** @param {any} c */
+  const ms2 = c => c.p.level === 2;
+  AZIONI.registra({ id: "spec.exportMgf", gruppo: "lib", ordine: 2, viste: ["spec"], visibile: ms2, nome: () => I18N.t("ctx.spec.exportMgf"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
+  AZIONI.registra({ id: "spec.exportMsp", gruppo: "lib", ordine: 2, viste: ["spec"], visibile: ms2, nome: () => I18N.t("ctx.spec.exportMsp"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
+}

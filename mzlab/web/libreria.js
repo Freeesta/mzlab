@@ -566,6 +566,9 @@ const LIB = (() => {
       d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
     } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
   }
+  // the action of the spectrum menu (registry azioni/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
+  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "spec.lib", gruppo: "lib", ordine: 1, viste: ["spec"], visibile: c => c.p.level === 2,
+    nome: c => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), esegui: c => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
   return { open, addFiles, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;
