@@ -55,6 +55,15 @@ impl State {
         a
     }
 
+    /// `feat/preview {name, recipe}`: the estimates with their proofs, the histograms and three traces of one file (`preview_file` of the `.wasm`).
+    fn feat_preview(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"].as_str().unwrap_or("");
+        let recipe = p["recipe"].as_str().unwrap_or("");
+        let mut ix = self.open_idx(name)?;
+        let r = run::recipe_for(recipe, &mut ix)?;
+        text(run::preview(&mut ix, &r, run::floor_given(recipe))?)
+    }
+
     fn feat_align(&self, p: &Value) -> Result<Answer> {
         let ns = names(p);
         let first = ns.first().ok_or_else(|| Error::new("error.featState"))?;
@@ -211,6 +220,8 @@ impl State {
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),
+            "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
+            "feat/preview" => self.feat_preview(p),
             "feat/clear" => {
                 *self.feat_lock() = FeatState::default();
                 text("{}")
