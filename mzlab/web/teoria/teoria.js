@@ -40,8 +40,17 @@ const CHAPTERS = [
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
-// «Teoria estesa»: unlocked by 5 clicks on the logo (sblocco.js), kept in localStorage «qqq.teoria.esteso»; a chapter with a 5th field `true` is listed only then
-const ESTESO = (() => { try { return localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } })();
+// «Teoria estesa»: part of the administrator mode (5 clicks on the logo, sblocco.js); a chapter with a 5th field `true` is listed only then
+// One administrator switch for the whole site: localStorage «qqq.admin» = «1» (5 clicks on the logo); the older flag «qqq.teoria.esteso» still counts.
+window.QADMIN = window.QADMIN || (() => {
+  const get = k => { try { return localStorage.getItem(k) === "1"; } catch (_) { return false; } };
+  return {
+    on: () => get("qqq.admin") || get("qqq.teoria.esteso"),
+    set() { try { localStorage.setItem("qqq.admin", "1"); } catch (_) { /* not stored: nothing unlocks */ } },
+    clear() { try { localStorage.removeItem("qqq.admin"); localStorage.removeItem("qqq.teoria.esteso"); } catch (_) { /* nothing to clear */ } },
+  };
+})();
+const ESTESO = QADMIN.on();
 (window.TEORIA = window.TEORIA || {}).esteso = () => ESTESO;
 if (ESTESO) document.documentElement.classList.add("esteso"); else for (let i = CHAPTERS.length; i--;) if (CHAPTERS[i][4]) CHAPTERS.splice(i, 1);
 // the chapters were written before the name changed: the old name in the text of the page is shown as the current one

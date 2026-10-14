@@ -9,6 +9,7 @@
   let isEditing = false, viewMode = "visual", originalDocHtml = "", barEl = null, codeWrapEl = null, codeTextarea = null;
 
   function init() {
+    if (!window.QADMIN || !QADMIN.on()) return;   // the editor belongs to the administrator mode: no button, no shortcut otherwise
     window.addEventListener("keydown", e => {
       if (e.altKey && (e.key === "e" || e.key === "E" || e.code === "KeyE")) {
         e.preventDefault(); toggleEditor();

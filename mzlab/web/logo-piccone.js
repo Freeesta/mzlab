@@ -6,7 +6,7 @@
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
   "use strict";
-  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = "qqq.logo.gold";
+  const HITS = 5, HEAL_MS = 3000, GOLD_KEY = "qqq.logo.gold", ADMIN_KEY = "qqq.admin";
   const logo = document.querySelector("header img.logo");
   if (!logo) return;
   const t = (k, d) => (window.I18N && I18N.t ? I18N.t(k) : d);
@@ -88,7 +88,7 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
   function hit() {
     if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
     const n = stage + 1;
-    if (n >= HITS) { shatter(!root.hasAttribute("data-logo-gold")); return; }
+    if (n >= HITS) { try { localStorage.setItem(ADMIN_KEY, "1"); } catch (_) { /* private mode: not unlocked */ } shatter(!root.hasAttribute("data-logo-gold")); return; }
     showStage(n); swing();
   }
   document.addEventListener("click", ev => { const t = /** @type {Element | null} */ (ev.target); if (t && t.closest && t.closest("header img.logo")) hit(); }, true);
