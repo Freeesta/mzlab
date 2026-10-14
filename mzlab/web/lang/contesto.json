@@ -60,6 +60,7 @@
   "err.file.notWiff": "{name} = nome del file.",
   "err.file.wiffNoScan": "{name} = nome del file .wiff.",
   "err.file.wiff": "{detail} = motivo tecnico (testo inglese della libreria).",
+  "err.file.unknown": "{detail} = motivo tecnico (testo inglese del motore).",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.notAgilentD": "{name} = nome della cartella .D.",
   "err.file.agilentNoEngine": "{name} = nome della cartella .D.",

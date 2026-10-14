@@ -490,6 +490,7 @@ I18N.add("it", {
   "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",
   "err.file.wiff": "Il file SCIEX .wiff non si legge ({detail}).",
   "err.file.mzmlWrite": "Non riesco a scrivere l'mzML.",
+  "err.file.unknown": "Il programma non ha ricevuto il file ({detail}): riprova a caricarlo.",
   "err.file.raw": "Il file Thermo .raw non si legge ({detail}).",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
   "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).",

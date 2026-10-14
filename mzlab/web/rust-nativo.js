@@ -7,6 +7,7 @@ import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 
 export const MAGIC = "mzlab/nat1";
+export const UPLOAD_ERROR = "err.file.unknown";              // the key the desktop engine gives for a file that did not reach it (the engine is in crates/mzlab-desktop)
 export const PREFIX = "nat~";                              // the members of a dataset in files/: nat~<key>~<path with ~ for />
 const TICK = 200;                                         // ms between two progress messages
 const PHASES = ["read", "read", "scans", "chrom"];        // the name of the phase shown, by the phase number of build_mzidx_native (0 = the copy)

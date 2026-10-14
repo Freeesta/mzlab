@@ -490,6 +490,7 @@ I18N.add("en", {
   "err.file.wiffEngine": "The calculation engine is not ready to read the .wiff: reload the page (Ctrl+Shift+R) and try again.",
   "err.file.wiff": "The SCIEX .wiff file cannot be read ({detail}).",
   "err.file.mzmlWrite": "The mzML could not be written.",
+  "err.file.unknown": "The program did not receive the file ({detail}): try loading it again.",
   "err.file.raw": "The Thermo .raw file cannot be read ({detail}).",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
   "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).",
