@@ -220,6 +220,10 @@ function attach(p) {
     if (!z) return;
     e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
   });
+  cv.addEventListener("keydown", e => {        // Shift+F10 and the Menu key: the menu of the right click (WCAG 2.1.1); the map has its own (mappa.js)
+    if (e.target !== cv || p.type === "map" || !(e.key === "ContextMenu" || e.key === "F10" && e.shiftKey)) return;
+    e.preventDefault(); e.stopPropagation(); kbdMenu(p);
+  });
   cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
@@ -306,6 +310,14 @@ async function extractMs2(p, e) {
   const sn = c._a && c._a.sr ? ms2Near(c, rt, 0) : null; if (!sn) return;
   c.cur = sn.rt; Object.assign(sp, { k: sn.k, level: 2, r0: sn.rt - sn.g / 2, r1: sn.rt + sn.g / 2, zoom: null });
   ctl(sp); draw(c); draw(sp); uiSave();
+}
+// the right-click menu opened from the keyboard: at the cursor of a chromatogram, at the tallest peak in view of a spectrum, otherwise in the middle of the graph
+function kbdMenu(p) {
+  const a = p._a; if (!a || !a.X) return;
+  let x = p.cur != null && p.cur >= a.x0 && p.cur <= a.x1 ? p.cur : (a.x0 + a.x1) / 2;
+  if (p.type === "spec" && a.data && a.data[0]) { const d = a.data[0].d; let best = -1; for (let i = 0; i < d.mz.length; i++) if (d.mz[i] >= a.x0 && d.mz[i] <= a.x1 && (best < 0 || d.y[i] > d.y[best])) best = i; if (best >= 0) x = d.mz[best]; }
+  const r = p.cv.getBoundingClientRect(), px = a.X(x), py = r.height / 2;
+  hideHover(p); ctxFor(p, { preventDefault() {}, clientX: r.left + px, clientY: r.top + py, kbd: true }, x, px, py);
 }
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();

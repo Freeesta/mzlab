@@ -582,7 +582,7 @@ window.MAPPA = (() => {
     const s = st(p), a = () => p._a, mid = () => ({ rt: (a().x0 + a().x1) / 2, mz: (a().y0 + a().y1) / 2 });
     const pt = () => { const q = s.lock || at || point(p); return q ? { ...q, v: valueAt(p, q.rt, q.mz) } : null; };
     return {
-      kind: "2d", p, pt, locked: () => !!s.lock,
+      vista: "map", kind: "2d", p, pt, locked: () => !!s.lock,
       toggleLock: () => { if (s.lock) unlock(p); else { s.lock = { ...(at || point(p) || mid()) }; s.kp = null; overlay(p); margins(p); } navSync(p); },
       marked: () => { const q = pt(); return !!q && markedAt(p, q) >= 0; },
       toggleMark: () => { const q = pt(); if (!q) return; const i = markedAt(p, q); if (i >= 0) delPoint(p, i); else addPointAt(p, q.rt, q.mz, p._a.dmz); },
@@ -598,38 +598,32 @@ window.MAPPA = (() => {
     if (what !== "xic") { const p = ad.p; if (ad.kind === "2d" && p.sel && p.sel[1] > p.sel[0]) newSpec(p, p.sel[0], p.sel[1], p._a.f.k); else spectrumAt(p, q.rt, ad.k); }
     if (ad.after) ad.after();
   }
+  // the commands are actions of the registry azioni/1 (azioni.js), views "map" (2D) and "map3d" (the 3D viewer); the context of an action is the adapter
+  const V2 = ["map", "map3d"];
+  const nameOf = (id, ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
+  const cmd = (id, gruppo, ic, viste, o) => AZIONI.registra({ id, gruppo, ic, viste, nome: ad => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: ad => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
+  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : T(`cmd.${id}.menu`) });       // with an RT stretch selected (Alt + drag) the spectrum is the average over it
+  const hasPt = ad => !!ad.pt();
   const CMDS = [
-    { id: "mapxic", g: "extract", ic: "xic", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "xic") },
-    { id: "mapspec", g: "extract", ic: "spec", short: true, kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: ad => extract(ad, "spec") },
-    { id: "maplock", g: "lock", ic: "lock", kinds: ["2d", "3d"], on: ad => ad.locked(), run: ad => ad.toggleLock() },
-    { id: "mapmark", g: "lock", ic: "mark", kinds: ["2d"], ok: ad => !!ad.pt(), on: ad => ad.marked(), run: ad => ad.toggleMark() },
-    { id: "mapreset", g: "view", ic: "home", kinds: ["2d", "3d"], run: ad => ad.resetAll() },
-    { id: "map3top", g: "view", ic: "top", kinds: ["3d"], run: ad => ad.view(1) },
-    { id: "map3rt", g: "view", ic: "side", kinds: ["3d"], run: ad => ad.view(2) },
-    { id: "map3mz", g: "view", ic: "spec", kinds: ["3d"], run: ad => ad.view(3) },
-    { id: "mapzin", g: "zoom", ic: "plus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(0.7) },
-    { id: "mapzout", g: "zoom", ic: "minus", kinds: ["2d", "3d"], bar: true, menu: false, run: ad => ad.zoomBy(1 / 0.7) },
-    { id: "mapfeat", g: "learn", ic: "feat", kinds: ["2d"], menu: false, vis: ad => featAvail(ad.p), on: ad => !!st(ad.p).feat, run: ad => featToggle(ad.p) },
-    { id: "mapcopy", g: "copy", ic: "copy", kinds: ["2d", "3d"], ok: ad => !!ad.pt(), run: async ad => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } },
-    { id: "maphelp", g: "help", ic: "help", kinds: ["2d", "3d"], run: ad => help(ad.kind) }
+    cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), disponibile: hasPt, esegui: ad => extract(ad, "xic") }),
+    cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), disponibile: hasPt, esegui: ad => extract(ad, "spec") }),
+    cmd("maplock", "lock", "lock", V2, { attiva: ad => ad.locked(), esegui: ad => ad.toggleLock() }),
+    cmd("mapmark", "lock", "mark", ["map"], { disponibile: hasPt, attiva: ad => ad.marked(), esegui: ad => ad.toggleMark() }),
+    cmd("mapreset", "view", "home", V2, { esegui: ad => ad.resetAll() }),
+    cmd("map3top", "view", "top", ["map3d"], { esegui: ad => ad.view(1) }),
+    cmd("map3rt", "view", "side", ["map3d"], { esegui: ad => ad.view(2) }),
+    cmd("map3mz", "view", "spec", ["map3d"], { esegui: ad => ad.view(3) }),
+    cmd("mapzin", "zoom", "plus", V2, { menu: false, esegui: ad => ad.zoomBy(0.7) }),
+    cmd("mapzout", "zoom", "minus", V2, { menu: false, esegui: ad => ad.zoomBy(1 / 0.7) }),
+    cmd("mapfeat", "learn", "feat", ["map"], { menu: false, visibile: ad => featAvail(ad.p), attiva: ad => !!st(ad.p).feat, esegui: ad => featToggle(ad.p) }),
+    cmd("mapcopy", "copy", "copy", V2, { disponibile: hasPt, esegui: async ad => { const q = ad.pt(); if (!q) return; try { await navigator.clipboard.writeText(ptText(q)); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
+    cmd("maphelp", "help", "help", V2, { esegui: ad => help(ad.kind) })
   ];
-  const cmdOf = id => CMDS.find(c => c.id === id);
-  const nameOf = (c, ad) => T(c.id === "maplock" && ad.locked() || c.id === "mapmark" && ad.marked() ? `cmd.${c.id}.off.name` : `cmd.${c.id}.name`);
-  const runCmd = (id, ad) => { const c = cmdOf(id); if (c && (!c.ok || c.ok(ad))) return c.run(ad); };
-  // the items of the right-click menu (shared component: menu() in explore.js)
+  const runCmd = (id, ad) => AZIONI.esegui(id, ad);
+  // the items of the right-click menu (shared component: menu() in explore.js): where the commands act, then the actions of the view
   function itemsFor(ad) {
-    const items = [], q = ad.pt(), hdr = ad.locked() ? T("mapnav.where.locked", { at: ptText(q) }) : q ? T("mapnav.where", { at: ptText(q) }) : T("mapnav.where.none");
-    items.push({ label: hdr, dim: true }, "-");
-    let last = null;
-    for (const c of CMDS) {
-      if (!c.kinds.includes(ad.kind) || c.menu === false || c.vis && !c.vis(ad)) continue;
-      if (last && c.g !== last) items.push("-");
-      last = c.g;
-      const on = c.on ? c.on(ad) : null, dis = c.ok && !c.ok(ad);
-      const lab = c.id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : c.short ? T(`cmd.${c.id}.menu`) : nameOf(c, ad);       // with an RT stretch selected (Alt + drag) the spectrum is the average over it
-      items.push({ label: lab, icon: SV(c.id === "maplock" && on ? ICO.unlock : ICO[c.ic]), aria: nameOf(c, ad), tip: T(`cmd.${c.id}.tip`), check: on, dim: dis, fn: () => runCmd(c.id, ad) });
-    }
-    return items;
+    const q = ad.pt(), hdr = ad.locked() ? T("mapnav.where.locked", { at: ptText(q) }) : q ? T("mapnav.where", { at: ptText(q) }) : T("mapnav.where.none");
+    return [{ label: hdr, dim: true }, "-", ...AZIONI.per(ad)];
   }
   // while the menu is open the sight (spectrum, XIC) is held on the point of the click; it is let go when the menu closes (a choice such as Lock has already set s.lock)
   function holdSight(ad) {
@@ -663,7 +657,7 @@ window.MAPPA = (() => {
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
-    b.innerHTML = BAR[kind].map(id => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
+    b.innerHTML = BAR[kind].map(id => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[AZIONI.voce(id).ic])}</button>`).join("");
     b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;
@@ -741,7 +735,7 @@ window.MAPPA = (() => {
   }
   // the 2D map of the active tab the palette acts on
   const activeMap = () => { const q = E.active; if (q && q.type === "map" && is2d(q) && E.panels.includes(q)) return q; return (typeof tabPanels === "function" ? tabPanels() : []).find(x => x.type === "map" && is2d(x)) || null; };
-  const paletteOk = c => { const p = activeMap(); return !!p && c.kinds.includes("2d") && (!c.vis || c.vis(ad2(p, null))); };
+  const paletteOk = c => { const p = activeMap(); return !!p && c.viste.includes("map") && (!c.visibile || c.visibile(ad2(p, null))); };
   const paletteRun = id => { const p = activeMap(); if (p) runCmd(id, ad2(p, null)); };
   // touch: one finger moves the map, two fingers move and pinch, a double tap = whole view, a long press = the menu
   function touchInit(p, cv) {
