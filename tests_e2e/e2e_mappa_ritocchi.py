@@ -52,7 +52,7 @@ try:
             assert [o for o in sel().locator("option").all_inner_texts()] == ["FullScan_t0", "FullScan_t30"], sel().locator("option").all_inner_texts()
             sel().select_option(index=1); pg.wait_for_timeout(600); ready(pg)
             assert pg.evaluate(f"E.files[{M}.k].label") == "FullScan_t30"
-            pg.evaluate("soloFile(E.files[E.cur])"); attendi(pg, 'E.browse'); ready(pg)           # one file shown: the map follows the bar, the selector still works
+            pg.evaluate(f"soloFile(E.files[{M}.k])"); attendi(pg, 'E.browse'); ready(pg)           # one file shown: the map follows the bar, the selector still works
             assert sel().is_enabled()
             sel().select_option(index=0); pg.wait_for_timeout(700); ready(pg)
             assert pg.evaluate("E.cur") == pg.evaluate(f"{M}.k") or pg.evaluate("E.files[E.cur].label") == "FullScan_t0", pg.evaluate("E.cur")
