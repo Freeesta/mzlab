@@ -528,7 +528,7 @@ window.MAPPA = (() => {
     addPoint(p, px, py); return true;
   }
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
-  const { table, tableNow, grpShape, drawPoints } = MAPTAB({ st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt });
+  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }

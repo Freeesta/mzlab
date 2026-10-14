@@ -1,11 +1,9 @@
 // @ts-check
-// The marked points of the RT x m/z map: the shapes drawn on the map and the table under it (sort, groups, reference, Excel, copy). Classic script, loaded before
-// mappa.js, which calls MAPTAB(ctx) once inside its closure: ctx carries the helpers that live there (state, points, overlay, tolerances).
-function MAPTAB(c) {
+// The marked points of the RT x m/z map: the shapes drawn on the map, the Excel / copy export and the table under it (sort, groups, reference).
+// Classic script, loaded before mappa.js, which calls MAPFORME(ctx) and MAPTAB(ctx, forms) once inside its closure: ctx carries the helpers that live there.
+const MAPFORME = c => {
   const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
   /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
-  const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
-  const xicAB = (p, mz) => xicDirect(mz, p);                // XIC of A and B overlaid: a new XIC panel with the m/z
   // HR only: the points of one group of RT share a shape (circle, square, triangle, diamond, by turns); with no groups (LR, table not ready) a circle
   const grpShape = (p, i) => { const r = st(p).rows; return isHrF(p._a.f) && r && r.length === pts(p).length && r[i] && r[i].g ? SHAPES[(r[i].g - 1) % SHAPES.length] : "circle"; };
   function shapePath(g, kind, x, y, r) {
@@ -26,9 +24,32 @@ function MAPTAB(c) {
     });
     g.restore();
   }
-  // ---- the table under the map
   const COLS = ["n", "rt", "mz", "ia", "ib", "d", "ratio", "sn", "g", "dm", "note"];
   const COLK = { n: ["mappa.col.n", "mappa.col.n.title"], rt: ["mappa.col.rt", "mappa.col.rt.title"], mz: ["mappa.col.mz", "mappa.col.mz.title"], ia: ["mappa.col.ia", "mappa.col.ia.title"], ib: ["mappa.col.ib", "mappa.col.ib.title"], d: ["mappa.col.d", "mappa.col.d.title"], ratio: ["mappa.col.ratio", "mappa.col.ratio.title"], sn: ["mappa.col.sn", "mappa.col.sn.title"], g: ["mappa.col.g", "mappa.col.g.title"], dm: ["mappa.col.dm", "mappa.col.dm.title"], note: ["mappa.col.note", "mappa.col.note.title"] };     // literal keys: the i18n check finds them
+  function sheetRows(p) {
+    const s = st(p), hr = isHrF(p._a.f);
+    return (s.rows || []).map(r => [r.n, r.rt != null ? +r.rt.toFixed(3) : "", r.mz != null ? +r.mz.toFixed(hr ? 5 : 2) : "", r.ia ?? "", r.ib ?? "", r.d ?? "", r.ratio != null ? +r.ratio.toFixed(3) : "", r.sn != null ? +r.sn.toFixed(1) : "", r.g ?? "", r.dm != null ? +r.dm.toFixed(hr ? 5 : 2) : "", r.note || ""]);
+  }
+  const headRow = () => COLS.map(c => T(COLK[c][0]));
+  function excel(p) {
+    const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
+      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
+      [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
+    dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
+      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }]);
+  }
+  async function copyRows(p) {
+    const txt = [headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n");
+    try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
+  }
+  return { grpShape, drawPoints, COLS, COLK, excel, copyRows };
+};
+const MAPTAB = (c, f) => {
+  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
+  /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
+  const { COLS, COLK, excel, copyRows } = f;
+  const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
+  const xicAB = (p, mz) => xicDirect(mz, p);                // XIC of A and B overlaid: a new XIC panel with the m/z
   let tT = 0;
   function table(p) {
     clearTimeout(tT); tT = setTimeout(() => tableNow(p), 30);
@@ -54,9 +75,10 @@ function MAPTAB(c) {
       `<td>${hr && r.g ? `<span aria-hidden="true">${GLYPH[(r.g - 1) % GLYPH.length]}</span> ` : ""}${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
       `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`;
-    box.innerHTML = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? GRP0}"> min</label>` +
+    const html = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? GRP0}"> min</label>` +
       `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
       `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${hr ? groupedRows(s, view, rowHtml) : view.map(rowHtml).join("")}</tbody></table></div>`;
+    box.innerHTML = h`${raw(html)}`;
     box.querySelectorAll("[data-gtog]").forEach(b => b.onclick = () => { const g = +b.dataset.gtog; if (s.gcol.has(g)) s.gcol.delete(g); else s.gcol.add(g); tableNow(p); });
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
     box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
@@ -88,21 +110,5 @@ function MAPTAB(c) {
     }
     return out.join("");
   }
-  function sheetRows(p) {
-    const s = st(p), hr = isHrF(p._a.f);
-    return (s.rows || []).map(r => [r.n, r.rt != null ? +r.rt.toFixed(3) : "", r.mz != null ? +r.mz.toFixed(hr ? 5 : 2) : "", r.ia ?? "", r.ib ?? "", r.d ?? "", r.ratio != null ? +r.ratio.toFixed(3) : "", r.sn != null ? +r.sn.toFixed(1) : "", r.g ?? "", r.dm != null ? +r.dm.toFixed(hr ? 5 : 2) : "", r.note || ""]);
-  }
-  const headRow = () => COLS.map(c => T(COLK[c][0]));
-  function excel(p) {
-    const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
-      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
-      [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
-    dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
-      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }]);
-  }
-  async function copyRows(p) {
-    const txt = [headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n");
-    try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
-  }
-  return { table, tableNow, grpShape, drawPoints };
-}
+  return { table, tableNow };
+};
