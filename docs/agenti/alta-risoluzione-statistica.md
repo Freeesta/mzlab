@@ -1,5 +1,5 @@
 # Statistica in HR (tabella delle feature, bianco, differenza dal riferimento, PCA)
-Stato attuale; riscrivi le righe. Il Banco e il resto del mondo HR: `alta-risoluzione.md`; le sezioni comuni della statistica: `dati-strumenti.md`.
+Il Banco e il resto del mondo HR: `alta-risoluzione.md`; le sezioni comuni della statistica: `dati-strumenti.md`.
 
 - **Statistica in HR** (sezioni di `STAT` con `hr: true`, solo con `BANCO.on()`; le sezioni comuni: `dati-strumenti.md`; dati sintetici `ds.hr_series`; prove `e2e_statistica`, `tests/test_statistica.py`, `tests/test_tabella.py`). **Tabella delle feature** (`tabella.js`, `TABELLA`): la matrice feature × file su cui lavorano bianco e PCA.
   Il programma non rileva feature: la tabella viene da un'esportazione CSV/TSV di mzmine (colonne `row m/z`, `row retention time`, una colonna di area per file, riconosciuta dal nome del file; mzmine 2 e 3), da una lista «m/z; RT» (ogni ione misurato in tutti i file con `PROFILO.measure`, al massimo 300) o dalla tabella di mzFinder (`UNTUI.state.table`); resta in memoria, `TABELLA.matrix()` la dà nell'ordine dei file.

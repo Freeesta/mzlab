@@ -32,7 +32,7 @@ try:
     step("static title and Open Graph", title_static)
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
-        holder = ctx.new_page(); holder.goto(URL + "static/teoria/01-tp.html")
+        holder = ctx.new_page(); holder.goto(URL + "static/teoria/index.html")
         holder.evaluate(GONE)
         def blocked():
             holder.evaluate(HOLD)

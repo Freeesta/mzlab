@@ -1,10 +1,10 @@
 # Metodo di acquisizione (`metodo/1`)
 
-Stato attuale. Il metodo di UN campione (strumento, sorgente, esperimenti, LC, rivelatori, registro) come un solo JSON, qualunque sia il file di partenza. Schema: `mzlab/web/schemi/metodo-1.json`. Codice: `crates/mzlab-core/src/metodo.rs` (albero, adattatore `.dam`, SHA-1, `userParam`), `metodo_wiff.rs` (adattatore `.wiff`) e `metodo_raw.rs` (+ `metodo_raw/script.rs`, `campi.rs`: adattatore Thermo `.raw`). Vale il principio «niente risposte»: il documento riporta ciò che il file dice, senza verdetti.
+Il metodo di UN campione (strumento, sorgente, esperimenti, LC, rivelatori, registro) come un solo JSON, qualunque sia il file di partenza. Schema: `mzlab/web/schemi/metodo-1.json`. Codice: `crates/mzlab-core/src/metodo.rs` (albero, adattatore `.dam`, SHA-1, `userParam`), `metodo_wiff.rs` (adattatore `.wiff`) e `metodo_raw.rs` (+ `metodo_raw/script.rs`, `campi.rs`: adattatore Thermo `.raw`). Vale il principio «niente risposte»: il documento riporta ciò che il file dice, senza verdetti.
 
 ## Regole del documento
 - Un valore sconosciuto è ASSENTE (mai `null`, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo (`flusso_mL_min`, `ce_eV`, `iniezione_uL`).
-- Sezioni: `schema` (= `metodo/1`), `origine` (formato, file con nome/SHA-1/byte, numero del campione, `file_creato` = ora locale del PC dello strumento, senza fuso; `lettore`), `campione`, `strumento`, `operatore`, `ms` (`sorgente`, `periodi[].esperimenti[]` con `parametri` e `transizioni`), `lc` (`gradiente`, `flusso_mL_min`, `forno_C`, `pressione_max`), `campionatore`, `rivelatori`, `registro`,
+- Sezioni: `schema` (= `metodo/1`), `origine` (formato, file con nome/SHA-1/byte, numero del campione, `file_creato` = ora locale del PC dello strumento, senza fuso; `lettore`), `campione`, `strumento`, `operatore`, `ms` (`sorgente`, `periodi[].esperimenti[]` con `parametri` e `transizioni`), `lc` (`gradiente`, `flusso_mL_min`, `forno_C`, `pressione_max`), `campionatore`, `rivelatori`, `registro`.
 - `campi` (ogni campo del file che le sezioni non portano: `origine`, `chiave`, `valore`, `unita?`, `mappato?`, `identita?`; ordinati per origine e chiave), `grezzo` (testo del Log o del metodo ≤ 256 KB), `avvisi` (chiave i18n + `dove`: `meta.nonDecodificato`, `meta.mancante`).
 - I parametri di `ms` sono ordinati per id (l'ordine nel file è un accidente dello scrittore): lo stesso metodo letto da `.dam` e da `.wiff` dà lo stesso `ms`. `tipo` di un esperimento è «MRM» solo se ci sono transizioni; il nome del file non è una prova.
 

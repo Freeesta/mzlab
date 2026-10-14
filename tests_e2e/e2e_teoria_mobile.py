@@ -11,7 +11,7 @@ def step(name, fn):
         steps.append((name, f"FAIL (line {ln}) " + str(e).split("\n")[0][:200]))
 IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 r = Run(port=8921, wd="/tmp/wdtm")
-CH = ["00-uso", "01-tp", "02-fotocatalisi", "03-cromatografia", "04-lc", "05-gc", "06-esi", "07-ei-ci", "08-vuoto", "09-quadrupolo", "10-qqq", "11-risoluzione",
+CH = ["01-tp", "02-fotocatalisi", "03-cromatografia", "04-lc", "05-gc", "06-esi", "07-ei-ci", "08-vuoto", "09-quadrupolo", "10-qqq", "11-risoluzione",
       "12-dati", "13-formula", "14-frammentazione-esi", "15-ei-metodo", "16-ei-famiglie", "17-origine", "18-strategia", "19-hr-dda", "20-disegno", "21-glossario", "22-formulario", "index"]
 try:
     with sync_playwright() as p:
