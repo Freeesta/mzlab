@@ -30,7 +30,7 @@ function start() {
 function fail(/** @type {Worker} */ w) {
   if (w !== worker) return;
   worker = null;
-  const e = Object.assign(new Error("err.file.lettoriLoad"), { json: { error: "err.file.lettoriLoad", error_key: "err.file.lettoriLoad", params: { family: "", detail: "worker" } } });
+  const e = Object.assign(new Error("err.file.wiffLoad"), { json: { error: "err.file.wiffLoad", error_key: "err.file.wiffLoad", params: { family: "", detail: "worker" } } });
   for (const p of wait.values()) p.no(e);
   wait.clear();
 }

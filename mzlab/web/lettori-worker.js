@@ -32,7 +32,7 @@ function reader(/** @type {Blob[]} */ blobs) {
 /** the error as the page reads it: the JSON of the bridge, or the key of a module that did not load */
 function errOf(/** @type {any} */ e, /** @type {string} */ fam) {
   try { const j = JSON.parse(String(e)); if (j && j.error_key) return j; } catch (_) { /* not JSON */ }
-  return { error_key: "err.file.lettoriLoad", params: { family: fam, detail: String(e && e.message || e) } };
+  return { error_key: "err.file.wiffLoad", params: { family: fam, detail: String(e && e.message || e) } };
 }
 
 /** @param {{ op: string, id: number, fam: string, members: { name: string, blob: Blob }[], c?: number, dest?: string }} m */
