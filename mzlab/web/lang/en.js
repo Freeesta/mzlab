@@ -3366,8 +3366,6 @@ I18N.add("en", {
   "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
   "error.featFailed": "The pipeline failed.",
   "error.badRecipe": "The parameters of the pipeline are not valid.",
-  "tabui.beta": "beta",
-  "tabui.beta.title": "in development: results to be verified",
   "logo.gold.live": "The logo has turned gold",
   "logo.normal.live": "The logo is back to normal"
 });

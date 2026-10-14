@@ -1,5 +1,5 @@
 // @ts-strict
-// Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a beta tab.
+// Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a normal tab.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) and are downloaded and run when the page starts (the tab shows a loading note until they are ready). No switch, no password.
 // static/mzfinder/indice.json = {js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
@@ -36,7 +36,6 @@
 #qt-host.on{display:flex}
 #qt-host .qt-hd{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line,#ccc)}
 #qt-host .qt-hd b{font-size:15px}#qt-host .qt-hd .qt-x{margin-left:auto}
-#nav .qt-beta{font-size:.68em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border:1px solid currentColor;border-radius:8px;padding:0 5px;margin-left:2px;opacity:.85}
 #qt-host .qt-bd{flex:1;overflow:auto;padding:14px}`;
   function ensureUi() {
     if (bar) return;
@@ -54,8 +53,8 @@
   }
   // tool with its own tab: button in #nav + full page section after the other views; opened lazily on the first visit
   const tabs = new Map();         // id -> {b, sec, fn}
-  /** the text of the tab button: icon, name and the «beta» badge (catalog it/en) */
-  const label = t => (t.icon ? t.icon + " " : "") + esc(t.name) + ` <span class="qt-beta" data-i18n="tabui.beta" data-i18n-title="tabui.beta.title" title="${esc(I18N.t("tabui.beta.title"))}">${esc(I18N.t("tabui.beta"))}</span>`;
+  /** the text of the tab button: icon and name */
+  const label = t => (t.icon ? t.icon + " " : "") + esc(t.name);
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
     const old = tabs.get(t.id);

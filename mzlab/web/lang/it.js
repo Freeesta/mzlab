@@ -3366,8 +3366,6 @@ I18N.add("it", {
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
   "error.badRecipe": "I parametri della pipeline non sono validi.",
-  "tabui.beta": "beta",
-  "tabui.beta.title": "in sviluppo: risultati da verificare",
   "logo.gold.live": "Il logo è diventato dorato",
   "logo.normal.live": "Il logo è tornato normale"
 });

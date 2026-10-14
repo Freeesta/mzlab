@@ -1,4 +1,4 @@
-"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab is visible in the header from the start, with a «beta» badge (no switch);
+"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab is visible in the header from the start like the others (no switch, no badge);
 it survives a reload; the logo egg (5 clicks) only turns the logo gold.
 Run from the repo root: python3 tests_e2e/e2e_tpmine1.py   (needs Playwright and a built Pyodide dir or internet)"""
 import os, shutil, subprocess, sys, time, tempfile
@@ -38,7 +38,6 @@ try:
             pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)      # the tab shows at once; the tool registers when its scripts have loaded
             txt = pg.inner_text('#nav button[data-v="tpmine"]')
             assert "Tabui" in txt and "mzFinder" not in txt, txt
-            assert pg.inner_text('#nav button[data-v="tpmine"] .qt-beta').lower() == "beta" and pg.get_attribute('#nav button[data-v="tpmine"] .qt-beta', "title")
             assert pg.evaluate("localStorage.getItem('qqq.mzfinder')") is None      # no switch: nothing to remember
             assert [u for u in reqs if u.endswith("/mzfinder/indice.json")]
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
@@ -46,7 +45,7 @@ try:
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/teoria opens the standalone Teoria page
             pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
-        step("the Tabui tab is in the header at once, with the beta badge, no clicks on the logo", visible)
+        step("the Tabui tab is in the header at once, no clicks on the logo", visible)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
