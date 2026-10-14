@@ -240,7 +240,7 @@ async function lrOp(m) {
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null);
+      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
       await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
       return { info: "{}" };
     }

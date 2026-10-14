@@ -295,18 +295,8 @@ function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=
   const fs=E.files.filter(f=>!f.gone);
   el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
   $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()}}
-// New session: ask first (nothing is touched if the student cancels), then clear everything the app keeps in the browser: the loaded files and the notebook
-// (the server or, in the web version, the worker's IndexedDB stores via api/new), localStorage (preferences), the drawing and the settings. The service
-// worker's cache holds only the program itself (no student data) and stays, so the page keeps working offline.
-async function wipeLocal(){
-  // qqq.* kept from the old name: renaming it would lose the users' data
-  try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("qqq."))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k));sessionStorage.clear()}catch(e){}
-  UIP.theme="auto";setPal("time");
-  Object.keys(NB).forEach(k=>delete NB[k]);NB.ui=null;NB.session=null;
-  document.dispatchEvent(new Event("nbreset"));
-  if(typeof uipApply==="function")uipApply()}
-$("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
-  try{await post("api/new",{fresh:true});S.sess=null;STATO.aggiunta(false,"adding");E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());STATO.pannelli([],"reset");$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await qqHardReset();return}await init()}catch(e){fail(e)}};
+// New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
+$("#newrun").onclick=()=>QQRESET.ask();
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"

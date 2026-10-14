@@ -27,6 +27,7 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _open = false;
+  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, Teoria, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
@@ -136,8 +137,6 @@ const BARRA = (() => {
   // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
   if (window.MAPPA) MAPPA.CMDS.filter(c => c.kinds.includes("2d")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
-  const IC_RESET = () => IC('<path d="M3 8a5 5 0 109-2.8"/><path d="M12.5 2v3.5H9"/>');
-  CMD.push({ id: "resetall", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("all") }, { id: "resetfiles", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("files") });
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   /** @type {(id: any) => any} */
   const byId = id => CMD.find(c => c.id === id);
@@ -947,7 +946,13 @@ const BARRA = (() => {
     if (tf) tf.addEventListener("load", () => { if (_ctx === "theory") { buildBar(); if (!tcmd()) setTimeout(() => _ctx === "theory" && buildBar(), 400); } });
     document.addEventListener("tpview", () => {
       syncContext();
-      if (wasData && !inData()) _open = false;        // leaving Dati hides the panel (the saved state keeps it for the next visit)
+      const sc = Q1("#sb-panels");
+      if (wasData && !inData()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
+      else if (!wasData && inData() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
+        _open = _away.open; _forced = false; _restore = false; autoNarrow();
+        const top = _away.top; _away = null;
+        FRAME.next(() => { const e = Q1("#sb-panels"); if (e) e.scrollTop = top; });
+      }
       wasData = inData();
       syncMode();
       if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);

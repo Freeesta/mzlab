@@ -15,14 +15,14 @@ pub struct Item {
 }
 
 #[derive(Default)]
-struct Node {
-    name: String,
-    attrs: Vec<(String, String)>,
-    text: String,
-    kids: Vec<Node>,
+pub(super) struct Node {
+    pub(super) name: String,
+    pub(super) attrs: Vec<(String, String)>,
+    pub(super) text: String,
+    pub(super) kids: Vec<Node>,
 }
 
-fn text_of(b: &[u8]) -> String {
+pub(super) fn text_of(b: &[u8]) -> String {
     super::method::decode(b)
         .trim_start_matches('\u{feff}')
         .to_string()
@@ -53,7 +53,7 @@ fn close(stack: &mut Vec<Node>) {
     }
 }
 
-fn tree(xml: &str) -> Option<Node> {
+pub(super) fn tree(xml: &str) -> Option<Node> {
     // a declaration that says utf-16 is wrong for the text we hold (already characters): cut it
     let xml = match xml.trim_start().strip_prefix("<?xml") {
         Some(rest) => rest.split_once("?>").map_or(xml, |(_, r)| r),
