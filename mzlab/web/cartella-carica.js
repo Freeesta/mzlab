@@ -72,7 +72,7 @@ const CartCarica = (() => {
     const n = ok.length + ag.runs.length; if (!n) { note(T("cart.none", { name }) + ig); return; }
     const msg = T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig; note(msg);
     await upload([...uniqueNames(ok, (ST.files || []).map(x => x.name)), ...await AgilentD.toMzml(ag.runs)], null);
-    if (document.getElementById("cartinfo")?.textContent === msg) note("");      // loaded: «n files to load» is done (a later notice stays)
+    if (!ig && document.getElementById("cartinfo")?.textContent === msg) note("");      // loaded: «n files to load» is done; the summary of the ignored files and later notices stay
   }
   function fromDrop(e) {                // true when the drop was a folder (read and loaded here); the entries are taken before any await
     const es = entriesOf(e.dataTransfer);
