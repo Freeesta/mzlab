@@ -1,6 +1,6 @@
 {
  "concordanza_mzmine": "non_misurata",
- "crate_version": "1.0.0",
+ "crate_version": "1.0.1",
  "criteri": [
   {
    "id": "timololo_tp_trovati",
@@ -16,9 +16,9 @@
   },
   {
    "id": "timololo_candidati",
-   "ok": false,
+   "ok": true,
    "soglia": 494,
-   "valore": 11618
+   "valore": 366
   },
   {
    "id": "timololo_gruppi",
@@ -102,7 +102,7 @@
    "id": "sintetici_cinetica_forma",
    "ok": true,
    "soglia": 0.9,
-   "valore": 0.9526
+   "valore": 0.9474
   },
   {
    "id": "sintetici_cinetica_generazione",
@@ -149,6 +149,6 @@
  ],
  "data": "2026-10-14",
  "format": "cancello/2",
- "vista_candidati": false,
+ "vista_candidati": true,
  "vista_tabella": true
 }
