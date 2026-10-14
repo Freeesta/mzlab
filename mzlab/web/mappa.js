@@ -73,7 +73,7 @@ window.MAPPA = (() => {
     return new Float32Array(u.buffer);
   }));
   // regions held by the page: the oldest ones leave the cache of explore.js when they pass a byte budget (smaller on small devices)
-  const REG = { map: new Map(), bytes: 0, max: (navigator.deviceMemory || 4) <= 2 ? 48e6 : 96e6, ms: 0 };
+  const REG = { map: new Map(), bytes: 0, max: ((/** @type {any} */ (navigator)).deviceMemory || 4) <= 2 ? 48e6 : 96e6, ms: 0 };
   function regionKeep(key, bytes) {
     REG.map.set(key, bytes); REG.bytes += bytes;
     for (const [k, b] of REG.map) { if (REG.bytes <= REG.max || k === key) break; REG.map.delete(k); REG.bytes -= b; CACHE.delete(k); }
