@@ -8,22 +8,14 @@
 
   let isEditing = false, viewMode = "visual", originalDocHtml = "", barEl = null, codeWrapEl = null, codeTextarea = null;
 
-  const isUnlocked = () => {
-    try {
-      return localStorage.getItem("mzlab_teoria_editor") === "1" ||
-             localStorage.getItem("qqq.teoria.esteso") === "1" ||
-             new URLSearchParams(location.search).has("token") ||
-             new URLSearchParams(location.search).has("edit");
-    } catch (_) { return false; }
-  };
-
   function init() {
+    if (!window.QADMIN || !QADMIN.on()) return;   // the editor belongs to the administrator mode: no button, no shortcut otherwise
     window.addEventListener("keydown", e => {
       if (e.altKey && (e.key === "e" || e.key === "E" || e.code === "KeyE")) {
         e.preventDefault(); toggleEditor();
       }
     });
-    if (isUnlocked()) insertBarButton();
+    insertBarButton();
   }
 
   function insertBarButton() {
@@ -315,7 +307,6 @@
     toggle: toggleEditor,
     salva: salvaCapitolo,
     attiva: () => {
-      try { localStorage.setItem("mzlab_teoria_editor", "1"); } catch (_) {}
       insertBarButton();
     }
   };
