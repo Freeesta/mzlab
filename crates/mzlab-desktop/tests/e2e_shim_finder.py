@@ -164,6 +164,21 @@ try:
             pg.locator("#hr-t tr.clk").first.click(); pg.wait_for_timeout(1500)
             m = pg.inner_text("#tp-msg"); assert "error" not in m.lower(), m
         step("the page: Dig, table and detail of a candidate", ui)
+        def pipeline_pool():
+            r = pg.evaluate("""async ([names, rulesUrl, parent]) => {
+                const pool = (await import('/static/mzfinder/feat-desktop-pool.js')).createDesktopPool();
+                const list = await pool.listIdx(), files = names.map(n => ({ name: n + '.mzidx', path: 'mzlab/idx/' + n + '.mzidx' }));
+                const prev = await pool.preview(files[0], ''), stored = await pool.detectAll(files, '');
+                const table = await pool.align(stored, files.map(f => f.path), '');
+                const rules = new Uint8Array(await (await fetch(rulesUrl)).arrayBuffer());
+                const h = await pool.hypotheses({ rules, parent, parentRt: NaN, paths: files.map(f => f.path), recipe: '', structure: '' });
+                const e = await pool.evidence({ minutes: files.map(() => NaN), parentMz: NaN, parentRt: NaN, recipe: '' });
+                return { list, crate: await pool.crateVersion(), prev: Object.keys(prev), n: stored.length, table: table.length, evid: e.table.length, tried: h.tried, reg: !!h.registry };
+            }""", [[f.name for f in files], "/static/mzfinder/regole_tp.json", PARENT["neutral"]])
+            assert all(f.name + ".mzidx" in r["list"] for f in files), r["list"]
+            assert r["n"] == len(files) and r["table"] > 100 and r["evid"] >= r["table"] and r["reg"] and r["crate"], r
+            assert "ms" in r["prev"] and "crate" in r["prev"], r["prev"]
+        step("Pipeline panel pool: listIdx, preview, detect, align, hypotheses and proofs on the native routes", pipeline_pool)
         def transformations():
             user = "my rule;+O;a row of the user"
             run = pg.evaluate("([f, p, t]) => window.TPCALL('run', f, p, {}, t)", [got["files"], PARENT, user])
