@@ -24,7 +24,7 @@ try:
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null)[{i}];return l&&{{x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2,m:l.m}}}})()")
         def pick_label():
             lb = label_box(0); assert lb, "no peak labels"
-            its = ctx_items(lb["x"], lb["y"]); print(lb["m"], its[:3])
+            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Ripristina zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
             assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copia valore" and its[2] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
             pg.keyboard.press("Escape")
             # the bar of the same peak gives the same value
@@ -61,13 +61,13 @@ try:
         step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
-            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" not in its, its
+            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" in its and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") == "true", its      # no zoom: there, grey
             pg.keyboard.press("Escape")
             pg.evaluate(f"(()=>{{const p={SPEC},a=p._a;p.zoom=[a.x0+(a.x1-a.x0)*0.4,a.x0+(a.x1-a.x0)*0.6];draw(p)}})()"); pg.wait_for_timeout(500)
-            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert its[0] == "Ripristina zoom", its
+            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", its
             pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); pg.wait_for_timeout(400)
             assert pg.evaluate(f"{SPEC}.zoom") is None
-        step("1.5: 'Ripristina zoom' is the first entry only with a zoom", zoom_first)
+        step("1.5: 'Ripristina zoom' is always there, grey without a zoom", zoom_first)
         def annot():
             pg.evaluate("""(()=>{const o=CanvasRenderingContext2D.prototype.stroke;window.__st=[];CanvasRenderingContext2D.prototype.stroke=function(){window.__st.push([String(this.strokeStyle),this.getLineDash().join()]);return o.apply(this,arguments)}})()""")
             lb = label_box(0); m = lb["m"]
