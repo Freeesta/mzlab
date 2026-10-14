@@ -2,9 +2,13 @@
 //! S/N of every transition in every file around the time of the quantifier, and the ratio of every qualifier to the quantifier checked against the
 //! median of the standards. The program gives no concentrations.
 
+use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{round, Out};
+use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::Result;
 
 use super::peak1d::{find_peak, Found};
+use super::plan::FileLr;
 
 /// Minimum S/N of a peak that counts as detected.
 const SNR_MIN: f64 = 3.0;
@@ -32,6 +36,36 @@ pub struct MrmFile {
     pub kind_type: String,
     pub time: Option<f64>,
     pub traces: Vec<Trace>,
+}
+
+/// The SRM traces of the mzML `m` of file `f`; `scans_end` is where its last scan ends (0 without scans). The site and the app read the file the same way.
+pub fn file_from_mzml<R: ReadAt>(f: &FileLr, m: &mut Mzml<R>, scans_end: u64) -> Result<MrmFile> {
+    let mut traces = Vec::new();
+    for c in m
+        .chromatograms(scans_end)?
+        .iter()
+        .filter(|c| c.kind == "srm")
+    {
+        let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
+            continue;
+        };
+        let (rt, y) = m.chromatogram(c)?;
+        traces.push(Trace {
+            q1,
+            q3,
+            ce: c.ce,
+            name: c.name.clone(),
+            rt,
+            y,
+        });
+    }
+    Ok(MrmFile {
+        name: f.name.clone(),
+        label: f.label.clone(),
+        kind_type: f.kind_type.clone(),
+        time: f.time,
+        traces,
+    })
 }
 
 #[derive(Debug, Clone)]

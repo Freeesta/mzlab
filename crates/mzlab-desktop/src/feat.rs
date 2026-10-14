@@ -235,7 +235,7 @@ fn written(b: &[u8]) -> Result<Answer> {
     text(o.0)
 }
 
-fn names(p: &Value) -> Vec<String> {
+pub(crate) fn names(p: &Value) -> Vec<String> {
     p["names"]
         .as_array()
         .map(|a| {
