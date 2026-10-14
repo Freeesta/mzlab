@@ -211,7 +211,7 @@ const BANCO = (() => {
   const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICON = {
     prev: svg('<path d="M10 3L5 8l5 5"/>'), next: svg('<path d="M6 3l5 5-5 5"/>'),
-    zundo: svg('<path d="M3 7h6a3 3 0 010 6H6"/><path d="M5.5 4.5L3 7l2.5 2.5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
+    zundo: svg('<path d="M3 7h6a3 3 0 010 6H6"/><path d="M5.5 4.5L3 7l2.5 2.5"/>'), zredo: svg('<path d="M13 7H7a3 3 0 000 6h3"/><path d="M10.5 4.5L13 7l-2.5 2.5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
     norm: svg('<path d="M3 13V8M7 13V4M11 13V6"/><path d="M2 13.5h12"/>'), add: svg('<path d="M8 3v10M3 8h10"/>'), del: svg('<path d="M3 4.5h10M6 4.5V3h4v1.5M5 4.5l.5 8.5h5l.5-8.5"/>'),
     type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), peaks: svg('<path d="M2 13c2 0 2-8 4-8s2 8 4 8 1.5-4 4-4"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'),
     copy: svg('<rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 10V3h7"/>'), xls: svg('<path d="M3 2.5h6.5l3 3v8H3z"/><path d="M5.5 8l3 3.5M8.5 8l-3 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
@@ -250,7 +250,8 @@ const BANCO = (() => {
   const FN = {
     prev: () => { const a = walkTarget(false); if (a) stepScan(a, -1); else info(I18N.t("bn.putCursor")); },
     next: () => { const a = walkTarget(false); if (a) stepScan(a, 1); else info(I18N.t("bn.putCursor")); },
-    zundo: () => { const a = act(); if (a) undoLast(a); },
+    zundo: () => { if (STORIA) STORIA.annulla(); },
+    zredo: () => { if (STORIA) STORIA.ripeti(); },
     zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
     norm: () => { const a = act(); if (!a) return; if (a.type === "spec") { a.rel = !specRel(a); draw(a); } else if (a.type === "chrom" || a.type === "xic") { a.norm100 = !a.norm100; draw(a); } uiSave(); sync2(); },
     pin: () => { const a = act(); if (a && (eligible(a) || a.type === "xic")) setPin(a, !a.pin); sync2(); },
@@ -461,7 +462,7 @@ const BANCO = (() => {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
       host.insertAdjacentElement("beforebegin", b);
       b.innerHTML = barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev) + barBtn("next", I18N.t("bn.bar.next"), ICON.next) + `<span class="sepv"></span>` +
-        barBtn("zundo", I18N.t("bn.bar.zundo"), ICON.zundo) + barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall) +
+        barBtn("zundo", I18N.t("bn.bar.zundo"), ICON.zundo) + barBtn("zredo", I18N.t("bn.bar.zredo"), ICON.zredo) + barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall) +
         barBtn("norm", I18N.t("bn.bar.norm"), ICON.norm) + barBtn("pin", I18N.t("bn.bar.pinbtn"), IC_PIN) + `<span class="sepv"></span>` +
         barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell")) + barBtn("type", I18N.t("bn.bar.type"), ICON.type) + barBtn("del", I18N.t("bn.bar.del"), ICON.del) + `<span class="sepv"></span>` +
         barBtn("peaks", I18N.t("bn.bar.peaks"), ICON.peaks) +

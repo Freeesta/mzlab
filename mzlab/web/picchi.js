@@ -99,7 +99,6 @@ function guardInt(p) {
 }
 // integrations never overlap (same trace and file): at most two peaks touch and share the border (drop line)
 const INT_EPS = 1e-6;
-let HSEQ = 0;                                                             // order of the undoable actions (zoom and integrations) of the session
 const iLo = it => Math.min(it.a, it.b), iHi = it => Math.max(it.a, it.b);
 const intClash = (p, key, a, b, skip) => p.ints.find(i => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
 function nearMsg(t) {                                                     // short notice next to the mouse
@@ -110,8 +109,6 @@ function nearMsg(t) {                                                     // sho
 }
 document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
 const intSnap = p => JSON.stringify(p.ints);
-function pushIh(p, snap) { const h = p.ih = p.ih || []; h.push({ n: ++HSEQ, s: snap || intSnap(p) }); if (h.length > 20) h.shift(); }
-function undoInt(p) { const e = p.ih && p.ih.pop(); if (!e) return; p.ints = JSON.parse(e.s); p.isel = null; draw(p); uiSave(); }
 function delInts(p, list) { pushIh(p); p.ints = p.ints.filter(i => !list.includes(i)); if (list.some(i => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(p, s, a, b, mirror = true) {
   const lo = Math.min(a, b), hi = Math.max(a, b);

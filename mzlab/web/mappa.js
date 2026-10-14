@@ -382,12 +382,12 @@ window.MAPPA = (() => {
     const done = () => { e.preventDefault(); e.stopPropagation(); };
     if (k === "f" || k === "F") { done(); p._setMax(!isMax(p)); return; }
     if (k === "0") { done(); whole(p); return; }
-    if (k === "Backspace") { done(); undoZoom(p); return; }
+    if (k === "Backspace") { done(); whole(p); return; }
     if (!is2d(p)) return;
     if (s.ex && window.MAPEX && MAPEX.key(p, e)) { done(); return; }
     if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
     if (k === "l" || k === "L") { done(); ad2(p, null).toggleLock(); return; }
-    if (k === "Escape") { if (s.lock) { done(); unlock(p); navSync(p); } else if (!isMax(p) && p.zh && p.zh.length) { done(); undoZoom(p); } return; }       // Esc: unlock, or take back the last zoom
+    if (k === "Escape") { if (s.lock) { done(); unlock(p); navSync(p); } return; }       // Esc: unlock
     if (k === "Home") { done(); whole(p); return; }
     if (k === "+" || k === "=") { done(); ad2(p, null).zoomBy(0.7); return; }
     if (k === "-" || k === "_") { done(); ad2(p, null).zoomBy(1 / 0.7); return; }
