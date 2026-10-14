@@ -20,6 +20,7 @@
     esercizi: '<path d="M4 10.5l4 4 8-9" />',
     strumenti: '<path d="M11.5 3.5a3.7 3.7 0 0 0-3.2 5.3L3.5 13.6a1.6 1.6 0 0 0 2.3 2.3l4.8-4.8a3.7 3.7 0 0 0 5.3-3.2l-2.3 2.3-2-.5-.5-2z" />',
     impostazioni: '<circle cx="10" cy="10" r="2.6" /><path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4" />',
+    esporta: '<path d="M10 3.5v9.5M6 9l4 4 4-4M3.5 15.5v1a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-1" />',
     altro: '<circle cx="4.5" cy="10" r="1.2" /><circle cx="10" cy="10" r="1.2" /><circle cx="15.5" cy="10" r="1.2" />',
   };
   const svg = k => `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
@@ -52,11 +53,13 @@
       { id: "glossario", icona: "glossario", etichetta: "Glossario", titolo: "Glossario e bibliografia", gruppo: "uso", href: "21-glossario.html", run: () => go("21-glossario.html") },
       { id: "formule", icona: "formule", etichetta: "Formule", titolo: "Formulario per l'orale", gruppo: "uso", href: "22-formulario.html", run: () => go("22-formulario.html") },
       { id: "esercizi", icona: "esercizi", etichetta: "Esercizi", titolo: "Esercizi di questo capitolo e Pratica", gruppo: "uso", run: esercizi },
+      { id: "esporta", icona: "esporta", etichetta: "Esporta", titolo: "Esporta in PDF, Word, Markdown o HTML", gruppo: "uso", run: () => T().esporta && T().esporta() },
       { id: "strumenti", icona: "strumenti", etichetta: "Strumenti", titolo: "Strumenti didattici", gruppo: "uso", figli: [
         { id: "frammenta", etichetta: "Frammenta", run: strum("frammenta", "#fr-rrk") },
         { id: "massa", etichetta: "Massa e addotti", run: strum("massa") },
         { id: "tavola", etichetta: "Tavola periodica", run: strum("tavola") },
         { id: "perdite", etichetta: "Perdite", run: strum("frammenta", "#fr-loss") },
+        { id: "esporta", etichetta: "Esporta capitolo o corso", run: () => T().esporta && T().esporta() },
       ] },
       { id: "impostazioni", icona: "impostazioni", etichetta: "Impostazioni", titolo: "Impostazioni di lettura", gruppo: "fine", run: () => { const b = $("#a11y-btn"); if (b) b.click(); } },
     ],
@@ -118,7 +121,7 @@
     menu(al, cmd("strumenti").figli, "Strumenti didattici");
   } else {
     const n = document.createElement("span"); n.className = "tgrp"; n.id = "tnav"; put("prec", n); put("succ", n); bar.appendChild(n); bar.appendChild(sep());
-    ["cerca", "glossario", "formule", "esercizi"].forEach(id => put(id));
+    ["cerca", "glossario", "formule", "esercizi", "esporta"].forEach(id => put(id));
     const st = put("strumenti"); menu(st, cmd("strumenti").figli, "Strumenti didattici");
     bar.appendChild(sep());
   }

@@ -29,7 +29,7 @@ Per vedere la modifica: apri il file con doppio clic e ricarica con Cmd+R. Nell'
 Il testo è tra i "tag" `<…>`. Si cambia il testo, si lasciano i tag. Ogni tag aperto va chiuso: `<p>` … `</p>`.
 
 ```html
-<h2>Titolo di sezione</h2>          compare anche nell'indice "In questa pagina"
+<h2>Titolo di sezione</h2>
 <h3>Sottotitolo</h3>
 <p>Un paragrafo con <b>grassetto</b>, <i>corsivo</i>, H<sub>2</sub>O, 10<sup>−5</sup>.</p>
 <ul><li>punto elenco</li><li>altro punto</li></ul>       (<ol> per l'elenco numerato)

@@ -279,9 +279,7 @@ main:focus{outline:none}
   .eq{overflow-x:auto;max-width:100%}
   main{max-width:100%}
 }
-@media (prefers-reduced-motion:reduce){#side.open{transition:none}#lb *{transition:none!important}}
-@media print{#cbar,#sheetbg,.fzoom,#lb{display:none!important}body{padding-top:0}}
-:root[data-a11y-reduce] #side.open{transition:none}
+@media print{#top,#side,.skip,.pn,#cbar,#sheetbg,.fzoom,#lb,#tbar,#tedit-bar,#export-modal,.ctl,.btns{display:none!important}body{padding-top:0!important;background:#fff!important;color:#000!important;font-size:11pt;line-height:1.5}.wrap{display:block!important;max-width:100%!important;padding:0!important;margin:0!important}main{max-width:100%!important}.box{break-inside:avoid;border:1pt solid #ccc;border-left:4pt solid #2b5c8a;margin:10pt 0}table{break-inside:avoid}h1,h2,h3{break-after:avoid}details.q{display:block!important;break-inside:avoid;border:1pt solid #ccc;padding:8pt;margin:8pt 0}details.q summary{font-weight:700}details.q summary ~ *{display:block!important}}
 /* line length around 65 characters */
 main p,main li,.gl dd{max-width:65ch}
 .tw,main pre,.eitab{max-width:100%;overflow-x:auto}
@@ -398,4 +396,30 @@ body.tedit-active .sim::before{content:"[Simulazione interattiva protetta]";posi
 .tedit-modal-card ol{margin:8px 0 16px;padding-left:20px;font-size:14px}
 .tedit-modal-card code{font-weight:700}
 .tedit-modal-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px}
+
+/* ---- modal esportazione (esporta.js) ---- */
+#export-modal{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.exp-card{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:760px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 10px 36px rgba(0,0,0,.3)}
+.exp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}
+.exp-header h2{font-size:20px;margin:0 0 4px;border:none;padding:0}
+.exp-sub{font-size:14px;color:var(--muted);margin:0}
+.exp-close{font:inherit;font-size:18px;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+.exp-close:hover{color:var(--bad);background:var(--sel)}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:680px){.exp-grid{grid-template-columns:1fr}}
+.exp-sec{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.exp-sec-hd{margin-bottom:4px}
+.exp-sec-hd h3{font-size:15px;margin:4px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-badge{font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.05em;color:var(--accent);background:var(--panel);border:1px solid var(--line);padding:2px 6px;border-radius:4px;display:inline-block}
+.exp-badge-gold{color:var(--warn);border-color:var(--warn)}
+.exp-actions{display:flex;flex-direction:column;gap:8px}
+.exp-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;transition:border-color .15s,transform .1s}
+.exp-item:hover{border-color:var(--accent);background:var(--sel);transform:translateY(-1px)}
+.exp-ico{font-size:22px;flex:none;line-height:1}
+.exp-txt b{display:block;font-size:14px;margin-bottom:2px}
+.exp-txt span{display:block;font-size:12px;color:var(--muted);line-height:1.3}
+.exp-status{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:13.5px;font-weight:600;text-align:center}
+.exp-status.ok{background:var(--ok);color:#fff}
+.exp-status.err{background:var(--bad);color:#fff}
+
 

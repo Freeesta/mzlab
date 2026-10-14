@@ -1,499 +1,260 @@
-/* mzLab - Teoria: simulazione dinamica del campionamento del picco cromatografico.
-   Mostra in tempo reale come il flusso continuo della sorgente ESI (più ioni diversi co-eluenti)
-   viene filtrato a turno dal quadrupolo (Full scan vs MRM) e come si costruisce
-   il picco dell'analita target rispetto alla curva teorica continua. */
+/* QqQ lab - Simulazione dinamica e visiva dei tempi del quadrupolo:
+   Fascio continuo ESI (3 ioni distinti: A m/z 200, B target m/z 350, C m/z 500).
+   Confronto fra scansione continua Full Scan vs selezione MRM e costruzione del picco.
+*/
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const box = document.getElementById("sim-tempi-quad");
-  if (!box) return;
+  const el = document.getElementById("sim-tempi-quad");
+  if (!el) return;
 
-  const css = getComputedStyle(document.documentElement);
-  const col = n => css.getPropertyValue("--c" + n).trim() || "#2b5c8a";
-  const colOk = css.getPropertyValue("--ok").trim() || "#047857";
-  const colBad = css.getPropertyValue("--bad").trim() || "#b42318";
-  const colWarn = css.getPropertyValue("--warn").trim() || "#b45309";
-  const colMuted = css.getPropertyValue("--muted").trim() || "#6b675c";
-  const colLine = css.getPropertyValue("--line").trim() || "#e4e2dc";
-  const colPanel = css.getPropertyValue("--panel").trim() || "#ffffff";
-  const colInk = css.getPropertyValue("--ink").trim() || "#24231f";
+  const box = document.createElement("div");
+  box.className = "sim-box";
+  el.appendChild(box);
 
-  box.innerHTML = "";
+  const col = i => getComputedStyle(document.documentElement).getPropertyValue(`--c${i}`).trim() || "#2b5c8a";
+  const colMuted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#6b675c";
+  const colLine = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#e4e2dc";
+  const colInk = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#24231f";
+  const colPanel = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim() || "#ffffff";
+  const colOk = getComputedStyle(document.documentElement).getPropertyValue("--ok").trim() || "#047857";
+  const colWarn = getComputedStyle(document.documentElement).getPropertyValue("--warn").trim() || "#b45309";
+  const colBad = getComputedStyle(document.documentElement).getPropertyValue("--bad").trim() || "#b42318";
 
-  let mode = "mrm"; // "mrm" | "full"
-
-  // 3 ioni distinti che escono contemporaneamente dalla sorgente continua
-  const IONS = [
-    { id: 0, mz: 200, label: "Ione A (m/z 200)", color: col(1) },
-    { id: 1, mz: 350, label: "Target B (m/z 350)", color: col(2) },
-    { id: 2, mz: 500, label: "Ione C (m/z 500)", color: col(4) }
-  ];
-
-  // Barra comandi: Modi + Play/Pausa + Riavvia
-  const bar = document.createElement("div");
-  bar.className = "row";
-  bar.style.display = "flex";
-  bar.style.flexWrap = "wrap";
-  bar.style.gap = "8px";
-  bar.style.alignItems = "center";
-  bar.style.marginBottom = "8px";
-  box.appendChild(bar);
-
+  let mode = "mrm";
   const btnMrm = document.createElement("button");
-  btnMrm.type = "button";
-  btnMrm.textContent = "SIM / MRM (Canali a turno)";
-  btnMrm.className = "btn";
+  btnMrm.type = "button"; btnMrm.textContent = "MRM (selezione a canali fissi)"; btnMrm.className = "on";
+  const btnScan = document.createElement("button");
+  btnScan.type = "button"; btnScan.textContent = "Full Scan (sweep continuo 100-900 Da)";
+  const modeBar = document.createElement("div");
+  modeBar.className = "btns";
+  modeBar.appendChild(btnMrm); modeBar.appendChild(btnScan);
+  box.appendChild(modeBar);
 
-  const btnFull = document.createElement("button");
-  btnFull.type = "button";
-  btnFull.textContent = "Full Scan (Sweep continuo)";
-  btnFull.className = "btn";
+  const ctlWrap = document.createElement("div");
+  box.appendChild(ctlWrap);
 
-  const setModeBtn = () => {
-    btnMrm.setAttribute("aria-pressed", String(mode === "mrm"));
-    btnFull.setAttribute("aria-pressed", String(mode === "full"));
-    btnMrm.style.fontWeight = mode === "mrm" ? "700" : "400";
-    btnFull.style.fontWeight = mode === "full" ? "700" : "400";
-    btnMrm.style.borderColor = mode === "mrm" ? "var(--accent)" : "";
-    btnFull.style.borderColor = mode === "full" ? "var(--accent)" : "";
-  };
-  setModeBtn();
-
-  btnMrm.onclick = () => { mode = "mrm"; setModeBtn(); toggleCtls(); restart(); };
-  btnFull.onclick = () => { mode = "full"; setModeBtn(); toggleCtls(); restart(); };
-  bar.append(btnMrm, btnFull);
-
-  const btnPlay = document.createElement("button");
-  btnPlay.type = "button";
-  btnPlay.textContent = "⏸ Pausa";
-  btnPlay.style.marginLeft = "auto";
-  btnPlay.onclick = () => togglePlay();
-  bar.appendChild(btnPlay);
-
-  const btnRestart = document.createElement("button");
-  btnRestart.type = "button";
-  btnRestart.textContent = "↺ Ricomincia";
-  btnRestart.onclick = () => restart();
-  bar.appendChild(btnRestart);
-
-  // Controlli essenziali
-  const ctls = TP.controls(box, [
-    { id: "n", label: "Transizioni / analiti a turno (MRM)", min: 1, max: 20, step: 1, value: 3, fmt: x => x },
-    { id: "dw", label: "Dwell time per canale (MRM)", min: 10, max: 200, step: 10, value: 60, unit: "ms", fmt: x => x },
-    { id: "speed", label: "Velocità di sweep (Full Scan)", min: 500, max: 8000, step: 500, value: 2000, unit: "Da/s", fmt: x => x },
-    { id: "anim", label: "Velocità animazione", min: 0.1, max: 1.2, step: 0.1, value: 0.4, fmt: x => TP.fmt(x, 1) + "×" },
-  ], () => { restart(); });
-
-  function toggleCtls() {
-    const cN = box.querySelector("[data-ctl=n]");
-    const cDw = box.querySelector("[data-ctl=dw]");
-    const cSpeed = box.querySelector("[data-ctl=speed]");
-    if (cN) cN.style.display = mode === "mrm" ? "" : "none";
-    if (cDw) cDw.style.display = mode === "mrm" ? "" : "none";
-    if (cSpeed) cSpeed.style.display = mode === "full" ? "" : "none";
+  let ctls = null;
+  function setupControls() {
+    ctlWrap.innerHTML = "";
+    const specs = mode === "mrm" ? [
+      { id: "dw", label: "Dwell time per canale", min: 5, max: 200, step: 5, value: 30, unit: "ms" },
+      { id: "n", label: "Numero transizioni MRM", min: 1, max: 40, step: 1, value: 5, unit: "canali" },
+      { id: "anim", label: "Velocità animazione", min: 0.1, max: 1.0, step: 0.05, value: 0.35, unit: "×" },
+    ] : [
+      { id: "speed", label: "Velocità sweep", min: 500, max: 12000, step: 500, value: 2000, unit: "Da/s" },
+      { id: "anim", label: "Velocità animazione", min: 0.1, max: 1.0, step: 0.05, value: 0.35, unit: "×" },
+    ];
+    ctls = TP.controls(ctlWrap, specs, () => restart());
   }
-  toggleCtls();
+  setupControls();
 
-  // Canvas unico grande
-  const c = TP.canvas(box, 360);
+  btnMrm.onclick = () => { if (mode !== "mrm") { mode = "mrm"; btnMrm.classList.add("on"); btnScan.classList.remove("on"); setupControls(); restart(); } };
+  btnScan.onclick = () => { if (mode !== "scan") { mode = "scan"; btnScan.classList.add("on"); btnMrm.classList.remove("on"); setupControls(); restart(); } };
+
+  const playBar = document.createElement("div");
+  playBar.className = "btns";
+  const btnPlay = document.createElement("button");
+  btnPlay.type = "button"; btnPlay.textContent = "⏸ Pausa";
+  const btnRestart = document.createElement("button");
+  btnRestart.type = "button"; btnRestart.textContent = "↺ Riavvia corsa (12 s)";
+  playBar.appendChild(btnPlay); playBar.appendChild(btnRestart);
+  box.appendChild(playBar);
+  btnPlay.onclick = () => togglePlay();
+  btnRestart.onclick = () => restart();
+
+  const c = TP.canvas(box, 380);
+  const { cv, ctx } = c;
   const out = document.createElement("div");
   out.className = "readout";
   box.appendChild(out);
 
-  const T_TOTAL = 12.0; // secondi totali della corsa simulata
-  const T_CENTER = 6.0; // apice del picco cromatografico
-  const SIGMA = 1.25;   // larghezza picco (FWHM ~ 3 s)
+  const T_TOTAL = 12.0, T_CENTER = 6.0, SIGMA = 1.25;
+  const peakIdeal = t => Math.exp(-0.5 * Math.pow((t - T_CENTER) / SIGMA, 2));
 
-  function peakIdeal(t) {
-    const u = (t - T_CENTER) / SIGMA;
-    return Math.exp(-0.5 * u * u);
-  }
-
-  let tSim = 0;
-  let lastRealTime = performance.now();
-  let paused = false;
-  let rafId = null;
-
-  // Campioni acquisiti dello ione target (B, arancione)
-  let samples = [];
-  let nextSampleTime = 0;
+  let tSim = 0, lastRealTime = performance.now(), paused = false, samples = [], nextSampleTime = 0;
 
   function getTiming() {
     let cycleSec = 0, dwellMs = 0, dutyPct = 0;
     if (mode === "mrm") {
-      const pauseMs = 6;
       dwellMs = ctls.dw;
-      const cycleMs = ctls.n * (dwellMs + pauseMs);
+      const cycleMs = ctls.n * (dwellMs + 6);
       cycleSec = cycleMs / 1000;
       dutyPct = (dwellMs / cycleMs) * 100;
     } else {
-      const rangeDa = 800; // es. 100 - 900 Da
-      const sweepSec = rangeDa / ctls.speed;
-      cycleSec = sweepSec + 0.010; // +10 ms settling
-      dwellMs = (1.0 / ctls.speed) * 1000; // ~1 Da
+      const sweepSec = 800 / ctls.speed;
+      cycleSec = sweepSec + 0.010;
+      dwellMs = (1.0 / ctls.speed) * 1000;
       dutyPct = (dwellMs / (cycleSec * 1000)) * 100;
     }
-    const ptsOnPeak = (SIGMA * 2.355 * 2) / cycleSec;
-    return { cycleSec, dwellMs, dutyPct, ptsOnPeak };
+    return { cycleSec, dwellMs, dutyPct };
   }
 
   function restart() {
-    tSim = 0;
-    samples = [];
-    nextSampleTime = 0;
-    lastRealTime = performance.now();
+    tSim = 0; samples = []; nextSampleTime = 0; lastRealTime = performance.now();
     if (paused) draw();
   }
 
   function togglePlay() {
-    paused = !paused;
-    btnPlay.textContent = paused ? "▶ Avvia" : "⏸ Pausa";
-    if (!paused) {
-      lastRealTime = performance.now();
-      loop();
-    }
+    paused = !paused; btnPlay.textContent = paused ? "▶ Avvia" : "⏸ Pausa";
+    if (!paused) { lastRealTime = performance.now(); loop(); }
   }
 
-  // Particelle ioniche continue (3 tipi: 0=blu, 1=arancione target, 2=viola)
-  const PARTICLES = Array.from({ length: 42 }, (_, i) => ({
-    x: Math.random(),
-    y: (Math.random() - 0.5) * 22,
-    speed: 0.65 + Math.random() * 0.45,
-    type: i % 3 // 0, 1 o 2
+  const PARTICLES = Array.from({ length: 42 }, () => ({
+    x: Math.random(), y: (Math.random() - 0.5) * 22,
+    vx: 0.16 + Math.random() * 0.08, type: Math.floor(Math.random() * 3),
+    deflected: false, deflVy: 0,
   }));
 
-  function update(dtReal) {
-    if (paused) return;
-
-    const timeScale = ctls.anim !== undefined ? ctls.anim : 0.4;
-    const dtSim = dtReal * timeScale;
-    tSim += dtSim;
-
-    const { cycleSec, dwellMs } = getTiming();
-
-    // Campionamento del Target B a ogni ciclo
-    while (tSim >= nextSampleTime && nextSampleTime <= T_TOTAL) {
-      const trueVal = peakIdeal(nextSampleTime);
-      const noiseAmp = mode === "full" ? 0.045 : (0.012 * Math.sqrt(60 / Math.max(10, dwellMs)));
-      const noise = (Math.random() - 0.5) * noiseAmp;
-      samples.push({ t: nextSampleTime, val: Math.max(0, trueVal + noise) });
+  function update(dt) {
+    const rate = ctls.anim || 0.35;
+    tSim += dt * rate;
+    const { cycleSec } = getTiming();
+    if (tSim >= nextSampleTime && tSim <= T_TOTAL) {
+      samples.push({ t: tSim, val: peakIdeal(tSim) });
       nextSampleTime += cycleSec;
     }
+  }
 
-    if (tSim > T_TOTAL + 1.2) {
-      restart();
+  function getStatus(cycleSec, dwellMs) {
+    const cycleMs = cycleSec * 1000, progressMs = (tSim * 1000) % cycleMs;
+    let passingId = -1, txt = "", color = colMuted;
+    if (mode === "mrm") {
+      const stepMs = dwellMs + 6, ch = Math.floor(progressMs / stepMs);
+      if ((progressMs % stepMs) < dwellMs) {
+        passingId = ch <= 2 ? ch : -1;
+        const labels = ["Ione A (m/z 200)", "Target B (m/z 350)", "Ione C (m/z 500)"];
+        txt = `Filtra Canale ${ch + 1}: ${labels[ch] || "altre masse"}`;
+        color = ch === 0 ? col(1) : (ch === 1 ? col(2) : (ch === 2 ? col(4) : colMuted));
+      } else {
+        txt = "Settling (6 ms)";
+      }
+    } else {
+      const sweepMs = cycleMs - 10;
+      if (progressMs < sweepMs) {
+        const mass = 100 + (progressMs / sweepMs) * 800;
+        txt = `Sweep: m/z ${TP.fmt(mass, 0)} Da (${ctls.speed} Da/s)`;
+        if (Math.abs(mass - 200) < 6) { passingId = 0; color = col(1); }
+        else if (Math.abs(mass - 350) < 6) { passingId = 1; color = col(2); }
+        else if (Math.abs(mass - 500) < 6) { passingId = 2; color = col(4); }
+      } else {
+        txt = "Ritorno scala masse (settling 10 ms)";
+      }
     }
+    return { passingId, txt, color };
+  }
 
-    // Avanzamento particelle (fluido e calmo)
-    const pSpeedFactor = Math.max(0.2, (timeScale / 0.4) * 0.55);
+  function drawInstrument(W, topH, yMid, xEsi, xQ1, xQ2, xDet, st) {
+    ctx.fillStyle = colPanel; ctx.strokeStyle = colLine; ctx.lineWidth = 1;
+    ctx.fillRect(8, 8, W - 16, topH); ctx.strokeRect(8, 8, W - 16, topH);
+
+    ctx.beginPath();
+    ctx.moveTo(xEsi - 30, yMid - 22); ctx.lineTo(xEsi + 8, yMid - 6);
+    ctx.lineTo(xEsi + 8, yMid + 6); ctx.lineTo(xEsi - 30, yMid + 22);
+    ctx.closePath(); ctx.fillStyle = colLine; ctx.fill();
+
+    ctx.font = "bold 11px system-ui,sans-serif"; ctx.fillStyle = colInk; ctx.textAlign = "center";
+    ctx.fillText("SORGENTE ESI", xEsi - 10, yMid - 28);
+    ctx.font = "10px system-ui,sans-serif"; ctx.fillStyle = colMuted;
+    ctx.fillText("Flusso continuo", xEsi - 10, yMid + 36);
+
+    ctx.fillStyle = colLine;
+    ctx.fillRect(xQ1, yMid - 28, xQ2 - xQ1, 10);
+    ctx.fillRect(xQ1, yMid + 18, xQ2 - xQ1, 10);
+
+    ctx.font = "bold 12px system-ui,sans-serif"; ctx.fillStyle = st.color; ctx.textAlign = "center";
+    ctx.fillText(st.txt, (xQ1 + xQ2) / 2, yMid - 36);
+    ctx.font = "11px system-ui,sans-serif"; ctx.fillStyle = colMuted;
+    ctx.fillText("QUADRUPOLO (BARRE RF/DC)", (xQ1 + xQ2) / 2, yMid + 42);
+
+    ctx.fillStyle = colLine;
+    ctx.fillRect(xDet - 6, yMid - 24, 12, 48);
+    ctx.font = "bold 11px system-ui,sans-serif"; ctx.fillStyle = colInk;
+    ctx.fillText("RIVELATORE", xDet, yMid - 30);
+    ctx.font = "10px system-ui,sans-serif"; ctx.fillStyle = colMuted;
+    ctx.fillText(st.passingId === 1 ? "Conta Target B" : "(attesa)", xDet, yMid + 36);
+  }
+
+  function drawParticles(W, dt, yMid, xEsi, xQ1, xQ2, xDet, passingId) {
+    const pCols = [col(1), col(2), col(4)];
+    const pRad = [4.5, 5.5, 4.5];
+    const rate = ctls.anim || 0.35;
+
     PARTICLES.forEach(p => {
-      p.x += p.speed * dtReal * pSpeedFactor;
-      if (p.x > 1) {
-        p.x = 0;
-        p.y = (Math.random() - 0.5) * 22;
+      p.x += p.vx * dt * rate;
+      if (p.x > 1.05) {
+        p.x = 0; p.y = (Math.random() - 0.5) * 20; p.deflected = false; p.deflVy = 0;
+      }
+      const px = xEsi + p.x * (xDet - xEsi + 20);
+      if (px >= xQ1 && px <= xQ2 && !p.deflected && p.type !== passingId) {
+        p.deflected = true;
+        p.deflVy = (p.y >= 0 ? 1 : -1) * (35 + Math.random() * 25);
+      }
+      if (p.deflected) p.y += p.deflVy * dt * rate;
+      const py = yMid + p.y;
+      if (px <= xDet || (p.type === passingId && !p.deflected)) {
+        ctx.beginPath(); ctx.arc(px, py, pRad[p.type], 0, 2 * Math.PI);
+        ctx.fillStyle = pCols[p.type]; ctx.fill();
+        ctx.strokeStyle = colPanel; ctx.lineWidth = 1; ctx.stroke();
       }
     });
   }
 
-  function draw() {
-    const { ctx, W, H } = c;
-    ctx.clearRect(0, 0, W, H);
-
-    const { cycleSec, dwellMs, dutyPct } = getTiming();
-
-    // Calcolo di quale ione viene trasmesso in questo millisecondo
-    let currentPassingId = -1; // -1: nessuno (settling o massa diversa da A, B, C)
-    let quadStatusText = "";
-    let quadStatusColor = colMuted;
-    let currentMass = 0;
-
-    const cycleMs = cycleSec * 1000;
-    const progressMs = (tSim * 1000) % cycleMs;
-
-    if (mode === "mrm") {
-      const stepMs = dwellMs + 6; // dwell + pause
-      const activeChannel = Math.floor(progressMs / stepMs);
-      const inDwell = (progressMs % stepMs) < dwellMs;
-
-      if (inDwell) {
-        if (activeChannel === 0) {
-          currentPassingId = 0; // Ione A
-          quadStatusText = "Filtra Canale 1: Ione A (m/z 200)";
-          quadStatusColor = col(1);
-        } else if (activeChannel === 1) {
-          currentPassingId = 1; // Target B
-          quadStatusText = "Filtra Canale 2: Target B (m/z 350)";
-          quadStatusColor = col(2);
-        } else if (activeChannel === 2) {
-          currentPassingId = 2; // Ione C
-          quadStatusText = "Filtra Canale 3: Ione C (m/z 500)";
-          quadStatusColor = col(4);
-        } else {
-          currentPassingId = -1;
-          quadStatusText = `Filtra Canale ${activeChannel + 1} (altre masse)`;
-          quadStatusColor = colMuted;
-        }
-      } else {
-        currentPassingId = -1;
-        quadStatusText = "Inter-scan delay (settling 6 ms)";
-        quadStatusColor = colMuted;
-      }
-    } else {
-      // Full Scan
-      const sweepMs = cycleMs - 10;
-      if (progressMs < sweepMs) {
-        const frac = progressMs / sweepMs;
-        currentMass = 100 + frac * 800; // da 100 a 900 Da
-        quadStatusText = `Sweep: m/z ${TP.fmt(currentMass, 0)} Da (${ctls.speed} Da/s)`;
-
-        if (Math.abs(currentMass - 200) < 6) {
-          currentPassingId = 0;
-          quadStatusColor = col(1);
-        } else if (Math.abs(currentMass - 350) < 6) {
-          currentPassingId = 1;
-          quadStatusColor = col(2);
-        } else if (Math.abs(currentMass - 500) < 6) {
-          currentPassingId = 2;
-          quadStatusColor = col(4);
-        } else {
-          currentPassingId = -1;
-          quadStatusColor = colMuted;
-        }
-      } else {
-        currentPassingId = -1;
-        quadStatusText = "Ritorno scala masse (settling 10 ms)";
-        quadStatusColor = colMuted;
-      }
-    }
-
-    // ============================================================== 1. STRUMENTO (IN ALTO)
-    const topH = 120;
-    ctx.fillStyle = colPanel;
-    ctx.strokeStyle = colLine;
-    ctx.lineWidth = 1;
-    ctx.fillRect(8, 8, W - 16, topH);
-    ctx.strokeRect(8, 8, W - 16, topH);
-
-    const yMid = 8 + topH / 2;
-    const xEsi = 75;
-    const xQ1 = W * 0.36;
-    const xQ2 = W * 0.72;
-    const xDet = W - 55;
-
-    // Cono ESI
-    ctx.beginPath();
-    ctx.moveTo(xEsi - 30, yMid - 22);
-    ctx.lineTo(xEsi + 8, yMid - 6);
-    ctx.lineTo(xEsi + 8, yMid + 6);
-    ctx.lineTo(xEsi - 30, yMid + 22);
-    ctx.closePath();
-    ctx.fillStyle = colLine;
-    ctx.fill();
-
-    ctx.font = "bold 11px system-ui,sans-serif";
-    ctx.fillStyle = colInk;
-    ctx.textAlign = "center";
-    ctx.fillText("SORGENTE ESI", xEsi - 10, yMid - 28);
-    ctx.font = "10px system-ui,sans-serif";
-    ctx.fillStyle = colMuted;
-    ctx.fillText("Flusso continuo", xEsi - 10, yMid + 36);
-
-    // Quadrupolo
-    const hasPassing = currentPassingId >= 0;
-    ctx.fillStyle = hasPassing ? (currentPassingId === 1 ? "rgba(194, 65, 12, 0.12)" : "rgba(43, 92, 138, 0.10)") : "rgba(180, 35, 24, 0.05)";
-    ctx.fillRect(xQ1, yMid - 28, xQ2 - xQ1, 56);
-    ctx.strokeStyle = hasPassing ? quadStatusColor : colLine;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(xQ1, yMid - 28, xQ2 - xQ1, 56);
-
-    // Barre metalliche
-    ctx.fillStyle = colLine;
-    ctx.fillRect(xQ1, yMid - 28, xQ2 - xQ1, 7);
-    ctx.fillRect(xQ1, yMid + 21, xQ2 - xQ1, 7);
-
-    // Testi stato quadrupolo
-    ctx.font = "bold 11.5px system-ui,sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillStyle = quadStatusColor;
-    ctx.fillText(quadStatusText.toUpperCase(), (xQ1 + xQ2) / 2, yMid - 34);
-
-    ctx.font = "10.5px system-ui,sans-serif";
-    if (hasPassing) {
-      ctx.fillStyle = quadStatusColor;
-      ctx.fillText(`✔ TRASMETTE SOLO ${IONS[currentPassingId].label}`, (xQ1 + xQ2) / 2, yMid + 4);
-    } else {
-      ctx.fillStyle = colBad;
-      ctx.fillText("✖ TUTTI GLI IONI SBATTONO SULLE BARRE", (xQ1 + xQ2) / 2, yMid + 4);
-    }
-
-    // Rivelatore (Detector)
-    ctx.fillStyle = hasPassing ? quadStatusColor : colLine;
-    ctx.strokeStyle = hasPassing ? quadStatusColor : colMuted;
-    ctx.lineWidth = 1.5;
-    ctx.fillRect(xDet - 15, yMid - 24, 22, 48);
-    ctx.strokeRect(xDet - 15, yMid - 24, 22, 48);
-    ctx.fillStyle = hasPassing ? "#ffffff" : colInk;
-    ctx.font = "bold 10px system-ui,sans-serif";
-    ctx.fillText("DET", xDet - 4, yMid + 3);
-
-    // Particelle che si muovono
-    PARTICLES.forEach(p => {
-      const px = (xEsi + 10) + p.x * (xDet - xEsi - 22);
-      let py = yMid + p.y;
-
-      const insideQuad = px >= xQ1 && px <= xQ2;
-      const pastQuad = px > xQ2;
-      const isThisPassing = (p.type === currentPassingId);
-
-      if (insideQuad) {
-        if (!isThisPassing) {
-          // Deviazione rapida verso le barre
-          py += (p.y >= 0 ? 1 : -1) * (px - xQ1) * 0.42;
-        } else {
-          // Traiettoria stabile focalizzata
-          py = yMid + p.y * 0.25;
-        }
-      } else if (pastQuad) {
-        if (!isThisPassing) return; // sparita sulle barre!
-        py = yMid + p.y * 0.25;
-      }
-
-      ctx.beginPath();
-      ctx.arc(px, py, p.type === 1 ? 3.4 : 2.8, 0, 2 * Math.PI);
-      ctx.fillStyle = IONS[p.type].color;
-      ctx.fill();
-    });
-
-    // Legenda colori ioni (in basso nel riquadro strumento)
-    const legX = xQ1;
-    ctx.font = "10.5px system-ui,sans-serif";
-    ctx.textAlign = "left";
-    IONS.forEach((ion, i) => {
-      const lx = legX + i * 115;
-      ctx.beginPath();
-      ctx.arc(lx, yMid + 45, 3.5, 0, 2 * Math.PI);
-      ctx.fillStyle = ion.color;
-      ctx.fill();
-      ctx.fillStyle = colInk;
-      ctx.fillText(ion.label, lx + 7, yMid + 48);
-    });
-
-    // ============================================================== 2. PICCO CROMATOGRAFICO (SOTTO)
-    const pTop = 150;
-    const pBot = H - 32;
-    const pLeft = 55;
-    const pRight = W - 25;
-    const pW = pRight - pLeft;
-    const pH = pBot - pTop;
-
+  function drawPlot(W, H, cycleSec, dwellMs, dutyPct) {
+    const pTop = 150, pBot = H - 32, pLeft = 55, pRight = W - 25, pW = pRight - pLeft, pH = pBot - pTop;
     const xOfT = t => pLeft + (t / T_TOTAL) * pW;
     const yOfVal = v => pBot - v * (pH - 18);
 
-    // Assi
-    ctx.strokeStyle = colLine;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pLeft, pBot);
-    ctx.lineTo(pRight, pBot);
-    ctx.moveTo(pLeft, pTop);
-    ctx.lineTo(pLeft, pBot);
-    ctx.stroke();
+    ctx.strokeStyle = colLine; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pLeft, pBot); ctx.lineTo(pRight, pBot);
+    ctx.moveTo(pLeft, pTop); ctx.lineTo(pLeft, pBot); ctx.stroke();
 
-    ctx.font = "11px system-ui,sans-serif";
-    ctx.fillStyle = colMuted;
-    ctx.textAlign = "center";
+    ctx.font = "11px system-ui,sans-serif"; ctx.fillStyle = colMuted; ctx.textAlign = "center";
     ctx.fillText("0 s", pLeft, pBot + 16);
     ctx.fillText(`${T_TOTAL / 2} s`, pLeft + pW / 2, pBot + 16);
     ctx.fillText(`${T_TOTAL} s (tempo cromatografico)`, pRight - 45, pBot + 16);
 
-    ctx.save();
-    ctx.translate(14, pTop + pH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Segnale Target B", 0, 0);
-    ctx.restore();
+    ctx.save(); ctx.translate(14, pTop + pH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Segnale Target B", 0, 0); ctx.restore();
 
-    // Curva teorica continua (Target B)
     ctx.beginPath();
     for (let s = 0; s <= T_TOTAL; s += 0.05) {
-      const x = xOfT(s);
-      const y = yOfVal(peakIdeal(s));
+      const x = xOfT(s), y = yOfVal(peakIdeal(s));
       if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    ctx.strokeStyle = colMuted;
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash([4, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.strokeStyle = colMuted; ctx.lineWidth = 1.8; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = "italic 11px system-ui,sans-serif"; ctx.fillStyle = colMuted; ctx.textAlign = "left";
+    ctx.fillText("– – – Picco teorico Target B (eluizione continua)", pLeft + 10, pTop + 14);
 
-    ctx.font = "italic 11px system-ui,sans-serif";
-    ctx.fillStyle = colMuted;
-    ctx.textAlign = "left";
-    ctx.fillText("– – –  Picco teorico Target B (eluizione continua)", pLeft + 10, pTop + 14);
-
-    // Punti campionati registrati
     if (samples.length > 0) {
       ctx.beginPath();
       samples.forEach((sp, idx) => {
-        const x = xOfT(sp.t);
-        const y = yOfVal(sp.val);
+        const x = xOfT(sp.t), y = yOfVal(sp.val);
         if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
-      const ptsCount = samples.length;
-      ctx.strokeStyle = ptsCount >= 12 ? colOk : (ptsCount >= 7 ? colWarn : colBad);
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
+      ctx.strokeStyle = samples.length >= 12 ? colOk : (samples.length >= 7 ? colWarn : colBad);
+      ctx.lineWidth = 2.2; ctx.stroke();
 
       samples.forEach(sp => {
-        const x = xOfT(sp.t);
-        const y = yOfVal(sp.val);
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, 2 * Math.PI);
-        ctx.fillStyle = col(2); // colore Target B
-        ctx.fill();
-        ctx.strokeStyle = colPanel;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(xOfT(sp.t), yOfVal(sp.val), 4, 0, 2 * Math.PI);
+        ctx.fillStyle = col(2); ctx.fill(); ctx.strokeStyle = colPanel; ctx.lineWidth = 1.2; ctx.stroke();
       });
     }
 
-    // Linea verticale del tempo corrente
     const curX = xOfT(Math.min(tSim, T_TOTAL));
-    ctx.strokeStyle = col(1);
-    ctx.lineWidth = 1.4;
-    ctx.setLineDash([2, 2]);
-    ctx.beginPath();
-    ctx.moveTo(curX, pTop);
-    ctx.lineTo(curX, pBot);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.strokeStyle = col(1); ctx.lineWidth = 1.4; ctx.setLineDash([2, 2]);
+    ctx.beginPath(); ctx.moveTo(curX, pTop); ctx.lineTo(curX, pBot); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(curX, pBot, 4, 0, 2 * Math.PI); ctx.fillStyle = col(1); ctx.fill();
 
-    ctx.beginPath();
-    ctx.arc(curX, pBot, 4, 0, 2 * Math.PI);
-    ctx.fillStyle = col(1);
-    ctx.fill();
-
-    // Badge esito
     const nPts = samples.length;
-    let badgeText = `Punti acquisiti Target B: ${nPts}`;
-    let badgeCol = colMuted;
+    let bText = `Punti acquisiti Target B: ${nPts}`, bCol = colMuted;
     if (tSim >= T_TOTAL) {
-      if (nPts >= 14) {
-        badgeText = `Fine picco: ${nPts} punti (✔ Ottimo per quantificare)`;
-        badgeCol = colOk;
-      } else if (nPts >= 8) {
-        badgeText = `Fine picco: ${nPts} punti (⚠ Al limite, picco squadrato)`;
-        badgeCol = colWarn;
-      } else {
-        badgeText = `Fine picco: ${nPts} punti (✖ Inaccettabile: apice perso)`;
-        badgeCol = colBad;
-      }
+      bText = nPts >= 14 ? `Fine picco: ${nPts} punti (✔ Ottimo)` : (nPts >= 8 ? `Fine picco: ${nPts} punti (⚠ Al limite)` : `Fine picco: ${nPts} punti (✖ Inaccettabile)`);
+      bCol = nPts >= 14 ? colOk : (nPts >= 8 ? colWarn : colBad);
     }
-    ctx.font = "bold 12px system-ui,sans-serif";
-    ctx.fillStyle = badgeCol;
-    ctx.textAlign = "right";
-    ctx.fillText(badgeText, pRight - 6, pTop + 14);
+    ctx.font = "bold 12px system-ui,sans-serif"; ctx.fillStyle = bCol; ctx.textAlign = "right";
+    ctx.fillText(bText, pRight - 6, pTop + 14);
 
-    // ============================================================== SINTESI SOTTO
     out.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;font-size:14.5px">
         <div><b>Tempo di ciclo</b>: ${TP.fmt(cycleSec * 1000, 0)} ms (${TP.fmt(cycleSec, 2)} s)</div>
@@ -504,17 +265,23 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  function loop() {
-    const now = performance.now();
-    const dt = (now - lastRealTime) / 1000;
-    lastRealTime = now;
+  function draw() {
+    const W = c.W, H = c.H, topH = 120, yMid = 8 + topH / 2;
+    const xEsi = 75, xQ1 = W * 0.36, xQ2 = W * 0.72, xDet = W - 55;
+    ctx.clearRect(0, 0, W, H);
+    const { cycleSec, dwellMs, dutyPct } = getTiming();
+    const st = getStatus(cycleSec, dwellMs);
+    drawInstrument(W, topH, yMid, xEsi, xQ1, xQ2, xDet, st);
+    drawParticles(W, 0.016, yMid, xEsi, xQ1, xQ2, xDet, st.passingId);
+    drawPlot(W, H, cycleSec, dwellMs, dutyPct);
+  }
 
+  function loop() {
+    const now = performance.now(), dt = (now - lastRealTime) / 1000;
+    lastRealTime = now;
     update(Math.min(dt, 0.1));
     draw();
-
-    if (!paused) {
-      rafId = requestAnimationFrame(loop);
-    }
+    if (!paused) requestAnimationFrame(loop);
   }
 
   c.onresize = draw;
