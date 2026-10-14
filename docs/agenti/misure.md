@@ -256,3 +256,6 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Rilevamento delle feature (`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx...`, nativo, 13 file reali Orbitrap da circa 80 MB con 3,8 M picchi MS1 ciascuno)
 1 259 216 feature in totale, le stesse di `features.detect` file per file; 0,5-0,7 s e 62-78 MB di picco per file (Python: 3,5 s e 565 MB); due esecuzioni e budget di 8 MB (picco 42-43 MB) danno lo stesso SHA-256.
+
+## Gesti della mappa (`python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR`, Chromium headless 4 CPU, motore WASM, file sintetici)
+- Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.

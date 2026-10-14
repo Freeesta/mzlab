@@ -247,7 +247,7 @@ function uiSave(now = false) {
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
+      tab: E.tab, cur: E.cur, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
@@ -386,7 +386,7 @@ function restoreUi() {
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
   u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
-  STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); E.browse = !!u.browse; STATO.scheda(pickTab(u.tab), "notebook");
+  STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex(f => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
   const made = u.panels.map(sp => addPanel(sp.type, {
@@ -483,8 +483,9 @@ function reorderFiles(fromK, toK, isBefore) {
 const flCompact = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { return lsObj("qqq.flgrp"); }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
-// the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
+// the rows of the list: a click selects the file (the active one), a double click on the name shows only that file (rename: right click), on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
+  bindListaFile();
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
   Q("#flst").querySelectorAll(".fl:not(.pr)").forEach(row => {
     const nm = row.querySelector(".nm"); if (!nm) return;
@@ -502,7 +503,6 @@ function bindFileRows() {
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
     };
-    nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
     const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
   });
 }
@@ -680,14 +680,14 @@ function renderFileList() {
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
     side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
-    renderFileList();
+    renderFileList(); renderNav();
     redrawAll();
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
     sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
-    redrawAll();
+    renderNav(); redrawAll();
     uiSave();
   });
   Q("#flst").querySelectorAll(".fl").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
@@ -744,7 +744,7 @@ function fileMenu(btn) {
   const paint = () => {
     const gs = []; tabFiles().forEach(f => { const g = grpOf(f); let G = gs.find(x => x.g === g); if (!G) gs.push(G = { g, fs: [] }); G.fs.push(f); });
     d.innerHTML = `<div class="fpb"><button data-all="1">${I18N.t("files.pop.all")}</button><button data-all="0">${I18N.t("files.pop.none")}</button></div>` + gs.map(G => `<div class="fgh"><span>${EH(grpLabel(G.g))}</span></div>` + G.fs.map(f => `<label><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}" title="${I18N.t("files.pop.only.title")}">${EH(f.label)}</span></label>`).join("")).join("");
-    const done = () => { renderFileList(); redrawAll(); uiSave(); };
+    const done = () => { renderFileList(); renderNav(); redrawAll(); uiSave(); };
     d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { tabFiles().forEach(f => f.vis = b.dataset.all === "1"); if (b.dataset.all === "0") cleanupOrphanPanels(); paint(); done(); });
     d.querySelectorAll("input").forEach(i => i.onchange = () => { E.files[+i.dataset.k].vis = i.checked; if (!i.checked) cleanupOrphanPanels(); done(); });
     d.querySelectorAll(".fn").forEach(n => n.onclick = e => { e.preventDefault(); tabFiles().forEach(f => f.vis = f.k === +n.dataset.k); cleanupOrphanPanels(); paint(); done(); });
@@ -770,24 +770,13 @@ function renderNav() {
   const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
   s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";   // as wide as the longest name (CSS sets the minimum and the maximum)
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");   // with a single file nothing here has a meaning
-  // a single file: "Solo il selezionato" is on and "Tutti sovrapposti" is off; with two or more files the choice the student had made comes back
-  if (one && tf.length) { if (!E._forced) { E._forced = true; E._prev = !!E.browse; } E.browse = true; STATO.file(tf[0].k, "browse"); }
-  else if (E._forced) { E._forced = false; E.browse = !!E._prev; }
-  Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
-  const nowhy = I18N.t("nav.onlySelected");
-  [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; const nav = !b.closest("#fmode"), all = b.dataset.m === "all"; b.disabled = nav ? one || !E.browse : one && all; b.title = one ? (all ? I18N.t("nav.oneFile") : nav ? why : b.dataset.t0) : nav && !E.browse ? nowhy : b.dataset.t0; });
+  syncBrowse();                                                      // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
+  [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
-  Q("#fmode").classList.toggle("dis", one);
-}
-function goFile(d) {
-  const tf = tabFiles(); if (tf.length < 2 || !E.browse) return;
-  STATO.file(tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k, "browse"); renderNav();
-  renderFileList(); redrawAll(); uiSave();
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
-Q("#fsel").onchange = e => { STATO.file(+e.target.value, "file"); renderFileList(); renderNav(); if (E.browse) redrawAll(); uiSave(); };
-Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
+Q("#fsel").onchange = e => activeFile(+e.target.value);
 // ← → (scan by scan or file by file), Maiusc + ← →, Spazio and Esc: see scroll.js (scrollKeys)
 document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (e.target); if (E.active && t.closest("#dpanels") && !t.closest(".pnl")) setActive(null); });
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time

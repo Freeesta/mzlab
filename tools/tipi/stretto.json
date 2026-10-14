@@ -39,6 +39,7 @@
     "../../mzlab/web/grafici.js",
     "../../mzlab/web/picchi.js",
     "../../mzlab/web/storia.js",
+    "../../mzlab/web/asse.js",
     "../../mzlab/web/eventi.js",
     "../../mzlab/web/composizione.js",
     "../../mzlab/web/elementare.js",
