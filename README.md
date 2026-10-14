@@ -10,7 +10,8 @@ Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, 
 
 - **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
-- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent. Per gli altri formati si converte in mzML (guida nella schermata di caricamento).
+- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop (ultima versione). I file Waters, Shimadzu e Bruker non si leggono direttamente: convertire in mzML con MSConvert (guida nella schermata di caricamento).
+  *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the latest desktop app. Waters, Shimadzu and Bruker files are not read directly: convert them to mzML with MSConvert.)*
 - **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet.
 
 ## Le schede
