@@ -88,7 +88,7 @@ def test_sheet_names_and_text_cleanup(tmp_path):
 def test_dlx_completes_the_extension():
     code = "const calls=[];global.dl=(n,d,m)=>calls.push([n,d.constructor.name,m]);" \
            "const fs=require('fs');const src=fs.readFileSync(" + repr(str(JS)) + ",'utf8');" \
-           "(0,eval)(src+';globalThis.dlx=dlx');dlx('r',[{name:'a',rows:[[1]]}]);dlx('r.XLSX',[{name:'a',rows:[]}]);console.log(JSON.stringify(calls))"
+           "(0,eval)(src+';globalThis.dlx=dlx');(async()=>{await dlx('r',[{name:'a',rows:[[1]]}],false);await dlx('r.XLSX',[{name:'a',rows:[]}],false);console.log(JSON.stringify(calls))})()"
     calls = json.loads(subprocess.run(["node", "-e", code], check=True, capture_output=True, encoding="utf-8").stdout)
     mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     assert calls == [["r.xlsx", "Uint8Array", mime], ["r.XLSX", "Uint8Array", mime]]

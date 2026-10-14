@@ -3,7 +3,7 @@
 // «# mzLab x.y.z · file=... · background=... · ...»; this file only collects what the page knows (files, background, SNIP, smoothing, tolerance)
 // and puts the result in the three places a table leaves the program: dl() (CSV/TSV: the line, first row), dlx() (.xlsx: a last sheet) and the clipboard (PROV.tsv).
 // The line starts with «#»: pandas skips it (read_csv(..., comment="#")), R too (comment.char = "#"); Excel shows it as row 1 (delete it, or Data > From Text/CSV and start at row 2).
-// An export takes part by passing a third/fourth argument to dl()/dlx() (an object with the fields it knows: file, table, p = panel); the files of mzFinder, made for other programs, do not.
+// Every CSV/TSV and .xlsx goes through dl()/dlx() and gets it by default; an export adds the fields it knows ({table, file, p = panel}); the files of mzFinder, made for other programs, pass false.
 const PROV = (() => {
   /** @param {any} p panel @returns {Record<string, string>} */
   const ofPanel = p => {

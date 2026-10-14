@@ -61,3 +61,15 @@ def test_one_helper_and_the_engine_writes_the_line():
 def test_own_imports_skip_the_provenance_line():
     for name in ("liste.js", "campioni.js"):
         assert 'startsWith("#")' in (WEB / name).read_text(encoding="utf-8"), name
+
+
+def test_default_on_and_mzfinder_opts_out():
+    """the helpers add the provenance unless told `false`; every CSV/xlsx of mzFinder (files for mzmine, GNPS, ...) says false"""
+    assert "prov !== false" in (WEB / "explore.js").read_text(encoding="utf-8") and "prov !== false" in (WEB / "xlsx.js").read_text(encoding="utf-8")
+    tp = WEB.parent.parent / "TP_Mine" / "js"
+    for name in ("28_untarget_export.js", "38_feature_export.js"):
+        src = (tp / name).read_text(encoding="utf-8")
+        for m in re.finditer(r"G\.dlx?\(", src):
+            c = call(src, m.end() - 1)
+            if "text/csv" in c or m.group().startswith("G.dlx"):
+                assert c.rstrip(")").rstrip().endswith("false"), (name, c[-90:])

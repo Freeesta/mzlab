@@ -19,9 +19,9 @@ r = Run(port=8893, wd="/tmp/wd93")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(f) for f in SYN]); pg.wait_for_timeout(2500)
+        pg.set_input_files("#pick", [str(f) for f in SYN]); attendi(pg, "document.body.innerText.includes('Carica dati')")
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
-        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); pg.wait_for_timeout(1200)
+        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); attendi(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
         def line_ok(t):
             first = t.split("\n")[0]
             assert first.startswith(f"# mzLab {VER} · "), first
@@ -39,8 +39,10 @@ try:
                 with pg.expect_download() as d: pg.evaluate(f"dl('{name}', 'a\\tb\\n1\\t2\\n', '{typ}', {{ table: 'prova' }})")
                 d.value.save_as("/tmp/prov_" + name); t = open("/tmp/prov_" + name, encoding="utf-8").read()
                 line_ok(t); assert t.split("\n")[1:3] == ["a\tb", "1\t2"], t
-            with pg.expect_download() as d: pg.evaluate("dl('n.csv', 'a\\n1\\n', 'text/csv')")
-            d.value.save_as("/tmp/prov_n.csv"); assert open("/tmp/prov_n.csv").read() == "a\n1\n", "without prov the file is unchanged (mzFinder)"
+            with pg.expect_download() as d: pg.evaluate("dl('d.csv', 'a\\n1\\n', 'text/csv')")
+            d.value.save_as("/tmp/prov_d.csv"); line_ok(open("/tmp/prov_d.csv").read())       # default: no argument, the line is there
+            with pg.expect_download() as d: pg.evaluate("dl('n.csv', 'a\\n1\\n', 'text/csv', false)")
+            d.value.save_as("/tmp/prov_n.csv"); assert open("/tmp/prov_n.csv").read() == "a\n1\n", "false = unchanged (mzFinder)"
         step("csv / tsv: the line comes first, the table follows unchanged", csv_tsv)
         def clip():
             t = pg.evaluate("PROV.tsv('x\\ty\\n1\\t2', {table:'prova'})"); line_ok(t)

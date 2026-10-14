@@ -45,10 +45,10 @@ ${q.gruppi.length ? `<table>${row(["Type", "Group", "Time (min)", "Files", "Rows
     const enc = new TextEncoder();
     /** @type {Record<string, () => Promise<void> | void>} */
     const act = {
-      mzmine: async () => G.dl(stem + "_mzmine.csv", await o.session.file(o.spec(), "full_mzmine"), "text/csv;charset=utf-8"),
-      full: async () => G.dl(stem + "_cells.csv", await o.session.file(o.spec(), "full"), "text/csv;charset=utf-8"),
-      xlsx: async () => { const rows = await o.session.rows(o.spec()); G.dlx(stem + ".xlsx", [{ name: "Features", head: rows[0], rows: rows.slice(1) }]); },
-      semi: async () => G.dl(stem + ".csv", "﻿" + await o.session.file(o.spec(), "csv_semicolon"), "text/csv;charset=utf-8"),
+      mzmine: async () => G.dl(stem + "_mzmine.csv", await o.session.file(o.spec(), "full_mzmine"), "text/csv;charset=utf-8", false),
+      full: async () => G.dl(stem + "_cells.csv", await o.session.file(o.spec(), "full"), "text/csv;charset=utf-8", false),
+      xlsx: async () => { const rows = await o.session.rows(o.spec()); G.dlx(stem + ".xlsx", [{ name: "Features", head: rows[0], rows: rows.slice(1) }], false); },
+      semi: async () => G.dl(stem + ".csv", "﻿" + await o.session.file(o.spec(), "csv_semicolon"), "text/csv;charset=utf-8", false),
       fbmn: async () => G.dl("gnps2_" + stem + ".zip", G.zipStore([["quant.csv", enc.encode(await o.session.file(o.spec(), "quant"))], ["ms2.mgf", enc.encode(await ms2("mgf"))]]), "application/zip"),
       sirius: async () => G.dl("sirius_" + stem + ".ms", await ms2("sirius"), TXT),
       report: async () => G.dl(stem + "_report.html", reportHtml(await o.session.report(o.spec()), o.names), "text/html;charset=utf-8"),
