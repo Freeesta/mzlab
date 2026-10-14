@@ -215,6 +215,33 @@ fn the_frequency_alone_is_not_a_candidate() {
     assert!(b.reasons.iter().all(|r| r.code != R_ONLY_FREQUENCY));
 }
 
+#[test]
+fn the_controls_alone_are_not_a_candidate() {
+    let t = table();
+    let ctl = proof(&t, Kind::Controls, 8.0, None, false);
+    let freq = proof(&t, Kind::Frequency, 1.0, None, false);
+    assert!(ctl.points > 0.0);
+    for rows in [vec![ctl.clone()], vec![ctl.clone(), freq.clone()]] {
+        let b = breakdown(&t, rows, 1);
+        assert_eq!(
+            b.total, 0.0,
+            "above the blank says the signal is real, not what it is"
+        );
+        assert!(b.reasons.iter().any(|r| r.code == R_ONLY_CONTROLS));
+    }
+    let mass = proof(&t, Kind::Mass, 1.0, None, false);
+    let b = breakdown(&t, vec![ctl.clone(), freq.clone(), mass.clone()], 1);
+    assert_eq!(
+        b.total,
+        ctl.points + freq.points + mass.points,
+        "with a proof of the identity the controls and the frequency count"
+    );
+    assert!(b
+        .reasons
+        .iter()
+        .all(|r| r.code != R_ONLY_CONTROLS && r.code != R_ONLY_FREQUENCY));
+}
+
 fn strings(v: Option<&Value>) -> Vec<String> {
     v.map(Value::arr)
         .unwrap_or(&[])
