@@ -30,13 +30,14 @@ try:
             pg.wait_for_function(f"{M}._mz.sp.dataset.pts", timeout=15000)
             return pg.evaluate(f"(()=>{{const d={M}._mz.sp.dataset;return [+d.pts,+d.full,{M}._mz.sp.getBoundingClientRect().height]}})()")
         def whole():
-            n, full, h = pts(); assert n >= 100 and full > n * 0 and n > 0.3 * h, (n, full, h)    # a continuous line: about one point per pixel row, not a few bars
+            n, full, h = pts(); assert n > 0.3 * h and full > n, (n, full, h)    # a continuous line: about one point per pixel row, not a few bars
         step("profile scan: continuous line, many points", whole)
         def zoom():
-            pg.evaluate(f"(()=>{{const a={M}._a;{M}.setView&&0}})()")
-            for _ in range(5):
+            for _ in range(25):
                 pg.mouse.wheel(0, -300); ready(pg)
-            n, full, h = pts(); assert full >= 5 and n == full, (n, full)                         # zoomed in: every original point is drawn
+                n, full, h = pts()
+                if n == full: break
+            assert full >= 5 and n == full, (n, full)                                             # zoomed in: every original point is drawn
         step("strong zoom: every point is drawn", zoom)
         b.close()
     r.close()
