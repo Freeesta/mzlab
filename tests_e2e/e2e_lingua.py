@@ -33,20 +33,16 @@ try:
             pg = page("en-US", "?lang=it"); assert pg.evaluate("I18N.lang") == "it"
         step("?lang= forces the language for the tab", query)
         def theory():
-            pg = page("en-US"); pg.click("#nav [data-v=theory]"); pg.wait_for_timeout(300)
-            assert pg.is_visible("#theory-sorry") and not pg.is_visible("#tframe")
-            t = pg.inner_text("#theory-sorry")
-            assert "Sorry — the Theory section is not available in English yet. An English version is planned for a future release." in t, t
-            assert pg.inner_text("#theory-it") == "Open the Italian version anyway"
-            pg.click("#theory-it"); pg.wait_for_timeout(500)
-            assert pg.is_visible("#tframe") and not pg.is_visible("#theory-sorry") and "teoria" in pg.evaluate("document.querySelector('#tframe').src")
-            pg.click("#nav [data-v=data]"); pg.click("#nav [data-v=theory]"); pg.wait_for_timeout(300)
-            assert pg.is_visible("#theory-sorry"), "the Italian Theory is only for that visit"
-        step("Theory in English: courtesy page, button opens the Italian one for that visit only", theory)
+            pg = page("en-US"); pg.click("#nav [data-v=theory]")
+            pg.wait_for_function("document.querySelector('#tframe').src.includes('teoria')")
+            assert pg.is_visible("#tframe") and pg.locator("#theory-sorry").count() == 0, "no courtesy page: the Theory opens at once"
+            pg.wait_for_function("[...document.querySelectorAll('#toast-container *')].some(e => e.textContent.trim() === 'Sorry! For now the theory is only in Italian.')")
+        step("Theory in English: opens at once in Italian, with the «only in Italian» toast", theory)
         def italian_theory():
             pg = page("it-IT"); pg.click("#nav [data-v=theory]"); pg.wait_for_timeout(500)
-            assert pg.is_visible("#tframe") and not pg.is_visible("#theory-sorry")
-        step("Theory in Italian: unchanged", italian_theory)
+            pg.wait_for_function("document.querySelector('#tframe').src.includes('teoria')")
+            assert pg.is_visible("#tframe") and not pg.locator("#toast-container *").count(), "no toast in Italian"
+        step("Theory in Italian: no toast", italian_theory)
         def gear():
             pg = page("it-IT"); shutil.rmtree("/tmp/s_lingua", ignore_errors=True)
             stage(pg, synth.make_series("/tmp/s_lingua", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)

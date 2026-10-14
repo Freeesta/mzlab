@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it"><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema--><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Domande dell'orale · QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script><link rel="stylesheet" href="pratica/pratica.css"></head>
+<title>Domande di ripasso · Teoria mzLab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script><link rel="stylesheet" href="pratica/pratica.css"></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Pratica</div>
-<h1>Domande dell'orale</h1>
-<p class="lead">L'orale ha due parti: domande su spettrometria di massa (bassa e alta risoluzione), GC e LC, con le formule principali degli analizzatori; poi uno spettro EI da risolvere a mano. Qui si allena la prima parte: rispondete a voce o per scritto, poi confrontate la risposta con i punti che una risposta completa deve toccare.</p>
+<h1>Domande di ripasso</h1>
+<p class="lead">Un percorso strutturato di autoverifica: domande teoriche su spettrometria di massa (bassa e alta risoluzione), GC e LC, con le formule principali degli analizzatori, e l'interpretazione strutturale di uno spettro EI. Rispondete mentalmente o per iscritto, poi confrontate con i punti chiave della risposta modello.</p>
 
 <div class="box key"><b>Come allenarsi</b>
-<p>Rispondete <b>prima</b> di guardare la risposta modello, a voce alta o con una scaletta scritta: è lo sforzo di richiamare che fa ricordare. Poi spuntate onestamente i punti che avete detto. Le domande con meno punti tornano prima (dopo un giorno), quelle sapute bene dopo una, tre settimane. Le formule si ripassano nel <a href="22-formulario.html">formulario</a>, che si può usare anche nascondendo le formule.</p></div>
+<p>Rispondete <b>prima</b> di guardare la risposta modello, a voce o con una scaletta scritta: è lo sforzo di richiamare che fa consolidare la memoria. Poi spuntate con obiettività i punti che avete toccato. Le domande con meno punti tornano prima (dopo un giorno), quelle sapute bene dopo una o tre settimane. Le formule si ripassano nel <a href="22-formulario.html">formulario</a>, che si può usare anche nascondendo le formule.</p></div>
 
 <div class="gbar noprint">
-<button id="exam" class="pri">Simulazione d'orale (4 domande + spettro)</button>
+<button id="exam" class="pri">Sessione completa (4 domande + spettro)</button>
 <label>Ripasso <select id="area"><option value="">tutti gli argomenti</option></select></label>
 <button id="one">Una domanda</button>
 <span class="pts" id="pts"></span>
@@ -71,11 +71,11 @@
       <p><span class="score">${mean}%</span> dei punti${run.exam ? `, in ${min} min` : ""}.</p>
       ${run.res.map(r => `<p>${Math.round(r.frac * 100)}% · ${r.d.q} <a href="${r.d.cap}">ripassa</a></p>`).join("")}
       ${weak.length ? `<p class="fb hi">Le domande sotto il 60% torneranno domani: ripassate i capitoli indicati prima di allora.</p>` : ""}
-      ${run.exam ? `<p><b>Seconda parte:</b> uno spettro EI da risolvere a mano, come all'orale. <a href="pratica-ei.html?orale=1">Apri lo spettro in Modalità orale</a> (si può stampare e risolvere su carta).</p>` : `<div class="row"><button class="pri" id="again">Un'altra domanda</button></div>`}</div>`;
+      ${run.exam ? `<p><b>Seconda parte:</b> uno spettro EI da interpretare in autonomia. <a href="pratica-ei.html?orale=1">Apri lo spettro in modalità autonoma</a> (può anche essere stampato e risolto su carta).</p>` : `<div class="row"><button class="pri" id="again">Un'altra domanda</button></div>`}</div>`;
     const a = $("#again"); if (a) a.onclick = one;
   }
   function exam() {
-    // as at the exam: one question on separation, one on ionization/vacuum, one on an analyzer (with its formulas), one on high resolution/data/EI theory
+    // complete review session: one question on separation, one on ionization/vacuum, one on an analyzer (with its formulas), one on high resolution/data/EI theory
     const r = Math.random, by = a => items.filter(i => a.includes(i.d.area));
     const list = [["sep"], ["ion"], ["anal"], ["hr", "dati", "ei"]].map(a => PAL.pick("orale", by(a), { rng: r }));
     run = { list, i: 0, res: [], exam: true, t0: Date.now() };

@@ -9,7 +9,7 @@ Tutto il testo sta in questa cartella, un file per capitolo. Non c'è niente da 
 | Introduzione e mappa | `index.html` |
 | Capitoli 1–22 | `01-tp.html` … `22-formulario.html` (il numero è nel nome; i vecchi nomi, come `06-quadrupolo.html`, sono rimandi automatici al nuovo capitolo) |
 | Pratica (giochi ed esercizi) | `pratica.html` (pagina iniziale), `pratica-ei.html`, `pratica-orale.html`, `pratica-perdite.html`, `pratica-isotopi.html`, `pratica-formula.html`, `pratica-strumento.html`, `pratica-quadrupolo.html`, `pratica-tp.html`; codice e dati in `pratica/` |
-| Domande dell'orale (testo e punti della risposta) | `pratica/domande.js` |
+| Domande di ripasso (testo e punti della risposta) | `pratica/domande.js` |
 | Spettri EI dei capitoli 15-16 e del gioco | `pratica/ei-dati.js`, generato da `tools/genera_ei.py` (non a mano) |
 | Glossario (parole sottolineate nel testo) | `21-glossario.html`, poi `python3 tools/genera_glossario.py` e `python3 tools/genera_indice_teoria.py` (ricerca) |
 | Elenco dei capitoli nel menu laterale | `teoria.js`, in alto: lista `CHAPTERS` |
@@ -29,7 +29,7 @@ Per vedere la modifica: apri il file con doppio clic e ricarica con Cmd+R. Nell'
 Il testo è tra i "tag" `<…>`. Si cambia il testo, si lasciano i tag. Ogni tag aperto va chiuso: `<p>` … `</p>`.
 
 ```html
-<h2>Titolo di sezione</h2>          compare anche nell'indice "In questa pagina"
+<h2>Titolo di sezione</h2>
 <h3>Sottotitolo</h3>
 <p>Un paragrafo con <b>grassetto</b>, <i>corsivo</i>, H<sub>2</sub>O, 10<sup>−5</sup>.</p>
 <ul><li>punto elenco</li><li>altro punto</li></ul>       (<ol> per l'elenco numerato)
@@ -46,7 +46,7 @@ Caratteri speciali: si possono scrivere direttamente (à è ≈ → Δ λ ±), i
 <div class="box warn"><b>Errore frequente</b><p>Testo.</p></div>      riquadro arancione
 <div class="box lab"><b>In laboratorio</b><p>Testo.</p></div>         riquadro verde
 <div class="box math"><b>Derivazione</b><p>Testo.</p></div>           riquadro viola
-<div class="box oral"><b>All'orale</b><p>Testo.</p></div>             che cosa si chiede all'esame
+<div class="box oral"><b>Domande di ripasso</b><p>Testo.</p></div>     quesiti e concetti chiave di verifica
 <div class="box lr">…</div> <div class="box hr">…</div>              bassa / alta risoluzione (dentro <div class="duo"> stanno affiancati)
 <details class="poe"><summary>Prevedi, poi guarda</summary><p>…</p></details>   domanda prima di una figura
 <div class="eispec" data-ei="2-esanone" data-keys="1"></div>        spettro EI vero (id in pratica/ei-dati.js)
@@ -96,6 +96,6 @@ Menu laterale, indice della pagina e pulsanti avanti/indietro si aggiornano da s
 
 - Ogni gioco salva i progressi solo nel browser (`localStorage`, chiave `qqq.pratica`): nessun dato esce dal computer, nessuna classifica.
 - Il motore comune è `pratica/motore.js` (livello per competenza con una regola tipo Elo, ripasso distanziato 1-3-7-21 giorni, codici sfida, conti chimici). I giochi brevi sono in `pratica/giochi.js`, il gioco EI in `pratica/gioco-ei.js`.
-- Le domande dell'orale si correggono in `pratica/domande.js`: ogni domanda ha un `id` (non cambiarlo: i progressi sono salvati per id), un'area, il capitolo dove sta la risposta e i punti di una risposta completa.
+- Le domande di ripasso si gestiscono in `pratica/domande.js`: ogni domanda ha un `id` (non cambiarlo: i progressi sono salvati per id), un'area, il capitolo dove sta la risposta e i punti di una risposta completa.
 - Il gioco EI e l'editor di strutture funzionano dal programma o dal sito, non da un file aperto con doppio clic (il browser blocca i moduli JavaScript da `file://`). I capitoli e gli altri giochi funzionano anche da disco.
 - Spettri: solo da MassBank (licenza CC BY-NC-SA, fonte indicata sotto ogni spettro), mai dalla libreria NIST. Mai usare composti dei metodi del laboratorio.

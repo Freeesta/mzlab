@@ -457,6 +457,8 @@
   "cart.found": "Avviso sotto il riquadro di caricamento dopo la lettura di una cartella (più file); {n} = file compatibili, {name} = nome della cartella.",
   "cart.found.one": "Come cart.found ma con un solo file compatibile; {name} = nome della cartella.",
   "cart.none": "Avviso quando la cartella non contiene nessun file compatibile; {name} = nome della cartella.",
+  "cart.method": "Frase accodata all'avviso della cartella: più cartelle di metodo Agilent (.m) riconosciute, non sono file ignorati; {n} = quante, {name} = i loro nomi.",
+  "cart.method.one": "Frase accodata all'avviso della cartella: una cartella di metodo Agilent (.m) riconosciuta; {name} = il nome della cartella.",
   "cart.ignored": "Frase accodata all'avviso della cartella: file di formato non riconosciuto, non caricati; {n} = quanti.",
   "cart.reading": "Avviso di avanzamento mentre si legge una cartella trascinata; {n} = file trovati finora.",
   "cartp.where": "Intestazione della cartella ricordata; {name} = nome della cartella.",

@@ -5,7 +5,7 @@
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Capitolo 4</div>
 <h1>Cromatografia liquida (HPLC)</h1>
-<p class="lead">La cromatografia separa nel tempo ciò che lo spettrometro non sa separare in massa. Per un quadrupolo a risoluzione unitaria il tempo di ritenzione è metà dell'informazione. Le grandezze di base (k, α, N, R<sub>s</sub>, van Deemter) sono nel capitolo 3: qui le applichiamo all'HPLC in fase inversa, quella dell'esperienza.</p>
+<p class="lead">La cromatografia separa nel tempo ciò che lo spettrometro non sa separare in massa. Per un quadrupolo a risoluzione unitaria il tempo di ritenzione è metà dell'informazione. Le grandezze di base (k, α, N, R<sub>s</sub>, van Deemter) sono nel capitolo 3: qui le applichiamo all'HPLC in fase inversa (RP-HPLC).</p>
 
 <h2>Lo strumento</h2>
 <figure>
@@ -26,20 +26,20 @@
 <rect class="bx" x="770" y="55" width="80" height="75" rx="6"/><text class="t" x="810" y="82" text-anchor="middle">ESI-MS</text><text class="s" x="810" y="102" text-anchor="middle">QqQ</text>
 <text class="s" x="430" y="185" text-anchor="middle">il volume fra il punto di miscelazione e la testa della colonna (volume di ritardo, dwell volume) ritarda l'arrivo del gradiente</text>
 </svg><details class="figdesc" id="fd-04-0"><summary>Descrizione della figura</summary><p>Da sinistra: i solventi A (acqua + HCOOH) e B (ACN + HCOOH); pompa binaria con degasatore e miscelatore (fino a 400-1300 bar); autocampionatore con valvola a 6 vie e loop da 1-20 µL; forno della colonna (30-50 °C) con colonna C18 100 × 2,1 mm; PDA 200-400 nm; ESI-MS QqQ. Una nota segnala che il volume fra miscelazione e testa della colonna (dwell volume) ritarda il gradiente.</p></details>
-<figcaption><b>Figura 4.1</b> Uno strumento LC-MS come quello del laboratorio: due solventi, pompa binaria che li miscela secondo il programma del gradiente, iniezione con valvola a sei vie, colonna termostatata, rivelatore UV a serie di diodi (PDA) e spettrometro di massa in serie.</figcaption>
+<figcaption><b>Figura 4.1</b> Schema tipico di un sistema LC-MS: due solventi, pompa binaria che li miscela secondo il programma del gradiente, iniezione con valvola a sei vie, colonna termostatata, rivelatore UV a serie di diodi (PDA) e spettrometro di massa in serie.</figcaption>
 </figure>
 <ul>
 <li><b>Pompe</b>: due pompe a pistoni (binaria ad alta pressione) o una pompa con valvola di proporzionamento (quaternaria a bassa pressione). Devono dare un flusso costante e senza pulsazioni contro la resistenza della colonna; la pressione segue la legge di Darcy, Δ<i>P</i> ∝ η·<i>u</i>·<i>L</i>/<i>d</i><sub>p</sub><sup>2</sup>: particelle piccole, flussi alti e solventi viscosi (le miscele acqua-metanolo più dell'acetonitrile) alzano la pressione. HPLC classica fino a ~400 bar, <b>UHPLC</b> fino a 1000-1300 bar.</li>
 <li><b>Iniettore</b>: una valvola a sei vie riempie un loop a pressione ambiente e poi lo inserisce nel flusso. Il solvente del campione non deve essere più forte della fase mobile iniziale (picchi deformati).</li>
 <li><b>Colonna</b> termostatata: la temperatura riduce la viscosità e cambia un po' la selettività; va tenuta costante per tempi riproducibili.</li>
-<li><b>Rivelatori</b>: UV-Vis e <b>PDA</b> (assorbanza secondo Lambert-Beer, A = ε b c: serve un cromoforo; il PDA registra tutto lo spettro 200-400 nm per ogni istante), fluorescenza (molto sensibile, solo per molecole fluorescenti), indice di rifrazione (universale, poco sensibile, niente gradienti) e soprattutto la <b>spettrometria di massa</b>. Nel vostro strumento il PDA è prima della MS: nei file mzML ne resta solo il segnale totale (capitolo 12).</li>
+<li><b>Rivelatori</b>: UV-Vis e <b>PDA</b> (assorbanza secondo Lambert-Beer, A = ε b c: serve un cromoforo; il PDA registra tutto lo spettro 200-400 nm per ogni istante), fluorescenza (molto sensibile, solo per molecole fluorescenti), indice di rifrazione (universale, poco sensibile, niente gradienti) e soprattutto la <b>spettrometria di massa</b>. Nei sistemi con PDA e MS in serie, il rivelatore ottico è posto a monte dello spettrometro (capitolo 12).</li>
 </ul>
 
 <h2>Le colonne</h2>
 <p>La fase stazionaria più usata è <b>silice</b> porosa con catene alchiliche legate chimicamente ai silanoli (Si–O–Si–R). Dopo la funzionalizzazione restano silanoli liberi, acidi: si «chiudono» con gruppi trimetilsilile (<b>end-capping</b>) perché con le basi protonate darebbero code.</p>
 <table>
 <tr><th>Fase</th><th>Caratteristiche</th><th>Quando</th></tr>
-<tr><td>C18 (ottadecile)</td><td>La più idrofoba e versatile</td><td>Prima scelta: farmaci, pesticidi, TP (la colonna dell'esperienza)</td></tr>
+<tr><td>C18 (ottadecile)</td><td>La più idrofoba e versatile</td><td>Prima scelta: farmaci, pesticidi, metaboliti e prodotti di trasformazione</td></tr>
 <tr><td>C8</td><td>Meno trattenente</td><td>Molecole molto idrofobe, corse più brevi</td></tr>
 <tr><td>Fenil-esile, pentafluorofenile (PFP)</td><td>Interazioni π-π, dipolari, di forma</td><td>Cambiare α per aromatici, isomeri di posizione, alogenati</td></tr>
 <tr><td>Fasi «polar-embedded», C18 per acqua al 100%</td><td>Non collassano in acqua pura</td><td>Molecole molto polari (alcuni TP)</td></tr>
@@ -122,10 +122,10 @@
 <span class="eq"><i>N</i> = 5,54 <span class="frac"><span><i>t</i><sub>R</sub><sup>2</sup></span><span><i>w</i><sub>1/2</sub><sup>2</sup></span></span>, &nbsp;&nbsp; <i>R</i><sub>s</sub> = 1,18 <span class="frac"><span><i>t</i><sub>R,2</sub> − <i>t</i><sub>R,1</sub></span><span><i>w</i><sub>1/2,1</sub> + <i>w</i><sub>1/2,2</sub></span></span><span class="no">(4.2)</span></span>
 <p>Con <i>R</i><sub>s</sub> ≥ 1,5 due picchi sono separati alla base. Se due isomeri non sono risolti, nell'XIC vedrete un picco unico (eventualmente con una spalla): lo spettrometro non vi aiuterà, perché hanno la stessa massa e spesso frammenti simili.</p>
 
-<div class="box lab"><b>Il metodo del laboratorio</b>
-<p>Colonna C18, fase mobile acqua con acido formico 0,05% (A) e acetonitrile (B), gradiente dal basso all'alto contenuto di organico, rivelatore PDA seguito dal triplo quadrupolo in ESI positivo. I parametri esatti (gradiente, flusso, temperatura del forno, canali del PDA) sono nel file del metodo (.dam): il programma li mostra nella finestra «Metodo» se caricate il .dam. Prima dell'iniezione i campioni sono filtrati a 0,45 µm per togliere il TiO<sub>2</sub>, che intaserebbe colonna e capillari.</p></div>
+<div class="box key"><b>Parametri operativi tipici in RP-LC-MS</b>
+<p>Configurazione rappresentativa: colonna C18, fase mobile acqua acidificata (acido formico 0,05% per promuovere la protonazione in ESI positivo) e acetonitrile, gradiente di eluizione a polarità decrescente, accoppiamento in serie PDA ed ESI-MS. Prima dell'iniezione, campioni contenenti particolato o catalizzatori eterogenei vanno rigorosamente filtrati a 0,22 o 0,45 µm per prevenire l'intasamento di capillari e colonna.</p></div>
 
-<div class="box oral"><b>All'orale</b>
+<div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Disegnare lo strumento HPLC e spiegare ogni parte; perché la pressione cresce con particelle piccole (UHPLC); meccanismo della fase inversa e ordine di eluizione; isocratica contro gradiente e modello del solvente forte; end-capping e code delle basi; HILIC contro fase inversa; perché in LC-MS si usano additivi volatili; rivelatore UV contro MS.</p></div>
 
 <h2>Verifica</h2>
@@ -144,7 +144,7 @@
 <ul class="refs">
 <li><span class="tag">libro</span>Snyder L.R., Kirkland J.J., Dolan J.W. <i>Introduction to Modern Liquid Chromatography</i>, 3ª ed., Wiley, 2010: il riferimento per ritenzione, gradiente e sviluppo dei metodi.</li>
 <li><span class="tag">web</span><a href="https://en.wikipedia.org/wiki/Reversed-phase_chromatography" target="_blank" rel="noopener">Reversed-phase chromatography</a> (Wikipedia).</li>
-<li><span class="tag">dispense</span>Sbobine del corso, capitolo "Analisi GC/LC" (materiale interno al corso).</li>
+<li><span class="tag">libro</span>Dong M.W. <i>Modern HPLC for Practicing Scientists</i>, Wiley, 2006.</li>
 </ul>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-chrom.js"></script>

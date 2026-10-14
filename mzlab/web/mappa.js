@@ -477,9 +477,11 @@ window.MAPPA = (() => {
   const ptsSave = p => { const k = pairKey(p); if (k && NB.mappaPunti && !NB.mappaPunti[k].length) delete NB.mappaPunti[k]; nbSave(); };
   const ppmOf = f => isHrF(f) ? ((HR.prof(f, f.lv || 1) || {}).tol || 5) : 0;
   // the apex near (rt, m/z) (Rust, `api/mapsnap`); null when the option «snap» is off or no peak is near
-  async function snapAt(p, rt, mz, dmz) {
+  // the RT window is about 5 px of the current zoom (never wider than 0.2 min, never narrower than 1.5 scans), so the apex is the one under the click and not a taller neighbour
+  async function snapAt(p, rt, mz, dmz, drt) {
     if (PREF.snap === false) return null; const a = p._a;
-    try { const at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${dmz || a.dmz || 1}`); return at && at.rt != null ? at : null; } catch (e) { return null; }
+    if (drt == null) drt = Math.min(0.2, Math.max(5 * Math.abs(a.x1 - a.x0) / (Math.abs(a.X(a.x1) - a.X(a.x0)) || 1), 1.5 * scanStep()));
+    try { const at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${dmz || a.dmz || 1}&drt=${drt}`); return at && at.rt != null ? at : null; } catch (e) { return null; }
   }
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
@@ -490,7 +492,7 @@ window.MAPPA = (() => {
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
-    const q = (await snapAt(p, rt, mz, dmz || 1)) || { rt, mz };
+    const q = (await snapAt(p, rt, mz, dmz || 1, 0.2)) || { rt, mz };
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
@@ -528,7 +530,7 @@ window.MAPPA = (() => {
     addPoint(p, px, py); return true;
   }
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
-  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
+  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
@@ -793,7 +795,7 @@ window.MAPPA = (() => {
     }
   }
 
-  return { guide, dbl, open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { guide, dbl, open3d, addPointAt, grpShape, shapePath, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's

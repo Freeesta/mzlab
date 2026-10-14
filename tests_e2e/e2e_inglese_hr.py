@@ -12,7 +12,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
 WORDS = ci.ITALIAN_WORDS - {"come", "dati", "file-non", "ora", "sia", "tra", "fra", "anche", "solo", "poi", "area", "tempo", "durante", "tipo", "mass", "base", "menu", "lingua", "dell"}
 JS = """() => { const out = []; const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
-    for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style,#theory-sorry,#phone')) continue; if (!e.checkVisibility()) continue;
+    for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style,#phone')) continue; if (!e.checkVisibility()) continue;
       for (const n of e.childNodes) if (n.nodeType === 3) out.push(n.nodeValue);
       for (const a of ['title', 'placeholder', 'aria-label', 'alt']) if (e.getAttribute(a)) out.push(e.getAttribute(a)); }
     return out.join(' | '); }"""

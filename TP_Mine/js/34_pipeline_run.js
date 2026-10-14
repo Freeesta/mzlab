@@ -55,7 +55,7 @@
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
     return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minuti[i] : null; return m == null ? NaN : m; }),
-      smiles, structure: await structureOf(smiles), campioni: st.cs ? st.R.canonical(st.call, st.cs).json : "" };
+      smiles, structure: await structureOf(smiles), campioni: st.cs ? (await st.R.canonical(st.call, st.cs)).json : "" };
   }
   async function run(op) {
     if (st.busy) return;
@@ -82,11 +82,11 @@
   async function loadRoles() {
     try {
       if (!st.R) { const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })); st.R = await import(url); }
-      const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base);
-      st.call = (op, j) => { try { return m.campioni(op, j); } catch (e) { throw fail(e); } };
-      st.cs = st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
-      drawRoles();
-    } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
+      if (window.MZLAB_DESKTOP) { const pool = await st.ctx.pool(); st.call = (op, j) => pool.campioni(op, j); }     // the app: the native route finder/campioni
+      else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.campioni(op, j); } catch (e) { throw fail(e); } }; }
+      st.cs = await st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
+      await drawRoles();
+    } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; await drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
   }
   /** one change of the model: apply it, keep it in the notebook, draw again with the focus where it was */
   function edit(change, focusId) {
@@ -94,7 +94,7 @@
     change(); if (typeof NB !== "undefined") { st.R.store(NB, st.cs); if (typeof nbSave === "function") nbSave(); }
     drawRoles(focusId);
   }
-  function drawRoles(focusId) {
+  async function drawRoles(focusId) {
     const tab = $("#pr-tab"), warn = $("#pr-warn"), go = $("#pipe-run-go"); if (!tab) return;
     const cs = st.cs || [], R = st.R;
     tab.innerHTML = tab.querySelector("caption").outerHTML + (cs.length ? `<tr><th scope="col">File</th><th scope="col">Role</th><th scope="col">Time</th></tr>` : "")
@@ -107,7 +107,7 @@
     let list = [], block = "";
     if (st.cs) {
       try {
-        const v = R.check(st.call, cs); st.tp = R.forTp(st.call, cs);
+        const v = await R.check(st.call, cs); st.tp = await R.forTp(st.call, cs);
         const by = new Map(); v.avvisi.filter(a => WARN[a.codice]).forEach(a => { const k = a.codice; by.set(k, { sev: a.gravita, n: (by.get(k) || { n: 0 }).n + 1 }); });
         list = [...by].map(([k, o]) => `<span class="${o.sev === "error" ? "e" : "w"}">${esc(WARN[k])}${o.n > 1 ? " (" + o.n + ")" : ""}</span>`);
         if (v.bloccante) block = [...by].filter(([, o]) => o.sev === "error").map(([k]) => WARN[k]).join("; ");
@@ -123,7 +123,7 @@
     const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
-    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(st.R.canonical(st.call, st.cs))); }
+    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(await st.R.canonical(st.call, st.cs))); }
     st.last = rec; armAgain();
   }
   const lastOp = () => (typeof NB !== "undefined" && window.WORKFLOW ? /** @type {any} */ (window).PIPEREC.lastOp(NB.ops, window.WORKFLOW.checkFeatureOp) : null);

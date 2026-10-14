@@ -7,6 +7,31 @@ Prima di mettere il tag `vX.Y.Z`: sposta qui sotto le voci di «Non rilasciato»
 
 ## [Non rilasciato]
 
+## [1.0.1] - 2026-10-14
+
+Aggiornamento dell'app desktop e del sito.
+
+### Aggiunto
+- App desktop: avviso di nuova versione, letto dalle release di GitHub; nel riquadro (i) il link «Scarica l'app desktop».
+- App desktop: Tabui e pannello Pipeline con calcolo nativo (tabella, QC, esportazione e rapporto, ruoli dei file).
+- Mappa RT×m/z: blocco d'asse con Maiusc, spettro laterale a profilo continuo e piramide di tessere calcolata in Rust.
+- Elenco file: clic = file attivo, doppio clic = solo questo, Ctrl/Cmd+clic e Maiusc+clic per selezioni multiple.
+- Colori predefiniti «Per file» (mai grigio né tratteggio senza tempi).
+- Cartelle Agilent con metodo `.m` riconosciute, con messaggio dedicato per le `.D`.
+- Teoria: capitolo 23 sui tempi con simulazione dinamica, esportazione in PDF, Word, Markdown e HTML.
+
+### Modificato
+- Caricamento più fluido: si apre subito il primo file della lista; tabella di carico con un clic per passare da un campo all'altro; barra di gruppo a tutta larghezza.
+- Teoria in inglese: si apre in italiano, con un avviso.
+- Teoria: tolti il secondo indice, i box degli obiettivi e la sintesi vocale.
+- Avvio a freddo dell'app desktop come nuova installazione.
+
+### Corretto
+- App desktop: i file di esempio mzML si caricano anche su macOS, con messaggio d'errore corretto.
+- Cartella con metodo `.m` non più ignorata.
+
+*English: desktop app notifies new releases from GitHub and links the download from the (i) box; Tabui and the Pipeline panel run natively in the app; RT×m/z map (axis lock, continuous side spectrum, Rust tile pyramid), file list selection (click, double click, Ctrl/Cmd, Shift), default "per file" colours, smoother loading, Agilent `.m` method folders, Theory chapter 23 and export; fixes: example mzML files load on macOS, cold start as a fresh install. Theory opens in Italian when the interface is English.*
+
 ## [1.0.0] - 2026-10-14
 
 Prima pubblicazione.

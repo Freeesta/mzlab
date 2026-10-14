@@ -130,7 +130,7 @@
 <p>Fonte: Huang N. et al., <i>J. Am. Soc. Mass Spectrom.</i> <b>10</b> (1999) 1166–1173. I valori esatti sono ricalcolati con le masse monoisotopiche del programma.</p>
 
 <div class="box warn"><b>Assenza di segnale ≠ assenza di molecola</b>
-<p>Un TP che ha perso il sito basico (es. un'ammina trasformata in ammide o un prodotto acido di apertura dell'anello) può ionizzarsi poco in positivo e meglio in negativo ([M−H]<sup>−</sup>). Le misure dell'esperienza sono solo in ESI positivo: alcuni TP restano invisibili. È un limite da dichiarare, non un errore.</p></div>
+<p>Un TP che ha perso il sito basico (es. un'ammina trasformata in ammide o un prodotto acido di apertura dell'anello) può ionizzarsi poco in positivo e molto meglio in negativo ([M−H]<sup>−</sup>). Se le acquisizioni sono condotte unicamente in polarità positiva, tali composti restano invisibili: è un limite analitico da dichiarare con trasparenza.</p></div>
 
 <h2>Risposta, linearità e saturazione</h2>
 <p>Poiché la carica disponibile è limitata dalla corrente ESI, le specie presenti nella goccia se la dividono. Un modello semplice e istruttivo (Enke; Tang &amp; Kebarle) scrive il segnale dell'analita A in presenza di un elettrolita E come</p>
@@ -142,18 +142,18 @@
 </ul>
 <div class="sim" id="sim-comp"><h4>Competizione per la carica</h4>
 <p class="note">Equazione 4.2 con k<sub>E</sub>/k<sub>A</sub> = 0,1 e una specie di matrice coeluente aggiuntiva. Il tratteggio è l'estrapolazione lineare del primo tratto.</p></div>
-<div class="box lab"><b>Che cosa significa per la vostra retta di taratura</b>
-<p>Un composto organico a 7,5 mg/L con massa molare intorno a 300 g/mol è circa 2,5·10<sup>−5</sup> M: proprio nella zona in cui la risposta ESI può iniziare a piegarsi (si aggiunge la possibile saturazione del rivelatore). Per questo la retta MRM va controllata guardando i residui, non solo R<sup>2</sup>, e i campioni troppo concentrati vanno diluiti (capitolo 12).</p></div>
+<div class="box key"><b>Linearità e saturazione nelle curve di calibrazione</b>
+<p>Un composto organico a 7,5 mg/L con massa molare intorno a 300 g/mol corrisponde a circa 2,5·10<sup>−5</sup> M: proprio nella zona in cui la risposta ESI può iniziare a deviare dalla linearità (a cui può sommarsi la saturazione del rivelatore). Per questo le rette di taratura vanno verificate ispezionando i grafici dei residui, non solo il coefficiente R<sup>2</sup>, e i campioni sovra-concentrati vanno opportunamente diluiti (capitolo 12).</p></div>
 
 <h2>Soppressione ionica ed effetto matrice</h2>
 <p>Qualsiasi specie che coeluisce con l'analita (sali, sostanza organica naturale, altri TP, tensioattivi) può sottrargli carica o superficie, o aumentare viscosità e tensione superficiale delle gocce: il segnale cala senza che la concentrazione sia cambiata. Si quantifica confrontando la pendenza (o l'area) in matrice e in solvente puro (Matuszewski et al., 2003):</p>
 <span class="eq">ME (%) = <span class="frac"><span>area in matrice (dopo l'estrazione)</span><span>area in solvente</span></span> × 100 − 100<span class="no">(6.3)</span></span>
-<p>ME &lt; 0 indica soppressione, ME &gt; 0 esaltazione. Rimedi: separare meglio, diluire, tarare in matrice, usare uno standard interno marcato isotopicamente (che coeluisce e subisce la stessa soppressione). Nella nostra esperienza la matrice è semplice (acqua e TiO<sub>2</sub> filtrato), ma il parent stesso, ad alta concentrazione, può sopprimere i TP che coeluiscono con lui.</p>
+<p>ME &lt; 0 indica soppressione, ME &gt; 0 esaltazione. Rimedi: separare meglio, diluire, tarare in matrice, usare uno standard interno marcato isotopicamente (che coeluisce e subisce la stessa soppressione). Anche in matrici pulite, il composto progenitore ad alta concentrazione può causare una marcata soppressione ionica sui prodotti di trasformazione che coeluiscono con esso.</p>
 
 <h2>Ioni multicarica (cenno)</h2>
 <p>Molecole grandi con molti siti basici (peptidi, proteine) prendono molti protoni: [M+<i>z</i>H]<sup><i>z</i>+</sup>. Lo spettro mostra una serie di picchi; due picchi adiacenti <i>p</i><sub>1</sub> &gt; <i>p</i><sub>2</sub> differiscono di una carica, e se <i>z</i> è la carica di <i>p</i><sub>1</sub>:</p>
 <span class="eq"><i>z</i> = <span class="frac"><span><i>p</i><sub>2</sub> − 1,007</span><span><i>p</i><sub>1</sub> − <i>p</i><sub>2</sub></span></span>, &nbsp;&nbsp; <i>M</i> = <i>z</i> (<i>p</i><sub>1</sub> − 1,007)<span class="no">(6.4)</span></span>
-<p>Esempio: picchi a 1431,5 e 1301,5 → <i>z</i> = 1300,5/130,0 = 10 e <i>M</i> ≈ 14 305 Da (lisozima). È così che un quadrupolo con limite di 1000–3000 m/z "vede" proteine da decine di kDa. Per i nostri analiti, piccoli, <i>z</i> = 1.</p>
+<p>Esempio: picchi a 1431,5 e 1301,5 → <i>z</i> = 1300,5/130,0 = 10 e <i>M</i> ≈ 14 305 Da (lisozima). È così che un quadrupolo con limite di 1000–3000 m/z "vede" proteine da decine di kDa. Per le piccole molecole organiche (massa &lt; 1000 Da) si osserva invece tipicamente <i>z</i> = 1.</p>
 
 <h2>ESI, APCI, APPI</h2>
 <table>
@@ -182,7 +182,7 @@
 <li><span class="tag">review</span>Annesley T.M. (2003) Ion suppression in mass spectrometry. <i>Clin. Chem.</i> 49, 1041–1044. <a href="https://doi.org/10.1373/49.7.1041" target="_blank" rel="noopener">doi:10.1373/49.7.1041</a></li>
 <li><span class="tag">metodo</span>Matuszewski B.K., Constanzer M.L., Chavez-Eng C.M. (2003) Strategies for the assessment of matrix effect in quantitative bioanalytical methods based on HPLC−MS/MS. <i>Anal. Chem.</i> 75, 3019–3030. <a href="https://doi.org/10.1021/ac020361s" target="_blank" rel="noopener">doi:10.1021/ac020361s</a></li>
 <li><span class="tag">web</span><a href="https://en.wikipedia.org/wiki/Electrospray_ionization" target="_blank" rel="noopener">Electrospray ionization</a> (Wikipedia) e <a href="https://www.nobelprize.org/prizes/chemistry/2002/fenn/lecture/" target="_blank" rel="noopener">lezione Nobel di J.B. Fenn</a>.</li>
-<li><span class="tag">dispense</span>Sbobine del corso, capitolo "Ionizzazioni LC-MS".</li>
+<li><span class="tag">libro</span>Cole R.B. (ed.) <i>Electrospray and MALDI Mass Spectrometry</i>, 2ª ed., Wiley, 2010.</li>
 </ul>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-esi.js"></script>
