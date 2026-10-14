@@ -60,8 +60,8 @@ try:
             t = pg.inner_text("#unopen"); assert "format not recognised" in t and "x_ingl_b.txt" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
             pg.set_input_files("#pick", "/tmp/y_ingl_b.raw")
-            pg.wait_for_function("document.body.innerText.includes('The Thermo .raw file cannot be read')", timeout=60000)       # a .raw is read in the browser: a damaged one says so, in English
-            t = pg.inner_text("body"); assert "The Thermo .raw file cannot be read" in t, [l for l in t.split("\n") if "raw" in l]
+            pg.wait_for_function("document.body.innerText.includes('File type not accepted: y_ingl_b.raw')", timeout=60000)       # a .raw is read in the browser: one the reader does not recognise says so, in English
+            t = pg.inner_text("body"); assert "File type not accepted: y_ingl_b.raw" in t, [l for l in t.split("\n") if "raw" in l]
             open("/tmp/z_ingl_b.mzML", "w").write("not xml")
             pg.set_input_files("#pick", "/tmp/z_ingl_b.mzML"); pg.wait_for_timeout(800)
             assert not italian_on_screen(pg), italian_on_screen(pg)
@@ -71,7 +71,8 @@ try:
             assert pg.evaluate("E.files.length") >= 3
         step("open the files", load)
         def gear():
-            pg.click("#np-set"); pg.wait_for_timeout(200)
+            pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
+            pg.evaluate("document.getElementById('uip-a11y').open = true")       # the chart colours are in the Accessibility submenu
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w in t, (w, t)
             assert "By time (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"

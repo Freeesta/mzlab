@@ -1,6 +1,7 @@
 """Rust engine on the built site: TIC, XIC and single scans answered by mzlab-wasm give the same values as the Python reference (pyref.py),
 and a worker that dies is restarted by the supervisor (a second death within a minute stops the engine: the page asks to reload).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+from pathlib import Path
 import shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
@@ -22,7 +23,7 @@ if not wasm.exists():
     else:
         print("  ", ("wasm", "FAIL site/static/wasm missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 GET = """async u => { const r = await fetch(u); return { eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
 def close(a, b, tol, rel=0.0):

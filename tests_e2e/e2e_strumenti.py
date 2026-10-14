@@ -190,6 +190,7 @@ try:
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
             assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
+            pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
             assert "·" not in " ".join(lab) and not any(x.isupper() and len(x) == 3 for x in lab), lab
@@ -242,7 +243,9 @@ try:
             pg.set_viewport_size({"width": 1500, "height": 1000}); pg.wait_for_timeout(300)
             pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); pg.wait_for_timeout(300)
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
-            pg.set_viewport_size({"width": 800, "height": 900}); pg.wait_for_timeout(500)
+            pg.set_viewport_size({"width": 800, "height": 900})
+            attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet
+            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && BARRA.sheet")
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") and not pg.is_visible("#dpanels"), "below 900 px the panel is a sheet that replaces the workspace"
             assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") >= 800 - 30 and pg.is_visible("#sb-x")
             assert pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1

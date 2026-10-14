@@ -53,7 +53,7 @@ function openOrigin(pre = {}) {
   const d = ogDialog(), full = E.files.filter(f => f.kind === "full" && !f.gone && f.type !== "blank");
   if (!full.length) return info(I18N.t("og.needFull"));
   const q = id => d.querySelector(id);
-  q("#og-k").innerHTML = full.map(f => `<option value="${f.k}">${EH(f.label)}</option>`).join("");
+  q("#og-k").innerHTML = full.map(f => h`<option value="${f.k}">${f.label}</option>`).join("");
   const kk = full.find(f => f.k === pre.k) || full[0]; q("#og-k").value = kk.k;
   q("#og-mz").value = pre.mz != null ? fmz(pre.mz) : "";
   if (pre.parent != null) q("#og-par").value = fmz(pre.parent);
@@ -120,7 +120,7 @@ async function ogDrawXics() {
     series.push({ x: t.rt, y: t.y.map(v => mx > 0 ? v / mx : 0), color: it.color, w: it.w, dash: it.dash, name: it.name });
   }
   ogPlot(cv, { series, x0, x1, y0: 0, y1: 1.08, xl: I18N.t("og.ax.rt"), yl: I18N.t("og.ax.norm") });
-  chips.innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${EH(s.name)}</span>`).join("");
+  chips.innerHTML = series.map(s => h`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
 }
 
 // High-resolution files only, and only with mzFinder on: its list of proofs (adduct step, co-elution, fragment in the MS2 of the parent, ratio across samples).

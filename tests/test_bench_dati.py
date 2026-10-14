@@ -51,12 +51,26 @@ def test_main_delete(tmp_path):
     assert D.main(["m.json", str(tmp_path), "--elimina", "x.raw", "nonexistent.raw"]) == 0 and not (tmp_path / "x.raw").exists()
 
 
+def _parser(tmp_path, body: str):
+    """A fake converter that runs on every OS: a Python script (a shebang on Unix, a .cmd launcher on Windows, where CreateProcess ignores shebangs)."""
+    py = tmp_path / "fake.py"
+    py.write_text(body, encoding="utf-8")
+    if sys.platform == "win32":
+        cmd = tmp_path / "fake.cmd"
+        cmd.write_text(f'@"{sys.executable}" "{py}" %*\r\n')
+        return cmd
+    py.write_text(f"#!{sys.executable}\n" + body, encoding="utf-8")
+    py.chmod(py.stat().st_mode | stat.S_IEXEC)
+    return py
+
+
 def test_conversion_record(tmp_path):
-    fake = tmp_path / "fake"
-    fake.write_text('#!/bin/sh\nif [ "$1" = "--version" ]; then echo 9.9.9; exit 0; fi\n'
-                    'while [ $# -gt 0 ]; do case "$1" in -i) i="$2";; -o) o="$2";; esac; shift; done\n'
-                    'b=$(basename "$i" .raw); echo "<mzML/>" > "$o/$b.mzML"\n')
-    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    fake = _parser(tmp_path, "import os, sys\n"
+                   "a = sys.argv[1:]\n"
+                   "if a[:1] == ['--version']:\n    print('9.9.9'); sys.exit(0)\n"
+                   "d = {a[k]: a[k + 1] for k in range(len(a) - 1)}\n"
+                   "b = os.path.basename(d['-i'])[:-4]\n"
+                   "open(os.path.join(d['-o'], b + '.mzML'), 'w', newline='\\n').write('<mzML/>\\n')\n")
     raw = tmp_path / "raw"
     raw.mkdir()
     (raw / "S1.raw").write_bytes(b"raw1")
@@ -71,9 +85,7 @@ def test_conversion_record(tmp_path):
 
 
 def test_conversion_failure_is_reported(tmp_path):
-    bad = tmp_path / "bad"
-    bad.write_text("#!/bin/sh\nexit 3\n")
-    bad.chmod(bad.stat().st_mode | stat.S_IEXEC)
+    bad = _parser(tmp_path, "import sys\nsys.exit(3)\n")
     (tmp_path / "S1.raw").write_bytes(b"r")
     with pytest.raises(SystemExit, match="failed"):
         C.converti(str(bad), tmp_path / "S1.raw", tmp_path / "o")

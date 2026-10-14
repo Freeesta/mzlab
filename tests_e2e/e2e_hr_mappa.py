@@ -2,6 +2,7 @@
 with cells of equal ppm, minus a reference; api/mapsnap, api/mappunti, api/mappunti3d) and the evidence of origin (api/origin) come from the Rust engine,
 no request of those routes is left to Python (window.MZLAB_LR_MISS) and Pyodide is not downloaded; the JSON equals the Python reference's (pyref.py).
 Needs the site and the .wasm (python tools/build_site.py)."""
+from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
@@ -21,7 +22,7 @@ import dati_sintetici as ds  # noqa: E402
 PARENT = ds.hr_parent_mz()
 D = synth("hrmappa")
 FILES = [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML"]
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 JSON = """async u => { const r = await fetch(u); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
 CLOCK = "async u => { const t = performance.now(); await fetch(u); return performance.now() - t; }"

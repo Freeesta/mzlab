@@ -38,7 +38,7 @@ try:
             pg.click("#flst .fgh[data-gg='hr.dda']"); pg.wait_for_timeout(200)
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.flgrp'))['hr.dda']") == 1
             assert not pg.is_visible("#flst .fl:has-text('HR_DDA')")
-            pg.evaluate("renderFileList()"); assert pg.get_attribute("#flst .fgh[data-gg='hr.dda']", "aria-expanded") == "false"
+            pg.evaluate("renderFileList()"); assert pg.get_attribute("#flst .fgh[data-gg='hr.dda'] .chv", "aria-expanded") == "false"
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(300); pg.evaluate("renderFileList()"); drawer(pg)
             assert pg.locator("#flst .fgh[data-gg]").count() == 0 and pg.is_visible("#flst .fl:has-text('HR_DDA')")
         step("narrow list: groups fold with memory; wide window unchanged", compact)

@@ -88,7 +88,7 @@ function refreshIntf(p) {
   const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && p._a && p._a.sr && p._a.sr.length > 1;
   sel.hidden = !on; if (!on) return;
   const opts = [["", I18N.t("int.target.clicked")], ["all", I18N.t("int.target.all")], ...p._a.sr.map(s => [s.key, s.name])], sig = JSON.stringify(opts);
-  if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => `<option value="${EH(o[0])}">${EH(o[1])}</option>`).join(""); }
+  if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
   sel.value = p.intf || "";
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
@@ -99,7 +99,6 @@ function guardInt(p) {
 }
 // integrations never overlap (same trace and file): at most two peaks touch and share the border (drop line)
 const INT_EPS = 1e-6;
-let HSEQ = 0;                                                             // order of the undoable actions (zoom and integrations) of the session
 const iLo = it => Math.min(it.a, it.b), iHi = it => Math.max(it.a, it.b);
 const intClash = (p, key, a, b, skip) => p.ints.find(i => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
 function nearMsg(t) {                                                     // short notice next to the mouse
@@ -110,8 +109,6 @@ function nearMsg(t) {                                                     // sho
 }
 document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
 const intSnap = p => JSON.stringify(p.ints);
-function pushIh(p, snap) { const h = p.ih = p.ih || []; h.push({ n: ++HSEQ, s: snap || intSnap(p) }); if (h.length > 20) h.shift(); }
-function undoInt(p) { const e = p.ih && p.ih.pop(); if (!e) return; p.ints = JSON.parse(e.s); p.isel = null; draw(p); uiSave(); }
 function delInts(p, list) { pushIh(p); p.ints = p.ints.filter(i => !list.includes(i)); if (list.some(i => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(p, s, a, b, mirror = true) {
   const lo = Math.min(a, b), hi = Math.max(a, b);

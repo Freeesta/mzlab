@@ -44,11 +44,13 @@ try:
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x1, y1, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
             after = z(); assert after[0][1] - after[0][0] < before[0][1] - before[0][0] and after[1][1] - after[1][0] < before[1][1] - before[1][0], (before, after)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Backspace"); pg.wait_for_timeout(200)
-            assert z() == before, (z(), before)                                                 # Backspace = previous zoom
+            assert z() == [None, None], z()                                                     # Backspace = whole view
+            pg.keyboard.press("Control+z"); attendi(pg, M + ".zoom!==null"); assert z() == after, (z(), after)      # Ctrl+Z takes the box zoom back
+            pg.keyboard.press("Backspace"); attendi(pg, M + ".zoom===null")
             pg.keyboard.press("0"); pg.wait_for_timeout(200); assert z() == [None, None], z()
             pg.mouse.move(*at(.5, .5)); pg.mouse.wheel(0, -300); pg.wait_for_timeout(200); assert z()[0]
             pg.click(".pnl.map [data-a=fit]"); pg.wait_for_timeout(200); assert z() == [None, None], z()
-        step("box zoom, Backspace = previous zoom, 0 and the button = whole view", boxz)
+        step("box zoom, Backspace = whole view, 0 and the button = whole view", boxz)
         def full():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(900)
             assert pg.evaluate(f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")

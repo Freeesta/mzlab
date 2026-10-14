@@ -181,14 +181,15 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
+  pushCampi(p, "storia.bianco");
   if (p.type === "map") return MAPPA.setCorr(p, v);
   p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);       // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
   ctl(p); draw(p); uiSave();
 }
 // chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
-function setSub(p, v) { p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
+function setSub(p, v) { pushCampi(p, "storia.bianco"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
 function setFondo(p, v) {
-  const f = p.fondo; p._pickIbk = false;
+  pushCampi(p, "storia.fondo"); const f = p.fondo; p._pickIbk = false;
   if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
   else if (v === "tract") {
     if (f.ib) f.mode = "tract";
@@ -223,7 +224,7 @@ function ibkSpectra(p) {
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
-  p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
+  pushCampi(p, "storia.fondo"); p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
   p._ibkA = null; draw(p); uiSave();
 }
 function ibkPick(p, mode, iv) {
@@ -247,7 +248,7 @@ function legend(p, all, note = "") {
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
-  } else p.leg.innerHTML = all.map(s => `<span class="tg${off(isHid(p, s))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${sw(s.color)}${EH(s.name)}${legPol(E.files[s.k])}</span>`).join("");
+  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);

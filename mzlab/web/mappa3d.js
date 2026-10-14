@@ -544,7 +544,7 @@ export function open(p, opener) {
     const g = V.g, b = box(); let near = -1, bd = 14 * 14;
     try { MAPPA.pts(p).forEach((s, n) => { const i = iOf(s.rt), j = jOf(s.mz); if (i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1) return; const q = project(px(i), heightAt(i, j) * b.y, pz(j)), d2 = (q[0] - e.offsetX) ** 2 + (q[1] - e.offsetY) ** 2; if (d2 < bd) { bd = d2; near = n; } }); } catch (err) { /* none */ }
     if (near >= 0) { const s = MAPPA.pts(p)[near]; close(); MAPPA.spectrumAt(p, s.rt); return; }
-    V.cam.t = [px(h.fi), heightAt(h.fi, h.fj) * b.y * 0.5, pz(h.fj)]; V.dirty = true;       // double click = centre on that point
+    close(); MAPPA.spectrumAt(p, rtAt(h.i));       // double click = the spectrum of that point
   });
   const stepCur = (di, dj) => { if (!V.cur) return; V.plane = true; dlg.querySelector('[data-m="pl"]').checked = true; setCur(V.cur.i + di, V.cur.j + dj); };
   dlg.addEventListener("keydown", e => {

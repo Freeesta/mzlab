@@ -123,20 +123,6 @@ function specParams(p, btn) {
 }
 
 // ---------------------------------------------------------------- zoom history, whole view (keys)
-function pushZh(p) {
-  const s = { zoom: p.zoom ? [...p.zoom] : null, zoomY: p.zoomY ? [...p.zoomY] : null }, h = p.zh = p.zh || [], l = h[h.length - 1];
-  if (l && JSON.stringify({ zoom: l.zoom, zoomY: l.zoomY }) === JSON.stringify(s)) return;
-  s.n = ++HSEQ; h.push(s); if (h.length > 15) h.shift();
-}
-function undoZoom(p) {
-  const h = p.zh; if (!h || !h.length) return;
-  const s = h.pop(); p.zoom = s.zoom; p.zoomY = s.zoomY; if (p.type === "spec") p.lock = null; draw(p); uiSave();
-}
-function undoLast(p) {                                                    // Ctrl/Cmd+Z: the last thing done, whether a zoom or an integration
-  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1], n = Math.max(z ? z.n || 0 : 0, i ? i.n || 0 : 0);
-  if (window.AFFIANCA && AFFIANCA.ultimo() > n) { AFFIANCA.annulla(); return; }      // the last thing done was a change of the arrangement
-  if (i && (!z || i.n > (z.n || 0))) undoInt(p); else undoZoom(p);
-}
 document.addEventListener("keydown", e => {
   const a = E.active; if (!a || !a.el || !Q("#dpanels").offsetParent || a.type === "map" && false) return;
   if (/** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
@@ -144,7 +130,6 @@ document.addEventListener("keydown", e => {
   const chosen = a.isel != null && a.ints && a.ints.find(i => i.id === a.isel);
   if ((e.key === "Delete" || e.key === "Backspace") && chosen && !e.ctrlKey && !e.metaKey) { e.preventDefault(); delInts(a, [chosen]); return; }      // with a peak selected, Delete/Backspace remove it (before "whole view")
   if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); pushZh(a); a.zoom = null; a.zoomY = null; if (a.type === "spec") a.lock = null; draw(a); uiSave(); }
-  else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") { e.preventDefault(); undoLast(a); }
   else if (e.key === "Escape" && a.type === "spec" && (a.meas || a.rul)) measClear(a);
 });
 

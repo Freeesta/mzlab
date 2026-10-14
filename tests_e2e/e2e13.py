@@ -13,7 +13,7 @@ def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
     except Exception as e: print("  ", (name, "FAIL " + str(e)[:300]))
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site") if not BASE else "/tmp/qq_pages"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site") if not BASE else "/tmp/qq_pages"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 try:
     with sync_playwright() as p:

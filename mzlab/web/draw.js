@@ -741,7 +741,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K); }, ready: () => !!K };
+window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
 try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -810,5 +810,5 @@ function frameExtras(fr) {
     [t("draw.keys.rightClick.key"), t("draw.keys.rightClick")]];
   if (coarse) rows.push([t("draw.keys.twoFingers.key"), t("draw.keys.twoFingers")], [t("draw.keys.pen.key"), t("draw.keys.pen")], [t("draw.keys.longPress.key"), t("draw.keys.longPress")]);
   else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
-  Q("#keys-body").innerHTML = `<table>${rows.map(r => `<tr><td>${EH(r[0])}</td><td>${EH(r[1])}</td></tr>`).join("")}</table>`;
+  Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();
