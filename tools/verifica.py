@@ -50,7 +50,8 @@ SMOKE = ["e2e3", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_hr_neare
          "e2e_hr_isotopi", "e2e_picchi", "e2e_a11y_dati"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
-          r"Layout was forced before the page was fully loaded"]   # Firefox: a notice about styles, not an error   # aborted requests = page reloaded or closed by the test
+          r"Layout was forced before the page was fully loaded",
+          r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests = page reloaded or closed by the test
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
