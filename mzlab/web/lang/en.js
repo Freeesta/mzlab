@@ -664,6 +664,8 @@ I18N.add("en", {
   "panel.max.exit": "Exit full screen (Esc)",
   "panel.close": "Close the panel",
   "panel.num.title": "Panel {n}: press the {n} key to activate it",
+  "panel.pair.to": "Panel {n} follows this graph",
+  "panel.pair.from": "Follows panel {n}: it shows the spectrum of the scan chosen there",
   "aff.grip": "Move or place side by side",
   "aff.menu.beside": "Place beside",
   "aff.menu.up": "Move up",

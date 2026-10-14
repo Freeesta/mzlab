@@ -128,6 +128,8 @@
   "chk.reachesTo": "{t} = ultimo RT del file in minuti.",
   "aff.where": "Annuncio per i lettori di schermo dopo uno spostamento; {n} = numero del pannello, {r} = riga, {t} = righe totali, {i} = posizione nella riga, {m} = pannelli nella riga.",
   "panel.num.title": "Suggerimento sul numerino del pannello; {n} = numero (1-9), è anche il tasto da premere.",
+  "panel.pair.to": "Suggerimento sull'etichetta «→ n» del grafico sorgente; {n} = numero del pannello (spettro) che lo segue.",
+  "panel.pair.from": "Suggerimento sull'etichetta «← n» dello spettro; {n} = numero del pannello (cromatogramma) che lo guida.",
   "spec.follow": "Chip nell'intestazione di uno spettro agganciato; {n} = numero del pannello del cromatogramma.",
   "spec.follow.aria": "Etichetta accessibile del chip dello spettro agganciato; {n} = numero del pannello.",
   "spec.follow.item": "Voce del menu del chip: un cromatogramma da seguire; {n} = numero del pannello, {title} = suo titolo.",
