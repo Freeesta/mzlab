@@ -52,7 +52,7 @@ CEN = names[0][:-len(".mzidx")] + ".cen.mzidx"  # second index of the same sampl
 shutil.copy2(data / names[0], data / CEN)
 
 PORT = lib.free_port()
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []
 URL = f"http://127.0.0.1:{PORT}/"
 PUT = """async (names) => {

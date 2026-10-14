@@ -13,7 +13,7 @@ def step(name, fn):
 site = ROOT / "site"
 if not (site / "index.html").exists() or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 XP = "E.panels.find(p=>p.type==='xic')"
 try:

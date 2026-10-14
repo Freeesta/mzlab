@@ -1,5 +1,6 @@
 """Start-up of the site: static title, ONE status line with a progress bar, and a saved-files database that is blocked by another tab
 or never answers (message, «start from scratch» button = same clean slate as «New session»). Build first: python tools/build_site.py"""
+from pathlib import Path
 import re, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -24,7 +25,7 @@ def title_static():
     built = (ROOT / "site/index.html").read_text(encoding="utf-8")
     assert re.search(r"<title>[^<]*· Analisi MS</title>", built) and 'og:title" content="' in built and "Analisi MS" in re.search(r'og:title" content="([^"]*)"', built).group(1)
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:

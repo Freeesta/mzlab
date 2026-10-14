@@ -1,6 +1,7 @@
 """The site keeps the mzML files and their .mzidx indexes in OPFS (mounted with WORKERFS, no copy in the memory of the engine); a reload does not read the
 spectra again; what an older visit left in IndexedDB passes to OPFS; the gear shows the space and frees the indexes of removed files; «New session» empties
 OPFS. Build first: python tools/build_site.py"""
+from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz, free_port
@@ -19,7 +20,7 @@ NOTEBOOK = """() => new Promise(res => { const r = indexedDB.open('qqq_lab'); r.
   q.onsuccess = () => { db.close(); res(String(q.result || '')); }; }; r.onerror = () => res(''); })"""
 FILES = [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:

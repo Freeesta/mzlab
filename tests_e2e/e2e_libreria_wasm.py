@@ -2,6 +2,7 @@
 analogues are searched, the library survives a reload, an old MZL1 archive (made with ?libjs=1) is converted once and its old files go, a dead engine is
 replaced (and a second death within a minute sends the page to the JavaScript path), and the .wasm stays under 600 KB.
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm-lib)."""
+from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
@@ -43,7 +44,7 @@ ADD = """async ([name, text]) => { const r = await LIB.call("add", { file: new F
 SEARCH = """async ([peaks, prec, pol]) => { const r = await LIB.call("search", { peaks, prec, pol, tol: { v: 10, unit: "ppm" }, frag: 0.01 }); return { names: r.results.map(x => x.name), ent: r.results.map(x => x.ent), cos: r.results.map(x => x.cos), shared: r.results.map(x => x.shared), lic: r.results.map(x => x.lib), q: r.query.mz.length }; }"""
 FILES = """async () => { const out = []; const walk = async (d, pre) => { for await (const [n, h] of d.entries()) { out.push(pre + n); if (h.kind === "directory") await walk(h, pre + n + "/"); } }; await walk(await navigator.storage.getDirectory(), ""); return out.sort(); }"""
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:

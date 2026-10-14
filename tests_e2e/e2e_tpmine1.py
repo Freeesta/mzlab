@@ -24,7 +24,7 @@ def packed():
     assert not (site / "static" / "tpmine.enc").exists()
 step("built site: mzFinder in plain text in static/mzfinder/, no encrypted file", packed)
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []; reqs = []
 def clicks(pg):
     pg.wait_for_timeout(3200)                    # a fresh window of 3 s
