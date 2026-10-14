@@ -39,11 +39,11 @@
       if (el.id === "cmp-tu") { tunitSet(el.value); paint(box); if (typeof renderFileList === "function") renderFileList(); return; }
       if (el.id === "cmp-imp") {
         const file = el.files && el.files[0]; if (!file) return;
-        file.text().then(tx => {
+        FILESICURI.readText(file).then(tx => {
           const r = importTsv(tx);
           paint(box);
           msg(box, r.changed ? t("meta.imported", { n: r.changed }) + (r.unknown.length ? " " + t("meta.unknown", { list: r.unknown.join(", ") }) : "") : t("meta.imported.none"), !r.changed);
-        });
+        }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat"), true));
         return;
       }
       if (!f) return;

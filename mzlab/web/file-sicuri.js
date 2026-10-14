@@ -19,16 +19,20 @@ const FILESICURI = (() => {
     return max;
   }
 
+  /** Error whose message is the reason code and whose `key` is the i18n key of its text.
+   * @type {(code: "tooBig" | "tooDeep") => Error & { key: string }} */
+  const fail = code => Object.assign(new Error(code), { key: "workflow.err." + code });
+
   /** @typedef {{ maxBytes?: number, maxDepth?: number, maxNodes?: number }} Limits */
   /** JSON.parse with caps; keys named __proto__, constructor or prototype are dropped. Throws Error (message = reason code).
    * @type {(text: string, lim?: Limits) => any} */
   function parse(text, lim = {}) {
     const { maxBytes = MAX_BYTES, maxDepth = MAX_DEPTH, maxNodes = MAX_NODES } = lim;
-    if (typeof text !== "string" || text.length > maxBytes) throw new Error("tooBig");
-    if (depthOf(text) > maxDepth) throw new Error("tooDeep");
+    if (typeof text !== "string" || text.length > maxBytes) throw fail("tooBig");
+    if (depthOf(text) > maxDepth) throw fail("tooDeep");
     let n = 0;
     return JSON.parse(text, function (k, v) {
-      if (++n > maxNodes) throw new Error("tooBig");
+      if (++n > maxNodes) throw fail("tooBig");
       return BAD_KEYS.has(k) ? undefined : v;
     });
   }
@@ -36,8 +40,15 @@ const FILESICURI = (() => {
   /** Reads a File as JSON, refusing it by size before reading it.
    * @type {(file: File, lim?: Limits) => Promise<any>} */
   async function readJson(file, lim = {}) {
-    if (file.size > (lim.maxBytes || MAX_BYTES)) throw new Error("tooBig");
+    if (file.size > (lim.maxBytes || MAX_BYTES)) throw fail("tooBig");
     return parse(await file.text(), lim);
+  }
+
+  /** Reads a File as text (CSV, TSV, lists), refusing it by size before reading it. Throws the error of `fail`.
+   * @type {(file: File, maxBytes?: number) => Promise<string>} */
+  async function readText(file, maxBytes = MAX_BYTES) {
+    if (file.size > maxBytes) throw fail("tooBig");
+    return file.text();
   }
 
   /** Copies into `target` only the own keys it already has, when the type is the same (finite for numbers); returns `target`.
@@ -58,5 +69,5 @@ const FILESICURI = (() => {
   /** @type {(v: any, lo: number, hi: number) => number | null} */
   const num = (v, lo, hi) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : null;
 
-  return { parse, readJson, assignKnown, num, depthOf };
+  return { parse, readJson, readText, assignKnown, num, depthOf };
 })();
