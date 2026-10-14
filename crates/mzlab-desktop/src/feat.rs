@@ -254,6 +254,7 @@ impl State {
             "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
             "feat/preview" => self.feat_preview(p),
             "feat/files" => self.feat_files(),
+            "feat/import" => self.op_import(p),
             "feat/clear" => {
                 *self.feat_lock() = FeatState::default();
                 text("{}")

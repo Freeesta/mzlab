@@ -41,6 +41,7 @@
   /** table → Map key → result. opt: {tolPpm, frag, profile, onProgress(i, n), isCancelled()} */
   async function run(table, opt = {}) {
     await G.UNT.ready();          // the formulas of the external sources are checked by the readers' .wasm (a table of the pipeline never loaded it)
+    await G.UNT.prime(table);     // in the app the checks are asked of the native engine in one request
     const tol = Math.max(MIN_TOL_PPM, +opt.tolPpm || 10), frag = opt.frag || 0.01, out = new Map(), queries = [], idx = [];
     table.features.forEach((f, i) => {
       if (f.ms2 && f.ms2.mz.length && f.mz > 0) { queries.push({ key: i, rt: f.rt, prec: f.ms2.prec > 0 ? f.ms2.prec : f.mz, pol: f.pol || table.pol || 0, peaks: f.ms2.mz.map((m, j) => [m, f.ms2.it[j]]) }); idx.push(i); }
