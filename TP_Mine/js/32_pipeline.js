@@ -42,6 +42,7 @@
   /** the .mzidx files in OPFS (mzlab/idx/), by name (not the `.cen.mzidx` of mzFinder, a second index of the same sample) */
   async function listIdx() {
     try {
+      if (window.MZLAB_DESKTOP) return await (await getPool()).listIdx();       // the app: the index folder, through the native pool
       let d = await navigator.storage.getDirectory();
       for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p);
       const out = [];
@@ -53,6 +54,12 @@
   /** the pool of workers, created on the first use; the .wasm come from static/wasm-feat/manifest.json */
   async function getPool() {
     if (st.pool) return st.pool;
+    if (window.MZLAB_DESKTOP) {      // the app: the native routes feat/* (feat-desktop-pool.js), no wasm-feat/ and no OPFS
+      const mod = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" })));
+      st.pool = mod.createDesktopPool({ notify: (k, p) => say(msg(k, p)) });
+      st.crate = await st.pool.crateVersion();
+      return st.pool;
+    }
     const c = window.QTOOLS.ctx, u = p => new URL("wasm-feat/" + p, c.base).href;
     const man = await (await fetch(u("manifest.json"))).json();
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
