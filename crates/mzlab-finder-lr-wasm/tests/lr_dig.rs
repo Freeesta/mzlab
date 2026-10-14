@@ -420,3 +420,16 @@ fn the_tree_comes_from_the_ms2_of_the_parent() {
         serde_json::from_str(&lr::tree::frag_tree_compare(&d, other.id, &mut op).unwrap()).unwrap();
     assert!(c.get("ok").is_some(), "{c}");
 }
+
+#[test]
+fn mrm_files_are_listed_by_the_plan_and_keep_it_in_rust() {
+    let (files, idxs) = series();
+    let with = files.replace(
+        ']',
+        r#",{"name": "lr_MRM.mzML", "time": null, "type": "standard", "kind": "mrm"}]"#,
+    );
+    let plan: Value = serde_json::from_str(&lr::plan::plan_json(&with, PARENT).unwrap()).unwrap();
+    assert_eq!(plan["rust"], true);
+    assert_eq!(plan["mrm"][0], "lr_MRM.mzML");
+    assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
+}
