@@ -1,6 +1,6 @@
 # Licenze del materiale di terzi
 
-mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
+mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). I testi di Teoria e Pratica sono sotto CC BY 4.0 e i file d'esempio sono dati sintetici (sezioni sotto). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
 
 | Componente | Versione | Licenza | Dove si trova |
 |---|---|---|---|
@@ -23,6 +23,14 @@ mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). Il 
 | Atkinson Hyperlegible Next (Braille Institute, Google Fonts) | WOFF2 Regular e Bold dal ramo `main` di googlefonts/atkinson-hyperlegible-next | SIL OFL 1.1 | `mzlab/web/teoria/fonts/AtkinsonHyperlegibleNext-{Regular,Bold}.woff2` (licenza: `OFL-AtkinsonHyperlegibleNext.txt`). https://github.com/googlefonts/atkinson-hyperlegible-next. SHA-256: Regular `378aea0f5c1d179f4e0b5382c06bfc87571b98cfcc4fd1352bc979e2e2259c54`, Bold `dda449f0f556a595cffd0a9ce479bb1210beba286cb4c2f5aeca6975f9c85a3b`. Si scarica solo se lo studente lo sceglie in «Lettura facilitata» |
 | OpenDyslexic (Abbie Gonzalez) | WOFF2 Regular e Bold dal ramo `master` di antijingoist/opendyslexic (cartella `compiled`) | SIL OFL 1.1 | `mzlab/web/teoria/fonts/OpenDyslexic-{Regular,Bold}.woff2` (licenza: `OFL-OpenDyslexic.txt`). https://github.com/antijingoist/opendyslexic. SHA-256: Regular `0441bc21071e42db57c217f93fbc48d3b55a2987c02814c94dc93621c42e8695`, Bold `b534a0b84ef3cca941ebdb506ce3f4e0010aa4ef881271bac8b6959dbf694fbf`. Si scarica solo se scelto |
 | Caratteri predefiniti | - | nessuno incluso | `system-ui` |
+
+## Testi di Teoria e Pratica
+
+I testi originali di Teoria e Pratica (`mzlab/web/teoria/`, esclusi gli spettri EI e i caratteri, che hanno la licenza indicata qui sotto) sono © 2026 Federico Cristaudo e distribuiti con licenza **Creative Commons Attribution 4.0 International** (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/): puoi copiarli, adattarli e ridistribuirli, anche a scopo commerciale, citando l'autore e indicando le modifiche. Il codice della stessa cartella resta MIT.
+
+## File d'esempio
+
+I file in `mzlab/web/esempi/` (offerti da «Prova con i file di esempio») sono dati sintetici anonimi, creati per la didattica: non vengono da campioni o strumenti reali. Si possono usare, copiare e modificare liberamente (**CC0 1.0**, https://creativecommons.org/publicdomain/zero/1.0/).
 
 ## Figure della Teoria
 
