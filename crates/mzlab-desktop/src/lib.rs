@@ -12,6 +12,7 @@ mod idxbuild_nat;
 pub mod librerie;
 pub mod mapped;
 mod nativi;
+mod nativi_slots;
 pub mod protocol;
 pub mod rpc;
 mod rpc_lr;
