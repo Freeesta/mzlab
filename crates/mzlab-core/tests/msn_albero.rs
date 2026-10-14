@@ -2,6 +2,8 @@
 //! routes on the committed synthetic MSn file (`tests/golden/ref/msntree_rotta`), and the parent of a node without the generation before in
 //! `/api/msntree` (the nearest ancestor). Synthetic data only.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::PathBuf;
 
 use mzlab_core::idxread::Index;

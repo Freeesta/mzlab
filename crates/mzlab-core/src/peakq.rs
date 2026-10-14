@@ -286,7 +286,7 @@ mod tests {
         // the CWT finds two peaks here as well, but its limits overlap (the same points are integrated twice); the valley limits of the new mode do not
         let mut c = detect_peaks(&rt, &y, Params::default());
         assert_eq!(c.len(), 2, "{c:?}");
-        c.sort_by_key(|p| p.apex_i);
+        crate::sortc::slice_by_key(&mut c, |p| p.apex_i);
         assert!(c[0].hi > c[1].lo, "CWT limits overlap: {c:?}");
         assert!(a.hi <= b.lo);
     }

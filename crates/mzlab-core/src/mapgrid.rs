@@ -115,6 +115,8 @@ pub fn median_cols(full: &[f32], rows: usize, nmz: usize) -> Vec<f32> {
     (0..nmz)
         .map(|j| {
             let mut c: Vec<f32> = (0..rows).map(|r| full[r * nmz + j]).collect();
+            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+            #[allow(clippy::disallowed_methods)]
             c.sort_by(f32::total_cmp);
             match c.len() {
                 0 => 0.0,
@@ -140,6 +142,8 @@ pub struct Point {
 /// `rt_groups`: points whose apexes are within ±`tol` minutes chain into one group (1, 2, ... in RT order).
 pub fn rt_groups(points: &mut [Point], tol: f64) {
     let mut order: Vec<usize> = (0..points.len()).collect();
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    #[allow(clippy::disallowed_methods)]
     order.sort_by(|&a, &b| points[a].rt.total_cmp(&points[b].rt));
     let (mut g, mut last) = (0, None::<f64>);
     for &i in &order {

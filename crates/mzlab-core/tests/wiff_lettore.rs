@@ -1,6 +1,8 @@
 //! The `.wiff` pair read through the `Lettore` contract gives the same spectra and chromatograms as `Wiff::run`, and is recognised by the registry.
 //! Synthetic pairs need python3 (`tools/wiff_riferimento.py`), the real ones the data repository (`MZLAB_DATI`); both skip when missing.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

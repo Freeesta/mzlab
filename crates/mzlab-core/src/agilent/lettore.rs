@@ -339,7 +339,7 @@ impl LettoreAgilent {
             .flat_map(|m| m.groups.iter().flat_map(|g| g.ions.iter()))
             .map(|(mz, _)| (mz * 100.0).round() as i64)
             .collect();
-        keys.sort_unstable();
+        crate::sortc::slice_ord(&mut keys);
         keys.dedup();
         keys
     }

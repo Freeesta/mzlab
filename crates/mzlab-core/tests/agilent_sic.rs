@@ -1,5 +1,7 @@
 //! SIC per SIM ion: built from the SIM scans of a synthetic `.D` and written to mzML.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_synth;
 
 use agilent_synth::*;

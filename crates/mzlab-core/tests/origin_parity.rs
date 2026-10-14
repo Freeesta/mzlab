@@ -1,6 +1,8 @@
 //! `origin::origin_report` gives what `ionfamily.origin_report` gives (`tools/origin_riferimento.py`): the same keys, the same indices
 //! and counts, numbers within 1e-6 relative. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

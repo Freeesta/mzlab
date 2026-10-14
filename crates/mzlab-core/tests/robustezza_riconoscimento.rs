@@ -1,6 +1,8 @@
 //! The recognition of a set (`lettori::riconosci`) looks at the first bytes, never at the extension alone: every prefix of every magic, a magic under the
 //! wrong name, a declared size smaller or larger than the bytes, and a Thermo `.raw` that is its magic and little else, must give a refusal or a key.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod robustezza;
 
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};

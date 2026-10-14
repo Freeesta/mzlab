@@ -57,7 +57,7 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         };
         let (lo, hi) = (pick(&|v, m| v < m), pick(&|v, m| v > m));
         let mut ks = vec![lo, hi];
-        ks.sort();
+        crate::sortc::slice_ord(&mut ks);
         ks.dedup();
         for k in ks {
             tt.push(t[k]);

@@ -2,6 +2,8 @@
 //! the same ROIs (count, scans, intensities within 1e-9 relative, centres within 1e-9). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

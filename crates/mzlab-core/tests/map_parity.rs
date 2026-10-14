@@ -2,6 +2,8 @@
 //! the other numbers within 1e-9 relative; the answers Python refuses (an error) are Python's here too (`None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;

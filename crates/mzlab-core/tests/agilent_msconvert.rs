@@ -3,6 +3,8 @@
 //! Differences that are known and accepted: msconvert names a scan `scanId=N` (here `scan=N`, the form the program reads scan numbers from), writes m/z as
 //! shorter decimals than the f32 values of the file (up to 2e-5 apart), and adds one SIM chromatogram per ion (the program builds XICs from the spectra).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 
 use mzlab_core::agilent::{AgilentD, Files};

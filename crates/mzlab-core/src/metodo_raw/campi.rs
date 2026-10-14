@@ -122,7 +122,7 @@ fn trailer(raw: &RawFileReader) -> Vec<Campo> {
             (format!("{lo}..{hi}"), format!("{label} (min..max)"))
         } else {
             let mut u = texts.clone();
-            u.sort();
+            crate::sortc::slice_ord(&mut u);
             u.dedup();
             (u.len().to_string(), format!("{label} (distinct values)"))
         };
@@ -331,7 +331,9 @@ pub fn fields(
         c.identita |= ident.names(&c.valore);
     }
     all.retain(|c| !c.valore.is_empty());
-    all.sort_by(|a, b| (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave)));
+    crate::sortc::slice_by(&mut all, |a, b| {
+        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+    });
     all.iter().filter_map(Campo::json).collect()
 }
 

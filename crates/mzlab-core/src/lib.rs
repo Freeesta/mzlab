@@ -1,6 +1,8 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 #![forbid(unsafe_code)]
+// the unit tests compare against the standard sorts
+#![cfg_attr(test, allow(clippy::disallowed_methods))]
 pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
@@ -80,6 +82,8 @@ pub mod profspec;
 pub mod project;
 pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+// raw.rs belongs to the formats work: its one std sort stays until that lands (then sortc::slice_ord)
+#[allow(clippy::disallowed_methods)]
 pub mod raw;
 pub mod rawfilter;
 pub mod rawlettore;

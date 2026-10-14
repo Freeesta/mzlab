@@ -79,7 +79,7 @@ pub fn time_profile(points: &[Value], metric: &str, istd: Option<&Value>) -> R<V
             .put("value", opt(v)).put("norm", opt(norm)).done();
         rows.push((t, file, i, row));
     }
-    rows.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut rows, |a, b| {
         let by_time = a.0.unwrap_or(0.0).partial_cmp(&b.0.unwrap_or(0.0)).unwrap_or(Equal);
         a.0.is_none().cmp(&b.0.is_none()).then(by_time).then_with(|| if a.0.is_some() { a.1.cmp(&b.1) } else { Equal }).then(a.2.cmp(&b.2))
     });

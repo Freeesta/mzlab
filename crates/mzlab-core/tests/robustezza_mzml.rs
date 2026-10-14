@@ -2,6 +2,8 @@
 //! tags that never close, a zlib array that inflates to hundreds of megabytes, millions of `cvParam` in one spectrum. Each case gives a key `err.*` or a
 //! reading, within a ceiling of memory that does not grow with what the file declares (`tests/robustezza/mod.rs`).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod robustezza;
 
 use std::io::{Read, Write};

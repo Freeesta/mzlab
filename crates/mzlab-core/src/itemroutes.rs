@@ -65,7 +65,7 @@ fn strings(o: &mut Out, v: &[String]) {
 
 fn polarity_of(sc: &[&Scan]) -> &'static str {
     let mut pols: Vec<i8> = sc.iter().map(|s| s.polarity).filter(|p| *p != 0).collect();
-    pols.sort();
+    crate::sortc::slice_ord(&mut pols);
     pols.dedup();
     match pols.as_slice() {
         [1] => "positive",
@@ -98,7 +98,7 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     let polarity = if kind == "mrm" || sc.is_empty() { m.header_polarity()? } else { polarity_of(&sc).to_string() };
     let win = scan_window(idx, &mut m.r)?;
     let mut filters: Vec<&str> = sc.iter().map(|s| s.filter.as_str()).filter(|f| !f.is_empty()).collect();
-    filters.sort();
+    crate::sortc::slice_ord(&mut filters);
     filters.dedup();
     let mut precs: Vec<f64> = ms2.iter().filter_map(|s| s.precursor.filter(|p| *p != 0.0)).map(|p| round(p, 2)).collect();
     crate::sortc::by(&mut precs, f64::total_cmp);

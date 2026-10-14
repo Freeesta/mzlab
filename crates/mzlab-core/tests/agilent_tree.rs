@@ -1,6 +1,8 @@
 //! What follows the head of `AcqData/MSTree2.bin` in the real runs (skipped without the data repository): per scan the TIC as `f32`, then one block
 //! per ion with the trace of that ion. Read here with a parser that shares no code with the reader.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 
 use mzlab_core::agilent::{AgilentD, Files};

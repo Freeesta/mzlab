@@ -108,7 +108,7 @@ fn compound(c: &Node, root: &Node) -> Option<V> {
         .iter()
         .filter(|q| q.name == "TargetQualifier" && same_compound(q, id))
         .collect();
-    ions.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut ions, |a, b| {
         f(a, "QualifierID")
             .partial_cmp(&f(b, "QualifierID"))
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -118,7 +118,7 @@ fn compound(c: &Node, root: &Node) -> Option<V> {
         .iter()
         .filter(|l| l.name == "Calibration" && same_compound(l, id))
         .collect();
-    levels.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut levels, |a, b| {
         f(a, "LevelConcentration")
             .partial_cmp(&f(b, "LevelConcentration"))
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -236,7 +236,9 @@ pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
             c
         })
         .collect();
-    fields.sort_by(|a, b| (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave)));
+    crate::sortc::slice_by(&mut fields, |a, b| {
+        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+    });
     let mut seen: Vec<&str> = Vec::new();
     for i in items.iter().filter(|i| i.name == "undecoded bytes") {
         if !seen.contains(&i.origin.as_str()) {

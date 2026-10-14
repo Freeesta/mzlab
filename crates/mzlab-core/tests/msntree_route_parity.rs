@@ -2,6 +2,8 @@
 //! tree (numbers within 1e-9) and the same error keys. `MZLAB_MSN_DIR` names a folder already written by the reference (a real file); without it the
 //! reference runs on a synthetic infusion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

@@ -234,9 +234,9 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         let form = bst.as_ref().map(|b| b.0.clone());
         let c = &cons[g];
         let mut top: Vec<usize> = (0..c.mz.len()).collect();
-        top.sort_by(|&a, &b| c.rel[b].total_cmp(&c.rel[a]));
+        crate::sortc::slice_by(&mut top, |&a, &b| c.rel[b].total_cmp(&c.rel[a]));
         top.truncate(MAX_PEAKS);
-        top.sort_by(|&a, &b| c.mz[a].total_cmp(&c.mz[b]));
+        crate::sortc::slice_by(&mut top, |&a, &b| c.mz[a].total_cmp(&c.mz[b]));
         let mx = if c.rel.is_empty() {
             1.0
         } else {

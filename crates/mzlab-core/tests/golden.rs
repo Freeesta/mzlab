@@ -2,6 +2,8 @@
 //! Order: the indices of the peak limits must be identical, then areas (1e-4 relative), m/z (1e-6), entropy (1e-9).
 //! A difference in an area is a difference of logic: fix the logic, never the tolerance.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
