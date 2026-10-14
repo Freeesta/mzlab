@@ -114,6 +114,6 @@
     for (const t of tools) if (t.nav) addTab(t);
     render();
   }
-  const start = () => { turnOn(); };
+  const start = () => { if (window.MZLAB_BROWSER || window.MZLAB_DESKTOP) turnOn(); };      // only in the built site and the desktop app: the plain web folder has no static/mzfinder/
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
