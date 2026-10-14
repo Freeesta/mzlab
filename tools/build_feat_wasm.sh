@@ -4,6 +4,7 @@
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480).
 limit=512000
+limit_lr=560000   # finder-lr carries the structure graph (chem) for the supposed tree
 out=${1:-site/static}/wasm-feat
 for which in detect proofs mrm finder finder_msn; do
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
@@ -26,7 +27,7 @@ tools/wasm_opt.sh "$out/import/mzlab_feat_import_wasm_bg.wasm" $limit "mzFinder 
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
 wasm-bindgen --target web --no-typescript --out-dir "$out/finder-lr" target/wasm32-unknown-unknown/release/mzlab_finder_lr_wasm.wasm
-tools/wasm_opt.sh "$out/finder-lr/mzlab_finder_lr_wasm_bg.wasm" $limit "mzFinder finder-lr"
+tools/wasm_opt.sh "$out/finder-lr/mzlab_finder_lr_wasm_bg.wasm" $limit_lr "mzFinder finder-lr"
 python3 - "$out" <<'P'
 import hashlib, json, sys
 o = sys.argv[1]

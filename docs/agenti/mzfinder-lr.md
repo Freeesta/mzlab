@@ -4,7 +4,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 
 ## Scavo LR: file
 - `crates/mzlab-feat/src/legacy/lr/`: `plan.rs` (file, colonne, progenitore, impostazioni; `plan_json` = `{rust, lc, minutes, formula}`), `rows.rs` (calibrazione sul progenitore, candidati dal registro delle ipotesi, isomeri, ioni inattesi, isotopi), `labels.rs` (criteri e punteggio di `score_candidate`), `kin.rs` (decadimento del progenitore, generazione cinetica), `summary.rs` (`summary`, `live`, livelli 4/5), `detail.rs` (`detail` con gli XIC dai `.mzidx`, `frag_tree`, `frag_tree_compare`), `mod.rs` (`dig`).
-- `crates/mzlab-finder-lr-wasm`: `.wasm` a sé (`wasm-feat/finder-lr/`, voce `finder_lr` del manifest, limite 512 000 B): `finder_lr_plan`, `finder_lr_dig` → `FinderLrDig{summary(timing), live(), detail(id, read, sizes), frag_tree(), frag_tree_compare(id)}`. Esempio nativo `finder_lr` (stessa pipeline del browser, per l'e2e).
+- `crates/mzlab-finder-lr-wasm`: `.wasm` a sé (`wasm-feat/finder-lr/`, voce `finder_lr` del manifest, limite 560 000 B in `build_feat_wasm.sh`, con `chem` per l'albero): `finder_lr_plan`, `finder_lr_dig` → `FinderLrDig{summary(timing), live(), detail(id, read, sizes), frag_tree(), frag_tree_compare(id)}`. Esempio nativo `finder_lr` (stessa pipeline del browser, per l'e2e).
 - `TP_Mine/files/finder-lr.js` (modulo importato da `tpmine-worker.js`): `run(ctx, args)` → JSON di `api.run` oppure `false` (si passa a Pyodide); `ofDig(ctx, fn, args)` per `detail`, `frag_tree`, `frag_tree_compare` quando `last === "rust-lr"`.
 
 ## Scavo LR: quando gira in Rust
