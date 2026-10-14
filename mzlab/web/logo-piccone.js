@@ -1,7 +1,7 @@
 // @ts-strict
-// Easter egg of the header logo: five hits with a small pickaxe switch mzFinder on (or off, see tpmine-loader.js). Each hit shakes the logo and adds a
-// stage of cracks (1-4); the fifth shatters it into pieces and flips the switch: mzFinder ON = the logo stays GOLDEN (localStorage, as a trophy), the next round
-// of five hits switches mzFinder OFF and gives the original logo back.
+// Easter egg of the header logo: five hits with a small pickaxe turn the logo gold (or back to normal). Each hit shakes the logo and adds a
+// stage of cracks (1-4); the fifth shatters it into pieces and turns the logo GOLDEN (localStorage, as a trophy), the next round
+// of five hits gives the original logo back.
 // No hit for a few seconds: the cracks close again. Reduced motion: no shake, no pickaxe, no shards, only the stages of cracks. Enter / Space on the focused logo = a hit.
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {
@@ -88,7 +88,7 @@ header img.logo{cursor:pointer;border-radius:4px}header img.logo:focus-visible{o
   function hit() {
     if (logo.style.opacity === "0") return;                         // the shards are flying: wait for the logo to be whole again
     const n = stage + 1;
-    if (n >= HITS) { shatter(window.QTOOLS && QTOOLS.flip ? !!QTOOLS.flip() : !root.hasAttribute("data-logo-gold")); return; }
+    if (n >= HITS) { shatter(!root.hasAttribute("data-logo-gold")); return; }
     showStage(n); swing();
   }
   document.addEventListener("click", ev => { const t = /** @type {Element | null} */ (ev.target); if (t && t.closest && t.closest("header img.logo")) hit(); }, true);

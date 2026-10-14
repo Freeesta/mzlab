@@ -1,3 +1,4 @@
+// @ts-strict
 // "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed.
 // The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
@@ -168,7 +169,7 @@ function hideMacro(fr) {
       const sel = K.editor.selection() || {};
       const set = new Set(sel.atoms || []);
       (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
-      let smi = "";
+      /** @type {any} */ let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
       if (!smi) { try { smi = plainSmiles(await K.getSmiles()); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
@@ -226,6 +227,7 @@ function hideMacro(fr) {
 // Each group lists data-testid of Ketcher's buttons. Default: what is needed to draw structures and transformation pathways;
 // the rest (stereochemistry, S/R groups, biology, mapping ...) is one click away in the «Strumenti dell'editor» card.
 // Note: Hand, Selection, Eraser, Text are in the top toolbar (always on). Shapes and images are always on.
+/** @type {any[]} */
 const TOOLS = [
   ["rings", true, ["bottom-toolbar"]],
   ["react", true, ["reaction-plus", "arrows-drop-down-button"]],
@@ -393,7 +395,7 @@ async function showInfo1() {
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
   if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
-  const all = pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) }));
+  const all = /** @type {any[]} */ (pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) })));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;
     if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
@@ -436,9 +438,9 @@ async function showInfo1() {
     + (perm ? '<div class="muted sm">' + EH(I18N.t("draw.props.permanent")) + '</div>' : "");
 }
 let neutOn = true;                                                             // "Escludi la carica": on by default
-document.addEventListener("change", e => { if (e.target && e.target.id === "prop-neut") { neutOn = e.target.checked; showInfo(); } });
+document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
+document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -647,8 +649,8 @@ function addExportLabels(svgText, ket) {
   const bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
   root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
   const sx = (x1 - x0) / vb[2], sy = (y1 - y0) / vb[3];
-  const pw = parseFloat(root.getAttribute("width")), ph = parseFloat(root.getAttribute("height"));
-  if (pw) root.setAttribute("width", pw * sx); if (ph) root.setAttribute("height", ph * sy);
+  const pw = parseFloat(/** @type {string} */ (root.getAttribute("width"))), ph = parseFloat(/** @type {string} */ (root.getAttribute("height")));
+  if (pw) root.setAttribute("width", String(pw * sx)); if (ph) root.setAttribute("height", String(ph * sy));
   if (bg) { bg.setAttribute("x", x0); bg.setAttribute("y", y0); bg.setAttribute("width", x1 - x0); bg.setAttribute("height", y1 - y0); }
   root.appendChild(g);
   return new XMLSerializer().serializeToString(doc);
@@ -662,8 +664,8 @@ function padSvg(svgText, px) {
   if (vb.length !== 4 || vb.some(isNaN)) return svgText;
   const [x, y, w, h] = vb, bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
   root.setAttribute("viewBox", `${x - px} ${y - px} ${w + 2 * px} ${h + 2 * px}`);
-  const pw = parseFloat(root.getAttribute("width")), ph = parseFloat(root.getAttribute("height"));
-  if (pw) root.setAttribute("width", pw * (w + 2 * px) / w); if (ph) root.setAttribute("height", ph * (h + 2 * px) / h);
+  const pw = parseFloat(/** @type {string} */ (root.getAttribute("width"))), ph = parseFloat(/** @type {string} */ (root.getAttribute("height")));
+  if (pw) root.setAttribute("width", String(pw * (w + 2 * px) / w)); if (ph) root.setAttribute("height", String(ph * (h + 2 * px) / h));
   if (bg) { bg.setAttribute("x", x - px); bg.setAttribute("y", y - px); bg.setAttribute("width", w + 2 * px); bg.setAttribute("height", h + 2 * px); }
   return new XMLSerializer().serializeToString(doc);
 }
@@ -691,7 +693,7 @@ async function image(format) {
   await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
   const sc = Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1));
   const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-  const g = c.getContext("2d"); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
+  const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(img, 0, 0, c.width, c.height);
   URL.revokeObjectURL(url);
   const out = await new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
@@ -742,7 +744,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
-document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
+document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") start(); });
 try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
 // "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)

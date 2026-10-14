@@ -36,6 +36,16 @@ try:
             assert IN(pg, "d => d.querySelector('#tp-bar [data-tp=rings]').classList.contains('tp-sel')")
             assert IN(pg, "d => d.querySelector('#tp-bar [role=menu]').hidden"), "the menu closes after a choice"
         step("menu opens, choosing an item selects the real Ketcher tool and the proxy mirrors it", menu)
+        def one_click():
+            fr = pg.frame_locator("#kframe"); sel = lambda tid: IN(pg, "d => [...d.querySelector('[data-testid=\"" + tid + "\"]').classList].some(c => /selected/i.test(c))")
+            for grp, tid, nxt in (("charge", "charge-plus", "charge-minus"), ("rings", "template-2", "template-1")):
+                fr.locator(f"#tp-bar [data-tp={grp}]").click()
+                assert IN(pg, f"d => d.querySelector('#tp-bar [data-tp={grp}]').getAttribute('aria-expanded')") == "true", grp
+                attendi(pg, f"(()=>{{const d=document.querySelector('#kframe').contentDocument;return [...d.querySelector('[data-testid=\"{tid}\"]').classList].some(c=>/selected/i.test(c))}})()")
+                fr.locator(f"#tp-bar [data-tp={grp}]").click()
+                assert IN(pg, f"d => d.querySelector('#tp-bar [data-tp={grp}]').getAttribute('aria-expanded')") == "false", "a second click closes"
+                assert sel(tid), "and keeps the tool"
+        step("one click on a group opens its menu AND selects its current tool; a second click closes it", one_click)
         def keys():
             fr = pg.frame_locator("#kframe")
             IN(pg, "d => d.querySelector('#tp-bar [data-tp=charge]').focus()")

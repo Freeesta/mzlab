@@ -42,7 +42,6 @@ try:
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
         def boot():
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=60000)
-            for _ in range(5): pg.click("header img.logo")
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-unt", timeout=60000)
         step("mzFinder is on and the feature-table button exists", boot)
         def lib():
@@ -93,7 +92,7 @@ try:
             r1 = lines[1].split(";"); assert r1[0] == "POS:1" and r1[head.index("level")] == "2b" and r1[head.index("level_proposed")] == "2a" and r1[head.index("level_decided")] == "2b" and len(r1[head.index("table_sha256")]) == 64
             n, b = get("#unt-x-xlsx"); assert n.endswith(".xlsx") and b[:2] == b"PK" and b"Library records" in b, n
             n, b = get("#unt-x-mgf"); m = b.decode("utf-8")
-            assert m.startswith("# mzFinder untargeted export") and m.count("BEGIN IONS") == 4 and "LEVEL=2b" in m and "NAME=Alpha" in m and "not stated" in m
+            assert m.startswith("# Tabui untargeted export") and m.count("BEGIN IONS") == 4 and "LEVEL=2b" in m and "NAME=Alpha" in m and "not stated" in m
             pg.select_option("#unt-lv", "5"); pg.check("#unt-xf"); n, b = get("#unt-x-csv"); assert len(b.decode("utf-8").lstrip("\ufeff").split("\r\n")[:-1]) == 1 + 3          # only the filtered features
             pg.uncheck("#unt-xf"); pg.select_option("#unt-lv", "all")
         step("export: CSV with «;», xlsx and MGF with levels, decided level, licences; only the filtered features", export)

@@ -1,12 +1,14 @@
+// @ts-strict
 // TPMINE-PRIVATE  «Run» section of the panel Pipeline (window.PIPER): runs L1-L9 (feat-run.js, pool of PIPE) on every .mzidx in OPFS, shows the result with PIPEV (list of identities or, without the
 // gate of quality, of rows), the detail of a row (proofs, cells per file, XIC and MS2 of the file chosen, from the routes api/xic and api/spectrum of the file open in Data) and sends the table to
 // the window of the feature tables (UNT, model «mzlab»). Above the run: the roles and times of the files (campioni/2, TP_Mine/files/finder-ruoli.js; the Rust proposes and checks). Texts in English (mzFinder convention).
 (() => {
   "use strict";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  /** @type {any} */
   const st = { ctx: null, data: null, list: [], view: null, files: [], gated: false, out: null, sel: null, res: {} };
   const $ = q => st.ctx.q(q);
-  const PV = () => window.PIPEV;
+  const PV = () => /** @type {any} */ (window).PIPEV;
 
   const html = () => `<details open><summary>Run on all the files</summary>
     <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="e.g. C9H11NO2" autocomplete="off"><span class="why">only with the gate open: hypotheses of transformation</span></label>
@@ -118,13 +120,13 @@
   // ------------------------------------------------------------ recipe: the record goes to the log of operations (.mzflow), «Re-apply» runs the last one again
   const levelsText = async () => { const s = document.querySelector('script[src*="livelli-1.js"]'); try { return s ? await (await fetch(s.src)).text() : null; } catch (_) { return null; } };
   async function recordRun(recipe, parent, op) {
-    const rec = await window.PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
+    const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
-    if (op) { const c = window.PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
+    if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
     if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(st.R.canonical(st.call, st.cs))); }
     st.last = rec; armAgain();
   }
-  const lastOp = () => (typeof NB !== "undefined" && window.WORKFLOW ? window.PIPEREC.lastOp(NB.ops, window.WORKFLOW.checkFeatureOp) : null);
+  const lastOp = () => (typeof NB !== "undefined" && window.WORKFLOW ? /** @type {any} */ (window).PIPEREC.lastOp(NB.ops, window.WORKFLOW.checkFeatureOp) : null);
   function armAgain() { const b = st.box && st.box.querySelector("#pipe-again"); if (b) b.disabled = !!st.busy || !lastOp(); }
   function again() {
     const op = lastOp(); if (!op) return;
@@ -154,7 +156,7 @@
       st.session = session; const g = { ...gate, table: gate.table === true };
       /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
-      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "mzfinder_" + session.sha.slice(0, 8) });
+      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
   }
   function refilter() {
@@ -164,7 +166,7 @@
   }
   async function toUnt() {
     const t = PV().toUnt(st.data, st.names, st.ctx.values().polarity);
-    try { t.file.sha256 = await window.UNT.sha256Hex(st.out.evid || st.out.table); } catch (_) { t.file.sha256 = ""; }
+    try { t.file.sha256 = await /** @type {any} */ (window).UNT.sha256Hex(st.out.evid || st.out.table); } catch (_) { t.file.sha256 = ""; }
     if (window.UNTUI && window.UNTUI.adopt) { window.UNTUI.adopt(t); msg(`${t.features.length.toLocaleString("en")} features sent to the feature tables.`); }
   }
 

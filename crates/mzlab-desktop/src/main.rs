@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use mzlab_desktop::cartella;
 use mzlab_desktop::librerie::{self, Config};
+use mzlab_desktop::release;
 use mzlab_desktop::scarica::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
 use mzlab_desktop::{handle_body, State};
@@ -223,6 +224,14 @@ async fn update_apply(app: AppHandle) -> String {
         })
 }
 
+/// Is there a newer stable release of the app? JSON `{status:"newer", version, url}` or `{status:"none"}`; never an error.
+#[tauri::command]
+async fn release_check() -> String {
+    tauri::async_runtime::spawn_blocking(|| release::check(release::API, env!("CARGO_PKG_VERSION")))
+        .await
+        .unwrap_or_else(|_| r#"{"status":"none"}"#.to_string())
+}
+
 #[tauri::command]
 fn update_restart(app: AppHandle) {
     app.restart();
@@ -402,6 +411,7 @@ fn main() {
             update_check,
             update_apply,
             update_restart,
+            release_check,
             data_choose_dir,
             data_get_dir,
             data_list,

@@ -88,7 +88,7 @@ try:
         pg.reload(); pg.wait_for_timeout(4000)
         pg.screenshot(path=SH + "20_restored.png")
         print("after reload", pg.evaluate("({f:E.files.length,p:E.panels.map(p=>p.type+':'+(p.traces||[]).length+':'+p.ints.length)})"))
-        step("tabs Dati, Disegno, Teoria", lambda: (lambda n: None if n == ["data", "draw", "theory"] else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
+        step("tabs Dati, Disegno, Teoria, Tabui", lambda: (lambda n: None if n == ["data", "draw", "theory", "tpmine"] else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
         pg.click("text=Disegno"); pg.wait_for_timeout(5000); pg.screenshot(path=SH + "22_draw.png")
         b = None
 finally:

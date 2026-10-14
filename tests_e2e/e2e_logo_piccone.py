@@ -1,5 +1,5 @@
-"""Logo easter egg (logo-piccone.js): 5 hits (click or Enter) switch mzFinder, the logo turns gold and stays gold after a reload; the next five hits
-switch mzFinder off and give the original logo back (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
+"""Logo easter egg (logo-piccone.js): 5 hits (click or Enter): the logo turns gold and stays gold after a reload; the next five hits
+give the original logo back (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
 Run from the repo root: python3 tests_e2e/e2e_logo_piccone.py"""
 import sys
 from pathlib import Path
@@ -15,7 +15,7 @@ def step(name, fn):
 LOGO = "header img.logo"
 def cracks(pg): return pg.evaluate("document.querySelectorAll('#lg-fx .lg-cr.on').length")
 def gold(pg): return pg.evaluate("[document.documentElement.hasAttribute('data-logo-gold'), localStorage.getItem('qqq.logo.gold'), getComputedStyle(document.querySelector('header img.logo')).filter]")
-def tab(pg): return pg.evaluate("localStorage.getItem('qqq.mzfinder') === '1'")      # the tab itself exists only in the built site (e2e_tpmine*)
+def tab(pg): return pg.evaluate("localStorage.getItem('qqq.mzfinder') !== null")      # the logo no longer switches anything: this key must never appear
 def run(p, reduced):
     tag = "reduced " if reduced else "motion "
     b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, reduced_motion="reduce" if reduced else "no-preference")
@@ -34,11 +34,10 @@ def run(p, reduced):
     step(tag + "2 hits = 2 stages of cracks, they close after 3 s", heal)
     def five():
         for _ in range(5): pg.click(LOGO)
-        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') === '1'", timeout=15000)
         pg.wait_for_function("document.documentElement.hasAttribute('data-logo-gold')", timeout=8000)
         pg.wait_for_function("getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=5000)
         g = gold(pg); assert g[1] == "1" and g[2] != "none", g
-    step(tag + "5 clicks: mzFinder on, logo gold", five)
+    step(tag + "5 clicks: logo gold", five)
     def reload():
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
         g = gold(pg); assert g[0] and g[2] != "none", g
@@ -52,20 +51,19 @@ def run(p, reduced):
     def keyboard():
         pg.focus(LOGO)
         for _ in range(5): pg.keyboard.press("Enter"); pg.wait_for_timeout(80)
-        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') !== '1'", timeout=15000)
         pg.wait_for_function("!document.documentElement.hasAttribute('data-logo-gold') && getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=8000)
         g = gold(pg); assert g[0] is False and g[1] is None and g[2] == "none", g
-    step(tag + "second round (Enter x5): mzFinder off, original logo back", keyboard)
+    step(tag + "second round (Enter x5): original logo back", keyboard)
     def reload2():
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
         g = gold(pg); assert g[0] is False and g[2] == "none" and not tab(pg), g
     step(tag + "original logo after a reload", reload2)
     def third():
         for _ in range(5): pg.click(LOGO)
-        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') === '1' && document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
+        pg.wait_for_function("document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
         for _ in range(5):
             pg.wait_for_function("getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=5000); pg.click(LOGO)
-        pg.wait_for_function("localStorage.getItem('qqq.mzfinder') !== '1' && !document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
+        pg.wait_for_function("!document.documentElement.hasAttribute('data-logo-gold')", timeout=15000)
     step(tag + "third and fourth round alternate again (gold, original)", third)
     b.close()
 try:

@@ -93,7 +93,7 @@
   function adopt(t) {
     open();
     st.table = t; st.res = null; st.sel = null; st.graph = null; st.open = new Set(); st.files = [];
-    $("#unt-sum").innerHTML = `<b>${esc(t.file.name)}</b>: ${t.features.length.toLocaleString("en")} features · ${t.samples.length} samples (pipeline of mzFinder)`;
+    $("#unt-sum").innerHTML = `<b>${esc(t.file.name)}</b>: ${t.features.length.toLocaleString("en")} features · ${t.samples.length} samples (pipeline of Tabui)`;
     $("#unt-go").disabled = !t.features.length; $("#unt-res").hidden = true;
   }
 
@@ -159,7 +159,7 @@
     if (!st.grp) { table(); return; }
     if (!st.graph) {
       say("Grouping the features by identity..."); const tp = window.TPCALL;
-      if (!tp) { say("The mzFinder engine is not available."); st.grp = false; $("#unt-grp").checked = false; return; }
+      if (!tp) { say("The Tabui engine is not available."); st.grp = false; $("#unt-grp").checked = false; return; }
       try { const g = await ID().compute(st.table, tp, { opt: { cycle_s: st.cyc } }); ID().annotate(g, st.table, st.res); st.graph = g; g.warnings.forEach(w => say(w)); if (!g.warnings.length) say(`${g.stats.grouped.toLocaleString("en")} groups of 2 or more features, ${g.stats.identities.toLocaleString("en")} rows in all.`); }
       catch (e) { say(String(e.message || e)); st.grp = false; $("#unt-grp").checked = false; $("#unt-cyc-l").hidden = true; return; }
     }

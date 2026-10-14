@@ -494,12 +494,14 @@ function bindFileRows() {
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {          // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
-      if (lrTog() && f0 && !E.panels.length) {          // empty work area (every file was hidden and its panels closed): the file opens with the starting layout of its type, which starts with the TIC
-        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
+      if (lrTog() && f0 && (!E.panels.length || !f0.vis)) {          // a hidden file (or an empty work area): the file opens with the starting layout of its type (MRM: its chromatograms; Full Scan: TIC + spectrum...); panels left without a visible file are closed, none stays empty
+        const far = E.panels.length && f0.kind !== E.tab;
+        sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll(); uiSave();
+        if (far) scrollToBlock(f0.kind); return;
       }
       if (lrTog() && f0 && !f0.vis && !tabFiles(f0.kind).some(f => f.vis)) { sibsOf(f0).forEach(f => { f.vis = true; }); ensureLayout(); return goToFileTab(f0); }       // the first file of a type that was left closed: it opens with the block of its type
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
-      STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
+      STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
     const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
@@ -628,7 +630,7 @@ function renderFileList() {
     const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
-    return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
+    return `<div class="fl ${f.k === E.cur ? "cur" : ""}"${f.k === E.cur ? ' aria-current="true"' : ""} data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
       <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${modeTag(f)}${hasPr ? `<span class="pr-tog${prOpen ? " on" : ""}" role="button" tabindex="0" aria-expanded="${prOpen}" aria-label="${I18N.t("files.showHidePrec")}" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}"></span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
@@ -678,14 +680,14 @@ function renderFileList() {
   });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
     side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
-    if (!x.checked) cleanupOrphanPanels();
+    if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderFileList();
     redrawAll();
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
     sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
-    if (!x.checked) cleanupOrphanPanels();
+    if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     redrawAll();
     uiSave();
   });

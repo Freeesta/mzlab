@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted tables: ONE model of the features of a LC-HRMS table (id, m/z, RT, areas per sample, MS2, external annotations with their source).
 // The readers (mzMine full table, annotations, FBMN quant + MGF + IIN edges, MS-DIAL, GNPS2 library and network) are Rust: crates/mzlab-feat/src/import, the .wasm «import» of wasm-feat/manifest.json
 // (crates/mzlab-feat-import-wasm, docs/agenti/mzfinder-import.md). Here: loading it, the calls (the arguments in, the table as JSON out; no number is calculated here) and the rest of the model
@@ -25,7 +26,8 @@
     if (g.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== g.sha256) throw fail("error.featWasmHash");
     const m = await import(u(g.js)); await m.default({ module_or_path: bytes }); return use(m);
   }
-  if (typeof process !== "undefined" && process.env && process.env.MZLAB_IMPORT_PKG) use(require(process.env.MZLAB_IMPORT_PKG + "/mzlab_feat_import_wasm.js"));
+  /** @type {any} */ const nodeProc = /** @type {any} */ (globalThis).process || null;   // node only (tests)
+  if (nodeProc && nodeProc.env && nodeProc.env.MZLAB_IMPORT_PKG) use(require(nodeProc.env.MZLAB_IMPORT_PKG + "/mzlab_feat_import_wasm.js"));
   const need = () => { if (!W) throw fail("error.featFailed", "the readers of the tables are not loaded (UNT.ready())"); return W; };
   const nan = x => (Number.isNaN(x) ? null : x);
   /** an error of the .wasm is a JSON string {error_key, params: {message}} */
@@ -48,17 +50,17 @@
   }
   const keyOf = (pol, id) => (pol > 0 ? "POS" : pol < 0 ? "NEG" : "UNK") + ":" + id;
   function addFeature(t, id, mz, rt) {
-    const f = { key: keyOf(t.pol, id), id: String(id), pol: t.pol, mz, rt, areas: {}, detected: null, ms2: null, ann: [], group: null, iin: null, component: null, nScans: null, program: t.program };
+    const f = { key: keyOf(t.pol, id), id: String(id), pol: t.pol, mz, rt, areas: {}, detected: null, ms2: null, ann: /** @type {any[]} */ ([]), group: null, iin: null, component: null, nScans: null, program: t.program };
     t.features.push(f); t.byId.set(f.id, f); return f;
   }
 
   // ------------------------------------------------------------ mzFinder HR (internal features): the rows of an HR result
   function fromMzfinder(res, o = {}) {
-    const t = newTable("mzfinder", o.name || "mzFinder", polOf(o.pol)); const files = (res.files || []).map(f => (typeof f === "string" ? f : f.name || f.label || ""));
+    const t = newTable("mzfinder", o.name || "Tabui", polOf(o.pol)); const files = (res.files || []).map(f => (typeof f === "string" ? f : f.name || f.label || ""));
     t.samples = files;
     for (const r of res.rows || []) {
       const f = addFeature(t, r.id, r.mz, r.rt); (r.series || []).forEach((a, i) => { if (a) f.areas[files[i] || "file" + i] = a; });
-      if (r.formula) f.ann.push({ source: "mzFinder", type: "formula", score: null, shared: null, ppm: r.ppm == null ? null : r.ppm, name: r.name || r.formula, cleanName: r.name || r.formula, formula: r.formula, ik: "", smiles: "", external: true, analog: false, propagated: false, notes: [] });
+      if (r.formula) f.ann.push({ source: "Tabui", type: "formula", score: null, shared: null, ppm: r.ppm == null ? null : r.ppm, name: r.name || r.formula, cleanName: r.name || r.formula, formula: r.formula, ik: "", smiles: "", external: true, analog: false, propagated: false, notes: [] });
       f.nScans = r.ms2_scans || null;
     }
     t.stats.features = t.features.length; return t;
@@ -66,7 +68,7 @@
 
   // ------------------------------------------------------------ mzFinder pipeline (crates/mzlab-feat): the rows of an aligned series {id, mz, rt, areas[], detected[]} (indices of samples), program «mzlab»
   function fromRows(rows, samples, o = {}) {
-    const t = newTable("mzlab", o.name || "mzFinder pipeline", polOf(o.pol)); t.samples = samples.slice();
+    const t = newTable("mzlab", o.name || "Tabui pipeline", polOf(o.pol)); t.samples = samples.slice();
     for (const r of rows) {
       const f = addFeature(t, r.id, r.mz, r.rt); r.areas.forEach((a, i) => { if (a > 0) f.areas[samples[i] || "file" + i] = a; });
       f.detected = (r.detected || []).map(i => samples[i] || "file" + i);

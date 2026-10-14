@@ -121,7 +121,7 @@ impl Store {
     pub fn put(&mut self, name: &str, path: PathBuf) -> Result<Entry> {
         self.load();
         let name = clean(name)?;
-        let (size, mtime) = stamp(&path).ok_or_else(|| Error::new("err.file.raw").with("detail", "unknown file"))?;
+        let (size, mtime) = stamp(&path).ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
         self.seq += 1;
         let e = Entry { path, size, mtime, seq: self.seq, nat: None };
         self.files.insert(name.to_string(), e.clone());
@@ -136,7 +136,7 @@ impl Store {
         let path = nat.members.first().map(|m| m.1.clone()).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
         self.seq += 1;
         let mut e = Entry { path, size: 0, mtime: 0, seq: self.seq, nat: Some(nat) };
-        (e.size, e.mtime) = e.stamp().ok_or_else(|| Error::new("err.file.raw").with("detail", "unknown file"))?;
+        (e.size, e.mtime) = e.stamp().ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
         self.files.insert(name.to_string(), e.clone());
         self.save_files();
         Ok(e)

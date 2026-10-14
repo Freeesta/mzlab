@@ -40,7 +40,7 @@ function setTab(t, quiet, motivo) {
 
 // first time a tab is shown (or after all its panels were closed and the page reloaded): its starting layout
 function ensureLayout() {
-  if (tabFiles().length && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);
+  if (tabFiles().some(f => f.vis) && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);          // a block is made only for a type with a visible file: no empty panels
   if (lrTog()) ensureBlocks();
 }
 // every experiment type that has files gets its block (its starting layout) under the ones already on the page
