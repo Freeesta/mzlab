@@ -39,8 +39,8 @@ try:
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 2 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
-            assert pg.input_value("#uip-pal") == "time"
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
+            assert pg.input_value("#uip-pal") == "file"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
             pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(300)
             assert pg.evaluate("UIP.tips") is None and pg.evaluate("UIP.num") is None and pg.evaluate("typeof TUT") == "undefined" and pg.evaluate("typeof tipOf") == "undefined"
@@ -48,6 +48,7 @@ try:
             assert pg.evaluate("document.querySelectorAll('[title]').length") > 40, "tooltips stay on"
         step("gear: exactly 3 controls; tips and numbers are fixed on; no tutorial", gear)
         def time_scale():
+            pg.evaluate("setPal('time'); paintFiles(); renderFileList()")             # the time scale is the «Per tempo» palette, no longer the default
             c = pg.evaluate(COLORS); print(c)
             assert [x[0] for x in c] == [0, 5, 15, 30, 60], c
             hs = [hexof(x[1]) for x in c]; assert len(set(hs)) == 5, hs
@@ -75,9 +76,9 @@ try:
         step("a colour chosen by hand is not overwritten; 'ripristina colori' brings the scale back", manual)
         def menu_entry():
             drawer(pg); pg.click("#flst .fl .nm >> nth=0", button="right"); pg.wait_for_timeout(300)
-            assert "Ripristina i colori automatici (per tempo)" in pg.inner_text("body")
+            assert "Ripristina i colori automatici" in pg.inner_text("body")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
-        step("the file menu has 'Ripristina i colori automatici (per tempo)'", menu_entry)
+        step("the file menu has 'Ripristina i colori automatici'", menu_entry)
         def palettes():
             seen = {}
             for k in ("time", "cb", "hc", "rainbow"):
@@ -99,7 +100,7 @@ try:
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
             set_pal(pg, "cb"); pg.wait_for_timeout(300)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"theme": "auto", "pal": "cb", "merge": True}
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"v": 2, "theme": "auto", "pal": "cb", "merge": True}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette
@@ -117,7 +118,7 @@ try:
         def n_variants():
             for n, times in ((3, [0, 15, 60]), (7, [0, 5, 10, 15, 30, 45, 60])):
                 pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(2500)
-                load(pg, times, str(n))
+                load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «Per tempo»
                 c = pg.evaluate(COLORS); hs = [hexof(x[1]) for x in c]; ls = [lum(h) for h in hs]
                 assert len(c) == n and len(set(hs)) == n and all(ls[i] < ls[i + 1] for i in range(n - 1)), (n, hs)
                 pg.screenshot(path=SH + f"250_scale_{n}.png", clip={"x": 0, "y": 60, "width": 400, "height": 500})
@@ -134,7 +135,7 @@ try:
             pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(3000)
             print("after:", pg.evaluate("[E.files.length, localStorage.getItem('qqq.extra'), localStorage.getItem('qqq.prefs')]"))
             assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('qqq.extra')") is None and pg.evaluate("localStorage.getItem('qqq.prefs')") is None
-            assert pg.evaluate("UIP.pal") == "time" and pg.evaluate("document.documentElement.dataset.pal") == "time" and pg.evaluate("UIP.font") is None
+            assert pg.evaluate("UIP.pal") == "file" and pg.evaluate("document.documentElement.dataset.pal") == "file" and pg.evaluate("UIP.font") is None
             assert pg.evaluate("(NB.session||null)") is None and pg.evaluate("Object.keys(NB).filter(k=>k!=='ui'&&k!=='session').length") == 0
             st = pg.evaluate("fetch('api/notebook').then(r=>r.json())"); assert not st.get("session"), st
         step("Nuova sessione: warning text, cancel changes nothing, confirm clears files, notebook, preferences", new_session)

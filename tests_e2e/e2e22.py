@@ -27,7 +27,7 @@ try:
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))"); print(saved)
-            assert saved == {"theme": "dark", "pal": "time", "merge": True}, saved
+            assert saved == {"theme": "dark", "v": 2, "pal": "file", "merge": True}, saved
         step("gear: theme, saved in localStorage (theme, pal, merge)", gear)
         def reload():
             pg.reload(); pg.wait_for_timeout(2500)
