@@ -319,7 +319,7 @@ async function bootSession0() {
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
   const seq = !!E._seq, waiting = !!(E.pending && E.pending.some(x => x.state === "wait"));      // seq: a list opened file by file, this is not its first step
   E._seq = waiting;
-  const isFirstLoad = !oldNames.length || !!(E.pending && E.pending.some(x => x.state === "wait"));       // while a list is opened file by file the new ones follow the rules of the first load
+  const isFirstLoad = !oldNames.length || seq || waiting;       // while a list is opened file by file the new ones follow the rules of the first load
   const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
   const trueHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));       // a low-resolution IDA file is not high resolution
   E.files = j.session.map((s, k) => {
@@ -329,8 +329,7 @@ async function bootSession0() {
     } else if (isFirstLoad && trueHr && new Set(j.session.map(x => fileBase(x.file))).size > 1) {
       vis = fileBase(s.file) === fileBase(j.session[0].file);          // high resolution: only the first file (in the order of the list) is open, a click opens the others
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
-      const firstIdx = j.session.findIndex(x => x.kind === s.kind);
-      vis = (k === firstIdx);
+      vis = (k === 0);          // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
     }
     return { ...s, k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
@@ -498,6 +497,7 @@ function bindFileRows() {
       if (lrTog() && f0 && !E.panels.length) {          // empty work area (every file was hidden and its panels closed): the file opens with the starting layout of its type, which starts with the TIC
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
+      if (lrTog() && f0 && !f0.vis && !tabFiles(f0.kind).some(f => f.vis)) { sibsOf(f0).forEach(f => { f.vis = true; }); ensureLayout(); return goToFileTab(f0); }       // the first file of a type that was left closed: it opens with the block of its type
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
