@@ -82,11 +82,10 @@
   }
   const qcCss = `#pipe svg.qcl{display:inline;width:12px;vertical-align:-1px}#pipe .qcb{stroke:var(--panel)}#pipe .qcb0{fill:var(--pv-d)}#pipe .qcb1{fill:var(--pv-t)}#pipe .qcb2{fill:var(--pv-f)}#pipe .qcb3{fill:var(--pv-a)}#pipe .qc table{border-collapse:collapse;font-size:12px;margin:6px 0}#pipe .qc td,#pipe .qc th{padding:2px 8px;text-align:left}#pipe .qc .n{text-align:right}`;
 
-  /** renders the step into `box`; `o` = { session, gate (PIPE.gateState), gateText (html), chart (PIPE.chart: box, svg, title, desc, table) } */
+  /** renders the step into `box`; `o` = { session, chart (PIPE.chart: box, svg, title, desc, table) } */
   function render(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
     const q = o.session.qc(""), files = q.file;
     box.innerHTML = `<details open class="qc"><summary>Quality control</summary><p class="mut">Numbers of the engine for the whole table; no threshold is applied. D detected, T targeted, F filled, A absent.</p>
-      <div class="gate${o.gate.table ? " ok" : ""}" role="status">${o.gateText}<br>Table view: ${o.gate.table ? "validated" : "not validated"}. Candidate view: ${o.gate.ok ? "validated" : "not validated"}.</div>
       <div class="charts"><div class="ch" id="qc-m"></div></div>
       <p class="mut" aria-hidden="true">${KINDS.map((k, j) => `<svg class="qcl" width="12" height="12"><rect class="qcb qcb${j}" width="12" height="12"/></svg> ${k[1]} ${k[2]}`).join(" &nbsp; ")}</p>
       <table><caption class="mut">Cells and area per file</caption><tr><th>File</th>${KINDS.map(k => `<th class="n" title="${k[2]}">${k[1]}</th>`).join("")}<th class="n">Total area</th></tr>

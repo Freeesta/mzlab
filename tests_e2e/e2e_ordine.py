@@ -38,8 +38,7 @@ try:
         def typed():
             pg.select_option("#tunit", "h")
             i = pg.locator("#flist input[data-k=time]").nth(0); i.fill("0,5"); i.press("Tab")
-            assert pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)")[0] == "0.5"
-            pg.wait_for_timeout(100)
+            attendi(pg, "Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)[0] === '0.5'")      # the commit is applied once the focus has moved
             names = pg.evaluate(NAMES); assert names[0] == "s_t30.mzML" or names[1] == "s_t30.mzML", names     # 0.5 h = 30 min ties with s_t30: order by name
             j = pg.locator("#flist input[data-k=time]").nth(2); j.fill("abc"); j.press("Tab")
             assert pg.get_attribute("#flist input[aria-invalid=true]", "data-k") == "time"
