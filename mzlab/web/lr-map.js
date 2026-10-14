@@ -38,7 +38,7 @@ export async function engineRoute(path, q, env) {
   }
   if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };                  // the ?perf meter lists how Python read each file: Python reads none here
   if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };   // a built-in list: data, not a calculation
-  if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => k + "\t" + String(v).replace(/[\r\n]+/g, " ").trim()).join("\n") })).info };       // schema provenienza/1: the engine writes the line of an exported table
+  if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => [k, String(v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/·/g, "-").trim()]).filter(kv => kv[1]).map(kv => kv.join("\t")).join("\n") })).info };       // schema provenienza/1: the engine writes the line of an exported table
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (path === "/api/qaqc") return await qaqcRoute(q, env);
   if (/^\/api\/map(snap|punti|punti3d|tiles)?$/.test(path)) return await mapRoute(path, q, env);
