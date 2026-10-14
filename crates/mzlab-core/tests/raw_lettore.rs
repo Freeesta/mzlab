@@ -1,6 +1,7 @@
 //! The Thermo `.raw` read through the `Lettore` contract gives the same spectra as `raw::read`, with an index built without reading peaks, and is
 //! recognised by the registry from its first bytes. Needs the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without it.
 #![allow(clippy::indexing_slicing)]
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use std::path::{Path, PathBuf};
 

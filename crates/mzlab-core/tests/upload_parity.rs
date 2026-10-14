@@ -2,6 +2,8 @@
 //! `source` (name, size, probe, sha256; the modification date is left out) and `run` objects. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

@@ -223,7 +223,9 @@ fn fields(d: &AgilentD, ident: &Ident) -> Vec<V> {
         })
         .collect();
     all.retain(|c| !c.valore.is_empty());
-    all.sort_by(|a, b| (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave)));
+    crate::sortc::slice_by(&mut all, |a, b| {
+        (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
+    });
     all.iter().filter_map(Campo::json).collect()
 }
 

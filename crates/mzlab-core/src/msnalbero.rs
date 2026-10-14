@@ -285,7 +285,7 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Raggrupp
         }
     }
     let mut keys: Vec<Key> = groups.keys().cloned().collect();
-    keys.sort_by(key_cmp);
+    crate::sortc::slice_by(&mut keys, key_cmp);
     let mut by_nominal: HashMap<Vec<i64>, Vec<Key>> = HashMap::new();
     for k in &keys {
         by_nominal

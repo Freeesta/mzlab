@@ -2,6 +2,8 @@
 //! infusion without a hint, the synthetic infusion of `TP_Mine/tests/msn_synth.py` (one path at a time) is (skipped without python3 and
 //! numpy), and the files of the private data repository answer as `scratchpad/verita_infusione_msn.json` says (skipped without it).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

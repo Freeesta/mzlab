@@ -4,6 +4,8 @@
 //! `agilent_audit/scarti.txt` with the reason. `agilent_audit/noti.txt` lists, per file, how many items the reader gives: if a known one disappears the
 //! test fails (write it again with `AUDIT_WRITE=1`). Real folders need the data repository (`MZLAB_DATI`); the synthetic test always runs.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 

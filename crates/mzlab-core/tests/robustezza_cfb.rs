@@ -1,6 +1,8 @@
 //! The reader of OLE2 compound files (the container of `.wiff` and `.dam`) against crafted containers: FAT chains that loop, DIFAT chains that make the FAT
 //! larger than the file, sectors outside the file, directories that loop, streams of a declared size of 4 GB. Containers are built here, byte by byte.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod robustezza;
 
 use mzlab_core::methodinfo;

@@ -259,6 +259,8 @@ impl Lettore for LettoreRaw {
 }
 
 fn median(mut v: Vec<f32>) -> f32 {
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    #[allow(clippy::disallowed_methods)]
     v.sort_by(f32::total_cmp);
     v[v.len() / 2]
 }

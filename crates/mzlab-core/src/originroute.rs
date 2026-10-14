@@ -32,7 +32,7 @@ pub struct Ask<'a> {
 /// The strongest 40 peaks, as Python sends them for the proofs of the page.
 fn strongest(s: &(Vec<f64>, Vec<f64>)) -> Value {
     let mut k: Vec<usize> = (0..s.1.len()).collect();
-    k.sort_by(|&a, &b| s.1[b].total_cmp(&s.1[a]));
+    crate::sortc::slice_by(&mut k, |&a, &b| s.1[b].total_cmp(&s.1[a]));
     k.truncate(40);
     let a: Vec<f64> = k.iter().map(|&i| s.0[i]).collect();
     let y: Vec<f64> = k.iter().map(|&i| s.1[i]).collect();
@@ -79,7 +79,7 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
         return Err(Error::new("err.origin.needFullScan"));
     }
     let mut slots: Vec<u32> = full.iter().map(|(_, it)| it.slot).collect();
-    slots.sort_unstable();
+    crate::sortc::slice_ord(&mut slots);
     if slots.windows(2).any(|w| w[0] == w[1]) {
         return Ok(None);
     }

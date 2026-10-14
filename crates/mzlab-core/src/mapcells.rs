@@ -141,6 +141,8 @@ impl<R: ReadAt> Routes<R> {
         })?;
         let total = pts.len();
         let mut order: Vec<usize> = (0..total).collect();
+        // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+        #[allow(clippy::disallowed_methods)]
         order.sort_by(|&i, &j| pts[j].2.total_cmp(&pts[i].2));
         order.truncate(cap);
         Ok(Sticks {

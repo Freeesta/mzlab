@@ -2,6 +2,8 @@
 //! profile files): the same peaks, the same padded line, numbers within 1e-9; the requests Python refuses are Python's here too (`None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_PROFILE_DIR` = a folder already written by the script.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

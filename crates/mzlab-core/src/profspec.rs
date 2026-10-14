@@ -77,7 +77,7 @@ impl<R: ReadAt> Routes<R> {
     /// as `Item._step` does (the index cannot give it: its m/z are rounded to single precision). A no-op for every other level.
     pub fn prime_steps<M: Scansioni + ?Sized>(&mut self, mzml: &mut M) -> Result<()> {
         let mut levels: Vec<u8> = self.idx.scans.iter().map(|s| s.level).collect();
-        levels.sort_unstable();
+        crate::sortc::slice_ord(&mut levels);
         levels.dedup();
         for level in levels {
             let all_profile = self.idx.scans.iter().filter(|s| s.level == level).all(|s| s.profile);

@@ -2,6 +2,8 @@
 //! the spacing of the points is read from the scans that have enough of them, wherever they are, so the route answers instead of giving the
 //! level to Python (the page has no Python: the spectrum panel stayed blank). Synthetic data only.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::Spectrum;

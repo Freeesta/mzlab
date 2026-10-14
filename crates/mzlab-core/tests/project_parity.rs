@@ -1,6 +1,8 @@
 //! `project::guess_sample` and `project::guess_conc` answer like `mzlab/project.py` on ~36000 generated file names
 //! (`tools/project_riferimento.py`). Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

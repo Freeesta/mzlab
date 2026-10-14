@@ -49,7 +49,7 @@ pub fn read_points<R: ReadAt>(peak: &mut R, rec: &ScanRec) -> Result<(Vec<f64>, 
         return Ok((mz, it));
     }
     let mut ord: Vec<usize> = (0..n).collect();
-    ord.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]));
+    crate::sortc::slice_by(&mut ord, |&a, &b| mz[a].total_cmp(&mz[b]));
     Ok((
         ord.iter().map(|&i| mz[i]).collect(),
         ord.iter().map(|&i| it[i]).collect(),

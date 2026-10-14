@@ -1,6 +1,8 @@
 //! The `metodo/1` document of the real Agilent runs (skipped without the data repository): what the sections say, that no field of the side files is
 //! left out of `campi`, and that the mzML carries the same document.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_folder;
 
 use agilent_folder::*;
