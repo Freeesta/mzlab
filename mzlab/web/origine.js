@@ -1,3 +1,4 @@
+// @ts-strict
 // "Da dove viene questo ione?" (Origin of an ion). ES module (loaded after explore.js); only openOrigin goes on window.
 // ONE window (like openXic) that shows the EVIDENCE computed by mzlab/ionfamily.py (/api/origin) and never a verdict:
 //   (a) normalised XICs of the ion, of the candidate precursor and of the co-eluting ions the student picks,
@@ -5,6 +6,7 @@
 //   (c) F against P (area of the ion against area of the candidate precursor, one point per scan) with the fitted line and R2,
 //   (d) behaviour across samples (kinetics), each metric with a two-line explanation, honest warnings, the student's own hypothesis
 //       (saved in the notebook) and an Excel export. The only "conclusion" on the page is the one the student writes.
+/** @type {any} */
 const OG = { res: null, sel: new Set(), traces: new Map(), busy: 0 };
 const ogMsg = w => (w && w.key ? I18N.t(w.key, w.params) : String(w));                // a warning from the server: {key, params}
 const ogRole = r => (r.label_key ? I18N.t(r.label_key, r.params) : r.label || r.role);   // a role of a co-eluting ion
@@ -30,7 +32,7 @@ const ogN = (v, d = 3) => v == null || !isFinite(v) ? "-" : (Math.abs(v) >= 1e4 
 const OG_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#7a3b9b", "#8a8a8a"];
 
 function ogDialog() {
-  let d = document.getElementById("ogdlg"); if (d) return d;
+  /** @type {any} */ let d = document.getElementById("ogdlg"); if (d) return d;
   d = document.createElement("dialog"); d.id = "ogdlg";
   d.innerHTML = `<div class="ogh"><h3>${I18N.t("og.title")}</h3><button id="og-x" title="${I18N.t("common.close")}">&times;</button></div>
 <div class="ogb"><p class="why">${I18N.t("og.intro")}</p>
@@ -63,14 +65,14 @@ function openOrigin(pre = {}) {
   (q("#og-par").value ? q("#og-go") : q("#og-par")).focus();
 }
 async function ogRun() {
-  const d = document.getElementById("ogdlg"), q = id => d.querySelector(id), err = q("#og-err");
+  const d = /** @type {any} */ (document.getElementById("ogdlg")), q = id => d.querySelector(id), err = q("#og-err");
   const mz = numMz(q("#og-mz").value), par = numMz(q("#og-par").value), r0 = numIt(q("#og-r0").value), r1 = numIt(q("#og-r1").value);
   err.hidden = true;
   if (mz == null || par == null) { err.textContent = I18N.t("og.needBoth"); err.hidden = false; return; }
   if (mz === par) { err.textContent = I18N.t("og.differ"); err.hidden = false; return; }
   q("#og-go").disabled = true; const t0 = Date.now(), webNote = window.QQQ_BROWSER ? " " + I18N.t("og.webNote") : "";
   q("#og-out").innerHTML = `<p class="why" id="og-wait">${I18N.t("og.wait")}${webNote}</p>`;
-  const tick = setInterval(() => { const w = document.getElementById("og-wait"); if (w) w.firstChild.textContent = I18N.t("og.waitN", { s: Math.round((Date.now() - t0) / 1000) }); }, 1000);
+  const tick = setInterval(() => { const w = document.getElementById("og-wait"); if (w && w.firstChild) w.firstChild.textContent = I18N.t("og.waitN", { s: Math.round((Date.now() - t0) / 1000) }); }, 1000);
   const my = ++OG.busy;
   try {
     let u = `api/origin?k=${q("#og-k").value}&mz=${mz}&parent=${par}`;
@@ -137,7 +139,7 @@ async function ogEvidence(R, box) {
 }
 
 function ogRender() {
-  const R = OG.res, d = document.getElementById("ogdlg"), out = d.querySelector("#og-out"), P = R.profile || {}, F = R.ratio || {}, K = R.kinetics || {}, C = R.ratio_constancy || {};
+  const R = OG.res, d = /** @type {any} */ (document.getElementById("ogdlg")), out = d.querySelector("#og-out"), P = R.profile || {}, F = R.ratio || {}, K = R.kinetics || {}, C = R.ratio_constancy || {};
   const warn = [...new Set([...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])].map(ogMsg))];
   if (P.reliable === false) warn.push(I18N.t("og.warn.unreliable"));
   if (P.x_has_peak === false) warn.push(I18N.t("og.warn.noPeak"));
