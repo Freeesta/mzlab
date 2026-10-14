@@ -614,6 +614,8 @@ I18N.add("it", {
   "errori.copied": "Copiato",
   "errori.close": "Chiudi",
   "workflow.err.invalidFormat": "Formato .mzflow non valido o non riconosciuto.",
+  "workflow.err.tooBig": "File troppo grande.",
+  "workflow.err.tooDeep": "File troppo annidato.",
   "workflow.warn.shaMismatch": "L'impronta SHA-256 del file <b>{file}</b> ({actual}…) è diversa da quella del flusso di lavoro ({expected}…). Continuare comunque?",
   "workflow.needFiles": "Il flusso di lavoro fa riferimento a questi file, che non risultano ancora caricati:",
   "workflow.warn.unknownOps": "Il file contiene operazioni che questa versione non conosce e che sono state ignorate: {ops}",
