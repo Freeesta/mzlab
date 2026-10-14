@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: sito-rust-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
   sito-e2e:

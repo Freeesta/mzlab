@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: rust-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
   # Decides from the changed paths whether the Rust jobs run (the workflow itself has no path filter, so `rust-ok` always reports).

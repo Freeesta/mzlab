@@ -15,7 +15,7 @@ permissions:
 # a new push stops the run still going on the same branch / pull request
 concurrency:
   group: test-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
   pytest:
