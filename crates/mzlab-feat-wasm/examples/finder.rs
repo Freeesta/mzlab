@@ -111,7 +111,10 @@ fn main() {
     }
     pj.raw("}");
     let p = legacy::series::parent(&pj.0).expect("parent");
-    let par = rt.map(|t| (p.mz, t));
+    // as the page does (`finder_parent`): the proofs read the kinetics, the in-source fragments and the MS2 notes against the parent peak found in the table
+    let par = legacy::parent_peak(&fj.0, &pj.0, &table)
+        .expect("parent peak")
+        .map(|x| (p.mz, x.1));
     let ev = run::evidence(&table, &h, &mins, par, &r).expect("evidence");
     let d = legacy::dig(&fj.0, &pj.0, &ev, &h.registry.to_json(), |k| open(paths[k])).expect("dig");
     write(&out, &d);
