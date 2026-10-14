@@ -57,7 +57,11 @@ pub fn file_facts<R: ReadAt>(index: &Index<R>) -> FileFacts {
         polarity: sign.signum() as i8,
         resolution: if nres > 0 { res / f64::from(nres) } else { 0.0 },
         acquisition: acquisition.to_string(),
-        instrument: an.iter().max_by_key(|e| e.1).map_or("", |e| e.0).to_string(),
+        instrument: an
+            .iter()
+            .max_by_key(|e| e.1)
+            .map_or("", |e| e.0)
+            .to_string(),
     }
 }
 

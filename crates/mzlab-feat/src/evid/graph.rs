@@ -171,13 +171,20 @@ pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> 
     (0..aligned.len())
         .map(|r| {
             let at = |k: usize| closest(aligned.member_mz[k], f64::from(aligned.member_rt[k]));
-            let roots = aligned.members(r).filter(|&k| aligned.member_role[k] == ROLE_M);
+            let roots = aligned
+                .members(r)
+                .filter(|&k| aligned.member_role[k] == ROLE_M);
             // the root of the family speaks first, then the reference ion of the row, then the other ions
             roots
                 .clone()
                 .find_map(at)
                 .or_else(|| closest(aligned.mz[r], aligned.rt[r]))
-                .or_else(|| aligned.members(r).filter(|&k| aligned.member_role[k] != ROLE_M).find_map(at))
+                .or_else(|| {
+                    aligned
+                        .members(r)
+                        .filter(|&k| aligned.member_role[k] != ROLE_M)
+                        .find_map(at)
+                })
         })
         .collect()
 }
@@ -301,7 +308,9 @@ pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
     let mut ids: Vec<Identity> = (0..inp.aligned.len())
         .map(|r| prep.identity(inp, r))
         .collect();
-    crate::sortc::any_by(&mut ids, |a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
+    crate::sortc::any_by(&mut ids, |a, b| {
+        super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b))
+    });
     ids
 }
 

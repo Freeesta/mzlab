@@ -19,10 +19,10 @@ pub use tabella::{role_of, table_json, Role, TABLE_SCHEMA};
 
 use mzlab_core::error::Result;
 
-use crate::trace::filled;
 use crate::aligned::Aligned;
 use crate::evid::rowproofs::Signs;
 use crate::hypo::Hypothesis;
+use crate::trace::filled;
 
 pub const SCHEMA: &str = "tp/1";
 /// `NO_PARENT` in `TpBlock::parent_row`.
@@ -131,7 +131,11 @@ impl TpRoles {
     pub fn of(cs: &[mzlab_core::campioni::Campione]) -> TpRoles {
         let p = mzlab_core::campioni::per_tp(cs);
         TpRoles {
-            blank_kinds: p.blank.iter().map(|&i| cs[i].blank_kind.clone().unwrap_or_default()).collect(),
+            blank_kinds: p
+                .blank
+                .iter()
+                .map(|&i| cs[i].blank_kind.clone().unwrap_or_default())
+                .collect(),
             minutes: p.minutes.iter().map(|m| m.unwrap_or(f64::NAN)).collect(),
             treated: p.treated,
             t0: p.t0,
@@ -143,16 +147,24 @@ impl TpRoles {
 
     /// The roles of the files from a `campioni/2` document (`error.badCampioni` when it is not one).
     pub fn from_json(campioni: &str) -> Result<TpRoles> {
-        Ok(TpRoles::of(&mzlab_core::campioni::from_json(campioni.as_bytes())?))
+        Ok(TpRoles::of(&mzlab_core::campioni::from_json(
+            campioni.as_bytes(),
+        )?))
     }
 
     /// The files the kinetics reads: the timed ones (the t0 and the treated) and the controls. With the roles the controls are the blanks and the
     /// dark only (never the infusion, a standard or a QC); without, every file with no time in `minutes` is a control.
     pub fn kinetic_files(minutes: &[f64], roles: Option<&TpRoles>) -> (Vec<usize>, Vec<usize>) {
-        let timed = (0..minutes.len()).filter(|&k| minutes[k].is_finite()).collect();
+        let timed = (0..minutes.len())
+            .filter(|&k| minutes[k].is_finite())
+            .collect();
         let controls = match roles {
-            Some(ro) => (0..minutes.len()).filter(|k| ro.blank.contains(k) || ro.dark.contains(k)).collect(),
-            None => (0..minutes.len()).filter(|&k| !minutes[k].is_finite()).collect(),
+            Some(ro) => (0..minutes.len())
+                .filter(|k| ro.blank.contains(k) || ro.dark.contains(k))
+                .collect(),
+            None => (0..minutes.len())
+                .filter(|&k| !minutes[k].is_finite())
+                .collect(),
         };
         (timed, controls)
     }
@@ -211,7 +223,10 @@ pub fn build(inp: &TpInputs) -> Result<Option<TpBlock>> {
 /// `build` with the roles of the files: gate 1 says which reference took a row out, runs without a t0 (every row noted) and leaves out the
 /// infusion; `inp.minutes` is replaced by `roles.minutes`.
 pub fn build_by_role(inp: &TpInputs, roles: &TpRoles) -> Result<Option<TpBlock>> {
-    let inp = TpInputs { minutes: &roles.minutes, ..*inp };
+    let inp = TpInputs {
+        minutes: &roles.minutes,
+        ..*inp
+    };
     run_gates(&inp, Some(roles))
 }
 
