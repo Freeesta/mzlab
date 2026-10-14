@@ -8,6 +8,7 @@ use std::fs::File;
 use std::path::Path;
 
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::sorgente::TracceMzml;
 use mzlab_feat::mrm::{self, MrmParams};
 use sha2::{Digest, Sha256};
 
@@ -21,7 +22,8 @@ fn sha(b: &[u8]) -> String {
 fn traces(path: &str) -> Vec<mrm::Srm> {
     let f = File::open(path).expect("open");
     let size = f.metadata().expect("size").len();
-    mrm::read_srm(&mut Mzml::new(f, size), 0).unwrap_or_else(|e| panic!("{path}: {e}"))
+    mrm::read_srm(&mut TracceMzml::new(&mut Mzml::new(f, size), 0))
+        .unwrap_or_else(|e| panic!("{path}: {e}"))
 }
 
 fn main() {

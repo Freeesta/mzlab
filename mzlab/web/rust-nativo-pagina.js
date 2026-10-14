@@ -24,6 +24,12 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
       return JSON.parse(r.info);
     },
+    /** the SRM traces of the sample `name` as `srm::impacchetta` writes them (a Uint8Array): mzFinder integrates an MRM file from them without an mzML */
+    async nativeSrm(/** @type {string} */ name) {
+      const r = await h.rpc({ op: "natsrm", name: h.base(name) });
+      if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
+      return r.srm;
+    },
     /** the mzML of the sample `name` as a File of OPFS (a Blob without OPFS; in the desktop app an empty Blob that carries `mzlabId`, the number of the mzML on the disk); `onProgress({ scans, scansTotal, written })`; `signal` cancels it (the worker is stopped and started again) */
     async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
       const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });

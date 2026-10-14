@@ -12,7 +12,8 @@
  * What the worker lends: its URLs, its readers of OPFS, its pool and its detection cache.
  * @typedef {{ featUrl: (p: string) => string, base: () => string, manifest: () => Promise<any>, sha: (b: ArrayBuffer) => Promise<string>,
  *   pool: () => Promise<any>, idxFiles: (n: string[]) => Promise<File[] | null>, openIdx: (n: string[]) => Promise<any>,
- *   detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any> }} Ctx
+ *   detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any>,
+ *   natives: Set<string>, ask: (what: string, name: string) => Promise<any> }} Ctx
  */
 
 /** the finder_lr module of wasm-feat/manifest.json, checked against its SHA-256 @param {Ctx} c */
@@ -39,17 +40,24 @@ async function plan(c, a) {
   const p = JSON.parse(x.finder_lr_plan(a[0], a[1]));
   if (!p.rust) return null;
   const idx = await c.idxFiles(p.lc);
-  if (p.mrm.some((/** @type {string} */ n) => !c.held.has(n))) return null;          // the mzML of an MRM file is read from the bytes the page sent
+  if (p.mrm.some((/** @type {string} */ n) => !c.held.has(n))) return null;          // the mzML of an MRM file is read from the bytes the page sent (a sample of a maker's file: its traces, from the page)
   return idx && (!p.ms2.length || await c.idxFiles(p.ms2)) ? { p, idx, x } : null;
 }
 
 /**
- * synchronous reader of the mzML of the MRM files (read(k, offset, length) as finder_lr_mrm wants it) over the Blobs or ArrayBuffers the page sent
- * @param {Map<string, any>} held @param {string[]} names
+ * synchronous reader of the mzML of the MRM files (read(k, offset, length) as finder_lr_mrm wants it) over the Blobs or ArrayBuffers the page sent; a sample of a maker's file
+ * has no mzML: its size is -1 and `packed[k]` holds its SRM traces (`srm::impacchetta`, made by the engine of the page)
+ * @param {Ctx} c @param {string[]} names
  */
-function mzmlReader(held, names) {
-  const src = names.map(n => held.get(n)), rd = typeof FileReaderSync === "function" ? new FileReaderSync() : null;
-  const size = (/** @type {any} */ b) => b.size ?? b.byteLength;
+async function mzmlReader(c, names) {
+  const held = c.held, src = names.map(n => held.get(n)), rd = typeof FileReaderSync === "function" ? new FileReaderSync() : null;
+  const packed = await Promise.all(names.map(async n => {
+    if (!c.natives.has(n)) return null;
+    const b = await c.ask("srm", n);
+    if (!b) throw new Error(`cannot read the traces of ${n}`);
+    return new Uint8Array(b);
+  }));
+  const size = (/** @type {any} */ b, /** @type {number} */ k) => packed[k] ? -1 : b.size ?? b.byteLength;
   const read = (/** @type {number} */ k, /** @type {number} */ off, /** @type {number} */ len) => {
     const b = src[k];
     if (b instanceof Blob) {
@@ -58,7 +66,7 @@ function mzmlReader(held, names) {
     }
     return new Uint8Array(b, off, len);
   };
-  return { read, sizes: Float64Array.from(src, size), ends: new Float64Array(src.length) };
+  return { read, sizes: Float64Array.from(src, size), ends: new Float64Array(src.length), packed };
 }
 
 /**
@@ -84,8 +92,8 @@ export async function run(c, a) {
   try { dig.isf(ix.read, ix.sizes); } finally { ix.close(); }   // the in-source verdicts need the lighter ions' traces
   let mrm = null;
   if (p.mrm.length) {
-    const r = mzmlReader(c.held, p.mrm), rt = JSON.parse(a[2] || "{}").rt_tol_min;
-    mrm = JSON.parse(x.finder_lr_mrm(a[0], r.read, r.sizes, r.ends, rt > 0 ? rt : 0.25));
+    const r = await mzmlReader(c, p.mrm), rt = JSON.parse(a[2] || "{}").rt_tol_min;
+    mrm = JSON.parse(x.finder_lr_mrm(a[0], r.read, r.sizes, r.ends, r.packed.map(b => b || null), rt > 0 ? rt : 0.25));
   }
   progress("", null, "xic", JSON.parse(dig.live()));
   progress("Searching for unexpected ions...", 0.9, "unexpected");

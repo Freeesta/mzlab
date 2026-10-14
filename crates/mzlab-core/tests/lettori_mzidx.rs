@@ -169,10 +169,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
         );
     }
     let mut m = Mzml::new(by_offset, size);
-    let mut tr = TracceMzml {
-        m: &mut m,
-        scans_end: rows.last().map_or(0, |s| s.end),
-    };
+    let mut tr = TracceMzml::new(&mut m, rows.last().map_or(0, |s| s.end));
     let written: Vec<VoceCromatogramma> = src
         .cromatogrammi()
         .unwrap()
@@ -200,6 +197,13 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
             x.id
         );
     }
+    let mut srm_src = mzlab_core::srm::leggi(&mut src).unwrap();
+    srm_src.retain(|t| !t.t.is_empty());
+    assert_eq!(
+        mzlab_core::srm::leggi(&mut tr).unwrap(),
+        srm_src,
+        "{label}: SRM traces"
+    );
     let (ha, hb) = (tr.testata().unwrap(), src.testata().unwrap());
     assert!(
         ha.starts_with(&hb) || hb.starts_with(&ha),

@@ -42,8 +42,16 @@ export function buildNative(/** @type {Function} */ build_mzidx_native, /** @typ
     (/** @type {number} */ p) => { phase = p; high.fill(0); tell(true); });
   return stats;
 }
-/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function }} h */
-export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml }) {
+/** the SRM traces of a sample (`srm::impacchetta` bytes; mzFinder integrates the MRM files from them, no mzML is written): `native_srm` gives the bytes once to its sink @param {Stub} st @param {(st: Stub) => Promise<Blob[]>} memberFiles @param {Function} native_srm */
+async function srmDi(st, memberFiles, native_srm) {
+  const files = await memberFiles(st);
+  /** @type {Uint8Array | null} */ let out = null;
+  native_srm(st.members.map(x => x.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid, (/** @type {Uint8Array} */ b) => { out = b; });
+  return out;
+}
+
+/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function }} h */
+export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm }) {
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
   const stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);
@@ -121,5 +129,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
   }
 
-  return { stubOf, attach, put, indexJob, toMzml, samples, sweep, forget: (/** @type {string} */ n) => stubs.delete(n) };
+  return { stubOf, attach, put, indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm), forget: (/** @type {string} */ n) => stubs.delete(n) };
 }

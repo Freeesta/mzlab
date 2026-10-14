@@ -68,12 +68,35 @@ pub trait Tracce {
     fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram>;
     /// The text of the file before its first spectrum: the header up to `<run ` and what follows the tag (instrument, sources, run parameters).
     fn testata(&mut self) -> Result<String>;
+    /// The SRM chromatograms with Q1 and Q3, in the order of the file (`srm::leggi`).
+    fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
+        crate::srm::da_voci(self)
+    }
 }
 
 /// The traces of an mzML; `scans_end` is where its last spectrum ends (0 without spectra), as `Mzml::chromatograms` wants it.
 pub struct TracceMzml<'a, M: ReadAt> {
     pub m: &'a mut Mzml<M>,
     pub scans_end: u64,
+    lista: Option<Vec<Chrom>>,
+}
+
+impl<'a, M: ReadAt> TracceMzml<'a, M> {
+    pub fn new(m: &'a mut Mzml<M>, scans_end: u64) -> Self {
+        TracceMzml {
+            m,
+            scans_end,
+            lista: None,
+        }
+    }
+
+    /// The headers of the chromatograms, read once.
+    fn lista(&mut self) -> Result<&[Chrom]> {
+        if self.lista.is_none() {
+            self.lista = Some(self.m.chromatograms(self.scans_end)?);
+        }
+        Ok(self.lista.as_deref().unwrap_or_default())
+    }
 }
 
 /// The kind `mzml::read` gives a chromatogram, from the kind `Mzml::chromatograms` gives it.
@@ -92,7 +115,7 @@ fn kind(c: &Chrom) -> ChromKind {
 
 impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
     fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>> {
-        let list = self.m.chromatograms(self.scans_end)?;
+        let list = self.lista()?.to_vec();
         list.iter()
             .map(|c| {
                 Ok(VoceCromatogramma {
@@ -105,19 +128,20 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
     }
 
     fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram> {
-        let list = self.m.chromatograms(self.scans_end)?;
-        let c = list
+        let c = self
+            .lista()?
             .iter()
             .find(|c| c.id == id)
+            .cloned()
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))?;
-        let (time, intensity) = self.m.chromatogram(c)?;
+        let (time, intensity) = self.m.chromatogram(&c)?;
         Ok(Chromatogram {
             index: c.index,
             id: c.id.clone(),
-            kind: kind(c),
+            kind: kind(&c),
             q1: c.q1,
             q3: c.q3,
-            unit: self.m.chromatogram_unit(c)?,
+            unit: self.m.chromatogram_unit(&c)?,
             time,
             intensity,
         })
@@ -125,6 +149,27 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
 
     fn testata(&mut self) -> Result<String> {
         self.m.info_head()
+    }
+
+    /// Straight from the headers: the units of the other chromatograms are not read.
+    fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
+        let list = self.lista()?.to_vec();
+        let mut out = Vec::new();
+        for c in list.iter().filter(|c| c.kind == "srm") {
+            let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
+                continue;
+            };
+            let (t, y) = self.m.chromatogram(c)?;
+            out.push(crate::srm::Traccia {
+                q1,
+                q3,
+                ce: c.ce,
+                name: c.name.clone(),
+                t,
+                y,
+            });
+        }
+        Ok(out)
     }
 }
 

@@ -19,6 +19,16 @@ async function recordedSize(ix) {
   } catch (_) { return null; }
 }
 
+/** the index of a sample of a maker's file (version 2) announces profile scans: the first MS1 row has the profile column (9) set; false when it cannot be read @param {File} ix */
+async function idxIsProfile(ix) {
+  try {
+    const head = new DataView(await ix.slice(0, 48).arrayBuffer());
+    const off = Number(head.getBigUint64(32, true)), len = Number(head.getBigUint64(40, true));
+    const row = JSON.parse(await ix.slice(off, off + len).text()).find((/** @type {any[]} */ r) => r[2] === 1);
+    return !!(row && row[9]);
+  } catch (_) { return false; }
+}
+
 /** the head of an mzML announces profile spectra: the first spectrum carries MS:1000128 (profile) rather than MS:1000127 (centroid) @param {Blob} blob */
 export async function headIsProfile(blob) {
   const head = await blob.slice(0, 1 << 20).text(), at = head.indexOf("<spectrum ");
@@ -33,6 +43,16 @@ async function idxFile(name) {
     const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx");
     return await (await d.getFileHandle(name + ".mzidx")).getFile();
   } catch (_) { return null; }
+}
+
+/** a sample of a maker's file whose index (the Data tab's, version 2) mzFinder can read as it is; otherwise its mzML replaces the stub in `held` (false: the file goes the way of any mzML) @param {string} name @param {Map<string, any>} held @param {Set<string>} natives @param {((what: string, name: string) => Promise<any>) | undefined} ask */
+async function stubIndexed(name, held, natives, ask) {
+  const ix = await idxFile(name), stub = held.get(name), size = stub instanceof Blob ? JSON.parse(await stub.text()).size : -1;
+  if (ix && await recordedSize(ix) === size && !(await idxIsProfile(ix))) return true;
+  const mzml = ask && await ask("mzml", name);
+  if (!mzml) throw new Error(`cannot read ${name}`);
+  held.set(name, mzml); natives.delete(name);
+  return false;
 }
 
 /** @param {string} base @param {(text: string) => void} say @param {(key: string, params: Record<string, string>) => void} [notify] */
@@ -85,10 +105,16 @@ export function createIngress(base, say, notify = () => {}) {
   }
 
   return {
-    /** every named file the page sent (name -> Blob | ArrayBuffer) has a fresh .mzidx when this returns; one that cannot be indexed rejects @param {string[]} names @param {Map<string, any>} held */
-    async ensure(names, held) {
+    /**
+     * every named file the page sent (name -> Blob | ArrayBuffer) has a fresh .mzidx when this returns; one that cannot be indexed rejects.
+     * `natives` = the names whose held bytes are the stub of a sample of a maker's file (docs/agenti/lettura-nativa.md): its index (version 2) is the one of the Data tab and no mzML is
+     * written; only a sample with profile scans (mzFinder works on centroids) or without an index gets its mzML from the page (`ask("mzml", name)`) and goes the way of any mzML.
+     * @param {string[]} names @param {Map<string, any>} held @param {Set<string>} [natives] @param {(what: string, name: string) => Promise<any>} [ask]
+     */
+    async ensure(names, held, natives = new Set(), ask) {
       /** @type {Promise<void>[]} */ const jobs = [];
       for (const name of names) {
+        if (natives.has(name) && await stubIndexed(name, held, natives, ask)) continue;
         const src = held.get(name);
         if (!src) continue;                              // not sent by the page: it keeps whatever index it has
         let blob = src instanceof Blob ? src : new Blob([src]);
