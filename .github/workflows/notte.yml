@@ -150,7 +150,7 @@ jobs:
         run: |
           python tools/build_site.py
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
-          cargo install wasm-bindgen-cli --version "$ver" --locked
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
           python tools/verifica.py --browser chromium --solo e2e_rust
