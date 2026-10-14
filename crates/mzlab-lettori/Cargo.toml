@@ -1,0 +1,9 @@
+[package]
+name = "mzlab-lettori"
+description = "The readers of vendor files that the engine does not carry: served only by the readers module (a .wasm of its own) and by the desktop app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core", features = ["estesi"] }

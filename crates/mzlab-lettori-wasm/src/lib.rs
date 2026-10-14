@@ -1,0 +1,194 @@
+//! The readers module in the browser: opens the files of a maker that the engine does not read and writes their mzML to the page piece by piece.
+//! A dataset is described as in `crates/mzlab-wasm/src/nativi.rs`: names (relative to the dataset), sizes, `read(i, offset, length) -> Uint8Array`.
+use std::io::Write;
+
+use js_sys::Function;
+use mzlab_core::idxread::ReadAt;
+use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori_mzml;
+use wasm_bindgen::prelude::*;
+
+/// Bytes sent to `sink` at a time.
+const BLOCCO: usize = 64 << 10;
+
+fn error_json(e: &mzlab_core::Error) -> JsValue {
+    let params: Vec<String> = e
+        .params
+        .iter()
+        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
+        .collect();
+    JsValue::from_str(&format!(
+        "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
+        e.key,
+        params.join(",")
+    ))
+}
+
+/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
+struct JsMember {
+    read: Function,
+    i: u32,
+}
+
+impl ReadAt for JsMember {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let bad = || mzlab_core::Error::new("error.badIndex");
+        let v = self
+            .read
+            .call3(
+                &JsValue::NULL,
+                &self.i.into(),
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| bad())?;
+        let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
+        if a.length() as usize != buf.len() {
+            return Err(bad());
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
+}
+
+/// The members of a dataset as the page describes them.
+struct Membri {
+    names: Vec<String>,
+    sizes: Vec<f64>,
+    read: Function,
+}
+
+impl Membri {
+    fn new(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Membri, JsValue> {
+        let names: Vec<String> = names
+            .iter()
+            .map(|v| v.as_string().unwrap_or_default())
+            .collect();
+        if names.len() != sizes.len() || names.is_empty() {
+            return Err(error_json(
+                &mzlab_core::Error::new("err.file.notAccepted")
+                    .with("name", names.first().cloned().unwrap_or_default()),
+            ));
+        }
+        Ok(Membri {
+            names,
+            sizes: sizes.to_vec(),
+            read,
+        })
+    }
+
+    fn fileset(&self) -> FileSet {
+        let membri = self
+            .names
+            .iter()
+            .zip(&self.sizes)
+            .enumerate()
+            .map(|(i, (n, &s))| Membro {
+                nome: n.clone(),
+                dim: s as u64,
+                dati: Box::new(JsMember {
+                    read: self.read.clone(),
+                    i: i as u32,
+                }),
+            })
+            .collect();
+        FileSet { membri }
+    }
+}
+
+/// Sends what is written to JS in blocks: `sink(Uint8Array)`.
+struct BlockWriter {
+    sink: Function,
+    buf: Vec<u8>,
+}
+
+impl BlockWriter {
+    fn manda(&mut self) -> std::io::Result<()> {
+        if self.buf.is_empty() {
+            return Ok(());
+        }
+        let a = js_sys::Uint8Array::from(&self.buf[..]);
+        self.sink
+            .call1(&JsValue::NULL, &a)
+            .map_err(|_| std::io::Error::other("sink failed"))?;
+        self.buf.clear();
+        Ok(())
+    }
+}
+
+impl Write for BlockWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.buf.extend_from_slice(data);
+        if self.buf.len() >= BLOCCO {
+            self.manda()?;
+        }
+        Ok(data.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.manda()
+    }
+}
+
+/// The extensions the module accepts (JSON array, lower case with the dot).
+#[wasm_bindgen]
+pub fn estensioni() -> String {
+    serde_json::to_string(&mzlab_lettori::estensioni()).unwrap_or_else(|_| "[]".into())
+}
+
+/// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say why the engine does not do: `"formato"` (the engine
+/// has no reader for it), `"variante"` (it has, but refuses this file), `"srm"` (SRM only as scans), `"pda"` (UV traces).
+#[wasm_bindgen]
+pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
+    let m = Membri::new(names, sizes, read)?;
+    let mut motivi: Vec<&str> = Vec::new();
+    let mut fs = m.fileset();
+    if lettori::riconosci(&mut fs).is_none() || mzlab_lettori::riconosciuto_dal_modulo(&mut fs) {
+        motivi.push("formato");
+    } else if lettori::apri(m.fileset(), &Limiti::sito()).is_err() {
+        motivi.push("variante");
+    }
+    let mut l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let campioni: Vec<serde_json::Value> = l
+        .campioni()
+        .iter()
+        .map(|c| serde_json::json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
+        .collect();
+    for x in mzlab_lettori::motivi(&mut *l, 0) {
+        if !motivi.contains(&x) {
+            motivi.push(x);
+        }
+    }
+    Ok(
+        serde_json::json!({ "formato": l.formato().id(), "campioni": campioni, "motivi": motivi })
+            .to_string(),
+    )
+}
+
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written.
+#[wasm_bindgen]
+pub fn to_mzml(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    sink: Function,
+    progress: Function,
+) -> Result<(), JsValue> {
+    let m = Membri::new(names, sizes, read)?;
+    let mut l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let mut out = BlockWriter {
+        sink,
+        buf: Vec::new(),
+    };
+    let mut tell = |done: usize, total: usize| {
+        let _ = progress.call2(
+            &JsValue::NULL,
+            &(done as f64).into(),
+            &(total as f64).into(),
+        );
+    };
+    lettori_mzml::scrivi(&mut *l, c as usize, &mut out, &mut tell).map_err(|e| error_json(&e))?;
+    out.flush().map_err(|_| {
+        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
+    })
+}

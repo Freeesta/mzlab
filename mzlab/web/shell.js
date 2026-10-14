@@ -162,12 +162,37 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
   for(const e of pairs){      // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken);taken.push(nm);res.files.push(NATIVO.sample(nm,key,mem,i,x.id,false))})}
-    catch(x){res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
+    catch(x){const M=window.LETTORI_MOD;if(M&&x.json&&M.retriable(x.json.error||x.json.error_key))res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0));else res.errs.push([x.json?I18N.err(x.json).message:x.message,e.wiff.name])}
     CONVROWS.drop(e.row)}
   return res}
+// Rule R (docs/agenti/lettori-modulo.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
+// module, a sample the engine refused with an error of variant (File with `mzlabModulo`, made by LETTORI_MOD.stand), a dataset the module's probe says the engine cannot do, and, with ?lettori=modulo, a .D folder (proof of the path).
+const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
+async function moduloWants(M,f){
+  if(f.mzlabModulo)return true;const n=f.name.toLowerCase();
+  if(M.extensions().some(e=>n.endsWith(e)))return true;
+  const nat=f.mzlabNat;if(!nat)return false;
+  if(LETT_FORCE&&nat.members.some(m=>/\.d\//i.test(m.name)))return true;
+  if(!M.loaded)return false;
+  try{return (await M.probe(nat.members)).motivi.length>0}catch(_){return false}}
+async function moduloToMzml(files,box,rep){
+  const M=window.LETTORI_MOD;if(!M||!files.length)return files;
+  const jobs=[];for(const f of files)if(await moduloWants(M,f))jobs.push(f);if(!jobs.length)return files;
+  const g=ConvUI.group(box,jobs.map(f=>NATIVO.size(f))),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map(x=>x.name),...files.filter(f=>!jobs.includes(f)).map(f=>f.name)];
+  let i=0;
+  for(const f of files){
+    if(!jobs.includes(f)){out.push(f);continue}
+    i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=f.mzlabModulo||f.mzlabNat?f.name:M.mzmlName(f.name,taken);taken.push(nm);
+    if(g.signal.aborted)continue;
+    CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
+    try{const blob=await M.toMzml(mem,lot?lot.c:0,dest,p=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
+      ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
+    catch(e){ui.done();if(!e.cancelled){const m=e.json?I18N.err(e.json).message:e.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name)}}
+    finally{CONVROWS.drop(nm)}}
+  out.panel=g;return out}
 let CONVERT_RAW=false;   // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 const UNOPEN_RE=/\.(raw|wiff2?|wiff\.scan|d|lcd|lcdx)$/i;
-function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
+function fileKind(name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some(e=>n.endsWith(e)))return null;const m=UNOPEN_RE.exec(n);return m?m[0]:"other"}
 function ssGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
 const SEEN_GROUPS=new Set();
@@ -227,7 +252,7 @@ async function upload0(files,into,box){
       LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
   let panel=null;
-  const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}   // the same group dropped again: no second notice
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);   // in the browser the engine builds the indexes of several files at once (pool of workers)

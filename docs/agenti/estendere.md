@@ -14,6 +14,7 @@ Codice: `crates/mzlab-core/src/lettori.rs` (contratto `CONTRATTO = 1`). Lettori:
 - `Limiti { profondita, voci, byte }` (`Limiti::sito()`, `Limiti::desktop()`) passato a ogni `apri`: un lettore confronta con `voci_ok` e `profondita_ok` i numeri letti dal file prima di allocare o ricorrere.
 
 ## Aggiungere un formato
+Un formato che il motore non porta nasce in `crates/mzlab-lettori/src/` (registro `LETTORI_EXTRA`) e l'estensione va in `EXT` di `lettori-modulo.js` (`docs/agenti/lettori-modulo.md`); un formato che sta nel motore segue i passi qui sotto in `mzlab-core`.
 1. Un modulo che implementa `Lettore` sopra `ReadAt` (mai `read_to_end` oltre 8 MB), e una `VOCE: VoceLettore { id, contratto, estensioni, riconosci, apri }`. `riconosci` guarda i byte iniziali e i nomi dei membri, l'estensione da sola non basta (`Fiducia::Si` solo con indizi nei byte).
 2. Una riga in `LETTORI`. Il riconoscimento (`lettori::riconosci`, `lettori::apri`) e le estensioni dei selettori di file (`lettori::estensioni`) vengono dal registro.
 3. Prove: un file costruito nel test, il confronto con l'mzML di msconvert dello stesso file (dati privati, salta senza `MZLAB_DATI`) e, per ogni numero letto dal file, il caso ostile (ciclo, profondità, conteggio enorme).

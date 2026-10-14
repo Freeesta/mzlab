@@ -12,7 +12,7 @@ const NATIVO = {
     return f;
   },
   // the size to show: the one of the members
-  size(f) { return f && f.mzlabNat ? f.mzlabNat.size : f.size; },
+  size(f) { return f && f.mzlabNat ? f.mzlabNat.size : f && f.mzlabModulo ? f.mzlabModulo.size : f.size; },
   // the engine of the page when it reads the files of a maker as they are, else null
   async engine() { const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null; return rb && !rb.disabled && rb.nativo ? rb : null; },
   // Thermo .raw files: each is one sample; the other files go on as they are
