@@ -1,3 +1,4 @@
+// @ts-strict
 // RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, full screen (classic script, loaded after explore.js).
 // The map itself (colours, difference, 3D) is drawn by drawMap in explore.js; this file adds what lives on top of it. Hooks in explore.js:
 // drawMap (zoomImg before the image is drawn, after at the end), attach (wheel, box zoom, click, right click, mouse move), ctl (decorate).
@@ -127,7 +128,7 @@ window.MAPPA = (() => {
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
-    const ctx = off.getContext("2d"), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : lutSeq(mapPal());
+    const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : lutSeq(mapPal());
     const px = new Uint32Array(d.data.buffer), tab32 = new Uint32Array(tab.buffer, tab.byteOffset, 256);       // one 32-bit write per pixel, the same bytes as the table
     for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
       const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255);
@@ -197,7 +198,7 @@ window.MAPPA = (() => {
   const once = (key, fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
   const axisOf = f => {                                                  // {rt, sid} of the scans of the level; null until it has arrived
     const key = `${f.k}|${f.lv || 1}`, e = AX.get(key); if (e) return e.v;
-    const q = { v: null }; AX.set(key, q);
+    const q = /** @type {any} */ ({ v: null }); AX.set(key, q);
     once("a" + key, () => J(`api/scan_axis?k=${f.k}&level=${f.lv || 1}`)).then(j => { q.v = { rt: Float64Array.from(j.rt), sid: j.sid }; ask(null); }, () => AX.delete(key));
     return null;
   };
@@ -663,8 +664,8 @@ window.MAPPA = (() => {
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
-    b.innerHTML = BAR[kind].map(id => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[cmdOf(id).ic])}</button>`).join("");
-    b.addEventListener("click", e => { const x = e.target.closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
+    b.innerHTML = BAR[kind].map(id => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[/** @type {any} */ (cmdOf(id)).ic])}</button>`).join("");
+    b.addEventListener("click", e => { const x = /** @type {any} */ (e.target).closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
     lockBtn(b, false); return b;
   }
@@ -746,7 +747,8 @@ window.MAPPA = (() => {
   // touch: one finger moves the map, two fingers move and pinch, a double tap = whole view, a long press = the menu
   function touchInit(p, cv) {
     cv.style.touchAction = "none";
-    let g = null, lastTap = null, lp = 0;
+    /** @type {any} */ let g = null;
+    let lastTap = null, lp = 0;
     const at = (t, r) => ({ x: t.clientX - r.left, y: t.clientY - r.top });
     const cen = ts => { const r = cv.getBoundingClientRect(), a = at(ts[0], r), b = ts[1] ? at(ts[1], r) : a; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y), cx: (ts[0].clientX + (ts[1] || ts[0]).clientX) / 2, cy: (ts[0].clientY + (ts[1] || ts[0]).clientY) / 2 }; };
     const inside = q => { const a = p._a; return a && q.x >= M.l && q.x <= a.W - M.r && q.y >= M.t && q.y <= a.H - M.b; };
