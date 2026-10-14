@@ -1,6 +1,6 @@
 """axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Disegno (Ketcher's own iframe excluded), Pratica and the guided tour.
 Same rule as e2e_axe_grafici: no serious or critical violation (wcag2a/2aa/21a/21aa/22aa). axe comes from axe-playwright-python or $AXE_JS; without either: SKIP."""
-import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
 
@@ -20,12 +20,17 @@ def axe(pg, ctx="document", exclude=None):
     c = ctx if not exclude else "{include: [[%s]], exclude: [%s]}" % (ctx, ",".join("['%s']" % e for e in exclude))
     v = pg.evaluate(RUN % c); assert not v, v
 D = synth("axe_rel")
+TMP = "/tmp/Esempio_FullScan_t15.mzML"; shutil.copy(str(ROOT / "mzlab" / "web" / "esempi" / "FullScan_t15.mzML"), TMP)
 r = Run(port=8868, wd="/tmp/wd_axe_rel")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 1100})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         step("axe: the HR bench (panels, toolbar, status bar)", lambda: axe(pg, "'#dpanels'"))
+        def grips():
+            small = pg.evaluate("[...document.querySelectorAll('.aff-grip')].map(e => e.getBoundingClientRect()).filter(r => r.width < 24 || r.height < 24).length")
+            assert pg.locator(".aff-grip").count() and not small, small
+        step("WCAG 2.5.8: the panel grips (.aff-grip) are at least 24 x 24 px", grips)
         def hrinfo():
             pg.evaluate("BARRA.setTab('hdr')"); pg.wait_for_timeout(900); axe(pg, "'#hrinfo'")
         step("axe: the information panel of the HR bench", hrinfo)
@@ -47,8 +52,8 @@ try:
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1000)
                 q.evaluate("try{localStorage.removeItem('qqq.tour.lr')}catch(_){}")
-                q.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); q.wait_for_timeout(1000)
-                q.click("text=Carica dati"); ready(q); q.wait_for_timeout(1500)
+                stage(q, [TMP])
+                q.click("text=Carica dati"); q.wait_for_timeout(2500)
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")
                 q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.click("#uip-tour")
                 q.wait_for_selector("#tour-dialog", timeout=3000)
