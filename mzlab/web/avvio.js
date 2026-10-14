@@ -15,10 +15,10 @@ function ldAnLoaded() {                                          // plain script
 function ldIon(on, mode) {
   if (on && LD_ANALYSERS && !/** @type {any} */ (window).LDAN) { ldAnLoaded().then(() => ldIon(on, mode)); return; }
   if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
-  const cv = /** @type {HTMLCanvasElement | null} */ (document.getElementById("ldion")), bars = document.querySelector("#loading .ms");
+  const cv = /** @type {HTMLCanvasElement | null} */ (document.getElementById("ldion"));
   FRAME.cancel(ldIonRaf); ldIonRaf = 0;
   if (!cv) return;
-  cv.style.display = on ? "block" : "none"; if (bars) bars.style.display = on ? "none" : "";
+  cv.style.display = on ? "block" : "none";
   if (!on) return;
   const W = 420, H = 120, R = window.devicePixelRatio || 1, TAU = 2 * Math.PI;
   const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
