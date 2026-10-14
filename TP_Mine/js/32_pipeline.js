@@ -1,6 +1,6 @@
 // @ts-strict
 // TPMINE-PRIVATE  Panel «Pipeline» of mzFinder (window.PIPE): the six numbers of the feature pipeline with the proof of every estimated value, the preview on one file (number of
-// features, histogram of the heights, three XIC with their edges) and the gate of quality (data/cancello.json). The engine is crates/mzlab-feat-wasm run by feat-worker.js (the .wasm are
+// features, histogram of the heights, three XIC with their edges) and the gate of quality (data/cancello.json, an internal datum: it closes no view). The engine is crates/mzlab-feat-wasm run by feat-worker.js (the .wasm are
 // fetched only when the panel is opened); the .mzidx files are the ones in OPFS (mzlab/idx/). Texts follow the convention of mzFinder (English, no lang/ keys, except the messages of the worker).
 (() => {
   "use strict";
@@ -21,18 +21,17 @@
 #pipe svg .ax{stroke:var(--line);fill:none}#pipe svg .bar{fill:var(--accent)}#pipe svg .mk{stroke:var(--warn);stroke-width:2;stroke-dasharray:5 3}#pipe svg .ln{stroke:var(--accent);fill:none;stroke-width:1.5}
 #pipe svg .eg{stroke:var(--ink);stroke-dasharray:2 3}#pipe svg text{fill:var(--muted);font-size:10px}#pipe .proof{margin:4px 0;font-size:12px}`;
 
-  /** state of the gate of quality: candidates are shown only with `vista_candidati: true` measured on the crate version of the .wasm loaded (cancello/2, cancello/1 also read); `table` is the same test for the table view (`vista_tabella`; a cancello/1 follows `vista_candidati`) */
+  /** state of the gate of quality, an internal datum: `validated` / `validatedTable` say whether `vista_candidati` / `vista_tabella` were measured true on the crate version of the .wasm loaded (cancello/2, cancello/1 also read). No view is closed by it: `ok` and `table` are always true */
   function gateState(c, crate) {
-    if (!c) return { ok: false, table: false, why: "absent" };
-    if (c.format !== "cancello/1" && c.format !== "cancello/2") return { ok: false, table: false, why: "format" };
+    const open = { ok: true, table: true };
+    if (!c) return { ...open, validated: false, validatedTable: false, why: "absent" };
+    if (c.format !== "cancello/1" && c.format !== "cancello/2") return { ...open, validated: false, validatedTable: false, why: "format" };
     const same = String(c.crate_version) === String(crate), cand = c.vista_candidati === true, tab = (c.format === "cancello/2" ? c.vista_tabella : c.vista_candidati) === true;
-    const table = tab && same;
-    if (!cand) return { ok: false, table, why: "closed", c };
-    if (!same) return { ok: false, table, why: "stale", c };
-    return { ok: true, table, why: "open", c };
+    const validatedTable = tab && same;
+    if (!cand) return { ...open, validated: false, validatedTable, why: "closed", c };
+    if (!same) return { ...open, validated: false, validatedTable, why: "stale", c };
+    return { ...open, validated: true, validatedTable, why: "open", c };
   }
-  const gateText = g => g.ok ? `Pipeline validated on ${esc(g.c.data || "?")} (version ${esc(g.c.crate_version)}): the candidate view is available.`
-    : `Pipeline not validated${g.why === "stale" ? " for this version of the engine" : ""}: only traces and families are shown, no candidates.`;
   function readGate(files) {
     const b = files && files["cancello.json"];
     if (!b) return null;
@@ -42,6 +41,7 @@
   /** the .mzidx files in OPFS (mzlab/idx/), by name (not the `.cen.mzidx` of mzFinder, a second index of the same sample) */
   async function listIdx() {
     try {
+      if (window.MZLAB_DESKTOP) return await (await getPool()).listIdx();       // the app: the index folder, through the native pool
       let d = await navigator.storage.getDirectory();
       for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p);
       const out = [];
@@ -53,6 +53,12 @@
   /** the pool of workers, created on the first use; the .wasm come from static/wasm-feat/manifest.json */
   async function getPool() {
     if (st.pool) return st.pool;
+    if (window.MZLAB_DESKTOP) {      // the app: the native routes feat/* (feat-desktop-pool.js), no wasm-feat/ and no OPFS
+      const mod = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" })));
+      st.pool = mod.createDesktopPool({ notify: (k, p) => say(msg(k, p)) });
+      st.crate = await st.pool.crateVersion();
+      return st.pool;
+    }
     const c = window.QTOOLS.ctx, u = p => new URL("wasm-feat/" + p, c.base).href;
     const man = await (await fetch(u("manifest.json"))).json();
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
@@ -153,7 +159,6 @@
   function build() {
     dlg = document.createElement("dialog"); dlg.id = "pipe"; dlg.setAttribute("aria-label", "Pipeline"); document.body.appendChild(dlg);
     dlg.innerHTML = `<div class="top"><h3>Pipeline</h3><button type="button" id="pipe-x" aria-label="Close">&times;</button></div>
-      <div id="pipe-gate" class="gate" role="status"></div>
       <div class="row"><label>File <select id="pipe-file" aria-label="Index file"></select></label><button type="button" id="pipe-ref" aria-label="Refresh the list of files">&#8635;</button>
         <button type="button" id="pipe-go" class="imp">Preview</button><span id="pipe-n" class="mut"></span></div>
       <div id="pipe-msg" class="mut" role="status"></div>
@@ -167,7 +172,7 @@
     $("#pipe-go").onclick = preview; $("#pipe-ref").onclick = refresh;
     $("#pipe-floor").oninput = () => { st.auto.floor = false; $("#pipe-floor-why").textContent = "chosen"; };
     $("#pipe-ppm").oninput = () => { st.auto.ppm = true; };
-    if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: false }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
+    if (window.PIPER) window.PIPER.mount($("#pipe-run"), { q: s => dlg.querySelector(s), listIdx, onRefresh: fn => hooks.push(fn), gate: () => st.gate || { ok: true, table: true }, pool: getPool, recipe: () => recipe(values()), values, msg, chart, proofs: () => st.proofs, crate: () => st.crate, apply });
   }
   async function refresh() {
     st.files = await listIdx();
@@ -180,14 +185,12 @@
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");
-    $("#pipe-gate").innerHTML = gateText(st.gate); $("#pipe-gate").className = "gate";
     await refresh();
     try {
       await getPool();
       st.gate = gateState(readGate(window.QTOOLS.ctx.files), st.crate);
-      $("#pipe-gate").innerHTML = gateText(st.gate); $("#pipe-gate").className = "gate" + (st.gate.ok ? " ok" : "");
     } catch (e) { say(msg(e.key || "error.featFailed", e.params), true); }
   }
 
-  window.PIPE = { open, state: st, gateState, gateText, recipe, values, DEF };
+  window.PIPE = { open, state: st, gateState, recipe, values, DEF };
 })();

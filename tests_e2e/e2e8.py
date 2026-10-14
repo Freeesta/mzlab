@@ -29,7 +29,7 @@ try:
         step("active panel: arrows move scan by scan, spectrum follows", arrows)
         def files():
             pg.mouse.click(5, 5)           # outside panels (page header area) does not deactivate; click on the empty board does
-            pg.evaluate("setActive(null)"); pg.click("#fmode [data-m=sel]"); f0 = pg.evaluate("E.cur")
+            pg.evaluate("setActive(null)"); pg.evaluate("soloFile(E.files[E.cur])"); f0 = pg.evaluate("E.cur")
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(600)
             assert pg.evaluate("E.cur") != f0
             pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1500); assert pg.evaluate("E.cur") == f0
