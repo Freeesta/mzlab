@@ -116,11 +116,20 @@ impl State {
             .map(|a| a.iter().map(num).collect())
             .unwrap_or_default();
         let (pm, pr) = (num(&p["parent_mz"]), num(&p["parent_rt"]));
-        let parent = (pm.is_finite() && pr.is_finite()).then_some((pm, pr));
+        let mut parent = (pm.is_finite() && pr.is_finite()).then_some((pm, pr));
         let mut g = self.feat_lock();
         let (Some(table), Some(h)) = (g.table.as_ref(), g.hypo.as_ref()) else {
             return Err(Error::new("error.featState"));
         };
+        // `files` + `parent` (the page's JSON): the parent peak of the aligned table, as the site's worker does (`finder_parent`) before the proofs
+        if let (Some(files), Some(par)) = (p["files"].as_str(), p["parent"].as_str()) {
+            let m = mzlab_feat::legacy::series::parent(par)
+                .map_err(crate::feat_finder::user)?
+                .mz;
+            parent = mzlab_feat::legacy::parent_peak(files, par, table)
+                .map_err(crate::feat_finder::user)?
+                .map(|x| (m, x.1));
+        }
         let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
         let mut out = Vec::new();
         run::evidence_to(

@@ -15,12 +15,12 @@ def step(name, fn):
 D = synth("intestazioni")
 r = Run(port=8958, wd="/tmp/wd_intestazioni")
 
-# every panel header: one row, every control inside it, no scrolling content, a chart at least 100 px high
+# every panel header: one row (fitHd lets the content overflow by 1 px as scrollWidth rounds it, so the edges are compared with 1.5 px), every control inside it, no scrolling content, a chart at least 100 px high
 CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {
   const hd = p.el.querySelector('.hd'), hr = hd.getBoundingClientRect();
   const items = [...hd.querySelectorAll(':scope > *, .ctl > *, .tbs > *')].filter(e => e.offsetParent && !e.closest('.hmore') && !e.classList.contains('rd') && !e.classList.contains('hmore') && e.getBoundingClientRect().width);
   const mid = items.map(e => { const q = e.getBoundingClientRect(); return q.top + q.height / 2; });
-  const out = items.filter(e => { const q = e.getBoundingClientRect(); return q.right > hr.right + 1 || q.left < hr.left - 1; }).map(e => e.className || e.tagName);
+  const out = items.filter(e => { const q = e.getBoundingClientRect(); return q.right > hr.right + 1.5 || q.left < hr.left - 1.5; }).map(e => e.className || e.tagName);
   return {id: p.id, type: p.type, rows: Math.round(Math.max(...mid) - Math.min(...mid)), hh: Math.round(hr.height), over: hd.scrollWidth - hd.clientWidth, out,
           ch: Math.round(p.cv.getBoundingClientRect().height), more: !!(p.el.querySelector('[data-a=more]') && !p.el.querySelector('[data-a=more]').hidden), pw: p.el.offsetWidth};
 }))()"""
