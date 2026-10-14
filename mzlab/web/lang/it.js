@@ -1600,6 +1600,7 @@ I18N.add("it", {
   "help.losses.body": "Nella cella di collisione (q2) un frammento si genera quasi sempre per <b>perdita di una specie neutra</b> (senza carica) dal precursore:<br><code>Δm = m/z del precursore − m/z del frammento</code><br>Questa tabella elenca le perdite più comuni nello spettrometro. Una perdita neutra è solo un'ipotesi da verificare sempre sulla struttura chimica della molecola.",
   "help.adducts.title": "Addotti ESI",
   "help.adducts.body": "La ionizzazione electrospray (ESI) è un metodo <i>soft</i> che produce ioni intatti per aggiunta o rimozione di ioni di fondo (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, HCOO<sup>−</sup>, Cl<sup>−</sup>...). Inserisci la massa neutra o la formula bruta per visualizzare tutti gli addotti teorici calcolati sia in ESI+ che in ESI−.",
+  "help.header.app": "<p style=\"margin:8px 0 0\"><a href=\"https://github.com/Freeesta/mzlab/releases/latest\" target=\"_blank\" rel=\"noopener\">Scarica l'app desktop</a> (Mac, Windows, Linux).</p>",
   "help.header.body": "<p style=\"margin:0 0 8px\">{app} è uno strumento gratuito e open source. Non carica mai dati o file personali: tutto resta nel tuo browser.</p><p style=\"margin:0 0 8px\">Questa versione è ancora in lavorazione.</p><p style=\"margin:0\">Suggerimenti e correzioni: <a href=\"mailto:federico.cristaudo@unito.it\">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).</p>",
   "header.fullscreen": "Schermo intero",
   "header.fullscreen.exit": "Esci dallo schermo intero (Esc)",
