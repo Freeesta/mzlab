@@ -35,14 +35,14 @@ async function corrected(p, all) {
   const out = [], others = so ? all.some(s => s.k !== so.k) : true;
   for (const s of all) {
     if (so && others && s.k === so.k) continue;                                    // the reference itself is the thing being subtracted (alone, it stays on the graph)
-    let y = s.y.slice(), x = s.x; const note = [];
+    let y = s.y.slice(), x = s.x; const note = []; let cb = false;
     if (so && s.k !== so.k) {
       const d = await diffTrace(p, s, so);
-      if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); }
+      if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); cb = true; }
     }
-    const r = FONDO.apply(x, y, fo);
+    const r = FONDO.apply(x, y, fo), yraw = y;
     if (r) { y = r.y; note.push(I18N.t(fo.mode === "tract" ? "corr.note.ibk" : "corr.note.baseline")); }
-    out.push({ ...s, x, y, corr: note.join(" "), ibl: r ? r.ibl : null });
+    out.push({ ...s, x, y, corr: note.join(" "), ibl: r ? r.ibl : null, bl: r && r.bl || null, yraw: r ? yraw : null, ze: r ? FONDO.zoneEnd(x, fo) : -Infinity, cb, cf: !!r });
   }
   return out;
 }
@@ -169,6 +169,8 @@ function syncView(p) {
   if (marg && (M.l !== L || M.r !== R)) drawSoon(p);                       // this panel was drawn with the old margins
 }
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
+// title of the y axis: what the corrected trace is (blank file, background or both)
+const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
 const analogTitle = (p, sr) => (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
@@ -187,24 +189,28 @@ function setCorr(p, v) {
 function setSub(p, v) { p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
 function setFondo(p, v) {
   const f = p.fondo; p._pickIbk = false;
-  if (v === "snip") { p.fondo = { mode: "auto", w: f.w || 1, ib: null }; }
+  if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
   else if (v === "tract") {
     if (f.ib) f.mode = "tract";
     else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }
     else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  } else p.fondo = { mode: "none", w: f.w || 1, ib: null };
+  } else p.fondo = { ...f, mode: "none", w: f.w || 1, ib: null };
   ctl(p); draw(p); uiSave();
 }
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
 const ibkLevels = l => fmtA(l.lvl) + (l.lvl2 != null ? " " + I18N.t("ibk.andShort") + " " + fmtA(l.lvl2) : "") + " cps";
 function ibkChip(p) {
-  const ib = ibOf(p); if (!ib) return;
-  const sr = p._a && p._a.sr, l0 = sr && sr[0] && sr[0].ibl;
+  const fo = p.fondo, ib = ibOf(p), auto = !!fo && fo.mode === "auto"; if (!ib && !auto) return;
+  const s0 = p._a && p._a.sr && p._a.sr[0], l0 = s0 && s0.ibl, bl = s0 && s0.bl, zd = fo.zd != null ? fo.zd : FONDO.ZD;
   const chip = document.createElement("span"); chip.className = "ibk";
-  chip.title = I18N.t("ibk.chip.title");
-  chip.innerHTML = `${I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) })} <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label> <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button> <button data-ib="off">${I18N.t("ibk.off")}</button>`;
+  chip.title = I18N.t(ib ? "ibk.chip.title" : "fondo.chip.auto.title");
+  const main = ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "";
+  chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input type="number" data-ib="zd" min="0" step="0.1" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
+    (ib ? ` <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button>` : "") + ` <button data-ib="off">${I18N.t("ibk.off")}</button>`;
   chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
-  chip.querySelector("[data-ib=spec]").onclick = () => ibkSpectra(p);
+  chip.querySelector("[data-ib=zd]").onchange = e => { fo.zd = Math.max(0, +e.target.value || 0); draw(p); uiSave(); };
+  chip.querySelector("[data-ib=det]").onclick = () => { const z = s0 ? FONDO.front(s0.x, s0.yraw || s0.y) : null; if (z == null) return info(I18N.t("fondo.zone.none")); fo.zd = z; draw(p); uiSave(); };
+  const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
   (p.corrbar || p.leg).appendChild(chip);
 }
@@ -260,6 +266,23 @@ function legCollapse(p) {
   L.appendChild(chip); L.appendChild(lst);
 }
 
+// the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
+function traceMax(s, x0, x1) {
+  let m = 1e-9, neg = 0;
+  for (const za of [s.ze ?? -Infinity, -Infinity]) {
+    for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= za) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    if (m > 1e-9 || neg < 0) break;
+  }
+  return { m, neg };
+}
+// the zero line (dashed; with a background it is the background itself, labelled) and the grey band of the initial zone
+function zeroMarks(g, sr, X, Y, W, H, band) {
+  const fo = sr.some(s => s.cf), y0 = Math.round(Y(0));
+  g.save(); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, y0 + 0.5); g.lineTo(W - M.r, y0 + 0.5); g.stroke(); g.restore();
+  if (fo) { g.save(); g.font = fpx(11); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText(I18N.t("axis.zero"), W - M.r - 4, y0 - 4); g.restore(); }
+  const s0 = band && sr.find(s => s.cf), xb = s0 ? Math.min(X(s0.ze), W - M.r) : 0;
+  if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
+}
 async function drawLines(p) {
   const all = await seriesOf(p);
   const { g, W, H } = setup(p.cv);
@@ -278,7 +301,7 @@ async function drawLines(p) {
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
     if (clipDraw) s.ys = s.ys.map(v => Math.max(0, v));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
-    let m = 1e-9, neg = 0; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    const { m, neg } = traceMax(s, x0, x1);
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
@@ -293,12 +316,12 @@ async function drawLines(p) {
   let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] < ymin) ymin = s.ys[i];
+  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
   if (ymin < 0) ymin *= 1.08;
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
   const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: YT_I }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : isAnalog(p.kind) && p.type === "chrom" ? analogTitle(p, sr) : YT_I;
+  const yt = nrm ? I18N.t("axis.relative") : stk ? (p.norm100 ? I18N.t("axis.rowsRel") : I18N.t("axis.rows")) : logy ? I18N.t("axis.logSuffix", { base: yTitleI(sr) }) : p.kind === "pda" && p.type === "chrom" ? I18N.t("export.col.pdaSignal") : isAnalog(p.kind) && p.type === "chrom" ? analogTitle(p, sr) : yTitleI(sr);
   // waterfall: the traces are ordered by time (the first one in front), each moved up and a little to the right; the room is taken from the axes
   const pw0 = W - M.l - M.r, ph0 = H - M.t - M.b;
   const cs = cas ? sr.slice().sort((a, b) => ((E.files[a.k] || {}).time ?? 1e9) - ((E.files[b.k] || {}).time ?? 1e9) || a.k - b.k) : null;
@@ -309,7 +332,8 @@ async function drawLines(p) {
   const { X, Y } = axes(g, W, H, x0, x1v, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, nl: rowMax, nrow, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
-  if (ymin < 0 && !stk && !logy) { g.save(); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke(); g.restore(); }      // the zero line: what is below it is lower than the reference
+  const withFondo = sr.some(s => s.cf);
+  if ((ymin < 0 || withFondo) && !stk && !logy) zeroMarks(g, sr, X, Y, W, H, withFondo && !p._exp);
   if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
@@ -373,7 +397,7 @@ async function drawLines(p) {
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     if (it.noise && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(it.noise[0]), M.l), xb = Math.min(X(it.noise[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: corrText(p) });
+    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, corr: corrText(p) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
@@ -397,8 +421,8 @@ async function drawLines(p) {
   if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
   // cosa mostrare quando il mouse passa sul grafico: RT e intensità di ogni traccia visibile in quel punto
   p._a.hov = (px, py) => {
-    const x = xOf(p, px), rows = sr.map(s => ({ s, v: s.ys[nearIdx(s.x, x)] })).sort((a, b) => b.v - a.v);
-    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b></div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
+    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }

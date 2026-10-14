@@ -45,10 +45,10 @@ try:
         def integ_note():
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P)
             pg.evaluate("""async()=>{const p=%s;await draw(p);const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3,ion:s.name,file:'f',time:0});await draw(p)}""" % P); pg.wait_for_timeout(1500)
-            it = pg.evaluate("%s.ints[0].ibk" % P); print(it); assert it.startswith("sì, 0.3-2 min, media")
+            it = pg.evaluate("%s.ints[0].corr" % P); print(it); assert it.startswith("sì, 0.3-2 min, media")
             a1 = pg.evaluate("%s.ints[0].area" % P)
             pg.evaluate("%s.fondo={mode:'none',w:1,ib:null};draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
-            a0 = pg.evaluate("%s.ints[0].area" % P); print(a0, a1); assert a0 != a1 and pg.evaluate("%s.ints[0].ibk" % P) == "no"
+            a0 = pg.evaluate("%s.ints[0].area" % P); print(a0, a1); assert a0 != a1 and pg.evaluate("%s.ints[0].corr" % P) == "no"
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); pg.wait_for_timeout(1200)
         step("integration on the subtracted trace and declared (table)", integ_note)
         def meta():

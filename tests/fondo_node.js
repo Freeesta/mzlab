@@ -35,4 +35,21 @@ const ib = { mode: "mean", a: [0.2, 2], b: null };
   assert.deepStrictEqual(FONDO.migra({ fondo: { mode: "auto", w: 0.5 } }), { mode: "auto", w: 0.5, ib: null });
   assert.strictEqual(FONDO.apply(x, noise(), { mode: "none" }), null);
 }
+// 6. the initial zone: SNIP does not use it, the front does not lift the baseline, the zone can be set
+{
+  const fr = peak(80000, 0.8, 0.25), y = noise().map((v, i) => v + fr[i]);
+  const zd = FONDO.front(x, y), bl = FONDO.auto(x, y, 1, zd);
+  assert(Math.abs(bl[0] - 5000) < sd && Math.abs(bl[100] - 5000) < sd, "baseline in the zone " + bl[0]);
+  assert.strictEqual(FONDO.zoneEnd(x, { mode: "auto" }), 0.5);
+  assert.strictEqual(FONDO.zoneEnd(x, { mode: "auto", zd: 1.2 }), 1.2);
+  assert.strictEqual(FONDO.zoneEnd(x, { mode: "none" }), -Infinity);
+  assert.deepStrictEqual(FONDO.migra({ fondo: { mode: "auto", w: 1, zd: 0.8 } }), { mode: "auto", w: 1, ib: null, zd: 0.8 });
+  assert(FONDO.apply(x, y, { mode: "auto", w: 1 }).bl.max > 0, "baseline returned");
+}
+// 7. detection of the solvent front (synthetic, apex at 0.8 min): the end is just after the peak; a flat trace has none
+{
+  const fr = peak(80000, 0.8, 0.25), y = noise().map((v, i) => v + fr[i]), e = FONDO.front(x, y);
+  assert(e != null && e > 0.8 && e < 1.6, "front end " + e);
+  assert.strictEqual(FONDO.front(x, noise()), null);
+}
 console.log("ok");

@@ -536,5 +536,7 @@
   "error.fileInUse": "Errore: il file è scritto da un'altra scheda di mzLab da più di 2 secondi. {file} = nome del file.",
   "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
   "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
-  "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file."
+  "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file.",
+  "fondo.chip.auto": "Etichetta del fondo automatico sotto il grafico. {min} e {max} = minimo e massimo della linea di base tolta, in cps (già formattati).",
+  "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato."
 }
