@@ -506,7 +506,7 @@ export function open(p, opener) {
   const ptrs = new Map(); let drag = null, moved = 0, lastPinch = 0, lpT = 0, lpDone = false;
   glc.addEventListener("pointerdown", e => {
     glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); moved = 0;
-    drag = { x: e.offsetX, y: e.offsetY, g: ASSE.gest(), ox: 0, oy: 0, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
+    drag = { x: e.offsetX, y: e.offsetY, g: ASSE.gest(true), ox: 0, oy: 0, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
     clearTimeout(lpT); lpDone = false;
     if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }       // long press = the menu
   });

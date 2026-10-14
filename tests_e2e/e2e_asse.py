@@ -1,4 +1,4 @@
-# e2e_asse: axis lock of the map gestures (Ctrl/Cmd held or the latch X / Y): pan, zoom box, marked point, arrows (asse.js)
+# e2e_asse: axis lock of the map gestures (Shift held, Ctrl/Cmd + Shift for a pan, or the latch X / Y): pan, zoom box, marked point, arrows (asse.js)
 import json, os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,13 +20,15 @@ try:
         def box():                                       # canvas rectangle in page pixels
             pg.evaluate(f"{MP}.cv.scrollIntoView({{block:'center'}})"); attendi(pg, f"{MP}.cv.getBoundingClientRect().height>0")
             return pg.evaluate(f"(()=>{{const r={MP}.cv.getBoundingClientRect();return [r.left,r.top,r.width,r.height]}})()")
-        def drag(mods, dx, dy, mid=None):
+        def drag(mods, dx, dy, mid=None, late=()):
             b = box(); x0, y0 = b[0] + b[2] * .5, b[1] + b[3] * .5
             for m in mods: pg.keyboard.down(m)
-            pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x0 + dx / 2, y0 + dy / 2, steps=3); pg.mouse.move(x0 + dx, y0 + dy, steps=3)
+            pg.mouse.move(x0, y0); pg.mouse.down()
+            for m in late: pg.keyboard.down(m)                  # pressed after the mouse button: Shift before it starts a pan
+            pg.mouse.move(x0 + dx / 2, y0 + dy / 2, steps=3); pg.mouse.move(x0 + dx, y0 + dy, steps=3)
             if mid: mid()
             pg.mouse.up()
-            for m in mods: pg.keyboard.up(m)
+            for m in (*mods, *late): pg.keyboard.up(m)
         def latch(k):
             pg.evaluate(MP + ".cv.focus()"); pg.keyboard.press(k)
         def held_pan():
@@ -34,7 +36,7 @@ try:
             z1 = z(); assert z1[0] != z0[0] and z1[1] == z0[1], ("held, mostly horizontal: only RT moves", z0, z1)
             drag(["Shift", "Control"], 12, 70); z2 = z(); assert z2[1] != z1[1] and z2[0] == z1[0], ("held, mostly vertical: only m/z moves", z1, z2)
             drag(["Shift"], 40, 40); z3 = z(); assert z3[0] != z2[0] and z3[1] != z2[1], ("free: both move", z2, z3)
-        step("pan with Ctrl held: the axis is the dominant direction", held_pan)
+        step("pan with Ctrl+Shift held: the axis is the dominant direction", held_pan)
         def latched_pan():
             zoomed(); z0 = z(); latch("x"); assert pg.evaluate("ASSE.fix") == "x"; attendi(pg, "document.getElementById('sb-live').textContent.length>0")
             drag(["Shift"], 40, 40); z1 = z(); assert z1[0] != z0[0] and z1[1] == z0[1], ("latch X: only RT moves", z0, z1)
@@ -46,13 +48,13 @@ try:
             pg.evaluate(f"MAPPA.whole({MP})"); attendi(pg, f"{MP}.zoom===null"); z0 = z()
             latch("x"); drag([], 70, 50); z1 = z(); assert z1[0] is not None and z1[1] == z0[1], ("latch X: the box zooms RT only", z0, z1)
             latch("x"); pg.evaluate(f"MAPPA.whole({MP})"); attendi(pg, f"{MP}.zoom===null")
-            drag(["Control"], 10, 50); z2 = z(); assert z2[1] is not None and z2[0] is None, ("held, vertical: the box zooms m/z only", z2)
+            drag([], 10, 50, late=["Shift"]); z2 = z(); assert z2[1] is not None and z2[0] is None, ("held, vertical: the box zooms m/z only", z2)
         step("zoom box in one direction", boxz)
         def marked():
             pg.evaluate(f"MAPPA.whole({MP})"); attendi(pg, f"{MP}.zoom===null")
             pg.evaluate(f"(()=>{{const p={MP},a=p._a;MAPPA.pts(p).push({{rt:(a.x0+a.x1)/2,mz:(a.y0+a.y1)/2,note:''}});MAPPA.redraw(p)}})()"); attendi(pg, f"MAPPA.pts({MP}).length>0")
             q0 = pg.evaluate(f"({{...MAPPA.pts({MP})[0]}})"); b = box(); sx, sy = pg.evaluate(f"[{MP}._a.X({q0['rt']}),{MP}._a.Y({q0['mz']})]")
-            pg.keyboard.down("Control"); pg.mouse.move(b[0] + sx, b[1] + sy); pg.mouse.down(); pg.mouse.move(b[0] + sx + 40, b[1] + sy + 8, steps=4); pg.mouse.move(b[0] + sx + 80, b[1] + sy + 16, steps=4); pg.mouse.up(); pg.keyboard.up("Control")
+            pg.mouse.move(b[0] + sx, b[1] + sy); pg.mouse.down(); pg.keyboard.down("Shift"); pg.mouse.move(b[0] + sx + 40, b[1] + sy + 8, steps=4); pg.mouse.move(b[0] + sx + 80, b[1] + sy + 16, steps=4); pg.mouse.up(); pg.keyboard.up("Shift")
             attendi(pg, f"MAPPA.pts({MP})[0].rt!=={q0['rt']}"); q1 = pg.evaluate(f"({{...MAPPA.pts({MP})[0]}})")
             assert q1["mz"] == q0["mz"], ("held, horizontal: the marked point keeps its m/z", q0, q1)
         step("marked point dragged along one axis", marked)

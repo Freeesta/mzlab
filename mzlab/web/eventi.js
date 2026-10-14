@@ -53,7 +53,7 @@ function attach(p) {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (p.type === "spec" && a.markN != null) hoverMark(p, px);
     if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
-      const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ held or X / Y = one direction only (asse.js)
+      const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ + Shift or X / Y = one direction only (asse.js)
       const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = c.dx / pw * span;
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
       if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = c.dy / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
@@ -106,7 +106,7 @@ function attach(p) {
   cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
-    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
+    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
