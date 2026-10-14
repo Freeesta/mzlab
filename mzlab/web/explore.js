@@ -484,8 +484,9 @@ function reorderFiles(fromK, toK, isBefore) {
 const flCompact = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(pointer:coarse), (max-width:1100px)").matches);
 function flGrpGet() { return lsObj("qqq.flgrp"); }
 function flGrpSet(m) { E._flgrp = m; try { localStorage.setItem("qqq.flgrp", JSON.stringify(m)); } catch (_) { /* no storage */ } }
-// the rows of the list: a click selects the file, a double click on the name renames it, on the colour square it opens the colour picker (called by renderFileList)
+// the rows of the list: a click selects the file (the active one), a double click on the name shows only that file (rename: right click), on the colour square it opens the colour picker (called by renderFileList)
 function bindFileRows() {
+  bindListaFile();
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
   Q("#flst").querySelectorAll(".fl:not(.pr)").forEach(row => {
     const nm = row.querySelector(".nm"); if (!nm) return;
@@ -503,7 +504,6 @@ function bindFileRows() {
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
     };
-    nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
     const sw = row.querySelector(":scope > i"); if (sw) sw.ondblclick = e => { e.stopPropagation(); pickFileColor(E.files[+nm.dataset.k]); };
   });
 }

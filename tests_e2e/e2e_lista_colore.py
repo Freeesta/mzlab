@@ -39,7 +39,7 @@ try:
             assert "Un punto per picco" not in pg.inner_text("#flst") and "One point per peak" not in pg.inner_text("#flst")
         step("blank and standard files carry blk / std with the full word as tooltip", tags)
         def rename():
-            drawer(pg); pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
+            drawer(pg); pg.click("#flst .fl .nm", button="right"); pg.click("#ctx >> text=/Rinomina|Rename/"); pg.wait_for_timeout(400)
             t = pg.inner_text("body"); assert "it is only a label" not in t and "è solo un'etichetta" not in t
             pg.keyboard.press("Escape")
         step("the rename prompt has no «only a label» note", rename)

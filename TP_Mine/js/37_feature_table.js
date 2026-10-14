@@ -56,7 +56,6 @@
 
   /** mounts the step in `box`. o = { session (PIPEQC.open), names, gate (PIPE.gateState), onPick(row {id, mz, rt, cells[{state, area}]}), say } */
   function mount(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
-    if (!o.gate.table) { box.innerHTML = `<details open><summary>Table</summary><p class="mut">Table view not validated for this version of the engine: the list of rows above is shown without normalisation or filters.</p></details>`; return null; }
     box.innerHTML = html();
     const q = (/** @type {string} */ s) => /** @type {any} */ (box.querySelector(s)), fmtv = G.PIPEQC.fmt;
     const head = ["ID", "<i>m/z</i>", "RT (min)", ...o.names.map((/** @type {string} */ n) => n.slice(0, 22))];
