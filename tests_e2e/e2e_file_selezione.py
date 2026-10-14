@@ -57,6 +57,22 @@ try:
             pg.click(f"#flst .fl[data-k='{ks[1]}'] .nm")
             attendi(pg, f"E.files[{ks[1]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[1]}'")
         step("double click = only this file; Ctrl/Cmd+click adds; Shift+click on a box = range; click on a hidden row shows and activates it", multi)
+        def derived():
+            assert pg.evaluate("!document.querySelector('#fmode')"), "no mode buttons: the list is the only control"
+            ks = pg.evaluate("E.files.filter(f=>f&&f.kind==='full').map(f=>f.k)")
+            pg.dblclick(f"#flst .fl[data-k='{ks[0]}'] .nm")
+            attendi(pg, f"E.browse&&E.cur==={ks[0]}&&E.files.filter(f=>f&&f.vis).length===1")
+            pg.click(f"#flst .fl[data-k='{ks[1]}'] .nm", modifiers=["ControlOrMeta"])
+            attendi(pg, f"!E.browse&&E.cur==={ks[0]}")                            # two ticked: overlaid, the first stays the active one
+            pg.click("#fnext")
+            attendi(pg, f"E.cur==={ks[1]}&&E.files[{ks[0]}].vis&&E.files[{ks[1]}].vis")      # the arrows walk through the ticked files
+            attendi(pg, "[...document.querySelectorAll('.pscan')].length>=1")
+            assert pg.evaluate("[...document.querySelectorAll('.pscan')].every(x=>x.textContent.includes(E.files[E.cur].label))")
+            pg.click(f"#flst .fl[data-k='{ks[1]}'] > input")                       # unticking the active file hands the role to a ticked one
+            attendi(pg, f"E.browse&&E.cur==={ks[0]}")
+            pg.click("#fnext")
+            attendi(pg, f"E.cur!=={ks[0]}&&E.browse&&E.files.filter(f=>f&&f.vis).length===1")      # one file shown: the arrows replace it
+        step("the list drives the view: browse follows the ticked files, arrows, «scan of» tag", derived)
 finally:
     r.close(); r.report()
 print("\nSTEPS")
