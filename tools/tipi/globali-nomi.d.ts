@@ -323,6 +323,7 @@ declare var drawMeas: any;
 declare var drawSoon: any;
 declare var drawSpec: any;
 declare var dropDups: any;
+declare var editAnn: any;
 declare var engineEdges: any;
 declare var ensureBlocks: any;
 declare var ensureLayout: any;
