@@ -53,9 +53,10 @@ function attach(p) {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (p.type === "spec" && a.markN != null) hoverMark(p, px);
     if (drag && drag.pan) {                                   // Maiusc + trascina: sposta la vista
-      const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = (px - drag.x0) / pw * span;
+      const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ + Shift or X / Y = one direction only (asse.js)
+      const pw = a.W - M.l - M.r, span = drag.z[1] - drag.z[0], dx = c.dx / pw * span;
       p.zoom = clampView(drag.z[0] - dx, drag.z[1] - dx, a.full[0], a.full[1]);
-      if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = (py - drag.y0) / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
+      if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = c.dy / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
       draw(p);
     } else if (drag && drag.cursor) moveCur(x);                // dragging the vertical line: the linked spectrum follows
     else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
@@ -70,13 +71,15 @@ function attach(p) {
       zl.dataset.v = p.type === "spec" ? I18N.t("zoom.mz", { lo: lo.toFixed(mzd(p, p.level)), hi: hi.toFixed(mzd(p, p.level)) }) : I18N.t("zoom.rt", { lo: lo.toFixed(2), hi: hi.toFixed(2) });
     }
     else if (drag) { drag.x = px; drag.y = py; const mapBox = p.type === "map" && !drag.alt; if (p.type === "spec" || mapBox || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together; on the map Alt + drag is the spectrum of the interval)
-      if (Math.abs(px - drag.x0) > 4 || (mapBox && Math.abs(py - drag.y0) > 4)) { zr.hidden = false; const yy = canYZ(a) || mapBox ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
+      if (mapBox) { const c = ASSE.clip(drag.g || (drag.g = ASSE.gest()), e, px - drag.x0, py - drag.y0); drag.x = drag.x0 + c.dx; drag.y = drag.y0 + c.dy; drag.ax = c.ax; if (window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 }); }     // one direction: the box stretches over the whole other axis
+      const qx = drag.x, qy = drag.y;
+      if (Math.abs(qx - drag.x0) > 4 || (mapBox && Math.abs(qy - drag.y0) > 4) || drag.ax) { zr.hidden = false; const yy = drag.ax === "x" || !(canYZ(a) || mapBox) ? [M.t, a.H - M.t - M.b] : [Math.min(qy, drag.y0), Math.abs(qy - drag.y0)], xx = drag.ax === "y" ? [M.l, a.W - M.l - M.r] : [Math.min(qx, drag.x0), Math.abs(qx - drag.x0)]; zr.style.left = cv.offsetLeft + xx[0] + "px"; zr.style.width = xx[1] + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
-    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
+    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true;
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
@@ -103,14 +106,14 @@ function attach(p) {
   cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
-    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
+    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
     const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
   };
   p._up = e => {
-    if (!drag) return; const d = drag; drag = null; zr.hidden = true;
+    if (!drag) return; const d = drag; drag = null; zr.hidden = true; if (d.ax !== undefined && window.MAPPA) MAPPA.guide(p, null);
     if (p.type === "map" && window.MAPPA && MAPPA.touched(p)) { zl.hidden = true; return; }       // mappa.js: the mouse events after a finger gesture
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
