@@ -72,10 +72,21 @@ window.MAPPA = (() => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new Float32Array(u.buffer);
   }));
-  const getRegion = (k, lv, r, extra = "") => memo(`mzr${k}|${lv}|${r.join("|")}${extra}`, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}${extra}`).then(j => {
-    const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    return { ...j, m: new Float32Array(u.buffer) };
-  }));
+  // regions held by the page: the oldest ones leave the cache of explore.js when they pass a byte budget (smaller on small devices)
+  const REG = { map: new Map(), bytes: 0, max: ((/** @type {any} */ (navigator)).deviceMemory || 4) <= 2 ? 48e6 : 96e6, ms: 0 };
+  function regionKeep(key, bytes) {
+    REG.map.set(key, bytes); REG.bytes += bytes;
+    for (const [k, b] of REG.map) { if (REG.bytes <= REG.max || k === key) break; REG.map.delete(k); REG.bytes -= b; CACHE.delete(k); }
+  }
+  const getRegion = (k, lv, r, extra = "") => {
+    const key = `mzr${k}|${lv}|${r.join("|")}${extra}`, t0 = performance.now();
+    return memo(key, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}${extra}`).then(j => {
+      const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      REG.ms = performance.now() - t0; regionKeep(key, u.length);
+      return { ...j, m: new Float32Array(u.buffer) };
+    }));
+  };
+  const quiet = () => REG.ms && REG.ms < 30 ? 40 : QUIET;                   // a fast route is asked soon after the last change, a slow one only after the pause
   function regionGrid(p, A, x0, x1, y0, y1, pw, ph) {
     const f = E.files[A.k], hr = isHrF(f), step = Math.max(scanStep(), 1e-4);
     const d = Math.min(2, devicePixelRatio || 1), nrt = Math.max(2, Math.min(1000, Math.max(Math.round(pw * d), Math.ceil((x1 - x0) / (A.rt1 - A.rt0) * A.nrt)), Math.floor((x1 - x0) / step)));   // never more bins than scans: no empty stripes
@@ -89,24 +100,26 @@ window.MAPPA = (() => {
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
     const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
     if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
-    clearTimeout(s.regT);
+    clearTimeout(s.regT); const seq = s.regSeq = (s.regSeq || 0) + 1;
     s.regT = setTimeout(async () => {
       try {
         const a = await getRegion(A.k, A.level, r, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + mapBg(p));
+        if (seq !== s.regSeq) return;                                     // a newer view was asked meanwhile: this one is not painted
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
         s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
-    }, QUIET);
+    }, quiet());
     return false;
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
     const ctx = off.getContext("2d"), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : lutSeq(mapPal());
+    const px = new Uint32Array(d.data.buffer), tab32 = new Uint32Array(tab.buffer, tab.byteOffset, 256);       // one 32-bit write per pixel, the same bytes as the table
     for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
-      const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
-      d.data[o] = tab[q * 4]; d.data[o + 1] = tab[q * 4 + 1]; d.data[o + 2] = tab[q * 4 + 2]; d.data[o + 3] = 255;
+      const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255);
+      px[(nmz - 1 - j) * nrt + i] = tab32[q];
     }
     ctx.putImageData(d, 0, 0); return off;
   }
