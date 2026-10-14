@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
+import html_sicuro  # noqa: E402
 
 BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
@@ -165,7 +166,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv)
+    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
