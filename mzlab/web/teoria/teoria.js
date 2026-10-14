@@ -28,6 +28,7 @@ const CHAPTERS = [
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
   ["22-formulario.html", "22", "Formulario per l'orale", "Appendice"],
+  ["23-tempi.html", "23", "I tempi degli analizzatori: dwell time, sweep e duty cycle", "IV. Analizzare gli ioni", true],
   ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
   ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
   ["pratica-orale.html", "P2", "Domande dell'orale", "Pratica"],
@@ -375,6 +376,7 @@ const TP = (() => {
   // comandi.js: TCMD, the commands of the header; impostazioni.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
   // lettura.js: menu sheet, reading position, figure viewer; cerca.js: search dialog (Ctrl/⌘K, TEORIA.cerca(), index read on first use);
   // sblocco.js: 5 clicks on the logo unlock the extended Teoria; strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js"].forEach(load); });
+  // editor.js: in-page chapter editor (Alt+E or Modifica button) with auto-save, syntax checks, git commit and push
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js", "editor.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();
