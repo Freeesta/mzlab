@@ -91,6 +91,14 @@ def attendi(pg, expr, timeout=30000):
     pg.wait_for_function(expr, timeout=timeout)
 
 
+def fermo(pg, sel, ms=300, timeout=30000):
+    """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
+    pg.evaluate("window.__fermo = null")
+    pg.wait_for_function("function (a) { const e = document.querySelector(a.sel); if (!e) return false; const r = e.getBoundingClientRect(), k = [r.x, r.y, r.width, r.height].map(v => Math.round(v * 10)).join(), t = performance.now(); "
+                         "const w = window.__fermo && window.__fermo.sel === a.sel ? window.__fermo : (window.__fermo = {sel: a.sel, k, t}); if (w.k !== k) { w.k = k; w.t = t; } return t - w.t >= a.ms; }",
+                         arg={"sel": sel, "ms": ms}, timeout=timeout)
+
+
 def saved(pg, timeout=60000):
     """Save the view now and wait until the notebook (which a reload resumes from) holds the session: it is written in the background."""
     pg.evaluate("uiSave(true)")
