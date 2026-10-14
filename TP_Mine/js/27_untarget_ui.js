@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted window of mzFinder: load the files of a feature table (mzMine, MS-DIAL, GNPS2), match every feature with an MS2 against the libraries, table with level,
 // best candidate, entropy, Δppm and evidence, filter by level, click → mirror and «What is it?» (the window of the Data tab), the chemist's decided level, export (28_untarget_export.js).
 (() => {
@@ -18,8 +19,9 @@
 #unt .idn-iin line{stroke:var(--idn-iin);stroke-width:3}#unt .idn-e text,#unt .idn-n text{fill:var(--ink);font-size:10px}#unt .idn-n circle{fill:var(--panel);stroke:var(--accent);stroke-width:2}#unt .idn-main circle{fill:var(--accent)}
 #unt canvas{width:100%;height:240px;display:block;border:1px solid var(--line);border-radius:6px}#unt ul{margin:2px 0;padding-left:18px}#unt .ext{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}`;
 
+  /** @type {any} */
   const st = { table: null, res: null, files: [], level: "all", text: "", onlyMs2: false, nShown: PAGE, sel: null, busy: false, cancel: false, tol: 10, order: null, grp: false, graph: null, open: new Set(), cyc: 1, gorder: null };
-  const U = () => window.UNT, M = () => window.UNTM, L = () => window.LIVELLI, ID = () => window.UNTID;
+  const U = () => /** @type {any} */ (window).UNT, M = () => /** @type {any} */ (window).UNTM, L = () => window.LIVELLI, ID = () => /** @type {any} */ (window).UNTID;
   let dlg = null;
   const $ = q => dlg.querySelector(q);
   const say = t => { const e = $("#unt-msg"); if (e) e.textContent = t || ""; };
@@ -120,7 +122,7 @@
     $("#unt-lv").innerHTML = `<option value="all">all (${t.features.length.toLocaleString("en")})</option>` + L().ORDER.filter(l => cnt[l]).map(l => `<option value="${l}">${l} · ${esc(L().name(l))} (${cnt[l].toLocaleString("en")})</option>`).join("");
     $("#unt-lv").value = st.level; $("#unt-res").hidden = false;
     st.order = t.features.map((f, i) => i).sort((a, b) => { const ra = st.res.get(t.features[a].key), rb = st.res.get(t.features[b].key); return rank(ra) - rank(rb) || (rb.ent ?? -1) - (ra.ent ?? -1) || a - b; });
-    if (window.UNTX && !$("#unt-x-xlsx")) { $("#unt-exp").innerHTML = window.UNTX.buttons(); window.UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol, all: () => st.order.map(i => st.table.features[i]), visible })); }
+    if (/** @type {any} */ (window).UNTX && !$("#unt-x-xlsx")) { $("#unt-exp").innerHTML = /** @type {any} */ (window).UNTX.buttons(); /** @type {any} */ (window).UNTX.bind(dlg, () => ({ table: st.table, res: st.res, tol: st.tol, all: () => st.order.map(i => st.table.features[i]), visible })); }
     if (st.grp && !st.graph) group(); else refresh();
   }
   /** the table in the current mode; the identities take level and candidate from the (possibly changed) results */
