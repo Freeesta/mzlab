@@ -266,7 +266,7 @@ function addPanel(type, o, after) {
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
+  const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
   const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; p.log = !p.log; syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const tabB = el.querySelector('[data-a="tab"]'); if (tabB) tabB.onclick = e => { e.stopPropagation(); if (window.TDATI) TDATI.open(p.cv); };
@@ -661,11 +661,12 @@ function ctl(p) {
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, v => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, v => setFondo(p, v));
-    else if (k === "snipw") x.onchange = () => { p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
+    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
         else x.onchange = () => {
       if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
         p.k = +x.value; STATO.file(+x.value, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
       }
+      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco");
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
