@@ -1,4 +1,4 @@
-"""The readers module (crates/mzlab-lettori-wasm, mzlab/web/lettori-worker.js, rule R of shell.js upload0) proved with a reader the engine already has: with ?lettori=modulo a synthetic Agilent .D folder
+"""The readers modules, one per family (crates/mzlab-lettori-wasm, mzlab/web/lettori-worker.js, rule R of shell.js upload0) proved with a reader the engine already has: with ?lettori=modulo a synthetic Agilent .D folder
 (tools/agilent_sintetico.py, no laboratory data) goes to the module, which writes its mzML in OPFS; the file enters the list as any mzML, gives the same TIC as the engine's own path, «Download .mzML» gives it
 byte for byte as the engine writes it and without converting again, and nothing misses the engine (MZLAB_LR_MISS empty). Needs the site and both .wasm: python tools/build_site.py, tools/build_lettori_wasm.sh
 (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
@@ -29,7 +29,7 @@ top = folder.parent
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+time.sleep(1); errs = []; asked = []
 LOAD = """async () => {
   const rb = await window.MZLAB_RUST_READY;
   await new Promise(r => setTimeout(r, 300));
@@ -51,6 +51,7 @@ def opened(pg):
 def page(b, query):
     pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
     pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.on("request", lambda r: asked.append(r.url) if "wasm-lettori/" in r.url else None)
     pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1{query}"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_function("window.MZLAB_RUST_READY !== undefined", timeout=60000)
@@ -77,8 +78,12 @@ try:
         def no_miss():
             assert res["mod"]["miss"] == 0 and res["eng"]["miss"] == 0, (res["mod"]["miss"], res["eng"]["miss"])
         step("MZLAB_LR_MISS is empty", no_miss)
+        def one_module():
+            fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
+            assert "agilent" in fams and fams <= {"agilent", "manifest.json"}, asked
+        step("only the module of the family (agilent) is downloaded, not sciex or thermo", one_module)
         def cancel():
-            r = mod.evaluate("""async () => { const c = new AbortController(); c.abort(); try { await LETTORI_MOD.toMzml([{ name: "a", blob: new Blob([]) }], 0, "x.mzML", undefined, c.signal); return "no"; } catch (e) { return e.cancelled ? "cancelled" : String(e); } }""")
+            r = mod.evaluate("""async () => { const c = new AbortController(); c.abort(); try { await LETTORI_MOD.toMzml("agilent", [{ name: "a", blob: new Blob([]) }], 0, "x.mzML", undefined, c.signal); return "no"; } catch (e) { return e.cancelled ? "cancelled" : String(e); } }""")
             assert r == "cancelled", r
         step("a cancelled conversion stops", cancel)
         b.close()

@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-lettori-wasm"
-description = "wasm-bindgen bridge of mzlab-lettori (the readers module); runs ONLY inside its Web Worker, as a .wasm of its own"
+description = "wasm-bindgen bridge of mzlab-lettori (the readers modules, one per family); runs ONLY inside the Web Worker of the readers, as a .wasm of its own per family"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,9 +8,20 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# the families, forwarded to mzlab-lettori: tools/build_lettori_wasm.sh builds one .wasm per family with --no-default-features --features <family>
+aperti = ["mzlab-lettori/aperti"]
+thermo = ["mzlab-lettori/thermo"]
+agilent = ["mzlab-lettori/agilent"]
+sciex = ["mzlab-lettori/sciex"]
+waters = ["mzlab-lettori/waters"]
+shimadzu = ["mzlab-lettori/shimadzu"]
+bruker = ["mzlab-lettori/bruker"]
+tutte = ["mzlab-lettori/tutte"]
+
 [dependencies]
 js-sys = "0.3.106"
 mzlab-core = { path = "../mzlab-core" }
-mzlab-lettori = { path = "../mzlab-lettori" }
+mzlab-lettori = { path = "../mzlab-lettori", default-features = false }
 serde_json = "1"
 wasm-bindgen = "0.2"

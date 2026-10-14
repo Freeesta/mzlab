@@ -1,20 +1,41 @@
 #!/usr/bin/env bash
-# The .wasm of the readers module (crates/mzlab-lettori-wasm: formats and variants the engine does not carry; fetched only when a file needs it, never committed)
-# and site/static/wasm-lettori/manifest.json with its SHA-256 (the worker checks it): tools/build_lettori_wasm.sh <site/static>
+# The .wasm modules of the readers, one per family of formats (crates/mzlab-lettori-wasm; each loaded only when a file of its family arrives, never committed), each under its limit after
+# wasm-opt -Oz, and site/static/wasm-lettori/manifest.json with {family: {sha256, byte}} (the worker checks it): tools/build_lettori_wasm.sh <site/static>
 # Called by the last line of tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
-# Limits after wasm-opt -Oz, bytes (tests/test_lettori_wasm.py checks them: they do not go up).
-limit=1048576
-# limit_tdf=655360   # lettori-tdf (Bruker TDF/TSF, with its minimal SQLite and zstd): build it here when the package that writes it lands
+# family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
+tetti="aperti 393216
+thermo 458752
+agilent 393216
+sciex 327680
+waters 327680
+shimadzu 327680
+bruker 524288"
+# the families that have readers (a family without readers is skipped and is born with its own package)
+con_lettori="agilent sciex thermo"
 out=${1:-site/static}/wasm-lettori
-cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm
-wasm-bindgen --target web --no-typescript --out-dir "$out" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm
-tools/wasm_opt.sh "$out/mzlab_lettori_wasm_bg.wasm" $limit lettori
-# tools/wasm_opt.sh "$out-tdf/mzlab_lettori_tdf_wasm_bg.wasm" $limit_tdf lettori-tdf
+mkdir -p "$out"
+built=""
+echo "$tetti" | while read -r fam limit; do
+  case " $con_lettori " in
+    *" $fam "*) ;;
+    *) echo "lettori $fam: no readers yet, skipped"; continue ;;
+  esac
+  cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm --no-default-features --features "$fam"
+  tmp=$(mktemp -d)
+  cp target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$tmp/"      # cargo writes the same file for every family: copy it at once
+  wasm-bindgen --target web --no-typescript --out-dir "$out/$fam" "$tmp/mzlab_lettori_wasm.wasm" </dev/null
+  rm -r "$tmp"
+  tools/wasm_opt.sh "$out/$fam/mzlab_lettori_wasm_bg.wasm" "$limit" "lettori $fam" </dev/null
+done
 python3 - "$out" <<'P'
-import hashlib, json, sys
+import hashlib, json, os, sys
 o = sys.argv[1]
-json.dump({"lettori": {"js": "mzlab_lettori_wasm.js", "wasm": "mzlab_lettori_wasm_bg.wasm",
-                       "sha256": hashlib.sha256(open(f"{o}/mzlab_lettori_wasm_bg.wasm", "rb").read()).hexdigest()}},
-          open(f"{o}/manifest.json", "w"), indent=1)
+m = {}
+for fam in sorted(os.listdir(o)):
+    w = f"{o}/{fam}/mzlab_lettori_wasm_bg.wasm"
+    if os.path.isfile(w):
+        b = open(w, "rb").read()
+        m[fam] = {"sha256": hashlib.sha256(b).hexdigest(), "byte": len(b)}
+json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)
 P

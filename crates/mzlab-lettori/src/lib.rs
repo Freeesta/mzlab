@@ -1,40 +1,65 @@
-//! The readers module: formats and variants that the engine (`mzlab-wasm`) does not carry. A new format is a module here that implements
-//! `mzlab_core::lettori::Lettore`, its `VOCE` and a line in `LETTORI_EXTRA`; variants of the readers that live in `mzlab-core` sit behind
-//! its `estesi` feature, which this crate turns on and the engine leaves off (`docs/agenti/lettori-modulo.md`).
+//! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/lettori-modulo.md): the engine (`mzlab-wasm`) carries none of this crate.
+//! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::lettori::Lettore`; variants of the readers that live
+//! in `mzlab-core` sit behind its `estesi` feature, which this crate turns on and the engine leaves off.
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
 pub mod srm;
 
-/// The formats of the module, in order of preference among equals.
-pub static LETTORI_EXTRA: &[VoceLettore] = &[];
+// The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
+#[cfg(any(feature = "agilent", feature = "tutte"))]
+static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
+#[cfg(any(feature = "sciex", feature = "tutte"))]
+static VOCE_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
+#[cfg(any(feature = "thermo", feature = "tutte"))]
+static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
 
-/// `LETTORI_EXTRA` followed by the registry of the engine (the module also serves the variants of the engine's readers).
-pub fn registro() -> Vec<&'static VoceLettore> {
-    LETTORI_EXTRA
-        .iter()
-        .chain(lettori::LETTORI.iter())
-        .collect()
+/// The name of the family this build serves (`"tutte"` for the desktop app and for tests).
+pub fn famiglia() -> &'static str {
+    if cfg!(feature = "tutte") {
+        "tutte"
+    } else if cfg!(feature = "agilent") {
+        "agilent"
+    } else if cfg!(feature = "sciex") {
+        "sciex"
+    } else if cfg!(feature = "thermo") {
+        "thermo"
+    } else if cfg!(feature = "aperti") {
+        "aperti"
+    } else if cfg!(feature = "waters") {
+        "waters"
+    } else if cfg!(feature = "shimadzu") {
+        "shimadzu"
+    } else if cfg!(feature = "bruker") {
+        "bruker"
+    } else {
+        ""
+    }
 }
 
-/// The reader of `registro` that is surest of `fs` (the first among equals).
+/// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` repeats the `.raw` reader until it leaves the engine.
+pub fn registro() -> Vec<&'static VoceLettore> {
+    #[allow(unused_mut)]
+    let mut v: Vec<&'static VoceLettore> = Vec::new();
+    #[cfg(any(feature = "agilent", feature = "tutte"))]
+    v.push(&VOCE_AGILENT);
+    #[cfg(any(feature = "sciex", feature = "tutte"))]
+    v.push(&VOCE_SCIEX);
+    #[cfg(any(feature = "thermo", feature = "tutte"))]
+    v.push(&VOCE_THERMO);
+    v
+}
+
+/// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
 pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     let mut best: Option<(Fiducia, &'static VoceLettore)> = None;
-    for v in registro()
-        .into_iter()
-        .filter(|v| v.contratto == lettori::CONTRATTO)
-    {
+    for v in registro().into_iter().filter(|v| v.contratto == lettori::CONTRATTO) {
         let f = (v.riconosci)(fs);
         if f > Fiducia::No && best.is_none_or(|(b, _)| f > b) {
             best = Some((f, v));
         }
     }
     best.map(|(_, v)| v)
-}
-
-/// True when the readers of the module (and not only the engine's) recognise `fs`.
-pub fn riconosciuto_dal_modulo(fs: &mut FileSet) -> bool {
-    lettori::riconosci_in(LETTORI_EXTRA, fs).is_some()
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
@@ -49,7 +74,7 @@ pub fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     Ok(Box::new(srm::SrmDaScansioni::new((v.apri)(fs, limiti)?)))
 }
 
-/// Every extension the module accepts (its own formats and the engine's), without repeats.
+/// Every extension of the registry of this build, without repeats.
 pub fn estensioni() -> Vec<&'static str> {
     let mut out: Vec<&'static str> = Vec::new();
     for e in registro().iter().flat_map(|v| v.estensioni.iter().copied()) {

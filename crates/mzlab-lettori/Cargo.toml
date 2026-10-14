@@ -1,9 +1,20 @@
 [package]
 name = "mzlab-lettori"
-description = "The readers of vendor files that the engine does not carry: served only by the readers module (a .wasm of its own) and by the desktop app"
+description = "The readers of vendor files, one module per family of formats: served only by the .wasm modules of the readers (loaded on demand) and by the desktop app, never by the engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+
+[features]
+# one feature per family (docs/agenti/lettori-modulo.md); `tutte` is for the desktop app and for cargo test
+aperti = []
+thermo = []
+agilent = []
+sciex = []
+waters = []
+shimadzu = []
+bruker = []
+tutte = ["aperti", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core", features = ["estesi"] }
