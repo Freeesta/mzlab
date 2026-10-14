@@ -29,7 +29,7 @@ Per vedere la modifica: apri il file con doppio clic e ricarica con Cmd+R. Nell'
 Il testo è tra i "tag" `<…>`. Si cambia il testo, si lasciano i tag. Ogni tag aperto va chiuso: `<p>` … `</p>`.
 
 ```html
-<h2>Titolo di sezione</h2>          compare anche nell'indice "In questa pagina"
+<h2>Titolo di sezione</h2>
 <h3>Sottotitolo</h3>
 <p>Un paragrafo con <b>grassetto</b>, <i>corsivo</i>, H<sub>2</sub>O, 10<sup>−5</sup>.</p>
 <ul><li>punto elenco</li><li>altro punto</li></ul>       (<ol> per l'elenco numerato)
@@ -46,7 +46,6 @@ Caratteri speciali: si possono scrivere direttamente (à è ≈ → Δ λ ±), i
 <div class="box warn"><b>Errore frequente</b><p>Testo.</p></div>      riquadro arancione
 <div class="box lab"><b>In laboratorio</b><p>Testo.</p></div>         riquadro verde
 <div class="box math"><b>Derivazione</b><p>Testo.</p></div>           riquadro viola
-<div class="obj"><b>In questo capitolo impari a</b><ul><li>...</li></ul></div>   obiettivi, subito dopo il sommario
 <div class="box oral"><b>All'orale</b><p>Testo.</p></div>             che cosa si chiede all'esame
 <div class="box lr">…</div> <div class="box hr">…</div>              bassa / alta risoluzione (dentro <div class="duo"> stanno affiancati)
 <details class="poe"><summary>Prevedi, poi guarda</summary><p>…</p></details>   domanda prima di una figura

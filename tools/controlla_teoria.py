@@ -154,8 +154,6 @@ def public_errors(path, folder, text):
         prev = lv
     chapter = chapter_number(path.name)
     if chapter is not None:
-        if not p.classes["obj"]:
-            E.append(("A", "missing objectives box .obj"))
         if not p.classes["q"]:
             E.append(("A", "missing end-of-chapter questions (details.q)"))
         eqs, bad = [], []

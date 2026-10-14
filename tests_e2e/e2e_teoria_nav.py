@@ -30,17 +30,14 @@ try:
             cur = q.eval_on_selector_all("#tabs a[aria-current=page]", "e=>e.map(x=>x.textContent)"); assert cur == ["Teoria"], cur
             for a in q.locator("#tabs a").all():
                 b = a.bounding_box(); assert b and b["height"] >= 44 and b["width"] >= 44 and b["x"] >= 0 and b["x"] + b["width"] <= w, (a.inner_text(), b)
-            lb = q.locator("#logo").bounding_box(); assert lb["height"] >= 44 and lb["width"] >= 28, lb
             assert q.evaluate("document.documentElement.scrollWidth") <= w, "horizontal scroll"
             assert q.evaluate("document.querySelector('#top').getBoundingClientRect().height") < 80
-            assert q.get_attribute("#tab-dati", "href") == "../../#/dati" and q.get_attribute("#tab-disegno", "href") == "../../#/disegno" and q.get_attribute("#logo", "href") == "../../#/dati"
+            assert q.get_attribute("#tab-dati", "href") == "../../#/dati" and q.get_attribute("#tab-disegno", "href") == "../../#/disegno"
         def widths():
             for w in (360, 768, 1280):
                 c, q = ctx(w); go(q, T + "06-esi.html"); tabs_ok(q, w)
-                if w <= 640: assert q.is_hidden("#top .t"), "the title gives way first"
-                else: assert q.is_visible("#top .t")
                 go(q, T + "pratica-ei.html"); tabs_ok(q, w); idle(q); c.close()
-        step("tabs Dati · Disegno · Teoria visible and ≥ 44 px at 360, 768, 1280 px (Teoria and Pratica), title shortened first", widths)
+        step("tabs Dati · Disegno · Teoria visible and ≥ 44 px at 360, 768, 1280 px (Teoria and Pratica)", widths)
         def dark():
             c, q = ctx(360, color_scheme="dark"); go(q, T + "12-dati.html"); tabs_ok(q, 360)
             L = "(c=>{const m=c.match(/[0-9.]+/g).map(Number),f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(m[0])+.7152*f(m[1])+.0722*f(m[2])})"
@@ -49,10 +46,10 @@ try:
         step("dark theme: tab text readable (≥ 4.5)", dark)
         def keyboard():
             c, q = ctx(1280); go(q, T + "13-formula.html"); q.wait_for_selector("#tabs")
-            q.evaluate("document.querySelector('#logo').focus()"); q.keyboard.press("Tab")
-            ids = []
-            for _ in range(3):
-                ids.append(q.evaluate("document.activeElement.id")); q.keyboard.press("Tab")
+            q.evaluate("document.querySelector('#tab-dati').focus()")
+            ids = [q.evaluate("document.activeElement.id")]
+            for _ in range(2):
+                q.keyboard.press("Tab"); ids.append(q.evaluate("document.activeElement.id"))
             assert "tab-dati" in ids and "tab-disegno" in ids and "tab-teoria" in ids, ids
             q.evaluate("document.querySelector('#tab-disegno').focus()"); idle(q); q.keyboard.press("Enter")
             q.wait_for_url("**/#/disegno"); idle(q); c.close()
@@ -70,8 +67,8 @@ try:
                 c, q = ctx(1280); go(q, T + "pratica-formula.html"); q.wait_for_selector("#" + tab)
                 idle(q); q.click("#" + tab); q.wait_for_function("window.qqReady===true", timeout=60000)
                 assert q.locator(ready_sel).get_attribute("data-v") == h, (tab, q.url)
-                go(q, T + "08-vuoto.html"); idle(q); q.click("#logo"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000); idle(q); c.close()
-        step("one click from a page to Dati and to Disegno; the logo leads to Dati", reach)
+                go(q, T + "08-vuoto.html"); idle(q); q.click("#tab-dati"); q.wait_for_url("**/#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000); idle(q); c.close()
+        step("one click from a page to Dati and to Disegno", reach)
         def session():
             c, q = ctx(1500, 1000); go(q, U + "#/dati"); q.wait_for_function("window.qqReady===true", timeout=60000)
             stage(q, [mz(f) for f in FILES[:1]]); q.click("text=Carica dati"); ready(q)
@@ -86,16 +83,15 @@ try:
             c = r.b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, user_agent=IPHONE); q = c.new_page()
             go(q, T + "04-lc.html"); q.wait_for_selector("#tabs")
             names = q.eval_on_selector_all("#tabs a", "e=>e.map(x=>x.textContent)"); assert names == ["Teoria"], names
-            assert q.get_attribute("#logo", "href") == "../../"
-            assert q.locator("#logo").bounding_box()["height"] >= 44 and q.locator("#tab-teoria").bounding_box()["height"] >= 44
+            assert q.locator("#tab-teoria").bounding_box()["height"] >= 44
             assert q.evaluate("document.documentElement.scrollWidth") <= 390
             idle(q); c.close()
-        step("phone: only the logo (to the program's notice) and Teoria", phone)
+        step("phone: only Teoria in the header", phone)
         def filep():
             import pathlib
             c, q = ctx(1280); go(q, (pathlib.Path(__file__).resolve().parent.parent / "mzlab/web/teoria/04-lc.html").as_uri()); q.wait_for_selector("#top")
-            assert q.locator("#tabs").count() == 0 and q.get_attribute("#logo", "href") == "index.html"; idle(q); c.close()
-        step("from file:// no link to the program (as before)", filep)
+            assert q.locator("#tab-teoria").count() == 1; idle(q); c.close()
+        step("from file:// tab Teoria is present", filep)
 finally:
     r.close()
 r.report()

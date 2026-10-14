@@ -206,11 +206,12 @@ impl State {
             ));
         }
         let (mut at, size) = (Slice(table), table.len() as u64);
-        let sha = if s("sha256").is_empty() {
-            sha_hex(table)
-        } else {
-            s("sha256").to_string()
-        };
+        let held = sha_hex(table);
+        // the page names the table it means by its SHA-256: another step of mzFinder may have replaced the one the app holds
+        if !s("sha256").is_empty() && s("sha256") != held {
+            return Err(Error::new("error.featState"));
+        }
+        let sha = held;
         let pol = p["polarity"].as_i64().unwrap_or(1) as i32;
         text(match kind {
             "view" => t::view_json(&mut at, size, s("samples"), s("spec"))?,

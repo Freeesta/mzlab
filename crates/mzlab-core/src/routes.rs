@@ -72,6 +72,8 @@ pub struct Routes<R: ReadAt> {
     pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>, u64)>,
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
+    /// The pyramid of map tiles of each level (`maptiles`), built on first use; `None` = the level has none.
+    pub(crate) tiles: Vec<(u8, Option<std::sync::Arc<crate::maptiles::Pyramid>>)>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
@@ -80,7 +82,7 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None, msn: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).

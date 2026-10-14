@@ -40,13 +40,13 @@ function setTab(t, quiet, motivo) {
 
 // first time a tab is shown (or after all its panels were closed and the page reloaded): its starting layout
 function ensureLayout() {
-  if (tabFiles().some(f => f.vis) && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);          // a block is made only for a type with a visible file: no empty panels
-  if (lrTog()) ensureBlocks();
+  if (lrTog()) ensureBlocks();          // every type with a visible file gets its block, placed under the ones already there (also the type just opened by a click in the list)
+  else if (tabFiles().some(f => f.vis) && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);          // a block is made only for a type with a visible file: no empty panels
 }
 // every experiment type that has files gets its block (its starting layout) under the ones already on the page
 function ensureBlocks() {
   ESP.ids.forEach(t => {
-    if (!tabFiles(t).some(f => f.vis) || E.panels.some(p => p.tab === t)) return;
+    if (!tabFiles(t).some(f => f.vis) || E.panels.some(p => p.tab === t)) return;      // a type whose files are all closed has no block until one of them is opened
     const before = new Set(E.panels);
     STATO.conScheda(t, () => defaultLayoutTab(t), "blocks");
     const shift = () => {
@@ -135,7 +135,7 @@ function defaultLayoutTab(t) {
     calLoad().catch(() => {}).then(() => {
       E._mrmLoading = false; if (tabPanels("mrm").length) return;
       const mfs = tabFiles("mrm");
-      mfs.forEach((f, i) => { f.vis = (i === 0); });
+      if (!mfs.some(f => f.vis)) mfs.forEach((f, i) => { f.vis = (i === 0); });
       if (typeof renderFileList === "function") renderFileList();
       const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
       addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });

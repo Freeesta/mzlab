@@ -34,11 +34,6 @@ Do not copy sentences from the sources (tools/controlla_teoria.py rejects runs o
 <h1>@TITLE@</h1>
 <p class="lead">TODO: due righe di apertura.</p>
 
-<div class="obj"><b>In questo capitolo impari a</b><ul>
-<li>TODO: primo obiettivo;</li>
-<li>TODO: secondo obiettivo;</li>
-<li>TODO: terzo obiettivo.</li></ul></div>
-
 <h2>@N@.1 TODO: primo argomento</h2>
 <p>TODO.</p>
 <span class="eq">TODO<span class="no">(@N@.1)</span></span>
