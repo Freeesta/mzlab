@@ -1609,7 +1609,7 @@ I18N.add("en", {
   "help.guide.method": "Method, images and properties",
   "help.guide.modes": "The three types of experiment (Full Scan, MS<sup>2</sup>, MRM)",
   "help.guide.credits.title": "Credits and licenses",
-  "help.guide.credits.body": "Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) and NumPy (BSD-3); the logo derives from <i>QuadrupoleContour.svg</i> by Geek3 (Wikimedia Commons, CC BY-SA 4.0). The mzML files stay on your computer. Details in <code>LICENZE-TERZI.md</code>.",
+  "help.guide.credits.body": "Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) and NumPy (BSD-3); the logo derives from <i>QuadrupoleContour.svg</i> by Geek3 (Wikimedia Commons, CC BY-SA 4.0). The Theory and Practice texts are CC BY 4.0 and the example files are synthetic data (CC0). The mzML files stay on your computer. Details in <code>LICENZE-TERZI.md</code>.",
   "lst.mzOnly": "m/z only",
   "lst.theoMz": "theoretical m/z",
   "cont.in.one": "Include the entry again: {n}",
