@@ -1,6 +1,12 @@
 # Prompt dei pacchetti dello studio sui formati nativi
 
-Un file per pacchetto (dipendenze, moduli per famiglia e file reali: `docs/studi/FORMATI_NATIVI_MS.md`, §4). Ogni prompt è autosufficiente: si copia la parte dopo «---». Ordine: DEV-00, poi DEV-01; DEV-02…DEV-08 (una famiglia ciascuno) in parallelo dopo DEV-00 (DEV-02 dopo DEV-01); DEV-09…DEV-11 (motore) dopo DEV-01.
+Un file per pacchetto (dipendenze, moduli per famiglia e file reali: `docs/studi/FORMATI_NATIVI_MS.md`, §4). Ogni prompt è autosufficiente: si copia la parte dopo «---». Ordine definitivo:
+1. DEV-00.
+2. DEV-01: Thermo fuori dal motore, approvata.
+3. DEV-03…DEV-08, una famiglia ciascuno, in parallelo dopo DEV-00; DEV-02 dopo DEV-01.
+4. DEV-09…DEV-11 (motore) dopo DEV-01.
+
+La dieta del motore non c'è più: è assorbita da DEV-01.
 
 - [DEV-00](DEV-00.md): Infrastruttura comune dei moduli per famiglia
 - [DEV-01](DEV-01.md): Thermo fuori dal motore: modulo `thermo` e lettore esterno

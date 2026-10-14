@@ -141,6 +141,12 @@ I prompt pronti e autosufficienti per le chat DEV sono in `docs/studi/PROMPT_FOR
 | DEV-10 | Mobilità ionica: array dell'mzML, informazioni, scansione | motore | DEV-1, DEV-8 | 1 mzML con mobilità (da TDF o Waters HDMSe) |
 | DEV-11 | `metodo/1` di un mzML di altri (testata, `startTimeStamp`, `sample`, `scanSettings`) | motore | DEV-1 | gli mzML di msconvert già nei dati bastano |
 
-DEV-2…DEV-8 sono indipendenti fra loro e si possono aprire in parallelo (ognuna tocca solo la sua cartella di `mzlab-lettori`, la sua riga di `lettori-famiglie.js` e il suo file d'area). Se DEV-1 non si fa, DEV-9, 10 e 11 richiedono prima una dieta del motore di almeno 16 KB.
+Ordine definitivo:
+1. DEV-0.
+2. DEV-1, approvata: Thermo esce dal motore e il SHA-256 del motore cambia.
+3. DEV-3…DEV-8 in parallelo dopo DEV-0, e DEV-2 dopo DEV-1. Ognuna tocca solo la sua cartella di `mzlab-lettori`, la sua riga di `lettori-famiglie.js` e il suo file d'area.
+4. DEV-9, 10 e 11 (motore) dopo DEV-1.
+
+**Dieta del motore: assorbita da DEV-1, non più necessaria.** I circa 156 KB liberati bastano ai pacchetti del motore. Una dieta che tocchi `vendor/opentfraw/` o `raw.rs` andrebbe in conflitto con DEV-1.
 
 Fuori (impossibili senza SDK del produttore): `.wiff2`, Bruker BAF, formati proprietari JEOL/LECO/PerkinElmer (strada: l'esportazione ANDI di DEV-3). MGF come corsa e mzData: solo su richiesta.
