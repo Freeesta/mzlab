@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg)
         open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, "E.panels.some(p=>p.type==='map'&&p._a)")
         MP = "E.panels.find(p=>p.type==='map')"
         z = lambda: pg.evaluate(f"[{MP}.zoom,{MP}.zoomY]")
