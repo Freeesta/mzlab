@@ -141,13 +141,7 @@ fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
     })
 }
 
-fn slabs(
-    src: &mut dyn Stored,
-    n: usize,
-    cuts: &[f64],
-    budget: &MemBudget,
-    r: &Recipe,
-) -> Result<Aligned> {
+fn slabs(src: &mut dyn Stored, n: usize, cuts: &[f64], budget: &MemBudget, r: &Recipe) -> Result<Aligned> {
     let mut table = Aligned {
         n_files: n,
         ..Aligned::default()

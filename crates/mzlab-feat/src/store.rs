@@ -142,10 +142,7 @@ impl<W: WriteAt> Seq<'_, W> {
 }
 
 /// Directory of the arrays: `(name, dtype, count, offset from the start of the data)` and the length of the data.
-fn plan(
-    cols: &[(&'static str, Col)],
-    evid: usize,
-) -> (Vec<(&'static str, &'static str, usize, usize)>, usize) {
+fn plan(cols: &[(&'static str, Col)], evid: usize) -> (Vec<(&'static str, &'static str, usize, usize)>, usize) {
     let (mut dir, mut at) = (Vec::with_capacity(cols.len() + 1), 0usize);
     let items = cols.iter().map(|(n, c)| (*n, c.shape()));
     for (name, (dtype, count, size)) in items.chain([("evid", ("u8", evid, 1))]) {
@@ -306,28 +303,14 @@ fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
 }
 
 /// Writes the `.mzfeatf` of one file to `sink`.
-pub fn write_file_to<W: WriteAt>(
-    sink: &mut W,
-    f: &FileFeatures,
-    r: &Recipe,
-    o: &Origin,
-) -> Result<()> {
+pub fn write_file_to<W: WriteAt>(sink: &mut W, f: &FileFeatures, r: &Recipe, o: &Origin) -> Result<()> {
     let mut cols = file_cols(f);
     if !f.q3.is_empty() {
         cols.push(("q3", Col::F64(&f.q3)));
     }
     let dt = [f.dt];
     cols.push(("dt", Col::F64(&dt)));
-    write_container(
-        sink,
-        "file",
-        r,
-        o,
-        &[("rows", f.len())],
-        "",
-        &cols,
-        &mut (&[][..]),
-    )
+    write_container(sink, "file", r, o, &[("rows", f.len())], "", &cols, &mut (&[][..]))
 }
 
 /// Bytes of the `.mzfeatf` of one file.
@@ -415,11 +398,7 @@ pub fn write_table_tp<W: WriteAt>(
         ("summaries", usize::from(!t.meta.is_empty())),
         ("identity", usize::from(ident)),
     ];
-    let tp = if tp_cols(tp, &mut cols) {
-        format!(",\"tp\":{}", tp.meta_json())
-    } else {
-        String::new()
-    };
+    let tp = if tp_cols(tp, &mut cols) { format!(",\"tp\":{}", tp.meta_json()) } else { String::new() };
     write_container(sink, "table", r, o, &shape, &tp, &cols, evid)
 }
 

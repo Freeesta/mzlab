@@ -30,15 +30,7 @@ pub enum Rule {
 }
 
 /// Names of the rules in the `filtra` operation, in the order of `Rule`.
-const NAMES: [&str; 7] = [
-    "min_rilevati",
-    "min_area",
-    "min_altezza",
-    "bianco",
-    "mz",
-    "rt",
-    "ms2",
-];
+const NAMES: [&str; 7] = ["min_rilevati", "min_area", "min_altezza", "bianco", "mz", "rt", "ms2"];
 
 impl Rule {
     pub fn name(&self) -> &'static str {
@@ -58,35 +50,16 @@ impl Rule {
 fn passes(t: &Aligned, samples: &[Sample], row: usize, rule: &Rule, blank: &[usize]) -> bool {
     let files = || (0..t.n_files).filter(|&k| decides(&samples[k]));
     match *rule {
-        Rule::MinDetected(n) => {
-            files()
-                .filter(|&k| t.state[row * t.n_files + k] == CELL_DETECTED)
-                .count()
-                >= n
-        }
-        Rule::MinArea(x) => {
-            files()
-                .filter_map(|k| measured(t, row, k))
-                .fold(0.0, f64::max)
-                >= x
-        }
-        Rule::MinHeight(x) => {
-            files()
-                .filter(|&k| measured(t, row, k).is_some())
-                .map(|k| f64::from(t.height[row * t.n_files + k]))
-                .fold(0.0, f64::max)
-                >= x
-        }
+        Rule::MinDetected(n) => files().filter(|&k| t.state[row * t.n_files + k] == CELL_DETECTED).count() >= n,
+        Rule::MinArea(x) => files().filter_map(|k| measured(t, row, k)).fold(0.0, f64::max) >= x,
+        Rule::MinHeight(x) => files()
+            .filter(|&k| measured(t, row, k).is_some())
+            .map(|k| f64::from(t.height[row * t.n_files + k]))
+            .fold(0.0, f64::max)
+            >= x,
         Rule::Blank(ratio) => {
-            let b = blank
-                .iter()
-                .map(|&k| measured(t, row, k).unwrap_or(0.0))
-                .sum::<f64>()
-                / blank.len() as f64;
-            files()
-                .filter_map(|k| measured(t, row, k))
-                .fold(0.0, f64::max)
-                >= ratio * b
+            let b = blank.iter().map(|&k| measured(t, row, k).unwrap_or(0.0)).sum::<f64>() / blank.len() as f64;
+            files().filter_map(|k| measured(t, row, k)).fold(0.0, f64::max) >= ratio * b
         }
         Rule::Mz(lo, hi) => (lo..=hi).contains(&t.mz[row]),
         Rule::Rt(lo, hi) => (lo..=hi).contains(&t.rt[row]),
@@ -99,9 +72,7 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
     if samples.len() != t.n_files || rules.len() > 250 {
         return Err(bad());
     }
-    let blank: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "blank")
-        .collect();
+    let blank: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "blank").collect();
     if rules.iter().any(|r| matches!(r, Rule::Blank(_))) && blank.is_empty() {
         return Err(Error::new("error.filterNoBlank"));
     }
@@ -123,12 +94,7 @@ pub fn to_json(rules: &[Rule]) -> String {
     let mut j = Out::default();
     j.raw("[");
     for (i, r) in rules.iter().enumerate() {
-        j.raw(if i > 0 {
-            ",{\"regola\":"
-        } else {
-            "{\"regola\":"
-        })
-        .str(r.name());
+        j.raw(if i > 0 { ",{\"regola\":" } else { "{\"regola\":" }).str(r.name());
         match *r {
             Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
             Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) => j.raw(",\"valore\":").num(x),
@@ -142,12 +108,7 @@ pub fn to_json(rules: &[Rule]) -> String {
 }
 
 pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
-    let num = |o: &Value, k: &str| {
-        o.get(k)
-            .and_then(Value::f64)
-            .filter(|x| x.is_finite())
-            .ok_or_else(bad)
-    };
+    let num = |o: &Value, k: &str| o.get(k).and_then(Value::f64).filter(|x| x.is_finite()).ok_or_else(bad);
     v.arr()
         .iter()
         .map(|o| {

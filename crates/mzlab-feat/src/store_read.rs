@@ -4,11 +4,11 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{parse, Value};
 
+use crate::store::{bad, ALIGN, MAGIC, PIECE};
 use crate::facts::FileFacts;
 use crate::store::Origin;
-use crate::store::{bad, ALIGN, MAGIC, PIECE};
-use crate::table::{Aligned, FileFeatures, RowIdent, RowMeta};
 use crate::tp::TpBlock;
+use crate::table::{Aligned, FileFeatures, RowIdent, RowMeta};
 
 /// Bytes in memory as a `ReadAt`.
 pub struct Slice<'a>(pub &'a [u8]);
@@ -41,10 +41,7 @@ fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
         return Err(bad());
     }
     let n = u64::from_le_bytes(h[8..].try_into().unwrap());
-    let end = 16u64
-        .checked_add(n)
-        .filter(|&e| e <= size)
-        .ok_or_else(bad)?;
+    let end = 16u64.checked_add(n).filter(|&e| e <= size).ok_or_else(bad)?;
     let mut text = mzlab_core::budget::try_vec::<u8>(n as usize)?;
     text.resize(n as usize, 0);
     r.read_at(16, &mut text)?;
@@ -68,12 +65,7 @@ impl Opened {
             .iter()
             .find(|x| x.get("name").and_then(|v| v.str()) == Some(name))
             .ok_or_else(bad)?;
-        let get = |k: &str| {
-            e.get(k)
-                .and_then(|v| v.f64())
-                .map(|v| v as usize)
-                .ok_or_else(bad)
-        };
+        let get = |k: &str| e.get(k).and_then(|v| v.f64()).map(|v| v as usize).ok_or_else(bad);
         if e.get("dtype").and_then(|v| v.str()) != Some(dtype) {
             return Err(bad());
         }
@@ -103,11 +95,7 @@ impl Opened {
         while at < b {
             let k = (b - at).min(PIECE);
             r.read_at(off + (at * N) as u64, &mut buf[..k * N])?;
-            out.extend(
-                buf[..k * N]
-                    .chunks_exact(N)
-                    .map(|c| dec(c.try_into().unwrap())),
-            );
+            out.extend(buf[..k * N].chunks_exact(N).map(|c| dec(c.try_into().unwrap())));
             at += k;
         }
         Ok(out)
@@ -143,20 +131,13 @@ macro_rules! cols {
 
 /// Reads a `.mzfeatf` by offsets: the table and its meta. With `want.mz` only the rows with m/z in the range; with `want.lean` only the columns of the
 /// alignment (the others stay empty, so such a table is for `align` and nothing else).
-pub fn read_file_from<R: ReadAt>(
-    r: &mut R,
-    size: u64,
-    want: Want,
-) -> Result<(FileFeatures, Value)> {
+pub fn read_file_from<R: ReadAt>(r: &mut R, size: u64, want: Want) -> Result<(FileFeatures, Value)> {
     let o = open(r, size, "file")?;
     let rows = match want.mz {
         None => None,
         Some((lo, hi)) => {
             let mz = o.col(r, size, "mz", "f64", None, f64::from_le_bytes)?;
-            Some((
-                mz.partition_point(|&m| m < lo),
-                mz.partition_point(|&m| m < hi),
-            ))
+            Some((mz.partition_point(|&m| m < lo), mz.partition_point(|&m| m < hi)))
         }
     };
     let mut f = if want.lean {
@@ -204,11 +185,7 @@ pub fn read_table_from<R: ReadAt>(r: &mut R, size: u64) -> Result<(Aligned, Valu
         apex_rt: o.col(r, size, "apex_rt", "f32", rows, f32::from_le_bytes)?,
         width: o.col(r, size, "width", "f32", rows, f32::from_le_bytes)?,
         state: o.col(r, size, "state", "u8", rows, |b: [u8; 1]| b[0])?,
-        q3: if o.has("q3") {
-            o.col(r, size, "q3", "f64", rows, f64::from_le_bytes)?
-        } else {
-            Vec::new()
-        },
+        q3: if o.has("q3") { o.col(r, size, "q3", "f64", rows, f64::from_le_bytes)? } else { Vec::new() },
         member_start: o.col(r, size, "member_start", "u32", rows, u32::from_le_bytes)?,
         member_mz: o.col(r, size, "member_mz", "f64", rows, f64::from_le_bytes)?,
         member_rt: o.col(r, size, "member_rt", "f32", rows, f32::from_le_bytes)?,
@@ -281,17 +258,9 @@ impl Opened {
                 Some("u8" | "i8") => 1,
                 _ => return Err(bad()),
             };
-            let get = |k: &str| {
-                e.get(k)
-                    .and_then(|v| v.f64())
-                    .map(|v| v as u64)
-                    .ok_or_else(bad)
-            };
+            let get = |k: &str| e.get(k).and_then(|v| v.f64()).map(|v| v as u64).ok_or_else(bad);
             let (offset, count) = (get("offset")?, get("count")?);
-            let end = self
-                .start
-                .checked_add(offset)
-                .and_then(|a| a.checked_add(count.checked_mul(width)?));
+            let end = self.start.checked_add(offset).and_then(|a| a.checked_add(count.checked_mul(width)?));
             if end.is_none_or(|e| e > size) {
                 return Err(bad());
             }
@@ -301,23 +270,14 @@ impl Opened {
 
     /// The block `tp/1` when the meta has it.
     fn tp<R: ReadAt>(&self, r: &mut R, size: u64) -> Result<TpBlock> {
-        let Some(m) = self.meta.get("tp") else {
-            return Ok(TpBlock::default());
-        };
+        let Some(m) = self.meta.get("tp") else { return Ok(TpBlock::default()) };
         let mut col = |name: &str| self.col(r, size, name, "u8", None, |b: [u8; 1]| b[0]);
-        Ok(TpBlock {
-            status: col("tp_status")?,
-            notes: col("tp_notes")?,
-            via: col("tp_via")?,
-            kinship: col("tp_kinship")?,
-            ..TpBlock::from_meta(m)
-        })
+        Ok(TpBlock { status: col("tp_status")?, notes: col("tp_notes")?, via: col("tp_via")?, kinship: col("tp_kinship")?, ..TpBlock::from_meta(m) })
     }
 
     /// Whether the container has an array called `name` (the tables of format 1 lack the summaries of the rows).
     fn has(&self, name: &str) -> bool {
         let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
-        e.iter()
-            .any(|x| x.get("name").and_then(|v| v.str()) == Some(name))
+        e.iter().any(|x| x.get("name").and_then(|v| v.str()) == Some(name))
     }
 }
