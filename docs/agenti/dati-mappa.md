@@ -1,5 +1,5 @@
 # Vista Dati: mappa RT×m/z e navigazione
-Stato attuale; parte della vista Dati (`docs/agenti/dati.md`). Una voce per argomento.
+Parte della vista Dati (`docs/agenti/dati.md`). Una voce per argomento.
 
 - **Mappa RT×m/z** (`drawMap` in `grafici.js`; mouse, tastiera, mirino e zoom vero in `mappa.js`, `MAPPA`; scelte in `qqq.mappa`): 2D nel pannello e 3D nel visore (nessuna vista Ridge). Gesti e comandi: vedi la voce «Navigazione della mappa 2D».
 - **Motore**: con `?motore=rust` (predefinito) `map`, `mapsnap`, `mappunti` e `mappunti3d` rispondono dagli indici in Rust per ogni file con indice (unitaria, profilo, HR), senza Pyodide (`lr-map.js`, `maproute.rs`; prova `tests/map_parity.rs`, `e2e_lr`, `e2e_hr_mappa`); Python solo senza indice.

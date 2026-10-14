@@ -1,5 +1,5 @@
 # Disegno (`draw.js`, Ketcher in `vendor/ketcher`)
-Stato attuale. Il nucleo è in AGENTS.md.
+Il nucleo è in AGENTS.md.
 
 - Ketcher si carica solo aprendo la scheda; OpenChemLib al primo calcolo delle proprietà. Lo `<style>` iniettato da `hideMacro` adatta le barre e nasconde aiuto e informazioni di Ketcher; zoom iniziale 100% (`fitZoom`). Tasto destro: «Copia SMILES», «Centra disegno».
 - **Zoom** nella barra alta, dopo ingranaggio, schermo intero e mirino (solo centra): «Ingrandisci», «Riduci» (×1,25 / ×0,8, 0,2-4) e «Ripristina» (100 % e centrato, `fitZoom`), `data-testid` `zoom-*-tp` (`addZoomButtons`); senza tasti +/−/0 perché Ketcher li usa per la carica.

@@ -1,5 +1,5 @@
 # Tracce di massa in Rust (`crates/mzlab-feat`)
-Stato attuale. Il crate porta `TP_Mine/py/tpmine/hr/features.py::detect` (livello L1 della pipeline): dai picchi MS1 di un `.mzidx` (una polarità) produce la tabella delle tracce di massa di un file. Il Python è il riferimento dei test di parità. Solo LC-HRMS centroidi, solo MS1; le polarità si trattano separate (`Params.polarity`).
+Il crate porta `TP_Mine/py/tpmine/hr/features.py::detect` (livello L1 della pipeline): dai picchi MS1 di un `.mzidx` (una polarità) produce la tabella delle tracce di massa di un file. Il Python è il riferimento dei test di parità. Solo LC-HRMS centroidi, solo MS1; le polarità si trattano separate (`Params.polarity`).
 
 ## Moduli
 - `trace.rs`: `Params` (predefiniti di `detect`: canali 4 ppm, soglia di rumore 2e4, altezza minima 2e5, punti minimi 5, buchi ≤ 2 scansioni, tracce di fondo > 400 scansioni, `budget` in byte) e `detect(&mut Index<R>, &Params) -> Result<FileFeatures>`. I picchi si leggono con `idxread::Index::each_peak` a pezzi di 64 K, si tengono solo quelli sopra la soglia e si formano lastre di m/z di circa `budget / 64` picchi (al massimo 1,5 M).

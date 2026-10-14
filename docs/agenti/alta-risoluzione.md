@@ -1,5 +1,5 @@
 # Mondo HR (alta risoluzione) e Banco
-Stato attuale; riscrivi le righe. Il nucleo è in AGENTS.md; la vista Dati comune è in `dati.md`.
+Il nucleo è in AGENTS.md; la vista Dati comune è in `dati.md`.
 
 - **Banco** (`banco.js`, `BANCO`; nel mondo LR `BANCO.on()` è falso e non c'è nulla di questo). Ogni cella ha un **filtro di scansione** (`/api/filters?k=`, chiave `scan_key`, es. «FTMS + ms2 @hcd») che viaggia con ogni richiesta (`filt=`; nelle cache sta nello slot del precursore: `prk` / `prSplit`); `p.filt`/`p.flv` si salvano con la sessione; un filtro MS2/MSn azzera il precursore, uno di un altro esperimento sposta la cella (`p.tab`). **Puntina** `p.pin`.
   **Grafici impilati** (`p.ranges`, fino a 8): TIC, BPC o XIC in ppm, **NL** (`p._a.nl`), `p.norm100`. Trio DDA: filtro su cromatogramma e MS1, non su MS2.
