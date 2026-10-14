@@ -671,6 +671,7 @@ declare var typeTag: any;
 declare var typingNow: any;
 declare var uiSave: any;
 declare var uiTimer: any;
+declare var uipAdminOn: any;
 declare var uipApply: any;
 declare var uipLoad: any;
 declare var uipOpen: any;
