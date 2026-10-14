@@ -210,33 +210,6 @@ impl Pyramid {
     }
 }
 
-/// The cells of one tile that are not zero: (`row * TILE + col`, value), in increasing order of position.
-type Tile = Vec<(u16, f32)>;
-type Level = HashMap<(u32, u32), Tile>;
-
-pub struct Pyramid {
-    pub n_scans: usize,
-    levels: Vec<Level>,
-}
-
-/// Width in Da of a cell of level `l`.
-pub fn cell_width(l: usize) -> f64 {
-    BASE_DMZ * (1u64 << l) as f64
-}
-
-/// What `api/maptiles` returns: the level, the aligned cells, and where they are.
-pub struct TileView {
-    pub tile_level: usize,
-    /// First and last scan position (exclusive) of the rows, in scans.
-    pub row0: usize,
-    pub rows: usize,
-    pub col0: usize,
-    pub cols: usize,
-    pub data: Vec<f32>,
-    /// RT of the start of every row, plus the end of the last one.
-    pub rt: Vec<f64>,
-}
-
 impl<R: ReadAt> Routes<R> {
     /// The pyramid of a level (built on first use), `None` when the level has no peaks or its scans are not in time order.
     pub(crate) fn pyramid(&mut self, level: u8) -> Result<Option<std::sync::Arc<Pyramid>>> {
@@ -324,6 +297,33 @@ impl<R: ReadAt> Routes<R> {
             rt: edges,
         }))
     }
+}
+
+/// The cells of one tile that are not zero: (`row * TILE + col`, value), in increasing order of position.
+type Tile = Vec<(u16, f32)>;
+type Level = HashMap<(u32, u32), Tile>;
+
+pub struct Pyramid {
+    pub n_scans: usize,
+    levels: Vec<Level>,
+}
+
+/// Width in Da of a cell of level `l`.
+pub fn cell_width(l: usize) -> f64 {
+    BASE_DMZ * (1u64 << l) as f64
+}
+
+/// What `api/maptiles` returns: the level, the aligned cells, and where they are.
+pub struct TileView {
+    pub tile_level: usize,
+    /// First and last scan position (exclusive) of the rows, in scans.
+    pub row0: usize,
+    pub rows: usize,
+    pub col0: usize,
+    pub cols: usize,
+    pub data: Vec<f32>,
+    /// RT of the start of every row, plus the end of the last one.
+    pub rt: Vec<f64>,
 }
 
 /// Dense strip of tiles of one column of tiles (`tx`), the rows of the file in tiles of `TILE`.
