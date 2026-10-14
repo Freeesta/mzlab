@@ -1,8 +1,4 @@
 {
- "00-uso.html": [
-  "A: missing end-of-chapter questions (details.q)",
-  "A: missing objectives box .obj"
- ],
  "01-tp.html": [
   "B: table without caption",
   "B: table without caption"
@@ -103,12 +99,10 @@
   "B: table without caption"
  ],
  "20-disegno.html": [
-  "A: missing end-of-chapter questions (details.q)",
-  "A: missing objectives box .obj"
+  "A: missing end-of-chapter questions (details.q)"
  ],
  "21-glossario.html": [
-  "A: missing end-of-chapter questions (details.q)",
-  "A: missing objectives box .obj"
+  "A: missing end-of-chapter questions (details.q)"
  ],
  "22-formulario.html": [
   "A: equation 10.1 does not belong to chapter 22",
@@ -142,7 +136,6 @@
   "A: equation 9.8 does not belong to chapter 22",
   "A: equation 9.9 does not belong to chapter 22",
   "A: equation number not in the form N.k: (9.4–9.5, 9.7)",
-  "A: missing objectives box .obj",
   "B: table without caption",
   "B: table without caption"
  ],
