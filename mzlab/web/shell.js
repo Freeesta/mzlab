@@ -96,8 +96,11 @@ function renderFiles(){const F=ST.files,el=$("#flist");
       f[k]=k==="use"?x.checked:v;
       if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
       if(k==="type"){if(f.type!=="sample"){f.time=null;f.gT=false}if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
-      sortFiles();renderFiles();                              // the table is sorted again when a value is committed (change/blur/Enter), never while typing
-      if(keep){const i=F.findIndex(q=>q.name===keep.name),b=el.querySelector(`[data-i="${i}"][data-k="${keep.k}"]`);if(b)b.focus()}};
+      // the table is sorted again when a value is committed (change/blur/Enter), never while typing. A change caused by leaving the field (click on another field, Tab) is applied
+      // once the focus has moved, and the focus goes back to the field that received it: the rebuilt table must not swallow the click
+      const go=()=>{const a=document.activeElement,ok=a&&el.contains(a),nk=ok&&a.dataset.k?{name:F[+a.dataset.i].name,k:a.dataset.k}:ok&&a.dataset.rm?{name:F[+a.dataset.rm].name,rm:1}:keep;sortFiles();renderFiles();
+        if(nk){const i=F.findIndex(q=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
+      if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
   el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
