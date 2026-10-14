@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="it" data-esteso><head><meta charset="utf-8"><!--tema--><meta name="color-scheme" content="light dark"><style>html{background:#fbfbf9}@media(prefers-color-scheme:dark){html:not([data-theme=light]){background:#14171b}}html[data-theme=dark]{background:#14171b}html[data-theme=light]{background:#fbfbf9}html.no-tr *,html.no-tr *::before,html.no-tr *::after{transition:none!important}</style><script>(function(){var R=document.documentElement,t=null;try{if(parent!==window)t=parent.document.documentElement.getAttribute("data-theme")}catch(e){}if(!t)try{t=JSON.parse(localStorage.getItem("qqq.prefs")||"{}").theme}catch(e){}if(t==="dark"||t==="light"){R.setAttribute("data-theme",t);R.style.colorScheme=t}R.classList.add("no-tr");addEventListener("load",function(){requestAnimationFrame(function(){requestAnimationFrame(function(){R.classList.remove("no-tr")})})})})()</script><!--/tema-->
+<!--
+chapter: 23 I tempi degli analizzatori: dwell time, sweep e duty cycle
+verification: draft
+exam-level: standard
+-->
+<meta name="robots" content="noindex">
+<title>I tempi degli analizzatori: dwell time, sweep e duty cycle · Teoria QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
+<body>
+<div class="wrap"><nav id="side"></nav><main>
+<div class="kicker">Capitolo 23</div>
+<h1>I tempi degli analizzatori: dwell time, sweep e duty cycle</h1>
+<p class="lead">La sorgente cromatografica (ESI) produce un fascio continuo di ioni nel tempo, mentre gli analizzatori di massa gestiscono questo flusso in modo sequenziale o pulsato. Capire i tempi di scansione spiega perché quadrupolo, TOF e Orbitrap si comportano in modo radicalmente diverso fra analisi mirata e screening non target.</p>
+
+<h2>23.1 Le tre definizioni fondamentali</h2>
+<p>Per padroneggiare il funzionamento di qualunque spettrometro accoppiato alla cromatografia liquida bisogna chiarire tre parametri temporali chiave:</p>
+
+<ul>
+<li><b>Dwell time</b> (tempo di permanenza o di sosta): l'intervallo di tempo (tipicamente espresso in millisecondi, ms) che un analizzatore a filtro (come il quadrupolo) dedica a monitorare un singolo valore di <i>m/z</i> (in SIM) o una singola transizione precursore/frammento (in SRM/MRM) prima di passare alla successiva. Aumentare il dwell time migliora la statistica di conteggio ionico e il rapporto segnale/rumore (S/N), ma allunga il tempo di ciclo complessivo.</li>
+<li><b>Sweep</b> (o scan time / tempo di spazzolata): il tempo necessario a un analizzatore a scansione continua per scorrere un intero intervallo di masse (es. da 100 a 1000 <i>m/z</i>). La <b>velocità di scansione</b> (scan speed) si misura in Da/s: coprire 900 Da in 0,45 s richiede una velocità di sweep di 2000 Da/s. Al termine di ogni spazzolata, l'elettronica impiega alcuni millisecondi (<b>inter-scan delay</b> o settling time) per ripristinare i potenziali di partenza, durante i quali non si acquisiscono dati.</li>
+<li><b>Duty cycle</b> (ciclo di lavoro utile): la frazione percentuale del tempo totale in cui gli ioni di un determinato <i>m/z</i> generati dalla sorgente continua vengono effettivamente trasmessi, analizzati e contati dal rivelatore:</li>
+</ul>
+
+<span class="eq">Duty Cycle (%) = <span class="frac"><span><i>t</i><sub>rilevazione effettiva</sub></span><span><i>t</i><sub>ciclo totale</sub></span></span> × 100<span class="no">(23.1)</span></span>
+
+<div class="box key"><b>L'efficienza di campionamento del fascio ionico</b>
+<p>Un duty cycle dell'1% significa che il 99% degli ioni dell'analita usciti dalla sorgente continua sbatte contro gli elettrodi o le pareti delle ottiche ioniche senza raggiungere il rivelatore.</p></div>
+
+<h2>23.2 Il quadrupolo in full scan e in MRM</h2>
+<p>In modalità full scan il quadrupolo varia in modo continuo le ampiezze della tensione continua (<i>U</i>) e a radiofrequenza (<i>V</i>) mantenendo costante il rapporto <i>U/V</i>. In ogni istante, solo una stretta finestra di stabilità (tipicamente Δ<i>m/z</i> ≈ 0,7–1 Da a risoluzione unitaria) attraversa le quattro barre.</p>
+
+<p>Se lo sweep copre da 100 a 1000 <i>m/z</i> (900 Da totali) con finestra di 1 Da, un singolo ione (es. <i>m/z</i> 350) viene trasmesso per solo 1/900 del tempo di spazzolata: il suo <b>duty cycle è circa lo 0,11%</b>. Per il restante 99,89% del tempo lo ione va perso. Aumentando la velocità di sweep (es. a 10 000 Da/s) per fare più scansioni al secondo, il tempo effettivo su ogni Dalton scende a 0,1 ms, abbattendo il rapporto segnale/rumore.</p>
+
+<p>In modalità SRM/MRM, invece, il quadrupolo smette di fare sweep: fissa i potenziali solo sui valori di <i>m/z</i> degli analiti scelti, portando il duty cycle tra il 10% e il 100% a seconda del numero di transizioni monitorate.</p>
+
+<h3>Simulazione: fascio continuo e tempi del filtro</h3>
+<div class="sim" id="sim-tempi-quad"><h4>Fascio continuo ESI e tempi del quadrupolo</h4>
+<p class="note">In alto il flusso continuo dalla sorgente ESI attraverso le barre del quadrupolo; in basso la costruzione del picco cromatografico campionato a confronto con il picco teorico continuo.</p></div>
+
+<div class="box warn"><b>Il compromesso sui punti per picco</b>
+<p>Per integrare e quantificare un picco cromatografico in modo accurato servono <b>almeno 12–15 punti per picco</b>. Se in MRM si monitorano troppe transizioni con dwell time eccessivo, il tempo di ciclo sale sopra 1–2 s e i punti crollano, rendendo l'integrazione inaffidabile.</p></div>
+
+<h2>23.3 TOF e Orbitrap in full scan</h2>
+<p>A differenza del quadrupolo, gli analizzatori ad alta risoluzione non scartano la maggior parte dello spettro quando acquisiscono in full scan:</p>
+
+<ul>
+<li><b>Time-of-Flight (oa-TOF)</b>: il fascio continuo entra nell'estrattore ortogonale (pusher), che spara a intervalli regolari (5–20 kHz) un intero pacchetto contenente tutti gli <i>m/z</i> dentro il tubo di volo. Un singolo volo dura 50–150 µs. Uno spettro a 10 Hz non è una singola scansione, ma la somma di circa 1000–2000 transienti TOF. Il duty cycle in full scan sale al 5–30% e, soprattutto, la risoluzione è del tutto indipendente dalla frequenza di acquisizione.</li>
+<li><b>Orbitrap</b>: gli ioni vengono accumulati in una trappola (C-Trap o IRM) per un tempo di iniezione (Injection Time, IT) regolato dall'AGC (Automatic Gain Control) e poi iniettati in blocco nell'Orbitrap. Qui oscillano inducendo una corrente immagine registrata per un tempo <i>t</i><sub>transiente</sub>. Nella trasformata di Fourier la risoluzione dipende linearmente dalla durata del transiente:</li>
+</ul>
+
+<span class="eq"><i>R</i> ∝ <i>t</i><sub>transiente</sub><span class="no">(23.2)</span></span>
+
+<p>Per raddoppiare la risoluzione bisogna raddoppiare il tempo di ascolto del transiente (es. da 128 ms a 256 ms), dimezzando la velocità in Hz. Nei sistemi moderni l'acquisizione è parallelizzata: mentre l'Orbitrap misura il pacchetto <i>n</i>, la C-Trap accumula già il pacchetto <i>n+1</i>, raggiungendo duty cycle elevati su campioni diluiti.</p>
+
+<h2>23.4 Confronto diretto in full scan</h2>
+<table>
+<caption>Confronto delle prestazioni e dei parametri temporali in modalità Full Scan</caption>
+<tr><th scope="col">Parametro</th><th scope="col">Quadrupolo (Q)</th><th scope="col">Time-of-Flight (oa-TOF)</th><th scope="col">Orbitrap</th></tr>
+<tr><td>Principio di scansione</td><td>Filtro sequenziale (un <i>m/z</i> alla volta)</td><td>Pulsato ad alta frequenza (tutti gli <i>m/z</i> insieme)</td><td>Accumulo in trappola + FFT (tutti gli <i>m/z</i> insieme)</td></tr>
+<tr><td>Parametro temporale chiave</td><td>Sweep time (Da/s) / Dwell equivalente</td><td>Tempo di volo (50–150 µs) × transienti</td><td>Injection Time (ms) + Transiente (ms)</td></tr>
+<tr><td>Duty Cycle tipico (Full Scan)</td><td class="n">0,05% – 0,2%</td><td class="n">5% – 30%</td><td class="n">5% – 90%</td></tr>
+<tr><td>Effetto dell'aumento di velocità (Hz)</td><td>Crolla il S/N e peggiora la risoluzione</td><td>Calano i transienti sommati (meno S/N), risoluzione invariata</td><td>Transiente più corto: dimezza la risoluzione ad ogni raddoppio di Hz</td></tr>
+<tr><td>Velocità massima utile</td><td class="n">10 – 20 Hz (bassa R)</td><td class="n">50 – 100+ Hz (ottimale per UHPLC)</td><td class="n">1,5 – 40 Hz (in funzione di R)</td></tr>
+</table>
+
+<p>Termini nel <a href="21-glossario.html">glossario</a>; formule nel <a href="22-formulario.html">formulario</a>.</p>
+
+<h2>Verifica</h2>
+<details class="q"><summary>Perché il quadrupolo è il re della quantificazione mirata (MRM) ma è inadeguato per lo screening non target?</summary>
+<p>In MRM il quadrupolo ferma la scansione e dedica quasi tutto il tempo solo agli analiti target (duty cycle fino a 50–100% per transizione), massimizzando la sensibilità. In full scan (necessario per scoprire composti sconosciuti), invece, il duty cycle crolla allo 0,1%, perdendo il 99,9% degli ioni prodotti dalla sorgente.</p></details>
+
+<details class="q"><summary>In un metodo UHPLC con picchi larghi 4 s, quale analizzatore ad alta risoluzione permette di mantenere oltre 15 punti per picco senza perdere potere risolutivo?</summary>
+<p>L'oa-TOF: con frequenze di 20–50 Hz garantisce 80–200 punti sul picco mantenendo inalterata la sua risoluzione. Un Orbitrap a 120 000 di risoluzione richiederebbe transienti lunghi (~256 ms), producendo meno di 4 spettri al secondo, cioè meno di 16 punti su un picco da 4 s.</p></details>
+
+<h2>Per approfondire</h2>
+<ul class="refs">
+<li><span class="tag">articolo</span>Chernushevich I.V. et al. (2001) An introduction to quadrupole–time-of-flight mass spectrometry. <i>J. Mass Spectrom.</i> 36, 849-865. <a href="https://doi.org/10.1002/jms.207" target="_blank" rel="noopener">doi:10.1002/jms.207</a></li>
+<li><span class="tag">articolo</span>Makarov A. et al. (2006) Performance evaluation of a high-field Orbitrap mass analyzer. <i>Anal. Chem.</i> 78, 2113-2120. <a href="https://doi.org/10.1021/ac0518811" target="_blank" rel="noopener">doi:10.1021/ac0518811</a></li>
+</ul>
+</main></div>
+<script src="../appname.js"></script><script src="teoria.js"></script><script src="sim-tempi.js"></script>
+</body></html>

@@ -28,6 +28,7 @@ const CHAPTERS = [
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
   ["22-formulario.html", "22", "Formulario per l'orale", "Appendice"],
+  ["23-tempi.html", "23", "I tempi degli analizzatori: dwell time, sweep e duty cycle", "IV. Analizzare gli ioni", true],
   ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
   ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
   ["pratica-orale.html", "P2", "Domande dell'orale", "Pratica"],
@@ -103,11 +104,9 @@ const TP = (() => {
     // chapters grouped by part: a small heading each time the part changes
     const list = CHAPTERS.map((c, i) => (c[3] && c[3] !== (CHAPTERS[i - 1] || [])[3] ? `<li class="part">${c[3]}</li>` : "") +
       `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"${i === idx ? ' aria-current="page"' : ""}><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
-    // on-page table of contents from h2/h3
-    const hs = [...document.querySelectorAll("main h2, main h3")];
-    hs.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
-    const toc = hs.map(h => `<a href="#${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${h.textContent}</a>`).join("");
-    side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><nav class="toc" aria-label="In questa pagina">${toc}</nav>` : ""}`;
+    // headings get IDs for direct URL anchors (#slug)
+    document.querySelectorAll("main h2, main h3").forEach(h => { if (!h.id) h.id = slug(h.textContent); });
+    side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>`;
     $("#menu").onclick = () => $("#menu").setAttribute("aria-expanded", String(side.classList.toggle("open")));
     side.addEventListener("click", e => { if (e.target.closest("a")) { side.classList.remove("open"); $("#menu").setAttribute("aria-expanded", "false"); } });   // narrow screens: the index is a full-screen panel
     if (PHONE) phone(top);
@@ -127,14 +126,6 @@ const TP = (() => {
     if (!embedded && !PHONE && location.protocol !== "file:" && !net.saveData && net.type !== "cellular" && (!net.effectiveType || net.effectiveType === "4g") && window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports("speculationrules")) {
       const urls = [p, n].filter(Boolean).map(c => c[0]);
       if (urls.length) { const sr2 = document.createElement("script"); sr2.type = "speculationrules"; sr2.textContent = JSON.stringify({ prefetch: [{ source: "list", urls, eagerness: "immediate" }] }); document.head.appendChild(sr2); }
-    }
-    // highlight the current section in the TOC
-    const links = [...side.querySelectorAll(".toc a")];
-    if (links.length && "IntersectionObserver" in window) {
-      const io = new IntersectionObserver(es => {
-        es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); });
-      }, { rootMargin: "-70px 0px -70% 0px" });
-      hs.forEach(h => io.observe(h));
     }
     document.title = `${/^[0-9]+$/.test(CHAPTERS[idx][1]) && CHAPTERS[idx][1] !== "0" ? CHAPTERS[idx][1] + ". " : ""}${CHAPTERS[idx][2]} · ${/^pratica/.test(here) ? "Pratica" : "Teoria"} ${APP}`;
     fixLevels();
@@ -375,6 +366,8 @@ const TP = (() => {
   // comandi.js: TCMD, the commands of the header; impostazioni.js: «Lettura facilitata» (tema.js has already put the choices on <html>);
   // lettura.js: menu sheet, reading position, figure viewer; cerca.js: search dialog (Ctrl/⌘K, TEORIA.cerca(), index read on first use);
   // sblocco.js: 5 clicks on the logo unlock the extended Teoria; strumenti/pannello.js: TEORIA.strumenti.* (each tool is read when opened)
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js"].forEach(load); });
+  // editor.js: in-page chapter editor (Alt+E or Modifica button) with auto-save, syntax checks, git commit and push
+  // esporta.js: export modal (PDF, Word, Markdown, HTML) for single chapters and complete course
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); ["comandi.js", "impostazioni.js", "lettura.js", "cerca.js", "sblocco.js", "strumenti/pannello.js", "editor.js", "esporta.js"].forEach(load); });
   return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();
