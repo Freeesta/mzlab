@@ -27,6 +27,7 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _open = false;
+  let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, Teoria, loading)
   let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
   let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
@@ -945,7 +946,13 @@ const BARRA = (() => {
     if (tf) tf.addEventListener("load", () => { if (_ctx === "theory") { buildBar(); if (!tcmd()) setTimeout(() => _ctx === "theory" && buildBar(), 400); } });
     document.addEventListener("tpview", () => {
       syncContext();
-      if (wasData && !inData()) _open = false;        // leaving Dati hides the panel (the saved state keeps it for the next visit)
+      const sc = Q1("#sb-panels");
+      if (wasData && !inData()) { _away = { open: _open, top: sc ? sc.scrollTop : 0 }; _open = false; }        // leaving Dati hides the panel, remembering how it was (open or shut, scroll)
+      else if (!wasData && inData() && _away) {                                                          // back in Dati: the panel returns as it was left (width and tool are kept in _w / _tab)
+        _open = _away.open; _forced = false; _restore = false; autoNarrow();
+        const top = _away.top; _away = null;
+        FRAME.next(() => { const e = Q1("#sb-panels"); if (e) e.scrollTop = top; });
+      }
       wasData = inData();
       syncMode();
       if (_open && inData() && validTab(_tab) && _painted !== _tab) renderPane(_tab);
