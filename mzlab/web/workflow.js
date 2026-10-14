@@ -144,11 +144,11 @@ const WORKFLOW = (() => {
       const file = inp.files && inp.files[0];
       if (!file) return;
       try {
-        const text = await file.text();
-        const wf = JSON.parse(text);
+        const wf = await FILESICURI.readJson(file);
         await applyWorkflow(wf, file.name);
       } catch (err) {
-        info(EH(I18N.t("workflow.err.invalidFormat") + " " + (err && err.message || "")));
+        const why = err && (err.message === "tooBig" || err.message === "tooDeep") ? I18N.t(err.message === "tooBig" ? "workflow.err.tooBig" : "workflow.err.tooDeep") : EH(err && err.message || "");
+        info(EH(I18N.t("workflow.err.invalidFormat")) + " " + why);
       }
     };
     inp.click();
@@ -160,7 +160,7 @@ const WORKFLOW = (() => {
       return false;
     }
 
-    const neededFiles = wf.file || [];
+    const neededFiles = (Array.isArray(wf.file) ? wf.file : []).filter(nf => nf && typeof nf.nome === "string").slice(0, 2000);
     const openFiles = (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone);
     const openByName = new Map();
     openFiles.forEach(f => {
@@ -198,15 +198,16 @@ const WORKFLOW = (() => {
     // Apply parameters
     const p = wf.parametri || {};
     if (p.picchi && typeof PK !== "undefined") {
-      Object.assign(PK, p.picchi);
+      FILESICURI.assignKnown(PK, p.picchi);
       if (typeof pkSave === "function") pkSave();
     }
     if (p.soglie_libreria && window.LIVELLI) LIVELLI.importState(p.soglie_libreria);
     if (typeof UIP !== "undefined") {
-      if (p.ppm != null) UIP.hrPpm = p.ppm;
-      if (p.dec != null) UIP.hrDec = p.dec;
-      if (p.tema) UIP.theme = p.tema;
-      if (p.tavolozza) UIP.pal = p.tavolozza;
+      const ppm = FILESICURI.num(p.ppm, 0, 1e4), dec = FILESICURI.num(p.dec, 0, 10);
+      if (ppm != null) UIP.hrPpm = ppm;
+      if (dec != null) UIP.hrDec = dec;
+      if (["auto", "light", "dark"].includes(p.tema)) UIP.theme = p.tema;
+      if (typeof PALS !== "undefined" && typeof p.tavolozza === "string" && Object.prototype.hasOwnProperty.call(PALS, p.tavolozza)) UIP.pal = p.tavolozza;
       if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
@@ -218,8 +219,8 @@ const WORKFLOW = (() => {
     if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
     if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
-    if (wf.operazioni && typeof NB !== "undefined") {
-      const { keep, unknown } = splitOps(wf.operazioni);
+    if (Array.isArray(wf.operazioni) && typeof NB !== "undefined") {
+      const { keep, unknown } = splitOps(wf.operazioni.slice(0, 500));
       NB.ops = keep;
       if (unknown.length) {
         const msg = I18N.t("workflow.warn.unknownOps", { ops: unknown.map(String).join(", ") });
