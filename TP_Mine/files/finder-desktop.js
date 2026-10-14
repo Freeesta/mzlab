@@ -96,7 +96,7 @@ export function createDesktop(base, say, held) {
     say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
     const h = await hypotheses(base, names, a[3], plan.structure, plan.formula);
-    await rpc("feat/evidence", { minutes: plan.minutes, recipe: "" }); lap("proofs", t); t = performance.now();
+    await rpc("feat/evidence", { minutes: plan.minutes, files: filesJson, parent: parentJson, recipe: "" }); lap("proofs", t); t = performance.now();
     say("Ranking the candidates...");
     const out = await rpc("finder/dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}", msn: msn ? msn.name : "" });
     lap("dig", t); lap("total", t0);
