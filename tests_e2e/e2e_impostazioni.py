@@ -1,5 +1,5 @@
 """Settings and tour: the tour invitation dismisses itself after a minute (counts as «Not now», never comes back), the Guided tour button of the settings
-starts the tour in Dati also from Disegno, the storage section is gone (only «Full reset…»), the accessibility options sit in a submenu."""
+starts the tour in Dati also from Disegno, the storage section is gone (no reset: the header button is the only entry), the accessibility options sit in a submenu."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8873, wd="/tmp/wd_impost")
@@ -25,7 +25,7 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
             for bad in ("Archivio nel browser", "Storage in the browser", "Rimuovi file e indici", "Libera i derivati"): assert bad not in t, bad
-            assert pg.locator("#uip-arch-all").count() == 1 and "Reset completo" in t
+            assert pg.locator("#uip-arch-all").count() == 0 and "Reset completo" not in t
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
             assert pg.evaluate("document.getElementById('uip-a11y').open") is False
             assert pg.evaluate("[...document.querySelectorAll('#uip-a11y #uip-font, #uip-a11y #uip-hc, #uip-a11y #uip-pal')].length") == 3
