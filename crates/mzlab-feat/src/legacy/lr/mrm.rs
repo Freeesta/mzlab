@@ -164,6 +164,20 @@ pub fn analyse(files: &[MrmFile], rt_tol: f64) -> Option<String> {
             )
         })
         .collect();
+    Some(emit(&head, &names, ref_rt, files, &rows, &refs, &ratio))
+}
+
+/// Serialise the per-transition integration table.
+#[allow(clippy::too_many_arguments)]
+fn emit(
+    head: &[Trace],
+    names: &[String],
+    ref_rt: Option<f64>,
+    files: &[MrmFile],
+    rows: &[Vec<Ion>],
+    refs: &[Option<f64>],
+    ratio: &dyn Fn(&[Ion], usize) -> Option<f64>,
+) -> String {
     let mut o = Out::default();
     o.raw("{\"transitions\":[");
     for (i, h) in head.iter().enumerate() {
@@ -233,5 +247,5 @@ pub fn analyse(files: &[MrmFile], rt_tol: f64) -> Option<String> {
     o.raw("},\"ratio_tol\":")
         .num(RATIO_TOL)
         .raw(",\"calibration\":null}");
-    Some(o.0)
+    o.0
 }
