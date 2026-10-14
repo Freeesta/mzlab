@@ -64,7 +64,7 @@ GATE = {"format": "cancello/2", "crate_version": "", "data": "2026-10-12", "vist
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
@@ -306,7 +306,7 @@ try:
             z = get("fbmn"); assert z[:2] == b"PK" and b"quant.csv" in z and b"ms2.mgf" in z, "FBMN zip"
             pg.wait_for_function("document.querySelector('#px-msg').textContent.includes('done')", timeout=20000)
             get("sirius")
-            html = get("report").decode(); assert "mzFinder feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
+            html = get("report").decode(); assert "Tabui feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
             assert "error" not in pg.inner_text("#px-msg").lower(), pg.inner_text("#px-msg")
         step("export and report: mzmine, cells, xlsx, CSV with BOM, FBMN zip, SIRIUS and the report come from the engine", export_step)
 

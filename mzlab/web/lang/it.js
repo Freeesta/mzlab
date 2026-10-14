@@ -3357,7 +3357,7 @@ I18N.add("it", {
   "rep.evidence": "Prove",
   "tpmine.feat.restarted": "Un processo della pipeline si è fermato ed è stato riavviato: il passo riparte.",
   "tpmine.feat.cancelled": "La pipeline è stata fermata.",
-  "tpmine.centroided": "{name} era in profilo: mzFinder lavora sui centroidi e ne ha usato una copia centroidata.",
+  "tpmine.centroided": "{name} era in profilo: Tabui lavora sui centroidi e ne ha usato una copia centroidata.",
   "tpmine.feat.degraded": "Tabella senza prove: memoria insufficiente per le prove su {files} file (fase {phase}, servono circa {stima_mb} MB su {budget_mb} MB). Le fasi già finite sono salvate; dividi la serie in gruppi più piccoli.",
   "error.featWorker": "Un processo della pipeline ha smesso di funzionare. Riprova; se succede ancora, chiudi le altre schede per liberare memoria.",
   "error.featWasmHash": "Il motore della pipeline non è stato scaricato bene (la somma di controllo non torna). Ricarica la pagina.",
@@ -3366,6 +3366,8 @@ I18N.add("it", {
   "error.featState": "Lo stato delle ipotesi non è valido: rifai la ricerca delle ipotesi.",
   "error.featFailed": "La pipeline non è riuscita.",
   "error.badRecipe": "I parametri della pipeline non sono validi.",
+  "tabui.beta": "beta",
+  "tabui.beta.title": "in sviluppo: risultati da verificare",
   "logo.gold.live": "Il logo è diventato dorato",
   "logo.normal.live": "Il logo è tornato normale"
 });

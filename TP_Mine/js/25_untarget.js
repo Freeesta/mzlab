@@ -54,11 +54,11 @@
 
   // ------------------------------------------------------------ mzFinder HR (internal features): the rows of an HR result
   function fromMzfinder(res, o = {}) {
-    const t = newTable("mzfinder", o.name || "mzFinder", polOf(o.pol)); const files = (res.files || []).map(f => (typeof f === "string" ? f : f.name || f.label || ""));
+    const t = newTable("mzfinder", o.name || "Tabui", polOf(o.pol)); const files = (res.files || []).map(f => (typeof f === "string" ? f : f.name || f.label || ""));
     t.samples = files;
     for (const r of res.rows || []) {
       const f = addFeature(t, r.id, r.mz, r.rt); (r.series || []).forEach((a, i) => { if (a) f.areas[files[i] || "file" + i] = a; });
-      if (r.formula) f.ann.push({ source: "mzFinder", type: "formula", score: null, shared: null, ppm: r.ppm == null ? null : r.ppm, name: r.name || r.formula, cleanName: r.name || r.formula, formula: r.formula, ik: "", smiles: "", external: true, analog: false, propagated: false, notes: [] });
+      if (r.formula) f.ann.push({ source: "Tabui", type: "formula", score: null, shared: null, ppm: r.ppm == null ? null : r.ppm, name: r.name || r.formula, cleanName: r.name || r.formula, formula: r.formula, ik: "", smiles: "", external: true, analog: false, propagated: false, notes: [] });
       f.nScans = r.ms2_scans || null;
     }
     t.stats.features = t.features.length; return t;
@@ -66,7 +66,7 @@
 
   // ------------------------------------------------------------ mzFinder pipeline (crates/mzlab-feat): the rows of an aligned series {id, mz, rt, areas[], detected[]} (indices of samples), program «mzlab»
   function fromRows(rows, samples, o = {}) {
-    const t = newTable("mzlab", o.name || "mzFinder pipeline", polOf(o.pol)); t.samples = samples.slice();
+    const t = newTable("mzlab", o.name || "Tabui pipeline", polOf(o.pol)); t.samples = samples.slice();
     for (const r of rows) {
       const f = addFeature(t, r.id, r.mz, r.rt); r.areas.forEach((a, i) => { if (a > 0) f.areas[samples[i] || "file" + i] = a; });
       f.detected = (r.detected || []).map(i => samples[i] || "file" + i);
