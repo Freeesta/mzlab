@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
-use mzlab_core::raw;
+use mzlab_core::{lettori_mzml, metodo, raw};
 
 fn raw_files() -> Vec<PathBuf> {
     let mut cands: Vec<PathBuf> = std::env::var_os("MZLAB_DATI")
@@ -174,4 +174,64 @@ fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks
         }
     }
     eprintln!("scans with noise nodes checked: {seen}");
+}
+
+/// A sink that keeps the first bytes and refuses the rest: the header of the mzML is what the test reads.
+struct Head(Vec<u8>);
+
+impl std::io::Write for Head {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        if self.0.len() > (4 << 20) {
+            return Err(std::io::Error::other("enough"));
+        }
+        self.0.extend_from_slice(b);
+        Ok(b.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[test]
+fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_lettore: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
+    let mut head = Head(Vec::new());
+    let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+    let xml = String::from_utf8_lossy(&head.0).into_owned();
+    let top = &xml[..xml.find("<spectrumList").unwrap()];
+    let want = mzlab_core::metodo::sha1_hex(
+        &mut std::fs::read(f).unwrap(),
+        std::fs::metadata(f).unwrap().len(),
+    )
+    .unwrap();
+    assert!(
+        top.contains(&format!(
+            "accession=\"MS:1000569\" name=\"SHA-1\" value=\"{want}\""
+        )),
+        "{top}"
+    );
+    assert!(top.contains("MS:1000563"), "source file format");
+    assert!(top.contains("startTimeStamp=\""), "start of the run");
+    assert!(top.contains("opentfraw.computer_name"), "run terms");
+    let doc = metodo::from_userparam(top).expect("metodo/1 in the run");
+    assert!(doc.contains("\"schema\":\"metodo/1\""));
+    assert!(
+        doc.contains(&want),
+        "the document names the file by its hash"
+    );
+    // the start is the one the method document gives as the creation of the file
+    let start = top
+        .split("startTimeStamp=\"")
+        .nth(1)
+        .and_then(|t| t.split('"').next())
+        .unwrap();
+    assert!(
+        doc.contains(&format!("\"file_creato\":\"{start}\"")),
+        "{start}"
+    );
 }

@@ -58,12 +58,22 @@ pub fn metodo<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
 }
 
 pub(crate) fn metodo_of<R: Read + Seek>(raw: &RawFileReader, source: &mut R, name: &str) -> String {
+    metodo_sha1(raw, source, name, None)
+}
+
+/// As `metodo_of`, with the SHA-1 of the file when the caller has it.
+pub(crate) fn metodo_sha1<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    name: &str,
+    sha1: Option<String>,
+) -> String {
     let bytes = source.seek(SeekFrom::End(0)).unwrap_or(0);
     let src = crate::metodo::Source {
         format: "thermo-raw",
         files: vec![crate::metodo::SrcFile {
             name: name.to_string(),
-            sha1: None,
+            sha1,
             bytes,
         }],
         sample: None,

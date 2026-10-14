@@ -42,6 +42,7 @@
     "../../mzlab/web/cartella-puntata-desktop.js",
     "../../mzlab/web/agilent-d.js",
     "../../mzlab/web/metodo-m.js",
+    "../../mzlab/web/metodo-doc.js",
     "../../mzlab/web/explore.js",
     "../../mzlab/web/lista-file.js",
     "../../mzlab/web/layout.js",
