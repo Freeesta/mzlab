@@ -667,6 +667,8 @@ I18N.add("it", {
   "panel.max.exit": "Esci dallo schermo intero (Esc)",
   "panel.close": "Chiudi il pannello",
   "panel.num.title": "Pannello {n}: premi il tasto {n} per attivarlo",
+  "panel.pair.to": "Il pannello {n} segue questo grafico",
+  "panel.pair.from": "Segue il pannello {n}: il suo spettro è quello della scansione scelta lì",
   "aff.grip": "Sposta o affianca il pannello",
   "aff.menu.beside": "Affianca a",
   "aff.menu.up": "Sposta su",

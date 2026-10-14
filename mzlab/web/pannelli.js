@@ -44,6 +44,29 @@ function numberPanels() {
   const st = tabPanels().filter(q => q.el).sort(LAYOUT.ordine);
   E.panels.forEach(q => { const n = q.el && q.el.querySelector(".pnum"); if (n) n.hidden = true; });
   st.forEach((q, i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
+  markPairs(st);
+}
+// a spectrum that follows a chromatogram (MS2: precursor chromatogram + product-ion spectrum, but also Full Scan): the two panels share a coloured side bar and a «→ n» / «← n» tag in the title (not colour alone), and hovering or focusing one lights up the other
+function markPairs(st) {
+  let ord = 0; const idx = new Map();
+  E.panels.forEach(q => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach(x => x.remove()); } });
+  st.forEach(sp => {
+    const src = sp.type === "spec" && sp.link ? st.find(q => q.id === sp.link) : null; if (!src) return;
+    if (!idx.has(src)) idx.set(src, ++ord);
+    const c = (idx.get(src) - 1) % 4 + 1;
+    [[src, "→", sp, "panel.pair.to"], [sp, "←", src, "panel.pair.from"]].forEach(([a, arrow, b, key]) => {
+      a.el.dataset.pair = String(c);
+      const t = document.createElement("span"); t.className = "ppair"; t.textContent = `${arrow} ${b.num}`; t.title = I18N.t(key, { n: b.num }); t.setAttribute("aria-label", t.title);
+      (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
+      if (!a.el._pairBound) {
+        a.el._pairBound = true;
+        const lit = on => { const m = a._mate; if (m && m.el) m.el.classList.toggle("pair-hi", on); };
+        a.el.addEventListener("mouseenter", () => lit(true)); a.el.addEventListener("mouseleave", () => lit(false));
+        a.el.addEventListener("focusin", () => lit(true)); a.el.addEventListener("focusout", () => lit(false));
+      }
+      a._mate = b;
+    });
+  });
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
