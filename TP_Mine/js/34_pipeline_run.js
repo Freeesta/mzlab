@@ -9,7 +9,7 @@
   const PV = () => window.PIPEV;
 
   const html = () => `<details open><summary>Run on all the files</summary>
-    <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="e.g. C9H11NO2" autocomplete="off"><span class="why">only with the gate open: hypotheses of transformation</span></label>
+    <div class="par"><label>Parent formula<input id="pipe-pf" type="text" placeholder="e.g. C9H11NO2" autocomplete="off"><span class="why">hypotheses of transformation</span></label>
       <label>Parent SMILES<input id="pipe-psmi" type="text" placeholder="optional" autocomplete="off" spellcheck="false"><span class="why">the structure: fragments and groups of the rules</span></label>
       <label>Parent m/z<input id="pipe-pmz" type="number" step="any"></label><label>Parent RT (min)<input id="pipe-prt" type="number" step="any"></label>
 </div>
@@ -46,7 +46,7 @@
     try { return grafo.analyse(smiles); }
     catch (e) { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } throw j && j.error_key ? Object.assign(new Error(j.error_key), { key: j.error_key, params: j.params }) : e; }
   }
-  /** the parent of the proofs (null without the gate, the formula or the rules) */
+  /** the parent of the proofs (null without the formula or the rules) */
   async function parentOf(files) {
     const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
     if (!st.gated || !f || !rules) return null;
@@ -140,7 +140,6 @@
     $("#pipe-res").innerHTML = `<div class="pv-bar"><label>Filter<input type="search" id="pv-q" aria-label="Filter by ID, m/z or formula"></label>`
       + (cand ? `<label><input type="checkbox" id="pv-dis"> Discarded (<span id="pv-nd">${all.filter(r => r.discarded).length}</span>)</label>` : "")
       + `<button type="button" id="pv-unt">Send to the feature tables</button><span class="mut" id="pv-n"></span></div>`
-      + (cand ? "" : `<div class="mut">Pipeline not validated: only traces and families are shown, no candidates.</div>`)
       + `<div id="pv-list" class="pv-wrap"></div><div id="pv-det" class="pv-det" hidden></div><div id="pipe-qc"></div><div id="pipe-tab"></div><div id="pipe-exp"></div>`;
     st.view = PV().mount($("#pv-list"), { gated: cand, onPick: detail });
     $("#pv-q").oninput = refilter; if (cand) $("#pv-dis").onchange = refilter;
@@ -152,7 +151,7 @@
     try {
       const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity });
       st.session = session; const g = { ...gate, table: gate.table === true };
-      /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
+      /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
       /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
