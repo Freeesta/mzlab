@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Toolbar of the header (#stbar) and drawer ("cassetto") of the Dati view, LR and HR.
 // One list of commands (CMD): the toolbar, its menus, "Altro" and the command palette are all built from it, so a new
@@ -80,6 +81,7 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- the list of commands
   // id: key of cmd.<id>.* in lang/; dom: id given to the toolbar button (kept for tests and scripts); ic: icon; panel: drawer panel the
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists.
+  /** @type {any[]} */
   const CMD = [
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inData(), run: () => toggle("file") },
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
@@ -137,6 +139,7 @@ const BARRA = (() => {
   const IC_RESET = () => IC('<path d="M3 8a5 5 0 109-2.8"/><path d="M12.5 2v3.5H9"/>');
   CMD.push({ id: "resetall", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("all") }, { id: "resetfiles", bar: false, group: "app", ic: IC_RESET, visible: () => !!window.QQRESET, run: () => QQRESET.ask("files") });
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
+  /** @type {(id: any) => any} */
   const byId = id => CMD.find(c => c.id === id);
   const clickEl = sel => { const e = Q1(sel); if (e) e.click(); };
   const shown = sel => { const e = Q1(sel); return !!e && !e.hidden && e.offsetParent !== null; };
@@ -500,7 +503,7 @@ const BARRA = (() => {
     const bar = Q1("#stbar");
     if (!bar) return;
     if (_ctx === "theory") return buildTheoryBar(bar);
-    const hadFocus = bar.contains(document.activeElement) ? document.activeElement.getAttribute("data-cmd") || document.activeElement.getAttribute("data-cmd-main") || document.activeElement.getAttribute("data-cmd-car") : null;
+    const hadFocus = bar.contains(document.activeElement) ? /** @type {Element} */ (document.activeElement).getAttribute("data-cmd") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-main") || /** @type {Element} */ (document.activeElement).getAttribute("data-cmd-car") : null;
     const common = CMD.filter(c => !c.hr && !c.item && !c.more && c.bar !== false && c.bar !== "end" && (!c.feature || FEATURES[c.feature]));
     const hr = CMD.filter(c => c.hr);
     let h = common.map(c => btnHtml(c)).join("");
@@ -659,7 +662,7 @@ const BARRA = (() => {
   // back to where the focus was before the bar (the body cannot take focus: then the bar just lets go of it)
   function leaveToolbar() {
     if (_before && _before !== document.body && document.contains(_before)) _before.focus();
-    else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    else if (document.activeElement && /** @type {HTMLElement} */ (document.activeElement).blur) /** @type {HTMLElement} */ (document.activeElement).blur();
   }
   function onBarKey(e) {
     const bar = Q1("#stbar");
@@ -691,7 +694,7 @@ const BARRA = (() => {
   function closeMenu(restore) {
     const m = Q1("#stmenu");
     if (!m) return;
-    const a = m._anchor;
+    const a = /** @type {any} */ (m)._anchor;
     m.remove();
     if (a) a.setAttribute("aria-expanded", "false");
     if (restore && a && document.contains(a)) a.focus({ preventScroll: true });
@@ -703,7 +706,7 @@ const BARRA = (() => {
     m.id = "stmenu";
     m.setAttribute("role", "menu");
     m.setAttribute("aria-label", anchor.getAttribute("aria-label") || "");
-    m._anchor = anchor;
+    /** @type {any} */ (m)._anchor = anchor;
     rows.forEach(r => {
       if (r.sep) { const hr = document.createElement("hr"); hr.setAttribute("role", "separator"); m.appendChild(hr); return; }
       if (r.head) { const h = document.createElement("div"); h.className = "mh"; h.setAttribute("role", "presentation"); h.textContent = r.head; m.appendChild(h); return; }
@@ -733,7 +736,7 @@ const BARRA = (() => {
       else if (e.key === "End") { e.preventDefault(); btns[btns.length - 1].focus(); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
       else if (e.key === "Tab") { closeMenu(false); }
-      else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); const a = m._anchor; closeMenu(true); onBarKey({ target: a, key: e.key, preventDefault() {} }); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); const a = /** @type {any} */ (m)._anchor; closeMenu(true); onBarKey({ target: a, key: e.key, preventDefault() {} }); }
     });
   }
 
@@ -819,6 +822,7 @@ const BARRA = (() => {
   function bindSideDrag() {
     const head = Q1("#sb-header");
     if (!head) return;
+    /** @type {any} */
     let st = null;
     const zones = () => {
       let l = Q1(".sb-dz.l"), r = Q1(".sb-dz.r"), pv = Q1(".sb-dz-prev");
@@ -909,7 +913,7 @@ const BARRA = (() => {
         setSide(e.key === "ArrowLeft" ? "left" : "right");
         return;
       }
-      if (e.key !== "Escape" || e.defaultPrevented || e._ctxWas) return;
+      if (e.key !== "Escape" || e.defaultPrevented || /** @type {any} */ (e)._ctxWas) return;
       if (Q1("#stmenu") || (window.PALETTE && PALETTE.isOpen)) return;
       const calcin = Q1("#calcin");
       if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) return;      // Esc first clears the field
