@@ -88,7 +88,7 @@ function refreshIntf(p) {
   const on = (p.imode === "auto" || p.imode === "man") && p.type !== "chrom" && p._a && p._a.sr && p._a.sr.length > 1;
   sel.hidden = !on; if (!on) return;
   const opts = [["", I18N.t("int.target.clicked")], ["all", I18N.t("int.target.all")], ...p._a.sr.map(s => [s.key, s.name])], sig = JSON.stringify(opts);
-  if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => `<option value="${EH(o[0])}">${EH(o[1])}</option>`).join(""); }
+  if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
   sel.value = p.intf || "";
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
