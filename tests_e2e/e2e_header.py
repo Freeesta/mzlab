@@ -19,10 +19,12 @@ try:
             b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "Informazioni su mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
-            ps = pg.locator("#helppop p"); assert ps.count() == 3, ps.count()
+            ps = pg.locator("#helppop p"); assert ps.count() == 4, ps.count()
             assert "{" not in pg.inner_text("#helppop") and pg.locator("#helppop p").first.inner_text().startswith(pg.evaluate("APP_NAME") + " "), "the name of the program fills {app}"
             assert ps.nth(2).inner_text().startswith("Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).")
             assert pg.get_attribute("#helppop a", "href") == "mailto:federico.cristaudo@unito.it"
+            dl = pg.locator("#helppop a", has_text="Scarica l'app desktop"); assert dl.count() == 1
+            assert dl.get_attribute("href") == "https://github.com/Freeesta/mzlab/releases/latest" and dl.get_attribute("target") == "_blank" and dl.get_attribute("rel") == "noopener"
             pg.keyboard.press("Escape")
         step("(i) opens the box with the mailto link", info)
         def chapter():
