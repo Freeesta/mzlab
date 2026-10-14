@@ -62,7 +62,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `ionmap_region`: a region on bins of its own (RT bins of `(rt1 - rt0) / nrt`, m/z bins of `(mz1 - mz0) / nmz`).
-    pub(crate) fn region_map(&mut self, level: u8, (rt0, rt1): (f64, f64), nrt: usize, (mz0, mz1): (f64, f64), (nmz, log): (usize, bool), mean: bool) -> Result<Vec<f32>> {
+    pub fn region_map(&mut self, level: u8, (rt0, rt1): (f64, f64), nrt: usize, (mz0, mz1): (f64, f64), (nmz, log): (usize, bool), mean: bool) -> Result<Vec<f32>> {
         let zeros = vec![0.0f32; nrt * nmz];
         let Some((si, rt)) = self.map_level(level)? else { return Ok(zeros) };
         if rt1 <= rt0 || mz1 <= mz0 {

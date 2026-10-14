@@ -298,15 +298,33 @@ fn sticks<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Re
     Ok(Some(crate::jsonb::write(&o.put("rt", f32s(&s.rt)).put("mz", b64(mz)).put("inten", f32s(&s.inten)).done())))
 }
 
+/// `api/maptiles`: the cells of the view from the pyramid of tiles of file `k` (rows = groups of 2^`tile_level` scans, cells of `dmz` Da from `mz0`).
+fn tiles<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
+    let (Some(k), Some(rt0), Some(rt1), Some(mz0), Some(mz1)) = (index(q, "k"), number(q, "rt0"), number(q, "rt1"), number(q, "mz0"), number(q, "mz1")) else { return Ok(None) };
+    if !(rt1 > rt0 && mz1 > mz0 && mz0 >= 0.0) {
+        return Ok(None);
+    }
+    let axis = |k: &str, top: i64| q.get(k).map_or(Some(400), |v| v.parse::<i64>().ok()).map(|v| v.clamp(1, top) as usize);
+    let (Some(nrt), Some(nmz)) = (axis("nrt", REGION_RT_MAX), axis("nmz", REGION_MZ_MAX)) else { return Ok(None) };
+    let level = q.level();
+    let Some(r) = route(items, routes, k) else { return Ok(None) };
+    let Some(v) = r.tile_view(level, (rt0, rt1), (mz0, mz1), nrt, nmz)? else { return Ok(None) };
+    let w = crate::maptiles::cell_width(v.tile_level);
+    let o = Obj::new().i("k", k).i("level", level as i64).i("tile_level", v.tile_level as i64).i("step", 1i64 << v.tile_level).i("row0", v.row0 as i64).i("nrt", v.rows as i64).i("nmz", v.cols as i64);
+    let o = o.n("mz0", v.col0 as f64 * w).n("dmz", w).put("rt", floats(&v.rt)).put("data", f32s(&v.data));
+    Ok(Some(crate::jsonb::write(&o.done())))
+}
+
 /// Answer for one of the map routes, or `None` when Python must answer.
 pub fn map_route<R: ReadAt>(path: &str, items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
-    if !matches!(path, "/api/map" | "/api/mapsnap" | "/api/mappunti" | "/api/mappunti3d") || !indexed(items, routes) {
+    if !matches!(path, "/api/map" | "/api/mapsnap" | "/api/mappunti" | "/api/mappunti3d" | "/api/maptiles") || !indexed(items, routes) {
         return Ok(None);
     }
     match path {
         "/api/map" => map(items, routes, q),
         "/api/mapsnap" => snap(items, routes, q),
         "/api/mappunti" => marked(items, routes, q),
+        "/api/maptiles" => tiles(items, routes, q),
         _ => sticks(items, routes, q),
     }
 }
