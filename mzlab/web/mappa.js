@@ -93,25 +93,37 @@ window.MAPPA = (() => {
     const nmz = Math.max(2, Math.min(1000, Math.max(Math.round(ph * d), Math.ceil((y1 - y0) / A.dmz)), hr ? 1000 : Math.floor((y1 - y0) / 0.1)));  // never coarser than the whole map; low resolution: bins of at least 0.1
     return [+x0.toFixed(5), +x1.toFixed(5), +y0.toFixed(5), +y1.toFixed(5), nrt, nmz];
   }
+  // The region is asked with a margin (a quarter of the view on each side): a pan or a small zoom inside it is already sharp and asks nothing.
+  const MARGIN = 0.25, SLACK = 1.5;
+  function regionWide(p, A, x0, x1, y0, y1, pw, ph) {
+    const dx = (x1 - x0) * MARGIN, dy = (y1 - y0) * MARGIN, k = 1 + 2 * MARGIN;
+    return regionGrid(p, A, Math.max(A.rt0, x0 - dx), Math.min(A.rt1, x1 + dx), Math.max(A.mz0, y0 - dy), Math.min(A.mz0 + A.nmz * A.dmz, y1 + dy), pw * k, ph * k);
+  }
+  // the region held covers the view with bins at most SLACK times coarser than the view needs
+  const regionFits = (R, pk, r, x0, x1, y0, y1) => R && R.pk === pk && R.off && x0 >= R.rt0 - 1e-9 && x1 <= R.rt1 + 1e-9 && y0 >= R.mz0 - 1e-9 && y1 <= R.mz1 + 1e-9
+    && (R.rt1 - R.rt0) / R.nrt <= (x1 - x0) / r[4] * SLACK && R.dmz <= (y1 - y0) / r[5] * SLACK;
   // called by drawMap before the image is drawn: true = the region image was drawn (otherwise the whole-map image is stretched, as before)
   function zoomImg(p, g, o) {
     const s = st(p); init(p);
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
-    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${r.join("|")}|${JSON.stringify(diffOpt(!!B))}`;
-    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, 0, (s.reg.mz1 - y1) / s.reg.dmz, s.reg.nrt, (y1 - y0) / s.reg.dmz, M.l, M.t, pw, ph); return true; }
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), w = regionWide(p, A, x0, x1, y0, y1, pw, ph);
+    const pk = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}${p.scale === "gamma" ? p.gamma || 0.6 : ""}|${mapPal()}|${mapBg(p)}|${JSON.stringify(diffOpt(!!B))}`;
+    const R = s.reg;
+    const put = R => { g.imageSmoothingEnabled = false; g.drawImage(R.off, (x0 - R.rt0) / (R.rt1 - R.rt0) * R.nrt, (R.mz1 - y1) / R.dmz, (x1 - x0) / (R.rt1 - R.rt0) * R.nrt, (y1 - y0) / R.dmz, M.l, M.t, pw, ph); return true; };
+    if (regionFits(R, pk, r, x0, x1, y0, y1)) return put(R);
     clearTimeout(s.regT); const seq = s.regSeq = (s.regSeq || 0) + 1;
     s.regT = setTimeout(async () => {
       try {
-        const a = await getRegion(A.k, A.level, r, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + mapBg(p));
+        const a = await getRegion(A.k, A.level, w, (B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "") + mapBg(p));
         if (seq !== s.regSeq) return;                                     // a newer view was asked meanwhile: this one is not painted
         const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
         for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
-        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
+        s.reg = { pk, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, mz1: a.mz1, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
     }, quiet());
-    return false;
+    return !!(R && R.pk === pk && R.off && R.rt0 <= x0 + 1e-9 && R.rt1 >= x1 - 1e-9 && R.mz0 <= y0 + 1e-9 && R.mz1 >= y1 - 1e-9) && put(R);   // meanwhile a coarser region that covers the view is better than the stretched map
   }
   function paint(v, nrt, nmz, im, diff) {
     const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;

@@ -42,6 +42,7 @@
     <fieldset><legend>Lettura</legend>${check("ruler", "Righello di lettura", "Una banda segue il mouse o il focus; il resto è attenuato.")}${check("focus", "Modalità concentrazione (tasto F)", "Nasconde indice e menu e mostra l'avanzamento.")}</fieldset>
     <fieldset><legend>Animazioni</legend>${radios("motion", S.motion || "auto")}</fieldset>
     <div class="row"><button type="button" id="a11y-reset">Ripristina</button></div>
+    ${window.QADMIN && QADMIN.on() ? '<div class="row"><button type="button" id="a11y-admin-exit">Esci dalla modalità amministratore</button></div>' : ""}
     <fieldset id="a11y-prog-set"><legend>Avanzamento</legend><div class="hint">Resta su questo computer; non si può annullare.</div>
       <div class="row"><button type="button" id="a11y-forget-pratica">Azzera la Pratica</button><button type="button" id="a11y-forget-pos">Dimentica dove ero</button></div>
       <div id="a11y-ask" role="alert" hidden><span></span> <button type="button" data-yes>Sì</button> <button type="button" data-no>Annulla</button></div></fieldset>`;
@@ -76,6 +77,7 @@
     save(); sync();
     if (t.name === "a11y-bg") dispatchEvent(new Event("resize"));   // the figures draw again with the new colours
   });
+  const adminExit = $("#a11y-admin-exit", panel); if (adminExit) adminExit.onclick = () => { QADMIN.clear(); location.reload(); };
   $("#a11y-reset", panel).onclick = () => { S = {}; save(); sync(); dispatchEvent(new Event("resize")); };
   // «Avanzamento»: a short confirmation inside the panel before anything is forgotten
   const ask = $("#a11y-ask", panel);

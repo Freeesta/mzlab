@@ -259,6 +259,33 @@ fn routes_give_the_bytes_and_the_json_of_the_steps() {
 }
 
 #[test]
+fn detect_of_several_files_at_once_gives_the_same_bytes() {
+    let e = setup();
+    let rec = run::recipe_for("", &mut open(&e.paths[0])).unwrap();
+    let direct: Vec<String> = NAMES
+        .iter()
+        .zip(&e.paths)
+        .map(|(n, p)| sha(&run::detect(&mut open(p), n, &rec).unwrap()))
+        .collect();
+    let together: Vec<String> = std::thread::scope(|s| {
+        let hs: Vec<_> = NAMES
+            .iter()
+            .map(|n| {
+                let e = &e;
+                s.spawn(move || {
+                    e.json("feat/detect", json!({"name": n, "recipe": ""}))["sha256"]
+                        .as_str()
+                        .unwrap()
+                        .to_string()
+                })
+            })
+            .collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    assert_eq!(together, direct);
+}
+
+#[test]
 fn preview_and_version_routes_equal_the_wasm_functions() {
     let e = setup();
     assert_eq!(

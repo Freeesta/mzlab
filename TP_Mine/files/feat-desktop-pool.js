@@ -6,6 +6,7 @@
 
 const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
 const CHUNK = 32 << 20;
+const DETECT_LANES = 4;
 
 /** an engine error is `{error_key, params}`: the Error carries `key` and `params` as the pool's errors do (feat-run.js tests `key === "error.featMemory"`) @param {string} t */
 function failure(t) {
@@ -49,13 +50,17 @@ export function createDesktopPool(opts = {}) {
     },
     /** L1-L3 of every file: the .mzfeatf stay in the app, the list holds an empty placeholder per file @param {{ name: string }[]} files @param {any} recipe */
     async detectAll(files, recipe) {
-      const out = [];
-      for (const [k, f] of files.entries()) {
-        const t0 = performance.now();
-        await json("feat/detect", { name: nameOf(f.name), recipe: recipeText(recipe) });
-        if (pool.onProgress) pool.onProgress({ phase: "detect", name: f.name, done: k + 1, total: files.length, ms: Math.round(performance.now() - t0) });
-        out.push(new Uint8Array(0));
-      }
+      const text = recipeText(recipe), out = files.map(() => new Uint8Array(0));
+      let next = 0, done = 0;
+      // the app bounds the files running at once (its own pool): the page keeps a few requests open so that no core waits
+      const lane = async () => {
+        while (next < files.length) {
+          const f = files[next++], t0 = performance.now();
+          await json("feat/detect", { name: nameOf(f.name), recipe: text });
+          if (pool.onProgress) pool.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0) });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(DETECT_LANES, files.length) }, lane));
       return out;
     },
     /** L4-L6 @param {Uint8Array[]} _stored @param {string[]} paths @param {any} recipe */
@@ -88,6 +93,8 @@ export function createDesktopPool(opts = {}) {
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },
     /** `check_structure` of many annotations at once: the list of the answers (`{ok, ppm, adduct}`) @param {{formula: string, precursor: number | null, adduct: string, pol: number, tol: number}[]} calls */
     async checkStructures(calls) { return json("feat/import", { kind: "check_structure", calls }); },
+    /** `grafo/1` of a SMILES (formula, groups, cleavages): the text of the native route `feat/grafo` @param {string} smiles */
+    async analyse(smiles) { return (await call("feat/grafo", { kind: "analyse", smiles })).text(); },
     /** an operation of campioni/2 (proponi, valida, per_tp, da_legacy, canonico, digest) of the native engine: the text it answers @param {string} op @param {string} input */
     async campioni(op, input) { return (await call("finder/campioni", { cop: op, input })).text(); },
     cancel() {},

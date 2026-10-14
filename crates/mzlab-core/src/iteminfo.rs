@@ -680,7 +680,9 @@ pub fn facts_from<M: ReadAt>(
         }
     }
     f.lc = crate::infusione::raw_lc(m)?;
-    if need_mrm {
+    // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
+    // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.
+    if need_mrm && (scans_end == 0 || f.srm > 0) {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
         for c in chroms.iter().filter(|c| c.kind == "srm") {
