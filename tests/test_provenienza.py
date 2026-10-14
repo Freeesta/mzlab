@@ -51,7 +51,7 @@ def test_clipboard_copies_use_the_same_helper():
 def test_one_helper_and_the_engine_writes_the_line():
     assert "api/provenance" in (WEB / "provenienza.js").read_text(encoding="utf-8")
     rust = (WEB.parent.parent / "crates" / "mzlab-core" / "src" / "provenance.rs").read_text(encoding="utf-8")
-    assert '"provenienza/1"' in rust and "# mzLab {version}" in rust
+    assert '"provenienza/1"' in rust and '# mzLab ' in rust
     # the schema name lives in the engine and in the helper only: a second copy would be a second schema
     for f in WEB.glob("*.js"):
         if f.name not in ("provenienza.js", "xlsx.js", "explore.js", "lr-map.js"):

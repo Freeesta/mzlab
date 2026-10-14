@@ -162,7 +162,7 @@ impl State {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
             }
-            "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))?),
+            "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))),
             "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),
             "lr_kv_set" => {
                 self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_set(s("key"), s("value"));

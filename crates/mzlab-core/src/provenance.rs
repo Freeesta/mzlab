@@ -1,88 +1,36 @@
 //! Provenance of an exported table (schema `provenienza/1`): the one place that decides which fields the first
 //! line `# mzLab x.y.z · key=value · ...` of a CSV/TSV (or the "Provenance" sheet of an .xlsx) carries.
-//! The page sends what it knows about the export as a flat JSON object; the version is the crate's own.
-use crate::error::{Error, Result};
-use crate::json::{self, Out, Value};
+//! The page sends what it knows about the export as `key<TAB>value` lines, in the order of the line; the version is the crate's own.
 
 pub const SCHEMA: &str = "provenienza/1";
 
-/// The fields written, in this order; a key that is absent or empty is left out.
-pub const FIELDS: [&str; 9] = [
-    "file",
-    "background",
-    "snip",
-    "smooth",
-    "tolerance",
-    "polarity",
-    "table",
-    "date",
-    "note",
-];
-
-fn clean(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_control() { ' ' } else { c })
-        .collect::<String>()
-        .replace(" · ", " - ")
-        .trim()
-        .to_string()
+/// Control characters become spaces and the separator dot `·` becomes `-`, so a value can never break the line.
+fn clean(s: &str, out: &mut String) {
+    for c in s.chars() {
+        out.push(match c {
+            '·' => '-',
+            c if c < ' ' || c == '\x7f' => ' ',
+            c => c,
+        });
+    }
 }
 
-/// `ctx` = JSON object of strings/numbers/booleans. Returns `{"schema","version","line","rows"}`.
-pub fn build(ctx: &str) -> Result<String> {
-    let v = json::parse(if ctx.trim().is_empty() {
-        b"{}"
-    } else {
-        ctx.as_bytes()
-    })
-    .map_err(|_| Error::new("err.provenance.unreadable"))?;
-    if !matches!(v, Value::Obj(_)) {
-        return Err(Error::new("err.provenance.unreadable"));
-    }
-    let version = env!("CARGO_PKG_VERSION");
-    let rows = rows_of(&v, version);
-    let mut line = format!("# mzLab {version}");
-    for (k, s) in rows.iter().skip(1) {
-        line.push_str(&format!(" · {k}={s}"));
-    }
-    Ok(render(version, &line, &rows))
-}
-
-/// The version row followed by the known, non-empty fields in their fixed order.
-fn rows_of(v: &Value, version: &str) -> Vec<(String, String)> {
-    let mut rows: Vec<(String, String)> = vec![("mzLab".into(), version.into())];
-    for k in FIELDS {
-        let s = match v.get(k) {
-            Some(Value::Str(s)) => clean(s),
-            Some(Value::Num(n)) => format!("{n}"),
-            Some(Value::Bool(b)) => b.to_string(),
-            _ => continue,
-        };
+/// `ctx` = the fields as lines `key<TAB>value`, already in the order of the line (the page sends every value as text);
+/// a line without a tab or with an empty value is left out; the page trims the values.
+/// Returns the schema name, a newline and the line `# mzLab x.y.z · key=value · ...`.
+pub fn build(ctx: &str) -> String {
+    let mut line = String::from(SCHEMA);
+    line.push_str("\n# mzLab ");
+    line.push_str(env!("CARGO_PKG_VERSION"));
+    for (k, s) in ctx.lines().filter_map(|l| l.split_once('\t')) {
         if !s.is_empty() {
-            rows.push((k.into(), s));
+            line.push_str(" · ");
+            line.push_str(k);
+            line.push('=');
+            clean(s, &mut line);
         }
     }
-    rows
-}
-
-fn render(version: &str, line: &str, rows: &[(String, String)]) -> String {
-    let mut o = Out::default();
-    o.raw("{\"schema\":")
-        .str(SCHEMA)
-        .raw(",\"version\":")
-        .str(version)
-        .raw(",\"line\":")
-        .str(line)
-        .raw(",\"rows\":[");
-    for (i, (k, s)) in rows.iter().enumerate() {
-        o.raw(if i == 0 { "[" } else { ",[" })
-            .str(k)
-            .raw(",")
-            .str(s)
-            .raw("]");
-    }
-    o.raw("]}");
-    o.0
+    line
 }
 
 #[cfg(test)]
@@ -91,35 +39,29 @@ mod tests {
 
     #[test]
     fn line_has_version_and_fields_in_order() {
-        let j: serde_json::Value = serde_json::from_str(
-            &build(r#"{"snip":"1 min","file":"a.mzML","x":"ignored","smooth":true,"note":""}"#)
-                .unwrap(),
-        )
-        .unwrap();
-        let line = j["line"].as_str().unwrap();
-        assert!(
-            line.starts_with(&format!(
-                "# mzLab {} · file=a.mzML · snip=1 min · smooth=true",
+        let out = build("file\ta.mzML\nsnip\t1 min\nsmooth\ton\nnote\t");
+        let (schema, line) = out.split_once('\n').unwrap();
+        assert_eq!(schema, SCHEMA);
+        assert_eq!(
+            line,
+            format!(
+                "# mzLab {} · file=a.mzML · snip=1 min · smooth=on",
                 env!("CARGO_PKG_VERSION")
-            )),
-            "{line}"
+            )
         );
-        assert!(!line.contains("ignored") && !line.contains("note") && !line.contains('\n'));
-        assert_eq!(j["schema"], SCHEMA);
-        assert_eq!(j["rows"][0][0], "mzLab");
     }
 
     #[test]
     fn control_characters_and_separators_cannot_break_the_line() {
-        let j: serde_json::Value =
-            serde_json::from_str(&build(r#"{"file":"a\tb\nc · d"}"#).unwrap()).unwrap();
-        assert_eq!(j["line"].as_str().unwrap().lines().count(), 1);
-        assert!(j["line"].as_str().unwrap().ends_with("file=a b c - d"));
+        let out = build("file\ta\u{b}b\u{c}c · d");
+        assert_eq!(out.lines().count(), 2);
+        assert!(out.ends_with("file=a b c - d"));
     }
 
     #[test]
-    fn empty_and_bad_input() {
-        assert!(build("").is_ok());
-        assert!(build("[1]").is_err());
+    fn empty_and_odd_input() {
+        let bare = format!("{SCHEMA}\n# mzLab {}", env!("CARGO_PKG_VERSION"));
+        assert_eq!(build(""), bare);
+        assert_eq!(build("no tab here\nfile\t\n"), bare);
     }
 }

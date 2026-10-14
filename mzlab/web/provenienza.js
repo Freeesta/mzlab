@@ -5,6 +5,8 @@
 // The line starts with «#»: pandas skips it (read_csv(..., comment="#")), R too (comment.char = "#"); Excel shows it as row 1 (delete it, or Data > From Text/CSV and start at row 2).
 // Every CSV/TSV and .xlsx goes through dl()/dlx() and gets it by default; an export adds the fields it knows ({table, file, p = panel}); the files of mzFinder, made for other programs, pass false.
 const PROV = (() => {
+  /** the fields of the line, in this order; anything else the page collects is left out */
+  const ORDER = ["file", "background", "snip", "smooth", "tolerance", "polarity", "table", "date", "note"];
   /** @param {any} p panel @returns {Record<string, string>} */
   const ofPanel = p => {
     /** @type {Record<string, string>} */
@@ -25,12 +27,16 @@ const PROV = (() => {
     const o = { file: names.length > 3 ? names.slice(0, 3).join(", ") + ` (+${names.length - 3})` : names.join(", "), ...ofPanel(panel), date: new Date().toISOString().slice(0, 19) + "Z" };
     if (typeof UIP !== "undefined" && UIP.hrPpm != null && E.tab === "hr") o.tolerance = `${UIP.hrPpm} ppm`;
     for (const [k, v] of Object.entries(mine)) if (v != null) o[k] = String(v);
-    return o;
+    return Object.fromEntries(ORDER.filter(k => o[k] != null).map(k => [k, o[k]]));
   }
   /** @param {any} [over] @returns {Promise<{schema: string, version: string, line: string, rows: string[][]}|null>} null (and a message) when the engine does not answer */
   async function get(over) {
-    try { return await J("api/provenance?" + new URLSearchParams(ctx(over))); }
-    catch (_) { if (window.toast) window.toast(I18N.t("prov.fail")); return null; }
+    try {
+      const r = await fetch("api/provenance?" + new URLSearchParams(ctx(over)));
+      if (!r.ok) throw new Error("provenance");
+      const [schema, line] = (await r.text()).split("\n"), parts = line.split(" · "), version = parts[0].slice(8);     // «# mzLab x.y.z · key=value ...»
+      return { schema, version, line, rows: [["mzLab", version], ...parts.slice(1).map(x => [x.slice(0, x.indexOf("=")), x.slice(x.indexOf("=") + 1)])] };
+    } catch (_) { if (window.toast) window.toast(I18N.t("prov.fail")); return null; }
   }
   /** text of a table (rows separated by \n) with the provenance line first; unchanged when it already has it or the engine does not answer @param {string} text @param {any} [over] */
   async function tsv(text, over) {
