@@ -1,5 +1,5 @@
 # Test nell'ambiente cloud (container di sessione)
-Stato attuale; il comando è in AGENTS.md §3.
+Il comando è in AGENTS.md §3.
 - **Chromium**: Playwright 1.63 cerca `/opt/pw-browsers/chromium-1243`; il collegamento `/opt/pw-browsers/chromium` può puntare a una versione più vecchia. Se manca, `verifica.py` NON dà rosso: stampa `SKIP e2e: Playwright/Chromium non disponibili`. Si prepara con `python3 tools/verifica.py --setup` (installa Chromium se serve e poi lancia la verifica intera, ~10 min). Per controllare solo il browser: `python3 -c "from playwright.sync_api import sync_playwright as s; p=s().start(); p.chromium.launch().close()"`.
 - **Un giro alla volta**: lanciato in background `verifica.py` stampa solo alla fine; il limite dei comandi in background è 30 minuti (`timeout` esplicito per le prove lunghe). Un processo `e2e*.py` rimasto vivo si ferma con il PID (mai `pkill -f` con parole presenti nel comando).
 - **Test che costruiscono il sito** (`e2e13`, `e2e_mzidx`, `e2e_tpmine*`, `e2e_avvio`, `e2e_identita`, `e2e_libreria_*`, `e2e_rust`, `e2e_untarget`): vengono saltati finché non c'è `site/`. Prima `python3 tools/build_site.py` (scarica Pyodide dal proxy, ~2 min, scrive `site/`), poi `verifica.py --solo e2e13,...`; dopo si cancella `site/`. `e2e_rust` serve anche il WASM (assente in cloud), `tools/bench.py` pure.

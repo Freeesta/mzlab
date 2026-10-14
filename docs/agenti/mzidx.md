@@ -1,5 +1,5 @@
 # `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`) o di un file del produttore
-Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
+Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
 
 ## Formato (tutto little-endian, nessuna compressione)
 ```
@@ -23,7 +23,7 @@ total      dimensione del file: un file di dimensione diversa (troncato) non si 
 ```
 - **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
 - **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
-- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (la stessa che userà `.mzflow`).
+- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (la stessa che usa `.mzflow`).
 - **Scrittura atomica**: file temporaneo accanto alla destinazione, poi rinomina; l'intestazione si scrive per ultima.
 
 ## Indice di un file del produttore (versione 2)
@@ -38,7 +38,7 @@ Un `.raw`, un `.wiff` (un indice per campione) o una cartella `.D` si indicizzan
 - **Centroidi**: `lettori_centroidi::centroidato(l)` dà lo stesso lettore con le scansioni a profilo ridotte a un punto per picco (`centroidi`, parametri da al più 64 scansioni per campione, testata `centroided`), come la conversione del `.wiff` con «centroidi»: per i `.wiff` `scrivi` del lettore, semplice o centroidato, dà gli stessi byte di `Wiff::to_mzml_progress` (prova `same_as_conversion` in `tests/lettori_rotte/`); il `.raw` letto dal lettore ha i centroidi del produttore.
 
 ## Costruzione (`build`)
-1. Le scansioni sono già nella tabella di `Run`: con un `indexList` (indexedmzML) le posizioni degli spettri vengono da lì e si leggono solo le intestazioni (fino a `<binaryDataArrayList`), mai i dati binari; senza `indexList` si percorre il file come prima (`Run._spans`).
+1. Le scansioni sono già nella tabella di `Run`: con un `indexList` (indexedmzML) le posizioni degli spettri vengono da lì e si leggono solo le intestazioni (fino a `<binaryDataArrayList`), mai i dati binari; senza `indexList` si percorre il file (`Run._spans`).
 2. Ogni scansione si decodifica una volta (`Run.read`) e i suoi picchi vanno, a gruppi di ~1 M di picchi, in secchi di 1 unità di m/z (0…9999, i valori fuori scala negli estremi); oltre `BUILD_BYTES` (64 MB, divisi per le sezioni) i secchi si scaricano in un file temporaneo. La memoria resta limitata: non si concatena mai tutto il file.
 3. Secchio per secchio, nell'ordine di m/z, si ordina in modo stabile e si scrive nei tre array; il primo m/z di ogni blocco entra in `fence`.
 Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo verifica `tests/test_mzidx.py` su tutti i file di esempio e sui sintetici.
@@ -50,7 +50,7 @@ Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo ver
 - `PeakTable.iter_chunks()`, `sum_by_scan()`, `base_peaks()` percorrono la tabella a pezzi (somme nello stesso ordine di `np.bincount` sull'intera tabella, quindi bit per bit uguali).
 
 ## Dove sta
-`Run.table` costruisce l'indice alla prima richiesta (TIC dichiarato e scansioni vengono dall'mzML, non serve prima) in `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; `index_name`: SHA-1 di percorso reale, dimensione e data) e lo apre; alla riapertura `Run` prende tabella delle scansioni, impronta e conteggi dall'indice e non percorre gli spettri. Se l'indice non si può scrivere, `Run.table` costruisce la tabella in memoria come prima (`table_reference`). `mzidx.trim(cartella, limite)` cancella i più vecchi.
+`Run.table` costruisce l'indice alla prima richiesta (TIC dichiarato e scansioni vengono dall'mzML, non serve prima) in `$MZLAB_CACHE` (predefinita `~/.cache/mzlab`; `index_name`: SHA-1 di percorso reale, dimensione e data) e lo apre; alla riapertura `Run` prende tabella delle scansioni, impronta e conteggi dall'indice e non percorre gli spettri. Se l'indice non si può scrivere, `Run.table` costruisce la tabella in memoria (`table_reference`). `mzidx.trim(cartella, limite)` cancella i più vecchi.
 
 ## Nel sito (`rust-worker.js`, `archivio.js`)
 - **Archivio**: OPFS, cartelle `mzlab/files/<nome>` (gli mzML) e `mzlab/idx/<nome>.mzidx`. Solo i worker Rust (motore e costruttori degli indici) toccano OPFS; ogni handle di scrittura si apre per una scrittura e si chiude subito; la lettura è un `File` (`getFile`) letto a fette dal motore. Senza OPFS (`FileSystemFileHandle.createSyncAccessHandle` assente) la pagina dice `load.err.oldBrowser`.
@@ -59,7 +59,7 @@ Il risultato è identico alla tabella in memoria (`Run.table_reference`): lo ver
   Nell'app desktop lo costruisce il lato nativo (`idxbuild.rs`, `rust.md`) leggendo il file a fette.
   Il costruttore Python (`mzidx.build`) resta il riferimento dei test di parità, non una via d'esecuzione.
 - **Riapertura**: all'avvio `lr_boot` apre ogni indice di OPFS (`lrOpen`, stesso file per nome); il motore riconosce l'indice da dimensione e impronta (`probe`) e prende scansioni, `sha256` e conteggi dall'indice: nessuna lettura degli spettri, nessun limite di 300 MB. Un file con lo stesso nome ma altro contenuto fa scartare l'indice (si ricostruisce); un mzML senza indice (caricamento interrotto) si indicizza di nuovo all'avvio.
-- **Migrazione**: i file di una visita precedente in IndexedDB (`files`) passano in OPFS all'avvio (`lrMigrate`) e si cancellano da IndexedDB solo a scrittura riuscita; quelli che non passano restano dove sono. I nomi `qqq_lab`, `qqq.*` non cambiano.
+- **Migrazione**: i file salvati in IndexedDB (`files`) da versioni precedenti passano in OPFS all'avvio (`lrMigrate`) e si cancellano da IndexedDB solo a scrittura riuscita; quelli che non passano restano dove sono. I nomi `qqq_lab`, `qqq.*` non cambiano.
 - **Spazio**: l'ingranaggio (solo nel sito) mostra quanto occupano file e indici e «Libera» cancella gli indici dei file tolti (sempre per primi, anche da soli quando la quota supera l'80%); un indice cancellato si ricostruisce da solo. `navigator.storage.persist()` si chiede al primo salvataggio, senza messaggi se rifiutato. «Nuova sessione» e «Ricomincia da capo» svuotano OPFS.
 - **Poco spazio**: `ARCH.ensureRoom(byte, nome)` conta file e indice (×1,8) e prenota lo spazio fino alla fine di `lr_index` (`ARCH.release`): più file insieme non contano due volte lo stesso spazio. Chromium accetta scritture oltre la quota e lascia il file più corto: `idx-worker.js` e `archivio.writeNow` confrontano `getSize()` con i byte scritti (`error.quota`); un indice che non si apre si cancella (`error.badIndex`, testo nei cataloghi). Prova: `e2e_carica_grandi.py` (mzML sintetici, `mzml_grande.py`).
 - **Pulsante «Carica dati»**: attivo anche mentre `upload()` ha file in lettura (`UPBUSY` in `shell.js`); al clic l'overlay mostra fase e % dell'insieme dei file (evento `mzlab-index`, `waitStato`, chiavi `load.ph.*`), aspetta l'ultimo file e apre tutti quelli letti; i nomi dei file non letti stanno in `QQQ_LOADFAIL` e mzFinder li segnala prima di «Dig».

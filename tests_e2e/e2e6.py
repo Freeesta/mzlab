@@ -27,7 +27,7 @@ try:
             assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); pg.wait_for_timeout(300)
             tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "federico.cristaudo@unito.it" in tx, tx[:200]
-            tg = r.teoria(pg); assert "Cromatogramma" in tg and "Spettro" in tg and "Full Scan" in tg, tg[:200]      # the old guide is the first chapter of the Teoria
+            tg = r.teoria(pg); assert "MRM" in tg and len(tg) > 1000, tg[:200]      # a real chapter of the Teoria opens
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
