@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // The folder pointed at and remembered (docs/agenti/dati-cartella.md). The user points at a folder of the computer ONCE (showDirectoryPicker); the handle is kept in
 // IndexedDB "qqq_lab" (store `kv`, key `cartella.puntata`) and found again at the next visit. The compatible files it holds appear GREY («not loaded») and a click
@@ -8,6 +9,7 @@
 const CartPP = (() => {
   const KEY = "cartella.puntata", MAXD = 3, CAP = 3000, POLL = 20000;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
+  /** @type {[string, RegExp][]} */
   const TIPI = [["data", /\.(mzml|raw|wiff)$/i], ["method", /\.dam$/i], ["library", /\.(msp|mgf|mzlib|jsonl|ndjson)$/i], ["table", /\.(csv|tsv)$/i]];
   const kindOf = name => { for (const [t, re] of TIPI) if (re.test(name)) return t; return null; };
 
@@ -28,8 +30,9 @@ const CartPP = (() => {
   const visible = items => items.filter(x => x.kind !== "scan" || !items.some(w => /\.wiff$/i.test(w.name) && pairScan(items, w) === x));
   const sameList = (a, b) => a.length === b.length && a.every((x, i) => x.path === b[i].path);
 
+  /** @type {{ handle: any, name: string, perm: string, items: any[], opened: Set<any>, stats: Map<any, any>, busy: boolean, obs: any, timer: any, native: any, deb?: any }} */
   const S = { handle: null, name: "", perm: "none", items: [], opened: new Set(), stats: new Map(), busy: false, obs: null, timer: 0, native: null };
-  const supported = () => typeof window !== "undefined" && !!window.showDirectoryPicker;
+  const supported = () => typeof window !== "undefined" && !!/** @type {any} */ (window).showDirectoryPicker;
   return { kindOf, collect, pairScan, visible, sameList, S, supported };
 })();
 
@@ -157,7 +160,7 @@ const CartPunt = (() => {
   async function choose() {
     if (S.native) return S.native.choose();
     try {
-      const h = await window.showDirectoryPicker({ id: "mzlab-dati", mode: "read" });
+      const h = await /** @type {any} */ (window).showDirectoryPicker({ id: "mzlab-dati", mode: "read" });
       S.handle = h; S.name = h.name; S.items = []; S.stats.clear(); S.opened.clear(); await keep(h); await rescan(); follow();
     } catch (e) { /* cancelled */ }
   }

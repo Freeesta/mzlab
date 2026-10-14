@@ -1,3 +1,4 @@
+// @ts-strict
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=s=>document.querySelector(s);
 // addresses of the views: #/dati, #/disegno (and #/teoria, which the head script above sends to the standalone Teoria on a cold start)
@@ -8,11 +9,11 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 async function api(u){const r=await fetch(u);const j=await r.json();if(j.error)throw I18N.err(j);return j}
 function fail(e){$("#err").textContent=e?(e.message||e):""}
 // canvas resolution = device pixels x the pinch scale (a "visual" zoom on a Mac trackpad), at most 4; every canvas is redrawn when it changes
-function dprNow(){const s=(window.visualViewport&&visualViewport.scale)||1;return Math.min(4,(devicePixelRatio||1)*s)}
+function dprNow(){const s=(window.visualViewport&&window.visualViewport.scale)||1;return Math.min(4,(devicePixelRatio||1)*s)}
 {let last=dprNow(),t=0;const redo=()=>{const d=dprNow();if(Math.abs(d-last)<.01)return;last=d;if(typeof redrawAll==="function")redrawAll()};
  const arm=()=>{try{matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener("change",()=>{redo();arm()},{once:true})}catch(_){}};arm();   // browser zoom (Ctrl/Cmd +)
  addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,60)});
- if(window.visualViewport)visualViewport.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,150)})}   // pinch: after a short pause
+ if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(redo,150)})}   // pinch: after a short pause
 function setup(c){const z=typeof fz==="function"?fz():1;M.l=Math.max(Math.round(66*z),window.MARG_L||0);M.r=Math.max(14,window.MARG_R||0);M.t=Math.round(14*z);M.b=Math.round(40*z);const r={width:c.clientWidth,height:c.clientHeight},d=dprNow();c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}   // layout size, not getBoundingClientRect: a panel sliding in (transizioni.js scales it) must not change the resolution
 function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
@@ -146,7 +147,7 @@ async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await windo
   return NATIVO.raws(files,(ST.files||[]).map(x=>x.name))}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
-async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
+async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res=/** @type {any} */ ({files,errs:[]}),isW=f=>/\.wiff(\.scan)?$/i.test(f.name);
   if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.QQQ_PHONE)&&files.some(isW)){      // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
     res.files=files.filter(f=>!isW(f));files.filter(isW).forEach(f=>res.errs.push([I18N.t(rb?"err.file.wiffEngine":"err.file.wiffLoad"),f.name]));return res}
   if(!rb||rb.disabled||!rb.nativeSamples||!files.some(isW))return res;
@@ -211,7 +212,7 @@ function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.fi
   return files.filter(f=>!dups.includes(f))}
 async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY){BATCH.tot=0;BATCH.done=0}BATCH.tot+=files.length;UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY)IDLE.splice(0).forEach(ok=>ok())}}
 async function upload0(files,into,box){
-  const rep={unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]},rejected=[];
+  const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]}),rejected=/** @type {any[]} */ ([]);
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
@@ -306,9 +307,9 @@ $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
- function fix(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>RX.test(n.nodeValue)&&n.parentElement&&!SKIP.test(n.parentElement.tagName)&&!(n.parentElement.tagName==="I"&&n.nodeValue==="m/z")&&!(n.parentElement.tagName==="SUP")?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+ function fix(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>RX.test(/** @type {string} */ (n.nodeValue))&&n.parentElement&&!SKIP.test(n.parentElement.tagName)&&!(n.parentElement.tagName==="I"&&n.nodeValue==="m/z")&&!(n.parentElement.tagName==="SUP")?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
   const L=[];while(w.nextNode())L.push(w.currentNode);
-  for(const n of L){const f=document.createDocumentFragment();n.nodeValue.split(/(m\/z|MS2)/).forEach(t=>{if(t==="m/z"){const e=document.createElement("i");e.textContent="m/z";f.appendChild(e)}else if(t==="MS2"){f.appendChild(document.createTextNode("MS"));const e=document.createElement("sup");e.textContent="2";f.appendChild(e)}else if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)}}
+  for(const n of /** @type {any[]} */ (L)){const f=document.createDocumentFragment();n.nodeValue.split(/(m\/z|MS2)/).forEach(t=>{if(t==="m/z"){const e=document.createElement("i");e.textContent="m/z";f.appendChild(e)}else if(t==="MS2"){f.appendChild(document.createTextNode("MS"));const e=document.createElement("sup");e.textContent="2";f.appendChild(e)}else if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)}}
  let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
  fix(document.body)})();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16);
@@ -322,10 +323,10 @@ let kPre=false;
 function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
   fetch("static/vendor/ketcher/index.html").then(r=>r.text()).then(t=>{const u=[...t.matchAll(/(?:src|href)="\.?\/?(assets\/[^"]+)"/g)].map(m=>"static/vendor/ketcher/"+m[1]);
     u.forEach(x=>fetch(x,{priority:"low"}).then(r=>r.arrayBuffer()).catch(()=>{}))}).catch(()=>{kPre=false})}
-function prefetchIdle(){const go=()=>{const c=navigator.connection||{};if(c.saveData)return;
+function prefetchIdle(){const go=()=>{const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
   prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"]);
   prefetch(["static/vendor/openchemlib.js"],"module");
   if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
-  window.requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
+  /** @type {any} */ (window).requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
 {const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
