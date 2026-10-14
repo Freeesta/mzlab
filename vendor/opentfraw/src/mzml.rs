@@ -841,79 +841,117 @@ fn run_analyzers(raw: &RawFileReader) -> Vec<msc::Analyzer> {
     out
 }
 
+/// The run-level `opentfraw.*` values (file version, sequence row, injection, labels) that go into the `<run>` of the mzML.
+fn run_extra(raw: &RawFileReader) -> ::std::collections::BTreeMap<String, String> {
+    let mut extra = ::std::collections::BTreeMap::new();
+    extra.insert("opentfraw.raw_version".into(), raw.version.to_string());
+    extra.insert(
+        "opentfraw.scan_format".into(),
+        format!("{:?}", raw.scan_format),
+    );
+    extra.insert(
+        "opentfraw.device_family".into(),
+        format!("{:?}", raw.device_family),
+    );
+    extra.insert(
+        "opentfraw.controller_count".into(),
+        raw.raw_file_info.preamble.controller_count.to_string(),
+    );
+    extra.insert(
+        "opentfraw.computer_name".into(),
+        raw.raw_file_info.computer_name.clone(),
+    );
+    let row = &raw.seq_row;
+    extra.insert("opentfraw.sample_id".into(), row.id.clone());
+    extra.insert("opentfraw.sample_comment".into(), row.comment.clone());
+    extra.insert("opentfraw.sample_vial".into(), row.vial.clone());
+    extra.insert(
+        "opentfraw.injection_row_number".into(),
+        row.injection.row_number.to_string(),
+    );
+    extra.insert(
+        "opentfraw.injection_vial".into(),
+        row.injection.vial.clone(),
+    );
+    extra.insert(
+        "opentfraw.injection_volume".into(),
+        row.injection.injection_volume.to_string(),
+    );
+    extra.insert(
+        "opentfraw.sample_weight".into(),
+        row.injection.sample_weight.to_string(),
+    );
+    extra.insert(
+        "opentfraw.sample_volume".into(),
+        row.injection.sample_volume.to_string(),
+    );
+    extra.insert(
+        "opentfraw.istd_amount".into(),
+        row.injection.istd_amount.to_string(),
+    );
+    extra.insert(
+        "opentfraw.dilution_factor".into(),
+        row.injection.dilution_factor.to_string(),
+    );
+    extra.insert(
+        "opentfraw.instrument_method_file".into(),
+        row.inst_method.clone(),
+    );
+    extra.insert(
+        "opentfraw.processing_method_file".into(),
+        row.proc_method.clone(),
+    );
+    extra.insert("opentfraw.original_file_name".into(), row.file_name.clone());
+    extra.insert("opentfraw.original_file_path".into(), row.path.clone());
+    for (i, (heading, value)) in raw
+        .raw_file_info
+        .label_headings
+        .iter()
+        .zip(&row.user_labels)
+        .enumerate()
+    {
+        extra.insert(format!("opentfraw.user_label.{i}.heading"), heading.clone());
+        extra.insert(format!("opentfraw.user_label.{i}.value"), value.clone());
+    }
+    extra
+}
+
+/// What the header of an mzML says about the run, for writers other than `write_mzml` (the readers of `mzlab-core`).
+pub struct RunTerms {
+    /// (accession, name) of the instrument model.
+    pub instrument: (String, String),
+    /// Acquisition start (RFC 3339) when the file carries a valid date.
+    pub start_timestamp: Option<String>,
+    /// (accession, name) of each analyzer the scan events use, in first-seen order.
+    pub analyzers: Vec<(&'static str, &'static str)>,
+    /// The `opentfraw.*` values of the run.
+    pub extra: Vec<(String, String)>,
+}
+
+/// The run terms of `raw`: what `write_mzml` puts in the header of the file.
+pub fn run_terms(raw: &RawFileReader) -> RunTerms {
+    let cv = instrument_cv(raw);
+    let analyzers = run_analyzers(raw)
+        .into_iter()
+        .map(|a| match a {
+            msc::Analyzer::ITMS => ("MS:1000264", "ion trap"),
+            msc::Analyzer::TQMS | msc::Analyzer::SQMS => ("MS:1000081", "quadrupole"),
+            msc::Analyzer::TOFMS => ("MS:1000084", "time-of-flight"),
+            msc::Analyzer::FTMS => ("MS:1000484", "orbitrap"),
+            msc::Analyzer::Sector => ("MS:1000080", "magnetic sector"),
+        })
+        .collect();
+    RunTerms {
+        instrument: (cv.accession.to_string(), cv.name),
+        start_timestamp: start_timestamp(raw),
+        analyzers,
+        extra: run_extra(raw).into_iter().collect(),
+    }
+}
+
 impl<'a, R: Read + Seek> msc::SpectrumSource for OpenTfRawSource<'a, R> {
     fn run_metadata(&self) -> msc::RunMetadata {
-        let mut extra = ::std::collections::BTreeMap::new();
-        extra.insert("opentfraw.raw_version".into(), self.raw.version.to_string());
-        extra.insert(
-            "opentfraw.scan_format".into(),
-            format!("{:?}", self.raw.scan_format),
-        );
-        extra.insert(
-            "opentfraw.device_family".into(),
-            format!("{:?}", self.raw.device_family),
-        );
-        extra.insert(
-            "opentfraw.controller_count".into(),
-            self.raw.raw_file_info.preamble.controller_count.to_string(),
-        );
-        extra.insert(
-            "opentfraw.computer_name".into(),
-            self.raw.raw_file_info.computer_name.clone(),
-        );
-        let row = &self.raw.seq_row;
-        extra.insert("opentfraw.sample_id".into(), row.id.clone());
-        extra.insert("opentfraw.sample_comment".into(), row.comment.clone());
-        extra.insert("opentfraw.sample_vial".into(), row.vial.clone());
-        extra.insert(
-            "opentfraw.injection_row_number".into(),
-            row.injection.row_number.to_string(),
-        );
-        extra.insert(
-            "opentfraw.injection_vial".into(),
-            row.injection.vial.clone(),
-        );
-        extra.insert(
-            "opentfraw.injection_volume".into(),
-            row.injection.injection_volume.to_string(),
-        );
-        extra.insert(
-            "opentfraw.sample_weight".into(),
-            row.injection.sample_weight.to_string(),
-        );
-        extra.insert(
-            "opentfraw.sample_volume".into(),
-            row.injection.sample_volume.to_string(),
-        );
-        extra.insert(
-            "opentfraw.istd_amount".into(),
-            row.injection.istd_amount.to_string(),
-        );
-        extra.insert(
-            "opentfraw.dilution_factor".into(),
-            row.injection.dilution_factor.to_string(),
-        );
-        extra.insert(
-            "opentfraw.instrument_method_file".into(),
-            row.inst_method.clone(),
-        );
-        extra.insert(
-            "opentfraw.processing_method_file".into(),
-            row.proc_method.clone(),
-        );
-        extra.insert("opentfraw.original_file_name".into(), row.file_name.clone());
-        extra.insert("opentfraw.original_file_path".into(), row.path.clone());
-        for (i, (heading, value)) in self
-            .raw
-            .raw_file_info
-            .label_headings
-            .iter()
-            .zip(&row.user_labels)
-            .enumerate()
-        {
-            extra.insert(format!("opentfraw.user_label.{i}.heading"), heading.clone());
-            extra.insert(format!("opentfraw.user_label.{i}.value"), value.clone());
-        }
+        let extra = run_extra(self.raw);
         msc::RunMetadata {
             extra,
             source_file_name: self.raw_filename.to_string(),
