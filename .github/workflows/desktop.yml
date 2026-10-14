@@ -8,9 +8,9 @@ on:
   workflow_call:                      # release.yml builds the installers of a tag by calling this workflow
   push:
     branches: [main]
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", "mzlab/web/**", "tools/build_site.py", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
   pull_request:
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", "mzlab/web/**", "tools/build_site.py", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
 
 permissions:
   contents: read
