@@ -14,7 +14,7 @@ def step(name, fn):
 WORDS = ci.ITALIAN_WORDS - {"come", "dati", "file-non", "ora", "sia", "tra", "fra", "anche", "solo", "poi"}
 def italian_on_screen(pg):
     t = pg.evaluate("""() => { const out = []; const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
-        for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style,#theory-sorry')) continue; if (!e.checkVisibility()) continue;
+        for (let e = walk.currentNode; e; e = walk.nextNode()) { if (e.closest('script,style')) continue; if (!e.checkVisibility()) continue;
           for (const n of e.childNodes) if (n.nodeType === 3) out.push(n.nodeValue);
           for (const a of ['title', 'placeholder', 'aria-label', 'alt']) if (e.getAttribute(a)) out.push(e.getAttribute(a)); }
         return out.join(' | '); }""")

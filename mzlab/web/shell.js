@@ -23,14 +23,15 @@ async function init(){try{loading(true);await bootSession();await Promise.all(E.
   const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
+let _lastV="";
 function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
-  // The Teoria is Italian only: in English a courtesy page is shown, with a button that opens the Italian Teoria for this visit only
-  if(v!=="theory")S.theoryIt=false;
-  const sorry=v==="theory"&&I18N.lang==="en"&&!S.theoryIt;$("#theory-sorry").hidden=!sorry;$("#tframe").hidden=sorry;
-  if(v==="theory"&&!sorry&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
+  // The Teoria is Italian only: in English it opens at once in Italian, with a short toast each time the student enters it
+  if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
+  if(v==="theory"&&_lastV!=="theory"&&I18N.lang==="en"&&window.toast)toast(I18N.t("theory.onlyItalian"));
+  _lastV=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   document.title=(v==="data"?I18N.t("app.title",{app:window.APP_NAME||""}):I18N.t("nav."+(v==="draw"?"draw":"theory"))+" · "+(window.APP_NAME||""));   // one title per view (WCAG 2.4.2)
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
@@ -45,7 +46,6 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.data
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
-$("#theory-it").onclick=()=>{S.theoryIt=true;applyView()};
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
