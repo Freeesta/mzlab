@@ -18,6 +18,7 @@ use serde_json::Value;
 
 use crate::engine::State;
 use crate::mapped::Mapped;
+use crate::nativi::{Nativi, Src};
 
 /// The slots of the files of the page's list (not of the session) start here, as in `rust-worker.js`.
 pub(crate) const LR_BASE: u32 = 1_000_000;
@@ -69,6 +70,32 @@ impl State {
         map_file(&e.path)
     }
 
+    /// What the routes read for `slot`: the reader of a native sample, else the mzML of the picked file `fid`.
+    pub(crate) fn src_slot<'a>(&self, nat: &'a mut Nativi, slot: u32, fid: u32) -> Result<(Src<'a>, u64)> {
+        if nat.is_native(slot) {
+            return nat.src(slot)?.ok_or_else(bad_index);
+        }
+        let (m, n) = self.mzml_of(fid)?;
+        Ok((Src::Map(m), n))
+    }
+
+    /// The same for a registered file, by name (`slot` is its slot in the page's list).
+    pub(crate) fn src_named<'a>(&self, nat: &'a mut Nativi, slot: u32, name: &str) -> Result<(Src<'a>, u64)> {
+        if nat.is_native(slot) {
+            return nat.src(slot)?.ok_or_else(bad_index);
+        }
+        let (m, n) = self.mzml_named(name)?;
+        Ok((Src::Map(m), n))
+    }
+
+    /// Attaches `slot` to the reader of the sample `name` when it is a native one (the store says), else lets it go.
+    pub(crate) fn attach_named(&self, eng: &mut Eng, slot: u32, name: &str) {
+        match self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).and_then(|e| e.nat) {
+            Some(nat) => eng.nat.attach(slot, &nat),
+            None => eng.nat.forget(slot),
+        }
+    }
+
     /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none.
     pub(crate) fn open_lr(&self, eng: &mut Eng, name: &str) -> Result<u32> {
         let slot = match eng.lr_slot.get(name) {
@@ -82,6 +109,7 @@ impl State {
         if !eng.idx.contains_key(&slot) {
             eng.idx.insert(slot, self.open_index_file(name).map_err(|_| Error::new("err.engine.index").with("name", name))?);
         }
+        self.attach_named(eng, slot, name);
         Ok(slot)
     }
 
@@ -94,9 +122,13 @@ impl State {
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
-        let (mut rd, size) = map_file(&e.path)?;
-        let prepared = mzlab_core::upload::prepare(&mut rd, size, name)?;
-        self.indexer()?.build(&e.path, name, &prepared.table)?;
+        if let Some(nat) = &e.nat {
+            self.indexer()?.build_nat(nat, name)?;
+        } else {
+            let (mut rd, size) = map_file(&e.path)?;
+            let prepared = mzlab_core::upload::prepare(&mut rd, size, name)?;
+            self.indexer()?.build(&e.path, name, &prepared.table)?;
+        }
         let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(slot) = eng.lr_slot.get(name).copied() {
             eng.idx.remove(&slot);
@@ -116,6 +148,7 @@ impl State {
                 r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8);      // as `set_polarity` of the wasm: 0 = every section
                 let out = format!("{{\"scans\":{},\"hr1\":{}}}", r.idx.scans.len(), r.idx.hr1());
                 eng.idx.insert(u("slot"), r);
+                self.attach_named(eng, u("slot"), s("name"));
                 text(out)
             }
             "route" => match eng.idx.get_mut(&u("slot")) {
@@ -123,19 +156,19 @@ impl State {
                 None => text(""),
             },
             "scaninfo" => match eng.idx.get(&u("slot")) {
-                Some(r) if r.has_scans() => text(r.scaninfo(f("sid") as usize, &mut self.mzml_of(u("fid"))?.0)?),
+                Some(r) if r.has_scans() => text(r.scaninfo(f("sid") as usize, &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?),
                 _ => text(""),
             },
             "mzmlroute" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => opt(r.mzml_route(s("path"), &q(), &mut self.mzml_of(u("fid"))?.0)?),
+                Some(r) => opt(r.mzml_route(s("path"), &q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?),
                 None => text(""),
             },
             "scanbin" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => Ok(Answer::Bytes(r.scanbin_route(&q(), &mut self.mzml_of(u("fid"))?.0)?.unwrap_or_default())),
+                Some(r) => Ok(Answer::Bytes(r.scanbin_route(&q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?.unwrap_or_default())),
                 None => Ok(Answer::Bytes(Vec::new())),
             },
             "specexact" => match eng.idx.get_mut(&u("slot")) {
-                Some(r) => opt(r.spectrum_exact(&q(), &mut self.mzml_of(u("fid"))?.0)?),
+                Some(r) => opt(r.spectrum_exact(&q(), &mut self.src_slot(&mut eng.nat, u("slot"), u("fid"))?.0)?),
                 None => text(""),
             },
             "specbg" => {
@@ -155,7 +188,7 @@ impl State {
             "mrm" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let end = r.idx.scans.last().map_or(0, |s| s.end);
-                let (rd, size) = self.mzml_of(u("fid"))?;
+                let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
                 let mut m = Mzml::new(rd, size);
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::fileroutes::mrm_transitions(&mut m, &chroms)?)
@@ -163,14 +196,14 @@ impl State {
             "mrmchrom" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let end = r.idx.scans.last().map_or(0, |s| s.end);
-                let (rd, size) = self.mzml_of(u("fid"))?;
+                let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
                 let mut m = Mzml::new(rd, size);
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
-                let (rd, size) = self.mzml_of(u("fid"))?;
+                let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
                 let mut m = Mzml::new(rd, size);
                 let head = m.info_head()?;
                 text(mzlab_core::fileroutes::fileinfo(r, &mut m, s("name"), &head)?)
@@ -207,6 +240,7 @@ impl State {
             }
             "reset" => {
                 eng.idx.retain(|k, _| *k >= LR_BASE);
+                eng.nat.forget_below(LR_BASE);
                 text("{}")
             }
 
@@ -217,6 +251,7 @@ impl State {
             },
             "close" => {
                 eng.idx.remove(&u("slot"));
+                eng.nat.forget(u("slot"));
                 text("{}")
             }
             _ => Err(Error::new("rpc.unknown")),
@@ -281,6 +316,11 @@ impl State {
         let _ = body;
         if op == "lr_index" {
             return self.lr_index(p["name"].as_str().unwrap_or(""));                 // the build takes its time: it does not hold the engine
+        }
+        match op {
+            "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
+            "nat2mzml" => return self.nat_to_mzml(p),
+            _ => {}
         }
         if op.starts_with("feat/") || op.starts_with("finder/") {
             return self.op_feat(op, p);                                              // mzFinder: long jobs of their own, they do not hold the engine
@@ -374,4 +414,6 @@ pub struct Eng {
     pub(crate) next_lr: u32,
     pub(crate) labs: Vec<(Lab, u64)>,
     pub(crate) labs_sig: Option<String>,
+    /// the samples of a maker's file read as they are (`nativi.rs`)
+    pub(crate) nat: Nativi,
 }

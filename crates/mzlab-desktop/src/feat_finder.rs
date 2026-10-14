@@ -109,7 +109,10 @@ impl State {
         let fs = legacy::lr::plan::files(s("files")).map_err(user)?;
         let mut out = Vec::new();
         for f in fs.iter().filter(|f| f.kind == "mrm") {
-            let (rd, size) = self.mzml_named(&f.name)?;
+            let mut guard = self.eng.lock().unwrap_or_else(|e| e.into_inner());
+            let eng = &mut *guard;
+            let slot = self.open_lr(eng, &f.name)?; // a native sample reads its chromatograms through its reader
+            let (rd, size) = self.src_named(&mut eng.nat, slot, &f.name)?;
             let mut m = Mzml::new(rd, size);
             // the scans of an MRM file are few; where they end tells where the chromatograms start
             let end = self

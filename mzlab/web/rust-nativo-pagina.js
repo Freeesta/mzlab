@@ -30,12 +30,14 @@ export function makeNativo(h) {
       if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
       return r.srm;
     },
-    /** the mzML of the sample `name` as a File of OPFS (a Blob without OPFS); `onProgress({ scans, scansTotal, written })`; `signal` cancels it (the worker is stopped and started again) */
+    /** the mzML of the sample `name` as a File of OPFS (a Blob without OPFS; in the desktop app an empty Blob that carries `mzlabId`, the number of the mzML on the disk); `onProgress({ scans, scansTotal, written })`; `signal` cancels it (the worker is stopped and started again) */
     async nativeToMzml(/** @type {string} */ name, /** @type {number} */ size, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
       const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
       if (signal && signal.aborted) throw cancelled();
-      try { await ensureRoom(size * 1.1); }
-      catch (q) { const j = JSON.parse(String(q)); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
+      if (!window.MZLAB_DESKTOP) {                                                  // the desktop app writes on the disk, not in the browser storage
+        try { await ensureRoom(size * 1.1); }
+        catch (q) { const j = JSON.parse(String(q)); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
+      }
       const onAbort = () => { if (w && w === h.current()) h.abort(w); };
       if (signal) signal.addEventListener("abort", onAbort, { once: true });
       const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;      // in OPFS mzlab/conv/
@@ -44,6 +46,7 @@ export function makeNativo(h) {
       if (signal) signal.removeEventListener("abort", onAbort);
       if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
       if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite"); }
+      if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid });     // desktop app: the mzML is on the disk, saved from there (conversione.js download)
       return r.file || new Blob(r.parts, { type: "application/xml" });
     },
   };
