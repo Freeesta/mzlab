@@ -19,6 +19,7 @@ Exit code 0 only if nothing failed. `.verifica/` is not committed (.gitignore).
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -128,6 +129,30 @@ def noti_rossi() -> dict[str, str]:
                 n, _, why = l.partition("|")
                 out[n.strip()] = why.strip()
     return out
+
+
+NOTI_VERDI_GIRI = 3
+
+
+def noti_verdi(results, noti: dict[str, str]):
+    """A line of noti_rossi.txt whose e2e passes for NOTI_VERDI_GIRI runs in a row becomes a FAIL until the line is removed (streaks in .verifica/noti_verdi.json)."""
+    f = OUT / "noti_verdi.json"
+    try:
+        serie = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        serie = {}
+    stato = {n: st for n, st, _dt, _notes in results}
+    serie = {n: c for n, c in serie.items() if n in noti}
+    for n in noti:
+        if stato.get(n) == "OK":
+            serie[n] = serie.get(n, 0) + 1
+        elif stato.get(n) == "FAIL":
+            serie[n] = 0
+    try:
+        f.write_text(json.dumps(serie), encoding="utf-8")
+    except OSError:
+        pass
+    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in serie.items() if c >= NOTI_VERDI_GIRI]
 
 
 def teoria(results) -> None:
@@ -293,7 +318,7 @@ AREE = [
     ("mzlab/web/tour.js", {"e2e_tour"}),
     ("mzlab/web/transizioni", {"e2e_transizioni", "e2e_pannello", "e2e_cassetto"}),
     ("mzlab/web/paletta.js", {"e2e_strumenti", "e2e_teoria_contesto"}), ("mzlab/web/barra.js", {"e2e_teoria_contesto", "e2e_strumenti", "e2e_pannello", "e2e_cassetto", "e2e_barra_hint", "e2e_barra", "e2e_calc", "e2e_perdite", "e2e_contaminanti", "e2e_banco_info", "e2e_tour", "e2e_spettro_hr"}), ("tests_e2e/e2e_strumenti.py", {"e2e_strumenti"}), ("tests_e2e/e2e_spettro_hr.py", {"e2e_spettro_hr"}),
-    ("mzlab/web/legende.js", {"e2e_legende", "e2e_axe_grafici", "e2e_spettro_hr", "e2e20", "e2e16"}), ("tests_e2e/e2e_legende.py", {"e2e_legende"}),
+    ("mzlab/web/legende.js", {"e2e_legende", "e2e_axe_grafici", "e2e_spettro_hr", "e2e20", "e2e16"}), ("tests_e2e/e2e_legende.py", {"e2e_legende"}), ("tests_e2e/e2e_axe_release.py", {"e2e_axe_release"}),
     ("tests_e2e/e2e_mrm_layout.py", {"e2e_mrm_layout"}),
     ("mzlab/web/affianca.js", {"e2e_affianca", "e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_a11y_dati"}), ("tests_e2e/e2e_affianca.py", {"e2e_affianca"}),
     ("mzlab/web/layout.js", {"e2e_righe", "e2e_pannelli", "e2e_pannelli2", "e2e_blocco2", "e2e16", "e2e20", "e2e_hr_dda"}), ("tests_e2e/e2e_righe.py", {"e2e_righe"}),
@@ -440,9 +465,10 @@ def main() -> None:
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
     noti = noti_rossi()
+    extra = noti_verdi(results, noti)
     results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
-               for n, st, dt, notes in results]
+               for n, st, dt, notes in results] + extra
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]

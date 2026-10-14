@@ -612,7 +612,7 @@ function ctl(p) {
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       corrWidget(p, { files: f.filter(x => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) +
       (p.bg === "w" ? `<label class="muted">${I18N.t("ctl.range.from")} <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> ${I18N.t("ctl.range.to")} <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
-      (p.level === 2 ? `<select data-o="prec" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
+      (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
   }
   if (p.type === "spec" && c.firstElementChild) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
@@ -830,7 +830,7 @@ function openXic(panel, pre = {}) {
   addRow(first); addRow();
   addB.onclick = () => { if (rows.length < XIC_MAXROWS) addRow().inp.focus(); };
   const ff = scanFiles(tabFiles(panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab));
-  fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map(f => `<option value="${f.k}">${EH(f.label)}</option>`).join("");
+  fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map(f => h`<option value="${f.k}">${f.label}</option>`).join("");
   Q("#xic-no").onclick = () => d.close();
   Q("#xic-go").onclick = async () => {
     await Promise.all(rows.map(r => r.pending));

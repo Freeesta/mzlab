@@ -39,13 +39,13 @@
     try { return JSON.parse(typeof b === "string" ? b : new TextDecoder().decode(b)); } catch (_) { return { format: "?" }; }
   }
 
-  /** the .mzidx files in OPFS (mzlab/idx/), by name */
+  /** the .mzidx files in OPFS (mzlab/idx/), by name (not the `.cen.mzidx` of mzFinder, a second index of the same sample) */
   async function listIdx() {
     try {
       let d = await navigator.storage.getDirectory();
       for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p);
       const out = [];
-      for await (const [name, h] of /** @type {any} */ (d).entries()) if (h.kind === "file" && name.endsWith(".mzidx")) out.push(name);
+      for await (const [name, h] of /** @type {any} */ (d).entries()) if (h.kind === "file" && name.endsWith(".mzidx") && !name.endsWith(".cen.mzidx")) out.push(name);
       return out.sort();
     } catch (_) { return []; }
   }
