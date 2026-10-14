@@ -4,7 +4,6 @@
 // [file, number shown in the menu, title, part]. The order is the study path: each chapter uses only what comes before it.
 // The "Pratica" pages (pratica*.html) are the exercises and games; they use the same layout.
 const CHAPTERS = [
-  ["00-uso.html", "A", "Come si usa {APP}", "Guida"],
   ["index.html", "0", "Introduzione e mappa del percorso", "Guida"],
   ["01-tp.html", "1", "Prodotti di trasformazione", "I. Il problema"],
   ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂", "I. Il problema"],

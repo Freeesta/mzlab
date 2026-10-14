@@ -7,7 +7,7 @@
 
   function getChaptersList() {
     const raw = typeof CHAPTERS !== "undefined" ? CHAPTERS : [];
-    return raw.filter(c => !c[0].startsWith("pratica") && c[0] !== "00-uso.html");
+    return raw.filter(c => !c[0].startsWith("pratica"));
   }
 
   function getCurrentChapter() {
