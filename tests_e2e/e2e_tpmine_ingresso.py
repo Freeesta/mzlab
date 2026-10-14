@@ -38,7 +38,7 @@ names = [Path(f).name for f in mzml]
 PARENT = "C21H32N2O2"
 
 PORT = lib.free_port()
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []; reqs = []
 # SHA-256 of every .mzidx of OPFS, by name ({} when there is none)
 SHAS = """async () => { const out = {}; try { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx');

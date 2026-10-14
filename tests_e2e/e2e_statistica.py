@@ -97,9 +97,10 @@ try:
             assert len(set(cols)) == len(cols) >= 3, cols
         step("time gradient with a legend", gradient)
         def chart_legend():
-            pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});redrawAll()})()"); ready(pg); pg.wait_for_timeout(800)
-            assert pg.evaluate("E.panels.some(p=>p.leg&&p.leg.querySelector('.cmp-grad'))"), "the legend of a chart with the files of a time series carries the gradient bar"
-        step("chart legend carries the gradient bar", chart_legend)
+            pg.evaluate("(()=>{E.files.forEach(f=>{f.vis=true});redrawAll()})()"); ready(pg)
+            attendi(pg, "E.panels.some(p=>p.leg&&p.leg.querySelector('.tg'))")
+            assert pg.evaluate("!E.panels.some(p=>p.leg&&p.leg.querySelector('.cmp-grad'))"), "the legend of the charts is a column of names, without the gradient bar"
+        step("chart legend is a column of names, no gradient bar", chart_legend)
         def lr_profile():
             assert sections(pg) == ["meta", "profile"], sections(pg)           # low resolution: only the metadata and the profile
             assert pg.locator("#prof-istd").count() == 0, "no normalization in low resolution"
@@ -139,7 +140,7 @@ try:
             assert pg.evaluate("PROFILO.result.rows.find(r=>r.file==='HR_Blank_1.mzML').value") is None, "the blank has no peak of the ion"
         step("HR: profile of an ion divided by the internal standard of the same file", hr_profile)
         def hr_table():
-            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca", "kmd"], sections(pg)
+            assert sections(pg) == ["meta", "profile", "features", "blank", "reference", "pca", "kmd", "pfas"], sections(pg)
             pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0\nabc; 1"); pg.click("#feat-go")
             assert "1" in pg.inner_text("#feat-msg") and pg.evaluate("TABELLA.table") is None, "an invalid line is refused with its number"
             pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0"); pg.click("#feat-go")

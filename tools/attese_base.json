@@ -35,6 +35,7 @@
  "tests_e2e/e2e_avvio.py": 2,
  "tests_e2e/e2e_avvio_lingua.py": 2,
  "tests_e2e/e2e_axe_grafici.py": 6,
+ "tests_e2e/e2e_axe_release.py": 7,
  "tests_e2e/e2e_banco_barra.py": 19,
  "tests_e2e/e2e_banco_celle.py": 18,
  "tests_e2e/e2e_banco_info.py": 9,

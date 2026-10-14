@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -39,6 +40,7 @@ def _digests(out: Path) -> dict[str, str]:
     return {k: hashlib.sha256(p.read_bytes()).hexdigest() for k, p in _files(out).items()}
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="the golden answers are recorded on Linux: the last bit of libm/zlib differs on Windows and macOS, so the SHA-256 of the files does too")
 def test_golden_keys_found(tmp_path):
     for test, p in _files(tmp_path).items():
         st = json.loads(gzip.decompress((GOLD / f"{test}.json.gz").read_bytes()))

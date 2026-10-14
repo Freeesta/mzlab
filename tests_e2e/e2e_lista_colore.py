@@ -25,7 +25,7 @@ try:
         step("double click on the colour square opens the picker and sets the colour", colour)
         def margin():
             for w, h in ((1400, 900), (700, 480)):
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
+                pg.set_viewport_size({"width": w, "height": h}); drawer(pg)
                 pg.evaluate("window.__inp = null")
                 pg.locator("#flst .fl > i").last.scroll_into_view_if_needed(); pg.locator("#flst .fl > i").last.dblclick()
                 r = pg.evaluate("(() => { const b = window.__inp.getBoundingClientRect(); return [b.left, b.top, innerWidth - b.left - 280, innerHeight - b.top - 340]; })()")
@@ -39,7 +39,7 @@ try:
             assert "Un punto per picco" not in pg.inner_text("#flst") and "One point per peak" not in pg.inner_text("#flst")
         step("blank and standard files carry blk / std with the full word as tooltip", tags)
         def rename():
-            pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
+            drawer(pg); pg.dblclick("#flst .fl .nm"); pg.wait_for_timeout(400)
             t = pg.inner_text("body"); assert "it is only a label" not in t and "è solo un'etichetta" not in t
             pg.keyboard.press("Escape")
         step("the rename prompt has no «only a label» note", rename)

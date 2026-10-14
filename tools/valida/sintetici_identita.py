@@ -416,7 +416,7 @@ def scrivi_verita(out: Path, c: Costruttore, seme: int, profilo: str) -> None:
          "meta": {"seme": seme, "profilo": profilo, "colonne": COLONNE, "coincidenze": c.meta_coinc, "t_saturazione": c.P["t_sat"]},
          "parent": {"name": padre.id, "ion": padre.ion, "mz": round(padre.mz, 6), "rt_obs": round(padre.rt, 4), "notes": padre.note, "k_dec": padre.k_dec},
          "tps": [r for r in rows if r["ruolo"] in ("tp1", "tp2", "tp3", "isomero")], "ioni": rows, "file": [{"nome": f"SIN_{s}", "tipo": k, "time": t} for s, k, t in c.file]}
-    (out / "verita.json").write_text(json.dumps(d, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    (out / "verita.json").write_bytes((json.dumps(d, indent=1, ensure_ascii=False) + "\n").encode("utf-8"))      # bytes: no CRLF on Windows
 
 
 def genera(seme: int, profilo: str, out) -> Path:

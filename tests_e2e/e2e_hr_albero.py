@@ -19,7 +19,7 @@ if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" 
 import dati_sintetici_msn as ds  # noqa: E402
 FILE = Path(tempfile.mkdtemp(prefix="e2e_albero_")) / "MSN_infusion.mzML"
 ds.msn_infusion(FILE, np.random.default_rng(5))
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 JSON = """async u => { const r = await fetch(u); return { status: r.status, eng: r.headers.get("X-Engine"), j: await r.json() }; }"""
 def json_close(a, b, path=""):
