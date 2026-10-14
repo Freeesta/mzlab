@@ -32,9 +32,9 @@ const AZIONI = (() => {
   /** @param {Azione} a @param {Contesto} c */
   const pronta = (a, c) => !a.disponibile || a.disponibile(c);
   // the actions of the view in the order of the groups (inside a group: `ordine`, then the order of registration)
-  /** @param {Contesto} c @param {"menu" | "barra"} [dove] */
+  /** @param {Contesto} c @param {"menu" | "barra" | "tutte"} [dove] */
   function elenco(c, dove = "menu") {
-    const l = voci.filter(a => mostra(a, c) && (dove === "menu" ? a.menu !== false : a.barra === true));
+    const l = voci.filter(a => mostra(a, c) && (dove === "tutte" || (dove === "menu" ? a.menu !== false : a.barra === true)));
     return l.sort((a, b) => GRUPPI.indexOf(a.gruppo) - GRUPPI.indexOf(b.gruppo) || (a.ordine || 0) - (b.ordine || 0) || voci.indexOf(a) - voci.indexOf(b));
   }
   // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups;
@@ -68,7 +68,7 @@ const AZIONI = (() => {
   // the double click on a graph: the first available action that claims it (`doppio(c)` true), by `doppioOrd` (default 5); false when none does
   /** @param {Contesto} c */
   function doppio(c) {
-    const l = elenco(c).filter(a => a.doppio && pronta(a, c) && a.doppio(c)).sort((a, b) => (a.doppioOrd ?? 5) - (b.doppioOrd ?? 5));
+    const l = elenco(c, "tutte").filter(a => a.doppio && pronta(a, c) && a.doppio(c)).sort((a, b) => (a.doppioOrd ?? 5) - (b.doppioOrd ?? 5));
     if (!l.length) return false;
     esegui(l[0].id, c);
     return true;
