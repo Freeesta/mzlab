@@ -14,7 +14,9 @@ use crate::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
     VoceLettore, VoceScansione, CONTRATTO,
 };
+use crate::metodo::{self, sha1_hex};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::mzmlwrite::Header;
 
 const MAGIC: [u8; 18] = [
     0x01, 0xA1, b'F', 0, b'i', 0, b'n', 0, b'n', 0, b'i', 0, b'g', 0, b'a', 0, b'n', 0,
@@ -80,6 +82,8 @@ pub struct LettoreRaw {
     nome: String,
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
+    /// SHA-1 of the file, read the first time the mzML header is asked for (`Some(None)`: it could not be read).
+    sha1: Option<Option<String>>,
 }
 
 fn raw_error(e: impl std::fmt::Display) -> Error {
@@ -126,6 +130,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         nome,
         campioni,
         indice,
+        sha1: None,
     }))
 }
 
@@ -246,6 +251,11 @@ impl Lettore for LettoreRaw {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
     }
+
+    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+        self.one(c)?;
+        Ok(Some(testata(self)))
+    }
 }
 
 fn median(mut v: Vec<f32>) -> f32 {
@@ -343,4 +353,45 @@ fn header_fields(raw: &RawFileReader, m: &ScanMetadata) -> Vec<Campo> {
             .map(|(k, v)| field(&k, v, None, None)),
     );
     out
+}
+
+/// The header of the mzML: the instrument, the run terms the Thermo converter writes (`opentfraw.*`), the start of the acquisition, the SHA-1 of the
+/// file and the `metodo/1` document, so that the download of a `.raw` loses none of them.
+fn testata(l: &mut LettoreRaw) -> Header {
+    if l.sha1.is_none() {
+        let len = l.src.len;
+        l.sha1 = Some(sha1_hex(&mut l.src.inner, len).ok());
+    }
+    let sha1 = l.sha1.clone().flatten();
+    let t = opentfraw::mzml::run_terms(&l.raw);
+    let run = l
+        .campioni
+        .first()
+        .map(|c| c.nome.clone())
+        .unwrap_or_default();
+    let document = crate::raw::metodo_sha1(&l.raw, &mut l.src, &l.nome, sha1.clone());
+    let acquired = t
+        .start_timestamp
+        .or_else(|| crate::metodo_raw::campi::clock(l.raw.header.audit_start.time));
+    let mut run_params: Vec<(String, String)> = t.extra;
+    run_params.push((metodo::USERPARAM.to_string(), document));
+    Header {
+        run,
+        sources: vec![l.nome.clone()],
+        source_sha1: sha1.into_iter().collect(),
+        source_cv: vec![
+            ("MS:1000563".into(), "Thermo RAW format".into()),
+            ("MS:1000768".into(), "Thermo nativeID format".into()),
+        ],
+        instrument: Some(t.instrument),
+        components: t
+            .analyzers
+            .into_iter()
+            .map(|(a, n)| ("analyzer".to_string(), a.to_string(), n.to_string()))
+            .collect(),
+        acquired,
+        run_params,
+        software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+        ..Header::default()
+    }
 }
