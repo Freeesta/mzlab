@@ -394,3 +394,16 @@ fn ms2_files_give_the_fragments_and_the_transitions() {
     let other = d.entries.iter().find(|e| e.steps > 0).expect("a product");
     assert_eq!(get(other.id)["ms2"]["scans"], 0);
 }
+
+#[test]
+fn mrm_files_are_listed_by_the_plan_and_keep_it_in_rust() {
+    let (files, idxs) = series();
+    let with = files.replace(
+        ']',
+        r#",{"name": "lr_MRM.mzML", "time": null, "type": "standard", "kind": "mrm"}]"#,
+    );
+    let plan: Value = serde_json::from_str(&lr::plan::plan_json(&with, PARENT).unwrap()).unwrap();
+    assert_eq!(plan["rust"], true);
+    assert_eq!(plan["mrm"][0], "lr_MRM.mzML");
+    assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
+}
