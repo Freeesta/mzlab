@@ -33,10 +33,24 @@
     if (isEditing) exitEditor(); else await enterEditor();
   }
 
+  function getSecurityToken(promptIfMissing = false) {
+    const sp = new URLSearchParams(location.search);
+    let t = sp.get("token") || sessionStorage.getItem("mzlab_teoria_token");
+    if (!t && promptIfMissing) {
+      t = prompt("Inserisci il token di sicurezza mostrato nel terminale da tools/server_teoria.py:");
+      if (t) t = t.trim();
+    }
+    if (t) sessionStorage.setItem("mzlab_teoria_token", t);
+    return t || "";
+  }
+
   async function enterEditor() {
     showToast("Apertura editor...", "info", 1500);
     try {
-      const res = await fetch(`${SERVER_URL}/carica?file=${encodeURIComponent(here)}`);
+      const token = getSecurityToken(false);
+      const res = await fetch(`${SERVER_URL}/carica?file=${encodeURIComponent(here)}${token ? `&token=${encodeURIComponent(token)}` : ""}`, {
+        headers: token ? { "X-Teoria-Token": token } : {}
+      });
       if (res.ok) { const d = await res.json(); if (d.ok && d.html) originalDocHtml = d.html; }
     } catch (_) {}
     if (!originalDocHtml) originalDocHtml = buildFullDocumentHtml();
@@ -230,20 +244,32 @@
 
   async function salvaCapitolo() {
     const btn = document.getElementById("tedit-btn-save");
+    const token = getSecurityToken(true);
+    if (!token) {
+      showToast("Salvataggio annullato: token di sicurezza mancante", "err", 4000);
+      return;
+    }
     if (btn) { btn.disabled = true; btn.textContent = "⏳ Salvataggio..."; }
     const finalHtml = buildUpdatedDocumentHtml();
     try {
       showToast("Invio e controllo...", "info", 8000);
       const res = await fetch(`${SERVER_URL}/salva`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: here, html: finalHtml })
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Teoria-Token": token
+        },
+        body: JSON.stringify({ file: here, html: finalHtml, token: token })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         showToast("✅ Salvato e pubblicato su GitHub!", "ok", 4000);
         setTimeout(() => location.reload(), 1500);
       } else {
-        const msg = data.error || data.warning || "Errore sconosciuto";
+        if (res.status === 403) {
+          sessionStorage.removeItem("mzlab_teoria_token");
+        }
+        const msg = data.error || data.warning || `Errore HTTP ${res.status}`;
         showToast("❌ Errore:\n" + msg, "err", 8000);
         showFallbackModal(finalHtml, msg);
       }
