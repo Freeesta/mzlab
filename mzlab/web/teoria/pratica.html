@@ -4,18 +4,18 @@
 <body>
 <div class="wrap"><nav id="side"></nav><main>
 <div class="kicker">Pratica</div>
-<h1>Allenarsi per l'orale</h1>
-<p class="lead">Esercizi brevi e giochi su spettri e strumenti veri. Correggono subito e spiegano, tornano sugli errori dopo qualche giorno e si adattano al vostro livello. Servono a una cosa: arrivare all'orale capaci di risolvere da soli uno spettro EI e di spiegare GC, LC e spettrometria di massa.</p>
+<h1>Esercizi e autoverifica</h1>
+<p class="lead">Esercizi interattivi su spettri e strumentazione reale. Forniscono feedback immediato con spiegazioni dettagliate, ripropongono gli errori a intervalli ottimali e si adattano al livello di preparazione: l'obiettivo è acquisire piena autonomia nell'interpretazione di uno spettro EI e nella comprensione dei principi di GC, LC e spettrometria di massa.</p>
 
 <div class="box key"><b>Perché così</b>
-<p>Rileggere gli appunti dà l'impressione di sapere; <b>richiamare</b> le cose a memoria e ricevere subito una correzione fa ricordare davvero (pratica di recupero), soprattutto se si ripete a distanza di giorni (ripetizione distanziata) e mescolando argomenti diversi (pratica alternata). I problemi partono guidati e diventano via via più autonomi, fino alla «Modalità orale» senza aiuti. Qui non ci sono classifiche: i progressi restano solo in questo browser.</p></div>
+<p>Rileggere gli appunti dà l'impressione di sapere; <b>richiamare</b> le cose a memoria e ricevere subito una correzione fa ricordare davvero (pratica di recupero), soprattutto se si ripete a distanza di giorni (ripetizione distanziata) e mescolando argomenti diversi (pratica alternata). I problemi partono guidati e diventano via via più autonomi, fino alla modalità autonoma senza aiuti. Qui non ci sono classifiche: i progressi restano solo in questo browser.</p></div>
 
 <div id="ready" class="ready"></div>
 
 <h2>I giochi</h2>
 <div class="gcards">
-<a href="pratica-ei.html"><b>Dallo spettro alla struttura</b><span>Spettri EI veri: ione molecolare, formula, frammenti, struttura disegnata. Dal livello guidato alla Modalità orale.</span><i>capitoli 13, 15, 16</i></a>
-<a href="pratica-orale.html"><b>Domande dell'orale</b><span>Estrai tre domande come all'esame (GC, LC, ionizzazione, analizzatori, bassa e alta risoluzione, dati) e confronta la tua risposta con quella modello.</span><i>tutti i capitoli</i></a>
+<a href="pratica-ei.html"><b>Dallo spettro alla struttura</b><span>Spettri EI veri: ione molecolare, formula, frammenti, struttura disegnata. Dal livello guidato alla risoluzione autonoma.</span><i>capitoli 13, 15, 16</i></a>
+<a href="pratica-orale.html"><b>Domande di ripasso</b><span>Estrai domande teoriche su GC, LC, ionizzazione, analizzatori, risoluzione e dati, e confronta la tua risposta con quella modello.</span><i>tutti i capitoli</i></a>
 <a href="pratica-perdite.html"><b>Che cosa ha perso?</b><span>Due picchi, una perdita neutra: a risoluzione unitaria e ad alta risoluzione.</span><i>capitoli 14, 15</i></a>
 <a href="pratica-isotopi.html"><b>Indovina gli elementi</b><span>Un gruppo isotopico: quanti Cl, Br, S? Quanti carboni?</span><i>capitolo 13</i></a>
 <a href="pratica-formula.html"><b>Formula esatta</b><span>Massa misurata e isotopi: quale formula? Errori in ppm e candidati.</span><i>capitoli 11, 13</i></a>
@@ -28,12 +28,12 @@
 <p class="note">Il livello cresce quando risolvete problemi della difficoltà giusta e cala con gli errori; la difficoltà dei problemi si adatta di conseguenza. È un'indicazione per voi, non un voto.</p>
 <div id="skills" class="skills"></div>
 
-<h2>Sfida di classe</h2>
-<p>Un codice di cinque lettere fa giocare a tutti gli stessi cinque problemi EI, senza bisogno di internet né di account: il docente lo scrive alla lavagna, ognuno gioca e alla fine confronta il risultato.</p>
+<h2>Sfida condivisa</h2>
+<p>Un codice di cinque caratteri permette di condividere gli stessi cinque problemi EI tra più persone, senza bisogno di internet né di account, per confrontare passaggi e soluzioni.</p>
 <div class="gbar"><label>Codice <input id="code" size="7" class="mono" placeholder="ABCDE"></label><button id="gocode">Gioca la sfida</button><button id="newcode">Crea un codice</button><span id="codemsg"></span></div>
 
 <h2>I tuoi dati</h2>
-<p>I progressi stanno nella memoria di questo browser (cancellando i dati del sito si perdono). Potete copiarli per mandarli al docente, se ve lo chiede, o per spostarli.</p>
+<p>I progressi stanno nella memoria di questo browser (cancellando i dati del sito si perdono). Potete esportarli per conservarli o trasferirli su un altro dispositivo.</p>
 <div class="gbar"><button id="copy">Copia i miei progressi</button><button id="reset">Azzera</button><span id="datamsg"></span></div>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script><script src="pratica/ei-dati.js"></script><script src="pratica/motore.js"></script>
@@ -50,8 +50,8 @@
     }).join("");
     const r = PAL.oralReady(FAMS);
     $("#ready").className = "ready" + (r.ready ? " ok" : "");
-    $("#ready").innerHTML = r.ready ? `<b>Pronto per l'orale (spettri EI).</b> Le ultime tre prove in Modalità orale sono buone e su famiglie diverse, e avete risolto almeno un problema di ogni famiglia. Continuate a ripassare le domande dell'orale.`
-      : `<b>Verso l'orale.</b> ${r.last3 ? "Le ultime tre prove in Modalità orale vanno bene." : "Obiettivo: tre problemi di fila in <a href=\"pratica-ei.html?orale=1\">Modalità orale</a>, su famiglie diverse, con almeno 70 punti."} ` +
+    $("#ready").innerHTML = r.ready ? `<b>Livello avanzato raggiunto (spettri EI).</b> Le ultime tre prove in modalità autonoma sono ottime e su famiglie diverse, e hai risolto almeno un problema per ogni famiglia.`
+      : `<b>Percorso di completamento.</b> ${r.last3 ? "Le ultime tre prove in modalità autonoma vanno bene." : "Obiettivo: tre problemi di fila in <a href=\"pratica-ei.html?orale=1\">modalità autonoma</a>, su famiglie diverse, con almeno 70 punti."} ` +
         (r.missing.length ? `Famiglie di spettri ancora da risolvere almeno una volta: ${r.missing.map(f => `<a href="pratica-ei.html?fam=${f}">${FAMNAME[f] || f}</a>`).join(", ")}.` : "Avete risolto almeno un problema di ogni famiglia.");
   }
   $("#copy").onclick = async () => { const t = PAL.exportText(); try { await navigator.clipboard.writeText(t); $("#datamsg").textContent = "Copiati negli appunti."; } catch (_) { prompt("Copia questo testo:", t); } };

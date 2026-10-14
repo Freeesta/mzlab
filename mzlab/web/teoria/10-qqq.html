@@ -61,7 +61,7 @@
 <div class="sim" id="sim-modes"><h4>Le cinque modalità del triplo quadrupolo</h4>
 <p class="note">Miscela fittizia di un "parent X" con un gruppo isopropile (perdita di 42) e un nucleo che dà il frammento 152, due suoi TP e un interferente. I pallini sono ioni: quelli che non soddisfano il filtro deviano verso le barre. In basso lo spettro (o il cromatogramma) che si costruisce.</p></div>
 <div class="box key"><b>Concetto chiave</b>
-<p>Precursor ion e neutral loss scan sono strumenti da <em>suspect screening</em>: se il parent perde una molecola caratteristica, i TP che conservano quella parte della molecola la perdono anch'essi. Nell'esperienza non sono previsti, ma il ragionamento è lo stesso che farete confrontando gli MS2 dei TP con quello del parent (capitolo 18).</p></div>
+<p>Precursor ion e neutral loss scan sono potenti strumenti di <em>suspect screening</em>: se la molecola madre perde un frammento o una molecola neutra caratteristica, tutti i derivati che conservano quella porzione mostrano lo stesso comportamento, consentendo un confronto sistematico con gli spettri MS2 (capitolo 18).</p></div>
 
 <h2>MRM in dettaglio</h2>
 <h3>Perché è così sensibile</h3>
@@ -84,8 +84,8 @@
 <li><b>Saturazione</b>: oltre qualche milione di cps gli impulsi si sovrappongono (tempo morto) e il segnale smette di crescere linearmente; i picchi intensi si appiattiscono in cima. Uno standard troppo concentrato in MRM può essere fuori scala anche se in ESI sarebbe ancora lineare.</li>
 <li><b>Invecchiamento</b>: il guadagno del moltiplicatore cala con l'uso e la tensione (CEM) va aumentata periodicamente: le intensità assolute non sono confrontabili tra giorni diversi senza standard.</li>
 </ul>
-<div class="box lab"><b>Lo strumento del laboratorio: 3200 QTRAP</b>
-<p>È un triplo quadrupolo in cui Q3 può lavorare anche come trappola ionica lineare: oltre alle cinque modalità classiche offre scansioni "enhanced" (per esempio EPI, spettro dei prodotti accumulati in trappola, più sensibile del product ion scan classico). Nell'esperienza userete Q1 MS (full scan), product ion scan e MRM. I metodi (file <code>.dam</code>) del laboratorio sono organizzati proprio così: <code>FullMass</code>, <code>MS2_…</code> per i precursori di interesse, <code>MRM_…</code> per la quantificazione.</p></div>
+<div class="box key"><b>Configurazioni ibride e metodi strumentali</b>
+<p>In strumenti triplo quadrupolo avanzati o ibridi (come i QTRAP), Q3 può funzionare sia da quadrupolo standard sia da trappola ionica lineare per generare spettri ad alta sensibilità (Enhanced Product Ion, EPI). Nei workflow analitici tipici le acquisizioni si organizzano combinando metodi complementari: <code>Full scan</code> per lo screening generale degli ioni, <code>Product ion scan (MS2)</code> mirato per la delucidazione strutturale dei precursori d'interesse, e <code>MRM</code> per la quantificazione sensibile e selettiva.</p></div>
 
 <h2>Verifica</h2>
 <details class="q"><summary>Perché per uno ione a m/z 600 servono CE più alte che per uno a m/z 200?</summary>

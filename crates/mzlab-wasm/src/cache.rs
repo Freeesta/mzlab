@@ -18,6 +18,22 @@ impl Engine {
         out
     }
 
+    /// The bytes of the pyramid of map tiles of a level of the file at `slot` (built if need be) to keep in OPFS; empty = none (no index, no peaks).
+    pub fn tiles_export(&mut self, slot: u32, level: u8) -> Result<Vec<u8>, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else { return Ok(Vec::new()) };
+        r.tiles_export(level).map_err(|e| error_json(&e))
+    }
+
+    /// True when the pyramid of the level is in memory.
+    pub fn tiles_held(&self, slot: u32, level: u8) -> bool {
+        self.idx.get(&slot).is_some_and(|r| r.tiles_held(level))
+    }
+
+    /// Takes the bytes of `tiles_export` as the pyramid of the level; false when they are damaged or from another index (it is then built from the index).
+    pub fn tiles_import(&mut self, slot: u32, level: u8, bytes: &[u8]) -> bool {
+        self.idx.get_mut(&slot).is_some_and(|r| r.tiles_import(level, bytes))
+    }
+
     /// Budget of the engine in MB (NaN or 0 = 192; the page lowers it after an out-of-memory death): 5/6 is the cache (one LRU), 1/6 the work.
     pub fn set_budget_mb(&mut self, mb: f64) {
         let mb = if mb.is_finite() && mb > 0.0 { mb } else { BUDGET_DEFAULT_MB };

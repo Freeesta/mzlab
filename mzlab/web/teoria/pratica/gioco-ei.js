@@ -365,9 +365,9 @@ function oral(g, it) {
   const wk = document.createElement("div"); wk.className = "wk"; g.appendChild(wk);
   const sec = [["o1", "1. Composizione elementare (passi 1.x): isotopi, carboni, eteroatomi"], ["o2", "2. Ione molecolare (passi 2.x): M, regola dell'azoto, ioni a elettroni dispari, perdite"],
     ["o3", "3. Aspetto generale e famiglia (passi 3.x): serie di ioni, ioni caratteristici"], ["o4", "4. Meccanismi: spiega due o tre ioni importanti"], ["o5", "5. Struttura proposta e verifica (passi 4.x): che cosa la conferma, che cosa resta incerto"]];
-  wk.innerHTML = `<h3>Modalità orale</h3><p>Scrivi il ragionamento come lo diresti all'esame, sempre con i numeri dei passi (capitolo 15). Nessun aiuto: la correzione arriva quando consegni. <span id="o-clock" class="pill"></span></p>
+  wk.innerHTML = `<h3>Modalità autonoma</h3><p>Scrivi il ragionamento completo e metodico, seguendo la sequenza dei passi (capitolo 15). Nessun aiuto: la soluzione di confronto arriva quando consegni. <span id="o-clock" class="pill"></span></p>
     ${sec.map(([id, t]) => `<div class="st"><h4>${t}</h4><textarea id="${id}"></textarea></div>`).join("")}
-    <div class="st"><h4>Formula molecolare e struttura</h4><p>All'orale la struttura si disegna a mano sul foglio: fate lo stesso (anche sul foglio stampato) e poi, per la correzione automatica, ridisegnatela nell'editor o scrivetene lo SMILES.</p>
+    <div class="st"><h4>Formula molecolare e struttura</h4><p>La struttura si può prima tracciare a mano (ad esempio sul foglio stampato) e poi, per la verifica automatica, ridisegnarla nell'editor o inserirne lo SMILES.</p>
     <div class="row"><label>Formula <input id="o-f" class="mono" size="14" spellcheck="false"></label><button id="o-ked" class="noprint">Apri l'editor di strutture</button><label>oppure SMILES <input id="k-smi" class="mono" size="22" spellcheck="false"></label></div>
     <div id="o-kbox"></div><div class="printonly" style="height:9cm;border:1px dashed #999;border-radius:6px;margin-top:8px"><small>Struttura proposta (a mano)</small></div></div>
     <div class="row noprint"><button class="pri" id="o-done">Consegna</button><button id="o-print">Stampa il foglio</button></div><div id="end"></div>`;
@@ -376,7 +376,7 @@ function oral(g, it) {
     $("#o-kbox").innerHTML = `<iframe class="kframe" title="Editor di strutture" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe>`;
     startKetcher($("#o-kbox iframe")).catch(() => { /* SMILES field remains */ });
   };
-  const t0 = Date.now(), tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); const el = $("#o-clock"); if (!el) return clearInterval(tick); el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} (all'orale 10-15 minuti)`; }, 1000);
+  const t0 = Date.now(), tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); const el = $("#o-clock"); if (!el) return clearInterval(tick); el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} (tempo indicativo 10-15 min)`; }, 1000);
   $("#o-print").onclick = () => print();
   $("#o-done").onclick = async () => {
     clearInterval(tick);
