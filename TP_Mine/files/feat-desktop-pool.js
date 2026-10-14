@@ -88,6 +88,8 @@ export function createDesktopPool(opts = {}) {
     async importBuild(files, pol, maxFeatures) { return (await call("feat/import", { kind: "build", files, pol, max_features: maxFeatures })).text(); },
     /** `check_structure` of many annotations at once: the list of the answers (`{ok, ppm, adduct}`) @param {{formula: string, precursor: number | null, adduct: string, pol: number, tol: number}[]} calls */
     async checkStructures(calls) { return json("feat/import", { kind: "check_structure", calls }); },
+    /** `grafo/1` of a SMILES (formula, groups, cleavages): the text of the native route `feat/grafo` @param {string} smiles */
+    async analyse(smiles) { return (await call("feat/grafo", { kind: "analyse", smiles })).text(); },
     /** an operation of campioni/2 (proponi, valida, per_tp, da_legacy, canonico, digest) of the native engine: the text it answers @param {string} op @param {string} input */
     async campioni(op, input) { return (await call("finder/campioni", { cop: op, input })).text(); },
     cancel() {},
