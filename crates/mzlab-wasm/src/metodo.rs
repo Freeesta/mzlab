@@ -91,7 +91,13 @@ impl Engine {
 
     /// `metodo/1` of an Agilent method folder `*.m` outside any run (`mzlab-core::agilent::quant`): `names` = the paths inside the folder, one per line,
     /// `lens` = the length of each file, `data` = the bytes of all of them one after the other.
-    pub fn agilent_m_metodo(&mut self, name: &str, names: &str, lens: &[u32], data: &[u8]) -> String {
+    pub fn agilent_m_metodo(
+        &mut self,
+        name: &str,
+        names: &str,
+        lens: &[u32],
+        data: &[u8],
+    ) -> String {
         let mut files = Vec::new();
         let mut at = 0usize;
         for (n, len) in names.split('\n').zip(lens) {
