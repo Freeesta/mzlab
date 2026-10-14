@@ -9,13 +9,13 @@
  * @typedef {{ id: string, gruppo: string, viste: string[], icona?: string, menu?: boolean, barra?: boolean,
  *   visibile?: (c: Contesto) => boolean, disponibile?: (c: Contesto) => boolean, attiva?: (c: Contesto) => boolean,
  *   nome?: (c: Contesto) => string, aria?: (c: Contesto) => string, voce?: (c: Contesto) => string, tip?: (c: Contesto) => string, svg?: (c: Contesto) => string,
- *   esegui?: (c: Contesto) => any, ordine?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
+ *   esegui?: (c: Contesto) => any, ordine?: number, doppio?: (c: Contesto) => boolean, doppioOrd?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
  * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, icon?: string, esegui: () => any }} Riga
  * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any }} VoceAzione
  */
 const AZIONI = (() => {
-  // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help)
-  const GRUPPI = ["value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "learn", "copy", "help"];
+  // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
+  const GRUPPI = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "learn", "copy", "help", "ann"];
   /** @type {Azione[]} */
   const voci = [];
   /** @param {Azione} a */
@@ -65,5 +65,13 @@ const AZIONI = (() => {
     const a = voce(id);
     if (a && a.esegui && mostra(a, c) && pronta(a, c)) return a.esegui(c);
   }
-  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, pronta };
+  // the double click on a graph: the first available action that claims it (`doppio(c)` true), by `doppioOrd` (default 5); false when none does
+  /** @param {Contesto} c */
+  function doppio(c) {
+    const l = elenco(c).filter(a => a.doppio && pronta(a, c) && a.doppio(c)).sort((a, b) => (a.doppioOrd ?? 5) - (b.doppioOrd ?? 5));
+    if (!l.length) return false;
+    esegui(l[0].id, c);
+    return true;
+  }
+  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, pronta, doppio };
 })();
