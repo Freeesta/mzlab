@@ -2,7 +2,7 @@
 "use strict";
 // MSn infusion (kind "infusion"): the precursor tree of the file (/api/msn_albero, built in Rust from the index), the nodes as scan filters of the cells
 // of the bench (filt = "msn:<id>", with mtol/mce of the tree options added to every request by qs()), the Mean | Sum switch (modo=somma) and the
-// right-click entries of a peak. Classic script, loaded before banco.js; the tree panel is in infusione-albero.js.
+// right-click entries of a peak (infusione-menu.js). Classic script, loaded before banco.js; the tree panel is in infusione-albero.js.
 const INF = (() => {
   /** Options of the tree: tolerance of the precursors ("nom" | "0.01" | "10ppm"), energies separate or merged, mean or sum, deepest level shown (0 = all). */
   const O = { tol: "nom", ce: true, sum: false, lv: 0 };
@@ -80,37 +80,6 @@ const INF = (() => {
   }
   const state = () => (any() ? { ...O } : undefined);
   const restore = (/** @type {any} */ s) => { if (s && typeof s === "object") Object.assign(O, { tol: String(s.tol || "nom"), ce: s.ce !== false, sum: !!s.sum, lv: +s.lv || 0 }); };
-  /** The node a cell shows, from the tree already fetched: null when the cell shows the survey or another file. */
-  async function current(/** @type {any} */ p) {
-    const f = E.files[p.k ?? cells(p).specs[0]?.k ?? E.cur];
-    if (!isInf(f) || !p.filt) return { j: null, n: null, f };
-    const j = await tree(f.k);
-    return { j, n: node(j, p.filt), f };
-  }
-  /** Right click on a peak of an infusion spectrum: fragment this ion (the child node with that precursor) and go back to the precursor. */
-  function menuPeak(/** @type {any} */ p, /** @type {number} */ m) {
-    try {
-      const f = E.files[p.k];
-      if (!isInf(f) || p.type !== "spec") return [];
-      const out = [];
-      const tolOf = (/** @type {number} */ x) => (O.tol === "nom" ? 0.5 : O.tol.endsWith("ppm") ? x * parseFloat(O.tol) * 1e-6 : parseFloat(O.tol));
-      out.push({ label: I18N.t("inf.frag"), tip: I18N.t("inf.frag.tip"), fn: async () => {
-        const { j: tj, n } = await current(p), jj = tj || await tree(f.k);
-        const parent = n ? n.id : null;
-        const kid = jj.nodi.filter((/** @type {any} */ x) => x.genitore === parent && Math.abs(x.prec - m) <= tolOf(m)).sort((/** @type {any} */ a, /** @type {any} */ b) => Math.abs(a.prec - m) - Math.abs(b.prec - m))[0];
-        if (!kid) return nearMsg(I18N.t("inf.frag.none"));
-        pick(p, kid.id);
-      } });
-      out.push({ label: I18N.t("inf.up"), tip: I18N.t("inf.up.tip"), fn: async () => {
-        const { j: tj, n } = await current(p);
-        if (!n || !tj) return nearMsg(I18N.t("inf.up.none"));
-        if (n.genitore == null) { const { c, specs } = cells(p); [c, ...specs].filter(Boolean).forEach(q => BANCO.setFilter(q, null, [])); return; }
-        pick(p, n.genitore);
-      } });
-      out.push({ label: I18N.t(O.sum ? "inf.toMean" : "inf.toSum"), tip: I18N.t("inf.sum.tip"), fn: () => setOpt("sum", !O.sum) });
-      return out;
-    } catch (e) { console.info("INF menu", e); return []; }
-  }
-  return { O, isInf, any, tree, rows, groups, qs, node, richest, cells, pick, layout, setOpt, state, restore, current, menuPeak, prec };
+  return { O, isInf, any, tree, rows, groups, qs, node, richest, cells, pick, layout, setOpt, state, restore, prec };
 })();
 window.INF = INF;

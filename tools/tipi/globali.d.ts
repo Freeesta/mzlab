@@ -156,6 +156,7 @@ interface Window {
   ELEM: typeof ELEM;
   FEATURES: typeof FEATURES;
   HR: typeof HR;
+  INF: typeof INF;
   KMD: typeof KMD;
   KMDVIEW: typeof KMDVIEW;
   LIB: typeof LIB;

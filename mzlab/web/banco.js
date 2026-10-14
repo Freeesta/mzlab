@@ -185,7 +185,7 @@ const BANCO = (() => {
         if (!sel.isConnected) return;
         const opt = g => `<option value="${EH(g.key)}"${p.filt === g.key ? " selected" : ""}>${EH(g.label || g.key)} \u00d7${nfmt(g.n)}</option>`;
         if (gs.some(g => g.msn)) {
-          sel.innerHTML = `<option value="">${I18N.t("bn.filt.all")}</option>` + gs.map(opt).join("");
+          sel.innerHTML = h`<option value="">${I18N.t("bn.filt.all")}</option>${raw(gs.map(opt).join(""))}`;
           sel.value = p.filt && gs.some(g => g.key === p.filt) ? p.filt : "";
           sel.onchange = () => setFilter(p, sel.value || null, gs);
           return;

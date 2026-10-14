@@ -5,7 +5,7 @@
 // Mean | Sum switch of the spectrum. A click (or Enter) puts the node on the active cell; the arrows walk the tree. Needs infusione.js.
 (() => {
   const sel = (/** @type {string} */ id, /** @type {string} */ label, /** @type {[string, string][]} */ opts, /** @type {string} */ cur) =>
-    `<label>${EH(label)} <select id="${id}" title="${EH(label)}">${opts.map(([v, l]) => `<option value="${EH(v)}"${v === cur ? " selected" : ""}>${EH(l)}</option>`).join("")}</select></label>`;
+    h`<label>${label} <select id="${id}" title="${label}">${opts.map(([v, l]) => raw(h`<option value="${v}"${raw(v === cur ? " selected" : "")}>${l}</option>`))}</select></label>`;
   const mins = (/** @type {any} */ n) => `${n.rt0.toFixed(2)}–${n.rt1.toFixed(2)}`;
   /** The cell that takes a node: the active one if it can show scans of a file, else the chromatogram of the infusion tab. */
   function target(/** @type {any} */ p) {
@@ -28,17 +28,20 @@
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);
-    if (!f || !INF.isInf(f)) return void (b.innerHTML = `<div class="muted">${I18N.t("inf.none")}</div>`);
+    if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
     const j = await INF.tree(f.k);
     if (tok !== (window.BANCO && BANCO.token())) return;
     const lv = INF.O.lv, rows = INF.rows(j).filter(r => !lv || r.n.livello <= lv), cur = t && t.filt;
     const levels = /** @type {[string, string][]} */ ([["0", I18N.t("inf.lv.all")], ...j.livelli.map((/** @type {number} */ l) => [String(l), "MS" + l])]);
-    b.innerHTML = `<div class="row">${sel("inf-lv", I18N.t("inf.lv"), levels, String(lv))}${sel("inf-tol", I18N.t("inf.tol"), [["nom", I18N.t("inf.tol.nom")], ["0.01", "0.01 Da"], ["10ppm", "10 ppm"]], INF.O.tol)}` +
-      `${sel("inf-ce", I18N.t("inf.ce"), [["1", I18N.t("inf.ce.sep")], ["0", I18N.t("inf.ce.mer")]], INF.O.ce ? "1" : "0")}${sel("inf-sum", I18N.t("inf.avg"), [["0", I18N.t("inf.mean")], ["1", I18N.t("inf.sumL")]], INF.O.sum ? "1" : "0")}</div>` +
-      `<table id="inf-tree" role="tree" aria-label="${EH(I18N.t("inf.tree.aria"))}"><thead><tr><th>${I18N.t("inf.col.prec")}</th><th>MSⁿ</th><th>${I18N.t("inf.col.ce")}</th><th class="num">${I18N.t("inf.col.n")}</th><th>${I18N.t("inf.col.min")}</th></tr></thead><tbody>` +
-      `<tr role="treeitem" aria-level="1" aria-selected="${cur ? "false" : "true"}" tabindex="${cur ? -1 : 0}" data-id=""><td>MS1</td><td>MS1</td><td></td><td class="num">${j.ms1.n}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>` +
-      rows.map(r => `<tr role="treeitem" aria-level="${r.depth + 1}" aria-selected="${cur === "msn:" + r.n.id}" tabindex="${cur === "msn:" + r.n.id ? 0 : -1}" data-id="${EH(r.n.id)}" data-par="${r.n.genitore == null ? "" : EH(r.n.genitore)}"` +
-        ` title="${EH(r.path)}${r.n.salto ? " · " + EH(I18N.t("inf.skip", { n: r.n.salto })) : ""}"><td style="padding-left:${r.depth * 14}px">${EH(INF.prec(r.n))}</td><td>MS${r.n.livello}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td>${mins(r.n)}</td></tr>`).join("") + `</tbody></table>`;
+    const head = ["inf.col.prec", "MSⁿ", "inf.col.ce", "inf.col.n", "inf.col.min"].map((k, i) => raw(h`<th${raw(i === 3 ? ' class="num"' : "")}>${k.startsWith("inf.") ? I18N.t(k) : k}</th>`));
+    const first = h`<tr role="treeitem" aria-level="1" aria-selected="${cur ? "false" : "true"}" tabindex="${cur ? -1 : 0}" data-id=""><td>MS1</td><td>MS1</td><td></td><td class="num">${j.ms1.n}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>`;
+    const line = (/** @type {any} */ r) => {
+      const on = cur === "msn:" + r.n.id, skip = r.n.salto ? " · " + I18N.t("inf.skip", { n: r.n.salto }) : "";
+      return h`<tr role="treeitem" aria-level="${r.depth + 1}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-id="${r.n.id}" data-par="${r.n.genitore == null ? "" : r.n.genitore}" title="${r.path + skip}"><td style="padding-left:${r.depth * 14}px">${INF.prec(r.n)}</td><td>MS${r.n.livello}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td>${mins(r.n)}</td></tr>`;
+    };
+    b.innerHTML = h`<div class="row">${raw(sel("inf-lv", I18N.t("inf.lv"), levels, String(lv)))}${raw(sel("inf-tol", I18N.t("inf.tol"), [["nom", I18N.t("inf.tol.nom")], ["0.01", "0.01 Da"], ["10ppm", "10 ppm"]], INF.O.tol))}` +
+      h`${raw(sel("inf-ce", I18N.t("inf.ce"), [["1", I18N.t("inf.ce.sep")], ["0", I18N.t("inf.ce.mer")]], INF.O.ce ? "1" : "0"))}${raw(sel("inf-sum", I18N.t("inf.avg"), [["0", I18N.t("inf.mean")], ["1", I18N.t("inf.sumL")]], INF.O.sum ? "1" : "0"))}</div>` +
+      h`<table id="inf-tree" role="tree" aria-label="${I18N.t("inf.tree.aria")}"><thead><tr>${head}</tr></thead><tbody>${raw(first)}${rows.map(r => raw(line(r)))}</tbody></table>`;
     const byId = new Map(rows.map(r => [r.n.id, r]));
     /** @type {NodeListOf<HTMLElement>} */
     const trs = b.querySelectorAll("#inf-tree tbody tr");

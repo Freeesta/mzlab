@@ -65,7 +65,6 @@ const BARRA = (() => {
     hdr: IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3"/>'),
     lst: IC('<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="1.6" cy="4" r=".6"/><circle cx="1.6" cy="8" r=".6"/><circle cx="1.6" cy="12" r=".6"/>'),
     fil: IC('<path d="M3.5 2.5h6l3 3v8h-9z"/><path d="M9.5 2.5v3h3"/>'),
-    alb: IC('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
     cmp: IC('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>'),
     iso: IC('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>'),
     idn: IC('<path d="M3 2.5h8a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h8"/>'),
@@ -78,7 +77,7 @@ const BARRA = (() => {
     panel: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/><path d="M11 5.5h1.5M11 8h1.5" stroke-width="1.2"/>'),
     left: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M6.5 2.5v11"/>'),
     right: IC('<rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M9.5 2.5v11"/>')
-  };
+  }; ICONS.alb = IC('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>');         // alb: the precursor tree of an MSn infusion
 
   // ---------------------------------------------------------------- the list of commands
   // id: key of cmd.<id>.* in lang/; dom: id given to the toolbar button (kept for tests and scripts); ic: icon; panel: drawer panel the
@@ -100,8 +99,7 @@ const BARRA = (() => {
     // items of the HR menus (panels of the drawer, bodies in banco.js)
     { id: "hdr", item: "scan", ic: () => ICONS.hdr, panel: "hdr", run: () => pick("scan", "hdr") },
     { id: "lst", item: "scan", ic: () => ICONS.lst, panel: "lst", run: () => pick("scan", "lst") },
-    { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") },
-    { id: "alb", item: "scan", ic: () => ICONS.alb, panel: "alb", visible: () => !!window.INF && INF.any(), run: () => pick("scan", "alb") },
+    { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") }, { id: "alb", item: "scan", ic: () => ICONS.alb, panel: "alb", visible: () => !!window.INF && INF.any(), run: () => pick("scan", "alb") },
     { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
     { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
     // display options of a chart (right click on a chromatogram or a spectrum): only in the palette, the panel is in the drawer

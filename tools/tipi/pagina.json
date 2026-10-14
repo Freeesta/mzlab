@@ -75,6 +75,7 @@
     "../../mzlab/web/tabs.js",
     "../../mzlab/web/infusione.js",
     "../../mzlab/web/infusione-albero.js",
+    "../../mzlab/web/infusione-menu.js",
     "../../mzlab/web/banco.js",
     "../../mzlab/web/settings.js",
     "../../mzlab/web/aggiorna.js",

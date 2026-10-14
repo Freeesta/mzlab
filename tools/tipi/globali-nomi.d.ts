@@ -83,6 +83,7 @@ declare var IC_TAB: any;
 declare var IC_UNLOCK: any;
 declare var IC_ZOOM: any;
 declare var IDLE: any;
+declare var INF: any;
 declare var INFLIGHT: any;
 declare var INTOPT: any;
 declare var INT_COLS: any;

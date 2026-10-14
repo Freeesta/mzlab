@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1600})
         load(pg, [F], 6000, 1)
-        pg.wait_for_function("E.panels.some(p=>p.type==='spec' && p.filt && p.filt.startsWith('msn:'))", timeout=60000); pg.wait_for_timeout(1500)
+        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         def one():
             assert pg.evaluate("E.files.filter(f=>!f.gone).length") == 1, "one item, not MS1 + MS2"
             assert pg.evaluate("E.files[0].kind") == "infusion", pg.evaluate("E.files[0].kind")
@@ -45,7 +45,7 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#inf-tree tbody tr[data-id]')].map(t=>t.dataset.id).filter(Boolean)")
             now = pg.evaluate("E.panels.find(p=>p.type==='spec').filt")
             other = [i for i in ids if "msn:" + i != now][-1]
-            pg.click(f"#inf-tree tbody tr[data-id='{other}']"); pg.wait_for_timeout(2500)
+            pg.click(f"#inf-tree tbody tr[data-id='{other}']"); attendi(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{other}' && p._a && p._a.data && p._a.data[0] && p._a.data[0].d.y.length>0)", 30000)
             st = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'),s=E.panels.find(p=>p.type==='spec');return {c:c.filt,s:s.filt,n:s._a&&s._a.data&&s._a.data[0]?s._a.data[0].d.y.length:0}})()")
             assert st["c"] == st["s"] == "msn:" + other and st["n"] > 0, st
         step("a click on a node puts it on the chromatogram and the spectrum", click)
@@ -54,13 +54,15 @@ try:
             assert pg.evaluate("document.activeElement.closest('#inf-tree') !== null")
         step("the arrows walk the tree", keys)
         def frag():
-            r0 = pg.evaluate("""(async()=>{const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodi.find(n=>n.livello===2);
-              await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await new Promise(r=>setTimeout(r,1500));
-              const sp=E.panels.find(p=>p.type==='spec');const kid=j.nodi.find(n=>n.genitore===root.id);
-              const it=INF.menuPeak(sp, kid.prec).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await new Promise(r=>setTimeout(r,1500));
-              const after=E.panels.find(p=>p.type==='spec').filt; const back=INF.menuPeak(E.panels.find(p=>p.type==='spec'), 1).find(x=>x.label===I18N.t('inf.up')); await back.fn(); await new Promise(r=>setTimeout(r,1500));
-              return {root:root.id, kid:j.nodi.filter(n=>n.genitore===root.id).map(n=>n.id), after, again:E.panels.find(p=>p.type==='spec').filt}})()""")
-            assert r0["after"] == "msn:" + r0["kid"][0] or r0["after"][4:] in r0["kid"], r0
+            r0 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
+              const spec=()=>E.panels.find(p=>p.type==='spec'),shown=(id)=>()=>{const s=spec();return s.filt==='msn:'+id&&s._a&&s._a.data&&s._a.data[0]&&s._a.data[0].d.y.length>0};
+              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodi.find(n=>n.livello===2);
+              await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await till(shown(root.id));
+              const kid=j.nodi.find(n=>n.genitore===root.id);
+              const it=INF.menuPeak(spec(), kid.prec).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(shown(kid.id));
+              const after=spec().filt; const back=INF.menuPeak(spec(), 1).find(x=>x.label===I18N.t('inf.up')); await back.fn(); await till(shown(root.id));
+              return {root:root.id, kid:j.nodi.filter(n=>n.genitore===root.id).map(n=>n.id), after, again:spec().filt}})()""")
+            assert r0["after"][4:] in r0["kid"], r0
             assert r0["again"] == "msn:" + r0["root"], r0
         step("«Fragment this ion» goes to the child node, «Back to the precursor» returns", frag)
         def total():
@@ -77,7 +79,7 @@ try:
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS||[]).length") else None)
         # a DDA file next to it keeps its name
-        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_timeout(800)
+        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg2, "window.qqReady === true")
         load(pg2, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def keeps():
             t = pg2.evaluate("E.files.map(f=>f.kind).sort().join()"); assert "infusion" not in t, t
