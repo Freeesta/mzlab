@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'self'; form-action 'self'",
+      "csp": "default-src 'self'; script-src 'self' 'sha256-7vCgG2Go0+e2IpFbml0i6sLyQofK801EJR9V45gYGdI=' 'sha256-KQVN84UmXQOj2eeRlIzdw25ebptfmr/eD/A39JOcJo8=' 'sha256-eMR3v76RIfugwfOIeAfSrRUHJ8JeTdxlRk2r7NPQBMk=' 'sha256-CsV279Ev5RLUhUa8Q1yFNbZMK7ovSotHvKWptdF3384=' 'sha256-mDEu33TBeIPhz/R8Xh9Sbx5C9Ah9UK6Qm8cJCU96iAk=' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'none'; form-action 'self'",
       "dangerousDisableAssetCspModification": true
     }
   },
