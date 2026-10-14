@@ -176,4 +176,11 @@ const FAIR = (() => {
   return { LICENSES, ADDUCTS, adductMass, instrumentType, check, record, siriusMs, massbank, sirius, specOf, available };
 })();
 if (typeof window !== "undefined") window.FAIR = FAIR;
+// the actions of the spectrum menu (registry azioni/1): a high-resolution MS2 spectrum as a MassBank record or a SIRIUS .ms file
+if (typeof AZIONI !== "undefined") {
+  /** @param {any} c */
+  const ok = c => c.p.level === 2 && FAIR.available(c.p);
+  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
+  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
+}
 if (typeof module !== "undefined") module.exports = FAIR;
