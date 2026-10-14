@@ -36,10 +36,10 @@ const MAPFORME = c => {
       [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
       [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
     dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
-      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }]);
+      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }], { p, table: "map-points" });
   }
   async function copyRows(p) {
-    const txt = [headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n");
+    const txt = await PROV.tsv([headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n"), { p, table: "map-points" });
     try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
   }
   return { grpShape, drawPoints, shapePath, COLS, COLK, excel, copyRows };

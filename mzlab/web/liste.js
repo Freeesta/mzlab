@@ -140,7 +140,7 @@ const LISTE = (() => {
   }
 
   function csvParse(text) {
-    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim());
+    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
     if (!lines.length) return [];
     const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
     const head = csvSplit(lines[0], sep);
@@ -445,7 +445,7 @@ const LISTE = (() => {
           });
           document.querySelectorAll("#bigbody [data-del]").forEach(b => b.onclick = () => { const r = labRows(); r.splice(+b.dataset.del, 1); saveRows(r); draw(); });
           const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: I18N.t("lst.lab.newName") }); draw(); };
-          const bXl = document.querySelector("#lab-xl"); if (bXl) bXl.onclick = () => { if (typeof dl === "function") dl("contaminanti_laboratorio.csv", csvOut(labRows()), "text/csv"); };
+          const bXl = document.querySelector("#lab-xl"); if (bXl) bXl.onclick = () => { if (typeof dl === "function") dl("contaminanti_laboratorio.csv", csvOut(labRows()), "text/csv", { table: "lab-contaminants" }); };
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();

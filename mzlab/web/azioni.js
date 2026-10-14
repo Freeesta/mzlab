@@ -10,7 +10,7 @@
  *   visibile?: (c: Contesto) => boolean, disponibile?: (c: Contesto) => boolean, attiva?: (c: Contesto) => boolean,
  *   nome?: (c: Contesto) => string, aria?: (c: Contesto) => string, voce?: (c: Contesto) => string, tip?: (c: Contesto) => string, svg?: (c: Contesto) => string,
  *   esegui?: (c: Contesto) => any, ordine?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
- * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, esegui: () => any }} Riga
+ * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, icon?: string, esegui: () => any }} Riga
  * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any }} VoceAzione
  */
 const AZIONI = (() => {
@@ -49,7 +49,7 @@ const AZIONI = (() => {
         const ok = pronta(a, c), rs = a.voci(c);
         if (rs.length && last && a.gruppo !== last) items.push("-");
         if (rs.length) last = a.gruppo;
-        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, check: r.check ?? null, dim: !ok || !!r.dim, fn: r.esegui }));
+        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon, check: r.check ?? null, dim: !ok || !!r.dim, fn: r.esegui }));
         continue;
       }
       if (last && a.gruppo !== last) items.push("-");

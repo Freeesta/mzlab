@@ -25,7 +25,7 @@ const CAMPIONI = (() => {
   }
   // TSV (or CSV with ; or ,) -> {rows: [{filename, type, time (minutes), conc, cunit, rep}], warnings: [text]}
   function parseTsv(text) {
-    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "");
+    const lines = String(text || "").replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim() !== "" && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
     const warn = [];
     if (!lines.length) return { rows: [], warnings: ["empty"] };
     const sep = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";

@@ -859,7 +859,9 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
-function dl(name, text, type = "application/octet-stream") {
+// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder)
+async function dl(name, text, type = "application/octet-stream", prov = undefined) {
+  if (prov !== false && typeof text === "string" && /csv|tab-separated/.test(type)) text = await PROV.tsv(text, prov || {});
   saveBlob(new Blob([text], { type }), name);
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files

@@ -66,10 +66,9 @@
     };
     box.onclick = e => {
       if (e.target.id === "cmp-exp") {
-        saveBlob(new Blob([tsvText()], { type: "text/tab-separated-values" }), "metadata.tsv", 2000);
+        dl("metadata.tsv", tsvText(), "text/tab-separated-values", { table: "metadata" });
       } else if (e.target.id === "cmp-copy") {
-        const tx = tsvText();
-        (navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
+        PROV.tsv(tsvText(), { table: "metadata" }).then(tx => navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => msg(box, t("meta.copied")), () => msg(box, t("meta.copy.fail"), true));
       }
     };
   }

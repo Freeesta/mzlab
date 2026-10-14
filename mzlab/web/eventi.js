@@ -340,31 +340,35 @@ function ctxFor(p, e, x, px, py) {
       ...AZIONI.per({ vista: "spec", p, a, m, has, lab, e, px, py, pol: a.data[0].f && a.data[0].f.polarity }));
   } else {
     const k = nearestFile(p, x);
-    items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-");
-    const dt = scanStep();
-    if (p.type !== "mrm") {
-      if (p.sel) items.push({ label: I18N.t("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], k) });
-      items.push({ label: I18N.t("ctx.spec.atRt"), fn: () => { const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); } else nearScan(k, x).then(n => { if (n) { p.cur = n.rt; newSpec(p, n.rt - NEAR, n.rt + NEAR, k); } else newSpec(p, x - dt / 2, x + dt / 2, k); }); } });
-    }
-    if (p.type === "chrom") items.push({ label: I18N.t("ctx.chrom.xic"), fn: () => openXic(null, { after: p }) });
-    if (window.DISP && window.BANCO && BANCO.on() && (p.type === "chrom" || p.type === "xic")) items.push({ label: I18N.t("disp.menu"), fn: () => DISP.open(p) });
-    if (window.GRADIENTE && GRADIENTE.pressHave(p) && !isAnalog(p.kind)) items.push({ label: I18N.t("ctx.chrom.press"), check: p.overlay === "press", aria: I18N.t("ctx.chrom.press.aria"), fn: () => { p.overlay = p.overlay === "press" ? null : "press"; draw(p); uiSave(); } });
-    if (window.GRADIENTE && GRADIENTE.have(p)) items.push({ label: I18N.t("ctx.chrom.grad"), check: p.overlay === "grad", aria: I18N.t("ctx.chrom.grad.aria"), fn: () => { p.overlay = p.overlay === "grad" ? null : "grad"; draw(p); uiSave(); } });
-    if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
-    if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: I18N.t("ctx.chrom.identAll"), fn: () => LIB.identifyAll(k) });
-    if (p.type === "chrom" && window.COMP && window.HR && HR.isHr(E.files[k], 2) && E.files[k].kind === "ms2") items.push({ label: I18N.t("ctx.chrom.tree"), fn: () => COMP.tree(k) });
-    if (p.type === "xic") {
-      items.push({ label: I18N.t("ctx.chrom.addIon"), fn: () => openXic(p) });
-    }
-    items.push("-", ...intMenuItems(p, x, near, py));
-    { const ib = ibkMenuItems(p); if (ib.length) items.push("-", ...ib); }
-    items.push("-", { label: I18N.t("ctx.annotate.point"), fn: async () => { const v = await ask(I18N.t("ctx.annotate.prompt", { rt: x.toFixed(2) }), ""); if (v) { p.anns.push({ x, text: v }); draw(p); } } });
+    items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-",
+      ...AZIONI.per({ vista: p.type, p, x, k, near, px, py, e }));
   }
   if (near) items.push("-", { label: I18N.t("ctx.ann.edit", { text: near.text }), fn: async () => { const v = await ask(I18N.t("ctx.ann.prompt"), near.text); if (v != null) { if (v === "") p.anns = p.anns.filter(a => a !== near); else near.text = v; draw(p); } } },
     { label: I18N.t("ctx.ann.delete", { text: near.text }), fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
   if (p.zoom || p.zoomY) items.unshift({ label: I18N.t("ctx.resetZoom"), fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
   menu(e, items);
 }
+
+// ---------------------------------------------------------------- actions of the right-click menu of the chromatogram, XIC and MRM (registry azioni/1, azioni.js)
+// c = { vista: p.type, p, x: the RT under the pointer, k: the nearest file, near: the annotation under the pointer, px, py, e }; the modules add theirs (visualizza.js, gradiente.js, dda.js, libreria.js, compare…, picchi.js, grafici.js)
+(() => {
+  const V = ["chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
+  /** @param {any} o */
+  const reg = o => AZIONI.registra({ viste: V, ...o });
+  // the spectra of a trace: not for the MRM (it has no scans to average)
+  /** @param {any} c */
+  const spettri = c => ESP.spettri(c.p);
+  reg({ id: "chrom.avgSel", gruppo: "extract", visibile: /** @param {any} c */ c => spettri(c) && !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
+  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, nome: () => T("ctx.spec.atRt"), esegui: /** @param {any} c */ c => {
+    const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
+    if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); }
+    else nearScan(k, x).then(/** @param {any} n */ n => { if (n) { p.cur = n.rt; newSpec(p, n.rt - NEAR, n.rt + NEAR, k); } else newSpec(p, x - dt / 2, x + dt / 2, k); });
+  } });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
+  reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
+})();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
 function lcHtml(lc, row) {

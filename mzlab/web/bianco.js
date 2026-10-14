@@ -63,7 +63,7 @@ ${tb ? "" : `<p class="sm">${t("blank.err.table")}</p>`}<div id="blank-msg" clas
       try { await run(); paintRes(box); } catch (err) { msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
     };
     box.onclick = e => {
-      if (e.target.id === "blank-xlsx" && res) dlx("blank-subtraction.xlsx", [{ name: "Kept", head: head(), rows: body(res.r.kept), widths: [10, 12, 8, 14, 14, 14, 8] }, { name: "Discarded", head: head(), rows: body(res.r.discarded), widths: [10, 12, 8, 14, 14, 14, 8] }]);
+      if (e.target.id === "blank-xlsx" && res) dlx("blank-subtraction.xlsx", [{ name: "Kept", head: head(), rows: body(res.r.kept), widths: [10, 12, 8, 14, 14, 14, 8] }, { name: "Discarded", head: head(), rows: body(res.r.discarded), widths: [10, 12, 8, 14, 14, 14, 8] }], { table: "blank" });
       const tr = e.target.closest("tbody tr[data-mz]");
       if (tr && window.PROFILO) PROFILO.show(tr.dataset.mz, tr.dataset.rt);
     };

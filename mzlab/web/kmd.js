@@ -77,7 +77,7 @@ const KMD = (() => {
     const u = res.unit;
     dlx("kmd.xlsx", [{ name: "Features", head: ["ID", "m/z", "RT", "KM", "NKM", "KMD", t("kmd.col.series")], rows: res.rows.map(r => [r.id, r.mz, r.rt, r.km, r.nkm, r.kmd, r.series || ""]), widths: [10, 12, 8, 12, 8, 10, 8] },
       { name: "Series", head: [t("kmd.col.series"), t("kmd.col.members"), "KMD", t("kmd.col.span"), t("kmd.col.steps"), t("kmd.col.rt")], rows: res.series.map(s => [s.n, s.members.length, s.kmd, s.spanMDa, KMDVIEW.stepsText(s), s.rho == null ? "" : s.rho]), widths: [8, 10, 10, 12, 16, 12] },
-      { name: "Parameters", head: [t("kmd.param"), t("kmd.value")], rows: [[t("kmd.unit"), u.id], [t("kmd.unit.mass"), u.mass], [t("kmd.tol"), res.tolMDa], [t("kmd.min"), res.minMembers]], widths: [30, 14] }]);
+      { name: "Parameters", head: [t("kmd.param"), t("kmd.value")], rows: [[t("kmd.unit"), u.id], [t("kmd.unit.mass"), u.mass], [t("kmd.tol"), res.tolMDa], [t("kmd.min"), res.minMembers]], widths: [30, 14] }], { table: "kmd" });
   }
   if (typeof STAT !== "undefined") STAT.add({ id: "kmd", title: "kmd.title", hr: true, visible: () => true, mount });
   return { mount, compute, plotTable: () => KMDVIEW.plotTable(res), selectRow, get result() { return res; }, get params() { return st; } };
