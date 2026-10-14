@@ -1,5 +1,5 @@
 # `.mzidx`: l'indice di un file mzML (`mzlab/reader/mzidx.py`) o di un file del produttore
-Stato attuale. Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
+Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette (`open(path)`): la tabella delle scansioni più, per ogni gruppo di scansioni, i picchi ordinati per m/z. Chi lo usa (`Run.table`, `PeakTable`) non cambia: XIC, spettri e mappa leggono solo le fette che servono, e la riapertura non rilegge i dati dell'mzML.
 
 ## Formato (tutto little-endian, nessuna compressione)
 ```
