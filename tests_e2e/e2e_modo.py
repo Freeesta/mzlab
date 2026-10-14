@@ -17,23 +17,24 @@ try:
         for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); ready(pg)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)
         def allmode():
-            pg.click("#fmode [data-m=all]"); pg.wait_for_timeout(600)
-            assert all(dis("#fprev,#fnext,#fsel")), dis("#fprev,#fnext,#fsel")
+            pg.evaluate("tabFiles().forEach(f=>{f.vis=true});renderFileList();renderNav();redrawAll()"); attendi(pg, "!E.browse")
+            assert not any(dis("#fprev,#fnext,#fsel")), dis("#fprev,#fnext,#fsel")      # the arrows walk through the ticked files
             assert not any(dis("[data-o=k]")) and not any(dis("[data-o=all]"))
-        step("Tutti sovrapposti: arrows/selector off, panel file choosers on", allmode)
+        step("several files ticked: panel file choosers on", allmode)
         def selmode():
-            pg.click("#fmode [data-m=sel]")
+            pg.evaluate("soloFile(E.files[E.cur])")
             attendi(pg, "[...document.querySelectorAll('.pnl:not(.map) [data-o=k],[data-o=all]')].every(x => x.disabled)")
             assert not any(dis("#fprev,#fnext,#fsel"))
             assert all(dis(".pnl:not(.map) [data-o=k]")) and all(dis("[data-o=all]")), (dis("[data-o=k]"), dis("[data-o=all]"))       # the map keeps its chooser open (it only follows)
             pg.click("#fnext"); ready(pg)
             attendi(pg, "[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
             cur = pg.evaluate("E.cur"); assert pg.evaluate("[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
-        step("Solo il selezionato: arrows on, per-panel file choosers follow and are off", selmode)
+        step("one file ticked: arrows on, per-panel file choosers follow and are off", selmode)
         def norm():
             assert all(dis("[data-o=norm]"))
         step("normalisation off without a reference file", norm)
         def toggle():
+            if not pg.evaluate("E.panels.some(p=>p.type==='map')"): pg.click("#np-map"); ready(pg)      # a map of a file that is no longer shown closes with it
             on = lambda: pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.classList.contains('on')+':'+b.dataset.v)")
             assert on() == ["false:3d"], on()                                    # a single «Open in 3D» button, no more 2D/3D switch
             pg.locator("[data-o=view][data-v='3d']").first.click(); pg.wait_for_timeout(1500)
