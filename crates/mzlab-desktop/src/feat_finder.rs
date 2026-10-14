@@ -78,7 +78,12 @@ impl State {
         let mut d = legacy::lr::dig(s("files"), s("parent"), settings, table, s("registry"))
             .map_err(user)?;
         let names: Vec<String> = (d.lc.iter().map(|f| f.name.clone()))
-            .chain(d.files.iter().filter(|f| f.kind == "ms2").map(|f| f.name.clone()))
+            .chain(
+                d.files
+                    .iter()
+                    .filter(|f| f.kind == "ms2")
+                    .map(|f| f.name.clone()),
+            )
             .collect();
         d.isf = legacy::lr::isf::evaluate(&d, &mut |k| {
             self.open_idx(names.get(k).map_or("", |n| n.as_str()))
