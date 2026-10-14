@@ -449,7 +449,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; const n = csvParse(await f.text()); saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x) { if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }

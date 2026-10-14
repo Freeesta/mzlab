@@ -34,3 +34,15 @@ console.log(JSON.stringify({
     assert out["own"] == ["a"] and out["a"] == ["b"] and out["protoClean"]
     assert out["tgt"] == {"w": 1.2, "m": "x", "n": 3}
     assert out["num"] == [5, None, None, None]
+
+
+@pytest.mark.skipif(not NODE, reason="node not available")
+def test_read_text_cap_and_key():
+    out = run('''
+(async () => {
+  const ok = await FILESICURI.readText(new File(["a;b"], "x.csv"));
+  let err = null;
+  try { await FILESICURI.readText(new File(["0123456789"], "y.csv"), 5); } catch (e) { err = { m: e.message, k: e.key }; }
+  console.log(JSON.stringify({ ok, err }));
+})();''')
+    assert out["ok"] == "a;b" and out["err"] == {"m": "tooBig", "k": "workflow.err.tooBig"}
