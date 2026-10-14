@@ -25,7 +25,7 @@ ds.full_scan(D / "named.mzML", 0, np.random.default_rng(1))
 t = (D / "named.mzML").read_text(encoding="utf-8")
 t = t.replace("<instrumentConfigurationList", f'<fileDescription><fileContent/><sourceFileList count="1"><sourceFile id="SF1" name="one.wiff" location="file:///x"><cvParam cvRef="MS" accession="MS:1000569" name="SHA-1" value="{sha}"/></sourceFile></sourceFileList></fileDescription><instrumentConfigurationList', 1)
 (D / "named.mzML").write_text(t, encoding="utf-8")
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 JSON = """async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }"""
 

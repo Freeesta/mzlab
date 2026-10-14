@@ -91,6 +91,14 @@ def attendi(pg, expr, timeout=30000):
     pg.wait_for_function(expr, timeout=timeout)
 
 
+def fermo(pg, sel, ms=300, timeout=30000):
+    """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
+    pg.evaluate("window.__fermo = null")
+    pg.wait_for_function("function (a) { const e = document.querySelector(a.sel); if (!e) return false; const r = e.getBoundingClientRect(), k = [r.x, r.y, r.width, r.height].map(v => Math.round(v * 10)).join(), t = performance.now(); "
+                         "const w = window.__fermo && window.__fermo.sel === a.sel ? window.__fermo : (window.__fermo = {sel: a.sel, k, t}); if (w.k !== k) { w.k = k; w.t = t; } return t - w.t >= a.ms; }",
+                         arg={"sel": sel, "ms": ms}, timeout=timeout)
+
+
 def saved(pg, timeout=60000):
     """Save the view now and wait until the notebook (which a reload resumes from) holds the session: it is written in the background."""
     pg.evaluate("uiSave(true)")
@@ -180,7 +188,7 @@ class Run:
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
         s._log = tempfile.TemporaryFile(mode="w+", encoding="utf-8")       # the built site with the Rust engine (tools/prepara_sito.py): what the students get; a log file, not a pipe: nobody drains a pipe and the server blocks on its own request log when it fills
-        s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
+        s.srv = subprocess.Popen([sys.executable, str(Path(__file__).with_name("servi.py")), str(port), str(ROOT / "site")], cwd=str(ROOT),
                                  stdout=s._log, stderr=subprocess.STDOUT, text=True)
         # ready as soon as the server answers (it was a fixed 2 s wait)
         import urllib.request

@@ -37,11 +37,17 @@ try:
             live = pg.evaluate("E.panels.find(p=>p.type==='spec'&&p.tab===E.tab&&p.link).id"); assert ch[0][0] == live
         step("single click moves only the live spectrum", single)
         def group():
-            pg.click("#np-chrom"); pg.wait_for_timeout(800)
+            pg.click("#np-chrom")
+            attendi(pg, "E.panels.filter(p=>p.tab===E.tab&&p.type==='chrom').length>=2")
+            fermo(pg, "#dpanels .pnl.chrom .hd")
             names = lambda: pg.evaluate("(()=>{const ps=E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y);return ps.map(p=>p.type==='chrom'?'C'+p.id:p.type==='spec'?'s'+(p.src||p.link||'-')+'_'+p.id:'?')})()")
             n0 = names(); print(n0); assert n0[0].startswith("C") and n0[-1].startswith("C") and n0[0] != n0[-1], n0
-            pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); pg.wait_for_timeout(700); box = pg.locator("#dpanels .pnl.chrom .hd").first.bounding_box()
-            pg.mouse.move(box["x"] + 8, box["y"] + 8); pg.mouse.down(); pg.mouse.move(box["x"] + 8, box["y"] + 8 + pg.evaluate("(()=>{const c=E.panels.filter(p=>p.tab===E.tab&&p.type==='chrom').sort((a,b)=>a.y-b.y);return c[1].y+c[1].h-c[0].y})()"), steps=10); pg.mouse.up(); pg.wait_for_timeout(900)
+            pg.evaluate("window.scrollTo({top:0,behavior:\"instant\"})"); attendi(pg, "window.scrollY === 0"); fermo(pg, "#dpanels .pnl.chrom .hd"); box = pg.locator("#dpanels .pnl.chrom .hd").first.bounding_box()
+            dist = pg.evaluate("(()=>{const c=E.panels.filter(p=>p.tab===E.tab&&p.type==='chrom').sort((a,b)=>a.y-b.y);return c[1].y+c[1].h-c[0].y})()")
+            vp = pg.viewport_size; pg.set_viewport_size({"width": vp["width"], "height": int(box["y"] + 8 + dist + 40)})      # the pointer must stay inside the viewport: Firefox drops the mouse events that fall outside it
+            fermo(pg, "#dpanels .pnl.chrom .hd"); box = pg.locator("#dpanels .pnl.chrom .hd").first.bounding_box()
+            pg.mouse.move(box["x"] + 8, box["y"] + 8); pg.mouse.down(); pg.mouse.move(box["x"] + 8, box["y"] + 8 + dist, steps=10); pg.mouse.up()
+            pg.wait_for_function("function (id) { return E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y)[0].id === id; }", arg=int(n0[-1][1:]), timeout=30000)
             n1 = names(); print(n1)
             c1 = n0[0][1:]
             assert n1[0] == n0[-1] and n1[1] == "C" + c1 and all(x.startswith("s" + c1 + "_") for x in n1[2:]), n1      # the group moved as a block under the other chromatogram

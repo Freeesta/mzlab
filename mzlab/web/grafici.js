@@ -181,14 +181,15 @@ const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" 
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
 function setCorr(p, v) {
+  pushCampi(p, "storia.bianco");
   if (p.type === "map") return MAPPA.setCorr(p, v);
   p.bg = v === "" ? (S.ref.on[p.tab || E.tab] ? "x" : "") : v === "tract" ? "w" : +v.slice(1);       // the spectrum has no baseline: none | a file | the average of a stretch of time (its two ends are typed in the header)
   ctl(p); draw(p); uiSave();
 }
 // chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
-function setSub(p, v) { p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
+function setSub(p, v) { pushCampi(p, "storia.bianco"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
 function setFondo(p, v) {
-  const f = p.fondo; p._pickIbk = false;
+  pushCampi(p, "storia.fondo"); const f = p.fondo; p._pickIbk = false;
   if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
   else if (v === "tract") {
     if (f.ib) f.mode = "tract";
@@ -223,7 +224,7 @@ function ibkSpectra(p) {
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
-  p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
+  pushCampi(p, "storia.fondo"); p.fondo = { mode: "tract", w: p.fondo.w || 1, ib: { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null } };
   p._ibkA = null; draw(p); uiSave();
 }
 function ibkPick(p, mode, iv) {

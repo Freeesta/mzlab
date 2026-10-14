@@ -2,6 +2,7 @@
 subdirectory): inventory and the four states (ready, to index, update available is in e2e_libreria_scarica, damaged), a file that changes (touched = still ready, changed = to
 index), an index written once in `.mzlab/`, a package `.mzlib` put in the folder, an imported file, removing the index never removes the source, the window with the states.
 Needs the site: python tools/build_site.py and the engine in site/static/wasm-lib (built here when cargo and wasm-bindgen exist; the CI builds it in pages.yml)."""
+from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
@@ -47,7 +48,7 @@ window.T = {
   wipe: async () => { const root = await navigator.storage.getDirectory(); try { await root.removeEntry("librerie", { recursive: true }); } catch (e) {} },
 };"""
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:

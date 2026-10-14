@@ -26,9 +26,11 @@ try:
                          rec("Lontano", q["prec"] + 100, pk), rec("Negativo", q["prec"], pk, "Ion_mode: Negative\nPrecursor_type: [M-H]-\n"),
                          "Name: Senza precursore\nNum Peaks: 1\n100 100\n"])
         def load():
-            pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.locator("#uipset button", has_text="Librerie").count() == 1
-            pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(500)
-            assert pg.evaluate("document.querySelector('#libdlg').open") and "Nessuna libreria" in pg.inner_text("#lib-list")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.locator("#uip-lib").count() == 0, "the gear offers the libraries only with HRMS files"
+            pg.keyboard.press("Escape"); pg.evaluate("LIB.open()")          # the same window, as a low-resolution MS2 can still be searched
+            pg.wait_for_function("document.querySelector('#libdlg') && document.querySelector('#libdlg').open")
+            attendi(pg, "document.querySelector('#lib-list') && document.querySelector('#lib-list').innerText.trim() !== ''")
+            assert "Nessuna libreria" in pg.inner_text("#lib-list"), pg.inner_text("#lib-list")
             pg.set_input_files("#lib-file", {"name": "prova.msp", "mimeType": "text/plain", "buffer": msp.encode()}); pg.wait_for_timeout(2500)
             t = pg.inner_text("#lib-list"); assert "prova" in t and "5" in t, t
             assert pg.locator("#lib-list tr").count() == 2 and pg.inner_text("#lib-list td.num:nth-child(5)").strip() == "1", pg.inner_text("#lib-list")     # one discarded (no precursor)
@@ -62,14 +64,14 @@ try:
             pg.click("#lr-copy"); pg.wait_for_timeout(400); assert "copiate" in pg.inner_text("#lr-msg") or "non permette" in pg.inner_text("#lr-msg")
         step("copy the table / Excel", export)
         def none():
-            pg.click("#lr-x"); pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(500)
+            pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_timeout(500)
             pg.click("#lib-list [data-rm]"); pg.wait_for_timeout(800); assert "Nessuna libreria" in pg.inner_text("#lib-list"); pg.click("#lib-x")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_timeout(300); pg.click("#ctx >> text=Cerca nelle librerie"); pg.wait_for_timeout(1500)
             assert "Carica una libreria" in pg.inner_text("#lr-body"), pg.inner_text("#libres")
         step("no library: «Carica una libreria (ingranaggio → Librerie)»", none)
         def unsupported():
-            pg.click("#lr-x"); pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(400)
+            pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_timeout(400)
             pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); pg.wait_for_timeout(800)
             assert "MSP" in pg.inner_text("#lib-st"), pg.inner_text("#lib-st")
             pg.click("#lib-x"); pg.wait_for_timeout(200)
@@ -77,17 +79,17 @@ try:
         def persists():
             big = "\n".join(rec(f"Fill{i}", 150 + i * 0.01, [(50 + j * 3.7, 100 + j) for j in range(60)]) for i in range(5000)) + "\n" + rec("Target", 777.1234, pk)
             assert len(big) > 3_000_000, len(big)
-            pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(400)
+            pg.evaluate("LIB.open()"); pg.wait_for_timeout(400)
             pg.set_input_files("#lib-file", {"name": "grande.msp", "mimeType": "text/plain", "buffer": big.encode()}); pg.wait_for_timeout(6000)
             t = pg.inner_text("#lib-list"); assert "grande" in t and "5001" in t.replace(".", "").replace("\u202f", ""), t
             assert "MB" in t, t
             pg.reload(); pg.wait_for_timeout(2500)
-            pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(1000)
+            pg.evaluate("LIB.open()"); pg.wait_for_timeout(1000)
             assert "grande" in pg.inner_text("#lib-list"), pg.inner_text("#lib-list")                  # still there after the reload: no new import
             res = pg.evaluate("LIB.call('search', {peaks: %s, prec: 777.1234, pol: 1, tol: {v: 10, unit: 'ppm'}, frag: 0.02})" % json.dumps([[m, i] for m, i in pk]))
             assert res["results"] and res["results"][0]["name"] == "Target", res
             pg.click("#lib-list [data-rm]"); pg.wait_for_timeout(1000); assert "Nessuna libreria" in pg.inner_text("#lib-list")
-            pg.reload(); pg.wait_for_timeout(2000); pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(800)
+            pg.reload(); pg.wait_for_timeout(2000); pg.evaluate("LIB.open()"); pg.wait_for_timeout(800)
             assert "Nessuna libreria" in pg.inner_text("#lib-list")                                    # removed for good
         step("a library of some MB survives a reload, is searched without re-importing and «Togli» removes it", persists)
     r.close()

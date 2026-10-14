@@ -33,7 +33,7 @@ MGF = mgf(1, A) + mgf(2, A) + mgf(5, OTHER) + mgf(6, A[:2])
 tmp = Path(tempfile.mkdtemp()); (tmp / "tabella_pos.csv").write_text(HEAD + "\n".join(ROWS) + "\n"); (tmp / "fbmn.mgf").write_text(MGF)
 ADD = """async ([name, text]) => { const r = await LIB.call("add", { file: new File([text], name, { type: "text/plain" }) }); return r.info; }"""
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 try:
     with sync_playwright() as p:

@@ -30,7 +30,7 @@ for i in range(60):
 ds._write(D / "prof.mzML", specs, [ds._chrom(0, "TIC", np.arange(60) * 0.1, np.ones(60))])
 size0 = (D / "prof.mzML").stat().st_size
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 try:
     with sync_playwright() as p:
