@@ -19,7 +19,7 @@
 /** @type {Set<string>} every stub the page sent: Pyodide, if it is needed, gets their mzML (written then, for that use only) */ const stubs = new Set();
 /** @type {Map<number, (v: any) => void>} the answers the page owes to `ask` */ const asked = new Map();
 let askSeq = 0;
-/** the page makes what only it can: `what` "mzml" = the mzML of a sample of a maker's file (a Blob), "srm" = its SRM traces as `srm::impacchetta` bytes (an ArrayBuffer); null when it cannot @param {string} what @param {string} name @returns {Promise<any>} */
+/** the page makes what only it can: `what` "mzml" = the mzML of a sample of a maker's file (a Blob), "cenidx" = the centroid index of a profile sample built in OPFS idx/ (true), "srm" = its SRM traces as `srm::impacchetta` bytes (an ArrayBuffer); null when it cannot @param {string} what @param {string} name @returns {Promise<any>} */
 const ask = (what, name) => new Promise(res => { const rid = ++askSeq; asked.set(rid, res); postMessage({ type: "ask", rid, what, name }); });
 /** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
 /** @type {any} */ let ingress = null;            // finder-idx.js
@@ -94,17 +94,19 @@ function pyodide() {
 async function idxDir() {
   try { return await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx"); } catch (_) { return null; }
 }
+/** the name of the index mzFinder reads for `name`: a profile sample of a maker's file has a centroid one apart (finder-idx.js) @param {string} name */
+const idxBase = name => ingress ? ingress.idxName(name) : name;
 /** the .mzidx (File) of every name, null when one is missing @param {string[]} names */
 async function idxFiles(names) {
   const d = await idxDir();
   if (!d || !names.length) return null;
-  try { return await Promise.all(names.map(async n => (await d.getFileHandle(n + ".mzidx")).getFile())); } catch (_) { return null; }
+  try { return await Promise.all(names.map(async n => (await d.getFileHandle(idxBase(n) + ".mzidx")).getFile())); } catch (_) { return null; }
 }
 /** synchronous readers of the .mzidx of `names`: read(k, offset, length) as the .wasm wants it @param {string[]} names */
 async function openIdx(names) {
   const d = await idxDir(), hs = /** @type {any[]} */ ([]);
   if (!d) throw new Error("no index of the file: open it again");
-  try { for (const n of names) hs.push(await /** @type {any} */ (await d.getFileHandle(n + ".mzidx")).createSyncAccessHandle()); }
+  try { for (const n of names) hs.push(await /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx")).createSyncAccessHandle()); }
   catch (e) { for (const h of hs) h.close(); throw e; }
   let buf = new Uint8Array(1 << 16);
   const read = (/** @type {number} */ k, /** @type {number} */ off, /** @type {number} */ len) => {
@@ -177,7 +179,7 @@ async function runRust(a) {
   const t0 = performance.now(), f = await finder(), p = await pool();
   const plan = JSON.parse(f.finder_plan(filesJson, parentJson)), idx = await idxFiles(plan.lc);
   if (!idx) throw new Error("no index of the file: open it again");
-  const files = plan.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + n + ".mzidx" })), paths = files.map((/** @type {any} */ x) => x.path);
+  const files = plan.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + idxBase(n) + ".mzidx" })), paths = files.map((/** @type {any} */ x) => x.path);
   const timing = /** @type {Record<string, number>} */ ({}), lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
   let t = performance.now();
   say(`Detecting the features of ${files.length} files...`);
@@ -245,7 +247,7 @@ async function rustRun(a) {
 
 /** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
 const lrMod = () => import(base() + "mzfinder/finder-lr.js");
-const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, ask };
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, ask, idxBase };
 /** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
 async function waitIdx(names) {
   for (let i = 0; i < 60; i++) {
@@ -266,10 +268,10 @@ async function estimate(a) {
   const names = JSON.parse(a[0]), mz = +a[1];
   await ensureIdx(names).catch(() => { /* no index: no estimate */ });
   if (!(await waitIdx(names))) return "null";
-  const p = await pool(), r = await p.preview({ name: names[0], path: "mzlab/idx/" + names[0] + ".mzidx" }, "");
+  const p = await pool(), r = await p.preview({ name: names[0], path: "mzlab/idx/" + idxBase(names[0]) + ".mzidx" }, "");
   const out = /** @type {any} */ ({ da: r.da, rt_tol: r.rt_tol, dead: r.dead, fwhm: r.fwhm });
   if (names.length > 1 && mz > 0) {
-    const files = names.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + n + ".mzidx" })), idx = await idxFiles(names);
+    const files = names.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + idxBase(n) + ".mzidx" })), idx = await idxFiles(names);
     if (idx) {
       const d = await p.drift({ stored: await detect(p, files, idx), parentMz: mz, baseRtTol: r.rt_tol == null ? NaN : r.rt_tol });
       if (d.drift != null) { out.drift = { value: d.drift, n: d.n }; out.rt_tol = d.rt_tol; }
