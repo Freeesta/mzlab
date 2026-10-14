@@ -92,7 +92,7 @@ try:
             assert not pyodide(reqs), (pyodide(reqs)[:3], why(pg))
         step("after a reload the files are still there (OPFS), still without Pyodide", reload_keeps)
         # the Python reference on the same files: the JSON must be the same
-        ref = PyRef(FILES, pg.evaluate("fetch('api/notebook').then(r => r.json())")["session"])         # the same samples as the page posted
+        ref = PyRef(FILES, pg.evaluate("JSON.parse(JSON.stringify(E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null, rep: f.rep || undefined }))))"))         # the same samples as the page posted, in the shape the Python reference knows (time and base type)
         def no_msn(x):   # `msn` (infusion recognised from the index, `infusione.rs`) is the engine's alone, wherever a file is described: the reference has no such field
             if isinstance(x, dict): return {k: no_msn(v) for k, v in x.items() if k != "msn"}
             return [no_msn(v) for v in x] if isinstance(x, list) else x

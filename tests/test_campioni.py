@@ -38,9 +38,9 @@ def test_tsv_roundtrip_in_mzmine_columns():
             {"filename": "blank.mzML", "type": "blank", "time": None, "conc": 2.5, "cunit": "µg/L", "rep": ""}]
     tsv = js(f"console.log(JSON.stringify(C.toTsv({json.dumps(rows)},'h')))")
     lines = tsv.rstrip("\n").split("\n")
-    assert lines[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate"
-    assert lines[1].split("\t") == ["a_t0.mzML", "sample", "0", "h", "", "", "R1"]
-    assert lines[2].split("\t") == ["blank.mzML", "blank", "", "", "2.5", "µg/L", ""]
+    assert lines[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\tblank_type\ttime_confirmed"
+    assert lines[1].split("\t") == ["a_t0.mzML", "sample", "0", "h", "", "", "R1", "", ""]
+    assert lines[2].split("\t") == ["blank.mzML", "blank", "", "", "2.5", "µg/L", "", "", ""]
     p = js(f"console.log(JSON.stringify(C.parseTsv({json.dumps(tsv)})))")
     assert p["warnings"] == []
     assert p["rows"][0]["time"] == 0 and p["rows"][0]["type"] == "sample" and p["rows"][0]["rep"] == "R1"

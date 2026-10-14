@@ -266,7 +266,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;waitStato();await idle();WAITING=false;loadingStato(null)}
     if(!ST.files.some(usable)){checkGo();return}
     if(await RUOLI.gate($("#flist"),ST.files)){loading(false);checkGo();$("#gomsg").textContent=I18N.t("load.time.required");return}      // two or more samples: every time is written and confirmed first
-    const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();ST.files.forEach(f=>{const r=RUOLI.roleOf(f);if(window.QAQC&&(r==="qc"||r==="dark"))QAQC.setRole(f.name,r)});applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
+    const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
@@ -280,7 +280,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
         try {
           await post("api/new",{});                                 // closes the open files but keeps the uploaded ones on disk
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
-          STATO.aggiunta(false,"adding");await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
+          STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
         }catch(e2){$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {

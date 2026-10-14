@@ -18,6 +18,7 @@ declare var CALC: any;
 declare var CALC_MORE: any;
 declare var CAMPIONI: any;
 declare var CARTELLA: any;
+declare var CDOC: any;
 declare var CEN_EXT: any;
 declare var CIC: any;
 declare var CIVIDIS: any;

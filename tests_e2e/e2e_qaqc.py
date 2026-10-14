@@ -60,7 +60,7 @@ try:
         def lr_role_fix():
             pg.select_option("select[data-role='S_t30.mzML']", "qc"); ready(pg); pg.wait_for_timeout(600)
             assert pg.evaluate("QAQC.results.ions[0].roles.join()") == "blank,sample,qc"
-            assert "qc" in pg.evaluate("localStorage.getItem('qqq.qaqc')")
+            attendi(pg, "NB.session.some(x=>x.file==='S_t30.mzML' && x.tipo==='qc')")                 # remembered in the notebook (campioni/2), not in qqq.qaqc
         step("a type corrected by hand is used and remembered", lr_role_fix)
         def report(hr):
             import json
