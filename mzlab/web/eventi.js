@@ -180,36 +180,15 @@ function attach(p) {
   }, { passive: false });
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
-    if (hit) {
-      const v = await ask(I18N.t("ctx.ann.prompt"), hit.ann.text);
-      if (v != null) {
-        if (v === "") p.anns = p.anns.filter(a => a !== hit.ann);
-        else hit.ann.text = v;
-        draw(p);
-      }
-      return;
-    }
     if (p.type === "map") {                                              // zoomed = whole view; whole map = the spectrum at that RT (the double tap does the same: mappa.js)
+      if (hit) return void editAnn(p, hit.ann);
       if (window.MAPPA && p._a && p._a.map && Date.now() - (MAPPA.st(p).dtap || 0) < 600) return;      // the double tap has already done it
       if (window.MAPPA) MAPPA.dbl(p, rect(e)); else { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    // one rule for every graph: zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
-    if (p.zoom || p.zoomY) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }
-    if (p.type === "mrm" || p.el.classList.contains("max")) return;       // MRM has no spectra (a new one would jump to the Full Scan tab); full screen: nobody would see the new panel
-    if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
-      const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
-      if (!p._a || !f || f.kind === "mrm") return;
-      let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
-      const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { r0 = sn.rt - sn.g / 2; r1 = sn.rt + sn.g / 2; kk = sn.k; }
-      let at = sn ? sn.rt : x;
-      if (!sn) { const n = await nearScan(kk, x); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; } }
-      p.sel = null; p.cur = at;
-      newSpec(p, r0, r1, kk);          // every double click makes a new LIVE spectrum right under the chromatogram; the previous ones freeze
-      draw(p); return;
-    }
-    if (p.type === "spec") { pushZh(p); p.lock = null; if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); } }                     // double click on a spectrum: whole spectrum, free axes, no measures
-    p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
+    // one rule for every other graph, from the registry: an annotation = edit it; zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
+    const x = xd(rect(e));
+    await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
   cv.addEventListener("keydown", e => {
@@ -337,15 +316,12 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…";
     p._pm = has ? m : null;
     items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-",
-      ...AZIONI.per({ vista: "spec", p, a, m, has, lab, e, px, py, pol: a.data[0].f && a.data[0].f.polarity }));
+      ...AZIONI.per({ vista: "spec", p, a, m, has, lab, e, px, py, near, pol: a.data[0].f && a.data[0].f.polarity }));
   } else {
     const k = nearestFile(p, x);
     items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-",
       ...AZIONI.per({ vista: p.type, p, x, k, near, px, py, e }));
   }
-  if (near) items.push("-", { label: I18N.t("ctx.ann.edit", { text: near.text }), fn: async () => { const v = await ask(I18N.t("ctx.ann.prompt"), near.text); if (v != null) { if (v === "") p.anns = p.anns.filter(a => a !== near); else near.text = v; draw(p); } } },
-    { label: I18N.t("ctx.ann.delete", { text: near.text }), fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
-  if (p.zoom || p.zoomY) items.unshift({ label: I18N.t("ctx.resetZoom"), fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
   menu(e, items);
 }
 
@@ -358,16 +334,43 @@ function ctxFor(p, e, x, px, py) {
   // the spectra of a trace: not for the MRM (it has no scans to average)
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
-  reg({ id: "chrom.avgSel", gruppo: "extract", visibile: /** @param {any} c */ c => spettri(c) && !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
-  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, nome: () => T("ctx.spec.atRt"), esegui: /** @param {any} c */ c => {
-    const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
-    if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); }
-    else nearScan(k, x).then(/** @param {any} n */ n => { if (n) { p.cur = n.rt; newSpec(p, n.rt - NEAR, n.rt + NEAR, k); } else newSpec(p, x - dt / 2, x + dt / 2, k); });
-  } });
+  reg({ id: "chrom.avgSel", gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
+  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, nome: () => T("ctx.spec.atRt"),
+    doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
+    esegui: /** @param {any} c */ async c => {
+      const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
+      let r0 = x - dt / 2, r1 = x + dt / 2, kk = k, at = x;
+      if (sn) { r0 = sn.rt - sn.g / 2; r1 = sn.rt + sn.g / 2; kk = sn.k; at = sn.rt; }
+      else { const n = await nearScan(kk, x); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; } }
+      if (c.dbl) p.sel = null;
+      p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
+      if (c.dbl) draw(p);
+    } });
   reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
+})();
+
+// the actions common to every graph but the map (registry azioni/1): zoom reset (first in the menu, grey without a zoom) and the annotations (last, grey away from one);
+// the double click takes the first of them that applies (an annotation, then the zoom)
+/** @param {any} p @param {any} ann */
+async function editAnn(p, ann) {
+  const v = await ask(I18N.t("ctx.ann.prompt"), ann.text);
+  if (v == null) return;
+  if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v;
+  draw(p);
+}
+(() => {
+  const V = ["spec", "chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
+  /** @param {any} o */
+  const reg = o => AZIONI.registra({ viste: V, ...o });
+  reg({ id: "view.resetZoom", gruppo: "reset", disponibile: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppio: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppioOrd: 2,
+    nome: () => T("ctx.resetZoom"), esegui: /** @param {any} c */ c => { pushZh(c.p); c.p.zoom = null; c.p.zoomY = null; if (c.dbl) c.p.sel = null; draw(c.p); if (c.dbl) uiSave(); } });
+  reg({ id: "ann.edit", gruppo: "ann", ordine: 1, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
+    nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
+  reg({ id: "ann.delete", gruppo: "ann", ordine: 2, disponibile: /** @param {any} c */ c => !!c.near,
+    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); draw(c.p); } });
 })();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML

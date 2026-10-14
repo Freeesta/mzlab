@@ -161,10 +161,10 @@ function scanLine(p, data, d0) {
   const S = ["spec"], T = I18N.t.bind(I18N);
   /** @param {any} o */
   const reg = o => AZIONI.registra({ viste: S, ...o });
-  reg({ id: "spec.copy", gruppo: "value", visibile: /** @param {any} c */ c => !c.a.hrp, disponibile: /** @param {any} c */ c => c.has,
+  reg({ id: "spec.copy", gruppo: "value", disponibile: /** @param {any} c */ c => c.has,
     nome: () => T("ctx.spec.copy"), aria: /** @param {any} c */ c => T("ctx.spec.copy.aria", { mz: c.lab }), esegui: /** @param {any} c */ c => { try { navigator.clipboard.writeText(c.lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } });
   // low resolution: the product-ion spectrum of a precursor peak of the Full Scan
-  reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
+  reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.p.level === 1 && !c.a.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, disponibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
     esegui: /** @param {any} c */ c => { const e2 = ms2OfPeak(c.p, c.m); if (e2) extractMs2(c.p, e2); } });
   reg({ id: "spec.xic", gruppo: "xic", disponibile: /** @param {any} c */ c => c.has, nome: /** @param {any} c */ c => T("ctx.spec.xic", { mz: c.lab }), esegui: /** @param {any} c */ c => xicDirect(c.m, c.p) });
   // the m/z on an XIC already open: one row per XIC, or one row that lists them when they are more than 3
@@ -179,11 +179,17 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { c.p.anns.push({ x: c.m, text: v }); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
-  reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!c.p.iso && !!window.HR && !!c.a.hrp, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
-  reg({ id: "spec.isoOff", gruppo: "tools", visibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { c.p.iso = null; draw(c.p); } });
+  reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
+  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { c.p.iso = null; draw(c.p); } });
   // a spectrum that follows its chromatogram can be frozen; a frozen one can follow it again
   /** @param {any} p */
   const srcOf = p => p.src && E.panels.find(q => q.id === p.src && q.el);
+  // the double click on a spectrum that is not zoomed: the whole spectrum, free axes, no measures (not a menu entry)
+  reg({ id: "spec.full", gruppo: "zoom", menu: false, doppio: () => true, doppioOrd: 9, esegui: /** @param {any} c */ c => {
+    const p = c.p; pushZh(p); p.lock = null;
+    if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); }
+    p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
+  } });
   reg({ id: "spec.freeze", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { freezeSpec(c.p); uiSave(); } });
   reg({ id: "spec.relink", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) liveSpec(c.p, s); } });
 })();
