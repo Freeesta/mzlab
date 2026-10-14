@@ -443,8 +443,9 @@ function lcHtml(lc, row) {
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
 async function showMethod(sel) {
   const again = () => showMethod(sel);
-  const f = E.files[E.cur]; if (!f) return info(I18N.t("method.none"));
-  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return info(I18N.t("method.error", { message: EH(e.message) })); }
+  const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
+  if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
+  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${EH(a)}</td><td>${EH(String(b))}</td></tr>`;   // values come from the file: always escaped here
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
@@ -484,6 +485,7 @@ async function showMethod(sel) {
   }
   const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
   if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the student can enter one
+  if (held) h += await METODO_M.html();
   h = h.replace(/m\/z/g, "<i>m/z</i>");   // m/z is always in italics
   const d = Q("#bigdlg"); if (d.open) d.close();
   big(I18N.t("method.dialog.title"), h, () => {
@@ -491,6 +493,11 @@ async function showMethod(sel) {
     const sl = Q("#m-sel"); if (sl) sl.onchange = () => showMethod(+sl.value);
     const ld = Q("#m-load"); if (ld) ld.onclick = loadDam;
   });
+}
+// only the Agilent *.m method folders (no data file selected, or the method of the file could not be read): `note` is already escaped HTML
+async function showHeldMethods(note) {
+  const d = Q("#bigdlg"); if (d.open) d.close();
+  big(I18N.t("method.dialog.title"), (note ? `<div class="sm">${note}</div>` : "") + (await METODO_M.html()).replace(/m\/z/g, "<i>m/z</i>"));
 }
 // the method (.dam) can also be loaded here, without going back to the start screen
 function loadDam() {

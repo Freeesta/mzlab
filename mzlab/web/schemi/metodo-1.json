@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "metodo/1",
-  "description": "Metodo di acquisizione di UN campione. Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
+  "description": "Metodo di acquisizione di UN campione (o, per una cartella di metodo `.m` senza corsa, il metodo di analisi dei dati). Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
   "type": "object",
   "required": [
     "schema"
@@ -331,6 +331,155 @@
           }
         }
       }
+    },
+    "quantificazione": {
+      "type": "object",
+      "properties": {
+        "versione_dati": {
+          "type": "number"
+        },
+        "finestre": {
+          "type": "object",
+          "properties": {
+            "riferimento": {
+              "type": "number"
+            },
+            "non_riferimento": {
+              "type": "number"
+            },
+            "unita": {
+              "type": "string"
+            },
+            "correlazione": {
+              "type": "number"
+            }
+          }
+        },
+        "composti": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "tipo": {
+                "type": "string"
+              },
+              "istd": {
+                "type": "boolean"
+              },
+              "rt_min": {
+                "type": "number"
+              },
+              "finestra_rt": {
+                "type": "object",
+                "properties": {
+                  "valore": {
+                    "type": "number"
+                  },
+                  "unita": {
+                    "type": "string"
+                  }
+                }
+              },
+              "segmento_tempo": {
+                "type": "number"
+              },
+              "polarita": {
+                "type": "string"
+              },
+              "tipo_scansione": {
+                "type": "string"
+              },
+              "mz": {
+                "type": "number"
+              },
+              "finestra_mz": {
+                "type": "object",
+                "properties": {
+                  "sinistra": {
+                    "type": "number"
+                  },
+                  "destra": {
+                    "type": "number"
+                  },
+                  "unita": {
+                    "type": "string"
+                  }
+                }
+              },
+              "integratore": {
+                "type": "string"
+              },
+              "curva": {
+                "type": "object",
+                "properties": {
+                  "modello": {
+                    "type": "string"
+                  },
+                  "origine": {
+                    "type": "string"
+                  },
+                  "peso": {
+                    "type": "string"
+                  }
+                }
+              },
+              "unita_conc": {
+                "type": "string"
+              },
+              "ioni": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "indice": {
+                      "type": "number"
+                    },
+                    "mz": {
+                      "type": "number"
+                    },
+                    "risposta_relativa_pct": {
+                      "type": "number"
+                    },
+                    "min_pct": {
+                      "type": "number"
+                    },
+                    "max_pct": {
+                      "type": "number"
+                    },
+                    "incertezza_pct": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "livelli": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nome": {
+                      "type": "string"
+                    },
+                    "conc": {
+                      "type": "number"
+                    },
+                    "attivo": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Metodo di quantificazione (cartella .m di Agilent): ciò che il metodo cerca, per composto. Un m/z di 0 nel file è «non impostato»: assente."
     },
     "grezzo": {
       "type": "array",
