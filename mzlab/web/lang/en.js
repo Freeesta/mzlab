@@ -439,7 +439,7 @@ I18N.add("en", {
   "load.dropWiff": "<b>Drop .mzML, .raw or .wiff files here</b> (a .wiff with its .wiff.scan)<br>or <u>click to choose them from your computer</u>",
   "conv.help.summary": "Don't have mzML files?",
   "conv.help.hint": "You loaded {types} files: convert them like this.",
-  "conv.help.step1": "Download <b>ProteoWizard</b> (it includes MSConvert), free, for Windows: <a href=\"https://proteowizard.sourceforge.io/download.html\" target=\"_blank\" rel=\"noopener noreferrer\">proteowizard.sourceforge.io</a>.",
+  "conv.help.step1": "Waters, Shimadzu and Bruker files are not read directly: convert them to mzML with MSConvert. Download <b>ProteoWizard</b> (it includes MSConvert), free, for Windows: <a href=\"https://proteowizard.sourceforge.io/download.html\" target=\"_blank\" rel=\"noopener noreferrer\">proteowizard.sourceforge.io</a>.",
   "conv.help.step2": "Open <b>MSConvert</b>, drag your files (<code>.raw</code>, <code>.wiff</code>, <code>.d</code>…) into the list and press <b>Add</b> (a <code>.wiff</code> must sit next to its <code>.wiff.scan</code>).",
   "conv.help.step3": "Output format: <b>mzML</b>. The default settings are fine: change nothing else.",
   "conv.help.step4": "Press <b>Start</b>: the <code>.mzML</code> files appear in the output folder.",
