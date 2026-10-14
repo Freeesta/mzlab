@@ -325,7 +325,8 @@ try:
 
     r.close()
 except Exception as e:
-    steps.append(("run", f"FAIL: {e}"))
+    import traceback
+    steps.append(("run", f"FAIL line {traceback.extract_tb(e.__traceback__)[-1].lineno}: {type(e).__name__} {e}"))      # the line says which step broke: an empty message is not enough in the CI log
     r.close()
 
 for s in steps:
