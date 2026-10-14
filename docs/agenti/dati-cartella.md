@@ -1,5 +1,5 @@
 # Cartelle nella vista Dati
-Stato attuale; due funzioni della schermata di caricamento (`#start`), entrambe passano da `upload()` (`index.html`).
+Due funzioni della schermata di caricamento (`#start`), entrambe passano da `upload()` (`index.html`).
 
 - **Carica una cartella** (una volta, non si ricorda): `cartella-carica.js`, oggetto `CartCarica`. Input nascosto `#pickdir` (`webkitdirectory`), aperto dall'icona `#cartpick` solo dove manca `showDirectoryPicker`, o cartella trascinata su `#drop` (`webkitGetAsEntry` preso nell'evento, lettura ricorsiva a blocchi). Passano `.mzML`, `.dam`, `.raw`, `.wiff`, `.wiff.scan` (niente nascosti).
 - **Cartelle Agilent**: le cartelle `.D` (`AgilentD.group`, estensione e `AcqData` senza distinzione di maiuscole: una corsa = un campione) e le cartelle di metodo `*.m` fuori da ogni `.D` (`AgilentD.groupMethods`: i file restano in `AgilentD.held`, `#cartinfo` dice «Metodo Agilent «nome» (.m) riconosciuto», non «ignorati»); gli altri sono contati in `#cartinfo` («N file ignorati»).

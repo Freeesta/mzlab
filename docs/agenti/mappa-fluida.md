@@ -1,6 +1,6 @@
 # Mappa fluida: studio delle transizioni della mappa RT×m/z
 
-Studio (nessuna modifica al prodotto) su zoom, spostamento, mirino, cambio di file, scala e 3D della mappa 2D, con misure su file sintetici fino alla scala HRMS. Le funzioni della mappa sono descritte in `dati-mappa.md`; qui ci sono le misure, la diagnosi e i pacchetti di lavoro numerati.
+Misure, diagnosi e pacchetti di lavoro numerati per zoom, spostamento, mirino, cambio di file, scala e 3D della mappa 2D, con file sintetici fino alla scala HRMS. Le funzioni della mappa sono descritte in `dati-mappa.md`.
 
 ## Come rifare le misure
 - `MZLAB_CHROMIUM=<chrome> python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR [--json]`: crea i file mzML sintetici in `DIR` (non nel repository), costruisce il sito con il motore WASM (`build_site.py --no-pyodide` + `cargo build` + `wasm-bindgen`), apre due file per caso in Chromium headless con profilo persistente (la quota di un contesto in incognito rifiuta i file da 300 MB) e misura i gesti. `--json` stampa una riga per caso.
@@ -17,7 +17,7 @@ Studio (nessuna modifica al prodotto) su zoom, spostamento, mirino, cambio di fi
 5. **Colore** (`grafici.js` `mapImage`): un array JS delle celle non nulle, ordinato per il 99,5° percentile, poi un pixel alla volta con una funzione; l'immagine sta in un solo posto per pannello (`p._img`), quindi ogni cambio di file ricolora tutto.
 6. **Regioni in memoria**: `CACHE` di `explore.js` è una `Map` senza limite; ogni regione resta per sempre (il `Float32Array` e il suo testo base64).
 7. **Disegno**: `draw(p)` a ogni evento di input (non uno per frame); `MAPPA.after` ridimensiona la tela del sovrapposto e riscrive legenda e tabella a ogni disegno; la regione nitida parte 150 ms (`QUIET`) dopo l'ultimo gesto.
-8. **Mirino**: LRU proprio di spettri (64 MB, 32 su iPad) con lettura anticipata: è già adeguato.
+8. **Mirino**: LRU proprio di spettri (64 MB, 32 su iPad) con lettura anticipata: è adeguato.
 9. **3D** (`mappa3d.js`): la stessa rotta di regione fino a 1024², quindi eredita il punto 3.
 
 ## Misure (Chromium headless, container a 4 CPU, sito con motore Rust/WASM)
@@ -36,11 +36,11 @@ Studio (nessuna modifica al prodotto) su zoom, spostamento, mirino, cambio di fi
 | mirino: `api/spectra` p50 / p95 | 6,1 / 16,4 ms | 9,6 / 34,6 ms |
 | RSS Chromium / heap JS / picco WASM | 1314 / 91 / 32 MB | 1931 / 103 / 175 MB |
 
-Profilo HR (`hrp` 400 × 50 000, 2 × 320 MB, 20 M punti per file): nel browser l'apertura dei due file non è finita in 18 minuti (giro fermato, nessun gesto misurato); nativo, indice di 228 MB: mappa intera 506 ms (18 ms dalla cache), regione 100-1000 m/z su tutto il tempo 316-366 ms, regione profonda 30 ms. Il profilo è il caso in cui D1 pesa di più: va misurato di nuovo nel browser dopo P1.
+Profilo HR (`hrp` 400 × 50 000, 2 × 320 MB, 20 M punti per file): nel browser l'apertura dei due file non è finita in 18 minuti (giro fermato, nessun gesto misurato); nativo, indice di 228 MB: mappa intera 506 ms (18 ms dalla cache), regione 100-1000 m/z su tutto il tempo 316-366 ms, regione profonda 30 ms. Il profilo è il caso in cui D1 pesa di più.
 
 Nativo, stesso indice `hrc` (108 MB, file nella cache del sistema): mappa intera 254 ms a freddo e 14 ms dalla cache; regione 100-1000 m/z su tutto il tempo 212-273 ms; regione profonda 2 min × 2 m/z 29-45 ms. Nel browser le stesse rotte prendono 5830 ms e 1465 ms: il calcolo è lo stesso codice, il resto è lettura.
 
-Colore della mappa intera HRC (600 × 901, Node): algoritmo attuale 314 ms; con `Float32Array` ordinato, scala precalcolata in `Uint32Array` e scrittura a 32 bit 52 ms (6 volte meno).
+Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `Float32Array` ordinato, scala precalcolata in `Uint32Array` e scrittura a 32 bit 52 ms (6 volte meno).
 
 ## Diagnosi (in ordine di peso)
 - **D1 Lettura dell'indice nel browser**: la mappa intera HR legge 9 M picchi in 5,8 s contro 0,25 s nativi (23 volte). Il sospetto principale è `FileReaderSync` su `Blob.slice` (una copia attraverso il processo del browser a ogni lettura) più la copia `Uint8Array` → memoria WASM; il calcolo WASM vale al più 2 volte il nativo.
@@ -58,7 +58,7 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo attuale 314 ms; con 
 - Frame durante zoom e spostamento: p95 ≤ 17 ms (60 fps), anche in HR.
 - Nitido dopo il gesto: ≤ 120 ms in LR, ≤ 200 ms in HR; mai più di 300 ms, anche solo in RT.
 - Prima mappa ≤ 1 s per un file HR tipico (~10 M picchi MS1); cambio di file caldo ≤ 50 ms, freddo ≤ 300 ms.
-- Mirino: spettro percepito < 16 ms (già vero dalla cache, p95 da tenere < 35 ms).
+- Mirino: spettro percepito < 16 ms dalla cache, p95 < 35 ms.
 - Picco WASM ≤ 128 MB in HR; memoria della pagina limitata da un bilancio in byte, non dal numero di gesti.
 
 ## Ipotesi valutate
@@ -78,15 +78,15 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo attuale 314 ms; con 
 | tetto dei `.wasm` più alto | — | vietato | no: P1-P2 aggiungono poco codice al motore (stimato < 20 KB su 1 703 936 B) |
 
 ## Pacchetti (in ordine)
-Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a questo documento. Ogni pacchetto è una PR con la sua misura `bench_mappa.py` prima e dopo nella descrizione. «Libero» = non tocca i file delle chat in corso (mappa 2D: spettro laterale in profilo e blocco dell'asse in `mappa.js`/`grafici.js`; lista dei file e pannelli; caricamento).
+Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `bench_mappa.py` prima e dopo nella descrizione. «Libero» = non tocca i file di `mappa.js`/`grafici.js`, della lista dei file e pannelli, né del caricamento.
 
 ### P1 Lettura veloce dell'indice nel worker
 - Scopo: D1, D8. Prima uno strumento che separa lettura e calcolo (tempo dentro `read_at` contato nel worker); poi `createSyncAccessHandle()` sull'`.mzidx` di OPFS al posto di `FileReaderSync` (lettura diretta in un buffer riusato), con `read_at` su blocchi da 1-4 MB e un piccolo LRU di blocchi; ripiego su `FileReaderSync` se il handle è già preso o assente.
 - File: `mzlab/web/rust-worker.js` (`readerFor`), `crates/mzlab-wasm/src/lib.rs` (`JsReader`), `crates/mzlab-core/src/idxread.rs` (passo di `each_peak`).
 - Guadagno misurabile: prima mappa HRC da 6,3 s a ≤ 1 s; zoom solo RT da 1,5 s a ≤ 0,3 s; nessuna variazione dei byte delle rotte (parità invariata).
 - Rischio: basso. Il handle è esclusivo per file (una sola apertura nel worker); su Safari il comportamento di `read` con `{at}` cambia fra versioni e va provato su iPad; il ripiego resta.
-- Accettazione: `bench_mappa.py lr,hrc` prima e dopo nella PR, prima mappa HRC ≤ 1 s e zoom solo RT ≤ 0,3 s; `bench_mappa.py hrp` arriva in fondo (oggi l'apertura non finisce in 18 minuti); `cargo test -p mzlab-core --test map_parity` e `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi; `MZLAB_LR_MISS` vuota; tetti dei `.wasm` invariati.
-- Dipendenze e conflitti: nessuna dipendenza. Tocca `rust-worker.js` solo in `readerFor`: avvisare la chat del caricamento se lavora su quel file, altrimenti libero.
+- Accettazione: `bench_mappa.py lr,hrc` prima e dopo nella PR, prima mappa HRC ≤ 1 s e zoom solo RT ≤ 0,3 s; `bench_mappa.py hrp` arriva in fondo (l'apertura nel browser non finisce in 18 minuti); `cargo test -p mzlab-core --test map_parity` e `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi; `MZLAB_LR_MISS` vuota; tetti dei `.wasm` invariati.
+- Dipendenze e conflitti: nessuna dipendenza. Tocca `rust-worker.js` solo in `readerFor`: libero salvo modifiche concorrenti del caricamento a quel file.
 
 ### P2 Piramide di tessere della mappa in Rust
 - Scopo: D2, D9 e prima mappa istantanea al secondo accesso. Livelli di massimi (e somme) su una griglia agganciata (RT per scansione, m/z a potenze di 2 della cella), a tessere 256 × 256 sparse; costruita una volta per file (in un passaggio sui picchi già ordinati per m/z) e salvata in OPFS accanto all'`.mzidx`; una rotta nuova `api/maptiles` rende il rettangolo della vista al livello giusto; la regione esatta resta per media, fondo, differenza e per lo zoom più profondo.
@@ -102,7 +102,7 @@ Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a q
 - Guadagno: colore HRC da 400 a ≤ 60 ms; cambio di file caldo da 441 a ≤ 50 ms; cambio di scala ≤ 60 ms.
 - Rischio: basso; i colori devono restare gli stessi pixel (test che confronta l'immagine prima e dopo).
 - Accettazione: test che confronta i pixel di `mapImage` vecchia e nuova sulle mappe di `e2e_mappa` (uguali); `bench_mappa.py lr,hrc` con colore HRC ≤ 60 ms e cambio di file caldo ≤ 50 ms; `e2e_mappa*`, `e2e_tour`, `e2e_axe_grafici` verdi.
-- Dipendenze e conflitti: nessuna sul motore. Stessi file della chat della mappa 2D (spettro laterale in profilo, blocco dell'asse): parte dopo la sua unione.
+- Dipendenze e conflitti: nessuna sul motore. Stessi file di `mappa.js`/`grafici.js` della mappa 2D (spettro laterale in profilo, blocco dell'asse).
 
 ### P4 Trasporto binario delle rotte della mappa
 - Scopo: D7. Il worker restituisce JSON piccolo + `ArrayBuffer` trasferito (`postMessage(..., [buf])`), la pagina costruisce il `Float32Array` senza `atob`; vale per `api/map`, la regione e il 3D.
@@ -110,7 +110,7 @@ Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a q
 - Guadagno: -2 copie e -33 % di memoria per regione; 10-20 ms per mappa intera HR.
 - Rischio: medio (cambia il contratto fra worker e pagina; `MZLAB_LR_MISS` e gli e2e delle rotte vanno ricontrollati).
 - Accettazione: `bench_mappa.py lr,hrc` con meno memoria per regione (heap JS dopo 20 spostamenti) e rotta+parse della mappa intera HRC ≤ 60 ms; parità delle rotte invariata (JSON con base64 per desktop e test); `e2e_mappa3d`, `e2e_lr`, `MZLAB_LR_MISS` vuota.
-- Dipendenze e conflitti: dopo P3 (stesso `getMap`). `rust-worker.js` e `rust-bridge.js` sono anche della chat del caricamento: accordarsi o aspettare la sua unione.
+- Dipendenze e conflitti: dopo P3 (stesso `getMap`). `rust-worker.js` e `rust-bridge.js` sono condivisi con il caricamento.
 
 ### P5 Regioni in memoria, prefetch e attesa adattiva
 - Scopo: D4, D6. LRU di `CACHE` per byte (es. 96 MB, 48 su iPad) senza il testo base64; richiesta con margine (la vista ±50 %) così lo spostamento successivo è già nitido; `QUIET` adattivo (40 ms se la rotta recente è sotto 30 ms, 150 ms se lenta); annullo delle risposte vecchie (numero di sequenza) e una sola richiesta in volo; con P2, tessere invece di regioni.
@@ -118,7 +118,7 @@ Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a q
 - Guadagno: nitido dopo il gesto da 176-250 a ≤ 120 ms; memoria a tetto fisso.
 - Rischio: basso-medio (i test che contano le richieste).
 - Accettazione: `bench_mappa.py lr,hrc` con nitido dopo rotella ≤ 120 ms LR e ≤ 200 ms HRC, spostamento successivo già nitido (0 richieste), `CACHE` sotto il bilancio dopo 20 spostamenti; `e2e_mappa_nav`, `e2e_mappa_mirino`, `e2e_mappa_blocco` verdi.
-- Dipendenze e conflitti: dopo P3 e P6 (stessi file); con P2 chiede le tessere. Conflitto con la chat della mappa 2D: dopo la sua unione.
+- Dipendenze e conflitti: dopo P3 e P6 (stessi file); con P2 chiede le tessere. Stessi file della mappa 2D (`mappa.js`).
 
 ### P6 Un disegno per frame
 - Scopo: D5. `draw(p)` mette in coda e un solo `requestAnimationFrame` disegna; `MAPPA.after` ridimensiona la tela solo se cambia la misura, riscrive legenda e tabella solo se cambiano i dati (non a ogni gesto, la tabella al più dopo il silenzio).
@@ -126,7 +126,7 @@ Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a q
 - Guadagno: frame p95 da 33-50 a ≤ 17 ms durante il gesto.
 - Rischio: basso; il tour e i test che leggono la tabella subito dopo un gesto vanno ricontrollati.
 - Accettazione: `bench_mappa.py lr,hrc` con frame p95 ≤ 17 ms durante rotella e spostamento in LR e HRC; `e2e_mappa*`, `e2e_tour` verdi (ogni passo trova il bersaglio).
-- Dipendenze e conflitti: nessuna sul motore; stessi file di P3 (stessa chat o subito dopo). Conflitto con la chat della mappa 2D: dopo la sua unione.
+- Dipendenze e conflitti: nessuna sul motore; stessi file di P3 (`mappa.js`, `grafici.js`).
 
 ### P7 Colore su GPU (facoltativo)
 - Scopo: zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
@@ -160,8 +160,7 @@ Ogni pacchetto è autosufficiente: basta come prompt di una chat DEV insieme a q
 - Dipendenze e conflitti: insieme a P1 o subito dopo. Solo Rust e `memoria.md`: libero.
 
 ## Ordine consigliato
-P1 → P10 → P2 (motore, liberi, subito) · P3 + P6 → P5 (pagina, dopo l'unione della chat della mappa 2D) · P4 (dopo P3, accordo con la chat del caricamento) · P9, P8 · P7 solo se serve.
+P1 → P10 → P2 (motore, liberi) · P3 + P6 → P5 (pagina) · P4 (dopo P3) · P9, P8 · P7 solo se serve.
 
 ## Limiti dello studio
 - Misure su un container Linux headless a 4 CPU; iPad e Safari non sono misurati (P1 e P10 chiedono una prova reale).
-- I documenti di contesto del repository privato dei dati non erano leggibili da questa sessione.

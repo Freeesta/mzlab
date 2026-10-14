@@ -1,6 +1,6 @@
 # Contratto di memoria dei moduli WASM
 
-Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 256 MB per istanza, budget di lavoro 192 MB).
+Le righe valgono per ogni crate che gira in WASM (tetto rigido 256 MB per istanza, budget di lavoro 192 MB).
 
 - `mzlab-core::budget`: `MemBudget` (`reserve(fase, byte)` → `Guard` che restituisce i byte quando cade; `in_memory(stima)` = la stima entra in metà dello spazio libero; `from_request(mb)`: NaN/0 = 192 MB, nativo 1024 MB), `refusal`/`refuse` (errore `error.memoryBudget` con `{fase, stima_mb, budget_mb}`), `try_vec`, `WriteAt` (scrittura a offset: `Vec<u8>` nei test, handle OPFS nel browser), `Hashing` (sink in ordine che conta i byte e calcola lo SHA-256), `sha256_hex`.
 - Regola: ogni fase STIMA prima di allocare e sceglie una via: in memoria, a blocchi (stessi byte) o rifiuto ordinato con la chiave. Mai un risultato diverso in silenzio: né soglie alzate né file esclusi.
@@ -14,10 +14,10 @@ Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 25
 - `memory_bytes()` è esportata da `mzlab-wasm` e `mzlab-feat-wasm`.
 - `tools/controlla.py` rifiuta una funzione WASM esportata che torna un `Vec<u8>` intero se non è in `tools/api_byte_ammesse.txt`, e `indexedDB.open` fuori dai file noti.
 - Persistenza: `qqq-db.js` ha `SCHEMA` (versione dell'archivio intero) e `DB_VER` 3 con lo store `manifest` (una riga per file di OPFS: `{path, tipo, bytes, creato, usato, formato, versione_formato, crate, sorgente_sha256}`; i campi non ancora noti sono `null`).
-- `migra.js` esegue  passi numerati, idempotenti e ripetibili sotto il lock esclusivo `mzlab-migra`, prima che il motore apra i file (`rust-worker.js`, attesa massima 5 s se un'altra scheda tiene il database); `kv.schema` dice a che passo sono i dati.
-- Passo 3:  riempie il manifesto dai file già in OPFS (`files/`, `idx/`, `feat/`).
-- `archivio.js` avvisa  di ogni scrittura e rimozione (`watch`) e il manifesto le segue.
-- Le librerie stanno già  in OPFS (radice di `mzlab/`, il ripiego IndexedDB `mzlab-libs` solo senza OPFS): non sono spostate in `lib/`.
+- `migra.js` esegue passi numerati, idempotenti e ripetibili sotto il lock esclusivo `mzlab-migra`, prima che il motore apra i file (`rust-worker.js`, attesa massima 5 s se un'altra scheda tiene il database); `kv.schema` dice a che passo sono i dati.
+- Passo 3: riempie il manifesto dai file in OPFS (`files/`, `idx/`, `feat/`).
+- `archivio.js` avvisa di ogni scrittura e rimozione (`watch`) e il manifesto le segue.
+- Le librerie stanno in OPFS (radice di `mzlab/`, il ripiego IndexedDB `mzlab-libs` solo senza OPFS): non sono spostate in `lib/`.
 - Archivio (b): `archivio.js` scrive un file alla volta per scheda (`locked`, Web Lock `mzlab-file:<cartella>/<nome>`; oltre 2 s `error.fileInUse`), controlla lo spazio prima di una scrittura sopra 50 MB (`ensureRoom`: servono 1,8 × i byte, altrimenti `error.quota {serve_mb, libero_mb}`), chiede `persist()` una volta sola (`persistOnce`, anche dalla finestra delle librerie con `import()`) e avvisa le altre schede con `BroadcastChannel("mzlab")` (`listen`).
 - `pulizia.js` (a motore fermo): toglie i `.part` più vecchi di 1 h, gli indici senza sorgente non usati da una settimana e i derivati scritti in un formato più vecchio dell'attuale, mai un sorgente.
 - Spazio (impostazioni): somma anche la pipeline, dice quando il browser non garantisce di tenere i dati e, su iPad/iPhone fuori da «Aggiungi a Home», che dopo una settimana di non uso possono essere cancellati; si aggiorna quando un'altra scheda cambia i file.
@@ -32,5 +32,5 @@ Stato attuale; le righe valgono per ogni crate che gira in WASM (tetto rigido 25
 - Indice: `idxpool.js` usa quel `Module` (o compila una volta con `compileStreaming`) e lo passa a ogni worker con `{op:"module"}`; `idx-worker.js` aspetta quel messaggio. I pool dell'indice e dei `.wiff` condividono un cancello (`makeGate`, `poolSize`: al massimo 2 worker di calcolo insieme su iPad/telefono, `min(core − 1, 4)` sul computer): chi libera un posto sveglia l'altro pool.
 - Strato debole di `align`: le tabelle deboli di tutti i file sono contate sul budget (`series::finish`); oltre metà dello spazio libero la fase è rifiutata con `error.memoryBudget` (fase `align`).
 - Limite noto: l'mzML di un `.raw` grande resta in memoria come Blob durante la conversione.
-- Mappe e XIC: le regioni hanno al massimo 2048 (RT) × 1024 (m/z) celle `f32` (8 MB; senza `nrt`/`nmz` 400, la griglia di sessione non cambia: lo zoom chiede una regione nuova); i bastoncini 3D al massimo 200 000 punti, scelti in Rust (`sticks`); `subxic` non carica più la tabella dei picchi di una sopravvista (decine di milioni di picchi): per ogni finestra di ppm legge dall'indice solo i suoi picchi (`each_peak`), stesso JSON.
+- Mappe e XIC: le regioni hanno al massimo 2048 (RT) × 1024 (m/z) celle `f32` (8 MB; senza `nrt`/`nmz` 400, la griglia di sessione non cambia: lo zoom chiede una regione nuova); i bastoncini 3D al massimo 200 000 punti, scelti in Rust (`sticks`); `subxic` non carica la tabella dei picchi di una sopravvista (decine di milioni di picchi): per ogni finestra di ppm legge dall'indice solo i suoi picchi (`each_peak`), stesso JSON.
 - La cartella dei dati puntata dal browser è un handle in `qqq_lab`, store `kv`, chiave `cartella.puntata` (nessun file copiato in OPFS finché non si apre un file: poi vale tutto il resto di questo file); `docs/agenti/dati-cartella.md`.

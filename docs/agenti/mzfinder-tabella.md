@@ -1,5 +1,5 @@
 # mzFinder: tabella dei prodotti (mondo HR)
-Stato attuale. Testi in inglese (mzFinder non usa `lang/`).
+Testi in inglese (mzFinder non usa `lang/`).
 - **Dati**: la rotta Rust `tp_table` (`TP_Mine/files/finder-tabella.js`, chiamata da `tpmine-worker.js`; `tp::tabella` in `crates/mzlab-feat`, schema `tptab/1`, `docs/agenti/mzfeat-tp.md`) rilegge l'ultimo `.mzfeat` e dà per ogni riga `in_t0`, `in_blank` e i rapporti; ruoli letti in un solo punto (`role_of`); `samplesOf` scrive tipo e tempo scelti nella pagina nel modello `campioni/2` di `finder-ruoli.js` e prende gli indici per ruolo da `per_tp` (Rust) per costruire il `campioni/1` della rotta. Con la via Pyodide risponde `null` e le colonne t0/Blank restano `-`.
 - **Pagina**: `TP_Mine/js/42_tp_table.js` (`window.TPTAB`: `mount`, `spark`) disegna `<table class="tpt" id="hr-t">` con intestazioni-pulsante ordinabili (`aria-sort`); `21_tpmine_hr.js` definisce le colonne (`COLS`), i filtri (`keep()`: ricerca, livello, MS², senza t0, senza bianco) e riempie la scheda (`fill`).
 - **Colonne**: di default Lvl, m/z, Formula, Change, RT, Kinetics, t0, Blank, Score; le altre (`#`, Pred., Sim., t max, Max area, MS², Class, Region) si aggiungono dal menu «Columns» (`COLS` con `off: true`, `T.setCols`).

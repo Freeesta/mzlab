@@ -17,9 +17,38 @@
   const fail = (key, message) => Object.assign(new Error(message || key), { key });
   /** the module of the readers (the one of wasm-bindgen: add, build, detect, ...) */
   function use(mod) { W = mod; return W; }
+  /** the app: the readers are the native route feat/import (feat-desktop-pool.js). The table comes back as a promise; check_structure is synchronous, so `prime` asks for all the annotations of a table in ONE request and the answers are read from a cache */
+  /** @type {any} */ let native = null;
+  async function readyNative() {
+    const mod = await import(URL.createObjectURL(new Blob([G.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" })));
+    const pool = mod.createDesktopPool(), staged = /** @type {any[]} */ ([]), cache = new Map();
+    native = { pool, cache };
+    return use({
+      clear: () => { staged.length = 0; },
+      add: (/** @type {string} */ name, /** @type {string} */ sha256, /** @type {string} */ text) => { staged.push({ name, sha256, text }); },
+      build: (/** @type {number} */ pol, /** @type {number} */ max) => pool.importBuild(staged.splice(0), pol, max),
+      check_structure: (/** @type {any[]} */ ...a) => { const v = cache.get(JSON.stringify(a)); if (v === undefined) throw fail("error.featFailed", "check_structure: call UNT.prime(table) first"); return v; },
+    });
+  }
+  /** asks the native engine for the structure checks of the annotations of `table` (no-op where the readers are the .wasm) */
+  async function prime(table, tolPpm = 5) {
+    if (!native) return;
+    const todo = new Map();
+    for (const f of table.features) for (const a of f.ann || []) {
+      if (!a.formula || a.structure === "unreliable") continue;
+      const args = [txt(a.formula), f.mz == null ? NaN : +f.mz, txt(a.adduct), f.pol || 0, tolPpm], k = JSON.stringify(args);
+      if (!native.cache.has(k)) todo.set(k, args);
+    }
+    const keys = [...todo.keys()], STEP = 5000;
+    for (let i = 0; i < keys.length; i += STEP) {
+      const part = keys.slice(i, i + STEP), r = await native.pool.checkStructures(part.map(k => { const [formula, precursor, adduct, pol, tol] = todo.get(k); return { formula, precursor: Number.isNaN(precursor) ? null : precursor, adduct, pol, tol }; }));
+      part.forEach((k, j) => native.cache.set(k, JSON.stringify(r[j])));
+    }
+  }
   /** loads the .wasm «import» once: manifest.json of wasm-feat/, SHA-256 checked */
   async function ready() {
     if (W) return W;
+    if (G.MZLAB_DESKTOP) return readyNative();
     const u = p => new URL("wasm-feat/" + p, G.QTOOLS.ctx.base).href, g = (await (await fetch(u("manifest.json"))).json()).import;
     if (!g) throw fail("error.featFailed");
     const bytes = await (await fetch(u(g.wasm))).arrayBuffer(), hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -87,9 +116,9 @@
     const w = need(); w.clear();
     for (const f of files) w.add(f.name, f.sha256 || "", f.text);
     const pol = o.pol != null ? o.pol : polOf(o.polarity);
-    let t; try { t = JSON.parse(w.build(pol, o.maxFeatures || 0)); } catch (e) { throw asError(e); }
-    t.byId = new Map(t.features.map(f => [f.id, f]));          // by id, as the page looks the features up
-    return t;
+    const done = (/** @type {string} */ raw) => { const t = JSON.parse(raw); t.byId = new Map(t.features.map((/** @type {any} */ f) => [f.id, f])); return t; };      // by id, as the page looks the features up
+    let raw; try { raw = w.build(pol, o.maxFeatures || 0); } catch (e) { throw asError(e); }
+    return raw && typeof raw.then === "function" ? raw.then(done, (/** @type {any} */ e) => { throw asError(e); }) : done(raw);      // the app answers with a promise
   }
 
   // ------------------------------------------------------------ external evidence read with a profile of livelli/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
@@ -115,7 +144,7 @@
     const out = new Map(); for (const f of table.features) out.set(f.key, assessExternal(f, profile)); markIsomers(table, out, profile); return out;
   }
 
-  const UNT = { use, ready, num, formulaMass, normAdduct, checkStructure, cleanName, isPropagated, polOf, keyOf, detect, fromMzfinder, fromRows, sha256Hex, build, assessExternal, assessAllExternal };
+  const UNT = { use, ready, prime, num, formulaMass, normAdduct, checkStructure, cleanName, isPropagated, polOf, keyOf, detect, fromMzfinder, fromRows, sha256Hex, build, assessExternal, assessAllExternal };
   G.UNT = UNT;
   if (typeof module !== "undefined") module.exports = UNT;
 })();
