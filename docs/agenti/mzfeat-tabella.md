@@ -31,7 +31,7 @@
   - `quant`: la tabella di FBMN (`row ID`, `row m/z`, `row retention time`, `correlation group ID`, `annotation network number` a -1, `best ion` e `neutral M mass` solo per le righe con un'ipotesi, poi `<campione>.mzML Peak area`).
   - `mgf` (FBMN, `FEATURE_ID` = id della riga) e `sirius` (`.ms`, `feature_<id>`, senza formula): una voce per riga con spettro, righe `#` in testa dal rapporto. Lo spettro lo sceglie `ms2spec::spectra` nel `.mzidx` del file `ms2_file`: tra gli MS2 con finestra che contiene l'm/z e tempo dentro i bordi del picco, quello col TIC più alto (`MERGED_ACROSS_N_SAMPLES=1`); un solo passaggio sui picchi MS2 di ogni file. Senza MS1: il `.ms` non ha il pattern isotopico.
 - **Formato `.mzfeat` versione 2** (`store.rs::TABLE_FORMAT`).
-  - In più `id` e i riassunti come array, e nel meta `summaries` (0/1); le colonne di identità sono opzionali, con `identity` (0/1) nel meta.
+  - Contiene `id` e i riassunti come array, e nel meta `summaries` (0/1); le colonne di identità sono opzionali, con `identity` (0/1) nel meta.
   - Un file di versione 1 si legge con i riassunti vuoti; un file troncato è rifiutato anche se mancano array che il lettore non chiede.
   - `sort_rows` gira anche in `evidence_to` dopo l'aggiunta delle righe mirate, così gli id scritti sono quelli finali.
 - **Prove**: `tests/samples.rs` (nomi → tipi, andata e ritorno, rifiuti, TSV), `tests/store.rs` (id, conteggi, ordinamento che tiene intere le righe), `tests/export.rs` (scrittori, scelta dell'MS2 su un indice sintetico), `tests/view.rs` (fattori, regole, spec, qc, report), `tests/rowident.rs` (identità, dati per file, tabella senza identità), `tests/rowmeta.rs` (mediane, MS2, M+1/M, file in memoria e a lastre).

@@ -214,7 +214,7 @@ class Run:
         pg.goto(f"http://127.0.0.1:{s.port}/")
         pg.wait_for_timeout(800)
         return pg
-    def teoria(s, pg, name="00-uso.html", wait=800):
+    def teoria(s, pg, name="12-dati.html", wait=800):
         """Text of a Teoria chapter, opened in a second tab of the same browser."""
         q = s.b.new_page(); q.goto(f"http://127.0.0.1:{s.port}/static/teoria/{name}"); q.wait_for_timeout(wait)
         t = q.inner_text("body"); q.close(); return t

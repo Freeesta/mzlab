@@ -10,8 +10,8 @@
 - **Passi di Federico** (il codice non li fa):
   1) una volta, in Settings → Environments crea l'ambiente `release` e, se vuole, aggiungi tu come revisore obbligatorio
   2) scrivi la sezione del changelog, alza la versione nei tre file, unisci in `main`
-  3) senza terminale: su GitHub, scheda **Actions** → workflow **release** → **Run workflow**, ramo `main`, in «versione» scrivi `1.0.0` (senza `v`), in «conferma» riscrivi `1.0.0`, **Run workflow** (se una delle due righe è diversa il workflow si ferma subito e non fa nulla); con il terminale: `git tag v1.0.0 && git push origin v1.0.0`
-  4) aspetta che tutti i job siano verdi (circa 30 minuti), poi **Releases**: trovi la **bozza** «mzLab v1.0.0» con i file, `SHA256SUMS` e le note del changelog; controllali e premi **Publish release**: in quel momento nasce il tag `v1.0.0` sul commit di `main` che era in testa all'avvio, e Zenodo (se attivato come in `docs/zenodo.md`) archivia da solo e crea il DOI
+  3) senza terminale: su GitHub, scheda **Actions** → workflow **release** → **Run workflow**, ramo `main`, in «versione» scrivi `1.0.1` (senza `v`), in «conferma» riscrivi `1.0.1`, **Run workflow** (se una delle due righe è diversa il workflow si ferma subito e non fa nulla); con il terminale: `git tag v1.0.1 && git push origin v1.0.1`
+  4) aspetta che tutti i job siano verdi (circa 30 minuti), poi **Releases**: trovi la **bozza** «mzLab v1.0.1» con i file, `SHA256SUMS` e le note del changelog; controllali e premi **Publish release**: in quel momento nasce il tag `v1.0.1` sul commit di `main` che era in testa all'avvio, e Zenodo (se attivato come in `docs/zenodo.md`) archivia da solo e crea il DOI
   5) Software Heritage: su <https://archive.softwareheritage.org/save/> «Save code now» con l'indirizzo del repository (un clic, serve una volta e dopo ogni release se vuoi lo SWHID aggiornato)
   6) compila `doi` e `date-released` in `CITATION.cff` come in `docs/zenodo.md`.
 - Non incluso: firma di Windows (SignPath) e di macOS, dominio proprio, `update.rs` con la nuova origine.

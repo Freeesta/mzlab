@@ -28,7 +28,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 
 ## `da_legacy(json)`
 - Ingresso `{"session":[NB.session v1], "qaqc":{"roles":{file: ruolo}}, "campioni1":{campioni/1}, "mzflow":{"files":[...]}}`, ogni parte facoltativa.
-- Ordine dei file: sessione, poi `.mzflow`, poi `campioni/1`. Ogni campo viene dalla sessione, se no dal `.mzflow`, se no da `campioni/1`; il ruolo di `qqq.qaqc` vince (teneva QC e buio che la sessione salvava come `sample`). Vocabolari vecchi: `standard` → `std`, `control` → `dark`.
+- Ordine dei file: sessione, poi `.mzflow`, poi `campioni/1`. Ogni campo viene dalla sessione, se no dal `.mzflow`, se no da `campioni/1`; il ruolo di `qqq.qaqc` vince (tiene QC e buio, che la sessione salva come `sample`). Vocabolari della sessione: `standard` → `std`, `control` → `dark`.
 - I tempi della sessione e del `.mzflow` sono confermati (scritti dall'utente), quelli di `campioni/1` no. Un `sample` a 0 minuti diventa `t0`; bianchi, standard, QC e infusioni perdono il tempo; la replica scritta resta, le altre si numerano.
 
 ## Binding

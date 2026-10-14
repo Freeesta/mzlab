@@ -78,20 +78,7 @@ pub fn check_structure(
         pol,
         tol_ppm,
     );
-    let mut o = Out::default();
-    o.raw("{\"ok\":").raw(match c.ok {
-        Some(true) => "true",
-        Some(false) => "false",
-        None => "null",
-    });
-    if let Some(p) = c.ppm {
-        o.raw(",\"ppm\":").num(p);
-    }
-    if let Some(a) = &c.adduct {
-        o.raw(",\"adduct\":").str(a);
-    }
-    o.raw("}");
-    o.0
+    c.json()
 }
 
 /// «M+H» → «[M+H]+».

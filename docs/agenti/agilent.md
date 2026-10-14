@@ -1,6 +1,6 @@
 # Lettore Agilent MassHunter `.D` (GC/MS)
 
-Stato attuale. `crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
+`crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
 
 Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; Riferimento: gli mzML che ProteoWizard msconvert ha fatto dalle stesse tre corse (64 bit, zlib, senza peak picking, SIM come spettri; repository dati, `GC-MS/mzML/`), più controlli interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
 
@@ -89,7 +89,7 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 ## Audit di perdita (`tests/agilent_audit.rs`, `tests/agilent_audit/`)
 - Inventario del grezzo fatto senza il codice del lettore: elenco dei file, valori di testo e di attributo degli XML (scansione di testo semplice), valori degli `.ini`, campi del layout dei record. Ogni voce deve stare in `AgilentD::metadata` (nome o valore, origine = percorso nella cartella), in `ScanRec` o `extra_names`, oppure in `scarti.txt` con il motivo. I file che non si decodificano (`MSTree2.bin`, intestazione di `MSScan.bin`, formati ignoti) entrano con «undecoded bytes» e «undecoded sha1».
 - `noti.txt` (solo nomi di file e conteggi, i nomi dei metodi sono sostituiti da `*.M`): se un file noto dà meno voci di prima il test fallisce; si riscrive con `AUDIT_WRITE=1`. Prova sintetica sempre attiva: un campo mai visto si conserva.
-- Il primo giro ha trovato quattro perdite vere, corrette: XML in UTF-16, entità (`&lt;` arriva a parte nel lettore XML), testo misto con figli, nome di visualizzazione dei campi di `sample_info.xml`.
+- Il lettore XML dei file piccoli gestisce XML in UTF-16, entità (`&lt;` arriva a parte), testo misto con figli e il nome di visualizzazione dei campi di `sample_info.xml`: l'audit lo verifica.
 - Le cartelle `*.M` dentro `AcqData` (copia del metodo di acquisizione: `7890Method.bin`, `Acq.RTP*.xml`, tracce di audit, `quantitative.xml` con ioni e livelli di calibrazione) sono lette come file piccoli (`Files::others`): XML a nome/valore, il resto dichiarato con SHA-1.
 
 ## Cosa scrive nell'mzML oltre agli spettri
@@ -116,8 +116,8 @@ Scansioni numerate 1…N, tempi crescenti, blocchi che coprono `MSPeak.bin` da 6
 - `mzlab-wasm/src/agilent.rs`: `Engine::agilent_to_mzml(nome, MSScan.bin, MSScan.xsd, MSTS.xml, Devices.xml, Contents.xml, MSTree2.bin, acqmeth.txt, dimensione di MSPeak.bin, read, sink, progress)`: i file piccoli arrivano interi (array vuoto = file mancante), `MSPeak.bin` si legge per offset da Blob (finestra di 1 MB, mai intero), l'mzML esce a pezzi.
 - Pagina: `agilent-d.js::toMzml` raggruppa i file di ogni `.D`, li passa a `rb.nativeSamples` come membri `x.D/AcqData/…` e ne fa un campione `x.mzML` letto così com'è (`lettura-nativa.md`, `rust-nativo.js`). Prova: `tests_e2e/e2e_lettori.py`, `e2e_agilent.py` (cartella sintetica).
 - Cartella intera: `agilent-d.js` (`AgilentD`: `locate`, `group`, `mzmlName` puri e provati in node da `tests/test_agilent_d.py`; `toMzml` mostra l'avanzamento con `ConvUI`, annulla con il segnale, mette l'mzML in `CONV` per «Scarica mzML»). `CartCarica.load` (`cartella-carica.js`) raggruppa i file per cartella `.D` (percorso relativo) e passa a `upload()` un mzML per corsa insieme agli altri file; una `.D` senza `MSScan.bin`/`MSPeak.bin` dà un avviso con chiave (`err.file.notAgilentD`; con un `data.ms` la cartella si apre da quello), senza motore Rust `err.file.agilentNoEngine`.
-- Prova nel browser: `tests_e2e/e2e_agilent.py` (cartella sintetica di `tools/agilent_sintetico.py`: due `.D` e un mzML, avviso, TIC, nessuna richiesta a Pyodide). Un `.D` trascinato o scelto senza «Carica una cartella» (file sparsi) non è riconosciuto; il desktop non converte ancora i `.D`.
-- Peso, misurato con `wasm-opt -Oz` sul `.wasm` prima di `wasm-bindgen`: +22.7 KB (da 1 721 280 a 1 744 005 byte, +1.3 %; +9 KB in gzip). Il `.wasm` del motore pubblicato pesa 1 407 064 byte contro il limite di 1 572 864: resta nel motore, non serve caricarlo a richiesta.
+- Prova nel browser: `tests_e2e/e2e_agilent.py` (cartella sintetica di `tools/agilent_sintetico.py`: due `.D` e un mzML, avviso, TIC, nessuna richiesta a Pyodide). Un `.D` trascinato o scelto senza «Carica una cartella» (file sparsi) non è riconosciuto; il desktop non converte i `.D`.
+- Peso: il lettore sta nel motore (nessun caricamento a richiesta); il limite del `.wasm` è in `pages.yml`.
 - Memoria: `MSScan.bin` intero (184 byte per scansione) più i record (circa 130 byte): 100 000 scansioni = circa 30 MB sui 192 MB di budget; se l'allocazione fallisce l'errore è `error.memoryBudget`. Gli spettri passano uno alla volta; l'mzML non sta in memoria.
 
 ## Non verificato (nessun file vero)
