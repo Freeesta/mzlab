@@ -3,9 +3,9 @@
 <title>Teoria · QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><script src="tema.js"></script></head>
 <body>
 <div class="wrap"><nav id="side"></nav><main>
-<div class="kicker">Laboratorio di analisi degli inquinanti · Esperienza 3</div>
-<h1>Dalla cuvetta allo spettro: la teoria dietro l'esperienza</h1>
-<p class="lead">Un inquinante organico viene degradato per fotocatalisi su TiO<sub>2</sub>. I suoi prodotti di trasformazione (TP) vengono separati in cromatografia liquida, ionizzati per elettrospray e analizzati con un triplo quadrupolo in full scan, MS2 e MRM. Queste pagine spiegano <em>perché</em> ogni passaggio funziona e che cosa significa ciò che vedete nei dati.</p>
+<div class="kicker">Spettrometria di massa e cromatografia</div>
+<h1>Dalla cuvetta allo spettro: la teoria dietro l'analisi</h1>
+<p class="lead">Un caso di studio guida — la degradazione di una molecola modello e l'identificazione dei prodotti di trasformazione (TP) — illustra il funzionamento della cromatografia liquida, della ionizzazione elettrospray e dell'analisi con triplo quadrupolo in full scan, MS2 e MRM. Queste pagine spiegano <em>perché</em> ogni passaggio funziona e come interpretare i dati sperimentali.</p>
 
 <h2>Il percorso dell'analita</h2>
 <p>Ogni capitolo corrisponde a un tratto del percorso fisico della molecola. Cliccate su un blocco per aprire il capitolo.</p>
@@ -57,23 +57,23 @@
   <g stroke="#c2410c" stroke-width="3"><path d="M820 262 v-40 M836 262 v-20 M852 262 v-30 M862 262 v-8"/></g>
   <text class="ch" x="670" y="200">CAP. 12–18</text><text class="tt" x="740" y="200">Full scan · MS2 · MRM</text></a>
 </svg><details class="figdesc" id="fd-index-0"><summary>Descrizione della figura</summary><p>Otto riquadri in due righe, uniti da frecce. Prima riga: Fotocatalisi TiO₂ (cap. 1–2); Filtrazione 0,45 µm; HPLC C18, acqua/ACN + HCOOH (cap. 4); Elettrospray, ioni [M+H]⁺ in fase gas (cap. 6); Interfaccia e vuoto, 760 Torr → 10⁻⁵ (cap. 8). Seconda riga: Q1 filtro di massa (cap. 9); q2 cella di collisione, CID con N₂ (cap. 10–14); Q3 + rivelatore; Full scan · MS2 · MRM (cap. 12–18).</p></details>
-<figcaption><b>Figura 0.1</b> Il percorso fisico della molecola, dalla cuvetta irradiata al dato che aprite in QqQ lab. Ogni blocco porta al capitolo che lo spiega.</figcaption>
+<figcaption><b>Figura 0.1</b> Il percorso fisico della molecola, dal reattore al dato analizzato. Ogni blocco porta al capitolo che lo spiega.</figcaption>
 </figure>
 
-<h2>Che cosa farete in laboratorio</h2>
+<h2>Il workflow analitico tipico</h2>
 <table>
-<tr><th>Giorno</th><th>Operazione</th><th>Modalità MS</th><th>Capitoli</th></tr>
-<tr><td>1</td><td>Fotocatalisi del campione (TiO<sub>2</sub> 400 mg/L, 2,5 mL inquinante + 2,5 mL sospensione; t = 0, 5, 10, 15, 30, 45, 60 min; filtrazione 0,45 µm). Standard dell'inquinante incognito: ricerca delle transizioni più importanti.</td><td>Full scan, product ion scan (MS2)</td><td><a href="02-fotocatalisi.html">2</a>, <a href="10-qqq.html">10</a>, <a href="14-frammentazione-esi.html">14</a></td></tr>
-<tr><td>2</td><td>Retta di taratura in MRM e quantificazione dell'inquinante nei campioni degradati. Poi t0 e campioni degradati in scan per cercare gli intermedi.</td><td>MRM, full scan</td><td><a href="12-dati.html">12</a>, <a href="18-strategia.html">18</a></td></tr>
-<tr><td>3</td><td>Sui tempi in cui gli intermedi sono più abbondanti, esperimento di MS/MS (product ion scan).</td><td>MS2</td><td><a href="10-qqq.html">10</a>, <a href="14-frammentazione-esi.html">14</a>, <a href="18-strategia.html">18</a></td></tr>
+<tr><th>Fase</th><th>Operazione analitica</th><th>Modalità MS</th><th>Capitoli</th></tr>
+<tr><td>1</td><td>Studio cinetico di degradazione (TiO<sub>2</sub>, prelievi a tempi definiti: t = 0, 5, 10, 15, 30, 45, 60 min; filtrazione 0,45 µm). Standard del precursore: ottimizzazione delle transizioni più diagnostiche.</td><td>Full scan, product ion scan (MS2)</td><td><a href="02-fotocatalisi.html">2</a>, <a href="10-qqq.html">10</a>, <a href="14-frammentazione-esi.html">14</a></td></tr>
+<tr><td>2</td><td>Retta di taratura in MRM e quantificazione del precursore residuo. Analisi dei campioni a tempo in full scan per individuare i segnali dei prodotti intermedi.</td><td>MRM, full scan</td><td><a href="12-dati.html">12</a>, <a href="18-strategia.html">18</a></td></tr>
+<tr><td>3</td><td>Sui campioni a massima abbondanza dei prodotti di trasformazione, esperimento di MS/MS per elucidazione strutturale.</td><td>MS2</td><td><a href="10-qqq.html">10</a>, <a href="14-frammentazione-esi.html">14</a>, <a href="18-strategia.html">18</a></td></tr>
 </table>
-<div class="box lab"><b>Che cosa va nella relazione</b>
-<p>Una tabella con i rapporti m/z delle specie intermedie e i loro ioni prodotto caratteristici; il profilo di scomparsa dell'inquinante e l'evoluzione degli intermedi in funzione del tempo di irraggiamento. Il <a href="18-strategia.html">capitolo 18</a> spiega come arrivarci e come dichiarare onestamente il livello di confidenza di ogni attribuzione.</p></div>
+<div class="box key"><b>Elaborazione e presentazione dei risultati</b>
+<p>Tabella riassuntiva con i rapporti m/z dei prodotti intermedi e i loro ioni prodotto caratteristici; profilo cinetico di degradazione del composto di partenza ed evoluzione temporale dei prodotti. Il <a href="18-strategia.html">capitolo 18</a> spiega come condurre l'indagine e dichiarare con rigore il livello di confidenza di ogni attribuzione.</p></div>
 
-<h2>L'orale</h2>
-<div class="box oral"><b>Che cosa si chiede all'esame</b>
-<p>Due parti. <b>Prima</b>: domande su tutta la spettrometria di massa, a bassa e ad alta risoluzione, sulla gascromatografia e sulla cromatografia liquida, comprese le formule più importanti degli analizzatori. <b>Poi</b>: uno spettro EI stampato, da cui ricostruire a mano, da soli, la struttura del composto, da consegnare.</p>
-<p>Per la prima parte: i capitoli 3-11 e 19, il <a href="22-formulario.html">formulario</a> e le <a href="pratica-orale.html">domande dell'orale</a> con la simulazione d'esame. Per la seconda: i capitoli 13, 15 e 16 e il gioco <a href="pratica-ei.html">Dallo spettro alla struttura</a>, fino alla Modalità orale. La pagina <a href="pratica.html">Pratica</a> dice quando siete pronti.</p></div>
+<h2>Autoverifica e competenze chiave</h2>
+<div class="box oral"><b>Competenze teoriche e pratiche</b>
+<p>L'apprendimento della spettrometria di massa si articola in due pilastri: <b>comprensione dei principi</b> (bassa e alta risoluzione, cromatografia liquida e gassosa, sorgenti, analizzatori e formule chiave) e <b>capacità interpretativa</b> (ricostruire la struttura di un composto incognito a partire dallo spettro di massa EI e dai pattern di frammentazione).</p>
+<p>Per consolidare la teoria: i capitoli 3–11 e 19, il <a href="22-formulario.html">formulario</a> e le <a href="pratica-orale.html">domande di ripasso</a>. Per allenare l'interpretazione strutturale: i capitoli 13, 15 e 16 e gli esercizi in <a href="pratica-ei.html">Dallo spettro alla struttura</a>. La pagina <a href="pratica.html">Pratica</a> offre un quadro completo delle proprie competenze.</p></div>
 
 <h2>I capitoli</h2>
 <p>Sei parti, nell'ordine in cui conviene studiarle: ogni capitolo usa solo quello che c'è prima.</p>
@@ -118,21 +118,21 @@
 <h3>Appendici, guida e Pratica</h3>
 <div class="cards">
 <a href="21-glossario.html"><b>21 · Glossario e bibliografia</b><span>Termini, simboli e letture per approfondire.</span></a>
-<a href="22-formulario.html"><b>22 · Formulario per l'orale</b><span>Le formule da saper scrivere e spiegare, con gli ordini di grandezza.</span></a>
+<a href="22-formulario.html"><b>22 · Formulario</b><span>Le formule fondamentali da comprendere e applicare, con gli ordini di grandezza.</span></a>
 <a href="00-uso.html"><b>A · Come si usa QqQ lab</b><span>Pannelli, pulsanti e scorciatoie del programma, per argomento.</span></a>
-<a href="pratica.html"><b>Pratica</b><span>Giochi ed esercizi che correggono subito: spettri EI, domande dell'orale, isotopi, formule, quadrupolo.</span></a>
+<a href="pratica.html"><b>Pratica</b><span>Esercizi con feedback immediato: spettri EI, domande di ripasso, isotopi, formule, quadrupolo.</span></a>
 </div>
 
 <h2>Come usare queste pagine</h2>
 <ul>
-<li><b>Ordine consigliato</b>: da 1 a 18; il 19 e il 20 quando usate il programma. Ogni capitolo si apre con gli obiettivi («Alla fine saprete...») e chiude con domande di verifica: sono gli stessi obiettivi dell'orale.</li>
-<li><b>Riquadri</b>: <span class="pill">Concetto chiave</span> riassume l'idea da portare a casa; i riquadri arancioni segnalano errori frequenti; quelli verdi collegano la teoria allo strumento del laboratorio (SCIEX 3200 QTRAP, ESI positivo) e a QqQ lab; quelli viola contengono le derivazioni matematiche, che si possono saltare in prima lettura.</li>
-<li><b>Figure interattive</b>: sono calcoli veri, fatti nel vostro browser (nessuna connessione necessaria). Dove il modello è semplificato, la didascalia lo dice.</li>
-<li><b>Verifica</b>: a fine capitolo alcune domande con risposta a scomparsa. Provate a rispondere prima di aprirle.</li>
-<li><b>Fuori dall'app</b>: la cartella <code>teoria</code> si apre con doppio clic su <code>index.html</code> in qualsiasi browser, anche senza Python e senza internet. I link di approfondimento, ovviamente, richiedono la rete.</li>
+<li><b>Ordine consigliato</b>: da 1 a 18; il 19 e il 20 quando usate il programma. Ogni capitolo si chiude con domande di autoverifica per consolidare i concetti.</li>
+<li><b>Riquadri</b>: <span class="pill">Concetto chiave</span> riassume l'idea fondamentale; i riquadri arancioni segnalano errori frequenti; quelli verdi collegano la teoria alla strumentazione reale e al software; quelli viola contengono le derivazioni matematiche, che si possono saltare in prima lettura.</li>
+<li><b>Figure interattive</b>: calcoli e simulazioni eseguiti direttamente nel browser. Dove il modello è semplificato, la didascalia lo evidenzia.</li>
+<li><b>Verifica</b>: a fine capitolo domande concettuali con risposta a scomparsa per testare la propria preparazione.</li>
+<li><b>Fuori dall'app</b>: la cartella <code>teoria</code> si apre con doppio clic su <code>index.html</code> in qualsiasi browser, anche senza Python e senza internet. I link di approfondimento richiedono la rete.</li>
 </ul>
-<div class="box warn"><b>Una regola che vale per tutto il corso</b>
-<p>Il triplo quadrupolo del laboratorio ha <em>risoluzione unitaria</em>: misura la massa nominale, non la formula. Un m/z che compare nel tempo è un <em>candidato</em> prodotto di trasformazione, non un'identificazione. Queste pagine vi danno gli strumenti per ragionare sui candidati, non le risposte per il vostro composto.</p></div>
+<div class="box warn"><b>Una regola metodologica fondamentale</b>
+<p>Un quadrupolo standard lavora a <em>risoluzione unitaria</em>: misura la massa nominale, non la formula elementare. Un m/z osservato è un <em>candidato</em> prodotto di trasformazione, non un'identificazione definitiva. Queste pagine offrono gli strumenti logici e analitici per formulare e verificare ipotesi strutturali con rigore.</p></div>
 </main></div>
 <script src="../appname.js"></script><script src="teoria.js"></script>
 </body></html>

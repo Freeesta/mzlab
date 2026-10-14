@@ -27,11 +27,11 @@ const CHAPTERS = [
   ["19-hr-dda.html", "19", "Alta risoluzione e DDA nel programma", "VI. Dal dato al risultato"],
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
-  ["22-formulario.html", "22", "Formulario per l'orale", "Appendice"],
+  ["22-formulario.html", "22", "Formulario", "Appendice"],
   ["23-tempi.html", "23", "I tempi degli analizzatori: dwell time, sweep e duty cycle", "IV. Analizzare gli ioni", true],
-  ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
+  ["pratica.html", "P", "Esercizi e autoverifica", "Pratica"],
   ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
-  ["pratica-orale.html", "P2", "Domande dell'orale", "Pratica"],
+  ["pratica-orale.html", "P2", "Domande di ripasso", "Pratica"],
   ["pratica-perdite.html", "P3", "Che cosa ha perso?", "Pratica"],
   ["pratica-isotopi.html", "P4", "Indovina gli elementi", "Pratica"],
   ["pratica-formula.html", "P5", "Formula esatta", "Pratica"],
@@ -157,7 +157,7 @@ const TP = (() => {
       // header: logo, Teoria, info; it goes away scrolling down and comes back scrolling up (more room for the text, above all in landscape)
       top.insertAdjacentHTML("beforeend", `<button id="info" type="button" aria-label="Informazioni" title="Informazioni">i</button>`);
       const note = document.createElement("div"); note.id = "phnote"; note.className = "box warn"; note.hidden = true;
-      note.innerHTML = `<p>${PHONE_NOTE}</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p>`;
+      note.innerHTML = `<p>${PHONE_NOTE}</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande di ripasso</a></p>`;
       $("main").prepend(note);
       $("#info").onclick = () => { note.hidden = !note.hidden; if (!note.hidden) scrollTo({ top: 0, behavior: "smooth" }); };
       let y0 = scrollY;
@@ -165,9 +165,9 @@ const TP = (() => {
     }
     if (NOEX) {
       document.body.classList.add("noex");
-      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Gli esercizi si fanno da computer o da tablet</b><p>Questo gioco ha bisogno di uno schermo più grande (grafici da cliccare, editor delle strutture). Dal telefono potete ripassare con la Teoria, il formulario e le domande dell'orale.</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p></div>`);
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Gli esercizi si fanno da computer o da tablet</b><p>Questo gioco ha bisogno di uno schermo più grande (grafici da cliccare, editor delle strutture). Dal telefono potete ripassare con la Teoria, il formulario e le domande di ripasso.</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande di ripasso</a></p></div>`);
     } else if (here === "pratica.html") {
-      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Dal telefono</b><p>I giochi si fanno da computer o da tablet; dal telefono funzionano le <a href="pratica-orale.html">domande dell'orale</a>.</p></div>`);
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Dal telefono</b><p>I giochi si fanno da computer o da tablet; dal telefono funzionano le <a href="pratica-orale.html">domande di ripasso</a>.</p></div>`);
     }
   }
 
