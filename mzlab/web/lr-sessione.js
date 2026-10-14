@@ -8,7 +8,7 @@ const BASE = { sample: "sample", t0: "sample", blank: "blank", dark: "sample", i
 export function sessionFiles(items, ok, labels = []) {
   const seen = new Set(), lab = new Map((Array.isArray(labels) ? labels : []).filter(x => x && x.file).map(x => [x.file, x.label]));
   return (Array.isArray(items) ? items : []).filter(x => x && x.file)
-    .map(x => (x.tipo ? { file: x.file, label: lab.get(x.file) ?? null, type: BASE[x.tipo] || "sample", time: x.tempo_min, conc: x.concentrazione, cunit: x.unita, rep: x.rep } : x))
+    .map(x => (x.tipo ? { file: x.file, label: lab.get(x.file) ?? null, type: BASE[x.tipo] || "sample", time: x.tempo_min, conc: x.concentrazione, cunit: x.unita ?? "mg/L", rep: x.rep } : x))
     .map(x => (String(x.file).includes("#") ? { ...x, file: String(x.file).split("#")[0], label: null } : x))
     .filter(x => ok(x.file) && !seen.has(x.file) && seen.add(x.file));
 }
