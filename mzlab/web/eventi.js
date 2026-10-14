@@ -332,78 +332,12 @@ function ctxFor(p, e, x, px, py) {
     items.push("-");
     if (p.sel) items.push({ label: I18N.t("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], f.k) });
     items.push({ label: I18N.t("ctx.spec.atRt"), fn: () => newSpec(p, x - dt / 2, x + dt / 2, f.k) });
-  } else if (p.type === "spec") {
-    const a = p._a, d0 = a.data[0].d;
-    const m = specPick(p, px, py);                          // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
-    const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
-    items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-");
+  } else if (p.type === "spec") {                              // the actions of the registry azioni/1 (spettro.js and the modules that add theirs)
+    const a = p._a, m = specPick(p, px, py);                  // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
+    const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…";
     p._pm = has ? m : null;
-    items.push(mi({ label: I18N.t("ctx.spec.copy"), aria: I18N.t("ctx.spec.copy.aria", { mz: lab }), fn: () => { try { navigator.clipboard.writeText(lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } }));
-    let mark = items.length;                                  // HR: the entries are grouped at the end (tag), the others keep their order
-    const tag = g => { for (let i = mark; i < items.length; i++) if (items[i] !== "-" && !items[i].g) items[i].g = g; mark = items.length; };
-    if (a.hrp && window.DDA && has) { const q = DDA.ms2For(p, m)[0]; if (q) { items.push({ label: I18N.t("ctx.spec.openMs2", { mz: q.prec.toFixed(mzd(p, 2)) }), aria: I18N.t("ctx.spec.openMs2.aria", { mz: lab }), fn: () => DDA.openMs2(p, q.j) }); tag("ms2"); } }
-    { const e2 = has ? ms2OfPeak(p, m) : null; if (e2) items.push({ label: I18N.t("ctx.spec.extractMs2"), aria: I18N.t("ctx.spec.extractMs2.aria", { mz: lab }), fn: () => extractMs2(p, e2) }); }
-    items.push(mi({ label: I18N.t("ctx.spec.xic", { mz: lab }), fn: () => xicDirect(m, p) })); tag("xic");
-    if (window.LISTE) {
-      const pol = a.data[0].f && a.data[0].f.polarity;
-      items.push(mi({ label: I18N.t("ctx.spec.contLists"), fn: () => LISTE.open({ mz: m, polarity: pol, hr: !!a.hrp }) }));
-      if (a.hrp) {                                              // known contaminants (high resolution): information, and the contaminants of the laboratory
-        const kn = has && LISTE.isOn() && a.cont ? a.cont.match(m) : [];
-        if (kn.length) items.push({ label: I18N.t("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || I18N.t("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? I18N.t("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true });
-        items.push(mi({ label: I18N.t("ctx.spec.addLab"), fn: () => LISTE.askAdd(m, pol) }));
-      }
-      tag("cont");
-    }
-    if (a.hrp && window.DISP && window.BANCO && BANCO.on()) { items.push({ label: I18N.t("ctx.spec.marker"), check: markOn(p), aria: I18N.t("ctx.spec.marker.aria"), fn: () => { p.mk = !markOn(p); draw(p); uiSave(); } }, { label: I18N.t("ctx.spec.noCont"), check: !!p.noCont, aria: I18N.t("ctx.spec.noCont.aria"), fn: () => { p.noCont = !p.noCont; draw(p); uiSave(); } }); tag("view"); }
-    if (window.DISP && window.BANCO && BANCO.on()) { items.push({ label: I18N.t("disp.menu"), aria: I18N.t("disp.menu.aria"), fn: () => DISP.open(p) }); tag("disp"); }
-    if (a.hrp && window.ELEM) {
-      items.push(mi({ label: I18N.t("ctx.spec.generate", { mz: lab }), fn: () => ELEM.generate({ mz: m, sp: p, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
-      if (p.fm && p.fm.length) items.push({ label: I18N.t("cx.clear"), fn: () => { p.fm = []; draw(p); } });
-      tag("gen");
-    }
-    const xs = tabPanels().filter(q => q.type === "xic"), TIPX = I18N.t("ctx.spec.overlay.tip");
-    const ov = q => ({ label: I18N.t("ctx.spec.overlay", { name: xicName(q), n: q.num || "?" }), tip: TIPX, fn: () => xicDirect(m, p, q) });
-    if (xs.length > 3) items.push(mi({ label: I18N.t("ctx.spec.overlayMany"), tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));
-    else xs.forEach(q => items.push(mi(ov(q))));
-    tag("xic");
-    if (window.DDA) { const dm = DDA.menu(p, px, py, m); if (dm.length) items.push("-", ...dm); }       // DDA trio: average of the MS2 of an ion, follow an ion
-    tag("dda");
-    items.push("-", ...measMenu(p, m).map((o, i) => i === 0 ? mi(o) : o));
-    items.push(mi({ label: I18N.t("ctx.spec.annotate"), fn: async () => { const v = await ask(I18N.t("ctx.spec.annotate.prompt", { mz: lab }), ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } }));
-    items.push({ label: I18N.t("ctx.spec.iso"), fn: async () => {
-      const v = await ask(I18N.t("ctx.spec.iso.prompt", { adduct: EH(defAdduct(a.data.map(x => x.f))) }), p.iso ? p.iso.formula + " " + p.iso.ad : "");
-      if (!v) return;
-      const mm = v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
-      let ftxt = mm[1], adt = mm[2];
-      const chg = ftxt.match(/^(.+?)([+\-\u2212])$/);               // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
-      if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
-      try { const r = await getFormula(ftxt, ""); p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(x => x.f))).trim() };
-        const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
-        p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }   // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
-      catch (e) { info(I18N.t("ctx.spec.iso.fail", { message: EH(e.message) })); }
-    } });
-    if (p.iso && window.HR && a.hrp) items.push({ label: I18N.t("ctx.spec.isoRes"), fn: async () => {
-      const v = await ask(I18N.t("ctx.spec.isoRes.prompt"), p.iso.R != null ? String(p.iso.R) : "auto");
-      if (v == null) return; const t = String(v).trim().replace(",", ".");
-      if (t === "auto") delete p.iso.R; else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } p.iso.R = r; }
-      draw(p);
-    } });
-    if (p.iso) items.push({ label: I18N.t("ctx.spec.isoOff"), fn: () => { p.iso = null; draw(p); } });
-    tag("tools");
-    if (window.LIB && p.level === 2) items.push("-", LIB.isHr(p) ? { label: I18N.t("ctx.libWhat"), fn: () => LIB.whatIs(p) } : { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });       // «What is it?» only for high resolution
-    if (p.level === 2 && window.WORKFLOW) items.push("-", { label: I18N.t("ctx.spec.exportMgf"), fn: () => WORKFLOW.exportSpectrumMgf(p) }, { label: I18N.t("ctx.spec.exportMsp"), fn: () => WORKFLOW.exportSpectrumMsp(p) });
-    if (p.level === 2 && window.FAIR && FAIR.available(p)) items.push({ label: I18N.t("ctx.spec.exportMassbank"), fn: () => FAIR.massbank(p) }, { label: I18N.t("ctx.spec.exportSirius"), fn: () => FAIR.sirius(p) });
-    tag("lib");
-    const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
-    if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
-    if (p.link) items.push("-", { label: I18N.t("ctx.spec.freeze"), fn: () => { freezeSpec(p); uiSave(); } });
-    else if (srcP) items.push("-", { label: I18N.t("ctx.spec.relink"), fn: () => liveSpec(p, srcP) });
-    tag("link");
-    if (a.hrp) {                                              // HR: open the MS2, then formula and display, then the rest in groups with separators
-      const ORDER = [["ms2"], ["gen", "view", "disp"], ["xic"], ["cont"], ["tools"], ["dda"], ["lib"], ["link"]], head = items.splice(0, 2), body = items.splice(0).filter(i => i !== "-");
-      items.push(...head);
-      ORDER.forEach(g => { const l = body.filter(i => g.includes(i.g)).sort((a, b) => g.indexOf(a.g) - g.indexOf(b.g)); if (l.length) { if (items.length > head.length) items.push("-"); items.push(...l); } });
-    }
+    items.push({ label: has ? `m/z ${lab}` : I18N.t("ctx.spec.noPeak"), dim: true }, "-",
+      ...AZIONI.per({ vista: "spec", p, a, m, has, lab, e, px, py, pol: a.data[0].f && a.data[0].f.polarity }));
   } else {
     const k = nearestFile(p, x);
     items.push({ label: I18N.t("ctx.chrom.where", { rt: x.toFixed(2), file: E.files[k]?.label || "" }), dim: true }, "-");

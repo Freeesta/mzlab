@@ -40,3 +40,24 @@ def test_map_actions_have_texts_in_both_languages():
         for i in ids:
             for k in ("name", "tip"):
                 assert f'"cmd.{i}.{k}"' in cat, (lang, i, k)
+
+
+def test_rows_of_one_action_and_order_inside_a_group():
+    r = run("""const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('b',{ordine:2});reg('a',{ordine:1});reg('n',{voci:c=>c.xs.map(x=>({nome:'n'+x,dim:x===2,esegui:()=>0}))});reg('e',{voci:()=>[]});
+      AZIONI.registra({id:'h',gruppo:'help',viste:['v'],nome:()=>'h',esegui:()=>0});
+      const m=AZIONI.per({vista:'v',xs:[1,2]});
+      console.log(JSON.stringify(m.map(i=>i==='-'?'-':[i.id,i.label,i.dim])))""")
+    assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
+
+
+def test_spectrum_actions_have_texts_in_both_languages():
+    """Every i18n key named by a registered action of the spectrum exists in it and en."""
+    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair.js"))
+    blocks = re.findall(r'id: "spec\.\w+".*', src)
+    keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
+    assert len(blocks) >= 24 and len(keys) >= 20, (len(blocks), len(keys))
+    for lang in ("it", "en"):
+        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        for k in keys:
+            assert f'"{k}"' in cat, (lang, k)
