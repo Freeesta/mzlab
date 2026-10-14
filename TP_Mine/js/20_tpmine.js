@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  TP Mine: the tab with the whole automatic search of transformation products (only for the course owner).
 (() => {
   "use strict";
@@ -60,6 +61,7 @@
   // ---------------------------------------------------------------- worker and calls
   let worker = null, ready = null, seq = 0;
   const pending = new Map();
+  /** @type {(t?: any, f?: any, m?: any) => any} */
   let onProgress = () => {};
   function startWorker() {
     if (ready) return ready;
@@ -120,7 +122,7 @@
     try {
       const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
       const out = [];
-      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: f, nat: !!(await stubOf(f)) }); }
+      for await (const [name, h] of /** @type {any} */ (d).entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: f, nat: !!(await stubOf(f)) }); }
       return out;
     } catch (_) { return []; }
   }
@@ -214,6 +216,7 @@
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
+    /** @type {any} */
     const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
@@ -280,7 +283,7 @@
       msg("Looking for the files in browser memory...");
       const f = await pageFiles();
       if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
-      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
+      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf }), quiet);
     }
     $("#tp-pick").onclick = () => $("#tp-in").click();
     $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
@@ -369,7 +372,7 @@
       }
       return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, 8).map(x => x[2]);
     };
-    let sugItems = [], sugI = -1;
+    /** @type {any[]} */ let sugItems = [], sugI = -1;
     const sugBox = $("#tp-sug"), nameIn = $("#tp-name");
     const sugClose = () => { sugBox.hidden = true; sugI = -1; nameIn.setAttribute("aria-expanded", "false"); nameIn.removeAttribute("aria-activedescendant"); };
     const pick = i => {
@@ -408,9 +411,9 @@
     let drawing = false;
     const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
     drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
-    document.addEventListener("tpview", e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
-    document.getElementById("tp-draw-no").onclick = back;
-    document.getElementById("tp-draw-use").onclick = async () => {
+    document.addEventListener("tpview", /** @type {(e: any) => void} */ e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
+    /** @type {any} */ (document.getElementById("tp-draw-no")).onclick = back;
+    /** @type {any} */ (document.getElementById("tp-draw-use")).onclick = async () => {
       let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
@@ -459,7 +462,7 @@
     }
     function confetti() {
       const cv = document.createElement("canvas"); cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95"; document.body.appendChild(cv);
-      cv.width = innerWidth; cv.height = innerHeight; const g = cv.getContext("2d"), cols = ["#2b5c8a", "#047857", "#d99a1d", "#b42318", "#7c3aed", "#0ea5e9"];
+      cv.width = innerWidth; cv.height = innerHeight; const g = /** @type {CanvasRenderingContext2D} */ (cv.getContext("2d")), cols = ["#2b5c8a", "#047857", "#d99a1d", "#b42318", "#7c3aed", "#0ea5e9"];
       const P = Array.from({ length: 140 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 300, y: innerHeight * 0.35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 3, r: 3 + Math.random() * 4, c: cols[(Math.random() * cols.length) | 0], rot: Math.random() * 6, vr: (Math.random() - .5) * .4 }));
       const t0 = performance.now();
       const f = t => { const k = (t - t0) / 1800; g.clearRect(0, 0, cv.width, cv.height); for (const p of P) { p.vy += .35; p.x += p.vx; p.y += p.vy; p.vx *= .99; p.rot += p.vr; g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.globalAlpha = Math.max(0, 1 - k); g.fillStyle = p.c; g.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); g.restore(); } k < 1 ? requestAnimationFrame(f) : cv.remove(); };
@@ -651,7 +654,7 @@
     }
 
     document.addEventListener("keydown", ev => {
-      if (sec.hidden || !st.summary || st.view !== "tab" || !["ArrowDown", "ArrowUp"].includes(ev.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName)) return;
+      if (sec.hidden || !st.summary || st.view !== "tab" || !["ArrowDown", "ArrowUp"].includes(ev.key) || /INPUT|SELECT|TEXTAREA/.test((document.activeElement && document.activeElement.tagName) || "")) return;
       const ids = [...sec.querySelectorAll("#tp-t tr.clk")].map(t => +t.dataset.id); if (!ids.length) return;
       const i = ids.indexOf(st.sel), n = ev.key === "ArrowDown" ? Math.min(ids.length - 1, i + 1) : Math.max(0, i - 1); ev.preventDefault(); show(ids[n < 0 ? 0 : n]);
     });
