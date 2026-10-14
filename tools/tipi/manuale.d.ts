@@ -13,3 +13,6 @@ declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
 declare var FileSystemObserver: any;
 declare var MAPFEAT: any;
 declare var TPMINE: any;
+
+/** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are campioni/2 `tipo` and `tipo_bianco`, `time` is in minutes, `gT` = proposed from the name. */
+type Voce = { name: string; kind?: string; use: boolean; type: string; role?: string; sub?: string | null; time: number | null; gT?: boolean; conc?: number | null; prop?: number; ed?: number };

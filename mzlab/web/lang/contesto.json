@@ -460,6 +460,7 @@
   "cart.method": "Frase accodata all'avviso della cartella: più cartelle di metodo Agilent (.m) riconosciute, non sono file ignorati; {n} = quante, {name} = i loro nomi.",
   "method.m.title": "Titolo della sezione di una cartella di metodo Agilent (.m) nella finestra Metodo; {name} = nome della cartella.",
   "method.m.windows": "Riga sotto la tabella dei composti di un metodo .m: finestre del metodo; {ref} = finestra RT di riferimento, {non} = delle altre, {unit} = unità (%), {corr} = finestra di correlazione.",
+  "method.doc.fields": "Titolo del riquadro a scomparsa con tutti i campi del file, nella finestra Metodo; {n} = quanti.",
   "method.m.error": "Errore di lettura di un metodo .m nella finestra Metodo; {name} = cartella, {message} = motivo.",
   "cart.method.one": "Frase accodata all'avviso della cartella: una cartella di metodo Agilent (.m) riconosciuta; {name} = il nome della cartella.",
   "cart.ignored": "Frase accodata all'avviso della cartella: file di formato non riconosciuto, non caricati; {n} = quanti.",
@@ -550,5 +551,7 @@
   "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
   "cartp.one.aria": "Etichetta per lo screen reader del pulsante «Carica» di una riga della cartella collegata. {name} = nome del file.",
   "fondo.chip.auto": "Etichetta del fondo automatico sotto il grafico. {min} e {max} = minimo e massimo della linea di base tolta, in cps (già formattati).",
-  "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato."
+  "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato.",
+  "load.box.menu": "Nome accessibile dell'elenco aperto da una casella dei ruoli (Bianco, t0, Infusione) nella tabella di caricamento; {role} = nome della casella.",
+  "load.cell.of": "Nome accessibile di una cella della tabella di caricamento; {f} = nome del file, {col} = nome della colonna."
 }

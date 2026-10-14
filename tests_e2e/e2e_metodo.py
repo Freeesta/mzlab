@@ -58,6 +58,13 @@ try:
             assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "sciex-wiff" and m["origine"]["file"][0]["sha1"] == sha, m["origine"]
             assert m["origine"]["campione"] == 1, m["origine"]
         step("/api/metodo gives the metodo/1 of the .wiff sample", route)
+        def window():
+            pg.click("#np-method")
+            pg.wait_for_function("document.querySelector('#bigdlg').innerText.includes('Metodo registrato nel file')", timeout=60000)
+            t = pg.inner_text("#bigdlg")
+            assert "sciex-wiff" in t and "SHA-1 " + sha in t, t
+            pg.keyboard.press("Escape")
+        step("the Method window shows the method stored in the file (metodo/1)", window)
         def lone_unnamed():
             pg.set_input_files("#pick", [str(D / "lonely.wiff")])
             pg.wait_for_function("document.querySelector('#unopen') && document.querySelector('#unopen').innerText.includes('lonely')", timeout=60000)
