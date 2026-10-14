@@ -103,6 +103,12 @@ try:
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
             assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")
         step("files picked in the dialog are opened and the TIC is drawn by the native engine", load)
+        def native_listing():                                    # a dataset the readers do not know is refused through the whole way: bridge, shim, rpc, readers
+            f = LR_PICK[0]
+            r = pg.evaluate("""async f => { const file = new File([], "a.bin", { type: "application/x-mzlab-file;id=" + f.id }); Object.defineProperty(file, "size", { value: f.size });
+              try { await window.MZLAB_RUST.nativeSamples([{ name: "a.bin", blob: file }]); return "listed"; } catch (e) { return (e.json && e.json.error_key) || String(e); } }""", f)
+            assert r != "listed" and r.startswith("err."), r
+        step("natsamples reaches the readers of the native engine and refuses a file they do not know", native_listing)
         ref = {}
         def state_same():
             sess = pg.evaluate(JSON, "api/session")["j"]
