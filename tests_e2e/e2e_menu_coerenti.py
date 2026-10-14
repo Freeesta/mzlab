@@ -48,7 +48,16 @@ try:
             right_at(P, at[0] - b[0], at[1] - b[1]); ms = pg.evaluate(LABELS); close()
             assert kb and kb == ms, (kb, ms)
         step("chromatogram (Full Scan): Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')", "full"))
-        step("spectrum: Shift+F10 = right click at the same peak", lambda: same("E.panels.find(q=>q.type==='spec'&&q.el&&q.el.offsetParent)", "full"))
+        SP = "E.panels.find(q=>q.type==='spec'&&q.el&&q.el.offsetParent)"
+        step("spectrum: Shift+F10 = right click at the same peak", lambda: same(SP, "full"))
+        def spec_ids():
+            pg.evaluate(f"(()=>{{const p={SP};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
+            keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
+              return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
+                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes('spec'))}})()"""); close()
+            assert r["n"] >= 5 and not r["free"] and not r["bad"], r
+            assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
+        step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
         step("MRM: Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='mrm')", "mrm"))
     r.close()
 except Exception as e:

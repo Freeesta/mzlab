@@ -427,6 +427,8 @@ declare var isDark: any;
 declare var isHid: any;
 declare var isLine: any;
 declare var isMethodFile: any;
+declare var isoAsk: any;
+declare var isoRes: any;
 declare var kPre: any;
 declare var kbdMenu: any;
 declare var keyLoop: any;
