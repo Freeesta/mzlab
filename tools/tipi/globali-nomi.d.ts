@@ -557,7 +557,6 @@ declare var pushIh: any;
 declare var pushLinked: any;
 declare var pushZh: any;
 declare var qualityOf: any;
-declare var rawProfileInit: any;
 declare var rawSeries: any;
 declare var rawToMzml: any;
 declare var redrawAll: any;

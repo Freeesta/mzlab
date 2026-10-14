@@ -139,21 +139,11 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-function rawProfileInit(b){const rp=$("#rawprof"),cb=$("#rawprofile");if(!rp||!cb||b.nativo)return;rp.hidden=false;try{cb.checked=localStorage.getItem("qqq.rawprofile")==="1"}catch(_){}cb.addEventListener("change",()=>{try{localStorage.setItem("qqq.rawprofile",cb.checked?"1":"0")}catch(_){}})}      // the choice of profile or centroids of a converted .raw: only where the app converts (desktop)
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&(b.nativo||b.convertRaw)){{const k=b.nativo||b.convertWiff?"load.dropWiff":"load.dropRaw";d.setAttribute("data-i18n-html",k);d.innerHTML=I18N.t(k)}CONVERT_RAW=true;$("#convhelp").hidden=true;rawProfileInit(b)
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");CONVERT_RAW=true;$("#convhelp").hidden=true
 }})})();   // the .raw note only where the Rust engine can read it
-// a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
-async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!(rb.nativo||rb.convertRaw)||!files.some(f=>/\.raw$/i.test(f.name)))return files;
-  if(rb.nativo)return NATIVO.raws(files,(ST.files||[]).map(x=>x.name));      // read as it is: no mzML is made
-  const raws=files.filter(f=>/\.raw$/i.test(f.name)),out=[];let i=0;const g=ConvUI.group(box,raws.map(f=>f.size));
-  for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
-    if(g.signal.aborted)continue;       // cancelled: the .raw files still to convert are left out
-    const ui=g.start(++i,f.name);
-    try{const name=convName(f.name,[...files.filter(x=>!/\.raw$/i.test(x.name)).map(x=>x.name),...out.map(x=>x.name),...(ST.files||[]).map(x=>x.name)]),blob=await rb.convertRaw(f,p=>ui.update(p),g.signal,{profile:!!$("#rawprofile")?.checked});CONV.add(name,blob);out.push(new File([blob],name));ui.done();renderFiles()}
-    catch(e){if(e.cancelled){ui.done();continue}ui.fail(e.json?I18N.err(e.json).message:e.message)}}
-  if(g.signal.aborted){g.end();const d=document.createElement("div");d.className="muted";d.textContent=I18N.t("conv.cancelled");box.appendChild(d);setTimeout(()=>d.remove(),10000)}
-  else if(i)out.panel=g;else g.end();      // the panel stays for the indexing (upload shows it as the last phase of the same bar)
-  return out}
+// a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
+async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
+  return NATIVO.raws(files,(ST.files||[]).map(x=>x.name))}
 const WIFF_WAIT=new Map();   // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
 async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res={files,errs:[]},isW=f=>/\.wiff(\.scan)?$/i.test(f.name);

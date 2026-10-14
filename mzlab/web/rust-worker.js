@@ -84,7 +84,7 @@ setTimeout(() => safe(async () => {
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
   const files = await safe(() => ARCH.list("files")) || [], idx = await safe(() => ARCH.list("idx")) || [];
-  const names = new Set(files.map(f => f.name)), gone = idx.filter(e => !names.has(e.name.replace(/\.mzidx$/, "")));
+  const names = new Set(files.map(f => f.name)), gone = idx.filter(e => !names.has(e.name.replace(/(\.cen)?\.mzidx$/, "")));
   const sum = l => l.reduce((a, e) => a + e.size, 0), est = await ARCH.estimate();
   let persisted = false; try { persisted = !!(await navigator.storage.persisted()); } catch (_) { /* optional */ }
   const feat = await safe(() => ARCH.list("feat")) || [];
@@ -92,7 +92,7 @@ async function lrSpace() {
 }
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
-  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+  for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/(\.cen)?\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
 }
 async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
   for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
@@ -121,7 +121,7 @@ async function lrPut(m) {                                              // an upl
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
-  await ARCH.remove("idx", m.name + ".mzidx");
+  await ARCH.remove("idx", m.name + ".mzidx"); await ARCH.remove("idx", m.name + ".cen.mzidx");
   let f;
   if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
     f = await nativo.put(m, frac => postMessage({ op: "progress", id: m.id, frac, phase: "read" }));
@@ -168,6 +168,14 @@ async function lrOp(m) {
       try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
       if (!opened) jerr("err.engine.index");
       return { info: JSON.stringify({ ms: Math.round(performance.now() - t0) }) };
+    } finally { ARCH.release(m.name); }
+    case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
+      const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
+      if (!job) jerr("err.session.fileNotFound");
+      const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
+      if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
+      await ARCH.promote("idx", part, m.name + ".cen.mzidx");
+      return { info: "{}" };
     } finally { ARCH.release(m.name); }
     case "lr_entry": {
       const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");

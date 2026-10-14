@@ -1,7 +1,8 @@
 //! The files of the student and the notebook between two runs of the app: the page's archive (`archivio.js` in the browser, OPFS and IndexedDB) for the
 //! native engine. A file is KNOWN BY NAME and stays where it is on the disk (no copy of a 2 GB mzML); only what the app makes itself (the mzML converted
-//! from a Thermo `.raw`, a file sent as bytes) is copied into `files/`. `files.json` keeps name → path, size and date; `kv.json` the notebook; the indexes
-//! live in the index folder of the app (`idxbuild.rs`), and an index is dropped when its file changes.
+//! from a native sample, a file sent as bytes) is copied into `files/`. `files.json` keeps name → path, size and date; `kv.json` the notebook; the indexes
+//! live in the index folder of the app (`idxbuild.rs`), and an index is dropped when its file changes. A sample of a maker's file (`.raw`, `.wiff` +
+//! `.wiff.scan`, a `.D` folder) is an entry with `nat`: its members stay where they are, the size and the date are the ones of all of them.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -45,9 +46,10 @@ impl Store {
                     continue;
                 }
                 self.seq += 1;
+                let nat = Nat::from_json(&e["nat"]);
                 self.files.insert(
                     name,
-                    Entry { path, size: e["size"].as_u64().unwrap_or(0), mtime: e["mtime"].as_u64().unwrap_or(0), seq: self.seq },
+                    Entry { path, size: e["size"].as_u64().unwrap_or(0), mtime: e["mtime"].as_u64().unwrap_or(0), seq: self.seq, nat },
                 );
             }
         }
@@ -65,7 +67,13 @@ impl Store {
         let m: serde_json::Map<String, Value> = self
             .files
             .iter()
-            .map(|(n, e)| (n.clone(), json!({ "path": e.path.to_string_lossy(), "size": e.size, "mtime": e.mtime })))
+            .map(|(n, e)| {
+                let mut v = json!({ "path": e.path.to_string_lossy(), "size": e.size, "mtime": e.mtime });
+                if let Some(nat) = &e.nat {
+                    v["nat"] = nat.to_json();
+                }
+                (n.clone(), v)
+            })
             .collect();
         write_atomic(&dir, "files.json", &Value::Object(m).to_string());
     }
@@ -83,7 +91,7 @@ impl Store {
         let mut gone = Vec::new();
         let mut out = Vec::new();
         for (name, e) in self.files.iter_mut() {
-            match stamp(&e.path) {
+            match e.stamp() {
                 None => gone.push(name.clone()),
                 Some((size, mtime)) => {
                     let changed = size != e.size || mtime != e.mtime;
@@ -115,7 +123,20 @@ impl Store {
         let name = clean(name)?;
         let (size, mtime) = stamp(&path).ok_or_else(|| Error::new("err.file.raw").with("detail", "unknown file"))?;
         self.seq += 1;
-        let e = Entry { path, size, mtime, seq: self.seq };
+        let e = Entry { path, size, mtime, seq: self.seq, nat: None };
+        self.files.insert(name.to_string(), e.clone());
+        self.save_files();
+        Ok(e)
+    }
+
+    /// Registers (or replaces) the sample `name` of a maker's file: the members stay where they are.
+    pub fn put_nat(&mut self, name: &str, nat: Nat) -> Result<Entry> {
+        self.load();
+        let name = clean(name)?;
+        let path = nat.members.first().map(|m| m.1.clone()).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
+        self.seq += 1;
+        let mut e = Entry { path, size: 0, mtime: 0, seq: self.seq, nat: Some(nat) };
+        (e.size, e.mtime) = e.stamp().ok_or_else(|| Error::new("err.file.raw").with("detail", "unknown file"))?;
         self.files.insert(name.to_string(), e.clone());
         self.save_files();
         Ok(e)
@@ -125,8 +146,9 @@ impl Store {
         self.load();
         if let Some(e) = self.files.remove(name) {
             if let Ok(own) = self.own_dir() {
-                if e.path.starts_with(&own) {
-                    let _ = std::fs::remove_file(&e.path);
+                let paths = e.nat.iter().flat_map(|n| n.members.iter().map(|m| m.1.clone())).chain([e.path.clone()]);
+                for p in paths.filter(|p| p.starts_with(&own)) {
+                    let _ = std::fs::remove_file(p);
                 }
             }
             self.save_files();
@@ -171,14 +193,53 @@ fn stamp(path: &Path) -> Option<(u64, u64)> {
     Some((m.len(), t))
 }
 
+/// A sample of a maker's file: which sample (`c`) of which dataset (`ds`, one key for the samples that share the members), the members as
+/// `(name relative to the dataset, path)` and whether the profile scans are read as centroids.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Nat {
+    pub ds: String,
+    pub c: usize,
+    pub id: u32,
+    pub centroid: bool,
+    pub members: Vec<(String, PathBuf)>,
+}
+
+impl Nat {
+    fn to_json(&self) -> Value {
+        let members: Vec<Value> = self.members.iter().map(|(n, p)| json!([n, p.to_string_lossy()])).collect();
+        json!({ "ds": self.ds, "c": self.c, "id": self.id, "centroid": self.centroid, "members": members })
+    }
+
+    fn from_json(v: &Value) -> Option<Nat> {
+        let members: Vec<(String, PathBuf)> = v["members"].as_array()?.iter().filter_map(|m| Some((m[0].as_str()?.to_string(), PathBuf::from(m[1].as_str()?)))).collect();
+        (!members.is_empty()).then(|| Nat {
+            ds: v["ds"].as_str().unwrap_or("").to_string(),
+            c: v["c"].as_u64().unwrap_or(0) as usize,
+            id: v["id"].as_u64().unwrap_or(0) as u32,
+            centroid: v["centroid"].as_bool().unwrap_or(false),
+            members,
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Entry {
     pub path: PathBuf,
+    /// set for a sample of a maker's file (`path` is then its first member)
+    pub nat: Option<Nat>,
     pub size: u64,
     /// modification date in milliseconds: the order of the methods (`.dam`) and the test that an index still belongs to its file
     pub mtime: u64,
     /// order of arrival in this run: files of the same millisecond keep it
     pub seq: u64,
+}
+
+impl Entry {
+    /// Size and date now: of the file, or of all the members of a native sample (the sum of the sizes and the latest date). None when one is gone.
+    fn stamp(&self) -> Option<(u64, u64)> {
+        let Some(nat) = &self.nat else { return stamp(&self.path) };
+        nat.members.iter().try_fold((0u64, 0u64), |(s, t), (_, p)| stamp(p).map(|(a, b)| (s + a, t.max(b))))
+    }
 }
 
 #[derive(Default)]

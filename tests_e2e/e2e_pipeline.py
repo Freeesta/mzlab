@@ -48,6 +48,8 @@ for f in sorted(ser.glob("*.mzidx")): shutil.copy2(f, data / f.name)
 real = os.environ.get("MZLAB_PIPE_MZIDX")
 if real: shutil.copy2(real, data / "real.mzidx")
 names = sorted(p.name for p in data.glob("*.mzidx"))
+CEN = names[0][:-len(".mzidx")] + ".cen.mzidx"  # second index of the same sample (centroids for mzFinder): not a file of its own for the Pipeline
+shutil.copy2(data / names[0], data / CEN)
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -67,13 +69,19 @@ try:
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("window.PIPE && window.UNTUI", timeout=120000)
-        pg.evaluate(PUT, names)
+        pg.evaluate(PUT, names + [CEN])
 
         def gate_absent():
             pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open()"); pg.wait_for_selector("#pipe[open]")
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
             assert pg.locator("#pipe-file option").count() >= 1
         step("without cancello.json the panel says «not validated»", gate_absent)
+
+        def cen_not_listed():
+            opts = pg.eval_on_selector_all("#pipe-file option", "o => o.map(x => x.value)")
+            assert CEN not in opts and not any(".cen." in o for o in opts), opts
+            assert sorted(opts) == names, (opts, names)
+        step("a .cen.mzidx in OPFS is not listed as a file of the Pipeline", cen_not_listed)
 
         def gate_states():
             crate = pg.evaluate("PIPE.state.crate"); assert crate, crate
