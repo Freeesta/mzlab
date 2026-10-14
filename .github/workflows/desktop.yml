@@ -8,9 +8,9 @@ on:
   workflow_call:                      # release.yml builds the installers of a tag by calling this workflow
   push:
     branches: [main]
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", "Cargo.lock", "mzlab/web/**", "tools/build_site.py", ".github/workflows/desktop.yml"]
   pull_request:
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", "Cargo.lock", "mzlab/web/**", "tools/build_site.py", ".github/workflows/desktop.yml"]
 
 permissions:
   contents: read
@@ -39,6 +39,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: desktop-shim-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: desktop-shim-${{ runner.os }}-
       - run: python -m pip install numpy
       - run: python -m pip install playwright && python -m playwright install --with-deps chromium
       - name: Site
@@ -104,6 +105,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: desktop-${{ matrix.os }}-
       - name: cargo test (the mzlab:// protocol against the golden data)
         env:
           MZLAB_GOLDEN_STRICT: "1"
