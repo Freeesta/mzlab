@@ -93,16 +93,17 @@ try:
             pg.evaluate(M + ".cv.focus()"); x, y = at(.5, .5); pg.mouse.move(x, y)
             pg.keyboard.press("+"); pg.wait_for_timeout(300); z1 = z(); assert z1[0] and z1[1]
             pg.keyboard.press("+"); pg.wait_for_timeout(300); z2 = z(); assert (z2[0][1] - z2[0][0]) < (z1[0][1] - z1[0][0])
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert z() == z1, (z(), z1)                  # Esc takes back the last zoom
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert z() == z2, (z(), z2)                  # Esc only unlocks the mirror: the zoom stays (Ctrl/Cmd+Z takes it back)
             pg.keyboard.press("-"); pg.wait_for_timeout(300)
             pg.keyboard.press("Home"); pg.wait_for_timeout(300); assert z() == [None, None]
             zoom_in(); pg.keyboard.press("0"); pg.wait_for_timeout(300); assert z() == [None, None]
+            zoom_in(); pg.keyboard.press("Backspace"); attendi(pg, f"{M}.zoom == null && {M}.zoomY == null"); assert z() == [None, None]          # Backspace is the whole view too
             pg.keyboard.press("ContextMenu"); pg.wait_for_timeout(300)
             assert not pg.evaluate("document.getElementById('ctx').hidden"); focus = pg.evaluate("document.activeElement.getAttribute('role')"); assert focus == "menuitem", focus
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
             n0 = npan("xic"); pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ContextMenu"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(400)
             assert npan("xic") == n0 + 1, "Enter chooses the first live item: XIC"
-        step("keyboard: + − Esc Home 0, menu key, arrows and Enter in the menu", keys)
+        step("keyboard: + − Esc Home 0 Backspace, menu key, arrows and Enter in the menu", keys)
         def wheels():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("MAPPA.whole(" + M + ")"); x, y = at(.5, .45); pg.mouse.move(x, y)
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); pg.wait_for_timeout(300); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
