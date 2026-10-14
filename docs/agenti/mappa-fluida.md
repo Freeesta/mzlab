@@ -36,7 +36,7 @@ Studio (nessuna modifica al prodotto) su zoom, spostamento, mirino, cambio di fi
 | mirino: `api/spectra` p50 / p95 | 6,1 / 16,4 ms | 9,6 / 34,6 ms |
 | RSS Chromium / heap JS / picco WASM | 1314 / 91 / 32 MB | 1931 / 103 / 175 MB |
 
-Profilo HR (`hrp` 400 × 50 000, 2 × 320 MB): non ancora misurato.
+Profilo HR (`hrp` 400 × 50 000, 2 × 320 MB, 20 M punti per file): nel browser l'apertura dei due file non è finita in 18 minuti (giro fermato, nessun gesto misurato); nativo, indice di 228 MB: mappa intera 506 ms (18 ms dalla cache), regione 100-1000 m/z su tutto il tempo 316-366 ms, regione profonda 30 ms. Il profilo è il caso in cui D1 pesa di più: va misurato di nuovo nel browser dopo P1.
 
 Nativo, stesso indice `hrc` (108 MB, file nella cache del sistema): mappa intera 254 ms a freddo e 14 ms dalla cache; regione 100-1000 m/z su tutto il tempo 212-273 ms; regione profonda 2 min × 2 m/z 29-45 ms. Nel browser le stesse rotte prendono 5830 ms e 1465 ms: il calcolo è lo stesso codice, il resto è lettura.
 
