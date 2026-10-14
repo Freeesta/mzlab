@@ -49,7 +49,11 @@ impl State {
         let name = p["name"].as_str().unwrap_or("");
         let mut ix = self.open_idx(name)?;
         let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
-        let bytes = run::detect(&mut ix, name, &r)?;
+        // The page asks for several files at once: the pool of the index builds (cores - 1, at most 4) bounds how many run together and leaves a core to the window.
+        let bytes = self
+            .indexer()?
+            .pool
+            .install(|| run::detect(&mut ix, name, &r))?;
         let a = written(&bytes);
         self.feat_lock().files.insert(name.to_string(), bytes);
         a
