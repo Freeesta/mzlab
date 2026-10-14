@@ -63,10 +63,10 @@
     const g = grid(q("#ft-g"), head, r => [String(r[0]), Number(r[1]).toFixed(4), Number(r[2]).toFixed(2), ...o.names.map((/** @type {any} */ _, /** @type {number} */ j) => (r[7 + 2 * j] === "DETECTED" ? "" : `<small>${LETTER[r[7 + 2 * j]] || ""}</small> `) + fmtv(r[6 + 2 * j]))],
       r => o.onPick({ id: r[0], mz: r[1], rt: r[2], plain: true, reasons: [], proofs: [], cells: o.names.map((/** @type {any} */ _, /** @type {number} */ j) => ({ state: r[7 + 2 * j] in WORD ? WORD[r[7 + 2 * j]] : 3, area: r[6 + 2 * j] || 0 })) }));
     let timer = 0;
-    const update = () => {
+    const update = async () => {
       try {
-        const spec = specOf(q), v = o.session.view(spec), c = v.conteggi, rej = o.session.qc(spec).scartate;
-        g.set(o.session.rows(spec).slice(1));
+        const spec = specOf(q), v = await o.session.view(spec), c = v.conteggi, rej = (await o.session.qc(spec)).scartate;
+        g.set((await o.session.rows(spec)).slice(1));
         q("#ft-n").textContent = `${c.tenute.toLocaleString("en")} of ${c.righe.toLocaleString("en")} rows`;
         q("#ft-why").textContent = rej.length ? "Rejected by each filter, in order: " + rej.map((/** @type {any} */ r) => `${G.PIPEQC.WHY[r.regola] || r.regola} (${r.righe.toLocaleString("en")})`).join(", ") : "";
       } catch (/** @type {any} */ e) { q("#ft-n").textContent = ""; q("#ft-why").textContent = o.say ? o.say(e) : String(e.message || e); }

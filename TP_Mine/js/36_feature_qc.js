@@ -46,6 +46,7 @@
 
   /** a session on one table: `a` = { base, bytes (.mzfeat), names (stems of the files), inputs ([{name, sha256}] of the table), pol } */
   async function open(/** @type {any} */ a) {
+    if (window.MZLAB_DESKTOP) return openNative(a);
     const m = await engine(a.base), bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length;
     const read = (/** @type {any} */ _, /** @type {number} */ off, /** @type {number} */ len) => bytes.slice(off, off + len);
     const sha = await G.UNT.sha256Hex(bytes);
@@ -59,6 +60,25 @@
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
+    };
+  }
+
+  /** the same session in the app: every call is the native route `feat/table` (the table the last step of the Pipeline holds in the app, named by its SHA-256), so the methods answer with a Promise */
+  async function openNative(/** @type {any} */ a) {
+    const bytes = /** @type {Uint8Array} */ (a.bytes), size = bytes.length, sha = await G.UNT.sha256Hex(bytes);
+    const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-desktop-pool.js"]], { type: "text/javascript" }));
+    const pool = (await import(url)).createDesktopPool();
+    /** @type {(kind: string, p: Record<string, any>) => Promise<string>} */ const T = (kind, p) => pool.table(kind, p);       // its errors carry `key` and `params`
+    const proposed = await T("samples", { files: JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) }) });
+    const samples = a.campioni ? withRoles(proposed, a.campioni) : proposed;
+    /** @type {(kind: string, spec: string, more?: Record<string, any>) => Promise<string>} */ const V = (kind, spec, more) => T(kind, { samples, spec, sha256: sha, polarity: a.pol, ...more });
+    return {
+      samples, sha, size, bytes,
+      qc: async (/** @type {string} */ spec) => JSON.parse(await V("qc", spec)),
+      view: async (/** @type {string} */ spec) => JSON.parse(await V("view", spec)),
+      rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
+      report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
+      file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
     };
   }
 
@@ -83,8 +103,8 @@
   const qcCss = `#pipe svg.qcl{display:inline;width:12px;vertical-align:-1px}#pipe .qcb{stroke:var(--panel)}#pipe .qcb0{fill:var(--pv-d)}#pipe .qcb1{fill:var(--pv-t)}#pipe .qcb2{fill:var(--pv-f)}#pipe .qcb3{fill:var(--pv-a)}#pipe .qc table{border-collapse:collapse;font-size:12px;margin:6px 0}#pipe .qc td,#pipe .qc th{padding:2px 8px;text-align:left}#pipe .qc .n{text-align:right}`;
 
   /** renders the step into `box`; `o` = { session, gate (PIPE.gateState), gateText (html), chart (PIPE.chart: box, svg, title, desc, table) } */
-  function render(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
-    const q = o.session.qc(""), files = q.file;
+  async function render(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
+    const q = await o.session.qc(""), files = q.file;
     box.innerHTML = `<details open class="qc"><summary>Quality control</summary><p class="mut">Numbers of the engine for the whole table; no threshold is applied. D detected, T targeted, F filled, A absent.</p>
       <div class="gate${o.gate.table ? " ok" : ""}" role="status">${o.gateText}<br>Table view: ${o.gate.table ? "validated" : "not validated"}. Candidate view: ${o.gate.ok ? "validated" : "not validated"}.</div>
       <div class="charts"><div class="ch" id="qc-m"></div></div>

@@ -154,7 +154,7 @@
     try {
       const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity });
       st.session = session; const g = { ...gate, table: gate.table === true };
-      /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
+      await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, gateText: window.PIPE.gateText(gate), chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, onPick: r => detail(r), say });
       /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
