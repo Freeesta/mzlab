@@ -45,7 +45,7 @@
   };
   // The Rust engine (rust-bridge.js: the supervisor of rust-worker.js). A phone does not start it (telefono.js), an old browser cannot run it.
   const rustReady = modern && !window.QQQ_PHONE
-    ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), nativo: true, notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
+    ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
   try { caches.keys().then(k => console.info("[mzLab] site cache:", k.filter(n => n.startsWith("qqq-app-")).join(", ") || "none", "| page:", document.lastModified)).catch(() => {}); } catch (_) { /* no Cache API */ }      // for a diagnosis: which version of the site this page is
