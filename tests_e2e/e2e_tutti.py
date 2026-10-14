@@ -1,4 +1,4 @@
-"""Single view (low-resolution world): Full Scan, MS2 and MRM blocks on the same page from the start, one experiment type per panel; no tabs, no overview button,
+"""Single view (low-resolution world): only the block of the first file at the start; a click on a closed file adds the block of its type on the same page, one experiment type per panel; no tabs, no overview button,
 no switch; a click on a file of another group makes its type the current one and goes to its block."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,16 +16,23 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t15"), mz("B_MS2-t15"), mz("B_MRM-t0")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=30000)
         pg.click("text=Carica dati"); ready(pg)
+        def first_only():
+            pg.wait_for_function("E.panels.length>0", timeout=30000)
+            assert set(pg.evaluate("E.panels.map(p=>p.tab)")) == {"full"} and pg.evaluate("E.files.filter(f=>f.vis).length") == 1
+            n = pg.evaluate("document.querySelectorAll('#flst .fl input[data-k]').length"); assert n == 3, n          # one list with the three files, the others closed
+        step("only the first file is open; the list holds all three", first_only)
         def together():
-            pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000); pg.wait_for_timeout(1500)
+            open_kind(pg, "ms2"); attendi(pg, "E.panels.some(p=>p.tab==='ms2')")
+            open_kind(pg, "mrm")
+            pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000)
+            attendi(pg, "(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});const r=Object.values(m).map(a=>[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]).sort((a,b)=>a[0]-b[0]);return r.every((x,i)=>i===0||r[i-1][1]<=x[0]+1)})()", timeout=30000)      # the new blocks are placed under the ones already there
             v = pg.evaluate(VIS); assert {"full", "ms2", "mrm"} <= set(v), v
             ys = pg.evaluate("(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});return Object.fromEntries(Object.entries(m).map(([t,a])=>[t,[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]]))})()")
             order = sorted(ys, key=lambda t: ys[t][0])
             for a, b in zip(order, order[1:]): assert ys[a][1] <= ys[b][0] + 1, (a, b, ys)          # blocks one under the other, never overlapping
-            n = pg.evaluate("document.querySelectorAll('#flst .fl input[data-k]').length"); assert n == 3, n          # one list with the three files, all live
             assert pg.locator("#dtabs, #ovbtn, #uip-tog").count() == 0 and pg.evaluate("'tog' in UIP") is False, "no tabs, no overview button, no switch"
             assert pg.evaluate("STATO.verifica()") == [], pg.evaluate("STATO.verifica()")
-        step("three blocks one under the other from the start; one file list with every file", together)
+        step("opening the other two files: three blocks one under the other, no tabs", together)
         def rule():
             for pl in ("full", "ms2", "mrm"):
                 assert pg.evaluate(f"E.panels.filter(p=>p.tab==='{pl}'&&p._a&&p._a.sr).every(p=>p._a.sr.every(s=>E.files[s.k].kind==='{pl}'))"), pl      # a panel draws one experiment type only
