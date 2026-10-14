@@ -5,7 +5,9 @@
 pub mod detail;
 pub mod kin;
 pub mod labels;
+pub mod mrm;
 pub mod ms2;
+pub mod peak1d;
 pub mod plan;
 pub mod rows;
 pub mod spec;
