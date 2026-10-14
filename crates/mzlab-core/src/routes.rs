@@ -73,7 +73,7 @@ pub struct Routes<R: ReadAt> {
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
     /// The pyramid of map tiles of each level (`maptiles`), built on first use; `None` = the level has none.
-    pub(crate) tiles: Vec<(u8, Option<std::sync::Arc<crate::maptiles::Pyramid>>)>,
+    pub(crate) tiles: Vec<(u8, Option<std::sync::Arc<crate::maptiles::Pyramid>>, u64)>,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
@@ -384,7 +384,12 @@ pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
 pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    map_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+    map_cache_bytes(files) + tiles_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+}
+
+/// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
+pub fn tiles_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+    files.values().flat_map(|r| r.tiles.iter()).filter_map(|t| t.1.as_ref()).map(|p| p.bytes()).sum()
 }
 
 /// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
@@ -407,14 +412,22 @@ pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R
     let mut dropped = 0;
     while cache_bytes(files) > cap {
         let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
+        let tile = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, *k, i))).min();
         let idx = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k))).min();
-        match (map, idx) {
-            (Some((tm, k, i)), other) if other.is_none_or(|(ti, _)| tm <= ti) => {
+        let older = |t: u64, other: Option<u64>| other.is_none_or(|o| t <= o);
+        let (tm, tt, ti) = (map.map(|m| m.0), tile.map(|t| t.0), idx.map(|i| i.0));
+        match (map, tile, idx) {
+            (Some((t, k, i)), _, _) if older(t, tt) && older(t, ti) => {
                 if let Some(r) = files.get_mut(&k) {
                     r.maps.remove(i);
                 }
             }
-            (_, Some((_, k))) => {
+            (_, Some((t, k, i)), _) if older(t, tm) && older(t, ti) => {
+                if let Some(r) = files.get_mut(&k) {
+                    r.tiles.remove(i);
+                }
+            }
+            (_, _, Some((_, k))) => {
                 if let Some(r) = files.get_mut(&k) {
                     r.idx.evict_oldest();
                 }

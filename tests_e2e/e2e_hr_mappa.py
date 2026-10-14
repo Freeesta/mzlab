@@ -82,6 +82,19 @@ try:
         def origin():
             same([f"api/origin?k={a}&mz=305.0702&parent={PARENT}", f"api/origin?k={c}&mz={PARENT + 1.00335}&parent={PARENT}&rt0=13.8&rt1=14.8&formula={ds.HR_PARENT}"], 1e-6)
         step("the evidence of origin of high-resolution files from Rust, equal to the reference's, without Pyodide", origin)
+        def tiles():
+            u = f"api/maptiles?k={a}&level=1&rt0=0&rt1=60&mz0=100&mz1=1000&nrt=200&nmz=300"
+            r1 = pg.evaluate(JSON, u); assert r1["status"] == 200 and r1["eng"] == "rust", (r1["status"], r1["eng"])
+            j = r1["j"]; n = j["nrt"] * j["nmz"]; assert 0 < j["nrt"] <= 200 and 0 < j["nmz"] <= 300, (j["nrt"], j["nmz"])
+            raw = __import__("base64").b64decode(j["data"]); assert len(raw) == 4 * n, (len(raw), n)
+            assert any(raw), "the pyramid has no cell"
+            assert len(j["rt"]) == j["nrt"] + 1 and j["dmz"] == 0.25 * 2 ** j["tile_level"], (len(j["rt"]), j["dmz"], j["tile_level"])
+            saved = pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("tiles"); const o = []; for await (const [n, h] of d.entries()) o.push([n, (await h.getFile()).size]); return o; }""")
+            assert any(n.endswith(".L1.mzt") and sz > 16 for n, sz in saved), saved
+            r2 = pg.evaluate(JSON, u); r1["j"].pop("timing", None); r2["j"].pop("timing", None)
+            assert r2["j"] == r1["j"], "the second answer differs"
+            assert not left(pg), left(pg)
+        step("api/maptiles from Rust: cells that fit the request, the pyramid saved in OPFS, the same answer again", tiles)
         b.close()
 finally:
     srv.terminate()
