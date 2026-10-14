@@ -186,9 +186,9 @@ function attach(p) {
       }
       return;
     }
-    if (p.type === "map") {                                              // double click = whole view (the spectrum at that RT is in the right-click menu)
+    if (p.type === "map") {                                              // zoomed = whole view; whole map = the spectrum at that RT (the double tap does the same: mappa.js)
       if (window.MAPPA && p._a && p._a.map && Date.now() - (MAPPA.st(p).dtap || 0) < 600) return;      // the double tap has already done it
-      if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
+      if (window.MAPPA) MAPPA.dbl(p, rect(e)); else { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
     // one rule for every graph: zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
@@ -205,7 +205,7 @@ function attach(p) {
       newSpec(p, r0, r1, kk);          // every double click makes a new LIVE spectrum right under the chromatogram; the previous ones freeze
       draw(p); return;
     }
-    if (p.type === "spec") { p.lock = null; if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); } }                     // double click on a spectrum: whole spectrum, free axes, no measures
+    if (p.type === "spec") { pushZh(p); p.lock = null; if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); } }                     // double click on a spectrum: whole spectrum, free axes, no measures
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything

@@ -357,6 +357,11 @@ window.MAPPA = (() => {
     if (Math.abs(by - ay) > 4) p.zoomY = clampView(v[0], v[1], a.fullY[0], a.fullY[1]);
     draw(p); uiSave();
   }
+  // double click / double tap: zoomed = whole view (undoable); whole map = the spectrum at that RT
+  function dbl(p, px) {
+    const a = p._a; if (!a || !a.map || p.zoom || p.zoomY) { whole(p); return; }
+    const rt = a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); spectrumAt(p, Math.max(a.full[0], Math.min(a.full[1], rt)), a.f.k);
+  }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
   function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
   // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
@@ -807,7 +812,7 @@ window.MAPPA = (() => {
       if (e.touches.length) { if (e.cancelable) e.preventDefault(); g = { two: e.touches.length > 1, last: cen(e.touches), start: cen(e.touches), moved: true }; return; }
       if (moved) { st(p).gestAt = Date.now(); if (e.cancelable) e.preventDefault(); uiSave(); return; }       // no mouse events after a gesture (they would be a box zoom)
       const now = Date.now(), c = e.changedTouches[0], r = cv.getBoundingClientRect(), q = at(c, r);
-      if (lastTap && now - lastTap.t < 350 && Math.hypot(q.x - lastTap.x, q.y - lastTap.y) < 30) { lastTap = null; if (e.cancelable) e.preventDefault(); st(p).dtap = now; whole(p); navSync(p); return; }
+      if (lastTap && now - lastTap.t < 350 && Math.hypot(q.x - lastTap.x, q.y - lastTap.y) < 30) { lastTap = null; if (e.cancelable) e.preventDefault(); st(p).dtap = now; dbl(p, q.x); navSync(p); return; }
       lastTap = { t: now, x: q.x, y: q.y };
     };
     cv.addEventListener("touchend", end); cv.addEventListener("touchcancel", () => { clearTimeout(lp); g = null; });
@@ -855,7 +860,7 @@ window.MAPPA = (() => {
     }
   }
 
-  return { open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { dbl, open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
