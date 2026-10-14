@@ -25,7 +25,7 @@ window.toast = function(msg) {
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
-const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4 };      // merge = join the centroids of the same nominal mass (centroid files only)
+const UIP = { theme: "auto", pal: "file", merge: true, hrPpm: 5, hrDec: 4 };      // merge = join the centroids of the same nominal mass (centroid files only)
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
@@ -84,9 +84,10 @@ const PALS = {
     dash: true, blank: "#777777", blankDark: "#aaaaaa", std: "#333333", stdDark: "#dddddd"
   },
 };
+PALS.file = { ...PALS.time, plain: true };               // default: one categorical colour per file, no time scale, no neutral greys, continuous lines
 const PAL = [];
 function setPal(mode) {
-  UIP.pal = PALS[mode] ? mode : "time";
+  UIP.pal = PALS[mode] ? mode : "file";
   const P = PALS[UIP.pal], dark = isDark();
   PAL.length = 0; PAL.push(...(dark && P.catDark ? P.catDark : P.cat));
   document.documentElement.dataset.pal = UIP.pal;
@@ -106,8 +107,10 @@ const DASHES = [[], [6, 3], [2, 3], [10, 3, 2, 3]];
 const LWX = () => PALS[UIP.pal].lw || 0;                      // extra line width (px) of the high contrast palette
 // line style of a file: blank dashed, Full Scan standard dash-dot (both neutral grey); with the colour-blind / high-contrast palettes the files of the
 // time scale are also told apart by line style (second code besides the colour)
+let PLAIN = false;                                           // true while every file takes a categorical colour (palette "file", or "time" with no file that has a time)
 function fdash(f) {
   if (f.type === "blank") return [4, 3];
+  if (PLAIN) return [];
   if (f.kind === "full" && f.type === "standard") return [10, 4];
   return PALS[UIP.pal].dash && f.rank != null ? DASHES[f.rank % 4] : [];
 }
@@ -406,14 +409,6 @@ function restoreUi() {
 // time, so 7 files at 0-5-10-15-30-45-60 min are as far apart as 3 files; hiding a file does not change any colour, removing one does). Blank and
 // Full Scan standards are outside the scale (neutral grey, dashed); Full Scan samples without a time use the categorical colours. MS2 and MRM files keep
 // the categorical colours (MRM: transition, not time). A colour chosen by the student (colorSet) is never overwritten.
-const STD_SEQ_LIGHT = ["#fdae6b", "#e6550d", "#a63603", "#5a1d02"];     // one orange hue, light (low concentration) to dark (high) on white
-const STD_SEQ_DARK  = ["#ffedd5", "#fed7aa", "#fba94b", "#f97316", "#ff5722"]; // luminous peach to bright orange/coral on dark
-function stdColor(u) {                                       // u in 0..1
-  const seq = isDark() ? STD_SEQ_DARK : STD_SEQ_LIGHT;
-  const P = PALS[UIP.pal], x = (P.hc ? 0.45 + 0.55 * u : u) * (seq.length - 1), i = Math.min(Math.floor(x), seq.length - 2), f = x - i;
-  const c = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16)), A = c(seq[i]), B = c(seq[i + 1]);
-  return "#" + A.map((v, k) => Math.round(v + (B[k] - v) * f).toString(16).padStart(2, "0")).join("");
-}
 function paintFiles() {
   setPal(UIP.pal);
   const P = PALS[UIP.pal], dark = isDark();
@@ -422,8 +417,14 @@ function paintFiles() {
   const byTime = kind => E.files.filter(f => !f.gone && f.kind === kind && f.type === "sample" && f.time != null).sort((a, b) => a.time - b.time || a.k - b.k);
   const scales = [byTime("full"), byTime("mrm")], inScale = new Set(scales.flat());
   E.files.forEach(f => { f.rank = null; });
-  scales.forEach(scale => scale.forEach((f, i) => { f.rank = i; if (!f.colorSet) f.color = seqColor(scale.length > 1 ? i / (scale.length - 1) : 0.5); }));
   const cal = E.files.filter(f => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((a, b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);
+  PLAIN = !!P.plain || (UIP.pal === "time" && !inScale.size && !cal.length);
+  if (PLAIN) {                                               // nothing to draw on a time scale: a different colour per file, never grey or black
+    let m = 0;
+    E.files.forEach(f => { if (f.type === "blank") { if (!f.colorSet) f.color = blankCol; } else if (!f.colorSet) f.color = PAL[m++ % PAL.length]; else m++; });
+    return;
+  }
+  scales.forEach(scale => scale.forEach((f, i) => { f.rank = i; if (!f.colorSet) f.color = seqColor(scale.length > 1 ? i / (scale.length - 1) : 0.5); }));
   cal.forEach((f, i) => { if (!f.colorSet) f.color = stdColor(cal.length > 1 ? i / (cal.length - 1) : 0.6); });
   let n = 0;
   E.files.forEach(f => {

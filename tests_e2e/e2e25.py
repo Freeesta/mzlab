@@ -39,8 +39,8 @@ try:
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 2 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
-            assert pg.input_value("#uip-pal") == "time"
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
+            assert pg.input_value("#uip-pal") == "file"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
             pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(300)
             assert pg.evaluate("UIP.tips") is None and pg.evaluate("UIP.num") is None and pg.evaluate("typeof TUT") == "undefined" and pg.evaluate("typeof tipOf") == "undefined"
@@ -75,9 +75,9 @@ try:
         step("a colour chosen by hand is not overwritten; 'ripristina colori' brings the scale back", manual)
         def menu_entry():
             drawer(pg); pg.click("#flst .fl .nm >> nth=0", button="right"); pg.wait_for_timeout(300)
-            assert "Ripristina i colori automatici (per tempo)" in pg.inner_text("body")
+            assert "Ripristina i colori automatici" in pg.inner_text("body")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
-        step("the file menu has 'Ripristina i colori automatici (per tempo)'", menu_entry)
+        step("the file menu has 'Ripristina i colori automatici'", menu_entry)
         def palettes():
             seen = {}
             for k in ("time", "cb", "hc", "rainbow"):
