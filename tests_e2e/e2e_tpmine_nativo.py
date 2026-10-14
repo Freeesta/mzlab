@@ -1,5 +1,5 @@
 """mzFinder reads the samples of a maker's file (.wiff + .wiff.scan) as they are: its Full Scan, MS2 and MRM samples are listed from the .mzidx of the Data tab (version 2) and no mzML is written for
-them; only a sample with profile scans (mzFinder works on centroids) gets its mzML, written then for that use only. The SRM traces of a sample come from the engine of the page (`rb.nativeSrm`).
+them; a sample with profile scans (mzFinder works on centroids) gets a centroid index apart, `<name>.cen.mzidx`, beside the Data tab's; no mzML is written for it either. The SRM traces of a sample come from the engine of the page (`rb.nativeSrm`).
 Synthetic pairs of tools/wiff_riferimento.py. Needs the site and the .wasm (python tools/build_site.py + the CI build)."""
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -54,8 +54,13 @@ try:
             print("   made:", made)
             assert "two_s2.mzML" not in made, made                             # the MRM sample is read as it is
             assert not any(n.startswith("prodotto") for n in made), made    # centroid samples are read as they are
-            assert "serie.mzML" in made, made                                  # a profile sample is reduced to centroids: its mzML is written for that
-        step("no mzML is written for a centroid or MRM sample, one for the profile sample", no_mzml)
+            assert "serie.mzML" not in made, made                              # a profile sample is reduced to centroids by its own index, not through an mzML
+        step("no mzML is written for a centroid, MRM or profile sample", no_mzml)
+        def cen():
+            l = pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx"), o = []; for await (const [n] of d.entries()) o.push(n); return o; }""")
+            assert "serie.mzML.cen.mzidx" in l and "serie.mzML.mzidx" in l, l       # the centroid index is apart; the Data tab's stays
+            assert not any(n.startswith("prodotto") and ".cen." in n for n in l), l  # a centroid sample needs none
+        step("a profile sample gets a centroid index beside the Data tab's", cen)
         def traces():
             r = pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY, b = await rb.nativeSrm("two_s2.mzML"); return [b.constructor.name, new DataView(b.buffer, b.byteOffset).getUint32(0, true)]; }""")
             assert r[0] == "Uint8Array" and r[1] >= 0, r
