@@ -3,9 +3,11 @@
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
 use crate::numarray::Num;
-use std::io::{BufReader, Read};
+use std::borrow::Cow;
+use std::io::{BufReader, ErrorKind, Read};
 
 use base64::Engine;
+use flate2::{Decompress, FlushDecompress, Status};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
@@ -119,68 +121,163 @@ enum Scope {
     Chromatogram,
 }
 
-fn attrs(e: &BytesStart) -> Vec<(String, String)> {
-    e.attributes()
-        .with_checks(false)
-        .filter_map(|a| a.ok())
-        .map(|a| {
-            let v = a
-                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
-                .map(|c| c.into_owned())
-                .unwrap_or_default();
-            (a.key.as_ref().to_string(), v)
-        })
-        .collect()
+/// The attributes of an element as borrowed text (no allocation when the value has no escapes).
+fn attrs<'a>(e: &'a BytesStart) -> Vec<(&'a str, Cow<'a, str>)> {
+    let mut out = Vec::with_capacity(8);
+    for a in e.attributes().with_checks(false).filter_map(|a| a.ok()) {
+        let v = a
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+            .unwrap_or_default();
+        // `Attribute::key` borrows the element's buffer, not the temporary `a`
+        let key = a.key.into_inner();
+        out.push((key, v));
+    }
+    out
 }
 
-fn get<'a>(a: &'a [(String, String)], name: &str) -> Option<&'a str> {
-    a.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
+fn get<'a>(a: &'a [(&str, Cow<str>)], name: &str) -> Option<&'a str> {
+    a.iter().find(|(k, _)| *k == name).map(|(_, v)| v.as_ref())
 }
 
 fn xml_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.xml").with("detail", e)
 }
 
-fn decode_array(a: &Array, expected: usize) -> Result<(Vec<f64>, Vec<f32>)> {
-    let clean: String = a.text.chars().filter(|c| !c.is_whitespace()).collect();
-    if clean.is_empty() {
+/// What a caller keeps of a decoded array: the other width is never allocated.
+#[derive(Clone, Copy, PartialEq)]
+enum Want {
+    F64,
+    F32,
+    Both,
+}
+
+/// The inflater of the parse: one `Decompress` and one output buffer reused by every array.
+struct Inflate {
+    dec: Decompress,
+    out: Vec<u8>,
+}
+
+impl Inflate {
+    fn new() -> Self {
+        Inflate {
+            dec: Decompress::new(true),
+            out: Vec::new(),
+        }
+    }
+
+    /// Inflates the zlib stream into `self.out` (at most `limit` bytes), with the errors of `flate2::read::ZlibDecoder`.
+    fn run(&mut self, raw: &[u8], limit: usize) -> Result<()> {
+        self.dec.reset(true);
+        self.out.clear();
+        self.out
+            .try_reserve(limit.min(raw.len().saturating_mul(1032)))
+            .map_err(|_| Error::memory_budget())?;
+        let mut pos = 0usize;
+        loop {
+            // never more than `limit + 1` bytes: one over the limit is the proof of a bomb
+            let room = limit.saturating_add(1) - self.out.len();
+            if self.out.capacity() == self.out.len() {
+                let more = self.out.capacity().max(1 << 16).min(room);
+                self.out
+                    .try_reserve(more)
+                    .map_err(|_| Error::memory_budget())?;
+            }
+            let (before_in, before_out) = (self.dec.total_in(), self.dec.total_out());
+            let st = self
+                .dec
+                .decompress_vec(
+                    raw.get(pos..).unwrap_or_default(),
+                    &mut self.out,
+                    FlushDecompress::None,
+                )
+                .map_err(|_| zlib_error(ErrorKind::InvalidInput, "corrupt deflate stream"))?;
+            pos += usize::try_from(self.dec.total_in() - before_in).unwrap_or(raw.len());
+            let made = self.dec.total_out() - before_out;
+            if self.out.len() > limit {
+                return Err(Error::memory_budget());
+            }
+            match st {
+                Status::StreamEnd => return Ok(()),
+                _ if made == 0 && self.out.capacity() > self.out.len() => {
+                    return Err(zlib_error(
+                        ErrorKind::UnexpectedEof,
+                        "incomplete deflate stream",
+                    ))
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// The 32-bit intensity of a value (exact for a value read from a 32-bit array).
+fn narrow(v: f64) -> f32 {
+    v as f32
+}
+
+fn zlib_error(kind: ErrorKind, msg: &str) -> Error {
+    Error::new("err.file.zlib").with("detail", std::io::Error::new(kind, msg.to_string()))
+}
+
+fn decode_array(
+    a: &Array,
+    expected: usize,
+    inf: &mut Inflate,
+    want: Want,
+) -> Result<(Vec<f64>, Vec<f32>)> {
+    // Base64 text rarely holds white space: decode it where it is, filter only when a byte could be white space.
+    let spaced = a
+        .text
+        .bytes()
+        .any(|b| matches!(b, b'\t'..=b'\r' | b' ' | 0x80..));
+    let clean: String;
+    let text: &[u8] = if spaced {
+        clean = a.text.chars().filter(|c| !c.is_whitespace()).collect();
+        clean.as_bytes()
+    } else {
+        a.text.as_bytes()
+    };
+    if text.is_empty() {
         return Ok((Vec::new(), Vec::new()));
     }
     let raw = base64::engine::general_purpose::STANDARD
-        .decode(clean.as_bytes())
+        .decode(text)
         .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
-    let bytes = if a.zlib {
+    let bytes: &[u8] = if a.zlib {
         // an array inflates to what the spectrum declares (64 MB when it declares nothing): a zlib stream may claim far more than the file holds
         let limit = match expected.saturating_mul(a.num.width()) {
             0 => 64 << 20,
             n => n,
         };
-        let mut out = Vec::new();
-        out.try_reserve(limit.min(raw.len().saturating_mul(1032)))
-            .map_err(|_| Error::memory_budget())?;
-        flate2::read::ZlibDecoder::new(&raw[..])
-            .take((limit as u64).saturating_add(1))
-            .read_to_end(&mut out)
-            .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
-        if out.len() > limit {
-            return Err(Error::memory_budget());
-        }
-        out
+        inf.run(&raw, limit)?;
+        &inf.out
     } else {
-        raw
+        &raw
     };
     let width = a.num.width();
     let n = bytes.len() / width;
     let mut f64s: Vec<f64> = Vec::new();
     let mut f32s: Vec<f32> = Vec::new();
-    f64s.try_reserve_exact(n)
-        .map_err(|_| Error::memory_budget())?;
-    f32s.try_reserve_exact(n)
-        .map_err(|_| Error::memory_budget())?;
-    for c in bytes.chunks_exact(width) {
-        let v = a.num.value(c);
-        f64s.push(v);
-        f32s.push(v as f32);
+    if want != Want::F32 {
+        f64s.try_reserve_exact(n)
+            .map_err(|_| Error::memory_budget())?;
+    }
+    if want != Want::F64 {
+        f32s.try_reserve_exact(n)
+            .map_err(|_| Error::memory_budget())?;
+    }
+    let chunks = bytes.chunks_exact(width);
+    match (a.num, want) {
+        (Num::F32, Want::F64) => f64s.extend(chunks.map(|c| a.num.value(c))),
+        (_, Want::F64) => f64s.extend(chunks.map(|c| a.num.value(c))),
+        (_, Want::F32) => f32s.extend(chunks.map(|c| narrow(a.num.value(c)))),
+        (_, Want::Both) => {
+            for c in chunks {
+                let v = a.num.value(c);
+                f64s.push(v);
+                f32s.push(narrow(v));
+            }
+        }
     }
     Ok((f64s, f32s))
 }
@@ -212,15 +309,20 @@ struct Chrom {
     ms_term: bool,
 }
 
-fn finish_spectrum(s: Spec) -> Result<Spectrum> {
+fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<Spectrum> {
     let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
     for a in &s.arrays {
         match a.kind {
-            ArrayKind::Mz => mz = decode_array(a, s.len)?.0,
+            ArrayKind::Mz => mz = decode_array(a, s.len, inf, Want::F64)?.0,
             ArrayKind::Intensity => {
-                let (w, f) = decode_array(a, s.len)?;
-                it = f;
-                wide = if a.num == Num::F32 { None } else { Some(w) };
+                if a.num == Num::F32 {
+                    it = decode_array(a, s.len, inf, Want::F32)?.1;
+                    wide = None;
+                } else {
+                    let (w, f) = decode_array(a, s.len, inf, Want::Both)?;
+                    it = f;
+                    wide = Some(w);
+                }
             }
             _ => {}
         }
@@ -255,16 +357,16 @@ fn number_after(id: &str, key: &str) -> Option<f64> {
     rest[..end].parse().ok()
 }
 
-fn finish_chromatogram(c: Chrom) -> Result<Chromatogram> {
+fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     let (mut t, mut y) = (Vec::new(), Vec::new());
     let mut seconds = false;
     for a in &c.arrays {
         match a.kind {
             ArrayKind::Time => {
-                t = decode_array(a, c.len)?.0;
+                t = decode_array(a, c.len, inf, Want::F64)?.0;
                 seconds = a.seconds;
             }
-            ArrayKind::Intensity => y = decode_array(a, c.len)?.0,
+            ArrayKind::Intensity => y = decode_array(a, c.len, inf, Want::F64)?.0,
             _ => {}
         }
     }
@@ -314,6 +416,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     let mut in_binary = false;
     let mut in_precursor_list = false;
     let mut in_analyzer = false;
+    let mut inf = Inflate::new();
 
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
@@ -321,8 +424,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
             Event::Eof => break,
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(ev, Event::Empty(_));
-                let name = e.name().as_ref().to_string();
-                match name.as_str() {
+                let name = e.name().into_inner();
+                match name {
                     "spectrum" => {
                         let a = attrs(e);
                         spec = Some(Spec {
@@ -452,8 +555,8 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                 }
             }
             Event::End(ref e) => {
-                let name = e.name().as_ref().to_string();
-                match name.as_str() {
+                let name = e.name().into_inner();
+                match name {
                     "binary" => in_binary = false,
                     "binaryDataArray" => {
                         if let Some(arr) = array.take() {
@@ -468,14 +571,14 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
                         if let Some(s) = spec.take() {
-                            f(Item::Spectrum(finish_spectrum(s)?));
+                            f(Item::Spectrum(finish_spectrum(s, &mut inf)?));
                             n_spec += 1;
                         }
                         scope = Scope::None;
                     }
                     "chromatogram" => {
                         if let Some(c) = chrom.take() {
-                            f(Item::Chromatogram(finish_chromatogram(c)?));
+                            f(Item::Chromatogram(finish_chromatogram(c, &mut inf)?));
                             n_chrom += 1;
                         }
                         scope = Scope::None;
@@ -488,4 +591,70 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
         buf.clear();
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::indexing_slicing)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    fn mzml(zlib: &[u8]) -> String {
+        let b = base64::engine::general_purpose::STANDARD.encode(zlib);
+        let a = |acc: &str| {
+            format!(
+                r#"<binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000574"/><cvParam accession="{acc}"/><binary>{b}</binary></binaryDataArray>"#
+            )
+        };
+        format!(
+            r#"<mzML><run><spectrumList count="1"><spectrum index="0" id="scan=1" defaultArrayLength="3"><binaryDataArrayList>{}{}</binaryDataArrayList></spectrum></spectrumList></run></mzML>"#,
+            a("MS:1000514"),
+            a("MS:1000515")
+        )
+    }
+
+    fn deflate(raw: &[u8]) -> Vec<u8> {
+        let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+        e.write_all(raw).unwrap();
+        e.finish().unwrap()
+    }
+
+    fn key(z: &[u8]) -> (String, String) {
+        let e = read(mzml(z).as_bytes()).unwrap_err();
+        let detail = e
+            .params
+            .iter()
+            .find(|(k, _)| *k == "detail")
+            .map(|(_, v)| v.to_string())
+            .unwrap_or_default();
+        (e.key.to_string(), detail)
+    }
+
+    #[test]
+    fn zlib_errors_keep_their_keys_and_details() {
+        let raw: Vec<u8> = [1.0f64, 2.0, 3.0]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        let good = deflate(&raw);
+        let ok = read(mzml(&good).as_bytes()).unwrap();
+        assert_eq!(ok.spectra[0].mz, vec![1.0, 2.0, 3.0]);
+        let trailing = [good.clone(), b"xyz".to_vec()].concat();
+        assert_eq!(
+            read(mzml(&trailing).as_bytes()).unwrap().spectra[0]
+                .mz
+                .len(),
+            3
+        );
+        let cut = &good[..good.len() - 6];
+        assert_eq!(
+            key(cut),
+            ("err.file.zlib".into(), "incomplete deflate stream".into())
+        );
+        assert_eq!(key(&good[..5]).1, "incomplete deflate stream");
+        assert_eq!(key(b"hello world 12345").1, "corrupt deflate stream");
+        // 3 values declared, far more inflated: a bomb is a memory-budget error, not a zlib one
+        let bomb = deflate(&vec![0u8; 8 << 20]);
+        assert_eq!(key(&bomb), ("error.memoryBudget".into(), String::new()));
+    }
 }
