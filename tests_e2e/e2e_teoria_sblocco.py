@@ -1,4 +1,4 @@
-"""Administrator mode of the Teoria (sblocco.js): a single click on the Teoria tab (the logo) still follows its link; five quick clicks set qqq.admin, say it in a
+"""Administrator mode of the Teoria (sblocco.js): a single click on the logo still goes to the program; five quick clicks set qqq.admin, say it in a
 role=status message and reload with html.esteso; with reduced motion nothing is animated; once unlocked the logo is a plain link again."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -18,40 +18,40 @@ try:
             q.on("pageerror", lambda e: r.errs.append(("pageerror", str(e)))); return c, q
         ls = lambda q: q.evaluate("localStorage.getItem('qqq.admin')")
         def single():
-            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#tab-teoria")
-            assert q.get_attribute("#tab-teoria", "href") == "index.html" and q.locator("#sblocco[role=status]").count() == 1
-            q.click("#tab-teoria"); q.wait_for_url("**/index.html", timeout=10000); assert ls(q) is None; c.close()
+            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo")
+            assert q.get_attribute("#logo", "href") == "../../#/dati" and q.locator("#sblocco[role=status]").count() == 1
+            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=10000); assert ls(q) is None; c.close()
         step("one click still follows the logo link (after 600 ms) and unlocks nothing", single)
         def five():
-            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#tab-teoria")
+            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo")
             assert not q.evaluate("document.documentElement.classList.contains('esteso')")
-            for _ in range(5): q.click("#tab-teoria", delay=20, no_wait_after=True)
+            for _ in range(5): q.click("#logo", delay=20, no_wait_after=True)
             q.wait_for_function("document.getElementById('sblocco').className==='on'", timeout=3000)
             assert q.inner_text("#sblocco").strip() == "Sbloccato" and ls(q) == "1"
             q.wait_for_function("document.documentElement.classList.contains('esteso')", timeout=8000)
             assert q.locator("#sblocco.on").count() == 0 and q.evaluate("TEORIA.esteso()") is True
-            q.click("#tab-teoria"); q.wait_for_url("**/index.html", timeout=3000)   # unlocked: a plain link, no delay, no counting
+            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=3000)   # unlocked: a plain link, no delay, no counting
             c.close()
         step("five quick clicks: flag, status message, reload with html.esteso; then the logo is a plain link", five)
         def calm():
-            c, q = ctx(reduced_motion="reduce"); q.goto(T + "01-tp.html"); q.wait_for_selector("#tab-teoria")
+            c, q = ctx(reduced_motion="reduce"); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo")
             for i in range(5):
-                q.click("#tab-teoria", delay=20, no_wait_after=True)
-                if i < 4: assert q.evaluate("document.querySelector('#tab-teoria').getAnimations().length") == 0
+                q.click("#logo", delay=20, no_wait_after=True)
+                if i < 4: assert q.evaluate("document.querySelector('#logo img').getAnimations().length") == 0
             q.wait_for_function("localStorage.getItem('qqq.admin')==='1'", timeout=3000); c.close()
         step("reduced motion: no animation, same unlock", calm)
         def anim():
-            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#tab-teoria")
-            q.click("#tab-teoria", no_wait_after=True); assert q.evaluate("document.querySelector('#tab-teoria').getAnimations().length") >= 1
-            assert q.evaluate("getComputedStyle(document.querySelector('#tab-teoria')).display") != "none"; c.close()
+            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo")
+            q.click("#logo", no_wait_after=True); assert q.evaluate("document.querySelector('#logo img').getAnimations().length") >= 1
+            assert q.evaluate("getComputedStyle(document.querySelector('#logo')).display") != "none"; c.close()
         step("a click animates the logo image", anim)
         def editor():
-            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#tab-teoria"); q.wait_for_selector("#a11y-btn", state="attached")
+            c, q = ctx(); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo"); q.wait_for_selector("#a11y-btn", state="attached")
             q.wait_for_function("!!window.TEORIA_EDITOR", timeout=8000)          # editor.js has run: it only left the button out
             assert q.locator("#tc-editor").count() == 0
             q.keyboard.press("Alt+E")
             assert q.evaluate("!!document.querySelector('#tedit-bar')") is False and q.evaluate("document.designMode") != "on"
-            for _ in range(5): q.click("#tab-teoria", delay=20, no_wait_after=True)
+            for _ in range(5): q.click("#logo", delay=20, no_wait_after=True)
             q.wait_for_function("localStorage.getItem('qqq.admin')==='1'", timeout=3000)
             q.wait_for_function("document.documentElement.classList.contains('esteso')", timeout=8000)
             q.wait_for_selector("#tc-editor", timeout=5000)

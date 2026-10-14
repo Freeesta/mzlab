@@ -277,6 +277,12 @@
     toastTimer = setTimeout(() => { if (t) t.style.display = "none"; }, ms);
   }
 
-  window.TEORIA_EDITOR = { toggle: toggleEditor, salva: salvaCapitolo };
+  window.TEORIA_EDITOR = {
+    toggle: toggleEditor,
+    salva: salvaCapitolo,
+    attiva: () => {
+      insertBarButton();
+    }
+  };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

@@ -27,7 +27,7 @@ const CHAPTERS = [
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
   ["22-formulario.html", "22", "Formulario", "Appendice"],
-  ["23-tempi.html", "23", "I tempi degli analizzatori: dwell time, sweep e duty cycle", "IV. Analizzare gli ioni", true],
+  ["23-tempi.html", "23", "Tempi degli analizzatori: dwell time, sweep e duty cycle", "Appendice"],
   ["pratica.html", "P", "Esercizi e autoverifica", "Pratica"],
   ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
   ["pratica-orale.html", "P2", "Domande di ripasso", "Pratica"],
@@ -100,7 +100,8 @@ const TP = (() => {
     const tabs = `<nav id="tabs" aria-label="Sezioni di ${APP}">` +
       (!prog || PHONE ? "" : `<a id="tab-dati" href="../../#/dati">Dati</a><a id="tab-disegno" href="../../#/disegno">Disegno</a>`) +
       `<a id="tab-teoria" href="index.html" class="on" aria-current="page">Teoria</a></nav>`;
-    top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" : tabs + `<span class="sp"></span>`);
+    top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" :
+      `<a id="logo" href="${!prog ? "index.html" : PHONE ? "../../" : "../../#/dati"}" aria-label="${!prog ? "Teoria: introduzione" : PHONE ? APP : APP + ": Dati"}"><img src="../logo-64.png" alt="m/z" width="28" height="28"></a>` + tabs + `<span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side"); side.setAttribute("aria-label", "Indice dei capitoli e della pagina");
     // «Salta al contenuto»: first thing reached with Tab, visible only on focus
