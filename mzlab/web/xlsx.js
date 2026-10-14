@@ -83,6 +83,9 @@ function xlsxBuild(sheets) {
   ].map(([n, t]) => [n, enc.encode(t)]);
   return zipStore(files);
 }
-// download as .xlsx (name without extension is completed)
-function dlx(name, sheets) { dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME); }
+// download as .xlsx (name without extension is completed); prov (object, may be {}) = a last sheet «Provenance» (PROV, schema provenienza/1)
+async function dlx(name, sheets, prov = undefined) {
+  if (prov) sheets = await PROV.sheets(sheets, prov);
+  dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME);
+}
 if (typeof module !== "undefined") module.exports = { xlsxBuild, zipStore, xlsxCrc32 };

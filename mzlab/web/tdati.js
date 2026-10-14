@@ -41,7 +41,7 @@ function table(o) {
   d.querySelectorAll('[data-td="x"]').forEach(b => { b.onclick = close; });
   d.addEventListener("cancel", e => { e.preventDefault(); close(); });
   d.querySelector('[data-td="c"]').onclick = async () => {
-    const tsv = [o.head || [], ...(o.rows || [])].map(r => r.join("\t")).join("\n");
+    const tsv = await PROV.tsv([o.head || [], ...(o.rows || [])].map(r => r.join("\t")).join("\n"), { table: String(o.title || "chart-data") });
     try { await navigator.clipboard.writeText(tsv); } catch (_) { const t = document.createElement("textarea"); t.value = tsv; d.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* the table itself can be selected and copied */ } t.remove(); }
     /** @type {HTMLElement} */ (document.getElementById("tdati-n")).textContent = T("tdati.copied");
   };

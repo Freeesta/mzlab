@@ -584,6 +584,12 @@ pub fn build_mzidx(
     ))
 }
 
+/// `/api/provenance`: the first line and the rows of the provenance of an exported table (`mzlab-core::provenance`, schema `provenienza/1`).
+#[wasm_bindgen]
+pub fn provenance(ctx: &str) -> Result<String, JsValue> {
+    mzlab_core::provenance::build(ctx).map_err(|e| error_json(&e))
+}
+
 /// `/api/formula`: neutral mass and ion m/z of a formula (`mzlab-core::elements`); an error is JSON with a key.
 #[wasm_bindgen]
 pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {

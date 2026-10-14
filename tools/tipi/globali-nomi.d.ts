@@ -135,6 +135,7 @@ declare var PK_DEF: any;
 declare var PLAIN: any;
 declare var POLS: any;
 declare var PROFILO: any;
+declare var PROV: any;
 declare var PT: any;
 declare var PT_OLD: any;
 declare var Q: any;

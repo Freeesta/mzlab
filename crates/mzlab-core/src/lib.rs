@@ -23,6 +23,7 @@ pub mod chromeleon;
 pub mod hrscanbin;
 pub mod hrscans;
 pub mod error;
+pub mod provenance;
 pub mod gradient;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
