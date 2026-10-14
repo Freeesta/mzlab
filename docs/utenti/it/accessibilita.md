@@ -11,7 +11,9 @@ mzLab punta alle regole **WCAG 2.2 livello AA** per Dati, Disegno, Teoria e Prat
 - **Testo**: la dimensione si regola dalle impostazioni (ingranaggio); l'interfaccia è in italiano e inglese (Teoria e Pratica solo in italiano).
 
 ## Provato come
-Controlli automatici (axe) sui grafici e sulle schermate principali. Non c'è ancora una verifica con persone che usano lettori di schermo.
+Controlli automatici (axe) sui grafici, sul Banco ad alta risoluzione, su Disegno, sulla Pratica e sul tour guidato. Non c'è ancora una verifica con persone che usano lettori di schermo.
+
+**Lacune note**: dentro l'editor Ketcher e nell'app desktop (la stessa pagina web in un guscio nativo) non c'è ancora una verifica automatica.
 
 ## Se trovi una barriera
 Segnalala con una [issue](https://github.com/Freeesta/mzlab/issues/new/choose): descrivi il browser, il dispositivo e l'ausilio che usi. Supporto *best effort*, senza tempi garantiti. Se non riesci a usare una parte del programma durante una lezione, chiedi al docente un'alternativa.
