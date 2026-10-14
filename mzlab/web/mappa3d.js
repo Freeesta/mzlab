@@ -1,3 +1,4 @@
+// @ts-strict
 // RT x m/z map in 3D: a full-screen viewer (modal dialog) written by hand in WebGL2, no libraries. Opened by «Apri in 3D» of the 2D map panel
 // (mappa.js), with the file and the region of that panel; the panel itself stays 2D. Four representations of the same data: surface, sticks
 // (one segment per true point, high resolution centroids), waterfall of spectra stacked along RT, contour lines on the floor.
@@ -5,8 +6,8 @@
 // Only measures are shown here: no automatic labels, no candidates.
 const T = (k, o) => I18N.t(k, o);
 const PREF_KEY = "d3";                                   // inside MAPPA.prefs ("qqq.mappa")
-const REDUCED = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-const SMALL = () => !!(window.MZLAB_PHONE || (matchMedia("(pointer:coarse)").matches && Math.min(screen.width, screen.height) < 900) || (navigator.deviceMemory && navigator.deviceMemory <= 4));
+const REDUCED = () => !!(/** @type {any} */ (window).matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+const SMALL = () => !!(window.MZLAB_PHONE || (matchMedia("(pointer:coarse)").matches && Math.min(screen.width, screen.height) < 900) || (/** @type {any} */ (navigator).deviceMemory && /** @type {any} */ (navigator).deviceMemory <= 4));
 const GRID = () => SMALL() ? 512 : 1024;                 // cells per side
 const STICKS = () => SMALL() ? 50000 : 200000;           // most points drawn as sticks
 const DEF = { mode: "surf", hs: "lin", ex: 1, asp: 1.6, lt: true, fl: true, sig: null, side: true };
@@ -183,7 +184,7 @@ function blur(Z, nx, ny, s) {
 
 function plot(c, xs, ys, cx, label, xlab, signed) {
   const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), W = Math.round((r.width || 260) * d), H = Math.round((r.height || 104) * d);
-  if (c.width !== W) c.width = W; if (c.height !== H) c.height = H; const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0);
+  if (c.width !== W) c.width = W; if (c.height !== H) c.height = H; const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); g.setTransform(d, 0, 0, d, 0, 0);
   const w = W / d, h = H / d; g.clearRect(0, 0, w, h); g.fillStyle = css("--muted"); g.strokeStyle = css("--muted"); g.font = "10px system-ui, sans-serif"; g.fillText(label, 6, 11);
   const n = ys.length; let mn = 0, mx = 0; for (let i = 0; i < n; i++) { if (ys[i] > mx) mx = ys[i]; if (ys[i] < mn) mn = ys[i]; } if (mx === mn) mx = mn + 1;
   const X = i => 4 + i / (n - 1) * (w - 8), Y = v => h - 14 - (v - mn) / (mx - mn) * (h - 30);
@@ -202,6 +203,7 @@ export function open(p, opener) {
   prefs.bg = p.corr === "auto";                                  // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
   const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
   const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
+  /** @type {any} */
   const V = {                                               // the state of the viewer
     k: f.k, ref: a.ref ? a.ref.k : null, norm: p.norm || "abs", lv, hr, rt: [a.x0, a.x1], mz: [a.y0, a.y1],
     g: null, raw: null, Z: null, zmin: 0, zmax: 1, refv: 1, signed: false, pts: null, cur: null, hover: false, plane: false, playing: 0,
@@ -244,7 +246,7 @@ export function open(p, opener) {
   };
   const bufs = { stick: gl.createBuffer(), cont: gl.createBuffer(), plane: gl.createBuffer(), box: gl.createBuffer() };
   let nStick = 0, nCont = 0;
-  const bgCol = () => { const c = css("--panel"); const m = /#([0-9a-f]{6})/i.exec(c); if (m) return [parseInt(m[1].slice(0, 2), 16) / 255, parseInt(m[1].slice(2, 4), 16) / 255, parseInt(m[1].slice(4), 16) / 255]; const r = /rgba?\((\d+)[ ,]+(\d+)[ ,]+(\d+)/.exec(c); return r ? [r[1] / 255, r[2] / 255, r[3] / 255] : [1, 1, 1]; };
+  const bgCol = () => { const c = css("--panel"); const m = /#([0-9a-f]{6})/i.exec(c); if (m) return [parseInt(m[1].slice(0, 2), 16) / 255, parseInt(m[1].slice(2, 4), 16) / 255, parseInt(m[1].slice(4), 16) / 255]; const r = /rgba?\((\d+)[ ,]+(\d+)[ ,]+(\d+)/.exec(c); return r ? [+r[1] / 255, +r[2] / 255, +r[3] / 255] : [1, 1, 1]; };
 
   // ---- geometry of the box: RT along x, m/z along -z (high m/z at the back, like the 2D map seen from above), height along y
   const box = () => ({ x: P.asp, y: 0.55 * P.ex, z: 1 });
@@ -258,7 +260,7 @@ export function open(p, opener) {
   const eyeOf = () => { const c = V.cam, az = c.az * Math.PI / 180, el = c.el * Math.PI / 180; return [c.t[0] + c.d * Math.sin(az) * Math.cos(el), c.t[1] + c.d * Math.sin(el), c.t[2] + c.d * Math.cos(az) * Math.cos(el)]; };
   const FOV = 35 * Math.PI / 180;
   const matVP = () => m4.mul(m4.persp(FOV, V.W / V.H, 0.02, 60), m4.look(eyeOf(), V.cam.t, [0, 1, 0]));
-  let VP = null;
+  /** @type {any} */ let VP = null;
   const project = (x, y, z) => { const m = VP, w = m[3] * x + m[7] * y + m[11] * z + m[15], cx = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w, cy = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w; return [(cx * 0.5 + 0.5) * V.W, (0.5 - cy * 0.5) * V.H, w]; };
   const resetCam = (az = 35, el = 32) => { const b = box(), r = Math.hypot(b.x, b.z, b.y) / 2; V.cam = { az, el, d: Math.max(1.5, r * 3.6), t: [0, b.y * (V.signed ? 0 : 0.25), 0] }; V.dirty = true; };
   const setView = n => { if (n === 1) resetCam(0, 89); else if (n === 2) resetCam(0, 0); else if (n === 3) resetCam(90, 0); else resetCam(35, 32); if (n !== 4) { const b = box(); V.cam.d = Math.max(1.5, Math.hypot(b.x, b.z) * 2.2); } V.dirty = true; };
@@ -357,7 +359,7 @@ export function open(p, opener) {
   function hist() {
     if (!V.raw) return;                                       // small histogram of |value| / reference (log scale of the ratio), with the threshold
     const c = Q("hist"), r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); c.width = Math.max(10, Math.round((r.width || 280) * d)); c.height = Math.round(46 * d);
-    const g = c.getContext("2d"), W = c.width, H = c.height, nb = 64, h = new Float64Array(nb), raw = V.raw;
+    const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")), W = c.width, H = c.height, nb = 64, h = new Float64Array(nb), raw = V.raw;
     for (let i = 0; i < raw.length; i += Math.max(1, raw.length >> 18)) { const x = Math.abs(raw[i]) / V.refv; if (x > 0) h[clamp(Math.floor((Math.log10(Math.min(1, x)) + 4) / 4 * nb), 0, nb - 1)]++; }
     const mx = Math.max(...h.map(v => Math.log1p(v)), 1); g.clearRect(0, 0, W, H); g.fillStyle = css("--muted");
     for (let i = 0; i < nb; i++) { const bh = Math.log1p(h[i]) / mx * (H - 4); g.fillRect(i * W / nb + 1, H - bh, W / nb - 1, bh); }
@@ -477,7 +479,7 @@ export function open(p, opener) {
     }
     const ns = clamp(2 * (g.nrt + g.nmz), 200, 3000), dt = (t1 - t0) / ns;
     const fo = t => { const x = e[0] + d[0] * t, z = e[2] + d[2] * t, fi = (x / b.x + 0.5) * (g.nrt - 1), fj = (0.5 - z / b.z) * (g.nmz - 1); return [fi, fj, e[1] + d[1] * t - heightAt(fi, fj) * b.y]; };
-    let prev = fo(t0), hit = null;
+    let prev = fo(t0), /** @type {any} */ hit = null;
     for (let s = 1; s <= ns; s++) {
       const t = t0 + s * dt, cu = fo(t);
       if ((prev[2] > 0) !== (cu[2] > 0)) { let a = t - dt, bq = t; for (let k = 0; k < 12; k++) { const m = (a + bq) / 2, fm = fo(m); if ((fm[2] > 0) === (prev[2] > 0)) a = m; else bq = m; } hit = fo(bq); break; }
@@ -505,7 +507,7 @@ export function open(p, opener) {
 
   // ---- interaction
   const setCur = (i, j) => { const g = V.g; if (!g) return; i = clamp(i, 0, g.nrt - 1); j = clamp(j, 0, g.nmz - 1); if (V.cur && V.cur.i === i && V.cur.j === j) return; V.cur = { i, j }; readout(); V.dirty = true; };
-  const ptrs = new Map(); let drag = null, moved = 0, lastPinch = 0, lpT = 0, lpDone = false;
+  const ptrs = new Map(); /** @type {any} */ let drag = null, moved = 0, lastPinch = 0, lpT = 0, lpDone = false;
   glc.addEventListener("pointerdown", e => {
     glc.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); moved = 0;
     drag = { x: e.offsetX, y: e.offsetY, g: ASSE.gest(true), ox: 0, oy: 0, pan: e.shiftKey || e.button === 2 || e.button === 1 }; if (ptrs.size === 2) lastPinch = 0; glc.focus({ preventScroll: true });
@@ -550,7 +552,7 @@ export function open(p, opener) {
   });
   const stepCur = (di, dj) => { if (!V.cur) return; V.plane = true; dlg.querySelector('[data-m="pl"]').checked = true; setCur(V.cur.i + di, V.cur.j + dj); };
   dlg.addEventListener("keydown", e => {
-    if (e.target.matches("input[type=text],input.mzf,select") ) return;
+    if (/** @type {any} */ (e.target).matches("input[type=text],input.mzf,select") ) return;
     const k = e.key; let used = true;
     if (ASSE.key(e)) { e.preventDefault(); readout(); return; }
     if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) { e.preventDefault(); return; }       // the locked axis keeps the other one still
@@ -572,7 +574,7 @@ export function open(p, opener) {
       kind: "3d", p, k: V.k, pt: () => cellOf(V.lock ? V.cur : hit || V.cur), locked: () => V.lock, toggleLock,
       resetAll: () => { resetCam(35, 32); },
       view: n => setView(n), zoomBy: f => { V.cam.d = clamp(V.cam.d * f, 0.2, 12); V.dirty = true; },
-      host: () => dlg.appendChild(ctxEl()),                    // the menu must live inside the modal dialog to be seen and used
+      host: () => dlg.appendChild(/** @type {any} */ (ctxEl())),                    // the menu must live inside the modal dialog to be seen and used
       after: () => { close(); }                                // the XIC and the spectrum appear in the panels of the page
     };
   }
@@ -625,7 +627,7 @@ export function open(p, opener) {
     const w0 = glc.width, h0 = glc.height;
     glc.width = Math.round(V.W * d * s); glc.height = Math.round(V.H * d * s); ovc.width = glc.width; ovc.height = glc.height;
     frame(s);
-    const out = document.createElement("canvas"); out.width = glc.width; out.height = glc.height; const o = out.getContext("2d"); o.drawImage(glc, 0, 0); o.drawImage(ovc, 0, 0);
+    const out = document.createElement("canvas"); out.width = glc.width; out.height = glc.height; const o = /** @type {CanvasRenderingContext2D} */ (out.getContext("2d")); o.drawImage(glc, 0, 0); o.drawImage(ovc, 0, 0);
     glc.width = w0; glc.height = h0; ovc.width = w0; ovc.height = h0; ov.setTransform(d, 0, 0, d, 0, 0); V.dirty = true;
     out.toBlob(bl => { saveBlob(bl, `${f.label}_3d.png`); }, "image/png");
   }
