@@ -128,6 +128,7 @@ declare var PCA: any;
 declare var PHASE_KEY: any;
 declare var PK: any;
 declare var PK_DEF: any;
+declare var PLAIN: any;
 declare var POLS: any;
 declare var PROFILO: any;
 declare var PT: any;
