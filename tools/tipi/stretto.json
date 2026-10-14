@@ -65,6 +65,7 @@
     "../../mzlab/web/touch.js",
     "../../mzlab/web/stat.js",
     "../../mzlab/web/campioni.js",
+    "../../mzlab/web/campioni-tabella.js",
     "../../mzlab/web/profilo.js",
     "../../mzlab/web/tabella.js",
     "../../mzlab/web/bianco.js",

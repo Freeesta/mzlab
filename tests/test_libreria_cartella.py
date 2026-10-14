@@ -101,3 +101,16 @@ const bad = ["../x", "/etc/passwd", "a/b/c", "..", ".mzlab/../x", "x/y", "a\\\\b
 for (const b of bad) { try { C.safeRel(b); out.push(b); } catch (e) { /* refused */ } }
 return [out, C.safeRel(".mzlab/a.mzlib"), C.safeRel("a.msp"), C.idOf("a.msp"), C.nameOfId("f:a.msp"), C.isFolderId("f:x"), C.isFolderId("lib1")];""")
     assert r[0] == [] and r[1:4] == [".mzlab/a.mzlib", "a.msp", "f:a.msp"] and r[4] == "a.msp" and r[5] is True and r[6] is False
+
+
+def test_scan_survives_hostile_sidecars():
+    r = run(FAKE + """
+const d = mk({
+  "a.msp": F("0123456789"), ".mzlab/a.msp.idx.json": F('{"v":1,"bytes":4}'), ".mzlab/a.msp.mzlib": F("MZLB"),                    // no origine
+  "b.mgf": F("0123456789"), ".mzlab/b.mgf.idx.json": F('[1,2,3]'),                                                                 // not an object
+  "c.mzlib": F("MZLB"), ".mzlab/c.mzlib.pkg.json": F('{"__proto__":{"x":1},"id":5}'),                                             // id of the wrong type
+  ".mzlab/z.msp.idx.json": F('{"origine":{"size":"big"},"bytes":4}'), ".mzlab/z.msp.mzlib": F("MZLB"),                           // origine of the wrong type
+});
+const s = await C.scan(d, null); return { v: s.voci.map(v => [v.nome, v.stato]), proto: ({}).x === undefined };""")
+    assert r["proto"] and [v[0] for v in r["v"]] == ["a.msp", "b.mgf", "c.mzlib", "z.msp"]
+    assert all(v[1] != "pronta" for v in r["v"]), r

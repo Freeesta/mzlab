@@ -66,7 +66,7 @@ try:
                   return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
                     bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes(v))}})""" + f"('{vista}')"); close()
                 assert r["n"] >= 2 and not r["free"] and not r["bad"], (vista, r)
-                assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"], r["ids"]
+                assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"] and "ann.edit" in r["ids"], r["ids"]
                 assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]
         step("chromatogram and MRM: every entry of the menu is an action of the registry (data-azione)", trace_ids)
     r.close()
