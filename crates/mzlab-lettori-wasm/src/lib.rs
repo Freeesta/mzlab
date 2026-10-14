@@ -210,7 +210,7 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
 pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
     let m = Membri::new(names, sizes, read)?;
     let l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
-    Ok(con(|s| Ok(s.inserisci(l)))?)
+    con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]
 pub fn campioni(h: u32) -> Result<String, JsValue> {

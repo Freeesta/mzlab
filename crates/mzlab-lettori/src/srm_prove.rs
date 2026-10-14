@@ -33,7 +33,7 @@ impl Lettore for Finto {
     }
     fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         // Even scans: precursor 300 with products 100 and 150; odd ones: precursor 400 with product 200.
-        let (mz, y): (Vec<f64>, Vec<f32>) = if k % 2 == 0 {
+        let (mz, y): (Vec<f64>, Vec<f32>) = if k.is_multiple_of(2) {
             (vec![100.0, 150.001], vec![10.0 + k as f32, 5.0])
         } else {
             (vec![200.0], vec![7.0])
@@ -74,7 +74,7 @@ fn finto(filtro: &str) -> SrmDaScansioni {
                 k,
                 k as f64 * 0.1,
                 filtro,
-                if k % 2 == 0 { 300.0 } else { 400.0 },
+                if k.is_multiple_of(2) { 300.0 } else { 400.0 },
             )
         })
         .collect();
