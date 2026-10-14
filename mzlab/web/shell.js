@@ -308,7 +308,7 @@ $("#newrun").onclick=()=>QQRESET.ask();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16);
   if(e.closest("header"))e.querySelectorAll("svg").forEach(v=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});   // the header icons sit next to their text label (the icon names are Italian)
 // What is downloaded when (decided 8/10/2026, measured on the site): the engine (~10 MB compressed) at once, because Dati needs it;
-// after it, one step per idle moment: OpenChemLib ~340 kB, then (fast connection) Ketcher, then the Teoria ~60 kB, then the catalog of the other language; Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
+// after it, one step per idle moment: OpenChemLib ~340 kB, then (fast connection) Ketcher, then the Teoria ~60 kB; Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
 // and not metered (Chrome: navigator.connection, downlink >= 10 Mbit/s, no data saver); the example files (~28 MB) only with their button.
 function prefetch(urls,as){urls.forEach(u=>{const l=document.createElement("link");l.rel=as==="module"?"modulepreload":"prefetch";l.href=u;if(as&&as!=="module")l.as=as;document.head.appendChild(l)})}
 let kPre=false;
@@ -318,11 +318,9 @@ function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
 function prefetchIdle(){const idle=/** @type {any} */ (window).requestIdleCallback;
   const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
   const fast=c.downlink>=10&&!/2g|3g/.test(c.effectiveType||"");
-  // one step per idle moment, in this order: Disegno (OpenChemLib, Ketcher if fast), the Teoria, the catalog of the language that is NOT active (so the switch is instant)
-  const other=I18N.LANGS.find(l=>l!==I18N.lang);
+  // one step per idle moment, in this order: Disegno (OpenChemLib, Ketcher if fast), then the Teoria (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
   const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module"),()=>{if(fast)prefetchKetcher()},
-    ()=>prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"]),
-    ()=>{if(other)prefetch(["static/lang/"+other+".js"],"script")}];
+    ()=>prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"])];
   const next=()=>{const f=steps.shift();if(!f)return;f();idle?idle(next,{timeout:8000}):setTimeout(next,2000)};
   idle?idle(next,{timeout:8000}):setTimeout(next,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
