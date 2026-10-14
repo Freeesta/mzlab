@@ -143,6 +143,7 @@ declare var QICON: any;
 declare var QMODI: any;
 declare var RAPPORTO: any;
 declare var RIFERIMENTO: any;
+declare var RUOLI: any;
 declare var RawHtml: any;
 declare var S: any;
 declare var SC: any;
