@@ -444,9 +444,9 @@ export function open(p, opener) {
     // the marked points (the same list as the 2D map) that fall in the region
     try {
       MAPPA.pts(p).forEach((s, n) => {
-        const i = iOf(s.rt), j = jOf(s.mz); if (i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1) return;
-        const z = heightAt(i, j), q = project(px(i), z * b.y, pz(j)), q0 = project(px(i), 0, pz(j));
-        c.strokeStyle = strong; c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q[0], q[1]); c.stroke(); c.fillStyle = css("--panel"); c.beginPath(); c.arc(q[0], q[1], 8, 0, 7); c.fill(); c.stroke();
+        const m = markCell(s); if (!m) return;
+        const q = project(px(m.i), m.z * b.y, pz(m.j)), q0 = project(px(m.i), 0, pz(m.j));
+        c.strokeStyle = strong; c.beginPath(); c.moveTo(q0[0], q0[1]); c.lineTo(q[0], q[1]); c.stroke(); c.fillStyle = css("--panel"); MAPPA.shapePath(c, MAPPA.grpShape(p, n), q[0], q[1], 8); c.fill(); c.stroke();
         c.fillStyle = strong; c.textAlign = "center"; c.font = "bold 10px system-ui, sans-serif"; c.fillText(String(n + 1), q[0], q[1] + 3.5); c.font = "11px system-ui, sans-serif";
       });
     } catch (err) { /* no points */ }
@@ -458,6 +458,8 @@ export function open(p, opener) {
     }
     c.restore();
   }
+  // a marked point sits on the CELL that holds it, at the height of that cell (the grid keeps the maximum per cell, so the marker is on the top of the peak, not on the interpolated slope)
+  const markCell = s => { const g = V.g, i = Math.round(iOf(s.rt)), j = Math.round(jOf(s.mz)); return i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1 ? null : { i, j, z: V.Z[i * g.nmz + j] }; };
   const heightAt = (fi, fj) => {
     const g = V.g, i0 = clamp(Math.floor(fi), 0, g.nrt - 2), j0 = clamp(Math.floor(fj), 0, g.nmz - 2), u = clamp(fi - i0, 0, 1), w = clamp(fj - j0, 0, 1), Z = V.Z, n = g.nmz;
     return (Z[i0 * n + j0] * (1 - u) + Z[(i0 + 1) * n + j0] * u) * (1 - w) + (Z[i0 * n + j0 + 1] * (1 - u) + Z[(i0 + 1) * n + j0 + 1] * u) * w;
@@ -542,7 +544,7 @@ export function open(p, opener) {
   glc.addEventListener("dblclick", e => {
     const h = pick(e.offsetX, e.offsetY); if (!h) return;
     const g = V.g, b = box(); let near = -1, bd = 14 * 14;
-    try { MAPPA.pts(p).forEach((s, n) => { const i = iOf(s.rt), j = jOf(s.mz); if (i < 0 || j < 0 || i > g.nrt - 1 || j > g.nmz - 1) return; const q = project(px(i), heightAt(i, j) * b.y, pz(j)), d2 = (q[0] - e.offsetX) ** 2 + (q[1] - e.offsetY) ** 2; if (d2 < bd) { bd = d2; near = n; } }); } catch (err) { /* none */ }
+    try { MAPPA.pts(p).forEach((s, n) => { const m = markCell(s); if (!m) return; const q = project(px(m.i), m.z * b.y, pz(m.j)), d2 = (q[0] - e.offsetX) ** 2 + (q[1] - e.offsetY) ** 2; if (d2 < bd) { bd = d2; near = n; } }); } catch (err) { /* none */ }
     if (near >= 0) { const s = MAPPA.pts(p)[near]; close(); MAPPA.spectrumAt(p, s.rt); return; }
     close(); MAPPA.spectrumAt(p, rtAt(h.i));       // double click = the spectrum of that point
   });
@@ -638,7 +640,7 @@ export function open(p, opener) {
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });
-  window.__m3d = { V, P, ptrs, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
+  window.__m3d = { V, P, ptrs, markCell, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
   dlg.showModal(); resize(); offRo = FRAME.ro(main, () => resize()); glc.focus({ preventScroll: true });
   if (!window.ResizeObserver) resize();
   load().then(() => { raf = FRAME.next(loop); });

@@ -167,3 +167,49 @@ fn the_route_answers_with_aligned_cells_that_fit_the_request() {
     .unwrap()
     .is_none());
 }
+
+#[test]
+fn saved_pyramid_serves_the_same_answers_and_shares_the_cache_budget() {
+    let query = Query::parse("k=0&level=1&rt0=0&rt1=260&mz0=0&mz1=300&nrt=64&nmz=128");
+    let items = [ItemMeta {
+        slot: 0,
+        label: "a".into(),
+        time: None,
+        full: true,
+    }];
+    let mut a = HashMap::new();
+    a.insert(0u32, routes());
+    let want = map_route("/api/maptiles", &items, &mut a, &query)
+        .unwrap()
+        .unwrap();
+    let bytes = a.get_mut(&0).unwrap().tiles_export(1).unwrap();
+    assert!(!bytes.is_empty());
+    // the same bytes in a fresh engine answer without building; another index or damaged bytes are refused
+    let mut b = HashMap::new();
+    b.insert(0u32, routes());
+    assert!(b.get_mut(&0).unwrap().tiles_import(1, &bytes));
+    assert_eq!(
+        map_route("/api/maptiles", &items, &mut b, &query)
+            .unwrap()
+            .unwrap(),
+        want
+    );
+    assert!(!b
+        .get_mut(&0)
+        .unwrap()
+        .tiles_import(1, &bytes[..bytes.len() / 2]));
+    let mut other = routes();
+    other.idx.sections[0].n_peaks += 1;
+    assert!(!other.tiles_import(1, &bytes));
+    // the pyramid counts in the byte budget of the one LRU and goes when it does not fit
+    let held = mzlab_core::routes::tiles_cache_bytes(&b);
+    assert!(held > 0 && mzlab_core::routes::cache_bytes(&b) >= held);
+    mzlab_core::routes::trim_cache(&mut b, 0);
+    assert_eq!(mzlab_core::routes::tiles_cache_bytes(&b), 0);
+    assert_eq!(
+        map_route("/api/maptiles", &items, &mut b, &query)
+            .unwrap()
+            .unwrap(),
+        want
+    );
+}

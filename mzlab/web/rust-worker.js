@@ -27,6 +27,41 @@ const started = new Promise(res => { startInit = res; });
 const ready = started.then(module => { wasmModule = module || null; return module ? init({ module_or_path: module }) : init(); }).then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
 ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
+// The pyramid of map tiles of a level of a file (`maptiles.rs`) is kept in OPFS (mzlab/tiles/<file>.L<level>.mzt) beside the index: the first
+// map of a file builds it from the index, the next visits read it. The engine refuses bytes of another index (its stamp), so a stale file is harmless.
+/** @type {Map<number, string>} */ const tileName = new Map();           // slot -> name of the file, set when its index is opened
+/** @returns {Promise<any>} */ const tilesDir = async () => (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("tiles", { create: true });
+const tilesFile = (/** @type {string} */ name, /** @type {number} */ level) => `${name}.L${level}.mzt`;
+async function tilesEnsure(/** @type {string} */ query) {                                  // before api/maptiles: load the saved pyramid; after: save the one just built
+  const q = new URLSearchParams(query), slot = Number(q.get("k")), level = Number(q.get("level") || 1), name = tileName.get(slot);
+  if (!name || !Number.isInteger(slot) || engine.tiles_held(slot, level)) return null;
+  try {
+    const f = await (await (await tilesDir()).getFileHandle(tilesFile(name, level))).getFile();
+    if (engine.tiles_import(slot, level, new Uint8Array(await f.arrayBuffer()))) return null;
+  } catch (_) { /* none saved yet */ }
+  return { slot, level, name };
+}
+async function tilesSave(/** @type {{ slot: number, level: number, name: string }} */ t) {
+  try {
+    const bytes = engine.tiles_export(t.slot, t.level);
+    if (!bytes.length) return;
+    const h = await (await tilesDir()).getFileHandle(tilesFile(t.name, t.level), { create: true }), ah = await h.createSyncAccessHandle();
+    try { ah.truncate(0); if (ah.write(bytes, { at: 0 }) < bytes.length) { ah.close(); await (await tilesDir()).removeEntry(tilesFile(t.name, t.level)); return; } ah.flush(); } finally { try { ah.close(); } catch (_) { /* closed */ } }
+  } catch (_) { /* no OPFS or no room: the pyramid is built again next time */ }
+}
+async function mapOp(/** @type {any} */ m) {                                                // the map routes of the session; maptiles loads its saved pyramid first and saves a new one after
+  const tl = m.path === "/api/maptiles" ? await tilesEnsure(m.query) : null;
+  const info = engine.map_route(m.path, m.items, m.query);
+  if (tl) await tilesSave(tl);
+  return info;
+}
+async function tilesDrop(/** @type {string | null} */ name, /** @type {Set<string> | null} */ keep) {   // a file's pyramids (name), all of them (null, null) or those of files not in `keep`
+  try {
+    const d = await tilesDir();
+    for await (const [n] of d.entries()) { const own = n.replace(/\.L\d+\.mzt$/, ""); if (name ? own === name : (!keep || !keep.has(own))) await d.removeEntry(n).catch(() => {}); }
+  } catch (_) { /* nothing saved */ }
+}
+
 function readerFor(blob) {
   const fr = new FileReaderSync();
   return (offset, length) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(offset, offset + length)));
@@ -93,9 +128,11 @@ async function lrSpace() {
 async function lrFree() {                                                 // the indexes of the files that were taken away go first
   const files = new Set((await safe(() => ARCH.list("files")) || []).map(f => f.name));
   for (const e of await safe(() => ARCH.list("idx")) || []) if (!files.has(e.name.replace(/(\.cen)?\.mzidx$/, ""))) await ARCH.remove("idx", e.name);
+  await tilesDrop(null, files);
 }
 async function lrFreeDerived() {                                         // every index and pipeline file can be made again from the sources: all of them go
   for (const kind of ["idx", "feat"]) for (const e of await safe(() => ARCH.list(kind)) || []) await safe(() => ARCH.remove(kind, e.name));
+  await tilesDrop(null, null);
 }
 // Operations on single scans (`scans.rs` of the engine): the scans of a centroid file come from the mzML by offset, a background comes from the indexes.
 function scanOp({ op, id, slot, path, query, blob }) {
@@ -121,7 +158,7 @@ async function lrPut(m) {                                              // an upl
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
   engine.close(slotOf(m.name));
-  await ARCH.remove("idx", m.name + ".mzidx"); await ARCH.remove("idx", m.name + ".cen.mzidx");
+  await ARCH.remove("idx", m.name + ".mzidx"); await ARCH.remove("idx", m.name + ".cen.mzidx"); await tilesDrop(m.name, null);
   let f;
   if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
     f = await nativo.put(m, frac => postMessage({ op: "progress", id: m.id, frac, phase: "read" }));
@@ -187,7 +224,7 @@ async function lrOp(m) {
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await safe(lrFree);      // the indexes of the file go with it
+      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
       await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
       return { info: "{}" };
     }
@@ -197,7 +234,7 @@ async function lrOp(m) {
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
       for (const n of [...lrFile.keys()]) engine.close(slotOf(n));
       lrFile.clear();
-      await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); });
+      await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); await tilesDrop(null, null); });
       await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000);
       return { info: "{}" };
     }
@@ -248,7 +285,7 @@ onmessage = async ev => {
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
-        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
+        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); await nativo.attach(engine, m.name, m.slot); break;
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
@@ -259,13 +296,13 @@ onmessage = async ev => {
       case "fileinfo": info = engine.fileinfo(m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
-      case "map": info = engine.map_route(m.path, m.items, m.query); break;             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
+      case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;
       case "budget": engine.set_budget_mb(m.mb); break;                                  // the supervisor lowers it after a death by lack of memory
-      case "close": engine.close(m.slot); blobs.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); break;
+      case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
       case "xic": out = take(2 * engine.count(m.slot, m.level)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;

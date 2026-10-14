@@ -7,7 +7,7 @@
 
   function getChaptersList() {
     const raw = typeof CHAPTERS !== "undefined" ? CHAPTERS : [];
-    return raw.filter(c => !c[0].startsWith("pratica") && c[0] !== "00-uso.html");
+    return raw.filter(c => !c[0].startsWith("pratica"));
   }
 
   function getCurrentChapter() {
@@ -56,7 +56,7 @@
         if (node.classList.contains("q")) {
           const q = node.querySelector("summary")?.textContent.trim() || "Domanda";
           const a = node.querySelector("p, div")?.textContent.trim() || "";
-          return `\n\n> **Domanda d'esame:** ${q}\n>\n> *Risposta:* ${a}\n\n`;
+          return `\n\n> **Domanda di ripasso:** ${q}\n>\n> *Risposta:* ${a}\n\n`;
         }
         return ch();
       case "table": {
@@ -206,7 +206,7 @@
       triggerDownload(wrapWordDocument(b, "mzLab - Teoria Completa"), "mzLab_Teoria_Completa.doc", "application/msword;charset=utf-8");
       showStatus("✅ Tutta la Teoria scaricata in Word (.doc)!");
     } else if (fmt === "html" || fmt === "pdf") {
-      let b = `<header style="text-align:center;margin-bottom:40px"><h1 style="font-size:32px;color:#2b5c8a">mzLab · Dispensa Completa</h1><p>Corso di Spettrometria di massa</p></header><nav style="background:#fff;border:1px solid #e4e2dc;padding:16px;margin-bottom:30px"><h2>Indice</h2><ol>` + loaded.map(c => `<li><b>${c.num}.</b> ${c.title}</li>`).join("") + `</ol></nav>`;
+      let b = `<header style="text-align:center;margin-bottom:40px"><h1 style="font-size:32px;color:#2b5c8a">mzLab · Dispensa Completa</h1><p>Spettrometria di massa e cromatografia</p></header><nav style="background:#fff;border:1px solid #e4e2dc;padding:16px;margin-bottom:30px"><h2>Indice</h2><ol>` + loaded.map(c => `<li><b>${c.num}.</b> ${c.title}</li>`).join("") + `</ol></nav>`;
       loaded.forEach(c => { b += `<section class="chapter-block page-break">` + c.html + `</section>`; });
       if (fmt === "html") {
         triggerDownload(wrapStandaloneHtml(b, "mzLab - Teoria Completa"), "mzLab_Teoria_Completa.html", "text/html;charset=utf-8");
