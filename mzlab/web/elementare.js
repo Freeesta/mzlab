@@ -152,7 +152,7 @@ const ELEM = (() => {
   if (typeof AZIONI !== "undefined") {
     AZIONI.registra({ id: "spec.generate", gruppo: "gen", ordine: 1, viste: ["spec"], visibile: c => !!c.a.hrp, disponibile: c => c.has, nome: c => I18N.t("ctx.spec.generate", { mz: c.lab }),
       esegui: c => generate({ mz: c.m, sp: c.p, spec: c.a.data[0].d, polarity: c.pol }) });
-    AZIONI.registra({ id: "spec.fmClear", gruppo: "gen", ordine: 2, viste: ["spec"], visibile: c => !!c.a.hrp && !!(c.p.fm && c.p.fm.length), nome: () => I18N.t("cx.clear"), esegui: c => { c.p.fm = []; draw(c.p); } });
+    AZIONI.registra({ id: "spec.fmClear", gruppo: "gen", ordine: 2, viste: ["spec"], visibile: c => !!c.a.hrp, disponibile: c => !!(c.p.fm && c.p.fm.length), nome: () => I18N.t("cx.clear"), esegui: c => { c.p.fm = []; draw(c.p); } });
   }
   return { panel, generate, takeCtx, bindEls, bindPeriodic, DEFAULT_ELS, parse, ser, applyTo, peakFor };
 })();
