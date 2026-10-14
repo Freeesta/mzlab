@@ -40,6 +40,23 @@ try:
             assert pg.evaluate("E.panels.every(p=>E.files.some(f=>f&&f.kind===p.tab&&f.vis&&!f.gone))")
             assert pg.evaluate("E.panels.every(p=>p.tab==='mrm')")
         step("a click on a hidden MRM file: only MRM panels, none empty", mrm_click)
+        def multi():
+            ks = pg.evaluate("E.files.filter(f=>f&&f.kind==='full').map(f=>f.k)"); assert len(ks) >= 3
+            pg.evaluate("renderFileList()")
+            pg.dblclick(f"#flst .fl[data-k='{ks[0]}'] .nm")
+            attendi(pg, f"E.files.filter(f=>f&&f.vis).length===1&&E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
+            assert pg.evaluate("E.panels.length>0&&E.panels.every(p=>p.tab==='full')"), "double click: only this file, panels of its type"
+            pg.click(f"#flst .fl[data-k='{ks[2]}'] .nm", modifiers=["ControlOrMeta"])
+            attendi(pg, f"E.files[{ks[2]}].vis&&E.files.filter(f=>f&&f.vis).length===2&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
+            pg.click(f"#flst .fl[data-k='{ks[1]}'] > input")
+            attendi(pg, f"E.files[{ks[1]}].vis")
+            pg.click(f"#flst .fl[data-k='{ks[0]}'] > input")
+            attendi(pg, f"!E.files[{ks[0]}].vis")
+            pg.click(f"#flst .fl[data-k='{ks[2]}'] > input", modifiers=["Shift"])
+            attendi(pg, f"!E.files[{ks[2]}].vis&&!E.files[{ks[1]}].vis")
+            pg.click(f"#flst .fl[data-k='{ks[1]}'] .nm")
+            attendi(pg, f"E.files[{ks[1]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[1]}'")
+        step("double click = only this file; Ctrl/Cmd+click adds; Shift+click on a box = range; click on a hidden row shows and activates it", multi)
 finally:
     r.close(); r.report()
 print("\nSTEPS")
