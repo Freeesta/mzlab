@@ -76,7 +76,7 @@ def build_site(out):
 INIT = """(() => {
   const B = window.__B = { f: [], d: [], z: [], img: [], wmem: 0, fr: null, lt: [] };
   const W = window.Worker;
-  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) B.wmem = Math.max(B.wmem, m.mem); }); } };
+  window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) B.wmem = Math.max(B.wmem, m.mem); if (m && m.rd) B.rd = m.rd; }); } };
   const F = window.fetch; let wrapped = false;
   const wrap = () => { if (wrapped || !window.drawMap || !window.MAPPA) return; wrapped = true;
     const f0 = window.fetch;
@@ -155,6 +155,7 @@ class Case:
         d = s.since(t, "d"); fm = [r for r in s.since(t, "f") if "api/map" in r["u"]]
         s.out["first_draw_ms"] = round(d[0]["t1"] - t) if d else None
         s.out["first_map_request_ms"] = round(fm[0]["t1"] - fm[0]["t0"]) if fm else None
+        s.out["first_read"] = s.ev("__B.rd || null")            # time and bytes inside the index readers of the worker (cumulative since the open of the files)
         s.out["first_mapImage_ms"] = round(max([r["ms"] for r in s.since(t, "img")] or [0]), 1)
         s.ev(M + ".cv.focus()"); s.pg.keyboard.press("f"); s.pg.wait_for_timeout(800); s.quiet()
         s.c = c = s.ev(f"(()=>{{const r={M}.cv.getBoundingClientRect();return [r.left,r.top,r.width,r.height]}})()")
@@ -169,7 +170,7 @@ class Case:
 
     def gesture(s, label, act):
         """frames during the gesture, then the time from its end to the sharp region (zoomImg true) and the cost of the region request"""
-        s.ev("__B.frames(true)"); t = s.mark(); act(); te = s.mark(); fr = s.ev("__B.frames(false)")
+        rd0 = s.ev("(__B.rd || {ms: 0}).ms"); s.ev("__B.frames(true)"); t = s.mark(); act(); te = s.mark(); fr = s.ev("__B.frames(false)")
         try: wait(s.pg, f"__B.z.some(r => r.t > {te} && r.sharp)")
         except TimeoutError: pass
         s.quiet()
@@ -177,7 +178,8 @@ class Case:
         g = fr["g"]; dd = [r["t1"] - r["t0"] for r in s.since(t, "d") if r["t0"] <= te]
         s.out[label] = {"gesture_ms": round(te - t), "frame_p50": pct(g, .5), "frame_p95": pct(g, .95), "frame_max": pct(g, 1.0), "long_tasks": len(fr["lt"]),
                         "draws": len(dd), "draw_ms_p50": pct(dd, .5), "draw_ms_max": pct(dd, 1.0), "to_sharp_ms": round(z[0]["t"] - te) if z else None,
-                        "region_requests": len(fq), "region_request_ms": pct([r["t1"] - r["t0"] for r in fq if r.get("t1")], .5)}
+                        "region_requests": len(fq), "region_request_ms": pct([r["t1"] - r["t0"] for r in fq if r.get("t1")], .5),
+                        "read_ms": round(s.ev("(__B.rd || {ms: 0}).ms") - rd0)}
 
     def wheel(s, n, dy, mods=None):
         pg = s.pg; pg.mouse.move(s.cx, s.cy)
