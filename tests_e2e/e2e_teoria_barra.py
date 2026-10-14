@@ -48,7 +48,7 @@ try:
             q.click("#tc-succ"); q.wait_for_url("**/14-frammentazione-esi.html")
             q.wait_for_selector("#tbar"); assert q.get_attribute("#tc-prec", "href") == "13-formula.html"
             q.click("#tc-prec"); q.wait_for_url("**/13-formula.html"); q.wait_for_selector("#tbar")
-            q.goto(T + "00-uso.html"); q.wait_for_selector("#tbar"); assert q.get_attribute("#tc-prec", "aria-disabled") == "true" and q.get_attribute("#tc-prec", "href") is None
+            q.goto(T + "01-tp.html"); q.wait_for_selector("#tbar"); assert q.get_attribute("#tc-prec", "aria-disabled") == "true" and q.get_attribute("#tc-prec", "href") is None
             q.goto(T + "13-formula.html"); q.wait_for_selector("#tbar")
         step("previous / next change the chapter, the first has no previous", prevnext)
         def cerca():
