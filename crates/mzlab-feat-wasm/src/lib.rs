@@ -201,6 +201,26 @@ pub fn preview_file(
 }
 
 #[cfg(feature = "detect")]
+/// Drift of the RT of the parent along a series: `files` = the `.mzfeatf` of its files (an `Array` of `Uint8Array`), `parent_mz` the m/z of its ion,
+/// `base_rt_tol` the tolerance from the width of the peaks (NaN = none). JSON `{drift, n, rts, rt_tol}` (`mzlab_feat::params_drift`): `rt_tol` = max(width, drift).
+#[wasm_bindgen]
+pub fn drift_series(
+    files: Array,
+    parent_mz: f64,
+    base_rt_tol: f64,
+) -> std::result::Result<String, JsValue> {
+    let mut src = JsStored { files };
+    let mut all = Vec::new();
+    for k in 0..src.count() {
+        let bytes = src.bytes(k).map_err(js_err)?;
+        all.push(mzlab_feat::store::read_file(&bytes).map_err(js_err)?.0);
+    }
+    let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();
+    let d = mzlab_feat::params_drift::parent_drift(&refs, parent_mz);
+    Ok(mzlab_feat::params_drift::drift_json(&d, base_rt_tol))
+}
+
+#[cfg(feature = "detect")]
 /// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
 /// `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`. The same bytes whatever `budget_mb` (0/NaN = 192): in memory, in slabs of m/z, or
 /// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`.

@@ -250,14 +250,26 @@ async function waitIdx(names) {
   return null;
 }
 
-/** settings of the low-resolution Dig proposed from the data of one file (the preview of the pool, profile `lr`): JSON {da, rt_tol, dead, fwhm}, "null" when there is none @param {any[]} a */
+/**
+ * settings of the low-resolution Dig proposed from the data (the preview of the first file, profile `lr`): JSON {da, rt_tol, dead, fwhm, drift}, "null" when there is none.
+ * With the m/z of the parent and two files or more the tolerance of RT also holds the drift of the parent along the series: max(2 x FWHM, drift).
+ * @param {any[]} a  [names of the full-scan files, m/z of the parent (optional)]
+ */
 async function estimate(a) {
   if (init.desktop || !(await hasRust())) return "null";
-  const names = JSON.parse(a[0]);
+  const names = JSON.parse(a[0]), mz = +a[1];
   await ensureIdx(names).catch(() => { /* no index: no estimate */ });
   if (!(await waitIdx(names))) return "null";
-  const r = await (await pool()).preview({ name: names[0], path: "mzlab/idx/" + names[0] + ".mzidx" }, "");
-  return JSON.stringify({ da: r.da, rt_tol: r.rt_tol, dead: r.dead, fwhm: r.fwhm });
+  const p = await pool(), r = await p.preview({ name: names[0], path: "mzlab/idx/" + names[0] + ".mzidx" }, "");
+  const out = /** @type {any} */ ({ da: r.da, rt_tol: r.rt_tol, dead: r.dead, fwhm: r.fwhm });
+  if (names.length > 1 && mz > 0) {
+    const files = names.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + n + ".mzidx" })), idx = await idxFiles(names);
+    if (idx) {
+      const d = await p.drift({ stored: await detect(p, files, idx), parentMz: mz, baseRtTol: r.rt_tol == null ? NaN : r.rt_tol });
+      if (d.drift != null) { out.drift = { value: d.drift, n: d.n }; out.rt_tol = d.rt_tol; }
+    }
+  }
+  return JSON.stringify(out);
 }
 
 /** one call of the page @param {string} fn @param {any[]} a */

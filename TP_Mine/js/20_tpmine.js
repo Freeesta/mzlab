@@ -225,18 +225,19 @@
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
     // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
-    let estSeq = 0;
+    let estSeq = 0, parentMz = 0;            // parentMz: the m/z of the parent ion (from the preview of the parent), for the drift of its RT
     for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) $(id).addEventListener("input", ev => { ev.target.dataset.user = "1"; ev.target.classList.remove("tp-est"); });
     $("#tp-est").addEventListener("click", () => { for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) delete $(id).dataset.user; estimateLr(); });
     async function estimateLr() {
       const lr = st.files.filter(f => f.kind === "full"), f = lr.find(x => x.type === "sample") || lr[0], seq = ++estSeq;
       if (!f || st.files.some(x => x.kind === "hr")) return;
       let e = null;
-      try { e = JSON.parse(await callRaw("estimate", JSON.stringify([f.name]))); } catch (_) { /* no estimate: the defaults stay */ }
+      const names = [f.name, ...lr.filter(x => x !== f).map(x => x.name)];       // the first one is previewed; all of them give the drift of the parent
+      try { e = JSON.parse(await callRaw("estimate", JSON.stringify(names), parentMz ? String(parentMz) : "")); } catch (_) { /* no estimate: the defaults stay */ }
       if (!e || seq !== estSeq) return;
       const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
       put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
-      put("#tp-rtt", e.rt_tol, 2, `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
+      put("#tp-rtt", e.rt_tol, 2, e.drift && e.drift.value > 2 * (e.fwhm && e.fwhm.value || 0) ? `From the data: the RT of the parent drifts by ${e.drift.value.toFixed(2)} min over ${e.drift.n} files` : `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
@@ -314,6 +315,8 @@
         if (!mol && info && !$("#tp-mol").value.trim()) { $("#tp-mol").value = info.formula; }
         try {
           const r = await call("formula_info", q, ad);
+          const mzNew = r.ok ? +r.mz : 0;
+          if (mzNew !== parentMz) { parentMz = mzNew; if (parentMz) estimateLr(); }
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
           if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
