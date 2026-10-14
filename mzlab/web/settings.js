@@ -107,7 +107,7 @@ function uipOpen(btn) {
     <details id="uip-a11y" class="uip-sub"><summary>${I18N.t("settings.a11y.title")}</summary>
     <div class="row"><span>${I18N.t("settings.font.label")}</span> <select id="uip-font" aria-label="${I18N.t("settings.font.label")}"><option value="">${I18N.t("settings.font.default")}</option><option value="atkinson">${I18N.t("settings.font.atkinson")}</option><option value="dyslexic">${I18N.t("settings.font.dyslexic")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
-    <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${Object.keys(PALS).map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
+    <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
     </details>
     <div class="row">${I18N.t("settings.etich")} <select id="uip-etich" aria-label="${I18N.t("settings.etich")}"><option value="auto">${I18N.t("settings.etich.auto")}</option><option value="always">${I18N.t("settings.etich.always")}</option><option value="hidden">${I18N.t("settings.etich.hidden")}</option></select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>

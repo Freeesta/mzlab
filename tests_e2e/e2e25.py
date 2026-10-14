@@ -48,6 +48,7 @@ try:
             assert pg.evaluate("document.querySelectorAll('[title]').length") > 40, "tooltips stay on"
         step("gear: exactly 3 controls; tips and numbers are fixed on; no tutorial", gear)
         def time_scale():
+            pg.evaluate("setPal('time'); paintFiles()")             # the time scale is the «Per tempo» palette, no longer the default
             c = pg.evaluate(COLORS); print(c)
             assert [x[0] for x in c] == [0, 5, 15, 30, 60], c
             hs = [hexof(x[1]) for x in c]; assert len(set(hs)) == 5, hs
