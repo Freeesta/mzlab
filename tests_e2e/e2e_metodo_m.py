@@ -21,7 +21,10 @@ top = D / "serie"
 agilent_sintetico.write(top, "uno.D", 120)
 agilent_sintetico.write_method_m(top, "Metodo prova per SIM.m")
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import socket
+for _ in range(100):      # wait until the static server accepts connections
+    try: socket.create_connection(("127.0.0.1", PORT), 0.2).close(); break
+    except OSError: pass
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)

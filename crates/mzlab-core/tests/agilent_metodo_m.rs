@@ -48,6 +48,27 @@ fn document(dir: &Path) -> (Value, usize) {
     )
 }
 
+fn schema_has_all_keys(doc: &Value, comp: &[Value]) {
+    let schema: Value =
+        serde_json::from_str(include_str!("../../../mzlab/web/schemi/metodo-1.json")).unwrap();
+    for key in doc.as_object().unwrap().keys() {
+        assert!(
+            !schema["properties"][key.as_str()].is_null(),
+            "{key} is not in the schema"
+        );
+    }
+    for c in comp {
+        for key in c.as_object().unwrap().keys() {
+            assert!(
+                !schema["properties"]["quantificazione"]["properties"]["composti"]["items"]
+                    ["properties"][key.as_str()]
+                .is_null(),
+                "composti.{key}"
+            );
+        }
+    }
+}
+
 #[test]
 fn the_geosmin_and_mib_methods_say_what_quantitative_xml_says() {
     let Some(d) = dati() else { return };
@@ -118,24 +139,7 @@ fn the_geosmin_and_mib_methods_say_what_quantitative_xml_says() {
             .unwrap()
             .iter()
             .any(|c| c["mappato"] == "quantificazione"));
-        let schema: Value =
-            serde_json::from_str(include_str!("../../../mzlab/web/schemi/metodo-1.json")).unwrap();
-        for key in doc.as_object().unwrap().keys() {
-            assert!(
-                !schema["properties"][key.as_str()].is_null(),
-                "{key} is not in the schema"
-            );
-        }
-        for c in comp {
-            for key in c.as_object().unwrap().keys() {
-                assert!(
-                    !schema["properties"]["quantificazione"]["properties"]["composti"]["items"]
-                        ["properties"][key.as_str()]
-                    .is_null(),
-                    "composti.{key}"
-                );
-            }
-        }
+        schema_has_all_keys(&doc, comp);
     }
 }
 
