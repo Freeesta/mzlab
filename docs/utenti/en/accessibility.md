@@ -11,7 +11,9 @@ mzLab aims at **WCAG 2.2 level AA** for Data, Drawing, Theory and Practice. Not 
 - **Text**: size is set in the settings (gear icon); the interface is in Italian and English (Theory and Practice in Italian only).
 
 ## How it was checked
-Automated checks (axe) on the charts and the main screens. There is not yet a review with people who use screen readers.
+Automated checks (axe) on the charts, the high-resolution bench, Drawing, Practice and the guided tour. There is not yet a review with people who use screen readers.
+
+**Known gaps**: inside the Ketcher editor and in the desktop app (the same web page in a native shell) there is no automated check yet.
 
 ## If you find a barrier
 Report it with an [issue](https://github.com/Freeesta/mzlab/issues/new/choose): describe the browser, the device and the assistive tool you use. Best-effort support, no guaranteed response time. If you cannot use part of the program during a lesson, ask your teacher for an alternative.

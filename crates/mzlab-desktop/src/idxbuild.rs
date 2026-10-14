@@ -12,7 +12,7 @@ use mzlab_core::Error;
 
 use crate::mapped::Mapped;
 
-fn io_error(e: &std::io::Error) -> Error {
+pub(crate) fn io_error(e: &std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
@@ -25,12 +25,12 @@ pub fn pool_size() -> usize {
 }
 
 pub struct IdxBuilder {
-    dir: PathBuf,
-    pool: rayon::ThreadPool,
+    pub(crate) dir: PathBuf,
+    pub(crate) pool: rayon::ThreadPool,
 }
 
 /// A name that is only a file name (the page never chooses a path).
-fn clean(name: &str) -> Result<&str, Error> {
+pub(crate) fn clean(name: &str) -> Result<&str, Error> {
     if name.is_empty()
         || name.contains(['/', '\\'])
         || name == "."

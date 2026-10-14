@@ -41,6 +41,8 @@ Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di
 - **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
 - **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), usato solo da mzFinder (nascosto), scaricato dalla build del sito: https://github.com/pyodide/pyodide
 - **NumPy** (incluso in Pyodide, solo mzFinder), BSD-3-Clause: https://numpy.org
+- **Testi di Teoria e Pratica**: CC BY 4.0 (© Federico Cristaudo).
+- **File d'esempio** (`mzlab/web/esempi/`): dati sintetici, CC0 1.0.
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).
 - **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
 
