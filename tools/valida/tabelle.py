@@ -67,7 +67,7 @@ def trova_serie(cartella) -> list[dict]:
     from mzlab.reader.mzml import Run
     from tpmine.hr.engine import classify
     out = []
-    for p in sorted(Path(cartella).glob("*.mzML")) + sorted(Path(cartella).glob("*.mzml")):
+    for p in sorted({*Path(cartella).glob("*.mzML"), *Path(cartella).glob("*.mzml")}):      # a set: on Windows and macOS both patterns match every file
         r = Run(p)
         kind = classify(r)
         r.close()

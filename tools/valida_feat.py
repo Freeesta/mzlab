@@ -39,7 +39,9 @@ def _memoria_massima_mb() -> float:
         c.cb = ctypes.sizeof(c)
         k32 = ctypes.WinDLL("kernel32")
         k32.GetCurrentProcess.restype = wintypes.HANDLE
-        ok = ctypes.WinDLL("psapi").GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
+        psapi = ctypes.WinDLL("psapi")
+        psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD]      # the pseudo-handle is -1: without argtypes ctypes tries a C int and overflows
+        ok = psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(c), c.cb)
         return c.PeakWorkingSetSize / 1048576 if ok else 0.0
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return peak / (1048576 if sys.platform == "darwin" else 1024)

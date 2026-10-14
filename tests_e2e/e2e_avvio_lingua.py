@@ -1,6 +1,7 @@
 """First start of the site: the language and the title are decided before anything is drawn (browser it-IT + the old key qqq.lang='en' of the
 QqQ-lab site -> Italian from the first instant), only the catalog of that language is loaded, and the first loading phrase stays on screen
 for at least 4 s. Build first: python tools/build_site.py"""
+from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -19,7 +20,7 @@ WHICH = """() => { const el = document.getElementById('ldmsg'), L = document.get
   const t = el.textContent.replace(/\\.+$/, ''), d = document.createElement('div');
   for (let i = 1; i <= 17; i++) { d.innerHTML = I18N.t('load.phrase.' + i); if (d.textContent === t) return i - 1; } return -1; }"""
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:

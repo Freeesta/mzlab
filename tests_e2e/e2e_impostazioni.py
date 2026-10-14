@@ -37,10 +37,10 @@ try:
             pg.click("#nav button[data-v=draw]"); pg.wait_for_timeout(800)
             assert pg.evaluate("S.view") == "draw"
             pg.click("#np-set"); pg.wait_for_selector("#uip-tour"); assert pg.is_enabled("#uip-tour")
-            pg.click("#uip-tour"); pg.wait_for_timeout(1500)
-            assert pg.evaluate("S.view") == "data", "went to Dati"
-            assert pg.evaluate("!!(window.TOUR && TOUR.active)"), "tour started"
-        step("Guided tour from Disegno goes to Dati and starts", tour_from_draw)
+            pg.click("#uip-tour")
+            attendi(pg, "!!(window.TOUR && TOUR.active)")
+            assert pg.evaluate("S.view") == "draw", "the tour of Disegno starts in Disegno"
+        step("Guided tour from Disegno starts the tour of Disegno", tour_from_draw)
 finally:
     pass
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

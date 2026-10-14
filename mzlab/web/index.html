@@ -116,8 +116,8 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 .sb-dz-prev{position:fixed;top:var(--hh,40px);bottom:0;z-index:5201;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent);box-sizing:border-box;border-radius:8px}
 @media (prefers-reduced-motion:no-preference){.sb-dz{transition:background .12s}}
 /* toolbar of the header */
-@media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
 #stbar{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
+@media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
 #stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
 #stbar .tb:hover{background:var(--soft)}
 #stbar .tb .ti{display:inline-flex;color:var(--accent)}
@@ -318,6 +318,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 /* touch and pen (touch.js): the graphs take the finger, the controls are larger, the keys of the keyboard are on a bar */
 .pnl canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 /* map (mappa.js): grid with the map, the overlay of the sight and the two plots at the margins */
+.pnl.map .hd .mzg{min-width:0;flex:0 1 auto}
 .pnl.map .leg{max-height:none;padding-right:0;gap:2px 12px}.pnl.map .leg span.mzhelp{display:block;flex-basis:100%;padding-right:260px;font-size:11px}
 .mznav button:not(.bt){width:26px;height:26px;min-width:0;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ink);border-radius:4px;cursor:pointer}.mznav button:not(.bt):hover{background:var(--sel)}.mzex-d{margin:0 0 6px;color:var(--muted)}details.mzcol{margin-top:6px}details.mzcol summary{cursor:pointer;color:var(--muted)}details.mzcol label{display:flex;margin:4px 0}.mznav button.on,.mznav button[aria-pressed=true]{background:var(--sel);color:var(--accent)}.mznav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}table.mzhelp{border-collapse:collapse;width:100%;font-size:13px}.mzhelp th,.mzhelp td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.mzhelp thead th{position:sticky;top:0;background:var(--panel)}.mzhelp tbody th{white-space:nowrap}@media (pointer:coarse){.mznav button:not(.bt){width:44px;height:44px}}@media (max-width:700px){.mzhelp{font-size:12px}}
 .pnl .mzex{flex:none;border-top:1px solid var(--line);font-size:12px;padding:6px 4px}.mzex-n{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 16px;margin:0}.mzex-r{display:flex;gap:6px;align-items:baseline}.mzex-r dt{color:var(--muted)}.mzex-r dd{margin:0;font-variant-numeric:tabular-nums}.mzex-f{margin:6px 0 2px;color:var(--muted)}.mzex-b{margin:4px 0 0}

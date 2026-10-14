@@ -24,7 +24,7 @@ folder = agilent_sintetico.write(tmp / "serie", "uno.D", N)
 members = [(str(p.relative_to(folder)).replace(os.sep, "/"), base64.b64encode(p.read_bytes()).decode()) for p in sorted(folder.rglob("*")) if p.is_file()]
 
 PORT = lib.free_port()
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []
 LOAD = """async ([members, wrong]) => {
   const rb = await window.MZLAB_RUST_READY;

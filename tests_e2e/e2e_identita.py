@@ -27,7 +27,7 @@ ROWS = [row(1, M0 + P, 5.20, RAMP), row(2, M0 + 22.98921, 5.21, [v * 0.3 for v i
         row(4, M0 + P + 1.003355, 5.20, [v * 0.2 for v in RAMP]), row(5, 410.2, 7.0, OTHER), row(6, 426.195, 7.0, [v * 0.7 for v in OTHER]), row(7, 505.3, 3.0, RAMP[:2] + [0, 0, 0])]
 tmp = Path(tempfile.mkdtemp()); (tmp / "tabella_pos.csv").write_text(HEAD + "\n".join(ROWS) + "\n")
 
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 try:
     with sync_playwright() as p:

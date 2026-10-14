@@ -13,7 +13,7 @@ SITE = os.environ.get("SITE")
 errs = []
 srv = None
 if SITE:
-    srv = subprocess.Popen([sys.executable, "-m", "http.server", "8861", "--bind", "127.0.0.1", "-d", SITE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); time.sleep(1)
+    srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), "8861", SITE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); time.sleep(1)
     r = None
 else:
     r = Run(port=8824, wd="/tmp/wd24")
