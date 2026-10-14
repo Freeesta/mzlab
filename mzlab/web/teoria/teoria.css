@@ -279,9 +279,7 @@ main:focus{outline:none}
   .eq{overflow-x:auto;max-width:100%}
   main{max-width:100%}
 }
-@media (prefers-reduced-motion:reduce){#side.open{transition:none}#lb *{transition:none!important}}
-@media print{#cbar,#sheetbg,.fzoom,#lb{display:none!important}body{padding-top:0}}
-:root[data-a11y-reduce] #side.open{transition:none}
+@media print{#top,#side,.skip,.pn,#cbar,#sheetbg,.fzoom,#lb,#tbar,#tedit-bar,#export-modal,.ctl,.btns{display:none!important}body{padding-top:0!important;background:#fff!important;color:#000!important;font-size:11pt;line-height:1.5}.wrap{display:block!important;max-width:100%!important;padding:0!important;margin:0!important}main{max-width:100%!important}.box{break-inside:avoid;border:1pt solid #ccc;border-left:4pt solid #2b5c8a;margin:10pt 0}table{break-inside:avoid}h1,h2,h3{break-after:avoid}details.q{display:block!important;break-inside:avoid;border:1pt solid #ccc;padding:8pt;margin:8pt 0}details.q summary{font-weight:700}details.q summary ~ *{display:block!important}}
 /* line length around 65 characters */
 main p,main li,.gl dd{max-width:65ch}
 .tw,main pre,.eitab{max-width:100%;overflow-x:auto}
@@ -356,3 +354,72 @@ html.phone #top #a11y-btn{margin-left:0}
 
 #sblocco{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;padding:10px 16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:15px;box-shadow:0 2px 12px var(--line);pointer-events:none}
 #sblocco:not(.on){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- editor visivo e HTML della Teoria (editor.js) ---- */
+#tedit-bar{position:sticky;top:48px;z-index:55;background:var(--panel);border-bottom:2px solid var(--accent);padding:6px 14px;box-shadow:0 4px 14px rgba(0,0,0,.1);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+#tedit-bar .tedit-left,#tedit-bar .tedit-right{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tedit-badge{font-size:13px;color:var(--muted);background:var(--code);padding:3px 8px;border-radius:5px;border:1px solid var(--line)}
+.tedit-badge b{color:var(--accent)}
+.tedit-grp{display:inline-flex;align-items:center;gap:2px;background:var(--code);padding:2px 4px;border-radius:6px;border:1px solid var(--line)}
+.tedit-btn{font:inherit;font-size:13px;font-weight:600;padding:3px 7px;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--ink);cursor:pointer;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
+.tedit-btn:hover{background:var(--sel);border-color:var(--line)}
+.tedit-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tedit-sel{font:inherit;font-size:13px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer}
+.tedit-save{font:inherit;font-size:13.5px;font-weight:700;background:var(--ok);color:#fff;border:none;border-radius:6px;padding:5px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.tedit-save:hover{filter:brightness(1.1)}
+.tedit-save:disabled{opacity:.6;cursor:wait}
+.tedit-close{font:inherit;font-size:13px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.tedit-close:hover{color:var(--bad);border-color:var(--bad)}
+
+body.tedit-active main [contenteditable="true"]{outline:1px dashed rgba(43,92,138,.3);outline-offset:3px}
+body.tedit-active main [contenteditable="true"]:hover{outline-color:var(--accent)}
+body.tedit-active main [contenteditable="true"]:focus{outline:2px solid var(--accent);outline-offset:4px}
+body.tedit-active .sim{position:relative;opacity:.9}
+body.tedit-active .sim::before{content:"[Simulazione interattiva protetta]";position:absolute;top:6px;right:8px;font-size:11px;font-weight:700;color:var(--muted);background:var(--code);padding:2px 6px;border-radius:4px;border:1px solid var(--line);pointer-events:none}
+
+#tedit-code-wrap{width:100%;height:75vh;min-height:400px;margin:16px 0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--code)}
+.tedit-code-header{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.tedit-code-header code{font-weight:700;color:var(--accent)}
+.tedit-code-header small{color:var(--muted)}
+#tedit-code{flex:1;width:100%;font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:transparent;color:var(--ink);border:none;padding:12px;resize:none;tab-size:2;box-sizing:border-box}
+#tedit-code:focus{outline:none}
+
+#tedit-toast{position:fixed;bottom:24px;right:24px;z-index:99;padding:12px 18px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.22);max-width:480px;display:none}
+#tedit-toast.ok{background:var(--ok);color:#fff}
+#tedit-toast.err{background:var(--bad);color:#fff;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:13px}
+#tedit-toast.info{background:var(--panel);color:var(--ink);border:1px solid var(--accent)}
+
+#tedit-modal{position:fixed;inset:0;z-index:98;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+.tedit-modal-card{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:20px 24px;max-width:540px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.28)}
+.tedit-modal-card h3{margin:0 0 10px;font-size:18px}
+.tedit-modal-err{background:var(--code);border-left:3px solid var(--bad);padding:8px 12px;border-radius:4px;font-size:13px;margin:8px 0 14px;white-space:pre-wrap}
+.tedit-modal-card ol{margin:8px 0 16px;padding-left:20px;font-size:14px}
+.tedit-modal-card code{font-weight:700}
+.tedit-modal-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px}
+
+/* ---- modal esportazione (esporta.js) ---- */
+#export-modal{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.exp-card{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:760px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 10px 36px rgba(0,0,0,.3)}
+.exp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}
+.exp-header h2{font-size:20px;margin:0 0 4px;border:none;padding:0}
+.exp-sub{font-size:14px;color:var(--muted);margin:0}
+.exp-close{font:inherit;font-size:18px;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+.exp-close:hover{color:var(--bad);background:var(--sel)}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:680px){.exp-grid{grid-template-columns:1fr}}
+.exp-sec{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.exp-sec-hd{margin-bottom:4px}
+.exp-sec-hd h3{font-size:15px;margin:4px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-badge{font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.05em;color:var(--accent);background:var(--panel);border:1px solid var(--line);padding:2px 6px;border-radius:4px;display:inline-block}
+.exp-badge-gold{color:var(--warn);border-color:var(--warn)}
+.exp-actions{display:flex;flex-direction:column;gap:8px}
+.exp-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;transition:border-color .15s,transform .1s}
+.exp-item:hover{border-color:var(--accent);background:var(--sel);transform:translateY(-1px)}
+.exp-ico{font-size:22px;flex:none;line-height:1}
+.exp-txt b{display:block;font-size:14px;margin-bottom:2px}
+.exp-txt span{display:block;font-size:12px;color:var(--muted);line-height:1.3}
+.exp-status{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:13.5px;font-weight:600;text-align:center}
+.exp-status.ok{background:var(--ok);color:#fff}
+.exp-status.err{background:var(--bad);color:#fff}
+
+

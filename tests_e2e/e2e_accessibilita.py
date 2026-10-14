@@ -82,8 +82,8 @@ try:
             assert q.evaluate("getComputedStyle(document.getElementById('a11y-ruler')).display") == "block"
             q.mouse.move(700, 400); q.wait_for_timeout(100); q.screenshot(path=SH + "a11y_righello.png")
             assert q.evaluate("document.getElementById('a11y-ruler').style.getPropertyValue('--ry')") not in ("", "40%")
-            q.click("#side .toc a >> nth=1"); q.wait_for_timeout(400)            # a click through the ruler still works
-            assert q.evaluate("location.hash") != ""
+            q.click("#side ol a >> nth=1"); q.wait_for_timeout(400)            # a click through the ruler still works
+            assert q.evaluate("location.pathname") != ""
             q.close()
         step("reading ruler follows the mouse and never blocks clicks", ruler)
         def focus():

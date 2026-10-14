@@ -107,7 +107,8 @@ try:
             for w in ["TIC", "picco base", "RT"]: assert w not in t, (w, t)         # A4.3: the time is already next to the title
         step("G6: caption = only scansione i/N", caption)
         def ms2():
-            pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
+            open_kind(pg, "ms2")          # at the first load only the first file is open: the MS2 file opens with a click in the list
+            attendi(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec'&&q.cv);return !!p&&!!p._a&&p.cv.parentElement.querySelector('.leg').textContent.length>0})()")
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)
             assert s["rel"] is False and not s["lock"], s                      # cps by default since 8/10 (the «%» button switches)
             assert "precursore" in s["t"] and "CE" in s["t"], s

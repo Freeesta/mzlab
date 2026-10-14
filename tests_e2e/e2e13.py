@@ -3,7 +3,7 @@ Build first: python tools/build_site.py"""
 import subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, mz, SH
+from lib import ROOT, mz, SH, open_kind
 
 import os
 BASE = os.environ.get("QQQ_BASE", "")          # e.g. QqQ-lab: GitHub Pages serves a project site under /<repo>/
@@ -60,7 +60,7 @@ try:
         step("Disegno and Teoria tabs work from the static site", tabs)
         def mrm_spec():
             pg.wait_for_function("E.panels.some(p=>p.type==='spec' && p._a)", timeout=60000)      # the spectrum is made after the chromatogram, also after a reload
-            pg.evaluate("setTab('mrm')")      # as the tab button does (the button can sit under a notice or a tooltip)
+            open_kind(pg, "mrm")      # as a student does: at the first load only the first file is open, a click on the MRM file in the list opens it
             pg.wait_for_function("E.panels.some(p=>p.type==='mrm' && p._a && p._a.sr.length>0)", timeout=60000)
         step("spectrum and MRM panels", mrm_spec)
         def clear_all():

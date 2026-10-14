@@ -34,7 +34,6 @@ def test_structure(tmp_path):
     g = good()
     assert has(errs(tmp_path, g.replace("<h1>", "<h1>x</h1><h1>")), "one h1")
     assert has(errs(tmp_path, g.replace("<h2>25.1", "<h4>25.1").replace("TODO: primo argomento</h2>", "</h4>")), "jumps")
-    assert has(errs(tmp_path, g.replace('class="obj"', 'class="xx"')), ".obj")
     assert has(errs(tmp_path, g.replace('class="q"', 'class="xx"')), "questions")
     assert has(errs(tmp_path, g.replace("(25.1)", "(24.1)")), "does not belong")
     assert has(errs(tmp_path, g.replace("(25.1)", "(25.2)")), "25.1 is missing")
@@ -135,14 +134,14 @@ def test_without_private_data_it_warns_and_passes(tmp_path, monkeypatch):
 
 
 def test_base_only_blocks_worsening(tmp_path):
-    (tmp_path / "25-a.html").write_text(good().replace('class="obj"', 'class="xx"'), encoding="utf-8")
+    (tmp_path / "25-a.html").write_text(good().replace('class="q"', 'class="xx"'), encoding="utf-8")
     bf = tmp_path / "base.json"
     assert ct.main(["--path", str(tmp_path), "--base-file", str(bf), "--base"]) == 0
     assert ct.main(["--path", str(tmp_path), "--base-file", str(bf)]) == 0     # known error: tolerated
-    (tmp_path / "25-a.html").write_text(good().replace('class="obj"', 'class="xx"').replace('class="q"', 'class="xx"'), encoding="utf-8")
+    (tmp_path / "25-a.html").write_text(good().replace('class="q"', 'class="xx"').replace('lang="it" ', ''), encoding="utf-8")
     assert ct.main(["--path", str(tmp_path), "--base-file", str(bf)]) == 1     # one more: fails
     assert ct.main(["--path", str(tmp_path), "--base-file", str(bf), "--senza-base"]) == 1
-    assert "A: missing objectives box .obj" in json.loads(bf.read_text(encoding="utf-8"))["25-a.html"]
+    assert "A: missing end-of-chapter questions (details.q)" in json.loads(bf.read_text(encoding="utf-8"))["25-a.html"]
 
 
 def test_current_pages_pass_with_the_base(monkeypatch):
