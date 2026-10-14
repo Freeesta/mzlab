@@ -4,7 +4,7 @@
 // What this module cannot answer it returns null for: browser.js then answers with the error `err.route.unavailable`.
 //
 // The answers have the JSON of mzlab/api.py, the reference of the tests (tests_e2e/e2e_lr.py, tests/golden/).
-const VERSION = "0.1.0";                 // mzlab.__version__ (tests/test_lr_version.py keeps the two equal)
+const VERSION = "1.0.0";                 // mzlab.__version__ (tests/test_lr_version.py keeps the two equal)
 const WORKDIR = "/work/sessione";
 const ACCEPT = /\.(mzml|dam)$/i;
 

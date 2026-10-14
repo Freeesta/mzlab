@@ -9,8 +9,8 @@ authors:
 repository-code: "https://github.com/Freeesta/mzlab"
 url: "https://freeesta.github.io/mzlab/"
 license: MIT
-version: "0.1.0"
-# date-released: "AAAA-MM-GG"  # DA COMPILARE alla prima release
+version: "1.0.0"
+date-released: "2026-10-14"
 # doi: "10.5281/zenodo.XXXXXXX"  # DA COMPILARE dopo la prima release su Zenodo (vedi docs/zenodo.md)
 keywords:
   - mass spectrometry

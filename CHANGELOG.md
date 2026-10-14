@@ -1,15 +1,23 @@
 # Changelog
 
-Formato [Keep a Changelog](https://keepachangelog.com/it/1.1.0/), versioni [SemVer](https://semver.org/lang/it/) `0.MINORE.PATCH` fino all'articolo accettato. In italiano, con un riassunto in inglese per ogni versione.
+Formato [Keep a Changelog](https://keepachangelog.com/it/1.1.0/), versioni [SemVer](https://semver.org/lang/it/) `MAGGIORE.MINORE.PATCH` (la prima pubblicazione è la 1.0.0). In italiano, con un riassunto in inglese per ogni versione.
 Format: Keep a Changelog; one release per laboratory semester, patches when needed. Release notes are taken from the section of the tag by `tools/versione.py --nota`.
 
 Prima di mettere il tag `vX.Y.Z`: sposta qui sotto le voci di «Non rilasciato» nella sezione `## [X.Y.Z] - AAAA-MM-GG`, porta la stessa versione in `Cargo.toml`, `crates/mzlab-desktop/tauri.conf.json` e `CITATION.cff` (`python3 tools/versione.py --tag vX.Y.Z` lo controlla), poi vedi `docs/agenti/rilascio.md`.
 
 ## [Non rilasciato]
 
+## [1.0.0] - 2026-10-14
+
+Prima pubblicazione.
+
 ### Aggiunto
+- mzLab nel browser (GitHub Pages) e come app desktop: vista Dati per file a bassa e alta risoluzione (cromatogrammi, spettri, mappa RT×m/z, MRM, integrazione, MS2 e librerie), Disegno (Ketcher), Teoria e Pratica; interfaccia in italiano e inglese.
+- Lettura diretta dei file Thermo `.raw`, SCIEX `.wiff` (con `.wiff.scan`) e delle cartelle Agilent `.D`; gli altri formati (Waters, Shimadzu, Bruker) si convertono in mzML con MSConvert.
+- Licenze: codice MIT, testi di Teoria e Pratica CC BY 4.0, file d'esempio CC0, materiale di terzi in `LICENZE-TERZI.md`.
+- Accessibilità (WCAG 2.2 AA) provata con axe su Dati, Banco HR, Disegno, Pratica e tour.
 - Politica di sicurezza (`SECURITY.md`), Dependabot, controllo delle licenze con `cargo-deny`, SBOM CycloneDX.
 - Guide per studenti e docenti, privacy, accessibilità e piano B dell'ospitalità in `docs/utenti/`.
 - Flusso di rilascio sul tag `vX.Y.Z`: sito in zip, installatori per macOS, Windows e Linux, `SHA256SUMS`, SBOM.
 
-*English: security policy, dependency and licence checks, SBOM, user guides, and the release workflow (site zip, installers for macOS, Windows and Linux, checksums, SBOM).*
+*English: first public release. Browser site and desktop app for LC-MS data (low and high resolution), Drawing, Theory and Practice, in Italian and English; direct reading of Thermo `.raw`, SCIEX `.wiff` and Agilent `.D` (Waters, Shimadzu and Bruker: convert to mzML with MSConvert); code MIT, Theory and Practice texts CC BY 4.0, example files CC0; WCAG 2.2 AA checked with axe; security policy, licence checks, SBOM and the release workflow (site zip, installers, checksums).*

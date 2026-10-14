@@ -1931,7 +1931,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base64 0.23.1",
  "flate2",
@@ -1945,7 +1945,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-desktop"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "memmap2",
  "mzlab-core",
@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "libm",
  "mzlab-core",
@@ -1977,7 +1977,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-grafo-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -1986,7 +1986,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-import-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "mzlab-feat",
@@ -1995,7 +1995,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-table-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-feat-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2016,7 +2016,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-finder-lr-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
@@ -2028,7 +2028,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lib"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "mzlab-core",
  "ruzstd",
@@ -2037,7 +2037,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-lib-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-lib",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "mzlab-wasm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "js-sys",
  "mzlab-core",
