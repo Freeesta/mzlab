@@ -8,13 +8,22 @@
 
   let isEditing = false, viewMode = "visual", originalDocHtml = "", barEl = null, codeWrapEl = null, codeTextarea = null;
 
+  const isUnlocked = () => {
+    try {
+      return localStorage.getItem("mzlab_teoria_editor") === "1" ||
+             localStorage.getItem("qqq.teoria.esteso") === "1" ||
+             new URLSearchParams(location.search).has("token") ||
+             new URLSearchParams(location.search).has("edit");
+    } catch (_) { return false; }
+  };
+
   function init() {
     window.addEventListener("keydown", e => {
       if (e.altKey && (e.key === "e" || e.key === "E" || e.code === "KeyE")) {
         e.preventDefault(); toggleEditor();
       }
     });
-    insertBarButton();
+    if (isUnlocked()) insertBarButton();
   }
 
   function insertBarButton() {
@@ -302,6 +311,13 @@
     toastTimer = setTimeout(() => { if (t) t.style.display = "none"; }, ms);
   }
 
-  window.TEORIA_EDITOR = { toggle: toggleEditor, salva: salvaCapitolo };
+  window.TEORIA_EDITOR = {
+    toggle: toggleEditor,
+    salva: salvaCapitolo,
+    attiva: () => {
+      try { localStorage.setItem("mzlab_teoria_editor", "1"); } catch (_) {}
+      insertBarButton();
+    }
+  };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
