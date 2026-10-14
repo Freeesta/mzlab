@@ -99,6 +99,7 @@ def test_a_replaced_file_is_not_served_from_the_old_index(tmp_path, monkeypatch)
     f = tmp_path / "s.mzML"
     ds.full_scan(f, 0, np.random.default_rng(1))
     r1 = Run(f); t1 = np.asarray(r1.table(1).mz)
+    r1.close()                                  # Windows cannot rewrite a file that is still mapped
     ds.full_scan(f, 15, np.random.default_rng(9))
     r2 = Run(f); t2 = np.asarray(r2.table(1).mz)
     assert len(t1) != len(t2) or not np.array_equal(t1, t2)
