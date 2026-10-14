@@ -24,7 +24,7 @@ try:
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null)[{i}];return l&&{{x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2,m:l.m}}}})()")
         def pick_label():
             lb = label_box(0); assert lb, "no peak labels"
-            its = ctx_items(lb["x"], lb["y"]); print(lb["m"], its[:3])
+            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Ripristina zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
             assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copia valore" and its[2] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
             pg.keyboard.press("Escape")
             # the bar of the same peak gives the same value

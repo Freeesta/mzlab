@@ -39,7 +39,8 @@ try:
             items = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e=>[e.textContent.trim(),e.getAttribute('aria-label')])")
             hrs = pg.evaluate("document.querySelectorAll('#ctx hr').length")
             labs = [i[0] for i in items]; print(labs)
-            first = [i for i in items if not i[0].startswith(("m/z", "Ripristina"))]
+            assert "Copia valore" in labs, labs          # the copy of the value works in high resolution too
+            first = [i for i in items if not i[0].startswith(("m/z", "Ripristina", "Copia valore"))]
             assert first[0][0].startswith("Apri la scansione MS²") and first[0][1], first[:2]
             assert "ormula" in first[1][0], first[:3]
             assert any("pzioni di visualizzazione" in i[0] for i in first[:5]) and hrs >= 3, (first, hrs)

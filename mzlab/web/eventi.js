@@ -188,7 +188,7 @@ function attach(p) {
     }
     // one rule for every other graph, from the registry: an annotation = edit it; zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
     const x = xd(rect(e));
-    await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true });
+    await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
   cv.addEventListener("keydown", e => {
