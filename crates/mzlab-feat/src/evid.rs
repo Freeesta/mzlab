@@ -7,16 +7,16 @@
 mod arcs;
 mod graph;
 mod out;
-mod prepared;
 pub mod points;
+mod prepared;
 pub mod producers;
 mod proofs;
 pub mod rowproofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{
-    build_graph, match_hypotheses, match_hypotheses_in, Edge, EdgeKind, ExternalHit, Facts, Identity, Inputs, Kinetics,
-    LibHit, Member, Node, HYPOTHESIS_PPM,
+    build_graph, match_hypotheses, match_hypotheses_in, Edge, EdgeKind, ExternalHit, Facts,
+    Identity, Inputs, Kinetics, LibHit, Member, Node, HYPOTHESIS_PPM,
 };
 pub use out::{graph_json, GraphStream, EVID_GRAPH_FORMAT};
 
@@ -181,6 +181,9 @@ pub const R_ONLY_FILLED: &str = "EV_ONLY_FILLED";
 /// The only proof in favour is the frequency (how many files show the peak): that proves nothing about the identity, so the total is 0 and the
 /// identity is discarded.
 pub const R_ONLY_FREQUENCY: &str = "EV_ONLY_FREQUENCY";
+/// The only proofs in favour are the controls (the signal is above the blank), with or without the frequency: the signal is real, but that proves
+/// nothing about the identity, so the total is 0 and the identity is discarded.
+pub const R_ONLY_CONTROLS: &str = "EV_ONLY_CONTROLS";
 pub const WEAK_PURITY: f64 = 0.5;
 
 /// What the interface shows for a candidate: the column of the contributions (always), the total, the number of proofs against, N, 1/N and the reasons.
@@ -273,21 +276,33 @@ fn reasons_of(rows: &[Evidence], against: usize, n: usize, table: &PointsTable) 
 }
 
 /// The contributions of a candidate: rows in the order of the types (stable inside a type), total = points of the proofs "for" (never reduced by the
-/// others; 0 when the only one is the frequency), proofs against counted apart.
+/// others; 0 when the only ones are the frequency and the controls, which say the signal is real and nothing about the identity), proofs against
+/// counted apart.
 pub fn breakdown(table: &PointsTable, mut rows: Vec<Evidence>, n: usize) -> Breakdown {
     crate::sortc::any_by_key(&mut rows, |e| e.kind);
-    let points = |skip_frequency: bool| {
+    let presence = |k: Kind| matches!(k, Kind::Frequency | Kind::Controls);
+    let points = |keep: &dyn Fn(Kind) -> bool| {
         rows.iter()
-            .filter(|e| e.sign == Sign::For && !(skip_frequency && e.kind == Kind::Frequency))
+            .filter(|e| e.sign == Sign::For && keep(e.kind))
             .fold(0.0, |s, e| s + e.points.max(0.0))
     };
-    let only_frequency = points(true) <= 0.0 && points(false) > 0.0;
-    let total = if only_frequency { 0.0 } else { points(false) };
+    let (of_identity, of_presence) = (points(&|k| !presence(k)), points(&presence));
+    let only_presence = of_identity <= 0.0 && of_presence > 0.0;
+    let total = if only_presence {
+        0.0
+    } else {
+        of_identity + of_presence
+    };
     let against = rows.iter().filter(|e| e.sign == Sign::Against).count();
     let mut reasons = reasons_of(&rows, against, n, table);
-    if only_frequency {
+    if only_presence {
+        let controls = points(&|k| k == Kind::Controls) > 0.0;
         reasons.push(Reason {
-            code: R_ONLY_FREQUENCY,
+            code: if controls {
+                R_ONLY_CONTROLS
+            } else {
+                R_ONLY_FREQUENCY
+            },
             numbers: vec![],
         });
     }
