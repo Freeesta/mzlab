@@ -6,7 +6,7 @@ Object.assign(RUOLI, (() => {
   // ---------------------------------------------------------------- cells of the table
   function roleCell(/** @type {Voce} */ f, /** @type {number} */ i) {
     const v = val(f);
-    return `<td><select data-i="${i}" data-k="type" aria-label="${eh(cellLabel(f, t("load.table.type")))}">${OPTS.map(o => `<option value="${o}"${o === v ? " selected" : ""}>${eh(label(o))}</option>`).join("")}</select></td>`;
+    return `<td><select data-i="${i}" data-k="type" aria-label="${eh(cellLabel(f, t("load.table.type")))}">${OPTS.map(o => `<option value="${o === "std" ? "standard" : o}"${o === v ? " selected" : ""}>${eh(label(o))}</option>`).join("")}</select></td>`;
   }
   function timeCell(/** @type {Voce} */ f, /** @type {number} */ i, /** @type {string} */ tu, /** @type {string} */ guess) {
     const lab = `aria-label="${eh(cellLabel(f, t("load.table.time.col")))}"`, r = roleOf(f), at = `data-i="${i}" data-k="time"`;

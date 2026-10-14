@@ -15,7 +15,7 @@ try:
         def click_other():
             name = pg.evaluate("ST.files[2].name")
             pg.locator(T).nth(0).fill("7")
-            pg.locator(T).nth(2).click()
+            pg.locator(T).nth(1).click()   # the t0 time is fixed (disabled): two editable times
             attendi(pg, f"(()=>{{const a={ACT};return !!a&&a[0]===ST.files.find(f=>f.name===({name!r})).name&&a[1]==='time'}})()")
             pg.keyboard.type("5")
             attendi(pg, f"{ACT}&&{ACT}[2].endsWith('5')")

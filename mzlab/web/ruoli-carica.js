@@ -27,7 +27,7 @@ const RUOLI = /** @type {any} */ ((() => {
 
   /** the role `v` for an entry (the student's choice or a proposal); the time follows the role */
   function setRole(/** @type {Voce} */ f, /** @type {string} */ v) {
-    const was = roleOf(f), [r, sub] = v.split(":");
+    const was = roleOf(f), [r, sub] = (v === "standard" ? "std" : v).split(":");   // the option of the select says «standard» (the value the rest of the program knows)
     f.role = r; f.sub = sub || null; f.type = BASE[r] || "sample";
     if (r === "t0") { f.time = 0; f.gT = false; }
     else if (!TIMED.has(r)) { f.time = null; f.gT = false; }

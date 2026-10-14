@@ -67,12 +67,21 @@ def _sif(self, selector, files, **k):
     if selector == "#pick" and n:
         try: self.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={n}", timeout=20000)
         except TimeoutError: pass
-        if AUTO_TEMPI and n >= 2:      # two or more samples: «Open» wants every time written and confirmed (roles and times of the table): the tests that are not about it do it here
-            try:
-                self.wait_for_function("typeof RUOLI !== 'undefined' && RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
-                self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } f.gT = false; } }); renderFiles(); }""")
-            except TimeoutError: pass
+        _tempi(self)
 AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
+def _tempi(self):
+    """Two or more samples: «Open» wants every time written and confirmed (roles and times of the loading table). The tests that are not about it do it here, before they open."""
+    if not AUTO_TEMPI: return
+    try:
+        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && !document.getElementById('start').hidden && ST.files.length >= 2"): return
+        self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
+        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } f.gT = false; } }); renderFiles(); }""")
+    except Exception: pass
+_real_click = _Page.click
+def _click(self, selector, *a, **k):
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): _tempi(self)
+    return _real_click(self, selector, *a, **k)
+_Page.click = _click
 _Page.set_input_files = _sif
 def hold(pg, ms):
     """A pause that is really `ms` long (something that only time can bring, with nothing in the page to wait for)."""
