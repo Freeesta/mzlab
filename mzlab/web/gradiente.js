@@ -95,7 +95,7 @@ function bind(f, again) {
   on("#grad-rm", () => save(null));
   on("#grad-course", async () => { try { await save(await parse("", "course")); } catch (e) { err(e); } });
   on("#grad-last", () => { const l = lastRead(); if (l) save({ source: "manual", points: l.points, run_time: l.run_time }); });
-  on("#grad-csv", () => ask(".csv,.txt,.tsv", async fl => edit(await parse(await fl.text(), "csv"))));
+  on("#grad-csv", () => ask(".csv,.txt,.tsv", async fl => edit(await parse(await FILESICURI.readText(fl), "csv"))));
   on("#grad-raw", () => ask(".raw,.RAW", async fl => {
     const buf = await fl.slice(0, 2 * 1024 * 1024).arrayBuffer();
     const dec = o => new TextDecoder("utf-16le").decode(buf.slice(o, o + ((buf.byteLength - o) & ~1)));
