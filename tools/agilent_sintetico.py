@@ -66,3 +66,20 @@ if __name__ == "__main__":
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
     print(write(out, sys.argv[2] if len(sys.argv) > 2 else "synt.D", int(sys.argv[3]) if len(sys.argv) > 3 else 120))
+
+
+def write_method_m(root: Path, name: str = "metodo prova.m") -> Path:
+    """A method folder *.m outside any run: only DaMethod/Quant/quantitative.xml with two made-up compounds (a target without m/z, qualifier ions, calibration levels)."""
+    d = root / name / "DaMethod" / "Quant"
+    d.mkdir(parents=True, exist_ok=True)
+    comp = lambda i, nm, rt: (f"<TargetCompound><CompoundID>{i}</CompoundID><CompoundName>{nm}</CompoundName><CompoundType>Target</CompoundType>"
+                              f"<ConcentrationUnits>ng/ml</ConcentrationUnits><CurveFit>fitLinear</CurveFit><CurveFitOrigin>originIgnore</CurveFitOrigin><CurveFitWeight>weightEqual</CurveFitWeight>"
+                              f"<ISTDFlag>false</ISTDFlag><MZ>0</MZ><MZExtractionWindowFilterLeft>0.3</MZExtractionWindowFilterLeft><MZExtractionWindowFilterRight>0.7</MZExtractionWindowFilterRight>"
+                              f"<MZExtractionWindowUnits>Thomsons</MZExtractionWindowUnits><RetentionTime>{rt}</RetentionTime><RetentionTimeWindow>10</RetentionTimeWindow>"
+                              f"<RetentionTimeWindowUnits>Percent</RetentionTimeWindowUnits><ScanType>Ms1SIM</ScanType></TargetCompound>")
+    q = lambda i, k, mz, r: f"<TargetQualifier><CompoundID>{i}</CompoundID><QualifierID>{k}</QualifierID><MZ>{mz}</MZ><RelativeResponse>{r}</RelativeResponse><QualifierRangeMinimum>{r - 5}</QualifierRangeMinimum><QualifierRangeMaximum>{r + 5}</QualifierRangeMaximum></TargetQualifier>"
+    lv = lambda i, k, c: f"<Calibration><CompoundID>{i}</CompoundID><LevelName>{k}</LevelName><LevelConcentration>{c}</LevelConcentration><LevelEnable>true</LevelEnable></Calibration>"
+    body = comp(0, "composto-a", 7.5) + comp(1, "composto-b", 10.25) + q(0, 0, 108.1, 25) + q(0, 1, 135.1, 15) + q(1, 0, 111, 35) + "".join(lv(0, k + 1, c) for k, c in enumerate((0.1, 1, 10)))
+    (d / "quantitative.xml").write_text('﻿<?xml version="1.0" encoding="utf-8"?>\n<QuantitationDataSet DataVersion="2" ReferenceWindow="80" ReferenceWindowPercentOrMinutes="Percent" '
+                                       f'NonReferenceWindow="70" CorrelationWindow="0.1" xmlns="Quantitation">{body}</QuantitationDataSet>', encoding="utf-8")
+    return d.parent.parent

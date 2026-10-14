@@ -20,6 +20,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
   return async function metodoOp(m) {
     switch (m.op) {
       case "lr_metodo_wiff": return register(m);
+      case "lr_metodo_m": return { info: engine().agilent_m_metodo(m.name, m.names, m.lens, m.data) };      // a *.m method folder: its files come in one buffer
       case "lr_metodo": {                    // { source: "mzml" | "wiff" | "dam" | "none", metodo: {...} }
         await sync();
         const o = await open(m), e = engine();
