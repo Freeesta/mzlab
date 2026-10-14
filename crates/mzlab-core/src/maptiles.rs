@@ -20,7 +20,12 @@ const MAGIC: &[u8; 8] = b"MZTILE01";
 impl Pyramid {
     fn flush(level: &mut Level, s: &mut Strip) {
         for (ty, t) in s.tiles.iter_mut().enumerate() {
-            let cells: Tile = t.iter().enumerate().filter(|(_, v)| **v > 0.0).map(|(i, v)| (i as u16, *v)).collect();
+            let cells: Tile = t
+                .iter()
+                .enumerate()
+                .filter(|(_, v)| **v > 0.0)
+                .map(|(i, v)| (i as u16, *v))
+                .collect();
             if !cells.is_empty() {
                 level.insert((ty as u32, s.tx), cells);
             }
@@ -29,10 +34,16 @@ impl Pyramid {
     }
 
     /// Builds the pyramid in one pass: `each` feeds `(scan position, m/z, intensity)` with m/z ascending.
-    fn build(n_scans: usize, mut each: impl FnMut(&mut dyn FnMut(usize, f64, f64)) -> Result<()>) -> Result<Self> {
+    fn build(
+        n_scans: usize,
+        mut each: impl FnMut(&mut dyn FnMut(usize, f64, f64)) -> Result<()>,
+    ) -> Result<Self> {
         let nty = n_scans.div_ceil(TILE).max(1);
         let mut l0: Level = HashMap::new();
-        let mut strip = Strip { tx: 0, tiles: vec![vec![0.0; TILE * TILE]; nty] };
+        let mut strip = Strip {
+            tx: 0,
+            tiles: vec![vec![0.0; TILE * TILE]; nty],
+        };
         let mut any = false;
         each(&mut |p, mz, y| {
             let c = (mz / BASE_DMZ).floor();
@@ -67,7 +78,9 @@ impl Pyramid {
             for (ty, tx) in keys {
                 dense.fill(0.0);
                 for (dy, dx) in [(0u32, 0u32), (0, 1), (1, 0), (1, 1)] {
-                    let Some(child) = prev.get(&(ty * 2 + dy, tx * 2 + dx)) else { continue };
+                    let Some(child) = prev.get(&(ty * 2 + dy, tx * 2 + dx)) else {
+                        continue;
+                    };
                     let (oy, ox) = (dy as usize * TILE / 2, dx as usize * TILE / 2);
                     for &(i, v) in child {
                         let (r, c) = (i as usize / TILE / 2 + oy, i as usize % TILE / 2 + ox);
@@ -77,7 +90,12 @@ impl Pyramid {
                         }
                     }
                 }
-                let cells: Tile = dense.iter().enumerate().filter(|(_, v)| **v > 0.0).map(|(i, v)| (i as u16, *v)).collect();
+                let cells: Tile = dense
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| **v > 0.0)
+                    .map(|(i, v)| (i as u16, *v))
+                    .collect();
                 if !cells.is_empty() {
                     next.insert((ty, tx), cells);
                 }
@@ -100,13 +118,17 @@ impl Pyramid {
     pub fn rect(&self, l: usize, (r0, r1): (usize, usize), (c0, c1): (usize, usize)) -> Vec<f32> {
         let w = c1.saturating_sub(c0);
         let mut out = vec![0.0f32; r1.saturating_sub(r0) * w];
-        let Some(level) = self.levels.get(l) else { return out };
+        let Some(level) = self.levels.get(l) else {
+            return out;
+        };
         if r1 <= r0 || c1 <= c0 {
             return out;
         }
         for ty in r0 / TILE..=(r1 - 1) / TILE {
             for tx in c0 / TILE..=(c1 - 1) / TILE {
-                let Some(t) = level.get(&(ty as u32, tx as u32)) else { continue };
+                let Some(t) = level.get(&(ty as u32, tx as u32)) else {
+                    continue;
+                };
                 for &(i, v) in t {
                     let (r, c) = (ty * TILE + i as usize / TILE, tx * TILE + i as usize % TILE);
                     if r >= r0 && r < r1 && c >= c0 && c < c1 {
@@ -171,7 +193,15 @@ impl Pyramid {
             for _ in 0..n_tiles {
                 let (ty, tx, n) = (u32_(take(4)?), u32_(take(4)?), u32_(take(4)?) as usize);
                 let raw = take(n.checked_mul(6)?)?;
-                let t: Tile = raw.chunks_exact(6).map(|c| (u16::from_le_bytes([c[0], c[1]]), f32::from_le_bytes([c[2], c[3], c[4], c[5]]))).collect();
+                let t: Tile = raw
+                    .chunks_exact(6)
+                    .map(|c| {
+                        (
+                            u16::from_le_bytes([c[0], c[1]]),
+                            f32::from_le_bytes([c[2], c[3], c[4], c[5]]),
+                        )
+                    })
+                    .collect();
                 lv.insert((ty, tx), t);
             }
             levels.push(lv);
@@ -224,7 +254,9 @@ impl<R: ReadAt> Routes<R> {
     }
 
     fn build_pyramid(&mut self, level: u8) -> Result<Option<Pyramid>> {
-        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok(None);
+        };
         let (n_peaks, n_scans) = (self.idx.sections[si].n_peaks, self.idx.sections[si].n_scans);
         if n_peaks == 0 || n_scans == 0 {
             return Ok(None);
@@ -233,31 +265,64 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let idx = &mut self.idx;
-        Ok(Some(Pyramid::build(n_scans, |f| idx.each_peak(si, 0, n_peaks, &mut *f))?))
+        Ok(Some(Pyramid::build(n_scans, |f| {
+            idx.each_peak(si, 0, n_peaks, &mut *f)
+        })?))
     }
 
     /// The cells of the view `[rt0, rt1] × [mz0, mz1]` at the finest level whose aligned rectangle holds at most `nrt × nmz` cells.
-    pub(crate) fn tile_view(&mut self, level: u8, (rt0, rt1): (f64, f64), (mz0, mz1): (f64, f64), nrt: usize, nmz: usize) -> Result<Option<TileView>> {
-        let Some(p) = self.pyramid(level)? else { return Ok(None) };
-        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
+    pub(crate) fn tile_view(
+        &mut self,
+        level: u8,
+        (rt0, rt1): (f64, f64),
+        (mz0, mz1): (f64, f64),
+        nrt: usize,
+        nmz: usize,
+    ) -> Result<Option<TileView>> {
+        let Some(p) = self.pyramid(level)? else {
+            return Ok(None);
+        };
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok(None);
+        };
         let rt = self.idx.arrays(si)?.rt.clone();
         let n = rt.len();
         let first = rt.partition_point(|&r| r < rt0).min(n.saturating_sub(1));
         let last = rt.partition_point(|&r| r <= rt1).max(first + 1).min(n);
         let l = (0..=p.max_level())
             .find(|&l| {
-                let cols = ((mz1 / cell_width(l)).ceil() - (mz0.max(0.0) / cell_width(l)).floor()) as usize;
+                let cols = ((mz1 / cell_width(l)).ceil() - (mz0.max(0.0) / cell_width(l)).floor())
+                    as usize;
                 ((last - 1) >> l) + 1 - (first >> l) <= nrt && cols <= nmz
             })
             .unwrap_or(p.max_level());
         let (g0, g1) = (first >> l, ((last - 1) >> l) + 1);
         let w = cell_width(l);
-        let (c0, c1) = ((mz0.max(0.0) / w).floor() as usize, (mz1.max(0.0) / w).ceil() as usize);
+        let (c0, c1) = (
+            (mz0.max(0.0) / w).floor() as usize,
+            (mz1.max(0.0) / w).ceil() as usize,
+        );
         let data = p.rect(l, (g0, g1), (c0, c1.max(c0)));
         let mut edges: Vec<f64> = (g0..g1).map(|g| rt[g << l]).collect();
-        let step = if n > 1 { (rt[n - 1] - rt[0]) / (n - 1) as f64 } else { 0.0 };
-        edges.push(if g1 << l < n { rt[g1 << l] } else { rt[n - 1] + step });
-        Ok(Some(TileView { tile_level: l, row0: g0 << l, rows: g1 - g0, col0: c0, cols: c1.max(c0) - c0, data, rt: edges }))
+        let step = if n > 1 {
+            (rt[n - 1] - rt[0]) / (n - 1) as f64
+        } else {
+            0.0
+        };
+        edges.push(if g1 << l < n {
+            rt[g1 << l]
+        } else {
+            rt[n - 1] + step
+        });
+        Ok(Some(TileView {
+            tile_level: l,
+            row0: g0 << l,
+            rows: g1 - g0,
+            col0: c0,
+            cols: c1.max(c0) - c0,
+            data,
+            rt: edges,
+        }))
     }
 }
 
