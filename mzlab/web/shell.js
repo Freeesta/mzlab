@@ -62,8 +62,8 @@ function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f
     gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null,role:o&&o.role,sub:o&&o.sub,prop:o&&o.prop,ed:o&&o.ed}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
   sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then(c=>{if(c){sortFiles();renderFiles()}})}   // roles and times proposed from the names by the engine (campioni/2)
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
-const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
-function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
+const EXPORD={full:0,ms2:1,mrm:2,infusion:3},TYPORD={blank:0,standard:1,sample:2};
+function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??4)-(EXPORD[b.kind]??4)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
 // the formats of instrument methods the program reads TODAY (one line per format; the field, the file picker and the texts all come from here)
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
@@ -73,16 +73,16 @@ const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ex
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
-const EXPN={full:"Full Scan",ms2:"MS2 (Product Ion)",mrm:"MRM"},expn=k=>k==="empty"?I18N.t("load.exp.empty"):EXPN[k]||k;
+const EXPN={full:"Full Scan",ms2:"MS2 (Product Ion)",mrm:"MRM",infusion:I18N.t("inf.name")},expn=k=>k==="empty"?I18N.t("load.exp.empty"):EXPN[k]||k;
 const mixedText=m=>{const ns=[];for(const p of m){const n=p.name==="MS2"&&ns.includes("Full Scan")?"DDA":p.name;if(!ns.includes(n))ns.push(n)}return ns.join(" + ")};   // Full Scan + MS2 = DDA; polarities and precursor counts are not shown
 const expCell=f=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind?`<b>${expn(f.kind)}</b>${f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""}`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">${I18N.t("load.exp.nameHint",{hint:expn(f.hint),kind:expn(f.kind)})}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
-  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;   // GUESS: concentration cells
+  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("inf.name"),4:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;   // GUESS: concentration cells
   let last=-1,rows="";
-  F.forEach((f,i)=>{const g=EXPORD[f.kind]??3;
-    if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??3)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??3)===g).length})}</span></td></tr>`}
+  F.forEach((f,i)=>{const g=EXPORD[f.kind]??4;
+    if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??4)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??4)===g).length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu,I18N.t("load.guess.title"))+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
@@ -108,7 +108,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
 function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
-const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
+const usable=f=>f.use&&["full","ms2","mrm","infusion"].includes(f.kind);
 // ...and not while files are still being read and indexed: the button would open only the ones already ready (UPBUSY = loadings under way)
 let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();      // names of the files that could not be read: mzFinder warns that they are missing from its series
 // hook for a progress bar on the loading screen: loadingStato("phase", 40) shows the phase and 40 % in place of the phrase, loadingStato(null) gives the phrases back

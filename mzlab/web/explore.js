@@ -250,7 +250,7 @@ function uiSave(now = false) {
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
+      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
@@ -385,6 +385,7 @@ function fitWidth() {
 function restoreUi() {
   const u = NB.ui;
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
+  if (u && u.msn && window.INF) INF.restore(u.msn);                              // the grouping of the MSn tree travels with the session
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
@@ -773,7 +774,7 @@ document.addEventListener("mousedown", e => { const t = /** @type {Element} */ (
 // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom: the function declaration of a classic script wins at run time
 function toolbar() {
   if (window.BANCO) BANCO.bar();       // high-resolution bench: its toolbar (banco.js)
-  const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2"), mrm = has("mrm"), empty = !scan && !mrm;       // the buttons follow the experiment types the files have
+  const has = (/** @type {string} */ t) => tabFiles(t).length > 0, scan = has("full") || has("ms2") || has("infusion"), mrm = has("mrm"), empty = !scan && !mrm;       // the buttons follow the experiment types the files have
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !has("full"); Q("#np-xic").hidden = !scan;
   Q("#np-mrm").hidden = !mrm;
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;

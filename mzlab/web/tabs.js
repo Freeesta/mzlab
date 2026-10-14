@@ -106,16 +106,16 @@ async function goMs2(t) {
 
 function defaultLayoutTab(t) {
   const w = hostWidth();
-  if (t === "full") {
-    const f0 = tabFiles("full")[0];
+  if (t === "full" || t === "infusion") {
+    const f0 = tabFiles(t)[0];
     // chromatogram + linked spectrum must both fit in the window (a laptop at 1280x720 would push the spectrum below the fold and the arrows need both in view):
     // the usual 330 + 310 px when there is room, otherwise the height left in the window shared 50/50 (never below 190 px each)
     const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 84, avail = innerHeight - top - 42;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
     const g = pnlGap(); let hc = 330, hs = 310; if (avail < hc + hs + g) { hc = Math.max(190, Math.round((avail - g) * 0.5)); hs = Math.max(190, Math.round(avail - g - hc)); }
-    const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: hc, full: true });
-    const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + g, w, h: hs, full: true });
-    if (window.DDA && f0.dda) DDA.make(c, sp);                 // a data-dependent file: the MS2 scans sit to the right of the Full Scan
-    apexSpectrum(c, sp);
+    const c = addPanel("chrom", { tab: t, x: 0, y: 0, w, h: hc, full: true });
+    const sp = addPanel("spec", { tab: t, link: c.id, k: f0.k, level: 1, x: 0, y: hc + g, w, h: hs, full: true });
+    if (window.DDA && f0.dda && t === "full") DDA.make(c, sp);                 // a data-dependent file: the MS2 scans sit to the right of the Full Scan
+    if (t === "infusion") INF.layout(c, sp, f0); else apexSpectrum(c, sp);          // an MSn infusion starts on its richest node (the TIC of the node and its mean spectrum)
     let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
     const fix = () => {
       if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;      // the student already resized them

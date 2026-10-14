@@ -103,19 +103,19 @@ if F:
     try:
         with sync_playwright() as p:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-            load(pg, [F], 8000, 2)
+            load(pg, [F], 8000, 1)
             def paths():
-                pg.evaluate("setTab('ms2')"); pg.wait_for_timeout(3000)
-                pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2').el.setAttribute('data-tt','ms2c')")
+                pg.wait_for_timeout(3000)
+                pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='infusion').el.setAttribute('data-tt','ms2c')")
                 pg.wait_for_function("(()=>{const s=document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]');return s&&s.options.length>10})()", timeout=30000)
                 opts = pg.evaluate("[...document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
                 assert len(opts) >= 18, len(opts)
-                key = [o[0] for o in opts if o[0].endswith("317 > 261 > 244 @cid35")][0]
+                key = [o[0] for o in opts if "317 \u2192 261 \u2192 244" in o[1] and "CE 35" in o[1]][0]
                 n = int(opts[[o[0] for o in opts].index(key)][1].split("×")[1].replace(" ", ""))
                 pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key); pg.wait_for_timeout(2500)
-                got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
+                got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='infusion');return {flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
                 assert got["flv"] == 4 and got["n"] == n, (got, n)
-            step("MSn infusion: one filter per path of fragmentation; ms4 317 > 261 > 244 shows its own scans", paths)
+            step("MSn infusion: one filter per node of the tree; ms4 317 > 261 > 244 shows its own scans", paths)
         r.close()
     except Exception as e:
         steps.append(("msn", "FAIL " + str(e)[:300]))

@@ -14,7 +14,7 @@ const BARRA = (() => {
   const K_HR = "qqq.barra.hr";
   const K_SIDE = "qqq.barra.lato";
   const K_HINT = "qqq.barra.hint";   // first-visit hint under the toolbar: shown once per browser
-  const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
+  const HR_PANELS = ["hdr", "lst", "fil", "alb", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
@@ -65,6 +65,7 @@ const BARRA = (() => {
     hdr: IC('<rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3"/>'),
     lst: IC('<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="1.6" cy="4" r=".6"/><circle cx="1.6" cy="8" r=".6"/><circle cx="1.6" cy="12" r=".6"/>'),
     fil: IC('<path d="M3.5 2.5h6l3 3v8h-9z"/><path d="M9.5 2.5v3h3"/>'),
+    alb: IC('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
     cmp: IC('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>'),
     iso: IC('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>'),
     idn: IC('<path d="M3 2.5h8a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h8"/>'),
@@ -93,13 +94,14 @@ const BARRA = (() => {
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
     // HR only (after a separator): two menus and one direct button
-    { id: "scan", hr: true, items: ["hdr", "lst", "fil"], ic: () => ICONS[_last.scan] },
+    { id: "scan", hr: true, items: ["hdr", "lst", "fil", "alb"], ic: () => ICONS[_last.scan] },
     { id: "form", hr: true, items: ["cmp", "iso"], ic: () => ICONS[_last.form] },
     { id: "idn", hr: true, ic: () => ICONS.idn, panel: "idn", run: () => toggle("idn") },
     // items of the HR menus (panels of the drawer, bodies in banco.js)
     { id: "hdr", item: "scan", ic: () => ICONS.hdr, panel: "hdr", run: () => pick("scan", "hdr") },
     { id: "lst", item: "scan", ic: () => ICONS.lst, panel: "lst", run: () => pick("scan", "lst") },
     { id: "fil", item: "scan", ic: () => ICONS.fil, panel: "fil", run: () => pick("scan", "fil") },
+    { id: "alb", item: "scan", ic: () => ICONS.alb, panel: "alb", visible: () => !!window.INF && INF.any(), run: () => pick("scan", "alb") },
     { id: "cmp", item: "form", ic: () => ICONS.cmp, panel: "cmp", run: () => pick("form", "cmp") },
     { id: "iso", item: "form", ic: () => ICONS.iso, panel: "iso", run: () => pick("form", "iso") },
     // display options of a chart (right click on a chromatogram or a spectrum): only in the palette, the panel is in the drawer
@@ -155,7 +157,7 @@ const BARRA = (() => {
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
-      if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
+      if (["hdr", "lst", "fil", "alb"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
     }
     let side = null;
@@ -740,7 +742,7 @@ const BARRA = (() => {
   }
 
   function groupRows(c) {
-    return c.items.map(id => {
+    return c.items.filter(id => visible(byId(id))).map(id => {
       const it = byId(id);
       return { label: name(it), ic: it.ic(), checked: _last[c.id] === id, dom: null, fn: () => it.run() };
     });
@@ -757,7 +759,7 @@ const BARRA = (() => {
     gone.forEach(c => {
       if (c.items) {
         rows.push({ head: name(c) });
-        c.items.forEach(id => { const it = byId(id); rows.push({ label: name(it), ic: it.ic(), fn: () => { _opener = anchor; it.run(); } }); });
+        c.items.filter(id => visible(byId(id))).forEach(id => { const it = byId(id); rows.push({ label: name(it), ic: it.ic(), fn: () => { _opener = anchor; it.run(); } }); });
       } else {
         rows.push({ label: name(c), ic: c.ic(), fn: () => { _opener = anchor; if (c.run) c.run(); } });
       }

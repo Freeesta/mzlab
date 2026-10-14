@@ -13,6 +13,7 @@ const QMODI = (() => {
     mrm: frame('<path d="M8 50C30 50 38 49 52 48C60 47 64 12 74 12C84 12 88 47 98 48C112 49 124 50 144 50" stroke="var(--accent,#2b5c8a)" stroke-width="2"/>'),
   };
   const t = I18N.t;
+  THUMB.msn = THUMB.prod;
   const M = {
     full: { name: "Full Scan", short: "Full Scan", ico: "full", q: [t("modi.full.q1"), t("modi.full.q2"), t("modi.full.q3")],
       what: t("modi.full.what"), use: t("modi.full.use"), out: t("modi.full.out"), sel: t("modi.full.sel"), res: t("modi.full.res") },
@@ -21,6 +22,8 @@ const QMODI = (() => {
     mrm: { name: "MRM", short: "MRM", ico: "mrm", q: [t("modi.mrm.q1"), t("modi.mrm.q2"), t("modi.mrm.q3")],
       what: t("modi.mrm.what"), use: t("modi.mrm.use"), out: t("modi.mrm.out"), sel: t("modi.mrm.sel"), res: t("modi.mrm.res") },
   };
+  M.msn = { name: t("inf.name"), short: "MSn", ico: "prod", q: [t("modi.msn.q1"), t("modi.msn.q2"), t("modi.msn.q3")],
+    what: t("modi.msn.what"), use: t("modi.msn.use"), out: t("modi.msn.out"), sel: t("modi.msn.sel"), res: t("modi.msn.res") };      // not in ORDER: the Teoria table keeps the three modes of the 3200
   const ORDER = ["full", "prod", "mrm"];
   const th = "padding:3px 8px;border-bottom:1px solid #d9dce2;text-align:left;vertical-align:top;font-weight:600";
   const td = "padding:3px 8px;border-bottom:1px solid #eceef1;vertical-align:top";

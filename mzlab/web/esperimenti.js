@@ -7,6 +7,7 @@ const ESP = (() => {
     { id: "full", ordine: 1, etichetta: "Full Scan", didattica: "full", spettri: true },
     { id: "ms2", ordine: 2, etichetta: "MS2 (Product Ion)", didattica: "prod", spettri: true },
     { id: "mrm", ordine: 3, etichetta: "MRM", didattica: "mrm", spettri: false },
+    { id: "infusion", ordine: 4, etichetta: I18N.t("inf.name"), didattica: "msn", spettri: true },       // direct infusion with MSn on fixed precursors (the tree of infusione.js)
   ];
   const voce = id => voci.find(v => v.id === id);
   return {

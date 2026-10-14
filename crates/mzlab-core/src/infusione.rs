@@ -95,6 +95,12 @@ fn name_says(nome: &str) -> bool {
     NAME_WORDS.iter().any(|w| base.contains(w))
 }
 
+/// An infusion recognised from the structure of its MSn scans: the file the Dati view shows as one item of kind `infusion`. A file of MS1 scans
+/// only stays `full`, and one of constant RT (a product-ion scan of a low-resolution instrument) stays `ms2`.
+pub fn con_msn(scans: &[Scan], lc: Option<bool>, nome: &str) -> bool {
+    scans.iter().any(|s| s.level >= 2) && infusione(scans, lc, nome).is_some_and(|i| i.motivo != "rt_costante")
+}
+
 /// Whether the scans are an infusion (see the module), with `lc` = the `.raw` method has an LC part (`None`: unknown, e.g. an mzML).
 pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusione> {
     if scans.is_empty() {

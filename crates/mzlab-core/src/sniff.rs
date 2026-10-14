@@ -79,7 +79,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         None,
     )?;
     let v = json::parse(info.as_bytes())?;
-    let parts = file_parts(&idx.scans, facts.srm > 0);
+    let parts = file_parts(&idx.scans, facts.srm > 0, crate::infusione::con_msn(&idx.scans, facts.lc, file_name));
     let mut prec: Vec<i64> = idx
         .scans
         .iter()
@@ -106,6 +106,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
             .str(match p.mode {
                 "ms1" => "Full Scan",
                 "ms2" => "MS2",
+                "infusion" => "MSn infusion",
                 _ => "MRM",
             });
         o.raw(",\"pol\":");

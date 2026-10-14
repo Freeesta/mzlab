@@ -30,7 +30,8 @@ const BANCO = (() => {
   document.head.appendChild(st);
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
-  const groupsOf = k => memo(`flt|${k}`, () => J(`api/filters?k=${k}`).then(j => j.filters));
+  // an MSn infusion lists the nodes of its precursor tree instead of the scan types (infusione.js)
+  const groupsOf = k => memo(`flt|${k}|${window.INF && INF.isInf(E.files[k]) ? INF.O.tol + INF.O.ce : ""}`, () => (window.INF && INF.isInf(E.files[k]) ? INF.groups(k) : J(`api/filters?k=${k}`).then(j => j.filters)));
   const nfmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const IC_PIN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8l4.7 4.7-2 .6-2.4 2.6.1 3-1 1-2.6-3.1-3.6 3.6-.4-.4 3.6-3.6-3.1-2.6 1-1 3 .1 2.6-2.4z"/></svg>';
   // which cells have a scan filter: not the product-ion spectrum of the DDA trio (its scan is the one the survey scan started) nor the MRM ones
@@ -46,7 +47,7 @@ const BANCO = (() => {
   // all the cells that show the scans of the same chromatogram take the filter together (the chromatogram, its spectra)
   const group = p => { const ids = new Set([p.id]); E.panels.forEach(q => { if (q.type === "spec" && (q.link === p.id || q.src === p.id)) ids.add(q.id); if (p.type === "spec" && (p.link === q.id || p.src === q.id)) ids.add(q.id); }); return E.panels.filter(q => ids.has(q.id)); };
   function setFilter(p, key, gs) {
-    const g = key ? gs.find(x => x.key === key) : null, nt = g ? tabOf(g) : null;
+    const g = key ? gs.find(x => x.key === key) : null, nt = g && !g.msn ? tabOf(g) : null;
     group(p).forEach(q => {
       if (q.type === "chrom" && !eligible(q)) return;
       if (nt && q.tab !== nt && q.tab !== "mrm") {                           // another experiment: the files of the cell are the ones of that experiment (same physical file)
@@ -182,7 +183,13 @@ const BANCO = (() => {
       const f = fileOf(p);
       if (f) groupsOf(f.k).then(gs => {
         if (!sel.isConnected) return;
-        const opt = g => `<option value="${EH(g.key)}"${p.filt === g.key ? " selected" : ""}>${EH(g.key)} \u00d7${nfmt(g.n)}</option>`;
+        const opt = g => `<option value="${EH(g.key)}"${p.filt === g.key ? " selected" : ""}>${EH(g.label || g.key)} \u00d7${nfmt(g.n)}</option>`;
+        if (gs.some(g => g.msn)) {
+          sel.innerHTML = `<option value="">${I18N.t("bn.filt.all")}</option>` + gs.map(opt).join("");
+          sel.value = p.filt && gs.some(g => g.key === p.filt) ? p.filt : "";
+          sel.onchange = () => setFilter(p, sel.value || null, gs);
+          return;
+        }
         const lv = gs.filter(g => g.level === 1), l2 = gs.filter(g => g.level === 2), ln = gs.filter(g => g.level > 2);
         sel.innerHTML = `<option value="">${I18N.t("bn.filt.types")}</option>` + [[I18N.t("bn.grp.ms1"), lv], [I18N.t("bn.grp.ms2"), l2], [I18N.t("bn.grp.msn"), ln]].filter(([, l]) => l.length).map(([t, l]) => `<optgroup label="${t}">${l.map(opt).join("")}</optgroup>`).join("");
         sel.value = p.filt && gs.some(g => g.key === p.filt) ? p.filt : "";
@@ -285,7 +292,8 @@ const BANCO = (() => {
     ["cmp", I18N.t("bn.i9.cmp"), svg('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>')],
     ["iso", I18N.t("bn.i9.iso"), svg('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>')],
     ["idn", I18N.t("bn.i9.idn"), ICON.lib],
-    ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')]];
+    ["disp", I18N.t("bn.i9.disp"), svg('<path d="M2.5 4h6M11.5 4h2M2.5 8h2M7.5 8h6M2.5 12h8"/>')],
+    ["alb", I18N.t("bn.i9.alb"), ICON.tree]];
   const IK = "qqq.banco.info";
   const ist = (() => { const o = lsObj(IK); return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
   const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
@@ -411,7 +419,7 @@ const BANCO = (() => {
     b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg(I18N.t("bn.idn.needMs2")); };
     b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg(I18N.t("lib.noMs2")); };
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p) };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok) };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
@@ -448,7 +456,7 @@ const BANCO = (() => {
     }
     if (window.BARRA) {
       BARRA.syncMode();
-      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"].includes(BARRA.curTab));
+      c.hidden = !(BARRA.isOpen() && ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp", "alb"].includes(BARRA.curTab));
     } else {
       c.hidden = false;
     }
@@ -481,6 +489,6 @@ const BANCO = (() => {
     }
     b.hidden = false; sync2(); infoBar();
   }
-  return { infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+  return { token: () => ist.tok, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
 })();
 window.BANCO = BANCO;

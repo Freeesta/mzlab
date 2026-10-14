@@ -106,13 +106,13 @@ if DATI:
     try:
         with sync_playwright() as p:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-            load(pg, [MSN], 8000, 2)
+            load(pg, [MSN], 8000, 1)
             def msn():
                 pg.wait_for_timeout(3000)
                 tabs = pg.evaluate("E.panels.map(p=>p.type+':'+p.tab)")
-                assert "chrom:full" in tabs and "chrom:ms2" in tabs and "spec:ms2" in tabs, tabs
+                assert "chrom:infusion" in tabs and "spec:infusion" in tabs, tabs
                 assert "MSn" in pg.inner_text("#flst") or "MS8" in pg.inner_text("#flst"), pg.inner_text("#flst")[:300]
-            step("infusion MSn: the survey on top and the product-ion cells under it, file marked MSn", msn)
+            step("infusion MSn: one item, TIC and spectrum of its richest node, file marked MSn", msn)
         r.close()
     except Exception as e:
         steps.append(("msn", "FAIL " + str(e)[:300]))

@@ -356,6 +356,7 @@ function ctxFor(p, e, x, px, py) {
     tag("xic");
     if (window.DDA) { const dm = DDA.menu(p, px, py, m); if (dm.length) items.push("-", ...dm); }       // DDA trio: average of the MS2 of an ion, follow an ion
     tag("dda");
+    if (window.INF) { const im = INF.menuPeak(p, m); if (im.length) items.push("-", ...im); }      // MSn infusion: fragment this ion, back to the precursor, Mean | Sum
     items.push("-", ...measMenu(p, m).map((o, i) => i === 0 ? mi(o) : o));
     items.push(mi({ label: I18N.t("ctx.spec.annotate"), fn: async () => { const v = await ask(I18N.t("ctx.spec.annotate.prompt", { mz: lab }), ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } }));
     items.push({ label: I18N.t("ctx.spec.iso"), fn: async () => {

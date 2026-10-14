@@ -107,7 +107,7 @@ pub fn open_items<R: ReadAt, M: ReadAt>(
         .and_then(Value::str)
         .unwrap_or("")
         .to_string();
-    let parts = file_parts(&idx.scans, facts.srm > 0);
+    let parts = file_parts(&idx.scans, facts.srm > 0, crate::infusione::con_msn(&idx.scans, facts.lc, name));
     let one = |idx: &mut Index<R>,
                file: String,
                part: Option<&crate::iteminfo::Part>|
