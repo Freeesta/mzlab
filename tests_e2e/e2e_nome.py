@@ -37,7 +37,7 @@ try:
             src = "".join(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mzlab", "web", n), encoding="utf-8").read() for n in ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js")); assert '["Software", APP_NAME]' in src
         step("PNG metadata use the constant", png_meta)
         def teoria():
-            for ch in ("index.html", "00-uso.html", "12-dati.html"):
+            for ch in ("index.html", "01-tp.html", "12-dati.html"):
                 q = r.b.new_page(); q.goto(f"http://127.0.0.1:{r.port}/static/teoria/{ch}"); q.wait_for_timeout(900)
                 t = q.inner_text("body"); ttl = q.title(); name = q.evaluate("APP_NAME"); q.close()
                 assert OLD not in t and OLD not in ttl and name in ttl, (ch, ttl, [l for l in t.split("\n") if OLD in l][:2])

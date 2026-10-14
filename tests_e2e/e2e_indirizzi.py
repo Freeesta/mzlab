@@ -66,10 +66,10 @@ try:
 
         def alias():
             T = U + "static/teoria/index.html"
-            for h, end in (("#5", "05-gc.html"), ("#cap-12", "12-dati.html"), ("#A", "00-uso.html"), ("#09-quadrupolo", "09-quadrupolo.html"), ("#p2", "pratica-orale.html")):
+            for h, end in (("#5", "05-gc.html"), ("#cap-12", "12-dati.html"), ("#1", "01-tp.html"), ("#09-quadrupolo", "09-quadrupolo.html"), ("#p2", "pratica-orale.html")):
                 c, q = fresh(); q.goto(T + h); q.wait_for_url("**/" + end, timeout=10000); shut(c, q)
             c, q = fresh(); q.goto(T + "#i-capitoli"); q.wait_for_timeout(500); assert q.url.endswith("index.html#i-capitoli"); shut(c, q)
-        step("teoria/#5, #cap-12, #A, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
+        step("teoria/#5, #cap-12, #1, #09-quadrupolo, #p2 forward to the chapter; section anchors stay", alias)
 
         def toapp():
             c, q = fresh(); q.goto(U + "static/teoria/12-dati.html"); q.wait_for_selector("#tab-dati")
