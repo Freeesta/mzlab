@@ -5,7 +5,7 @@
 // as the Data tab does (`lr_put`, `lr_index`); the bytes of a file that only exists in the page are sent once (`lr/upload`).
 // Imported by tpmine-worker.js from <site>/mzfinder/finder-desktop.js.
 
-import { samplesOfAsync } from "./finder-tabella.js";
+import { samplesOf } from "./finder-tabella.js";
 
 const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
 const CHUNK = 32 << 20;
@@ -59,7 +59,7 @@ async function hypotheses(base, names, list, structure, parent) {
 /** the numbers of the table of the products: the roles of campioni/2 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
 async function tpTable(hr, rows) {
   if (!hr) return "null";
-  const samples = await samplesOfAsync((op, input) => rpc("finder/campioni", { cop: op, input }), hr.lc, hr.files);
+  const samples = await samplesOf((op, input) => rpc("finder/campioni", { cop: op, input }), hr.lc, hr.files);
   return rpc("finder/tp_table", { samples, rows: rows || "" });
 }
 
