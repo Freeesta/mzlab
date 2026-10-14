@@ -110,6 +110,7 @@ const DISP = (() => {
     AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
       esegui: c => { c.p.noCont = !c.p.noCont; draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.disp", gruppo: "gen", ordine: 5, viste: ["spec"], visibile: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
+    AZIONI.registra({ id: "chrom.disp", gruppo: "gen", ordine: 5, viste: ["chrom", "xic"], visibile: bench, nome: () => T("disp.menu"), esegui: c => open(c.p) });
   }
   return { register, panel, open, items, typeOf, pdaShift, pdaHere: p => !!dfile(p), pdaDelayValue: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; } };
 })();

@@ -200,6 +200,9 @@ const COMP = (() => {
       go();
     });
   }
+  // the chromatogram menu: the fragmentation tree of a high-resolution MS2 file
+  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.tree", gruppo: "lib", ordine: 2, viste: ["chrom"], nome: () => I18N.t("ctx.chrom.tree"),
+    visibile: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files[c.k].kind === ESP.ms2, esegui: c => tree(c.k) });
   return { open, observed, tree, rd, wr, num, IONS, BUILTIN, qs, prepSpec, scoreParams, afterFit, obsText };
 })();
 window.COMP = COMP;

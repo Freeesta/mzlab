@@ -569,6 +569,9 @@ const LIB = (() => {
   // the action of the spectrum menu (registry azioni/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "spec.lib", gruppo: "lib", ordine: 1, viste: ["spec"], visibile: c => c.p.level === 2,
     nome: c => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), esegui: c => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
+  // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
+  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", gruppo: "lib", viste: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
+    visibile: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: c => identifyAll(c.k) });
   return { open, addFiles, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;

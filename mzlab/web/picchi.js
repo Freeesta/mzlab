@@ -227,6 +227,9 @@ function intMenuItems(p, x, near, py) {
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }
+// the integration entries of the menu of a trace (registry azioni/1): the rows of intMenuItems, one action
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "tools", ordine: 1, viste: ["chrom", "xic", "mrm"],
+  voci: c => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
 function allInts() {
   return E.panels.flatMap(p => p.ints.map(i => { const f = E.files[i.k], std = f && f.type === "standard" && f.conc != null; return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: std ? f.conc : null, cunit: std ? f.cunit || "" : "" }; }));      // the concentration is only for standards: the calibration line is made by the student in Excel
 }
