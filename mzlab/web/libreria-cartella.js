@@ -154,7 +154,17 @@ const CARTELLA = (() => {
   }
 
   // ---------------------------------------------------------------- the inventory
-  const readJson = async (dir, rel) => { try { return JSON.parse(await (await dir.file(rel)).text()); } catch (e) { return null; } };
+  // sidecars come from a folder that may be shared: a size cap, no prototype keys, and a shape check (null = unreadable, so the entry shows as damaged instead of breaking the inventory)
+  const MAX_SIDE = 16 << 20, plain = v => !!v && typeof v === "object" && !Array.isArray(v), num = v => typeof v === "number" && Number.isFinite(v);
+  const okIdx = j => plain(j) && plain(j.origine) && num(j.origine.size) && num(j.origine.mtime) && num(j.bytes);
+  const okPkg = j => plain(j) && typeof j.id === "string";
+  const readJson = async (dir, rel, ok = plain) => {
+    try {
+      const f = await dir.file(rel); if (f.size > MAX_SIDE) return null;
+      const j = JSON.parse(await f.text(), (k, v) => (k === "__proto__" || k === "constructor" || k === "prototype" ? undefined : v));
+      return ok(j) ? j : null;
+    } catch (e) { return null; }
+  };
   const HEAD = [0x4d, 0x5a, 0x4c, 0x42];
   async function readHead(file) {                      // the 36-byte header of a .mzlib (docs/agenti/librerie.md): null if it is not one
     try { const b = new Uint8Array(await file.slice(0, 36).arrayBuffer()); if (b.length < 36 || !HEAD.every((x, i) => b[i] === x)) return null; const dv = new DataView(b.buffer); return { n: dv.getUint32(8, true), peaks: Number(dv.getBigUint64(16, true)), minReader: dv.getUint16(6, true) }; } catch (e) { return null; }
@@ -166,13 +176,13 @@ const CARTELLA = (() => {
     for (const f of top) {
       if (f.name.startsWith(".")) continue;
       if (SRC.test(f.name)) {
-        const meta = subSize.has(f.name + ".idx.json") ? await readJson(dir, META + "/" + f.name + ".idx.json") : null;
+        const meta = subSize.has(f.name + ".idx.json") ? await readJson(dir, META + "/" + f.name + ".idx.json", okIdx) : null;
         const st = await statoSorgente(f, meta, subSize.has(f.name + ".mzlib") ? subSize.get(f.name + ".mzlib") : null, async () => sha256Of(await dir.file(f.name)));
         if (st.mtime != null && meta) { meta.origine.mtime = st.mtime; await dir.write(META + "/" + f.name + ".idx.json", JSON.stringify(meta)); }
         seen.add(f.name);
         voci.push({ nome: f.name, tipo: "sorgente", id: idOf(f.name), size: f.size, mtime: f.mtime, stato: st.stato, info: st.stato === "pronta" || st.stato === "danneggiata" ? meta && meta.info : null });
       } else if (/\.mzlib$/i.test(f.name)) {
-        const side = await readJson(dir, META + "/" + f.name + ".pkg.json"), file = await dir.file(f.name), head = await readHead(file);
+        const side = await readJson(dir, META + "/" + f.name + ".pkg.json", okPkg), file = await dir.file(f.name), head = await readHead(file);
         const st = await statoPacchetto(f, side, side && catBy.get(side.id), !!head, () => sha256Of(file));
         if (st.mtime != null && side) { side.mtime = st.mtime; await dir.write(META + "/" + f.name + ".pkg.json", JSON.stringify(side)); }
         voci.push({ nome: f.name, tipo: "pacchetto", id: idOf(f.name), size: f.size, mtime: f.mtime, stato: st.stato, versione: side && side.versione, nuova: st.nuova, info: st.stato === "pronta" || st.stato === "aggiornamento" ? (side && side.info) || (head && { n: head.n, pos: 0, neg: 0, dropped: 0, peaks: head.peaks }) : null });
@@ -181,7 +191,7 @@ const CARTELLA = (() => {
     }
     for (const f of sub) {                              // indexes of files that are not in the folder (imported with the button or by drop): nothing to compare, ready while the index is whole
       const m = /^(.*)\.idx\.json$/.exec(f.name); if (!m || seen.has(m[1])) continue;
-      const meta = await readJson(dir, META + "/" + f.name), ok = meta && subSize.get(m[1] + ".mzlib") === meta.bytes;
+      const meta = await readJson(dir, META + "/" + f.name, okIdx), ok = meta && subSize.get(m[1] + ".mzlib") === meta.bytes;
       voci.push({ nome: m[1], tipo: "importata", id: idOf(m[1]), size: meta ? meta.origine.size : 0, mtime: meta ? meta.origine.mtime : 0, stato: ok ? "pronta" : "danneggiata", info: meta && meta.info });
     }
     return { voci: voci.sort((a, b) => a.nome.localeCompare(b.nome)) };
