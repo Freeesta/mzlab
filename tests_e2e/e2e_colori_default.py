@@ -12,8 +12,8 @@ r = Run(port=8994, wd="/tmp/wd_colori_default")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
+        pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length === 2")
         def default():
             assert pg.evaluate("UIP.pal") == "file"
         step("the default palette is «file»", default)
@@ -29,9 +29,9 @@ try:
             assert not set(cols) & set(eval(GREY)) and pg.evaluate("E.files.every(f => fdash(f).length === 0)"), cols
         step("«by time» without times falls back to a colour per file", by_time_no_time)
         def migrate():
-            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); pg.wait_for_timeout(1500)
+            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
             assert pg.evaluate("UIP.pal") == "file", "old saved default must become «file»"
-            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({v: 2, theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); pg.wait_for_timeout(1500)
+            pg.evaluate("localStorage.setItem('qqq.prefs', JSON.stringify({v: 2, theme: 'auto', pal: 'time', merge: true}))"); pg.reload(); attendi(pg, "typeof UIP !== 'undefined' && E.files !== undefined")
             assert pg.evaluate("UIP.pal") == "time", "an explicit choice is kept"
         step("saved «time» migrates to «file» unless chosen (v2)", migrate)
 finally:
