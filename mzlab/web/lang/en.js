@@ -543,6 +543,8 @@ I18N.add("en", {
   "update.progress": "Downloading file {done} of {total} ({size} MB)…",
   "update.ready": "Update ready: restart the program to use it.",
   "update.restart": "Restart now",
+  "release.new": "New version {version} available",
+  "release.get": "Download",
   "update.close": "Close",
   "update.newapp": "This update needs a newer version of the desktop app (at least {min}). Download the latest installer from:",
   "update.error.offline": "No internet connection: try again later. Nothing was changed.",
