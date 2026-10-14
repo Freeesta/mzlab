@@ -55,6 +55,15 @@ try:
             pg.mouse.dblclick(pos[0], pos[1]); pg.wait_for_timeout(400)
             assert "Annotazione" in pg.inner_text("#asktxt"), pg.inner_text("#asktxt"); pg.click("#askno")
         step("D15: annotation window with the translated title", annot)
+        def mapa():
+            open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+            MP = "E.panels.find(p=>p.type==='map')"; n = nspec()
+            pg.evaluate(f"MAPPA.whole({MP})"); dblp(MP, 0.5, 0.5); pg.wait_for_timeout(600)
+            assert nspec() == n + 1, "D10: whole map = spectrum at that RT"
+            pg.evaluate(f"{MP}.zoom=[{MP}._a.x0+1,{MP}._a.x1-1]"); pg.evaluate(f"draw({MP})"); dblp(MP, 0.5, 0.5)
+            assert pg.evaluate(f"{MP}.zoom") is None and nspec() == n + 1, "D11: zoomed map = whole view, no new spectrum"
+            pg.evaluate(f"undoZoom({MP})"); assert pg.evaluate(f"!!{MP}.zoom"), "D11: undoable"
+        step("D10/D11: map whole = spectrum, zoomed = whole view and undo", mapa)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
