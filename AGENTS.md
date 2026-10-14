@@ -9,7 +9,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, `pages.yml` a ogni push su `main`). Tutto gira nel browser; i file degli studenti non lasciano il computer.
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** nel mondo LR (niente «ecco i TP», niente rette di taratura o tabelle della relazione: gli studenti le fanno in Excel). Il mondo HR è uno strumento di ricerca: librerie, formule e analoghi come candidati con punteggio e prove, mai come verità. Eccezione: mzFinder (nascosto, solo per Federico).
-  2. Leggero: il programma servito è Rust (`crates/`: `.wasm` nel sito, nativo nell'app desktop) + HTML/JS semplice, senza bundler né dipendenze pesanti. Python ≥ 3.11 + numpy è solo RIFERIMENTO dei test di parità (`tools/golden.py`, `tools/*_riferimento.py`) e strumento (`tools/`): mai nel sito (per ora solo mzFinder, nascosto, tiene il suo Pyodide in `static/mzfinder/`) e nessuna funzione nuova nasce in Python.
+  2. Leggero: il programma servito è Rust (`crates/`: `.wasm` nel sito, nativo nell'app desktop) + HTML/JS semplice, senza bundler né dipendenze pesanti. Python ≥ 3.11 + numpy è solo RIFERIMENTO dei test di parità (`tools/golden.py`, `tools/*_riferimento.py`) e strumento (`tools/`): mai nel sito (fa eccezione solo mzFinder, nascosto, che tiene il suo Pyodide in `static/mzfinder/`) e nessuna funzione nuova nasce in Python.
   3. Interfaccia in italiano e inglese; Teoria e Pratica solo in italiano; codice e commenti in inglese. Sempre «m/z», «RT», «XIC», «TIC», «MRM», «MS2».
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
@@ -82,6 +82,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
+| workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM | `docs/agenti/rilascio.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
