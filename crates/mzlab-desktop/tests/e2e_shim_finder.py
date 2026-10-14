@@ -200,6 +200,19 @@ try:
             pg.wait_for_function("!document.querySelector('#pipe-exp .err')", timeout=60000)
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), "miss"
         step("Pipeline panel in the app: roles from the native engine, Run, quality control, table, report", pipeline_panel)
+        def import_native():
+            d = ROOT / "tests" / "data" / "untargeted"
+            tab, ann, mgf = ((d / "mzmine" / n).read_text(encoding="utf-8") for n in ("tabella_pos.csv", "annotazioni_pos.csv", "fbmn.mgf"))
+            r = pg.evaluate("""async ([tab, ann, mgf]) => {
+                await UNT.ready();
+                const t = await UNT.build([{ name: 'tabella_pos.csv', text: tab }, { name: 'annotazioni_pos.csv', text: ann }], { pol: 1 });
+                await UNT.prime({ features: [{ mz: 184.1332, pol: 1, ann: [{ formula: 'C10H17NO2', adduct: 'M+H' }] }, { mz: 301.1547, pol: 1, ann: [{ formula: 'C10H17NO2', adduct: 'M+H' }] }] }, 20);
+                let err = ''; try { await UNT.build([{ name: 'fbmn.mgf', text: mgf }], { pol: 1 }); } catch (e) { err = e.key || String(e); }
+                return { n: t.features.length, s: t.samples, mz: t.byId.get('1').mz, has99: t.byId.has('99'), ann: t.features[0].ann[0].cleanName, ok: UNT.checkStructure('C10H17NO2', 184.1332, 'M+H', 1).ok, bad: UNT.checkStructure('C10H17NO2', 301.1547, 'M+H', 1).ok, err };
+            }""", [tab, ann, mgf])
+            assert r["n"] == 6 and r["s"] == ["Campione_A_pos", "Campione_B_pos"] and r["mz"] == 184.1332 and not r["has99"] and r["ann"] == "Testamine", r
+            assert r["ok"] is True and r["bad"] is False and r["err"] == "noTable", r
+        step("tables of other programs: mzMine table and annotations read by the native route, structure checks in a batch, a reader error keeps its key", import_native)
         def transformations():
             user = "my rule;+O;a row of the user"
             run = pg.evaluate("([f, p, t]) => window.TPCALL('run', f, p, {}, t)", [got["files"], PARENT, user])

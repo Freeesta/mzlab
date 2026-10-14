@@ -66,12 +66,12 @@
 <tr><td>FT-ICR</td><td class="n">&gt; 10<sup>6</sup></td><td class="n">&lt; 1 ppm</td><td>lento</td><td>miscele complessissime</td></tr>
 </table>
 <div class="box key"><b>Quale strumento per quale domanda</b>
-<p><b>Quanto c'è</b> di un composto noto, in tracce, in tanti campioni: triplo quadrupolo in MRM (la vostra esperienza). <b>Che cos'è</b> un composto sconosciuto (un TP, un contaminante emergente): alta risoluzione, full scan + MS2 (DDA o DIA, capitolo 19), formula dalla massa esatta e dagli isotopi (capitolo 13). Nella ricerca dei TP si usano spesso entrambi: HRMS per scoprirli, QqQ per seguirli nel tempo.</p></div>
+<p><b>Quanto c'è</b> di un composto noto, in tracce, in tanti campioni: triplo quadrupolo in MRM. <b>Che cos'è</b> un composto sconosciuto (un TP, un metabolita o contaminante emergente): alta risoluzione, full scan + MS2 (DDA o DIA, capitolo 19), formula dalla massa esatta e dagli isotopi (capitolo 13). Nella ricerca dei prodotti di degradazione si usano spesso entrambi: HRMS per scoprirli e identificarli, QqQ per quantificarli e seguirli nel tempo.</p></div>
 
 <h2>Il rivelatore</h2>
 <p>Quadrupoli, trappole e TOF contano gli ioni con un <b>moltiplicatore di elettroni</b> (dinodi discreti o canale continuo) o con <b>piastre a microcanali</b> (TOF): ogni ione che colpisce la superficie libera elettroni, moltiplicati a cascata fino a 10<sup>6</sup>-10<sup>8</sup> volte. Orbitrap e FT-ICR non «distruggono» gli ioni: misurano la corrente immagine che inducono. Dettagli sul rivelatore del QqQ nel capitolo 10.</p>
 
-<div class="box oral"><b>All'orale</b>
+<div class="box oral"><b>Concetti chiave e domande di ripasso</b>
 <p>Definire potere risolutivo (FWHM, valle al 10%), risoluzione, accuratezza in ppm (con un calcolo); spiegare perché serve l'alta risoluzione per gli isobari e per la formula; principio del TOF (equazione 11.3, reflectron), dell'Orbitrap (frequenza assiale, transiente, trasformata di Fourier, compromesso risoluzione-velocità), della trappola ionica e dell'FT-ICR; tabella di confronto; scegliere lo strumento per una domanda analitica.</p></div>
 
 <h2>Verifica</h2>
@@ -81,7 +81,7 @@
 <p>Δm = 0,0100: R ≈ 400/0,01 = 40 000 per vederli appena separati, ~80 000 per una separazione netta. Un TOF di fascia alta ci arriva appena; un Orbitrap sì.</p></details>
 <details class="q"><summary>Perché nell'Orbitrap più risoluzione significa meno punti per picco cromatografico?</summary>
 <p>La risoluzione è proporzionale alla durata del transiente: se raddoppio la risoluzione, ogni scansione dura il doppio e in un picco largo 6 s entrano metà degli spettri. Con picchi stretti (UHPLC, GC) bisogna trovare un compromesso.</p></details>
-<details class="q"><summary>Il vostro QqQ vede un picco a m/z 216. Basta per dire che è atrazina protonata?</summary>
+<details class="q"><summary>Uno spettrometro a risoluzione unitaria rileva un picco a m/z 216. Basta per dire che è atrazina protonata?</summary>
 <p>No: a risoluzione unitaria centinaia di formule hanno massa nominale 216 (capitolo 13). Servono tempo di ritenzione, isotopi (qui il cloro: M+2 al 32%), MS2 e, per una conferma vera, lo standard. Con l'alta risoluzione la massa entro 3 ppm restringe moltissimo le formule, ma non distingue gli isomeri.</p></details>
 
 <h2>Per approfondire</h2>
@@ -92,7 +92,7 @@
 <li><span class="tag">articolo</span>Zubarev R.A., Makarov A. (2013) Orbitrap mass spectrometry. <i>Anal. Chem.</i> 85, 5288-5296. <a href="https://doi.org/10.1021/ac4001223" target="_blank" rel="noopener">doi:10.1021/ac4001223</a></li>
 <li><span class="tag">articolo</span>Marshall A.G., Hendrickson C.L. (2008) High-resolution mass spectrometers. <i>Annu. Rev. Anal. Chem.</i> 1, 579-599. <a href="https://doi.org/10.1146/annurev.anchem.1.031207.112945" target="_blank" rel="noopener">doi:10.1146/annurev.anchem.1.031207.112945</a></li>
 <li><span class="tag">articolo</span>Do (2026) From Equations to Intuition: Interactive Modeling for Teaching Ion Dynamics in Mass Spectrometry. <i>J. Chem. Educ.</i> 103, 4989-4997. <a href="https://doi.org/10.1021/acs.jchemed.6c00822" target="_blank" rel="noopener">doi:10.1021/acs.jchemed.6c00822</a> (notebook interattivi su quadrupolo, guide RF e Orbitrap)</li>
-<li><span class="tag">dispense</span>Sbobine del corso, capitolo "Analizzatori di massa".</li>
+<li><span class="tag">libro</span>Gross J.H. <i>Mass Spectrometry: A Textbook</i>, 3ª ed., Springer, 2017: capitoli su analizzatori ad alta risoluzione.</li>
 </ul>
 </main></div>
 <script src="../appname.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="sim-hr.js"></script>

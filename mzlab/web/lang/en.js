@@ -319,7 +319,7 @@ I18N.add("en", {
   "phone.open": "Open anyway",
   "phone.go": "Go to the Theory",
   "phone.about.title": "What is {app}",
-  "phone.about.text": "The program for the triple-quadrupole experiment of the pollutant analysis laboratory: it opens the spectrometer files, shows chromatograms and spectra and helps look for transformation products. It runs in the browser, with nothing to install, and your files stay on your computer.",
+  "phone.about.text": "An interactive platform for LC-MS/MS triple-quadrupole data analysis: it opens spectrometer files, displays chromatograms and spectra, and assists in identifying transformation products. It runs in the browser, requires no installation, and your files stay on your computer.",
   "phone.info": "About",
   "load.blocked": "The saved files are locked by another {app} tab: close the other {app} tabs and this one will carry on by itself.",
   "load.err.resumeTimeout": "Reopening the saved files is not answering. You can start from scratch: the files saved in this browser are deleted, and so are the notebook and the stored copies.",

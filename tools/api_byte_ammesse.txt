@@ -6,3 +6,5 @@ lib.rs::align_series
 lib.rs::build_evidence
 lib.rs::state
 finder.rs::finder_transformations
+# the pyramid of map tiles (about 1/8 of the index) is handed once per file to the worker, which writes it to OPFS
+cache.rs::tiles_export

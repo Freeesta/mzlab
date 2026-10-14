@@ -319,7 +319,7 @@ I18N.add("it", {
   "phone.open": "Apri comunque",
   "phone.go": "Vai alla Teoria",
   "phone.about.title": "Che cos'è {app}",
-  "phone.about.text": "Il programma dell'esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a cercare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.",
+  "phone.about.text": "Piattaforma interattiva per l'analisi di dati LC-MS/MS a triplo quadrupolo: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a identificare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.",
   "phone.info": "Informazioni",
   "load.blocked": "I file salvati sono bloccati da un'altra scheda di {app}: chiudi le altre schede di {app} e questa ripartirà da sola.",
   "load.err.resumeTimeout": "La ripresa dei file salvati non risponde. Puoi ripartire da zero: i file salvati in questo browser vengono cancellati, e anche il taccuino e le copie in memoria.",
