@@ -276,3 +276,11 @@ fn preview_and_version_routes_equal_the_wasm_functions() {
         );
     }
 }
+
+#[test]
+fn files_route_lists_the_indexed_files() {
+    let e = setup();
+    let mut want: Vec<&str> = NAMES.to_vec();
+    want.sort();
+    assert_eq!(e.json("feat/files", json!({})), json!(want));
+}
