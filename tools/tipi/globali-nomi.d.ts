@@ -184,6 +184,7 @@ declare var _cell: any;
 declare var _col: any;
 declare var _crcT: any;
 declare var _lastBox: any;
+declare var _lastV: any;
 declare var _sheetXml: any;
 declare var _tunit: any;
 declare var _xe: any;
