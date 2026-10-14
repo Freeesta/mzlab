@@ -37,7 +37,7 @@ try:
         step("no CSP violation in the basic flow", csp)
         def meta():
             c = pg.evaluate("document.querySelector('meta[http-equiv=Content-Security-Policy]').content")
-            for need in ("object-src 'none'", "base-uri 'self'", "form-action 'self'"): assert need in c, need
+            for need in ("object-src 'none'", "base-uri 'none'", "form-action 'self'"): assert need in c, need
         step("CSP forbids plugins, base and form targets", meta)
 finally:
     r.close(); r.report(); import shutil; shutil.rmtree(tmp, ignore_errors=True)
