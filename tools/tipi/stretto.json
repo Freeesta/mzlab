@@ -120,6 +120,7 @@
     "../../mzlab/web/manifesto.js",
     "../../mzlab/web/mappa-estrai.js",
     "../../mzlab/web/migra.js",
+    "../../mzlab/web/origine.js",
     "../../mzlab/web/perf.js",
     "../../mzlab/web/pulizia.js",
     "../../mzlab/web/qqq-db.js",
