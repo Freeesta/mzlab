@@ -6,11 +6,12 @@ Misure, diagnosi e pacchetti di lavoro numerati per zoom, spostamento, mirino, c
 - `MZLAB_CHROMIUM=<chrome> python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR [--json]`: crea i file mzML sintetici in `DIR` (non nel repository), costruisce il sito con il motore WASM (`build_site.py --no-pyodide` + `cargo build` + `wasm-bindgen`), apre due file per caso in Chromium headless con profilo persistente (la quota di un contesto in incognito rifiuta i file da 300 MB) e misura i gesti. `--json` stampa una riga per caso.
 - Casi: `lr` 1500 scansioni × 500 picchi (0,75 M picchi, 14 MB); `hrc` 3000 × 3000 centroidi (9 M, 150 MB); `hrc_big` 6000 × 5000; `hrp` 400 × 50 000 in profilo (20 M, 320 MB); `hrp_big` 600 × 150 000. `nome:SxP` cambia le dimensioni.
 - Ganci dello script (solo nel browser del test): `fetch` delle rotte `api/map|spectra|xic`, `drawMap`, `mapImage`, `MAPPA.zoomImg` (vero = disegnata la regione nitida), intervalli fra `requestAnimationFrame` e long task, picco della memoria WASM dai messaggi del worker, RSS di Chromium da `/proc`.
+- Lettura: `rdStat` di `rust-worker.js` (campo `rd` di ogni risposta) conta tempo, byte e byte da handle dentro i lettori; lo script li riporta (`first_read` cumulativo, `read_ms` per gesto).
 - Gesti: prima mappa a schermo intero (rotta, `JSON.parse`, base64, colore); 12 scatti di rotella; spostamento con Maiusc+trascinamento; zoom solo in RT (Maiusc+rotella); zoom profondo (2 min × 2 m/z); cambio di file freddo, ritorno e di nuovo caldo; 60 passi del mirino; 20 spostamenti (voci di `CACHE` e heap JS aggiunti).
 - Confronto nativo: un piccolo binario fuori dal repository che apre l'`.mzidx` con `Index::open(File)` e chiama `Routes::map_route` con le stesse query (un giro freddo e uno caldo).
 
 ## Il percorso dei dati (cosa sta in memoria)
-1. **Indice** `.mzidx` in OPFS: i picchi MS1 ordinati per m/z (colonne mz, intensità, posizione; 12 B/picco in HR), con un recinto ogni 16384 picchi. Il worker lo legge con `FileReaderSync.readAsArrayBuffer(blob.slice(...))` (`rust-worker.js` `readerFor`) a pezzi di 65 536 picchi (`idxread.rs` `each_peak`, tre letture per pezzo): ogni lettura è una chiamata sincrona che copia dal processo del browser.
+1. **Indice** `.mzidx` in OPFS: i picchi MS1 ordinati per m/z (mz, intensità, posizione; 12 B/picco in HR), con un recinto ogni 16384 picchi. Il worker lo legge da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato, a pezzi di 65 536 picchi (`idxread.rs` `each_peak`). Il handle, esclusivo, si chiude dopo 2 s senza letture e prima di scrivere, spostare o cancellare il file, e `wake()` lo riapre a ogni richiesta; senza handle si ripiega su `FileReaderSync`.
 2. **Mappa intera** (`api/map` senza finestra): la griglia della sessione (≤600 righe RT, celle di 1 Da anche in HR) costruita leggendo TUTTI i picchi del file; Rust tiene le ultime 6 per file (`ion_map`), la pagina le ricorda in `memo`.
 3. **Regione** (`ionmap_region`, al massimo 2048 × 1024): legge tutti i picchi della banda m/z per tutto il tempo e scarta quelli fuori RT, quindi uno zoom solo in RT legge l'intero file.
 4. **Trasporto**: `Vec<f32>` → base64 → testo JSON → `postMessage` → `Response` → `r.json()` → `atob` carattere per carattere → `Float32Array`: circa sei copie, 1,33 volte la dimensione.
@@ -43,7 +44,7 @@ Nativo, stesso indice `hrc` (108 MB, file nella cache del sistema): mappa intera
 Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `Float32Array` ordinato, scala precalcolata in `Uint32Array` e scrittura a 32 bit 52 ms (6 volte meno).
 
 ## Diagnosi (in ordine di peso)
-- **D1 Lettura dell'indice nel browser**: la mappa intera HR legge 9 M picchi in 5,8 s contro 0,25 s nativi (23 volte). Il sospetto principale è `FileReaderSync` su `Blob.slice` (una copia attraverso il processo del browser a ogni lettura) più la copia `Uint8Array` → memoria WASM; il calcolo WASM vale al più 2 volte il nativo.
+- **D1 Lettura dell'indice nel browser**: letta con `FileReaderSync` su `Blob.slice` costava una copia attraverso il processo del browser a ogni lettura (mappa intera HR 9 M picchi: 5,8 s contro 0,25 s nativi); il worker ora legge dal `SyncAccessHandle` in blocchi grandi (vedi «Il percorso dei dati», punto 1) e il calcolo WASM resta al più 2 volte il nativo.
 - **D2 Zoom solo in RT**: la regione legge tutta la banda m/z per tutto il tempo (1,5 s in HR); il recinto ogni 16384 picchi serve solo all'm/z.
 - **D3 Colore in JS**: 0,2-0,4 s per ogni mappa intera e rifatto a ogni cambio di file (un solo posto `p._img`): è la quasi totalità dei 441 ms del cambio di file caldo in HR.
 - **D4 Attesa del nitido**: 150 ms di silenzio + rotta + disegno ≈ 180-250 ms anche quando la rotta costa 40 ms.
@@ -64,7 +65,7 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `
 ## Ipotesi valutate
 | ipotesi | guadagno atteso | costo | esito |
 |---|---|---|---|
-| letture con `FileSystemSyncAccessHandle` o a blocchi grandi | D1: 5,8 s → < 1 s | basso, solo worker + Rust | sì, P1 |
+| letture con `FileSystemSyncAccessHandle` a blocchi grandi | D1 | basso, solo worker + Rust | fatto (P1) |
 | piramide di massimi a tessere in Rust, salvata in OPFS | D1-D2-D9: ogni zoom costa le celle, non i picchi | medio | sì, P2 |
 | scala precalcolata + percentile da Rust + LRU di immagini per file | D3: 400 → 50 ms, cambio caldo ~0 | basso | sì, P3 |
 | `Float32Array` trasferibile al posto di base64 nel JSON | D7, -2 copie | medio (tocca le rotte) | sì, P4 |
@@ -80,13 +81,10 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `
 ## Pacchetti (in ordine)
 Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `bench_mappa.py` prima e dopo nella descrizione. «Libero» = non tocca i file di `mappa.js`/`grafici.js`, della lista dei file e pannelli, né del caricamento.
 
-### P1 Lettura veloce dell'indice nel worker
-- Scopo: D1, D8. Prima uno strumento che separa lettura e calcolo (tempo dentro `read_at` contato nel worker); poi `createSyncAccessHandle()` sull'`.mzidx` di OPFS al posto di `FileReaderSync` (lettura diretta in un buffer riusato), con `read_at` su blocchi da 1-4 MB e un piccolo LRU di blocchi; ripiego su `FileReaderSync` se il handle è già preso o assente.
-- File: `mzlab/web/rust-worker.js` (`readerFor`), `crates/mzlab-wasm/src/lib.rs` (`JsReader`), `crates/mzlab-core/src/idxread.rs` (passo di `each_peak`).
-- Guadagno misurabile: prima mappa HRC da 6,3 s a ≤ 1 s; zoom solo RT da 1,5 s a ≤ 0,3 s; nessuna variazione dei byte delle rotte (parità invariata).
-- Rischio: basso. Il handle è esclusivo per file (una sola apertura nel worker); su Safari il comportamento di `read` con `{at}` cambia fra versioni e va provato su iPad; il ripiego resta.
-- Accettazione: `bench_mappa.py lr,hrc` prima e dopo nella PR, prima mappa HRC ≤ 1 s e zoom solo RT ≤ 0,3 s; `bench_mappa.py hrp` arriva in fondo (l'apertura nel browser non finisce in 18 minuti); `cargo test -p mzlab-core --test map_parity` e `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi; `MZLAB_LR_MISS` vuota; tetti dei `.wasm` invariati.
-- Dipendenze e conflitti: nessuna dipendenza. Tocca `rust-worker.js` solo in `readerFor`: libero salvo modifiche concorrenti del caricamento a quel file.
+### P1 Lettura veloce dell'indice nel worker (fatta)
+- Il worker legge l'`.mzidx` da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato; il handle è esclusivo, quindi si apre a ogni richiesta (`wake`) e si chiude quando il worker non ha richieste in corso (`parkAll`) e prima di scrivere, spostare o rimuovere il file (`dropLease`); se è preso o assente si legge con `FileReaderSync`.
+- `facts_from` (`iteminfo.rs`) non legge più le polarità di tutto il file se ha scansioni e nessun SRM: i file HRP da 320 MB si aprono senza `error.memoryBudget`.
+- Prova: `tools/bench_mappa.py` riporta `first_read` e `read_ms` per gesto; `map_parity`, `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi, `MZLAB_LR_MISS` vuota, `.wasm` entro i tetti. Safari/iPad non misurati.
 
 ### P2 Piramide di tessere della mappa in Rust
 - Scopo: D2, D9 e prima mappa istantanea al secondo accesso. Livelli di massimi (e somme) su una griglia agganciata (RT per scansione, m/z a potenze di 2 della cella), a tessere 256 × 256 sparse; costruita una volta per file (in un passaggio sui picchi già ordinati per m/z) e salvata in OPFS accanto all'`.mzidx`; una rotta nuova `api/maptiles` rende il rettangolo della vista al livello giusto; la regione esatta resta per media, fondo, differenza e per lo zoom più profondo.
@@ -160,7 +158,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - Dipendenze e conflitti: insieme a P1 o subito dopo. Solo Rust e `memoria.md`: libero.
 
 ## Ordine consigliato
-P1 → P10 → P2 (motore, liberi) · P3 + P6 → P5 (pagina) · P4 (dopo P3) · P9, P8 · P7 solo se serve.
+P10 → P2 (motore, liberi) · P3 + P6 → P5 (pagina) · P4 (dopo P3) · P9, P8 · P7 solo se serve.
 
 ## Limiti dello studio
 - Misure su un container Linux headless a 4 CPU; iPad e Safari non sono misurati (P1 e P10 chiedono una prova reale).
