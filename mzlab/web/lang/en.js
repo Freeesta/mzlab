@@ -614,6 +614,8 @@ I18N.add("en", {
   "errori.copied": "Copied",
   "errori.close": "Close",
   "workflow.err.invalidFormat": "Invalid or unrecognized .mzflow format.",
+  "workflow.err.tooBig": "File too large.",
+  "workflow.err.tooDeep": "File nested too deeply.",
   "workflow.warn.shaMismatch": "The SHA-256 hash for file <b>{file}</b> ({actual}…) differs from the workflow ({expected}…). Continue anyway?",
   "workflow.needFiles": "The workflow references these files, which are not currently loaded:",
   "workflow.warn.unknownOps": "The file contains operations this version does not know; they were ignored: {ops}",

@@ -57,6 +57,7 @@ declare var EXPORD: any;
 declare var EXPORTING: any;
 declare var FEATURES: any;
 declare var FIG: any;
+declare var FILESICURI: any;
 declare var FILE_COLORS: any;
 declare var FONDO: any;
 declare var FRAME: any;
