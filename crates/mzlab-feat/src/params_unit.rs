@@ -7,12 +7,15 @@ pub const DA_MIN: f64 = 0.1;
 pub const DA_MAX: f64 = 0.5;
 pub const RT_TOL_MIN: f64 = 0.05;
 pub const RT_TOL_MAX: f64 = 1.0;
+/// The window of m/z is this many times the measured tolerance (three robust sigma); the tolerance of RT this many times the median FWHM.
+pub const DA_FACTOR: f64 = 2.0;
+pub const RT_FACTOR: f64 = 2.0;
 /// Void front: the TIC of the first fifth of the run peaks over `DEAD_PEAK` times its median and comes back under `DEAD_BACK` times it.
 pub const DEAD_PEAK: f64 = 3.0;
 pub const DEAD_BACK: f64 = 1.5;
 
-/// Half window of m/z on the unit axis: three robust sigma of the offsets (Da) of the peaks from the mean m/z of their trace, within the bounds.
-/// Returns `(Da, sigma)`.
+/// Half window of m/z on the unit axis: `DA_FACTOR` times the measured tolerance (three robust sigma of the offsets, Da, of the peaks from the mean
+/// m/z of their trace), within the bounds. Returns `(Da, sigma)`.
 pub fn da_from_offsets(offsets: &mut [f64]) -> Option<(f64, f64)> {
     if offsets.len() < 20 {
         return None;
@@ -20,7 +23,7 @@ pub fn da_from_offsets(offsets: &mut [f64]) -> Option<(f64, f64)> {
     let m = median(offsets);
     let mut dev: Vec<f64> = offsets.iter().map(|e| (e - m).abs()).collect();
     let sigma = 1.4826 * median(&mut dev);
-    Some(((3.0 * sigma).clamp(DA_MIN, DA_MAX), sigma))
+    Some(((DA_FACTOR * 3.0 * sigma).clamp(DA_MIN, DA_MAX), sigma))
 }
 
 /// End of the void front, minutes: the RT where the TIC of the first fifth of the run, after its maximum, comes back under `DEAD_BACK` times the

@@ -3,6 +3,7 @@
   "use strict";
   const ctx = () => QTOOLS.ctx;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal in the same file and time window at the m/z of the ion, at ±1 and ±2 Da (neighbours) and at ±0.5 Da (decoy windows). A neighbour or a decoy as strong as the ion says the signal is not specific to its m/z.">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
   const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
   const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
@@ -188,9 +189,11 @@
   <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
   <div class="row"><label class="mut grow" for="tp-prt">RT of the parent (min; empty = automatic)</label><input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
+  <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-minf" title="Low resolution: a peak must appear in at least this many treated samples, or in two consecutive ones at the same RT (fewer when the series is shorter). 0 = off.">Peak in at least (samples)</label><input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
   <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
   <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
@@ -224,6 +227,7 @@
     // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
     let estSeq = 0;
     for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) $(id).addEventListener("input", ev => { ev.target.dataset.user = "1"; ev.target.classList.remove("tp-est"); });
+    $("#tp-est").addEventListener("click", () => { for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) delete $(id).dataset.user; estimateLr(); });
     async function estimateLr() {
       const lr = st.files.filter(f => f.kind === "full"), f = lr.find(x => x.type === "sample") || lr[0], seq = ++estSeq;
       if (!f || st.files.some(x => x.kind === "hr")) return;
@@ -231,8 +235,8 @@
       try { e = JSON.parse(await callRaw("estimate", JSON.stringify([f.name]))); } catch (_) { /* no estimate: the defaults stay */ }
       if (!e || seq !== estSeq) return;
       const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
-      put("#tp-tol", e.da && e.da.value, 2, `From the data: 3 × the scatter of m/z of the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
-      put("#tp-rtt", e.rt_tol, 2, `From the data: the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-rtt", e.rt_tol, 2, `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
       put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
     }
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
@@ -412,7 +416,7 @@
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
-        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
+        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked };
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
@@ -618,7 +622,7 @@
         <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
         <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
-        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>`;
+        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
       const isPar = par && id === par.id;
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
