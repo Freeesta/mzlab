@@ -151,7 +151,7 @@ fn emit(v: &Value, o: &mut Out) {
 /// The `regole_tp/1` file `base` with the rows of `text` as rules.
 pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     let rows = parse(text)?;
-    let unreadable = || "the rules of mzFinder cannot be read".to_string();
+    let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
     let Value::Obj(top) = &mut file else {
         return Err(unreadable());

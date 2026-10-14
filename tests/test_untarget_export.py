@@ -44,7 +44,7 @@ def test_csv_semicolon_bom_quoting_key_and_areas():
 
 def test_mgf_has_levels_ms2_only_and_the_licences_in_the_comments():
     m = js("const { t, res } = T(); return X.mgf(t, res, t.features)")
-    assert m.startswith("# mzFinder untargeted export") and "SHA-256 " + "ab" * 32 in m
+    assert m.startswith("# Tabui untargeted export") and "SHA-256 " + "ab" * 32 in m
     assert "# Library records cited (" in m and "CC BY 4.0: 1 record" in m and "not stated: " in m
     blocks = m.count("BEGIN IONS")
     assert blocks == 2 and m.count("END IONS") == 2          # features 1 and 5 have an MS2

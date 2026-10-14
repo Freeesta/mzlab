@@ -73,7 +73,7 @@ fn mgf_and_sirius_hold_only_the_rows_with_a_spectrum() {
     let c = Ctx { table: &t, samples: &s, view: None, table_sha256: "ab", polarity: -1 };
     let sp = vec![None, Some(Ms2 { prec: 300.2001, mz: vec![100.0, 150.123456], it: vec![10.0, 55.56], files: 1 })];
     let m = mgf(&c, &sp);
-    assert!(m.starts_with("# mzFinder feature table"));
+    assert!(m.starts_with("# Tabui feature table"));
     assert!(m.contains("BEGIN IONS\nFEATURE_ID=2\nPEPMASS=300.2001\nSCANS=2\nRTINSECONDS=420.00\nCHARGE=1-\nMSLEVEL=2\nIONMODE=Negative\nMERGED_ACROSS_N_SAMPLES=1\n100 10\n150.12346 55.6\nEND IONS\n"));
     assert!(!m.contains("FEATURE_ID=1"));
     assert!(!m.contains("unit resolution"));

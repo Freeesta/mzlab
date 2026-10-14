@@ -2,22 +2,26 @@
 // The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the session and the notebook in IndexedDB, the offline copy of the
 // app in the Cache API and the service worker) and the preferences (localStorage) in THIS browser, so a reload - even Cmd/Ctrl+Shift+R, which only skips the HTTP
 // cache - brings the files back. This file removes them, by NAME (what the browser lists, never a fixed list: other parts of the program add their own folders and
-// databases), and reloads. Two variants: "all" (everything, as if the program had never run here) and "files" (the files, their indexes and the session; the
-// preferences, language, theme and the saved libraries stay). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
+// databases), and reloads. Three variants: "all" (everything, as if the program had never run here), "files" (the files, their indexes and the session; the
+// preferences, language, theme and the saved libraries stay) and "cold" (below). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
 (() => {
   "use strict";
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
   const KEEP_OPFS = ["librerie"];                                     // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
   const KNOWN_IDB = ["qqq_lab", "mzlab-libs", "mzlab-libdir"];
-  const MODES = { 1: "all", all: "all", files: "files" };
+  // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
+  // choices, sidebar layout...); what the user set on purpose stays: language, theme and settings, reading aids, the update notice, library settings, seen hints
+  const KEEP_LS = /^(mzlab\.lang|qqq-theme|qqq\.(prefs|a11y|set\.a11y|upd\.|reset\.note|lib\.|tour\.|telefono|logo\.))/;
+  const RUN_KEY = "qqq.run";                                          // sessionStorage: present while this run of the app lives (a reload keeps it, a new start does not)
+  const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
   async function opfs(mode, rep) {
     const root = await navigator.storage.getDirectory(), names = [];
     for await (const [n] of /** @type {any} */ (root).entries()) names.push(n);
     for (const n of names) {
-      if (mode === "files" && KEEP_OPFS.includes(n)) continue;
+      if (mode !== "all" && KEEP_OPFS.includes(n)) continue;
       try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); } catch (e) { rep.errors.push("opfs " + n + ": " + (e && e.name)); }
     }
   }
@@ -26,14 +30,14 @@
     let names = KNOWN_IDB.slice();
     try { if (indexedDB.databases) names = [...new Set([...names, ...(await indexedDB.databases()).map(d => /** @type {string} */ (d.name))])]; } catch (e) { /* the fixed names only */ }
     for (const n of names) {
-      if (mode === "files" && KEEP_IDB.includes(n)) continue;
+      if (mode !== "all" && KEEP_IDB.includes(n)) continue;
       const ok = await wait(delDb(n), 3000);
       (ok ? rep.idb : rep.blocked).push(n);                           // blocked: another connection is open; the deletion is queued and finishes when the page reloads
     }
   }
   async function caches_(mode, rep) {
     for (const k of await caches.keys()) {
-      if (mode === "files" && !k.startsWith("qqq-big-")) continue;
+      if (mode !== "all" && !k.startsWith("qqq-big-")) continue;
       if (await caches.delete(k)) rep.caches.push(k);
     }
   }
@@ -50,7 +54,15 @@
         const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k)) ks.push(k); }
         ks.forEach(k => localStorage.removeItem(k)); rep.keys = ks.length; sessionStorage.clear();
       } catch (e) { rep.errors.push("storage"); }
-    } else { try { sessionStorage.clear(); } catch (e) { /* none */ } }
+    } else {
+      try {
+        if (mode === "cold") {
+          const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && /^(qqq|mzlab)/i.test(k) && !KEEP_LS.test(k)) ks.push(k); }
+          ks.forEach(k => localStorage.removeItem(k)); rep.keys = ks.length;
+        }
+        sessionStorage.clear();
+      } catch (e) { rep.errors.push("storage"); }
+    }
     window.QQRESET.last = rep;
     return rep;
   }
@@ -59,8 +71,9 @@
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     const rep = await wipe(mode);
+    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode === "all") u.searchParams.set("riparti", "1");
+    const u = new URL(location.href); u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1");
     location.replace(u.href);
     return rep;
   }
@@ -86,7 +99,14 @@
     n.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-n]")); if (!b) return; if (b.dataset.n === "reset") ask(); n.remove(); });
     document.body.appendChild(n);
   }
-  window.QQRESET = { wipe, run, ask, remind, modeOf, last: null };
+  // the desktop app calls this once at start (desktop-shim.js): the first page of a new run starts clean; a reload of the page in the same run keeps everything.
+  // Without sessionStorage nothing is reset (it could never be told apart from a reload).
+  function cold() {
+    try { if (sessionStorage.getItem(RUN_KEY)) return false; sessionStorage.setItem(RUN_KEY, "1"); sessionStorage.removeItem(RUN_KEY); } catch (e) { return false; }
+    run("cold", { mark: true });
+    return true;
+  }
+  window.QQRESET = { wipe, run, ask, remind, modeOf, cold, last: null };
 
   // ?reset=1 | all | files: acts at once (the engine of browser.js does not start while this runs)
   const q = modeOf(new URLSearchParams(location.search).get("reset"));

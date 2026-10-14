@@ -119,7 +119,6 @@ try:
             c2.close()
         step("the product-ion spectrum of a precursor is drawn for a file with two precursors and for a file with another one", product_spectrum)
         def mzfinder():                                  # the converted files are ordinary files of the Data tab: mzFinder (LR) lists them
-            pg.evaluate("localStorage.setItem('qqq.mzfinder', '1')"); pg.reload()
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=120000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)

@@ -162,13 +162,13 @@
       g.insertBefore(bg, g.firstChild);
       return new XMLSerializer().serializeToString(g);
     }
-    function exportSvg() { download("mzFinder_fragmentation_tree.svg", new Blob([svgText()], { type: "image/svg+xml" })); }
+    function exportSvg() { download("Tabui_fragmentation_tree.svg", new Blob([svgText()], { type: "image/svg+xml" })); }
     function exportPng() {
       const url = URL.createObjectURL(new Blob([svgText()], { type: "image/svg+xml" })), im = new Image();
       im.onload = () => {
         const c = document.createElement("canvas"), s = 2; c.width = L.W * s; c.height = L.H * s;
         const x = c.getContext("2d"); x.scale(s, s); x.drawImage(im, 0, 0); URL.revokeObjectURL(url);
-        c.toBlob(b => download("mzFinder_fragmentation_tree.png", b), "image/png");
+        c.toBlob(b => download("Tabui_fragmentation_tree.png", b), "image/png");
       };
       im.src = url;
     }

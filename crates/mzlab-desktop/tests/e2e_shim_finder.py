@@ -109,7 +109,8 @@ class Quiet(SimpleHTTPRequestHandler):
 page = ThreadingHTTPServer(("127.0.0.1", PAGE_PORT), partial(Quiet, directory=str(DIST)))
 threading.Thread(target=page.serve_forever, daemon=True).start()
 
-FAKE_TAURI = """window.__TAURI__ = { core: { invoke: async () => [] }, event: { listen: async () => () => {} }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };"""
+FAKE_TAURI = """try { if (!sessionStorage.getItem("qqq.run")) sessionStorage.setItem("qqq.run", "1"); } catch (_) {}    // a running app: no cold start
+window.__TAURI__ = { core: { invoke: async () => [] }, event: { listen: async () => () => {} }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };"""
 def native_route(route):                 # mzlab.localhost -> the engine over HTTP (what the window does with the custom protocol)
     u = route.request.url.replace("http://mzlab.localhost", f"http://127.0.0.1:{ENGINE_PORT}")
     try:

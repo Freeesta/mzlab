@@ -4,7 +4,7 @@
 // (crates/mzlab-desktop/src/update.rs: manifest, only the changed files, SHA-256, atomic swap); this file only asks and shows.
 // In a browser nothing here runs. A silent check at start (at most once a day) shows a small notice, never a dialog.
 window.DESKUPD = (() => {
-  const KEY = "qqq.upd.last", DAY = 864e5, REL = "https://github.com/Freeesta/mzlab/actions/workflows/desktop.yml";
+  const KEY = "qqq.upd.last", DAY = 864e5, REL_LATEST = "https://github.com/Freeesta/mzlab/releases/latest", REL = "https://github.com/Freeesta/mzlab/actions/workflows/desktop.yml";
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
@@ -76,11 +76,36 @@ window.DESKUPD = (() => {
   const row = () => live() ? `<div class="row" title="${I18N.t("update.settings.title")}"><span>${I18N.t("update.settings.label")}</span> <button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";
   const bind = d => { const b = d.querySelector("#uip-upd"); if (b) b.onclick = () => { d.remove(); check(false); }; };
 
+  // Newer release of the desktop app itself: the installers are not signed and nothing updates the binary, so the app only tells.
+  // The request is made by the native side (command release_check, GitHub's public releases API, nothing of the user in it).
+  // At most once a day (qqq.rel.last); a notice closed for a version is not shown again for that version (qqq.rel.seen).
+  async function release(force) {
+    if (!live()) return;
+    let last = 0, seen = ""; try { last = +(localStorage.getItem("qqq.rel.last") || 0); seen = localStorage.getItem("qqq.rel.seen") || ""; } catch (_) { /* optional */ }
+    if (!force && Date.now() - last <= DAY) return;
+    try { localStorage.setItem("qqq.rel.last", String(Date.now())); } catch (_) { /* optional */ }
+    try {
+      const r = JSON.parse(await T().core.invoke("release_check"));
+      if (r.status !== "newer" || !r.version || r.version === seen) return;
+      const old = document.getElementById("relbox"); if (old) old.remove();
+      const d = document.createElement("div"); d.id = "relbox"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite");
+      d.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:7000;max-width:320px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+      const msg = document.createElement("div"); msg.textContent = I18N.t("release.new", { version: r.version });
+      const bar = document.createElement("div"); bar.style.cssText = "display:flex;gap:10px;margin-top:6px;justify-content:flex-end;align-items:center";
+      const a = document.createElement("a"); a.href = REL_LATEST; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = I18N.t("release.get");
+      const btn = document.createElement("button"); btn.type = "button"; btn.textContent = I18N.t("update.close");
+      bar.append(a, btn); d.append(msg, bar);
+      btn.onclick = () => { try { localStorage.setItem("qqq.rel.seen", r.version); } catch (_) { /* optional */ } d.remove(); };
+      document.body.appendChild(d);
+    } catch (_) { /* offline, old binary without the command: no notice */ }
+  }
+
   function auto() {
     if (!live()) return;
     let last = 0; try { last = +(localStorage.getItem(KEY) || 0); } catch (_) { /* optional */ }
     if (Date.now() - last > DAY) setTimeout(() => check(true), 4000);
+    setTimeout(() => release(false), 6000);
   }
   addEventListener("load", auto);
-  return { row, bind, check };
+  return { row, bind, check, release };
 })();

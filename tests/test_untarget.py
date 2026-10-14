@@ -126,7 +126,7 @@ def test_clean_names_follow_the_profile():
 
 def test_mzfinder_internal_features_enter_the_same_model():
     t = js("const t = U.fromMzfinder({files: ['a', {name: 'b'}], rows: [{id: 3, mz: 301.1, rt: 4.2, series: [0, 5e4], formula: 'C1H1', ms2_scans: 2}]}, {pol: 'positive'}); return {f: t.features[0], p: t.pol, s: t.samples}")
-    assert t["p"] == 1 and t["s"] == ["a", "b"] and t["f"]["key"] == "POS:3" and t["f"]["areas"] == {"b": 50000} and t["f"]["program"] == "mzfinder" and t["f"]["ann"][0]["source"] == "mzFinder"
+    assert t["p"] == 1 and t["s"] == ["a", "b"] and t["f"]["key"] == "POS:3" and t["f"]["areas"] == {"b": 50000} and t["f"]["program"] == "mzfinder" and t["f"]["ann"][0]["source"] == "Tabui"
 
 
 def test_build_rejects_without_a_table_and_keeps_going_with_a_bad_side_file():

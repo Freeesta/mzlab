@@ -155,7 +155,7 @@ impl State {
             .picked
             .get(&id)
             .cloned()
-            .ok_or_else(|| Error::new("err.file.raw").with("detail", "unknown file"))
+            .ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))
     }
 
     /// Opens an mzML of the disk in `slot`. Returns the summary JSON that `mzlab-wasm` gives:
