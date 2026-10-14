@@ -123,6 +123,15 @@ fn after(id: &str, key: &str) -> Option<f64> {
     None
 }
 
+/// `(Q1, Q3, collision energy, name)` an SRM chromatogram id spells (`SRM SIC Q1=... Q3=... ce=... name=...`).
+pub fn srm_id(id: &str) -> (Option<f64>, Option<f64>, Option<f64>, String) {
+    let name = id
+        .find("name=")
+        .map(|p| id[p + 5..].lines().next().unwrap_or("").trim().to_string())
+        .unwrap_or_default();
+    (after(id, "Q1="), after(id, "Q3="), after(id, "ce="), name)
+}
+
 pub struct Mzml<R: ReadAt> {
     pub r: R,
     pub size: u64,
@@ -180,13 +189,7 @@ impl<R: ReadAt> Mzml<R> {
                 d.kind = "pressure".into();
             } else if cid.starts_with("SRM") {
                 d.kind = "srm".into();
-                d.q1 = after(&cid, "Q1=");
-                d.q3 = after(&cid, "Q3=");
-                d.ce = after(&cid, "ce=");
-                d.name = cid
-                    .find("name=")
-                    .map(|p| cid[p + 5..].lines().next().unwrap_or("").trim().to_string())
-                    .unwrap_or_default();
+                (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
                 d.dwell = dwell(&h);
             } else if ![
                 "MS:1000235",

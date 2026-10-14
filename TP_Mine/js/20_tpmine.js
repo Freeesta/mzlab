@@ -77,6 +77,10 @@
           const d = document.createElement("div"); d.className = "tp-toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d);
           setTimeout(() => d.classList.add("out"), 4200); setTimeout(() => d.remove(), 4800); return;
         }
+        if (m.type === "ask") {               // what only this page can do for the worker: the engine of the Data tab reads the maker's files (docs/agenti/lettura-nativa.md)
+          asked(m.what, m.name).then(value => worker.postMessage({ type: "ask-reply", rid: m.rid, value }), () => worker.postMessage({ type: "ask-reply", rid: m.rid, value: null }));
+          return;
+        }
         if (m.type === "ready") { const p = pending.get("init"); pending.delete("init"); return p && p.res(); }
         const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
         m.error ? p.rej(new Error(m.error)) : p.res(m.result);
@@ -98,17 +102,24 @@
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
-  async function nativeMzml(name, f) {      // a sample of a maker's file (.raw, .wiff, .D) is a small stub in files/: its mzML is written now, for this use only (docs/agenti/lettura-nativa.md)
-    try {
-      const j = JSON.parse(await f.text()); if (j.mzlab !== "mzlab/nat1") return null;
-      const rb = await window.MZLAB_RUST_READY; return rb && rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null;
-    } catch (_) { return null; }
+  const mzmls = new Map();                  // the mzML written for a sample (once, for the use that needs it: Pyodide, a profile sample to reduce)
+  async function stubOf(f) {                // the stub of a sample of a maker's file (.raw, .wiff, .D) in files/, null for anything else
+    if (!f || f.size >= 65536) return null;
+    try { const j = JSON.parse(await f.text()); return j.mzlab === "mzlab/nat1" ? j : null; } catch (_) { return null; }
+  }
+  async function asked(what, name) {        // "mzml": the mzML of the sample; "srm": its SRM traces for mzFinder, read from the maker's file without an mzML
+    const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
+    const j = await stubOf(await (await d.getFileHandle(name)).getFile()), rb = await window.MZLAB_RUST_READY;
+    if (!j || !rb) return null;
+    if (what === "srm") return rb.nativeSrm ? await rb.nativeSrm(name) : null;
+    if (!mzmls.has(name)) mzmls.set(name, rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null);
+    return mzmls.get(name);
   }
   async function opfsFiles() {        // the files of the Data tab kept by the Rust engine (low resolution): OPFS mzlab/files/, as File objects (never read whole here)
     try {
       const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
       const out = [];
-      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: (f.size < 65536 && await nativeMzml(name, f)) || f }); }
+      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: f, nat: !!(await stubOf(f)) }); }
       return out;
     } catch (_) { return []; }
   }
@@ -247,7 +258,8 @@
         let k = 0;
         for (const f of list) {
           msg(`Reading files... ${k} of ${list.length}`); bar(k++ / list.length);
-          if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
+          if (f.nat) await send({ type: "put", name: f.name, blob: f.file, nat: true });          // the stub of a sample of a maker's file: the worker reads its .mzidx, no mzML is written
+          else if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
           else { const buf = f.file ? await f.file.arrayBuffer() : f.buf; await send({ type: "put", name: f.name, buf }, [buf]); }
         }
         const info = await call("classify", list.map(f => f.name));
@@ -267,7 +279,7 @@
       msg("Looking for the files in browser memory...");
       const f = await pageFiles();
       if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
-      await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
+      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
     }
     $("#tp-pick").onclick = () => $("#tp-in").click();
     $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };

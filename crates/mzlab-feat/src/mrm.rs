@@ -7,10 +7,9 @@
 //! The qualifier/quantifier ratios and the long table of the calibration standards are here too; the calibration line is never computed.
 
 use mzlab_core::error::Result;
-use mzlab_core::idxread::ReadAt;
-use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::peakq::{quality, Quality};
 use mzlab_core::peaks::noise_level;
+use mzlab_core::sorgente::Tracce;
 
 mod resolver;
 use resolver::{area_above, boxcar, odd_points, resolve, Span, Stabilise};
@@ -32,26 +31,19 @@ pub struct Srm {
     pub y: Vec<f64>,
 }
 
-/// The SRM chromatograms of an mzML (`scans_end`: where its last scan ends, 0 without scans), ordered by Q1 then Q3.
-pub fn read_srm<M: ReadAt>(m: &mut Mzml<M>, scans_end: u64) -> Result<Vec<Srm>> {
-    let mut out = Vec::new();
-    for c in m
-        .chromatograms(scans_end)?
-        .iter()
-        .filter(|c| c.kind == "srm")
-    {
-        let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
-            continue;
-        };
-        let (t, y) = m.chromatogram(c)?;
-        out.push(Srm {
-            q1,
-            q3,
-            name: c.name.clone(),
-            t,
-            y,
-        });
-    }
+/// The SRM chromatograms of a file read through `Tracce` (an mzML: `TracceMzml`, whose `scans_end` is where its last scan ends, 0 without scans; or a sample of a
+/// vendor file), ordered by Q1 then Q3.
+pub fn read_srm<T: Tracce>(t: &mut T) -> Result<Vec<Srm>> {
+    let mut out: Vec<Srm> = mzlab_core::srm::leggi(t)?
+        .into_iter()
+        .map(|s| Srm {
+            q1: s.q1,
+            q3: s.q3,
+            name: s.name,
+            t: s.t,
+            y: s.y,
+        })
+        .collect();
     out.sort_by(|a, b| a.q1.total_cmp(&b.q1).then(a.q3.total_cmp(&b.q3)));
     Ok(out)
 }

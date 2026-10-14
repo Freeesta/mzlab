@@ -263,6 +263,9 @@ pub fn align_series(
 }
 
 #[cfg(feature = "mrm")]
+use mzlab_core::sorgente::TracceMzml;
+
+#[cfg(feature = "mrm")]
 fn mrm_params(min_height: f64) -> mzlab_feat::mrm::MrmParams {
     let mut p = mzlab_feat::mrm::MrmParams::default();
     if min_height.is_finite() && min_height > 0.0 {
@@ -284,7 +287,7 @@ pub fn detect_mrm_file(
     write: Function,
 ) -> std::result::Result<String, JsValue> {
     let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read, k: 0 }, size as u64);
-    let traces = mzlab_feat::mrm::read_srm(&mut m, 0).map_err(js_err)?;
+    let traces = mzlab_feat::mrm::read_srm(&mut TracceMzml::new(&mut m, 0)).map_err(js_err)?;
     let p = mrm_params(min_height);
     to_sink(write, |sink| {
         mzlab_feat::mrm::file_to(&traces, name, sha256, &p, sink)
@@ -316,7 +319,7 @@ pub fn align_mrm_series(
             },
             sizes[k] as u64,
         );
-        mzlab_feat::mrm::read_srm(&mut m, 0)
+        mzlab_feat::mrm::read_srm(&mut TracceMzml::new(&mut m, 0))
     };
     let p = mrm_params(min_height);
     to_sink(write, |sink| {
