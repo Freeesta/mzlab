@@ -192,6 +192,10 @@ class Case:
 
     def whole(s): s.ev(f"MAPPA.whole({M})"); s.quiet()
 
+
+class Moves(Case):
+    """The measured sequences: zoom, pan, file change, sight sweep, many pans."""
+
     def gestures(s):
         s.gesture("zoom_wheel", lambda: s.wheel(12, -100))
         s.gesture("pan_zoomed", s.pan)
@@ -229,7 +233,7 @@ class Case:
 
 
 def run_case(pg, port, name, kind, nscan, npk, wd):
-    c = Case(pg); c.open(port, name, kind, nscan, npk, wd); c.first(); c.gestures(); c.sight(); c.pans()
+    c = Moves(pg); c.open(port, name, kind, nscan, npk, wd); c.first(); c.gestures(); c.sight(); c.pans()
     return c.out
 
 
