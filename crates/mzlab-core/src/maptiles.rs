@@ -105,6 +105,15 @@ impl Pyramid {
         Ok(Pyramid { n_scans, levels })
     }
 
+    /// Bytes the pyramid holds in memory (a cell is 8 bytes with its position).
+    pub fn bytes(&self) -> usize {
+        self.levels
+            .iter()
+            .flat_map(|l| l.values())
+            .map(|t| t.len() * 8 + 64)
+            .sum()
+    }
+
     pub fn max_level(&self) -> usize {
         self.levels.len() - 1
     }
@@ -213,12 +222,68 @@ impl Pyramid {
 impl<R: ReadAt> Routes<R> {
     /// The pyramid of a level (built on first use), `None` when the level has no peaks or its scans are not in time order.
     pub(crate) fn pyramid(&mut self, level: u8) -> Result<Option<std::sync::Arc<Pyramid>>> {
-        if let Some((_, p)) = self.tiles.iter().find(|(l, _)| *l == level) {
-            return Ok(p.clone());
+        if let Some(t) = self.tiles.iter_mut().find(|t| t.0 == level) {
+            t.2 = super::routes::next_tick();
+            return Ok(t.1.clone());
         }
         let p = self.build_pyramid(level)?.map(std::sync::Arc::new);
-        self.tiles.push((level, p.clone()));
+        self.tiles
+            .push((level, p.clone(), super::routes::next_tick()));
         Ok(p)
+    }
+
+    /// Stamp that ties the saved bytes of a pyramid to the index it comes from (shape of the section and the first and last RT).
+    fn tiles_stamp(&mut self, level: u8) -> Result<Option<u64>> {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
+            return Ok(None);
+        };
+        let s = &self.idx.sections[si];
+        let mut h = [
+            s.n_peaks,
+            s.n_scans as u64,
+            s.n_fence as u64,
+            level as u64,
+            s.f4 as u64,
+        ]
+        .into_iter()
+        .fold(0xcbf2_9ce4_8422_2325u64, |h, v| {
+            (h ^ v).wrapping_mul(0x100_0000_01b3)
+        });
+        let rt = &self.idx.arrays(si)?.rt;
+        for v in [rt.first(), rt.last()].into_iter().flatten() {
+            h = (h ^ v.to_bits()).wrapping_mul(0x100_0000_01b3);
+        }
+        Ok(Some(h))
+    }
+
+    /// True when the pyramid of the level is in memory (the cache may have dropped it: the page then loads it again from OPFS).
+    pub fn tiles_held(&self, level: u8) -> bool {
+        self.tiles.iter().any(|t| t.0 == level && t.1.is_some())
+    }
+
+    /// The bytes of the pyramid of a level (built if need be) to keep beside the index; empty when the level has none.
+    pub fn tiles_export(&mut self, level: u8) -> Result<Vec<u8>> {
+        let (Some(p), Some(stamp)) = (self.pyramid(level)?, self.tiles_stamp(level)?) else {
+            return Ok(Vec::new());
+        };
+        Ok(p.to_bytes(stamp))
+    }
+
+    /// Takes saved bytes as the pyramid of a level; false when they are damaged or belong to another index (the pyramid is then built from the index).
+    pub fn tiles_import(&mut self, level: u8, bytes: &[u8]) -> bool {
+        let Ok(Some(stamp)) = self.tiles_stamp(level) else {
+            return false;
+        };
+        let Some(p) = Pyramid::from_bytes(bytes, stamp) else {
+            return false;
+        };
+        self.tiles.retain(|t| t.0 != level);
+        self.tiles.push((
+            level,
+            Some(std::sync::Arc::new(p)),
+            super::routes::next_tick(),
+        ));
+        true
     }
 
     /// The pyramid of a level for tests of other crates (`pyramid` is the engine's own entry).
