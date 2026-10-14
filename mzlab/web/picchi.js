@@ -1,3 +1,4 @@
+// @ts-strict
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ integrazione dei picchi
 function integ(s, a, b) {
@@ -72,7 +73,7 @@ function autoEdges(s, x, ref) {
 function intSeries(p, x, py) {
   const a = p._a; if (!a || !a.sr || !a.sr.length) return null;
   if (a.stk && py != null) { const row = Math.max(0, Math.floor(a.yinv(py))); return a.sr.find(s => s.row === row) || a.sr[Math.min(a.sr.length - 1, row)]; }
-  let best = null;                                       // the trace closest to the click (or the most intense one when the click position is unknown)
+  /** @type {any} */ let best = null;                                       // the trace closest to the click (or the most intense one when the click position is unknown)
   a.sr.forEach(s => { const v = a.U(s, s.ys[nearIdx(s.x, x)]), d = py != null && a.Y ? Math.abs(py - a.Y(v)) : -v; if (!best || d < best.d) best = { d, s }; });
   return best && best.s;
 }
@@ -394,16 +395,16 @@ async function drawSpec(p, snapped) {
   }
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
     if (isDiff) {                                          // a difference: the nearest line, up or down, as it is
-      let b = null;
+      /** @type {any} */ let b = null;
       data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] === 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; }));
       return b && { m: b.m, y: b.y, y0: b.y, f: b.f, multi: b.multi, prec: b.prec };
     }
     if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
-      let b = null;
+      /** @type {any} */ let b = null;
       data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; }));
       return b && { m: b.m, y: b.y, y0: b.y0, f: b.f, multi: b.multi, prec: b.prec };
     }
-    let best = null;
+    /** @type {any} */ let best = null;
     data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; }));
     if (!best) return null;
     const { mz, y } = best.x.d; let jb = best.j;
@@ -472,7 +473,7 @@ async function drawSpec(p, snapped) {
       if (hrp) isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0]);          // high resolution: fine structure, error in ppm (hr.js)
       else {
       const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z), top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
-      let obs = null; d0.mz.forEach((m, j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
+      /** @type {any} */ let obs = null; d0.mz.forEach((m, j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
       if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
         let sw = 0, sm = 0; d0.mz.forEach((m, j) => { if (Math.abs(m - obs.m) <= 0.5 && d0.y[j] > 0) { sw += d0.y[j]; sm += m * d0.y[j]; } });
         if (sw > 0) obs.c = sm / sw;
