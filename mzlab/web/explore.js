@@ -499,7 +499,6 @@ function bindFileRows() {
         sibsOf(f0).forEach(f => { f.vis = true; }); STATO.file(f0.k, "file"); setTab(f0.kind); ensureLayout(); cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll(); uiSave();
         if (far) scrollToBlock(f0.kind); return;
       }
-      if (lrTog() && f0 && !f0.vis && !tabFiles(f0.kind).some(f => f.vis)) { sibsOf(f0).forEach(f => { f.vis = true; }); ensureLayout(); return goToFileTab(f0); }       // the first file of a type that was left closed: it opens with the block of its type
       if (lrTog() && f0 && f0.kind !== E.tab) return goToFileTab(f0);
       STATO.file(+nm.dataset.k, "file"); Q("#flst").querySelectorAll(".fl").forEach(r => { r.classList.toggle("cur", r === row); if (r === row) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current"); }); renderNav(); if (E.browse) redrawAll();
     };
