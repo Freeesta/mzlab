@@ -7,7 +7,7 @@ Obiettivo: mzLab legge così come sono, senza conversione manuale in mzML, i fil
 - Il `.wasm` del motore pesa **1 703 607 B** (log del job `build` di `pages.yml`, run 38642852060, commit `e450dce`: «engine .wasm (optimised): 1703607 bytes»). Il tetto è **1 703 936 B** (`.github/workflows/pages.yml:61`, `tools/wasm_opt.sh`). **Margine: 329 byte.** Nessun lettore nuovo, nemmeno il più piccolo, entra nel motore così com'è.
 - Per confronto, il codice dei lettori che il motore contiene già: Thermo `opentfraw` 8 245 righe (`vendor/opentfraw/src/`) + 1 319 righe di `rawlettore.rs`/`raw.rs`/`metodo_raw*`; Agilent 2 904 righe (`crates/mzlab-core/src/agilent/`); SCIEX 901 righe (`wiff/`) + 384 (`ole.rs`).
 - Gli altri `.wasm` del sito hanno ciascuno il loro tetto e si caricano a richiesta (librerie 392 295 B su 614 400, `pages.yml:66`; mzFinder: `finder` 506 802 B, `finder-lr` 598 107 B, ecc.). Un **modulo lettori separato** segue quindi un modello che il sito usa già.
-- Conseguenza: il primo pacchetto (DEV-0) è una decisione architetturale, non un lettore. Senza di essa ogni altro pacchetto è bloccato. Vedi §4.
+- Conseguenza: i lettori nuovi vivono in un **modulo `.wasm` separato** («modulo lettori», DEV-0, deciso), caricato a richiesta, che scrive l'mzML del campione in OPFS; il motore lo legge come ogni mzML. Il motore non cresce di un byte. Architettura in §4.
 
 ## 1. Inventario: cosa si legge oggi
 
@@ -58,6 +58,20 @@ Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo de
 | Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) |
 | Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A |
 | Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) |
+| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS |
+
+### Metodo e metadati (colonna «metodo/metadati» per formato)
+
+Documento unico `metodo/1` (`docs/agenti/metodo.md`, schema `mzlab/web/schemi/metodo-1.json`, `crates/mzlab-core/src/metodo.rs`): strumento, origine, campione, operatore (campi `identita`, mai copiati nell'mzML), `ms` (sorgente, periodi, esperimenti, transizioni), `lc`, campionatore, rivelatori, `campi`, `grezzo`, `avvisi`.
+
+| Formato | Metodo/metadati oggi | Lacune |
+|---|---|---|
+| mzML | testata letta (`mzmlhead.rs:322-432`: strumento, seriale, componenti, analizzatori, `sourceFile` con SHA-1, software); parametri per scansione (`scanparams.rs`: finestra, risoluzione, tempo d'iniezione, attivazione, CE, isolamento); `metodo/1` solo se l'mzML l'ha scritto mzLab (`userParam mzLab metodo/1`, `from_userparam`) | un mzML di altri non ha `metodo/1` (`metodo.md`: «Senza di esso l'mzML non ha metodo»): `startTimeStamp`, `sample`, `scanSettings`, sorgente non entrano nel documento (DEV-14) |
+| Thermo `.raw` | `metodo/1` completo (`metodo_raw.rs`, `metodo_raw/script.rs`, `campi.rs`): riga di sequenza (vial, volume, id, diluizione, ISTD, file del metodo), InstID (modello, seriale, versioni), testo del metodo, gradiente dallo script, trailer, status log, tune | liste di inclusione, finestre DIA e transizioni del metodo solo nel testo (`grezzo`), non strutturate in `ms.periodi`; lock mass solo come campo (DEV-4) |
+| SCIEX `.wiff` | `from_wiff` (`metodo_wiff.rs:200`): Log («Config Table»: modello, seriale), utente e computer, pompe, campionatore, inizio/fine; esperimenti e transizioni da `methodinfo.rs` | `campione.nome`, `vial`, versione di Analyst «DA CONFERMARE» (`metodo.md`); `GLPTables` (calibrazione), `SampleTable`, `MSConfigInfo*`, `MassSpecMethod*` non decodificati (`grezzi-non-estratti.md`); CE e isolamento per scansione non letti (`wiff.md`) (DEV-7) |
+| SCIEX `.dam` | `from_dam` | — |
+| Agilent `.D` GC/MS | `agilent/doc.rs` (`AgilentD::metodo`): `sequence.xml`, `Devices.xml`, `Contents.xml`, `acqmeth.txt` (gruppi SIM, tune, forno, iniettore, colonna), `GC.ini`; cartella `.m` di quantificazione (`agilent/quant.rs`) | tipo di campione, `7890Method.bin`, audit trail; metodo LC/MS (QqQ dMRM, Q-TOF: masse di riferimento, liste) mai visto (DEV-5) |
+| formati assenti | — | ogni lettore nuovo nasce con `metodo(c)` = `metodo/1` (vedi prompt) |
 
 ## 3. Le lacune: fattibilità nel browser
 
@@ -89,33 +103,35 @@ Riferimenti liberi verificati (2026-10): la famiglia Sigilweaver/OpenMassSpec (A
 
 Impossibili oggi senza SDK del produttore: SCIEX `.wiff2` (cifrato), Bruker BAF, formati proprietari JEOL/LECO/PerkinElmer (per loro la strada è l'esportazione ANDI/netCDF, che il programma leggerà), calibrazioni CCS proprietarie. L'SDK di un produttore non entra nel sito: è codice Windows/.NET con licenza propria, non compilabile in `wasm32` né ridistribuibile su GitHub Pages.
 
-## 4. Piano a pacchetti DEV
+## 4. Architettura decisa (DEV-0) e piano a pacchetti
 
-Regola di ogni pacchetto: una PR piccola; un lettore = un modulo con `Lettore` + `VOCE` + una riga in `LETTORI` (`docs/agenti/estendere.md`, «Aggiungere un formato»); prove: file costruito nel test, parità con l'mzML di msconvert sui dati privati (salta senza `MZLAB_DATI`), casi ostili per ogni numero letto (`robustezza_*.rs`), chiavi `err.file.*` in `lang/it.js` e `lang/en.js`, `e2e_lettori.py` esteso; una riga nel file d'area. Il tetto del motore non si alza.
+### Modulo lettori
+- **Crate `crates/mzlab-lettori`** (libreria Rust, dipende da `mzlab-core`): i lettori nuovi, ciascuno con il contratto `Lettore` (`lettori.rs`) e una `VOCE`, nel registro `LETTORI_EXTRA`; gli adattatori comuni (`SrmDaScansioni`: le scansioni SRM di un lettore diventano cromatogrammi SRM `Q1/Q3`). Il riconoscimento usa `lettori::riconosci_in(LETTORI_EXTRA, fs)`; la scrittura `lettori_mzml::scrivi` (scrittore unico, con `testata_mzml` e `metodo/1` nel `<run>`).
+- **Crate `crates/mzlab-lettori-wasm`** (ponte `wasm-bindgen`, come `mzlab-lib-wasm`): `estensioni()`, `probe(nomi, dimensioni, read)` → `{formato, campioni:[{id,name,scans}], motivi}`, `to_mzml(nomi, dimensioni, read, c, sink, progress)` a pezzi di ~64 KB (stesso contratto di `native_to_mzml`, `crates/mzlab-wasm/src/nativi.rs:275`).
+- **Varianti dei lettori che stanno già nel motore** (Agilent LC/MS, `.wiff` di altri strumenti, numpress, PDA/SRM del `.raw`): il codice nuovo sta in `mzlab-core` dietro la feature Cargo **`estesi`** (spenta per `mzlab-wasm`, accesa da `mzlab-lettori`); il motore resta identico (stesso SHA-256 del `.wasm` prima e dopo).
+- **Pagina, regola R**: in `upload0` (`mzlab/web/shell.js`) un file o insieme di file va al modulo quando (1) la sua estensione è tra quelle del modulo, oppure (2) il motore lo rifiuta con un errore di variante (`err.file.agilent`, `err.file.wiff`, `err.file.numpress`), oppure (3) `probe` del modulo dice che il file ha ciò che il lettore del motore non dà (SRM da scansioni, UV/PDA). Il modulo scrive l'mzML in OPFS (`rust-opfs.js::rawSink`), poi il file entra in `upload()` come ogni mzML; «Scarica .mzML» lo dà senza riconvertire; le righe «In conversione» sono quelle di `CONVROWS` (`conversione.js`).
+- **Costruzione e tetti**: `tools/build_lettori_wasm.sh` (chiamato in fondo a `tools/build_feat_wasm.sh`, che `pages.yml:68` già esegue: nessun workflow cambia) costruisce `site/static/wasm-lettori/` e lo passa a `tools/wasm_opt.sh` con il tetto. Tetti proposti: **modulo `lettori` 1 048 576 B** (scrittore mzML, zlib, XML, OLE, i lettori aperti e le varianti; `opentfraw` serve ai casi TSQ e PDA del `.raw`), **modulo `lettori-tdf` 655 360 B** (Bruker, a parte perché porta SQLite minimo e zstd). `tests/test_lettori_wasm.py` controlla che i tetti nello script siano questi, che `mzlab-wasm` non dipenda da `mzlab-lettori` né accenda `estesi`, e misura il `.wasm` se `site/` esiste.
+- **Desktop**: `mzlab-desktop` collega `mzlab-lettori` in nativo (nessun tetto) e legge gli stessi formati (`docs/agenti/rust-desktop.md`).
 
-**DEV-0 — Decisione: dove vivono i lettori nuovi (blocca tutto il resto; decide Federico).**
-- Opzione A (raccomandata): un modulo `crates/mzlab-lettori-wasm` (un `.wasm` a parte, caricato solo quando l'utente apre un formato nuovo, come `mzlab-lib-wasm`), con il suo tetto in `pages.yml` (scelta di Federico: i tetti non li tocca questa chat). Il modulo apre il file con i lettori nuovi e scrive in OPFS un mzML (lo scrittore unico `lettori_mzml::scrivi` esiste già) che il motore legge come ogni mzML: **0 byte in più nel motore**. Costo: spazio OPFS doppio e il tempo di una scrittura; «Scarica .mzML» diventa gratuito.
-- Opzione B: spostare nel modulo separato anche `thermo-raw` (circa 9 500 righe con `opentfraw`), liberando decine di KB nel motore, e mettere nel motore un solo lettore generico di un formato intermedio compatto. Più pulito a regime, ma tocca un percorso che oggi funziona (`lettura-nativa.md`) ed è una PR grande.
-- Opzione C: lettori nuovi solo nell'app desktop (nessun tetto). Contraddice «distribuzione = sito».
-- Uscita di DEV-0: una riga in `docs/agenti/estendere.md` e `lettura-nativa.md` che dice la scelta.
+### Pacchetti
+I prompt pronti e autosufficienti per le chat DEV sono in `docs/studi/PROMPT_FORMATI/` (`DEV-00.md` … `DEV-14.md`, indice in `LEGGIMI.md`): ognuno dice i file e i punti di codice da toccare, le prove, i metodi e i metadati da leggere e i file reali. Ordine e dipendenze:
 
-Dopo DEV-0 (ordine per valore/rischio; tra parentesi le dipendenze):
+| # | Pacchetto | Dipende da | File reali da chiedere a Federico (ognuno con il suo mzML di msconvert, 64 bit, zlib, senza peak picking) |
+|---|---|---|---|
+| DEV-0 | Modulo lettori: crate, ponte, script e tetti, regola R nella pagina, desktop | — | nessuno (file sintetici) |
+| DEV-1 | mzML numpress (lineare, pic, slof) | DEV-0 | 1 mzML `msconvert --numpressAll` di un file già nei dati (meglio 2: LR e HR) |
+| DEV-2 | mzXML | DEV-0 | 2 mzXML (un full scan LR, un DDA HR) |
+| DEV-3 | netCDF/ANDI-MS (AIA) | DEV-0 | 1 `.cdf` esportato da una delle tre corse 5977 già nei dati; 1 `.cdf` Shimadzu GCMSsolution o LECO se c'è |
+| DEV-4 | Thermo: SRM da scansioni (TSQ), lock mass come campo | DEV-0 | 1 `.raw` TSQ (Altis/Quantis/Endura/Quantum) in SRM; 1 `.raw` Orbitrap con lock mass |
+| DEV-5 | Agilent LC/MS: QqQ (MRM, dMRM), Q-TOF profilo e centroidi, polarità negativa, metodo LC/MS | DEV-0 | 1 `.D` QqQ 64xx MRM, 1 Q-TOF 65xx profilo, 1 centroidi, 1 negativo |
+| DEV-6 | Waters MassLynx `.raw` (cartella): TQ MRM/SIR, QTof MS/MSe, lock mass | DEV-0 | 1 Xevo TQ MRM, 1 Xevo G2-XS (o Synapt) MSe con lock mass, 1 DDA |
+| DEV-7 | SCIEX `.wiff` oltre il 3200: QTRAP 4500/5500/6500 (MRM, sMRM, EPI, MS3, precursori, perdita neutra, più periodi), TripleTOF/ZenoTOF (IDA, SWATH) | DEV-0 | un `.wiff`+`.wiff.scan` per strumento ed esperimento; la versione 3200 di EPI/precursori se c'è |
+| DEV-8 | UV/PDA: Thermo, SCIEX `DAD*`, Agilent `*.ch`/`*.uv` | DEV-0, DEV-5 per Agilent | 1 file con PDA per produttore (mzML con le tracce UV di msconvert) |
+| DEV-9 | Shimadzu `.qgd` (GC/MS), `.lcd` (LCMS-2020, 8040/8050/8060, 9030) | DEV-0, DEV-3 per il confronto con `.cdf` | 1 `.qgd`, 1 `.lcd` SQ, 1 `.lcd` QqQ MRM, 1 `.lcd` 9030; con mzML o `.cdf` esportato |
+| DEV-10 | Bruker TDF/TSF (timsTOF): MS1, DDA-PASEF, diaPASEF | DEV-0 | 1 TDF DDA-PASEF, 1 diaPASEF, 1 TSF (anche pubblici PRIDE, se la licenza lo permette) |
+| DEV-11 | Dieta del motore: misura per funzione del `.wasm` e riduzione di almeno 16 KB senza perdite | — (parallelo) | nessuno |
+| DEV-12 | Tipi di scansione: precursor ion, neutral loss, EPI, MS3 riconosciuti | DEV-11 (tocca il motore), DEV-7 | 1 mzML per tipo (QTRAP) |
+| DEV-13 | Mobilità ionica: array dell'mzML, colonna nel `.mzidx`, vista | DEV-11, DEV-10 | 1 mzML con mobilità (da TDF o Waters HDMSe) |
+| DEV-14 | `metodo/1` di un mzML di altri (testata, `startTimeStamp`, `sample`, `scanSettings`) | DEV-11 | gli mzML di msconvert già nei dati bastano |
 
-| # | Pacchetto | Dipende da | Test attesi | Da Federico |
-|---|---|---|---|---|
-| DEV-1 | Numpress nell'mzML (lineare, pic, slof) al posto di `err.file.numpress` | DEV-0 se finisce nel motore (3-6 KB), altrimenti nel modulo come «mzML numpress → mzML» | vettori della specifica PSI nel test; parità con lo stesso file scritto senza numpress | 1 mzML scritto con `msconvert --numpressAll` di un file già nel repository privato |
-| DEV-2 | Lettore mzXML (`Lettore`, un campione) | DEV-0 | sintetico nel test; parità con mzML di msconvert; casi ostili (base64, zlib, `peaksCount` enorme) | 2 mzXML (LR, HR) + mzML degli stessi |
-| DEV-3 | Lettore netCDF/ANDI-MS (netCDF-3 classico: `scan_acquisition_time`, `mass_values`, `intensity_values`, `scan_index`, `point_count`) | DEV-0 | file `.cdf` costruito nel test; parità con il `.D` 5977 (stesso campione esportato in AIA da ChemStation/MassHunter) | 1 `.cdf` esportato da una delle 3 corse 5977 già nei dati; meglio anche 1 Shimadzu/LECO |
-| DEV-4 | Thermo SRM: `cromatogrammi` del lettore dà una traccia SRM per transizione dalle scansioni SRM (Q1 dal precursore, Q3 dai punti) | DEV-0 solo se tocca il motore (1-3 KB: va liberato spazio) | parità con i cromatogrammi SRM di msconvert; `native_srm` per mzFinder | 1 `.raw` TSQ (Altis/Quantis/Endura) in MRM + mzML msconvert |
-| DEV-5 | Agilent LC/MS: QqQ MRM e Q-TOF (profilo e centroidi), negativo | DEV-0; `agilent/` | `agilent_msconvert.rs` esteso ai nuovi file; tracce SRM | 1 `.D` QqQ MRM, 1 Q-TOF profilo, 1 centroidi, ognuno con mzML msconvert (64 bit, senza peak picking) |
-| DEV-6 | Waters MassLynx `.raw` (cartella): TQ MRM/SIR, QTof MS/MSe, funzione lock mass come cromatogramma, correzione lock mass come opzione dichiarata | DEV-0 | `waters_parity.rs` contro msconvert; casi ostili sugli `_FUNC*.IDX` | 1 cartella Xevo TQ MRM, 1 G2-XS MSe con lock mass, + mzML msconvert |
-| DEV-7 | SCIEX `.wiff` oltre il 3200: QTRAP 4500/5500/6500 (MRM, EPI, MS3, precursori, perdita neutra, più periodi), poi TripleTOF/ZenoTOF (IDA, SWATH) | DEV-0; `wiff/` | `wiff_parity.rs` esteso per strumento; un esperimento non riconosciuto dà un errore con chiave, non un full scan | per ogni strumento ed esperimento un `.wiff` + `.wiff.scan` + mzML msconvert |
-| DEV-8 | UV/PDA: Thermo (`Pda`/`Uv`), SCIEX `DAD*`, Agilent `*.ch`/`*.uv`, come cromatogrammi PDA (`ChromKind::Pda`) e spettri UV | DEV-0; serve decidere dove si mostra uno spettro UV (vista Dati) | parità con msconvert (mzML con `electromagnetic radiation spectrum`) | 1 file con PDA per produttore + mzML |
-| DEV-9 | Shimadzu `.qgd` (GC/MS) e `.lcd` LCMS-2020; poi 8040/8050/8060 QqQ | DEV-0; `ole.rs` | parità con mzML msconvert o con l'esportazione netCDF dello stesso file | 1 `.qgd`, 1 `.lcd` SQ, 1 `.lcd` QqQ MRM, ognuno con mzML o `.cdf` |
-| DEV-10 | Bruker TDF/TSF (MS1, DDA-PASEF, diaPASEF): lettore SQLite in sola lettura minimo + zstd; la mobilità come campo per scansione | DEV-0; decisione su come mostrare la mobilità | parità con mzML msconvert (`--combineIonMobilitySpectra`) | 1 TDF DDA-PASEF, 1 diaPASEF, 1 TSF |
-| DEV-11 | Precursor ion / neutral loss / EPI riconosciuti come tipi di scansione (CV `MS:1000341`, `MS:1000326`, e i codici dei produttori), in `iteminfo.rs::acq` | DEV-7 per i codici SCIEX | file costruiti nel test; un mzML msconvert per tipo | 1 file per tipo (QTRAP) |
-| DEV-12 | Mobilità ionica in mzML (array `MS:1002476`/`MS:1002815`) | DEV-10 (stessa interfaccia) | mzML costruito nel test | 1 mzML con mobilità |
-
-Ultimi, ciascuno su richiesta esplicita: MGF come corsa (DDA esportata), mzData. Restano fuori: `.wiff2`, BAF, formati JEOL/LECO/PerkinElmer (via netCDF di DEV-3).
-
-Cosa Federico deve fornire, in sintesi: la decisione DEV-0 (e il tetto del modulo separato se sceglie A o B); i file reali con il loro mzML di msconvert nel repository privato, in una cartella per produttore; per i file di altri laboratori, il permesso di tenerli nel repository privato. Senza file veri un lettore non si scrive (regola di `estendere.md`, punto 3).
+Fuori (impossibili senza SDK del produttore): `.wiff2`, Bruker BAF, formati proprietari JEOL/LECO/PerkinElmer (strada: l'esportazione ANDI di DEV-3). MGF come corsa e mzData: solo su richiesta.
