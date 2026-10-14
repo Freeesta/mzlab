@@ -1,6 +1,8 @@
 """Roles and times in the loading table (campioni/2): the boxes Blank · t0 · Infusion, the role select, the proposed times (yellow until confirmed),
 the warnings of the engine and «Open» held back by a missing time. Synthetic files with invented names; everything is done with the keyboard where it matters."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lib
+lib.AUTO_TEMPI = False
 from lib import *
 import synth
 steps = []

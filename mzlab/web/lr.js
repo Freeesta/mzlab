@@ -183,7 +183,6 @@ export function createLr({ rb }) {
       if (t === null) return null;
       { const r = await statRoute(path, t, { rpc }); if (r !== undefined) return r; }                       // the statistics of the series: the Rust engine, no file needed
       if (path === "/api/notebook") { await rpc({ op: "lr_kv_set", key: "notebook", value: t }); return json({ ok: true }); }
-      if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body: t })).info };      // roles and times of the files (campioni/2): proponi, valida, ...
       const body = JSON.parse(t || "{}");
       { const r = await mr.post(path, body); if (r !== undefined) return r; }
       if (path === "/api/explore") return await explore(body);

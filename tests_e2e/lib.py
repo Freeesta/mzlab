@@ -67,6 +67,12 @@ def _sif(self, selector, files, **k):
     if selector == "#pick" and n:
         try: self.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={n}", timeout=20000)
         except TimeoutError: pass
+        if AUTO_TEMPI and n >= 2:      # two or more samples: «Open» wants every time written and confirmed (roles and times of the table): the tests that are not about it do it here
+            try:
+                self.wait_for_function("typeof RUOLI !== 'undefined' && RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
+                self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } f.gT = false; } }); renderFiles(); }""")
+            except TimeoutError: pass
+AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
 _Page.set_input_files = _sif
 def hold(pg, ms):
     """A pause that is really `ms` long (something that only time can bring, with nothing in the page to wait for)."""
