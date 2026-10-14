@@ -102,6 +102,15 @@ const DISP = (() => {
     if (window.BARRA) BARRA.setTab("disp");
     if (window.BANCO) BANCO.renderInfo();
   }
+  // the actions of the spectrum menu (registry azioni/1, the high-resolution bench): peak marks, contaminants hidden, the display options
+  if (typeof AZIONI !== "undefined") {
+    const bench = () => !!window.BANCO && BANCO.on(), T = I18N.t.bind(I18N);
+    AZIONI.registra({ id: "spec.marker", gruppo: "gen", ordine: 3, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
+      esegui: c => { c.p.mk = !markOn(c.p); draw(c.p); uiSave(); } });
+    AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
+      esegui: c => { c.p.noCont = !c.p.noCont; draw(c.p); uiSave(); } });
+    AZIONI.registra({ id: "spec.disp", gruppo: "gen", ordine: 5, viste: ["spec"], visibile: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
+  }
   return { register, panel, open, items, typeOf, pdaShift, pdaHere: p => !!dfile(p), pdaDelayValue: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; } };
 })();
 window.DISP = DISP;
