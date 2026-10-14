@@ -61,3 +61,15 @@ def test_spectrum_actions_have_texts_in_both_languages():
         cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
+
+
+def test_trace_actions_have_texts_in_both_languages():
+    """Every i18n key named by a registered action of the chromatogram menu exists in it and en."""
+    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("eventi.js", "gradiente.js", "dda.js", "libreria.js", "composizione.js", "visualizza.js", "picchi.js", "grafici.js"))
+    blocks = re.findall(r'id: "(?:chrom|xic)\.\w+"[^\n]*(?:\n[^\n]*)?|over\("\w+"[^\n]*', src)
+    keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|disp)\.[\w.]+)"', b))
+    assert len(blocks) >= 11 and len(keys) >= 9, (len(blocks), len(keys))
+    for lang in ("it", "en"):
+        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        for k in keys:
+            assert f'"{k}"' in cat, (lang, k)
