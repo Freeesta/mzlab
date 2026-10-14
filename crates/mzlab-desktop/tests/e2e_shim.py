@@ -47,6 +47,7 @@ threading.Thread(target=page.serve_forever, daemon=True).start()
 
 FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [], delay: 0 };
 try { localStorage.setItem("qqq.upd.last", String(Date.now())); } catch (_) {}       // the daily silent check stays out of the way: the steps drive it
+try { if (!window.__NEWRUN && !sessionStorage.getItem("qqq.run")) sessionStorage.setItem("qqq.run", "1"); } catch (_) {}    // a running app (the cold start has its own steps)
 window.__TAURI__ = { core: { invoke: async (cmd, a) => {
     if (cmd === "pick_files") return a.dam ? [] : (window.__PICK || %s);
     if (cmd === "update_check") { window.__UPD.calls.push(cmd); if (window.__UPD.delay) await new Promise(r => setTimeout(r, window.__UPD.delay)); return JSON.stringify(window.__UPD.check); }
@@ -301,6 +302,28 @@ try:
             pg.evaluate("LIB.call('index', { name: 'a.msp' })"); pg.evaluate("LIB.call('remove', { id: 'f:a.msp' })")
             assert (LIBDIR / "a.msp").is_file() and states()["v"] == [["a.msp", "sorgente", "da_indicizzare"]]
         step("a truncated index is «damaged», indexing again mends it, removing it leaves the source", native_damaged)
+        def cold_start():
+            c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c3.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            url = f"http://127.0.0.1:{PAGE_PORT}/index.html"
+            running = "window.qqReady === true && sessionStorage.getItem('qqq.run') === '1' && !window.__before"
+            def state(): return q.evaluate("""async () => { const o = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) o.push(n);
+                return { opfs: o, files: E.files.length, ls: Object.keys(localStorage).filter(k => /^(qqq|mzlab)/i.test(k)) } }""")
+            q.goto(url); q.wait_for_function(running, timeout=120000)               # the first page of a new run
+            q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
+            q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
+                localStorage.setItem('qqq.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('qqq.prefs', '{"theme":"dark"}'); localStorage.setItem('qqq.barra.lato', 'l') }""")
+            q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
+            s = state(); assert "invented-work" in s["opfs"] and "qqq.mappa" in s["ls"] and "qqq.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
+            q.evaluate("window.__before = 1; sessionStorage.removeItem('qqq.run')"); q.reload(); q.wait_for_function(running, timeout=120000)       # the app was closed and opened again
+            s = state()
+            assert s["files"] == 0 and "invented-work" not in s["opfs"], s
+            assert "qqq.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('qqq.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
+            assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('qqq.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
+            c3.close()
+        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
         b.close()
 finally:
     eng.kill(); page.shutdown()
