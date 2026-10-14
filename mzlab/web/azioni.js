@@ -10,7 +10,7 @@
  *   visibile?: (c: Contesto) => boolean, disponibile?: (c: Contesto) => boolean, attiva?: (c: Contesto) => boolean,
  *   nome: (c: Contesto) => string, voce?: (c: Contesto) => string, tip?: (c: Contesto) => string, svg?: (c: Contesto) => string,
  *   esegui: (c: Contesto) => any, [k: string]: any }} Azione
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any }} Voce
+ * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any }} VoceAzione
  */
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels
@@ -37,9 +37,9 @@ const AZIONI = (() => {
     return l.sort((a, b) => GRUPPI.indexOf(a.gruppo) - GRUPPI.indexOf(b.gruppo) || voci.indexOf(a) - voci.indexOf(b));
   }
   // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups
-  /** @param {Contesto} c @returns {(Voce | "-")[]} */
+  /** @param {Contesto} c @returns {(VoceAzione | "-")[]} */
   function per(c) {
-    /** @type {(Voce | "-")[]} */
+    /** @type {(VoceAzione | "-")[]} */
     const items = [];
     let last = null;
     for (const a of elenco(c)) {
