@@ -689,7 +689,6 @@ declare var walkTarget: any;
 declare var whiteCanvas: any;
 declare var wiffName: any;
 declare var wiffToMzml: any;
-declare var wipeLocal: any;
 declare var xOf: any;
 declare var xicDirect: any;
 declare var xicName: any;

@@ -1,6 +1,6 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files and session only» keeps the
-preferences, the language and the saved libraries. Both from the command (palette / gear) and from ?reset=all|1|files."""
+preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -60,32 +60,43 @@ try:
             q.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000); q.wait_for_timeout(500)
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
         def full_cmd():
-            load_files(); pg.keyboard.press("Control+k"); pg.wait_for_timeout(300); pg.keyboard.type("full reset"); pg.wait_for_timeout(300)
-            assert "Full reset" in pg.inner_text("#pal-l"); pg.keyboard.press("Enter"); pg.wait_for_timeout(400)
-            txt = pg.inner_text("#resetdlg"); assert "Full reset" in txt and "Removes everything from this browser, then reloads." in txt and "Reset" not in txt.replace("Full reset", "") and "Files and session only" not in txt, txt
-            pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("!document.getElementById('resetdlg')", timeout=30000); ready_start(pg)
+            load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]")
+            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." in txt and "Full reset" in txt and "Everything, as the first time" in txt and "Files and session only" in txt and "Cancel" in txt, txt
+            hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(h >= 44 for h in hs), hs
+            assert pg.evaluate("(() => { const p = document.createElement('span'); p.style.color = 'var(--on-accent)'; p.style.background = 'var(--bad)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c === getComputedStyle(document.querySelector('#resetdlg [data-reset=all]')).backgroundColor; })()"), "the wide button is red (CSS variable)"
+            pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"], s
             assert [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], (s["opfs"], s["mzlab"])       # the engine may create its folder again, empty, at start
             assert set(s["idb"]) <= {"qqq_lab"}, s["idb"]
             assert s["caches"] == [] or all(c.startswith("qqq-app") for c in s["caches"]) and "other-cache" not in s["caches"], s["caches"]
             assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "qqq.mappa" not in s["ls"], s["ls"]
-        step("Full reset from the palette: question, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
+        step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
-            txt = pg.inner_text("#uip-space-row"); assert "Full reset" in txt and "Storage in the browser" not in txt and "Remove files and indexes" not in txt, txt
-            assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0 and pg.locator("#uip-space-val").count() == 0, "the storage section is gone"
-            hs = pg.evaluate("[...document.querySelectorAll('#uip-space-row button')].map(b => b.getBoundingClientRect().height)"); assert all(h < 40 for h in hs), hs         # the buttons do not wrap to several lines
-            pg.click("#uip-arch-all"); pg.wait_for_timeout(300); assert "Full reset" in pg.inner_text("#resetdlg") and "Files and session only" not in pg.inner_text("#resetdlg"); pg.click("#resetdlg [data-reset='']"); pg.wait_for_timeout(200)
-        step("gear: no storage section, one «Full reset…» button (asks, one line)", gear)
+            txt = pg.inner_text("#uipset"); assert "Full reset" not in txt and "Reset completo" not in txt and "Storage in the browser" not in txt, txt
+            assert pg.locator("#uip-arch-all").count() == 0, "no reset in the gear"
+            pg.keyboard.press("Escape"); pg.keyboard.press("Control+k"); pg.keyboard.type("reset"); pg.wait_for_timeout(300)
+            assert "Full reset" not in pg.inner_text("#pal-l"), "no reset in the palette"; pg.keyboard.press("Escape")
+        step("gear and palette have no reset (the header button is the only entry)", gear)
         def url_all():
             load_files(); pg.goto(base + "?reset=1"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE); assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [] and "mzlab.lang" not in s["ls"], s
         step("?reset=1 is the full reset at start", url_all)
         def cancel():
-            load_files(); pg.keyboard.press("Control+k"); pg.keyboard.type("reset"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
-            pg.click("#resetdlg [data-reset='']"); pg.wait_for_timeout(300); s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), s
+            load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(300)
+            s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), s
+            pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), "Esc = Cancel"
         step("Cancel changes nothing", cancel)
+        def remove_one():
+            load_files(); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)
+            before = pg.evaluate(STATE)["mzlab"]; k = pg.evaluate("E.files[0].file.split('#')[0]"); assert any(k in n for n in before), (k, before)
+            pg.evaluate("void removeFile(E.files[0])"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askok")
+            pg.wait_for_timeout(1500)
+            after = pg.evaluate(STATE)["mzlab"]; assert not any(k in n for n in after), ("the file and its index are freed", k, after)
+            assert pg.evaluate("E.files.filter(f => !f.gone).length") >= 1
+        step("«Remove from the session» also frees the file and its indexes in OPFS", remove_one)
         b.close()
     r.close()
 except Exception as e:
