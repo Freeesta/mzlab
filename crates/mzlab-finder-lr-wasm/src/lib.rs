@@ -5,6 +5,8 @@
 use js_sys::{Function, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::mzmlhead::Mzml;
+use mzlab_feat::legacy::lr::mrm::{MrmFile, Trace};
 use mzlab_feat::legacy::lr::{self, LrDig};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -13,7 +15,7 @@ fn user(e: String) -> JsValue {
     js_sys::Error::new(&e).into()
 }
 
-/// `read(k, offset, length)` of the worker: the bytes of the `.mzidx` of file `k`.
+/// `read(k, offset, length)` of the worker: the bytes of the `.mzidx` (or the mzML) of file `k`.
 struct JsReader {
     read: Function,
     k: u32,
@@ -52,6 +54,56 @@ fn open(read: &Function, k: usize, size: f64) -> std::result::Result<Index<JsRea
         size as u64,
     )
     .map_err(|e| e.to_string())
+}
+
+/// The integration table of the MRM files of the series (`d.mrm` of `api.run`): `read(k, offset, length)` gives the bytes of the mzML of the `k`-th
+/// file with kind `mrm` (the order of `mrm` in `finder_lr_plan`), `sizes` its size and `ends` where its last scan ends (0 without scans).
+#[wasm_bindgen]
+pub fn finder_lr_mrm(
+    files_json: &str,
+    read: Function,
+    sizes: Vec<f64>,
+    ends: Vec<f64>,
+    rt_tol: f64,
+) -> std::result::Result<String, JsValue> {
+    let fs = lr::plan::files(files_json).map_err(user)?;
+    let mut out = Vec::new();
+    for (k, f) in fs.iter().filter(|f| f.kind == "mrm").enumerate() {
+        let size = sizes.get(k).copied().unwrap_or(f64::NAN);
+        if size.is_nan() || size < 0.0 {
+            return Err(user("no mzML of the file: open it again".into()));
+        }
+        let r = JsReader {
+            read: read.clone(),
+            k: k as u32,
+        };
+        let mut m = Mzml::new(r, size as u64);
+        let end = ends.get(k).copied().unwrap_or(0.0) as u64;
+        let chroms = m.chromatograms(end).map_err(|e| user(e.to_string()))?;
+        let mut traces = Vec::new();
+        for c in chroms.iter().filter(|c| c.kind == "srm") {
+            let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
+                continue;
+            };
+            let (rt, y) = m.chromatogram(c).map_err(|e| user(e.to_string()))?;
+            traces.push(Trace {
+                q1,
+                q3,
+                ce: c.ce,
+                name: c.name.clone(),
+                rt,
+                y,
+            });
+        }
+        out.push(MrmFile {
+            name: f.name.clone(),
+            label: f.label.clone(),
+            kind_type: f.kind_type.clone(),
+            time: f.time,
+            traces,
+        });
+    }
+    Ok(lr::mrm::analyse(&out, rt_tol).unwrap_or_else(|| "null".into()))
 }
 
 /// What the worker needs before the pipeline: `{rust, lc: [names of the full-scan columns], minutes, formula}`.

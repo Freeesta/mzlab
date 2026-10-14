@@ -239,7 +239,7 @@ async function rustRun(a) {
 
 /** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
 const lrMod = () => import(base() + "mzfinder/finder-lr.js");
-const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect };
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held };
 /** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
 async function waitIdx(names) {
   for (let i = 0; i < 60; i++) {

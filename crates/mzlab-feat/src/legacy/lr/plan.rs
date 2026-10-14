@@ -179,16 +179,19 @@ pub fn settings_json(o: &mut Out, s: &Settings) {
     o.raw("}");
 }
 
-/// What the worker needs before the pipeline: `{lc: [names of the columns], minutes: [time | null], formula}`; `rust: false` when this series
+/// What the worker needs before the pipeline: `{lc: [names of the columns], ms2: [names], mrm: [names], minutes: [time | null], formula}`; `rust: false` when this series
 /// is not one the Rust Dig serves yet (a file that is not full scan, or a parent known only by its m/z).
 pub fn plan_json(files_json: &str, parent_json: &str) -> Res<String> {
     let fs = files(files_json)?;
     let p = parent(parent_json)?;
     let lc = columns(&fs);
     let ms2: Vec<&FileLr> = fs.iter().filter(|f| f.kind == "ms2").collect();
+    let mrm: Vec<&FileLr> = fs.iter().filter(|f| f.kind == "mrm").collect();
     let rust = !lc.is_empty()
         && !p.formula.is_empty()
-        && fs.iter().all(|f| f.kind == "full" || f.kind == "ms2");
+        && fs
+            .iter()
+            .all(|f| matches!(f.kind.as_str(), "full" | "ms2" | "mrm"));
     let mut o = Out::default();
     o.raw("{\"rust\":")
         .raw(if rust { "true" } else { "false" })
@@ -198,6 +201,10 @@ pub fn plan_json(files_json: &str, parent_json: &str) -> Res<String> {
     }
     o.raw("],\"ms2\":[");
     for (i, f) in ms2.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(&f.name);
+    }
+    o.raw("],\"mrm\":[");
+    for (i, f) in mrm.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(&f.name);
     }
     o.raw("],\"minutes\":[");
