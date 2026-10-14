@@ -396,7 +396,7 @@ function stepScan(p, d, o = {}) {
     rt = b.rt; i = b.i; k = b.k; lo = rt - b.g / 2; hi = rt + b.g / 2; tot = b.s.x.length;
   } else {
     const a = p._a, ok = s => E.files[s.k]?.kind !== "mrm";
-    const k0 = p._sk != null && a.sr.some(x => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);      // the same file all along, even if another one becomes the highest
+    const cf = E.files[E.cur], k0 = cf && a.sr.some(x => x.k === cf.k && ok(x)) ? cf.k : p._sk != null && a.sr.some(x => x.k === p._sk && ok(x)) ? p._sk : nearestFile(p, p.cur);      // the file selected at the side first      // the same file all along, even if another one becomes the highest
     const s = a.sr.find(x => x.k === k0 && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return false;
     const yy = s.y || s.ys, i0 = nearIdx(s.x, p.cur); i = i0;
     for (let j = 0; j < n; j++) {

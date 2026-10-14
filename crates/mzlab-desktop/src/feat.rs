@@ -55,6 +55,15 @@ impl State {
         a
     }
 
+    /// `feat/preview {name, recipe}`: the estimates with their proofs, the histograms and three traces of one file (`preview_file` of the `.wasm`).
+    fn feat_preview(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"].as_str().unwrap_or("");
+        let recipe = p["recipe"].as_str().unwrap_or("");
+        let mut ix = self.open_idx(name)?;
+        let r = run::recipe_for(recipe, &mut ix)?;
+        text(run::preview(&mut ix, &r, run::floor_given(recipe))?)
+    }
+
     fn feat_align(&self, p: &Value) -> Result<Answer> {
         let ns = names(p);
         let first = ns.first().ok_or_else(|| Error::new("error.featState"))?;
@@ -116,11 +125,20 @@ impl State {
             .map(|a| a.iter().map(num).collect())
             .unwrap_or_default();
         let (pm, pr) = (num(&p["parent_mz"]), num(&p["parent_rt"]));
-        let parent = (pm.is_finite() && pr.is_finite()).then_some((pm, pr));
+        let mut parent = (pm.is_finite() && pr.is_finite()).then_some((pm, pr));
         let mut g = self.feat_lock();
         let (Some(table), Some(h)) = (g.table.as_ref(), g.hypo.as_ref()) else {
             return Err(Error::new("error.featState"));
         };
+        // `files` + `parent` (the page's JSON): the parent peak of the aligned table, as the site's worker does (`finder_parent`) before the proofs
+        if let (Some(files), Some(par)) = (p["files"].as_str(), p["parent"].as_str()) {
+            let m = mzlab_feat::legacy::series::parent(par)
+                .map_err(crate::feat_finder::user)?
+                .mz;
+            parent = mzlab_feat::legacy::parent_peak(files, par, table)
+                .map_err(crate::feat_finder::user)?
+                .map(|x| (m, x.1));
+        }
         let budget = MemBudget::mb(mzlab_core::budget::NATIVE_BUDGET_MB as f64);
         let mut out = Vec::new();
         run::evidence_to(
@@ -211,6 +229,8 @@ impl State {
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),
+            "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
+            "feat/preview" => self.feat_preview(p),
             "feat/clear" => {
                 *self.feat_lock() = FeatState::default();
                 text("{}")

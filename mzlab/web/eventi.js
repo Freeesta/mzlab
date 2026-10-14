@@ -230,6 +230,8 @@ const scanStep = () => { const f = scanFiles(tabFiles())[0]; return f ? Math.max
 /** @param {Pannello} p @param {number} x */
 function nearestFile(p, x) {
   const a = p._a; if (a && a.map) return a.f.k; if (!a || !a.sr) return scanFiles(shownFor(p))[0]?.k ?? 0;
+  const cur = E.files[E.cur], sel = cur && scanFiles([cur]).length && a.sr.find(s => s.k === cur.k);      // the file selected in the side panel wins: overlaid TICs never make the scans (or the spectrum) jump to another file
+  if (sel) return sel.k;
   /** @type {{ v: number, k: number } | null} */
   let best = null;
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
