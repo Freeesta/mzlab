@@ -22,6 +22,8 @@ const MARGIN: f64 = 0.05;
 /// Fragments kept: product and parent (`top`).
 const TOP: usize = 6;
 const TOP_PARENT: usize = 10;
+/// Fragments of the parent that go to the supposed tree.
+pub const TOP_TREE: usize = 12;
 const MIN_REL: f64 = 0.05;
 
 #[derive(Debug, Clone, Default)]
@@ -81,7 +83,7 @@ fn average(bins: &BTreeMap<i64, Vec<(f64, f64)>>, n: usize) -> Vec<(f64, f64)> {
 }
 
 /// Pooled fragments of `e` (without the comparison with the parent). `open(k)` gives the index of file `k` of the columns then the MS2 files.
-fn pool<R: ReadAt>(
+pub fn pool<R: ReadAt>(
     d: &LrDig,
     e: &Entry,
     top: usize,

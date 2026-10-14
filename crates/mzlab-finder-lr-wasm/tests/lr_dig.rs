@@ -373,7 +373,7 @@ fn ms2_files_give_the_fragments_and_the_transitions() {
     assert_eq!(plan["lc"].as_array().unwrap().len(), idxs.len());
     let d = dig(&with, &idxs);
     let n = idxs.len();
-    let mut get = |id: i64| -> Value {
+    let get = |id: i64| -> Value {
         let s = detail(&d, id, |k| {
             Ok(if k < n { open(&idxs[k]) } else { open(&epi) })
         })
@@ -393,4 +393,30 @@ fn ms2_files_give_the_fragments_and_the_transitions() {
     assert!((t[0]["Q3_consigliato"].as_f64().unwrap() - (parent.mz_x - 17.0 - SHIFT)).abs() < 0.1);
     let other = d.entries.iter().find(|e| e.steps > 0).expect("a product");
     assert_eq!(get(other.id)["ms2"]["scans"], 0);
+}
+
+#[test]
+fn the_tree_comes_from_the_ms2_of_the_parent() {
+    let (files, idxs) = series();
+    let plain = dig(&files, &idxs);
+    let parent = &plain.entries[0];
+    let epi = ms2_index(parent.mz_x, parent.ref_rt.expect("RT of the parent"));
+    let with = files.replace(
+        ']',
+        r#",{"name": "lr_EPI.mzML", "time": null, "type": "sample", "kind": "ms2"}]"#,
+    );
+    let d = dig(&with, &idxs);
+    let n = idxs.len();
+    let mut op = |k: usize| Ok(if k < n { open(&idxs[k]) } else { open(&epi) });
+    let none: Value =
+        serde_json::from_str(&lr::tree::frag_tree(&plain, &mut |k| Ok(open(&idxs[k]))).unwrap())
+            .unwrap();
+    assert_eq!(none["ok"], false);
+    let t: Value = serde_json::from_str(&lr::tree::frag_tree(&d, &mut op).unwrap()).unwrap();
+    assert_eq!(t["ok"], true, "{t}");
+    assert_eq!(t["mode"], "lr");
+    let other = d.entries.iter().find(|e| e.steps > 0).expect("a product");
+    let c: Value =
+        serde_json::from_str(&lr::tree::frag_tree_compare(&d, other.id, &mut op).unwrap()).unwrap();
+    assert!(c.get("ok").is_some(), "{c}");
 }

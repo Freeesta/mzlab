@@ -61,6 +61,8 @@ export async function run(c, a) {
   progress("Aligning the peaks of the series...", 0.6, "xic");
   const table = await pool.align(stored, paths, ""); lap("align", t); t = performance.now();
   dig = x.finder_lr_dig(a[0], a[1], a[2] || "{}", table, h.registry); cols = [...p.lc, ...p.ms2];
+  const ix = await c.openIdx(p.lc);
+  try { dig.isf(ix.read, ix.sizes); } finally { ix.close(); }   // the in-source verdicts need the lighter ions' traces
   progress("", null, "xic", JSON.parse(dig.live()));
   progress("Searching for unexpected ions...", 0.9, "unexpected");
   progress("Looking for MS2 scans...", 0.95, "ms2");
@@ -72,9 +74,10 @@ export async function run(c, a) {
 /** detail, frag_tree and frag_tree_compare of the last run (the XICs of detail from the .mzidx of its columns) @param {Ctx} c @param {string} fn @param {any[]} a */
 export async function ofDig(c, fn, a) {
   if (!dig) throw new Error("no experiment in memory: run the analysis first");
-  if (fn === "frag_tree") return dig.frag_tree();
-  if (fn === "frag_tree_compare") return dig.frag_tree_compare(+a[0]);
-  if (fn !== "detail") throw new Error("no high-resolution experiment in memory");
-  const ix = await c.openIdx(cols);
-  try { return dig.detail(+a[0], ix.read, ix.sizes); } finally { ix.close(); }
+  if (!["detail", "frag_tree", "frag_tree_compare"].includes(fn)) throw new Error("no high-resolution experiment in memory");
+  const ix = await c.openIdx(cols);        // the columns then the MS2 files: the tree and the XICs read their .mzidx
+  try {
+    if (fn === "frag_tree") return dig.frag_tree(ix.read, ix.sizes);
+    return fn === "detail" ? dig.detail(+a[0], ix.read, ix.sizes) : dig.frag_tree_compare(+a[0], ix.read, ix.sizes);
+  } finally { ix.close(); }
 }

@@ -4,7 +4,8 @@ use mzlab_core::json::{round, Out};
 
 use super::kin::{kinetics, Point};
 use super::labels::Crit;
-use super::{plan, Entry, LrDig};
+use super::{isf, plan, Entry, LrDig};
+use crate::legacy::lrisf::IsfVerdict;
 
 const LEVEL_TEXT: [(u8, &str); 3] = [
     (5, "Level 5: mass of interest. Ion with a compatible time course, nothing more."),
@@ -76,8 +77,12 @@ fn kin_json(o: &mut Out, kin: &[Point]) {
     o.raw("]");
 }
 
-/// An unexpected ion lighter than the parent that co-elutes with it (within half the RT tolerance) is most likely an in-source fragment.
-fn insource(d: &LrDig, e: &Entry, p_rt: Option<f64>) -> bool {
+/// With a verdict (`isf`), a lighter ion is in-source when the probability of `isf` is at least one half; without one, an unexpected ion lighter than the
+/// parent that co-elutes with it (within half the RT tolerance) is most likely an in-source fragment.
+fn insource(d: &LrDig, e: &Entry, p_rt: Option<f64>, v: Option<&IsfVerdict>) -> bool {
+    if let Some(v) = v {
+        return e.mz < d.parent.mz && isf::p_isf(v) >= 0.5;
+    }
     e.unexpected
         && e.mz < d.parent.mz
         && matches!((p_rt, e.ref_rt), (Some(a), Some(b)) if (a - b).abs() <= 0.5 * d.settings.rt_tol_min)
@@ -88,6 +93,7 @@ struct Row<'a> {
     kin: Vec<Point>,
     max_area: f64,
     insource: bool,
+    isf: Option<&'a IsfVerdict>,
 }
 
 fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
@@ -140,7 +146,14 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64) {
     o.raw(",\"generation\":");
     opt_str(o, e.generation);
     o.raw(",\"delta_mz\":").num(round(e.mz - p_mz, 2));
-    o.raw(",\"isf\":null,\"insource\":")
+    o.raw(",\"isf\":");
+    match r.isf {
+        Some(v) => isf::verdict_json(o, v),
+        None => {
+            o.raw("null");
+        }
+    }
+    o.raw(",\"insource\":")
         .raw(if r.insource { "true" } else { "false" })
         .raw("}");
 }
@@ -164,8 +177,10 @@ fn ordered(d: &LrDig) -> Vec<Row<'_>> {
         .map(|e| {
             let kin = kinetics(&d.lc, &e.cells);
             let max_area = kin.iter().map(|p| p.area).fold(0.0, f64::max);
+            let isf = d.isf.iter().find(|x| x.0 == e.id).map(|x| &x.1);
             Row {
-                insource: insource(d, e, p_rt),
+                insource: insource(d, e, p_rt, isf),
+                isf,
                 e,
                 kin,
                 max_area,
