@@ -17,37 +17,17 @@ pub const BASE_DMZ: f64 = 0.25;
 const MAX_LEVEL: usize = 14;
 const MAGIC: &[u8; 8] = b"MZTILE01";
 
-/// The cells of one tile that are not zero: (`row * TILE + col`, value), in increasing order of position.
-type Tile = Vec<(u16, f32)>;
-type Level = HashMap<(u32, u32), Tile>;
-
-pub struct Pyramid {
-    pub n_scans: usize,
-    levels: Vec<Level>,
-}
-
-/// Width in Da of a cell of level `l`.
-pub fn cell_width(l: usize) -> f64 {
-    BASE_DMZ * (1u64 << l) as f64
-}
-
-/// Dense strip of tiles of one column of tiles (`tx`), the rows of the file in tiles of `TILE`.
-struct Strip {
-    tx: u32,
-    tiles: Vec<Vec<f32>>,
-}
-
-fn flush(level: &mut Level, s: &mut Strip) {
-    for (ty, t) in s.tiles.iter_mut().enumerate() {
-        let cells: Tile = t.iter().enumerate().filter(|(_, v)| **v > 0.0).map(|(i, v)| (i as u16, *v)).collect();
-        if !cells.is_empty() {
-            level.insert((ty as u32, s.tx), cells);
-        }
-        t.fill(0.0);
-    }
-}
-
 impl Pyramid {
+    fn flush(level: &mut Level, s: &mut Strip) {
+        for (ty, t) in s.tiles.iter_mut().enumerate() {
+            let cells: Tile = t.iter().enumerate().filter(|(_, v)| **v > 0.0).map(|(i, v)| (i as u16, *v)).collect();
+            if !cells.is_empty() {
+                level.insert((ty as u32, s.tx), cells);
+            }
+            t.fill(0.0);
+        }
+    }
+
     /// Builds the pyramid in one pass: `each` feeds `(scan position, m/z, intensity)` with m/z ascending.
     fn build(n_scans: usize, mut each: impl FnMut(&mut dyn FnMut(usize, f64, f64)) -> Result<()>) -> Result<Self> {
         let nty = n_scans.div_ceil(TILE).max(1);
@@ -61,7 +41,7 @@ impl Pyramid {
             }
             let (c, tx) = (c as usize, (c as usize / TILE) as u32);
             if any && tx != strip.tx {
-                flush(&mut l0, &mut strip);
+                Self::flush(&mut l0, &mut strip);
             }
             any = true;
             strip.tx = tx;
@@ -71,7 +51,7 @@ impl Pyramid {
             }
         })?;
         if any {
-            flush(&mut l0, &mut strip);
+            Self::flush(&mut l0, &mut strip);
         }
         let mut levels = vec![l0];
         let mut dense = vec![0.0f32; TILE * TILE];
@@ -200,6 +180,20 @@ impl Pyramid {
     }
 }
 
+/// The cells of one tile that are not zero: (`row * TILE + col`, value), in increasing order of position.
+type Tile = Vec<(u16, f32)>;
+type Level = HashMap<(u32, u32), Tile>;
+
+pub struct Pyramid {
+    pub n_scans: usize,
+    levels: Vec<Level>,
+}
+
+/// Width in Da of a cell of level `l`.
+pub fn cell_width(l: usize) -> f64 {
+    BASE_DMZ * (1u64 << l) as f64
+}
+
 /// What `api/maptiles` returns: the level, the aligned cells, and where they are.
 pub struct TileView {
     pub tile_level: usize,
@@ -265,4 +259,10 @@ impl<R: ReadAt> Routes<R> {
         edges.push(if g1 << l < n { rt[g1 << l] } else { rt[n - 1] + step });
         Ok(Some(TileView { tile_level: l, row0: g0 << l, rows: g1 - g0, col0: c0, cols: c1.max(c0) - c0, data, rt: edges }))
     }
+}
+
+/// Dense strip of tiles of one column of tiles (`tx`), the rows of the file in tiles of `TILE`.
+struct Strip {
+    tx: u32,
+    tiles: Vec<Vec<f32>>,
 }
