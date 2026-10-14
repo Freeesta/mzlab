@@ -833,14 +833,16 @@ function menu(ev, items) {
     if (it.aria) d.setAttribute("aria-label", it.aria);
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
     if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
-    if (it.dim) d.className = "dim"; else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
+    if (it.id) d.dataset.azione = it.id;                       // an action of the registry azioni/1: the same id in every menu that offers it
+    if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }     // an action not available now: grey, still reachable from the keyboard
+    else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     m.appendChild(d);
   });
   m.hidden = false; m.setAttribute("role", "menu");
   if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {                 // keyboard: arrows move, Enter/Space choose, Esc closes
-    const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim)')], i = its.indexOf(document.activeElement);
+    const its = [...m.querySelectorAll('div[role^=menuitem]:not(.dim), div[aria-disabled=true]')], i = its.indexOf(document.activeElement);
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
-    else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
+    else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); if (!its[i].hasAttribute("aria-disabled")) its[i].click(); } }
     else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
   }); }
   m._ret = ev.kbd ? document.activeElement : null; m._lp = !!ev.lp; m._t = Date.now();

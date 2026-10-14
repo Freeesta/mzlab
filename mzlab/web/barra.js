@@ -137,7 +137,7 @@ const BARRA = (() => {
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
   // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
-  if (window.MAPPA) MAPPA.CMDS.filter(c => c.kinds.includes("2d")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
+  if (window.MAPPA) MAPPA.CMDS.filter(c => c.viste.includes("map")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   /** @type {(id: any) => any} */
