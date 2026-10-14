@@ -70,8 +70,7 @@ try:
         step("after a reload the scan table comes from the index (the spectra are not walked again)", reload)
         def removed():
             pg.evaluate("fetch('api/remove', {method:'POST', body: JSON.stringify({name: 'B_FullMass-t60.mzML'})}).then(r=>r.text())"); pg.wait_for_timeout(1500)
-            j = pg.evaluate("fetch('api/spazio').then(r=>r.json())"); assert j["idx_removed"] > 0 and j["n_removed"] == 1, j
-            j = pg.evaluate("fetch('api/spazio', {method:'POST'}).then(r=>r.json())"); assert j["idx_removed"] == 0, j
+            j = pg.evaluate("fetch('api/spazio').then(r=>r.json())"); assert j["idx_removed"] == 0 and j["n_removed"] == 0, j      # the route frees the orphan index at once
             assert len(pg.evaluate(LIST, "idx")) == 2 and len(pg.evaluate(LIST, "files")) == 2
         step("the index of a removed file is freed first", removed)
         def gear():
@@ -85,7 +84,7 @@ try:
             assert pg.evaluate(LIST, "idx") == [] and len(pg.evaluate(LIST, "files")) == 2, (pg.evaluate(LIST, "idx"), pg.evaluate(LIST, "files"))
         step("the gear has no storage section; the derived data are freed by the route", gear)
         def new_session():
-            pg.click("#newrun"); pg.wait_for_selector("#askok", timeout=10000); pg.click("#askok")
+            pg.click("#newrun"); pg.wait_for_selector("#resetdlg [data-reset=files]", timeout=10000); pg.click("#resetdlg [data-reset=files]")
             ok = False
             for _ in range(60):
                 try:
