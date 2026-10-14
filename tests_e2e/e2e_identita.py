@@ -36,7 +36,6 @@ try:
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)
         def boot():
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-            for _ in range(5): pg.click("header img.logo")
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-unt", timeout=60000)
             attendi(pg, "!!window.UNTUI", 120000); pg.click("#tp-unt"); pg.wait_for_selector("#unt[open]", timeout=10000)      # the button does nothing until the table module is registered
             pg.set_input_files("#unt-in", [str(tmp / "tabella_pos.csv")]); pg.wait_for_function("document.querySelector('#unt-sum').textContent.includes('7 features')", timeout=20000)

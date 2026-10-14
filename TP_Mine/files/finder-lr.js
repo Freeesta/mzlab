@@ -22,7 +22,7 @@ async function load(c) {
   const m = (await c.manifest()).finder_lr;
   if (!m) return null;
   const bytes = await (await fetch(c.featUrl(m.wasm))).arrayBuffer();
-  if (m.sha256 && await c.sha(bytes) !== m.sha256) throw new Error("the engine of mzFinder does not match its manifest: reload the page");
+  if (m.sha256 && await c.sha(bytes) !== m.sha256) throw new Error("the engine of Tabui does not match its manifest: reload the page");
   const x = await import(c.featUrl(m.js));
   await x.default({ module_or_path: bytes });
   return (mod = x);

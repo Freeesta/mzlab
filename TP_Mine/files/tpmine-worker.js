@@ -129,7 +129,7 @@ const sha = async b => [...new Uint8Array(await crypto.subtle.digest("SHA-256", 
 async function load(key) {
   if (mods[key]) return mods[key];
   const m = (await manifest())[key], bytes = await (await fetch(featUrl(m.wasm))).arrayBuffer();
-  if (m.sha256 && await sha(bytes) !== m.sha256) throw new Error("the engine of mzFinder does not match its manifest: reload the page");
+  if (m.sha256 && await sha(bytes) !== m.sha256) throw new Error("the engine of Tabui does not match its manifest: reload the page");
   const mod = await import(featUrl(m.js));
   await mod.default({ module_or_path: bytes });
   return (mods[key] = mod);

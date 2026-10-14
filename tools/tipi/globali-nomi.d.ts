@@ -461,6 +461,7 @@ declare var mapNorm: any;
 declare var mapPal: any;
 declare var mapView: any;
 declare var markOn: any;
+declare var markPairs: any;
 declare var measClear: any;
 declare var measClick: any;
 declare var measCtx: any;
