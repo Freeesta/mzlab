@@ -22,8 +22,10 @@ try:
             n = pg.evaluate("document.querySelectorAll('#flst .fl input[data-k]').length"); assert n == 3, n          # one list with the three files, the others closed
         step("only the first file is open; the list holds all three", first_only)
         def together():
-            open_kind(pg, "ms2"); open_kind(pg, "mrm")
-            pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000); pg.wait_for_timeout(1500)
+            open_kind(pg, "ms2"); attendi(pg, "E.panels.some(p=>p.tab==='ms2')")
+            open_kind(pg, "mrm")
+            pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000)
+            attendi(pg, "(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});const r=Object.values(m).map(a=>[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]).sort((a,b)=>a[0]-b[0]);return r.every((x,i)=>i===0||r[i-1][1]<=x[0]+1)})()", timeout=30000)      # the new blocks are placed under the ones already there
             v = pg.evaluate(VIS); assert {"full", "ms2", "mrm"} <= set(v), v
             ys = pg.evaluate("(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});return Object.fromEntries(Object.entries(m).map(([t,a])=>[t,[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]]))})()")
             order = sorted(ys, key=lambda t: ys[t][0])
