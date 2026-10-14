@@ -47,6 +47,7 @@ threading.Thread(target=page.serve_forever, daemon=True).start()
 
 FAKE_TAURI = """window.__UPD = { check: {status: "uptodate", version: "x"}, calls: [], progress: [], restarted: false, listeners: [], delay: 0 };
 try { localStorage.setItem("qqq.upd.last", String(Date.now())); } catch (_) {}       // the daily silent check stays out of the way: the steps drive it
+try { if (!window.__NEWRUN && !sessionStorage.getItem("qqq.run")) sessionStorage.setItem("qqq.run", "1"); } catch (_) {}    // a running app (the cold start has its own steps)
 window.__TAURI__ = { core: { invoke: async (cmd, a) => {
     if (cmd === "pick_files") return a.dam ? [] : (window.__PICK || %s);
     if (cmd === "update_check") { window.__UPD.calls.push(cmd); if (window.__UPD.delay) await new Promise(r => setTimeout(r, window.__UPD.delay)); return JSON.stringify(window.__UPD.check); }
@@ -170,6 +171,27 @@ try:
             pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => !s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=30000)
             assert not (DATA / "files" / "FullScan_t5.mzML").exists()
         step("a File of the page (no dialog) is sent to the app as bytes, and removing it removes the copy", dragged)
+        def demo():                                              # «Prova con i file di esempio»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
+            c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script(FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            pg3 = c3.new_page(); pg3.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            pg3.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg3.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=120000)
+            pg3.evaluate("fetch('api/new', { method: 'POST', body: JSON.stringify({ fresh: true }) })"); pg3.reload(); pg3.wait_for_selector("#demobtn", timeout=120000)
+            pg3.click("#demobtn"); pg3.click("[data-demo=mrm]")
+            pg3.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
+            assert not pg3.evaluate("window.MZLAB_LR_MISS || []")
+            c3.close()
+            c4 = b.new_context(user_agent=ctx_ua); c4.add_init_script(FAKE_TAURI)         # a webview that drops the body of a POST (WKWebView with a Blob): the message must say the file did not arrive
+            def no_body(route):
+                if "lr/upload" not in route.request.url: return native(route)
+                route.fulfill(status=400, body=json.dumps({"error": "x", "error_key": "err.file.unknown", "params": {"detail": "empty upload"}}), headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"})
+            c4.route(re.compile(r"http://mzlab\.localhost/.*"), no_body)
+            pg4 = c4.new_page(); pg4.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg4.wait_for_function("window.MZLAB_DESKTOP === true", timeout=120000)
+            pg4.evaluate("fetch('api/new', { method: 'POST', body: JSON.stringify({ fresh: true }) })"); pg4.reload(); pg4.wait_for_selector("#demobtn", timeout=120000)
+            pg4.click("#demobtn"); pg4.click("[data-demo=mrm]")
+            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('non ha ricevuto')", timeout=60000)
+            assert "Thermo" not in pg4.inner_text("body")
+            c4.close()
+        step("the demo files load in the app (fetched from the bundle, sent as bytes)", demo)
         def hr():
             c2 = b.new_context(user_agent=ctx_ua); c2.add_init_script(FAKE_TAURI + "\nwindow.__PICK = %s;" % json.dumps(HR_PICK)); c2.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             pg2 = c2.new_page(); pg2.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
@@ -280,6 +302,28 @@ try:
             pg.evaluate("LIB.call('index', { name: 'a.msp' })"); pg.evaluate("LIB.call('remove', { id: 'f:a.msp' })")
             assert (LIBDIR / "a.msp").is_file() and states()["v"] == [["a.msp", "sorgente", "da_indicizzare"]]
         step("a truncated index is «damaged», indexing again mends it, removing it leaves the source", native_damaged)
+        def cold_start():
+            c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c3.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            url = f"http://127.0.0.1:{PAGE_PORT}/index.html"
+            running = "window.qqReady === true && sessionStorage.getItem('qqq.run') === '1' && !window.__before"
+            def state(): return q.evaluate("""async () => { const o = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) o.push(n);
+                return { opfs: o, files: E.files.length, ls: Object.keys(localStorage).filter(k => /^(qqq|mzlab)/i.test(k)) } }""")
+            q.goto(url); q.wait_for_function(running, timeout=120000)               # the first page of a new run
+            q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
+            q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
+                localStorage.setItem('qqq.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('qqq.prefs', '{"theme":"dark"}'); localStorage.setItem('qqq.barra.lato', 'l') }""")
+            q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
+            s = state(); assert "invented-work" in s["opfs"] and "qqq.mappa" in s["ls"] and "qqq.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
+            q.evaluate("window.__before = 1; sessionStorage.removeItem('qqq.run')"); q.reload(); q.wait_for_function(running, timeout=120000)       # the app was closed and opened again
+            s = state()
+            assert s["files"] == 0 and "invented-work" not in s["opfs"], s
+            assert "qqq.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('qqq.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
+            assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('qqq.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
+            c3.close()
+        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
         b.close()
 finally:
     eng.kill(); page.shutdown()

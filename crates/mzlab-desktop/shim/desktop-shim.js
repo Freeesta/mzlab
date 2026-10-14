@@ -5,6 +5,8 @@
   const T = window.__TAURI__;
   if (!T || !T.core) return;
   window.MZLAB_DESKTOP = true;
+  // a new run of the app starts as if new (no files, session or working choices; language, theme and settings stay); a reload in the same run keeps them
+  if (window.QQRESET && window.QQRESET.cold()) return;
   const BASE = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
   const tag = id => "application/x-mzlab-file;id=" + id;
 

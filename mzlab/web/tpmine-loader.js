@@ -1,10 +1,7 @@
 // @ts-strict
-// Loader of mzFinder (internal name "TP Mine"): the tools that give answers, only for the course owner.
+// Loader of Tabui (internal name "TP Mine", also called mzFinder in the code): the search for transformation products, shown in the header as a normal tab.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
-// from TP_Mine/) but are downloaded and run ONLY after the switch is turned on: with mzFinder off nothing of it is fetched.
-//
-// Switch: 5 hits on the logo of the page header (logo-piccone.js, within 3 s of each other) turn mzFinder on; 5 more turn it off. No password.
-// State in localStorage "qqq.mzfinder" ("1" = on): after a reload it stays on.
+// from TP_Mine/) and are downloaded and run when the page starts (the tab shows a loading note until they are ready). No switch, no password.
 // static/mzfinder/indice.json = {js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
 // (next to Teoria) and a full page; others get a button in the floating bar.
@@ -12,7 +9,6 @@
   "use strict";
   const BASE = new URL(".", document.currentScript ? /** @type {HTMLScriptElement} */ (document.currentScript).src : location.href).href;
   const DIR = BASE + "mzfinder/";
-  const KEY = "qqq.mzfinder";
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
@@ -21,9 +17,6 @@
     list: () => on ? tools.slice() : [],
     register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on) addTab(t); render(); },
   };
-
-  const getOn = () => { try { return localStorage.getItem(KEY) === "1"; } catch (_) { return false; } };
-  const setOn = v => { try { if (v) localStorage.setItem(KEY, "1"); else localStorage.removeItem(KEY); } catch (_) { /* private mode: only for this page */ } };
 
   function runScript(name) {
     return new Promise((/** @type {any} */ res, rej) => {
@@ -60,17 +53,19 @@
   }
   // tool with its own tab: button in #nav + full page section after the other views; opened lazily on the first visit
   const tabs = new Map();         // id -> {b, sec, fn}
+  /** the text of the tab button: icon and name */
+  const label = t => (t.icon ? t.icon + " " : "") + esc(t.name);
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
     const old = tabs.get(t.id);
     if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
-      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name);
+      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.innerHTML = label(t);
       if (old.opened) { old.sec.textContent = ""; openIn(old); }
       return;
     }
     if (!nav || !anchor || old || document.getElementById("v-" + t.id)) return;
     const b = document.createElement("button"); b.dataset.v = t.id; b.title = t.desc || t.name;
-    b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
+    b.innerHTML = label(t); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
     nav.appendChild(b);
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
     /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false };
@@ -84,14 +79,6 @@
     tabs.set(t.id, x);
   }
   function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
-  function removeTabs() {
-    for (const x of tabs.values()) {
-      const shown = !x.sec.hidden;
-      document.removeEventListener("tpview", x.fn); x.b.remove(); x.sec.remove();
-      if (shown && typeof setView === "function") setView("data");
-    }
-    tabs.clear();
-  }
   function openTool(t) {
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
@@ -113,7 +100,7 @@
     for (const n of js) await runScript(n);
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
-  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
+  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
@@ -127,14 +114,6 @@
     for (const t of tools) if (t.nav) addTab(t);
     render();
   }
-  function turnOff() {
-    on = false; removeTabs();
-    if (host) { host.classList.remove("on"); host.innerHTML = ""; }
-    render();
-  }
-
-  // ---- switch: logo-piccone.js (the five hits on the logo of the header) calls QTOOLS.flip()
-  /** @type {any} */ (reg).flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
-  const start = () => { if (getOn()) turnOn(); };
+  const start = () => { if (window.MZLAB_BROWSER || window.MZLAB_DESKTOP) turnOn(); };      // only in the built site and the desktop app: the plain web folder has no static/mzfinder/
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

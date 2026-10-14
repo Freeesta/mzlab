@@ -40,7 +40,7 @@
 
   /** MGF of the MS2 of the features that have one; comment lines (#) list the licences of the cited records */
   function mgf(table, res, feats) {
-    const srcs = sources(res, feats), out = [`# mzFinder untargeted export · table ${table.file.name || ""} · SHA-256 ${table.file.sha256 || "n/a"}`, `# ${NOTE}`];
+    const srcs = sources(res, feats), out = [`# Tabui untargeted export · table ${table.file.name || ""} · SHA-256 ${table.file.sha256 || "n/a"}`, `# ${NOTE}`];
     out.push("# Library records cited (" + srcs.length + ")" + (srcs.length ? ": " + licenceSummary(srcs) : ""));
     for (const s of srcs) out.push(`# ${s.library} · ${s.accession || s.name} · ${s.authors || "authors not stated"} · ${s.license}`);
     for (const f of feats) {

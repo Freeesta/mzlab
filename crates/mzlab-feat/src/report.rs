@@ -32,7 +32,7 @@ pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>, table_sha25
 /// The lines (`# ...`) that open an export: program, table, view and samples, so the file says what it comes from.
 pub fn header_lines(t: &Aligned, samples: &[Sample], view: Option<&View>, table_sha256: &str) -> Vec<String> {
     let mut v = vec![
-        format!("# mzFinder feature table, mzlab-feat {}", env!("CARGO_PKG_VERSION")),
+        format!("# Tabui feature table, mzlab-feat {}", env!("CARGO_PKG_VERSION")),
         format!("# table SHA-256 {table_sha256} · {} rows × {} files", t.len(), t.n_files),
         format!("# samples SHA-256 {}", samples::digest(samples)),
     ];

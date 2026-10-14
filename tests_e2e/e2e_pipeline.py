@@ -64,7 +64,7 @@ GATE = {"format": "cancello/2", "crate_version": "", "data": "2026-10-12", "vist
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('qqq.mzfinder','1');localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('qqq.barra.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
@@ -73,9 +73,9 @@ try:
 
         def gate_absent():
             pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open()"); pg.wait_for_selector("#pipe[open]")
-            pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
-            assert pg.locator("#pipe-file option").count() >= 1
-        step("without cancello.json the panel says «not validated»", gate_absent)
+            pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'absent'", timeout=60000)
+            assert pg.locator("#pipe-file option").count() >= 1 and pg.locator("#pipe-gate").count() == 0 and "validated" not in pg.inner_text("#pipe")      # the gate is internal: no text, no closed view
+        step("without cancello.json the panel shows no gate text", gate_absent)
 
         def cen_not_listed():
             opts = pg.eval_on_selector_all("#pipe-file option", "o => o.map(x => x.value)")
@@ -87,25 +87,28 @@ try:
             crate = pg.evaluate("PIPE.state.crate"); assert crate, crate
             g = lambda c, cr: pg.evaluate("([c, cr]) => PIPE.gateState(c, cr)", [c, cr])
             ok = dict(GATE, crate_version=crate)
-            assert g(ok, crate)["ok"] is True
+            assert g(ok, crate)["validated"] is True
             assert g(dict(ok, crate_version="0.0.0"), crate)["why"] == "stale"
             assert g(dict(ok, vista_candidati=False), crate)["why"] == "closed"
-            assert g(ok, crate)["table"] is True
-            r = g(dict(ok, vista_candidati=False), crate); assert r["table"] is True and r["ok"] is False        # table view independent of the candidates
-            assert g(dict(ok, vista_tabella=False, vista_candidati=False), crate)["table"] is False
-            assert g(dict(ok, format="cancello/1"), crate)["ok"] is True and g(dict(ok, format="cancello/1", vista_candidati=False), crate)["table"] is False
+            assert g(ok, crate)["validatedTable"] is True
+            r = g(dict(ok, vista_candidati=False), crate); assert r["validatedTable"] is True and r["validated"] is False        # table datum independent of the candidates
+            assert g(dict(ok, vista_tabella=False, vista_candidati=False), crate)["validatedTable"] is False
+            assert g(dict(ok, format="cancello/1"), crate)["validated"] is True and g(dict(ok, format="cancello/1", vista_candidati=False), crate)["validatedTable"] is False
             assert g(dict(ok, format="x/9"), crate)["why"] == "format"
             assert g(None, crate)["why"] == "absent"
-        step("gate: open only with vista_candidati and the crate version of the .wasm", gate_states)
+            for c in (ok, dict(ok, crate_version="0.0.0"), dict(ok, vista_candidati=False, vista_tabella=False), None):      # the measured state closes no view
+                r = g(c, crate); assert r["ok"] is True and r["table"] is True, r
+        step("gate: an internal datum (validated, validatedTable) bound to vista_* and the crate version; it closes no view", gate_states)
 
         def gate_page():
             crate = pg.evaluate("PIPE.state.crate")
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version=crate))
-            pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('candidate view is available')", timeout=60000)
+            pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'open'", timeout=60000)
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version="0.0.0"))
-            pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('this version of the engine')", timeout=60000)
+            pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'stale'", timeout=60000)
+            assert "validated" not in pg.inner_text("#pipe")
             pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open();")
-        step("gate in the panel: valid, other version of the engine", gate_page)
+        step("gate in the panel: internal state follows the file and the engine version, no text", gate_page)
 
         def preview():
             pg.select_option("#pipe-file", names[0]); t0 = time.time()
@@ -202,20 +205,21 @@ try:
 
         def run_plain():
             pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open();")
-            pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
+            pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'absent'", timeout=60000)
             pg.wait_for_selector("#pipe-run-go"); pg.click("#pipe-run-go")
             pg.wait_for_function("document.querySelectorAll('#pv-list .pv-row').length > 0", timeout=120000)
-            assert pg.locator("#pv-list [data-cand]").count() == 0 and pg.locator("#pv-dis").count() == 0, "candidates in the DOM without the gate"
-            assert "no candidates" in pg.inner_text("#pipe-res")
+            assert pg.locator("#pv-list [data-cand]").count() == 0 and pg.locator("#pv-dis").count() == 0, "candidates in the DOM without a parent"
+            assert "validated" not in pg.inner_text("#pipe-res")
             assert not pg.evaluate("/C21H32N2O2|against|1\\/\\d/.test(document.querySelector('#pipe-res').textContent)")
             pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
-            assert "Table view not validated" in pg.inner_text("#pipe-tab") and pg.locator("#ft-g").count() == 0, "the table view needs vista_tabella"
-        step("without the gate the run lists rows (traces and families) and no candidate is in the DOM", run_plain)
+            pg.wait_for_selector("#pipe-tab #ft-g", timeout=60000)
+            assert "validated" not in pg.inner_text("#pipe-tab"), "the table view is always open, with no gate text"
+        step("without cancello.json the run lists rows (traces and families), the table view is open and no candidate is in the DOM without a parent", run_plain)
 
         def run_gated():
             crate = pg.evaluate("PIPE.state.crate")
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version=crate))
-            pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('candidate view is available')", timeout=60000)
+            pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'open'", timeout=60000)
             pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0"); pg.fill("#pipe-psmi", SMILES)
             assert pg.evaluate("PIPER.state.tp.minuti") == [None, None, 0, 5, 10, 20]
             pg.click("#pipe-run-go")
@@ -274,8 +278,8 @@ try:
             pg.locator("#qc-m svg").focus(); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             assert pg.locator("#tdati table tr").count() >= n, "the chart has its table of data"
             pg.keyboard.press("Escape")
-            assert "Table view: validated" in pg.inner_text("#pipe-qc") and "Candidate view: validated" in pg.inner_text("#pipe-qc")
-        step("quality control: matrix D/T/F/A per file with its table, numbers of the engine, state of the gate", qc_step)
+            assert "validated" not in pg.inner_text("#pipe-qc")      # no gate text in the quality control
+        step("quality control: matrix D/T/F/A per file with its table, numbers of the engine", qc_step)
 
         def table_step():
             pg.wait_for_function("document.querySelector('#ft-n').textContent.includes(' of ')", timeout=60000)
@@ -306,7 +310,7 @@ try:
             z = get("fbmn"); assert z[:2] == b"PK" and b"quant.csv" in z and b"ms2.mgf" in z, "FBMN zip"
             pg.wait_for_function("document.querySelector('#px-msg').textContent.includes('done')", timeout=20000)
             get("sirius")
-            html = get("report").decode(); assert "mzFinder feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
+            html = get("report").decode(); assert "Tabui feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
             assert "error" not in pg.inner_text("#px-msg").lower(), pg.inner_text("#px-msg")
         step("export and report: mzmine, cells, xlsx, CSV with BOM, FBMN zip, SIRIUS and the report come from the engine", export_step)
 

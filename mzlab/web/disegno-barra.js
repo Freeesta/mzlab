@@ -68,7 +68,8 @@ export function mountBar(d, t) {
       menu.appendChild(b); return b;
     });
     const v = { g, box, btn, menu, items, cur: 0 };
-    const open = (/** @type {number} */ at) => { closeAll(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); items[at].focus(); };
+    // opening a group also selects its current tool (the one drawn on the button), so one click is enough to start drawing; the menu then offers the variants
+    const open = (/** @type {number} */ at) => { closeAll(); found(g.items[at].id)?.click(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); items[at].focus(); sync(); };
     btn.onclick = () => { if (menu.hidden) open(v.cur); else closeAll(); };
     btn.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); open(v.cur); } });
     menu.addEventListener("keydown", e => {

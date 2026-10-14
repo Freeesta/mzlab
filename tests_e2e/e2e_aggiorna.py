@@ -69,6 +69,34 @@ try:
             pg.evaluate("window.dispatchEvent(new Event('load'))"); pg.wait_for_function("__calls.some(c => c === 'update_check')", timeout=15000)
             assert upd() == ["update_check"], upd()
         step("the automatic check runs once a day", once_a_day)
+        def rel(reply, force=True):
+            pg.evaluate("document.getElementById('relbox')?.remove()")
+            pg.evaluate("r=>{window.__calls=[];window.__reply={release_check:r}}", reply)
+            pg.evaluate(f"DESKUPD.release({str(force).lower()})")
+        def rel_calls(): return pg.evaluate("__calls.filter(c => c === 'release_check')")
+        def release_notice():
+            pg.evaluate("localStorage.removeItem('qqq.rel.seen')")
+            rel({"status": "none"}); pg.wait_for_function("__calls.includes('release_check')"); assert pg.query_selector("#relbox") is None
+            rel("throw"); pg.wait_for_function("__calls.includes('release_check')"); assert pg.query_selector("#relbox") is None
+            rel({"status": "newer", "version": "9.9.9"}); pg.wait_for_selector("#relbox")
+            t = pg.inner_text("#relbox"); assert "9.9.9" in t, t
+            a = pg.query_selector("#relbox a"); assert a.get_attribute("href") == "https://github.com/Freeesta/mzlab/releases/latest" and a.get_attribute("rel") == "noopener noreferrer"
+        step("a newer release shows a notice with the link; none or an error shows nothing", release_notice)
+        def release_seen():
+            pg.click("#relbox button"); assert pg.query_selector("#relbox") is None
+            assert pg.evaluate("localStorage.getItem('qqq.rel.seen')") == "9.9.9"
+            rel({"status": "newer", "version": "9.9.9"}); pg.wait_for_function("__calls.includes('release_check')"); pg.evaluate("0")
+            assert pg.query_selector("#relbox") is None, "closed for that version: not shown again"
+            rel({"status": "newer", "version": "9.9.10"}); pg.wait_for_selector("#relbox")
+        step("a notice closed for a version does not come back for that version, only for a newer one", release_seen)
+        def release_daily():
+            pg.evaluate("localStorage.setItem('qqq.rel.last',String(Date.now()))")
+            rel({"status": "newer", "version": "99.0.0"}, False); pg.evaluate("new Promise(r => setTimeout(r, 0))")
+            assert rel_calls() == [], "asked twice in a day"
+            pg.evaluate("localStorage.setItem('qqq.rel.last','1')")
+            rel({"status": "newer", "version": "99.0.0"}, False); pg.wait_for_selector("#relbox")
+            assert rel_calls() == ["release_check"]
+        step("the release check runs at most once a day", release_daily)
         def row():
             assert 'id="uip-upd"' in pg.evaluate("DESKUPD.row()")
         step("the settings row exists in the desktop app", row)

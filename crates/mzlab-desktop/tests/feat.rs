@@ -257,3 +257,30 @@ fn routes_give_the_bytes_and_the_json_of_the_steps() {
     let (proofs, registry) = hypotheses_and_proofs(&e, stored, &table, &files_json, &parent_json);
     dig_and_views(&e, &proofs, &registry, &files_json, &parent_json);
 }
+
+#[test]
+fn preview_and_version_routes_equal_the_wasm_functions() {
+    let e = setup();
+    assert_eq!(
+        e.r("feat/version", json!({})),
+        format!("\"{}\"", mzlab_feat::CRATE_VERSION)
+    );
+    for recipe in ["", r#"{"floor":1234.5}"#] {
+        let mut ix = open(&e.paths[0]);
+        let r = run::recipe_for(recipe, &mut ix).unwrap();
+        let direct = run::preview(&mut ix, &r, run::floor_given(recipe)).unwrap();
+        assert_eq!(
+            e.r("feat/preview", json!({"name": NAMES[0], "recipe": recipe})),
+            direct,
+            "recipe {recipe:?}"
+        );
+    }
+}
+
+#[test]
+fn files_route_lists_the_indexed_files() {
+    let e = setup();
+    let mut want: Vec<&str> = NAMES.to_vec();
+    want.sort();
+    assert_eq!(e.json("feat/files", json!({})), json!(want));
+}

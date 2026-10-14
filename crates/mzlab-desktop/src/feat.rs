@@ -55,6 +55,36 @@ impl State {
         a
     }
 
+    /// `feat/files`: the names (sorted JSON array) of the files that have an `.mzidx` in the index folder: the series the Pipeline panel can run.
+    fn feat_files(&self) -> Result<Answer> {
+        let b = self.indexer()?;
+        let mut names: Vec<String> = crate::rpc::index_list(&b)
+            .into_iter()
+            .map(|(n, _)| n)
+            .filter(|n| !n.ends_with(".cen"))
+            .collect();
+        names.sort();
+        let mut o = Out::default();
+        o.raw("[");
+        for (i, n) in names.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            o.str(n);
+        }
+        o.raw("]");
+        text(o.0)
+    }
+
+    /// `feat/preview {name, recipe}`: the estimates with their proofs, the histograms and three traces of one file (`preview_file` of the `.wasm`).
+    fn feat_preview(&self, p: &Value) -> Result<Answer> {
+        let name = p["name"].as_str().unwrap_or("");
+        let recipe = p["recipe"].as_str().unwrap_or("");
+        let mut ix = self.open_idx(name)?;
+        let r = run::recipe_for(recipe, &mut ix)?;
+        text(run::preview(&mut ix, &r, run::floor_given(recipe))?)
+    }
+
     fn feat_align(&self, p: &Value) -> Result<Answer> {
         let ns = names(p);
         let first = ns.first().ok_or_else(|| Error::new("error.featState"))?;
@@ -220,6 +250,9 @@ impl State {
             "feat/hypotheses" => self.feat_hypotheses(p),
             "feat/evidence" => self.feat_evidence(p),
             "feat/table" => self.feat_table(p),
+            "feat/version" => text(format!("\"{}\"", mzlab_feat::CRATE_VERSION)),
+            "feat/preview" => self.feat_preview(p),
+            "feat/files" => self.feat_files(),
             "feat/clear" => {
                 *self.feat_lock() = FeatState::default();
                 text("{}")
