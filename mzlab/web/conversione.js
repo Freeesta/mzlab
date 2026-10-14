@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Thermo .raw and SCIEX .wiff -> mzML (index.html rawToMzml, wiffToMzml): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
 // below (also run by node in tests/test_conversione.py). Classic script, loaded after i18n.js.
@@ -25,8 +26,8 @@ const CONV = {
     if (!blob && this.native().includes(name)) blob = await this.make(name);
     if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
-      if (blob.mzlabId == null || !window.MZLAB_SAVE_MZML) return false;
-      try { const ok = !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
+      if (blob.mzlabId == null || !/** @type {any} */ (window).MZLAB_SAVE_MZML) return false;
+      try { const ok = !!(await /** @type {any} */ (window).MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
       catch (e) { const n = document.getElementById("up"); if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); n.appendChild(d); setTimeout(() => d.remove(), 12000); } return false; }
     }
     saveBlob(blob, name, 60000);
@@ -40,6 +41,7 @@ const CONV = {
 // until their index is ready: { name, state, pc }. state: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc), "conv" (converted, waits for the
 // index), "index" (indexing, pc). A change of state draws the list again; a new percentage only moves the bar of its row.
 const CONVROWS = {
+  /** @type {{ name: string, state: string, pc: number | null }[]} */
   rows: [],
   find(name) { return this.rows.find(r => r.name === name); },
   add(name, state) { if (!this.find(name)) { this.rows.push({ name, state, pc: null }); this.paint(); } },
