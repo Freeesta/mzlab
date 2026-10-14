@@ -40,7 +40,7 @@ export async function engineRoute(path, q, env) {
   if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };   // a built-in list: data, not a calculation
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (path === "/api/qaqc") return await qaqcRoute(q, env);
-  if (/^\/api\/map(snap|punti|punti3d)?$/.test(path)) return await mapRoute(path, q, env);
+  if (/^\/api\/map(snap|punti|punti3d|tiles)?$/.test(path)) return await mapRoute(path, q, env);
   return undefined;
 }
 
