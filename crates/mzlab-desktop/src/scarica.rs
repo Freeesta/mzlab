@@ -285,7 +285,13 @@ pub fn download_package(
         }
         DlError::new("lib.dl.err.hash", format!("{what} of {}", pkg.id))
     };
-    if size != pkg.dimensione || h.finalize().iter().map(|x| format!("{x:02x}")).collect::<String>() != pkg.sha256 {
+    if size != pkg.dimensione
+        || h.finalize()
+            .iter()
+            .map(|x| format!("{x:02x}"))
+            .collect::<String>()
+            != pkg.sha256
+    {
         return Err(bad("total"));
     }
     if head.len() < 36 || &head[..4] != b"MZLB" {
@@ -451,7 +457,11 @@ pub fn download_external(
         }
     }
     drop(out);
-    let sha = h.finalize().iter().map(|x| format!("{x:02x}")).collect::<String>();
+    let sha = h
+        .finalize()
+        .iter()
+        .map(|x| format!("{x:02x}"))
+        .collect::<String>();
     if ext.sha256.as_ref().is_some_and(|want| *want != sha)
         || ext.dimensione.is_some_and(|d| d != got)
     {

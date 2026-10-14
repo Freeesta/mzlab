@@ -29,7 +29,10 @@ fn text(a: Answer) -> String {
 }
 
 fn sha(b: &[u8]) -> String {
-    Sha256::digest(b).iter().map(|x| format!("{x:02x}")).collect::<String>()
+    Sha256::digest(b)
+        .iter()
+        .map(|x| format!("{x:02x}"))
+        .collect::<String>()
 }
 
 fn open(path: &Path) -> Index<File> {

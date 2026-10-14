@@ -221,7 +221,10 @@ impl State {
 }
 
 pub(crate) fn sha_hex(b: &[u8]) -> String {
-    Sha256::digest(b).iter().map(|x| format!("{x:02x}")).collect::<String>()
+    Sha256::digest(b)
+        .iter()
+        .map(|x| format!("{x:02x}"))
+        .collect::<String>()
 }
 
 /// `{"bytes", "sha256"}`: what a step that wrote bytes answers (the `.wasm` answers the same).
