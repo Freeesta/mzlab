@@ -123,7 +123,7 @@ export async function promote(kind, from, to) {
 }
 
 // ---- read leases: the worker of the engine reads an index in use through a SyncAccessHandle (direct, no copy through the browser process, which a File read has).
-// The handle is exclusive, so it is closed after LEASE_IDLE ms without reads (another tab can write the file), before this worker writes, moves or removes the file,
+// The handle is exclusive, so it is closed after LEASE_IDLE ms without reads and whenever the worker has no request in flight (parkAll; another tab can write the file), before this worker writes, moves or removes the file,
 // and reopened by wake() at the next request. Without a handle (taken, or not supported) leaseRead() answers -1 and the caller reads the File as before.
 const LEASE_IDLE = 2000, leases = new Map();
 const lkey = (kind, name) => kind + "/" + name;
@@ -149,6 +149,7 @@ export async function lease(kind, name) {
   if (!leases.has(k)) leases.set(k, { kind, name, ah: null, timer: 0, last: 0, open: null, dead: false });
   const l = leases.get(k); await openLease(l); return !!l.ah;
 }
+export async function parkAll() { for (const l of leases.values()) { await l.open; park(l); } }
 export async function wake() { await Promise.all([...leases.values()].map(l => (l.ah ? (l.last = performance.now(), 0) : openLease(l)))); }
 /** bytes read into `buf` at `at` (the number read), or -1 when there is no handle */
 export function leaseRead(kind, name, buf, at) {

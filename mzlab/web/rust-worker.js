@@ -260,7 +260,9 @@ async function lrOp(m) {
 
 // linear memory of the WASM (it only grows): the page recycles the worker when it is large and idle (rust-bridge.js). The cache is trimmed to its budget first (one LRU).
 const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
-onmessage = async ev => {
+let active = 0;                                                                   // requests in flight: the read handles are exclusive, so they are released when the worker is idle
+onmessage = async ev => { active++; try { await handle(ev); } finally { if (--active === 0) await ARCH.parkAll(); } };
+async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null);
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
@@ -338,4 +340,4 @@ onmessage = async ev => {
     const fatal = !(typeof e === "string" && e.startsWith("{"));
     postMessage({ id, op: m.op, error: text, fatal, mem: wasmMem ? wasmMem.buffer.byteLength : 0, panic: fatal ? (globalThis.__mzlabPanic || null) : null });      // the panic message (set by the engine before the abort) and the memory it had: the supervisor tells a lack of memory from another fault
   }
-};
+}
