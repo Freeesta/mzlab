@@ -19,9 +19,20 @@ window.MAPPA = (() => {
   const point = p => { const s = st(p); return s.lock || s.frz || s.kp || s.hov; };       // frz: the point of the right click, held while the menu is open
   const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
 
+  // the first time a 2D map is opened, the 3D viewer is fetched when the browser is idle (same guards as the other preloads in shell.js): the switch to 3D is then immediate
+  let pre3d = false;
+  function preload3d() {
+    if (pre3d) return; pre3d = true;
+    const c = /** @type {any} */ (navigator).connection || {};
+    if (c.saveData || /2g|3g/.test(c.effectiveType || "")) return;
+    const go = () => { const l = document.createElement("link"); l.rel = "modulepreload"; l.href = "static/mappa3d.js"; document.head.appendChild(l); };
+    /** @type {any} */ (window).requestIdleCallback ? /** @type {any} */ (window).requestIdleCallback(go, { timeout: 8000 }) : setTimeout(go, 2000);
+  }
+
   // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
   function init(p) {
     if (p._mzInit || !p.cv) return; p._mzInit = true;
+    preload3d();
     const cv = p.cv, grid = document.createElement("div");
     grid.className = "mzgrid"; cv.before(grid); grid.appendChild(cv);
     const ov = document.createElement("canvas"); ov.className = "mzov"; ov.setAttribute("aria-hidden", "true"); grid.appendChild(ov);

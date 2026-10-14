@@ -182,7 +182,7 @@ const PCA = (() => {
     const pcs = Array.from({ length: nc }, (_, i) => "PC" + (i + 1));
     dlx("pca.xlsx", [{ name: "Scores", head: [t("qaqc.col.file"), t("qaqc.col.type"), t("meta.time"), t("meta.rep")].concat(pcs), rows: sc, widths: [28, 12, 10, 18] },
       { name: "Loadings", head: ["ID", "m/z", "RT"].concat(pcs, [t("pca.col.stab")]), rows: ld, widths: [10, 12, 8] },
-      { name: "Variance", head: ["PC", "%"], rows: r.explained.map((v, i) => ["PC" + (i + 1), +(v * 100).toFixed(3)]), widths: [8, 10] }]);
+      { name: "Variance", head: ["PC", "%"], rows: r.explained.map((v, i) => ["PC" + (i + 1), +(v * 100).toFixed(3)]), widths: [8, 10] }], { table: "pca" });
   }
   if (typeof STAT !== "undefined") STAT.add({ id: "pca", title: "pca.title", hr: true, visible: () => true, mount });
   return { mount, run, select, scoresTable, get result() { return res; }, get params() { return st; }, groupInfo, MIN_SAMPLES };

@@ -42,14 +42,15 @@ try:
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_function("document.querySelectorAll('#ctx div').length>0", timeout=5000)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
-            assert not any(i[0] == "Ripristina zoom" for i in items) and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: no such entry
+            assert any(i[0] == "Estrai uno ione (XIC)…" for i in items), items
+            assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") == "true", "no zoom yet: the entry is there, grey"
             pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0] == ["Ripristina zoom", ""], items          # with a zoom it is the first entry
+            items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0][0].startswith("RT") and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", items          # with a zoom it works
             pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); pg.wait_for_timeout(500)
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()

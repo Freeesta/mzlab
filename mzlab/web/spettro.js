@@ -153,3 +153,65 @@ function scanLine(p, data, d0) {
   if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
   return parts.join(" · ");
 }
+
+// ---------------------------------------------------------------- actions of the right-click menu of the spectrum (registry azioni/1, azioni.js)
+// c = { vista: "spec", p, a: p._a, m: the picked m/z or null, has, lab: m/z as text, e: the event, px, py, pol }; the modules add theirs (dda.js, liste.js, libreria.js…)
+/** @typedef {{ vista: string, p: any, a: any, m: number, has: boolean, lab: string, e: any, px: number, py: number, pol: any }} CtxSpec */
+(() => {
+  const S = ["spec"], T = I18N.t.bind(I18N);
+  /** @param {any} o */
+  const reg = o => AZIONI.registra({ viste: S, ...o });
+  reg({ id: "spec.copy", gruppo: "value", disponibile: /** @param {any} c */ c => c.has,
+    nome: () => T("ctx.spec.copy"), aria: /** @param {any} c */ c => T("ctx.spec.copy.aria", { mz: c.lab }), esegui: /** @param {any} c */ c => { try { navigator.clipboard.writeText(c.lab).catch(() => {}); } catch (_) { /* clipboard unavailable */ } } });
+  // low resolution: the product-ion spectrum of a precursor peak of the Full Scan
+  reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.p.level === 1 && !c.a.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, disponibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
+    esegui: /** @param {any} c */ c => { const e2 = ms2OfPeak(c.p, c.m); if (e2) extractMs2(c.p, e2); } });
+  reg({ id: "spec.xic", gruppo: "xic", disponibile: /** @param {any} c */ c => c.has, nome: /** @param {any} c */ c => T("ctx.spec.xic", { mz: c.lab }), esegui: /** @param {any} c */ c => xicDirect(c.m, c.p) });
+  // the m/z on an XIC already open: one row per XIC, or one row that lists them when they are more than 3
+  reg({ id: "spec.overlay", gruppo: "xic", voci: /** @param {any} c */ c => {
+    const xs = tabPanels().filter(q => q.type === "xic"), tip = T("ctx.spec.overlay.tip");
+    /** @param {any} q */
+    const ov = q => ({ nome: T("ctx.spec.overlay", { name: xicName(q), n: q.num || "?" }), tip, dim: !c.has, esegui: () => xicDirect(c.m, c.p, q) });
+    if (xs.length > 3) return [{ nome: T("ctx.spec.overlayMany"), tip, dim: !c.has, esegui: () => menu({ preventDefault() {}, clientX: c.e.clientX, clientY: c.e.clientY }, xs.map(ov).map(o => ({ label: o.nome, tip, fn: o.esegui }))) }];
+    return xs.map(ov);
+  } });
+  reg({ id: "spec.measure", gruppo: "tools", voci: /** @param {any} c */ c => measMenu(c.p, c.m).map((o, i) => ({ nome: o.label, tip: o.tip, dim: i === 0 && !c.has, esegui: o.fn })) });
+  reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { c.p.anns.push({ x: c.m, text: v }); draw(c.p); } } });
+  reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
+  reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
+  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { c.p.iso = null; draw(c.p); } });
+  // a spectrum that follows its chromatogram can be frozen; a frozen one can follow it again
+  /** @param {any} p */
+  const srcOf = p => p.src && E.panels.find(q => q.id === p.src && q.el);
+  // the double click on a spectrum that is not zoomed: the whole spectrum, free axes, no measures (not a menu entry)
+  reg({ id: "spec.full", gruppo: "zoom", menu: false, doppio: () => true, doppioOrd: 9, esegui: /** @param {any} c */ c => {
+    const p = c.p; pushZh(p); p.lock = null;
+    if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); }
+    p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
+  } });
+  reg({ id: "spec.freeze", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { freezeSpec(c.p); uiSave(); } });
+  reg({ id: "spec.relink", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) liveSpec(c.p, s); } });
+})();
+// «Isotopic pattern…»: the formula (with its charge, or with the adduct) whose pattern is drawn over the spectrum, zoomed on it
+/** @param {any} p */
+async function isoAsk(p) {
+  const a = p._a, v = await ask(I18N.t("ctx.spec.iso.prompt", { adduct: EH(defAdduct(a.data.map(/** @param {any} x */ x => x.f))) }), p.iso ? p.iso.formula + " " + p.iso.ad : "");
+  if (!v) return;
+  const mm = v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
+  let ftxt = mm[1], adt = mm[2];
+  const chg = ftxt.match(/^(.+?)([+\-−])$/);               // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
+  if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
+  try { const r = await getFormula(ftxt, ""); p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
+    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
+    p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }   // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
+  catch (e) { info(I18N.t("ctx.spec.iso.fail", { message: EH(/** @type {any} */ (e).message) })); }
+}
+// «Resolution of the pattern…» (high resolution): a number or «auto»
+/** @param {any} p */
+async function isoRes(p) {
+  const v = await ask(I18N.t("ctx.spec.isoRes.prompt"), p.iso.R != null ? String(p.iso.R) : "auto");
+  if (v == null) return; const t = String(v).trim().replace(",", ".");
+  if (t === "auto") delete p.iso.R; else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } p.iso.R = r; }
+  draw(p);
+}

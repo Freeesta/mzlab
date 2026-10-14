@@ -59,6 +59,7 @@ const WORKFLOW = (() => {
         sha256: f.sha256 || "",
         dimensione: f.size || 0,
         tipo: f.type || "sample",
+        ruolo: window.CDOC ? CDOC.kindOf(f) : undefined,           // role of campioni/2 (the base type above is kept for the old readers)
         etichetta: f.label || "",
         tempo: f.time ?? null,
         concentrazione: f.conc ?? null,
@@ -114,12 +115,19 @@ const WORKFLOW = (() => {
     };
   }
 
-  function exportWorkflow() {
+  // the operation `campioni` (schema campioni/2, the canonical entries and their SHA-256, both from the Rust of mzlab-core): the roles and times of this moment
+  async function campioniOp() {
+    if (!window.CAMPIONI || !window.CDOC) return null;
+    try { const c = await CDOC.canonical(CAMPIONI.docNow()), d = JSON.parse(c.json); return { op: "campioni", t: new Date().toISOString(), da: "dati", schema: d.schema, campioni: d.campioni, sha256: c.sha256 }; } catch (_) { return null; }
+  }
+  async function exportWorkflow() {
     if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) {
       info(I18N.t("err.workflow.noFiles"));
       return;
     }
     const wf = buildWorkflow();
+    const co = await campioniOp();
+    if (co) wf.operazioni = wf.operazioni.filter((/** @type {any} */ o) => !(o && o.op === "campioni" && o.da === "dati")).concat([co]);
     const text = JSON.stringify(wf, null, 2);
     const first = E.files.find(f => !f.gone);
     const base = first ? (first.label || first.file).replace(/[^\w.-]+/g, "_") : "sessione";
@@ -129,6 +137,17 @@ const WORKFLOW = (() => {
   }
 
   // ---------------------------------------------------------------- .mzflow open & apply
+  // roles, subtypes, times and their confirmation: from the last operation `campioni` (campioni/2) or, for an old file, migrated by the Rust (`da_legacy`)
+  async function restoreCampioni(/** @type {any} */ wf, /** @type {any[]} */ needed, /** @type {any} */ p) {
+    if (!window.CAMPIONI || !window.CDOC) return;
+    try {
+      const ops = (Array.isArray(wf.operazioni) ? wf.operazioni : []).filter((/** @type {any} */ o) => o && o.op === "campioni" && o.schema === "campioni/2" && Array.isArray(o.campioni));
+      if (ops.length) CAMPIONI.importDoc({ campioni: ops[ops.length - 1].campioni });
+      else CAMPIONI.importDoc(await CDOC.post("da_legacy", { mzflow: { files: needed }, qaqc: { roles: (p.qaqc && p.qaqc.ruoli) || {} } }));
+    } catch (_) { /* the roles of the old shape below still apply */ }
+    CAMPIONI.importState(needed.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
+  }
+
   function openWorkflow() {
     let inp = /** @type {HTMLInputElement | null} */ (document.getElementById("wf-open-input"));
     if (!inp) {
@@ -144,11 +163,11 @@ const WORKFLOW = (() => {
       const file = inp.files && inp.files[0];
       if (!file) return;
       try {
-        const text = await file.text();
-        const wf = JSON.parse(text);
+        const wf = await FILESICURI.readJson(file);
         await applyWorkflow(wf, file.name);
       } catch (err) {
-        info(EH(I18N.t("workflow.err.invalidFormat") + " " + (err && err.message || "")));
+        const why = err && (err.message === "tooBig" || err.message === "tooDeep") ? I18N.t(err.message === "tooBig" ? "workflow.err.tooBig" : "workflow.err.tooDeep") : EH(err && err.message || "");
+        info(EH(I18N.t("workflow.err.invalidFormat")) + " " + why);
       }
     };
     inp.click();
@@ -160,7 +179,7 @@ const WORKFLOW = (() => {
       return false;
     }
 
-    const neededFiles = wf.file || [];
+    const neededFiles = (Array.isArray(wf.file) ? wf.file : []).filter(nf => nf && typeof nf.nome === "string").slice(0, 2000);
     const openFiles = (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone);
     const openByName = new Map();
     openFiles.forEach(f => {
@@ -198,15 +217,15 @@ const WORKFLOW = (() => {
     // Apply parameters
     const p = wf.parametri || {};
     if (p.picchi && typeof PK !== "undefined") {
-      Object.assign(PK, p.picchi);
+      FILESICURI.assignKnown(PK, p.picchi);
       if (typeof pkSave === "function") pkSave();
     }
     if (p.soglie_libreria && window.LIVELLI) LIVELLI.importState(p.soglie_libreria);
     if (typeof UIP !== "undefined") {
-      if (p.ppm != null) UIP.hrPpm = p.ppm;
-      if (p.dec != null) UIP.hrDec = p.dec;
-      if (p.tema) UIP.theme = p.tema;
-      if (p.tavolozza) UIP.pal = p.tavolozza;
+      const ppm = FILESICURI.num(p.ppm, 0, 1e4), dec = FILESICURI.num(p.dec, 0, 10);
+      if (ppm != null) UIP.hrPpm = ppm; if (dec != null) UIP.hrDec = dec;
+      if (["auto", "light", "dark"].includes(p.tema)) UIP.theme = p.tema;
+      if (typeof PALS !== "undefined" && typeof p.tavolozza === "string" && Object.prototype.hasOwnProperty.call(PALS, p.tavolozza)) UIP.pal = p.tavolozza;
       if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
@@ -216,10 +235,10 @@ const WORKFLOW = (() => {
     }
     if (p.qaqc && window.QAQC) QAQC.importState(p.qaqc);
     if (p.gradienti && window.GRADIENTE) GRADIENTE.importState(p.gradienti);
-    if (window.CAMPIONI) CAMPIONI.importState(neededFiles.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
+    await restoreCampioni(wf, neededFiles, p);
     if (window.RAPPORTO && Array.isArray(wf.candidati)) RAPPORTO.setCandidates(wf.candidati);
-    if (wf.operazioni && typeof NB !== "undefined") {
-      const { keep, unknown } = splitOps(wf.operazioni);
+    if (Array.isArray(wf.operazioni) && typeof NB !== "undefined") {
+      const { keep, unknown } = splitOps(wf.operazioni.slice(0, 500));
       NB.ops = keep;
       if (unknown.length) {
         const msg = I18N.t("workflow.warn.unknownOps", { ops: unknown.map(String).join(", ") });
@@ -398,3 +417,10 @@ const WORKFLOW = (() => {
   };
 })();
 window.WORKFLOW = WORKFLOW;
+// the actions of the spectrum menu (registry azioni/1): an MS2 spectrum as MGF or MSP
+if (typeof AZIONI !== "undefined") {
+  /** @param {any} c */
+  const ms2 = c => c.p.level === 2;
+  AZIONI.registra({ id: "spec.exportMgf", gruppo: "lib", ordine: 2, viste: ["spec"], visibile: ms2, nome: () => I18N.t("ctx.spec.exportMgf"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMgf(c.p) });
+  AZIONI.registra({ id: "spec.exportMsp", gruppo: "lib", ordine: 2, viste: ["spec"], visibile: ms2, nome: () => I18N.t("ctx.spec.exportMsp"), esegui: /** @param {any} c */ c => WORKFLOW.exportSpectrumMsp(c.p) });
+}

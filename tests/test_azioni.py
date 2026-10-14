@@ -40,3 +40,52 @@ def test_map_actions_have_texts_in_both_languages():
         for i in ids:
             for k in ("name", "tip"):
                 assert f'"cmd.{i}.{k}"' in cat, (lang, i, k)
+
+
+def test_rows_of_one_action_and_order_inside_a_group():
+    r = run("""const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('b',{ordine:2});reg('a',{ordine:1});reg('n',{voci:c=>c.xs.map(x=>({nome:'n'+x,dim:x===2,esegui:()=>0}))});reg('e',{voci:()=>[]});
+      AZIONI.registra({id:'h',gruppo:'help',viste:['v'],nome:()=>'h',esegui:()=>0});
+      const m=AZIONI.per({vista:'v',xs:[1,2]});
+      console.log(JSON.stringify(m.map(i=>i==='-'?'-':[i.id,i.label,i.dim])))""")
+    assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
+
+
+def test_spectrum_actions_have_texts_in_both_languages():
+    """Every i18n key named by a registered action of the spectrum exists in it and en."""
+    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair.js"))
+    blocks = re.findall(r'id: "spec\.\w+".*', src)
+    keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
+    assert len(blocks) >= 24 and len(keys) >= 20, (len(blocks), len(keys))
+    for lang in ("it", "en"):
+        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        for k in keys:
+            assert f'"{k}"' in cat, (lang, k)
+
+
+def test_trace_actions_have_texts_in_both_languages():
+    """Every i18n key named by a registered action of the chromatogram menu exists in it and en."""
+    src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("eventi.js", "gradiente.js", "dda.js", "libreria.js", "composizione.js", "visualizza.js", "picchi.js", "grafici.js"))
+    blocks = re.findall(r'id: "(?:chrom|xic)\.\w+"[^\n]*(?:\n[^\n]*)?|over\("\w+"[^\n]*', src)
+    keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|disp)\.[\w.]+)"', b))
+    assert len(blocks) >= 11 and len(keys) >= 9, (len(blocks), len(keys))
+    for lang in ("it", "en"):
+        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        for k in keys:
+            assert f'"{k}"' in cat, (lang, k)
+
+
+def test_double_click_takes_the_first_available_claim():
+    r = run("""const log=[];
+      const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:c=>log.push(id),...o});
+      reg('main',{doppio:()=>true,doppioOrd:9});reg('zoom',{doppio:c=>c.z,disponibile:c=>c.z,doppioOrd:2});reg('ann',{doppio:c=>c.a,doppioOrd:1,disponibile:c=>c.a});reg('quiet',{});
+      const out=[AZIONI.doppio({vista:'v'}),AZIONI.doppio({vista:'v',z:true}),AZIONI.doppio({vista:'v',z:true,a:true}),AZIONI.doppio({vista:'w'})];
+      console.log(JSON.stringify({out,log}))""")
+    assert r["log"] == ["main", "zoom", "ann"] and r["out"] == [True, True, True, False]
+
+
+def test_reset_zoom_first_and_annotations_last():
+    r = run("""const reg=(id,g)=>AZIONI.registra({id,gruppo:g,viste:['v'],nome:()=>id,esegui:()=>0});
+      reg('ann','ann');reg('x','xic');reg('help','help');reg('reset','reset');
+      console.log(JSON.stringify(AZIONI.per({vista:'v'}).map(i=>i==='-'?'-':i.id)))""")
+    assert r == ["reset", "-", "x", "-", "help", "-", "ann"]

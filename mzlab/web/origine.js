@@ -200,7 +200,7 @@ function ogXlsx() {
     { name: I18N.t("og.x.coeluting"), head: ["m/z", I18N.t("og.x.dm"), "Pearson", I18N.t("og.x.dApex"), I18N.t("og.x.area"), I18N.t("lst.col.note")], widths: [10, 20, 10, 14, 14, 40], rows: (R.candidates || []).map(c => [c.mz, R.parent_mz - c.mz, c.pearson, c.apex_diff_s, c.area_rel, (c.roles || []).map(ogRole).join("; ")]) },
     { name: I18N.t("og.x.samples"), head: [I18N.t("og.x.sample"), I18N.t("load.table.time"), I18N.t("og.x.areaCand"), I18N.t("og.x.areaIon"), I18N.t("og.x.ratio"), I18N.t("og.x.error")], widths: [24, 12, 16, 16, 14, 12], rows: (R.samples || []).map(s => [s.label, s.time, s.area_parent, s.area_ion, s.ratio, s.ratio_se]) },
     { name: I18N.t("og.x.fp"), head: [I18N.t("og.x.pCand"), I18N.t("og.x.fIon"), I18N.t("og.x.fLine")], widths: [16, 16, 16], rows: (pts.p || []).map((v, i) => [v, pts.f[i], (pts.fit || [])[i]]) },
-    { name: I18N.t("og.x.kin"), head: [I18N.t("load.table.time"), I18N.t("og.x.candNorm"), I18N.t("og.x.ionNorm"), I18N.t("og.x.ratio2")], widths: [12, 22, 20, 12], rows: (K.times || []).map((t, i) => [t, (K.parent_norm || [])[i], (K.ion_norm || [])[i], (K.ratio || [])[i]]) }]);
+    { name: I18N.t("og.x.kin"), head: [I18N.t("load.table.time"), I18N.t("og.x.candNorm"), I18N.t("og.x.ionNorm"), I18N.t("og.x.ratio2")], widths: [12, 22, 20, 12], rows: (K.times || []).map((t, i) => [t, (K.parent_norm || [])[i], (K.ion_norm || [])[i], (K.ratio || [])[i]]) }], { table: "origin" });
 }
 
 window.openOrigin = openOrigin;

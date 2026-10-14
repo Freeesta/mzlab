@@ -409,6 +409,16 @@ const DDA = (() => {
   st.textContent = ".pnl.jt{border-bottom-left-radius:0;border-bottom-right-radius:0}.pnl.jb{border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent}";
   document.head.appendChild(st);
 
+  // the actions of the spectrum menu (registry azioni/1): the MS2 of a peak (high resolution), the DDA trio, the MS2 beside the Full Scan
+  if (typeof AZIONI !== "undefined") {
+    /** @param {any} c */
+    const ms2Of = c => c.a.hrp && c.has ? ms2For(c.p, c.m)[0] : null;
+    AZIONI.registra({ id: "spec.ms2", gruppo: "ms2", viste: ["spec"], visibile: c => !!c.a.hrp, disponibile: c => !!ms2Of(c), nome: c => I18N.t("ctx.spec.openMs2", { mz: ms2Of(c) ? ms2Of(c).prec.toFixed(mzd(c.p, 2)) : "…" }),
+      aria: c => I18N.t("ctx.spec.openMs2.aria", { mz: c.lab }), esegui: c => { const q = ms2Of(c); if (q) openMs2(c.p, q.j); } });
+    AZIONI.registra({ id: "spec.dda", gruppo: "dda", viste: ["spec"], voci: c => menu(c.p, c.px, c.py, c.m).map(/** @param {any} o */ o => ({ nome: o.label, tip: o.tip, esegui: o.fn })) });
+    AZIONI.registra({ id: "chrom.ddaShow", gruppo: "link", ordine: 1, viste: ["chrom"], voci: c => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
+    AZIONI.registra({ id: "spec.ddaShow", gruppo: "link", ordine: 1, viste: ["spec"], voci: c => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
+  }
   return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;

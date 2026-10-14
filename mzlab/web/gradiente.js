@@ -95,7 +95,7 @@ function bind(f, again) {
   on("#grad-rm", () => save(null));
   on("#grad-course", async () => { try { await save(await parse("", "course")); } catch (e) { err(e); } });
   on("#grad-last", () => { const l = lastRead(); if (l) save({ source: "manual", points: l.points, run_time: l.run_time }); });
-  on("#grad-csv", () => ask(".csv,.txt,.tsv", async fl => edit(await parse(await fl.text(), "csv"))));
+  on("#grad-csv", () => ask(".csv,.txt,.tsv", async fl => edit(await parse(await FILESICURI.readText(fl), "csv"))));
   on("#grad-raw", () => ask(".raw,.RAW", async fl => {
     const buf = await fl.slice(0, 2 * 1024 * 1024).arrayBuffer();
     const dec = o => new TextDecoder("utf-16le").decode(buf.slice(o, o + ((buf.byteLength - o) & ~1)));
@@ -222,4 +222,12 @@ const cursorText = p => { if (p.overlay === "press") { const c = pressCurves(p)[
 const exportState = () => (NB.gradienti && Object.keys(NB.gradienti).length ? NB.gradienti : null);
 function importState(o) { if (o && typeof o === "object") { NB.gradienti = { ...(NB.gradienti || {}), ...o }; forget(); nbSave(); } }
 
+// the overlays of the chromatogram menu (registry azioni/1): the pressure trace and the gradient over the graph
+if (typeof AZIONI !== "undefined") {
+  /** @param {string} id @param {string} nome @param {string} aria @param {(c: any) => boolean} have */
+  const over = (id, nome, aria, have) => AZIONI.registra({ id: "chrom." + id, gruppo: "view", viste: ["chrom", "xic", "mrm"], visibile: have, attiva: c => c.p.overlay === id,
+    nome: () => T(nome), aria: () => T(aria), esegui: c => { c.p.overlay = c.p.overlay === id ? null : id; draw(c.p); uiSave(); } });
+  over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
+  over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
+}
 window.GRADIENTE = { pressHave, get, set, html, bind, any, forget, exportState, importState, ensure, have, curve, at, reading, draw, hover, needR, cursorText, colorOf };

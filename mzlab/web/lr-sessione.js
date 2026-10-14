@@ -1,10 +1,14 @@
 // @ts-strict
 // Two helpers of lr.js about the list of the files of a session.
 
-/** The notebook lists the items of the session: the parts of a mixed file ("name.mzML#MS1") come back as the file, once. */
-export function sessionFiles(items, ok) {
-  const seen = new Set();
+const BASE = { sample: "sample", t0: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", calibration: "standard", qc: "sample" };
+
+/** The notebook lists the items of the session: the parts of a mixed file ("name.mzML#MS1") come back as the file, once. An entry of campioni/2 (notebook v2,
+ *  `tipo`, `tempo_min`, ...) gives the fields the engine knows (type, time, concentration, replicate); the labels are the ones of `labels` (`ui.files`). */
+export function sessionFiles(items, ok, labels = []) {
+  const seen = new Set(), lab = new Map((Array.isArray(labels) ? labels : []).filter(x => x && x.file).map(x => [x.file, x.label]));
   return (Array.isArray(items) ? items : []).filter(x => x && x.file)
+    .map(x => (x.tipo ? { file: x.file, label: lab.get(x.file) ?? null, type: BASE[x.tipo] || "sample", time: x.tempo_min, conc: x.concentrazione, cunit: x.unita ?? "mg/L", rep: x.rep } : x))
     .map(x => (String(x.file).includes("#") ? { ...x, file: String(x.file).split("#")[0], label: null } : x))
     .filter(x => ok(x.file) && !seen.has(x.file) && seen.add(x.file));
 }

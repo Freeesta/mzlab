@@ -614,6 +614,8 @@ I18N.add("en", {
   "errori.copied": "Copied",
   "errori.close": "Close",
   "workflow.err.invalidFormat": "Invalid or unrecognized .mzflow format.",
+  "workflow.err.tooBig": "File too large.",
+  "workflow.err.tooDeep": "File nested too deeply.",
   "workflow.warn.shaMismatch": "The SHA-256 hash for file <b>{file}</b> ({actual}…) differs from the workflow ({expected}…). Continue anyway?",
   "workflow.needFiles": "The workflow references these files, which are not currently loaded:",
   "workflow.warn.unknownOps": "The file contains operations this version does not know; they were ignored: {ops}",
@@ -740,6 +742,10 @@ I18N.add("en", {
   "aff.undone": "Arrangement restored",
   "aff.where": "Panel {n}: row {r} of {t}, position {i} of {m}",
   "panel.pairArrow.title": "The spectrum below shows the product ions of the precursor chosen in the chromatogram above",
+  "prov.sheet": "Provenance",
+  "prov.field": "Field",
+  "prov.value": "Value",
+  "prov.fail": "The provenance could not be added to the table: the file was saved without it.",
   "export.sheet.data": "Data",
   "export.sheet.meta": "Metadata",
   "export.sheet.notes": "Notes",
@@ -3422,10 +3428,5 @@ I18N.add("en", {
   "error.featFailed": "The pipeline failed.",
   "error.badRecipe": "The parameters of the pipeline are not valid.",
   "logo.gold.live": "The logo has turned gold",
-  "logo.normal.live": "The logo is back to normal",
-  "inf.name": "MSn infusion", "inf.frag": "Fragment this ion", "inf.frag.tip": "Go to the child node whose precursor is this ion", "inf.frag.none": "This ion was not fragmented in the file", "inf.up": "Back to the precursor", "inf.up.tip": "Go to the parent node", "inf.up.none": "This spectrum has no precursor", "inf.toMean": "Show the mean", "inf.toSum": "Show the sum", "inf.sum.tip": "Mean or sum of the scans of the node", "inf.row.spec": "Spectrum of the node", "inf.row.new": "Open in a new panel", "inf.row.copy": "Copy the path", "inf.row.copied": "Path copied", "inf.row.formulas": "Tree with formulas",
-  "inf.none": "No MSn infusion file", "inf.lv": "Level", "inf.lv.all": "All", "inf.tol": "Tolerance", "inf.tol.nom": "Nominal", "inf.ce": "Energies", "inf.ce.sep": "Separate", "inf.ce.mer": "Merged", "inf.avg": "Spectrum", "inf.mean": "Mean", "inf.sumL": "Sum", "inf.tree.aria": "Precursor tree", "inf.col.prec": "Precursor", "inf.col.ce": "CE", "inf.col.n": "Scans", "inf.col.min": "min", "inf.skip": "{n, plural, one {# generation missing} other {# generations missing}}",
-  "bn.i9.alb": "Precursor tree", "cmd.alb.lab": "Tree", "cmd.alb.name": "Precursor tree", "cmd.alb.tip": "Precursor tree of an MSn infusion file", "cmd.alb.kw": "albero precursori infusione msn tree precursor infusion",
-  "modi.msn.q1": "Q1 the trap isolates one precursor", "modi.msn.q2": "Q2 fragments it", "modi.msn.q3": "Q3 the fragments are isolated and broken again (MS3, MS4…); the Orbitrap measures", "modi.msn.what": "Which fragment comes from which",
-  "modi.msn.use": "The sample flows in continuously: each precursor is isolated, fragmented and measured for a while, then each fragment is fragmented in turn. The tree of the precursors tells the path of every spectrum.", "modi.msn.out": "A tree of spectra: one for every path of fragmentation", "modi.msn.sel": "one precursor at a time", "modi.msn.res": "one mean spectrum for every node of the tree"
+  "logo.normal.live": "The logo is back to normal", "inf.name": "MSn infusion", "inf.frag": "Fragment this ion", "inf.frag.tip": "Go to the child node whose precursor is this ion", "inf.frag.none": "This ion was not fragmented in the file", "inf.up": "Back to the precursor", "inf.up.tip": "Go to the parent node", "inf.up.none": "This spectrum has no precursor", "inf.toMean": "Show the mean", "inf.toSum": "Show the sum", "inf.sum.tip": "Mean or sum of the scans of the node", "inf.row.spec": "Spectrum of the node", "inf.row.new": "Open in a new panel", "inf.row.copy": "Copy the path", "inf.row.copied": "Path copied", "inf.row.formulas": "Tree with formulas", "inf.none": "No MSn infusion file", "inf.lv": "Level", "inf.lv.all": "All", "inf.tol": "Tolerance", "inf.tol.nom": "Nominal", "inf.ce": "Energies", "inf.ce.sep": "Separate", "inf.ce.mer": "Merged", "inf.avg": "Spectrum", "inf.mean": "Mean", "inf.sumL": "Sum", "inf.tree.aria": "Precursor tree", "inf.col.prec": "Precursor", "inf.col.ce": "CE", "inf.col.n": "Scans", "inf.col.min": "min", "inf.skip": "{n, plural, one {# generation missing} other {# generations missing}}", "bn.i9.alb": "Precursor tree", "cmd.alb.lab": "Tree", "cmd.alb.name": "Precursor tree", "cmd.alb.tip": "Precursor tree of an MSn infusion file", "cmd.alb.kw": "albero precursori infusione msn tree precursor infusion", "modi.msn.q1": "Q1 the trap isolates one precursor", "modi.msn.q2": "Q2 fragments it", "modi.msn.q3": "Q3 the fragments are isolated and broken again (MS3, MS4…); the Orbitrap measures", "modi.msn.what": "Which fragment comes from which", "modi.msn.use": "The sample flows in continuously: each precursor is isolated, fragmented and measured for a while, then each fragment is fragmented in turn. The tree of the precursors tells the path of every spectrum.", "modi.msn.out": "A tree of spectra: one for every path of fragmentation", "modi.msn.sel": "one precursor at a time", "modi.msn.res": "one mean spectrum for every node of the tree"
 });

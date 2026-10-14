@@ -242,6 +242,9 @@ function ibkMenuItems(p) {
   if (ibOf(p)) it.push({ label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
   return it;
 }
+// the background-of-a-stretch entries of the menu of a trace (registry azioni/1): the rows of ibkMenuItems
+if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.ibk", gruppo: "tools", ordine: 2, viste: ["chrom", "xic", "mrm"],
+  voci: c => ibkMenuItems(c.p).map(/** @param {any} i */ i => ({ nome: i.label, esegui: i.fn })) });
 function legend(p, all, note = "") {
   const sw = c => `<i style="background:${c}"></i>`, off = h => (h ? " off" : "");
   if (p.type === "xic") {

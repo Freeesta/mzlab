@@ -48,8 +48,27 @@ try:
             right_at(P, at[0] - b[0], at[1] - b[1]); ms = pg.evaluate(LABELS); close()
             assert kb and kb == ms, (kb, ms)
         step("chromatogram (Full Scan): Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')", "full"))
-        step("spectrum: Shift+F10 = right click at the same peak", lambda: same("E.panels.find(q=>q.type==='spec'&&q.el&&q.el.offsetParent)", "full"))
+        SP = "E.panels.find(q=>q.type==='spec'&&q.el&&q.el.offsetParent)"
+        step("spectrum: Shift+F10 = right click at the same peak", lambda: same(SP, "full"))
+        def spec_ids():
+            pg.evaluate(f"(()=>{{const p={SP};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
+            keyboard(SP); r = pg.evaluate("""(()=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
+              return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
+                bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes('spec'))}})()"""); close()
+            assert r["n"] >= 5 and not r["free"] and not r["bad"], r
+            assert "spec.copy" in r["ids"] and "spec.xic" in r["ids"] and "spec.measure" in r["ids"], r["ids"]
+        step("spectrum: every entry of the menu is an action of the registry (data-azione)", spec_ids)
         step("MRM: Shift+F10 = right click at the same point", lambda: same("E.panels.find(q=>q.type==='mrm')", "mrm"))
+        def trace_ids():
+            for sel, vista in (("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')", "chrom"), ("E.panels.find(q=>q.type==='mrm')", "mrm")):
+                pg.evaluate(f"(()=>{{const p={sel};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
+                keyboard(sel); r = pg.evaluate("""(v=>{const its=[...document.querySelectorAll('#ctx div[role^=menuitem]')].slice(1);
+                  return {n:its.length,free:its.filter(d=>!d.dataset.azione).map(d=>d.textContent),ids:[...new Set(its.map(d=>d.dataset.azione))],
+                    bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.includes(v))}})""" + f"('{vista}')"); close()
+                assert r["n"] >= 2 and not r["free"] and not r["bad"], (vista, r)
+                assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"] and "ann.edit" in r["ids"], r["ids"]
+                assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]
+        step("chromatogram and MRM: every entry of the menu is an action of the registry (data-azione)", trace_ids)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

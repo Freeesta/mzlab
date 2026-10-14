@@ -187,7 +187,7 @@ function loading(on, msg) {
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
 let nbTimer = null, nbLast = "", nbBase = {}, nbRemote = null;
-const NB_V = 1;                                                          // schema of the notebook: bump it when a field changes meaning and migrate in nbClean
+const NB_V = 2;                                                          // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
 const nbPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
 // what comes back from the storage can be old, empty or damaged: only a plain object is accepted and the fields the program iterates over must have the right type
 function nbClean(j) {
@@ -227,6 +227,9 @@ async function nbLoad() {
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
   Object.assign(NB, j); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = j; nbLast = JSON.stringify(NB);
   nbEverLoaded = true;
+  if (CDOC.isOld(NB.session)) {          // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
+    try { NB.session = await CDOC.migrate(NB.session, (window.QAQC && QAQC.state.roles) || {}); NB._v = NB_V; nbSave(); } catch (_) { /* the notebook stays as it is */ }
+  }
   document.dispatchEvent(new Event("nbloaded"));
 }
 // back in the tab (after another tab or the browser was closed) the fields it did not change are refreshed from the stored notebook: the next save never undoes the other tab
@@ -246,7 +249,7 @@ function uiSave(now = false) {
   clearTimeout(uiTimer);
   const run = () => {
     if (!E.files.length) return;
-    NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null, rep: f.rep || undefined }));
+    NB.session = CDOC.session(E.files.filter(f => !f.gone));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
@@ -334,7 +337,7 @@ async function bootSession0() {
     } else if (isFirstLoad && !isHr && j.session.length > 1) {
       vis = (k === 0);          // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
     }
-    return { ...s, k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -352,6 +355,7 @@ async function bootSession0() {
   renderFileList();
   STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = "";
   await nbLoad();
+  CAMPIONI.restore(NB.session);
   if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
   ensureLayout();
   // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
@@ -856,7 +860,9 @@ document.addEventListener("click", () => { const m = Q("#ctx"); if (m._lp && m._
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
-function dl(name, text, type = "application/octet-stream") {
+// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder)
+async function dl(name, text, type = "application/octet-stream", prov = undefined) {
+  if (prov !== false && typeof text === "string" && /csv|tab-separated/.test(type)) text = await PROV.tsv(text, prov || {});
   saveBlob(new Blob([text], { type }), name);
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files

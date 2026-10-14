@@ -140,7 +140,7 @@ const LISTE = (() => {
   }
 
   function csvParse(text) {
-    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim());
+    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));       // «# mzLab ...» = provenance line of our own exports
     if (!lines.length) return [];
     const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
     const head = csvSplit(lines[0], sep);
@@ -445,11 +445,11 @@ const LISTE = (() => {
           });
           document.querySelectorAll("#bigbody [data-del]").forEach(b => b.onclick = () => { const r = labRows(); r.splice(+b.dataset.del, 1); saveRows(r); draw(); });
           const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: I18N.t("lst.lab.newName") }); draw(); };
-          const bXl = document.querySelector("#lab-xl"); if (bXl) bXl.onclick = () => { if (typeof dl === "function") dl("contaminanti_laboratorio.csv", csvOut(labRows()), "text/csv"); };
+          const bXl = document.querySelector("#lab-xl"); if (bXl) bXl.onclick = () => { if (typeof dl === "function") dl("contaminanti_laboratorio.csv", csvOut(labRows()), "text/csv", { table: "lab-contaminants" }); };
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; const n = csvParse(await f.text()); saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x) { if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -781,6 +781,16 @@ const LISTE = (() => {
     if (!dlg.open) dlg.showModal();
   }
 
+  // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
+  if (typeof AZIONI !== "undefined") {
+    const S = ["spec"], T = I18N.t.bind(I18N);
+    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, disponibile: c => c.has, nome: () => T("ctx.spec.contLists"), esegui: c => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
+    AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: c => {
+      const kn = c.a.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
+      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, esegui: () => {} }] : [];
+    } });
+    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, visibile: c => !!c.a.hrp, disponibile: c => c.has, nome: () => T("ctx.spec.addLab"), esegui: c => askAdd(c.m, c.pol) });
+  }
   return {
     tolDa,
     buildIndex,

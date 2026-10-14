@@ -127,9 +127,9 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
     box.onclick = e => {
       if (e.target.id === "prof-copy" && res) {
         const note = box.querySelector("#prof-note");
-        (navigator.clipboard ? navigator.clipboard.writeText(tsv(res)) : Promise.reject()).then(() => { note.textContent = t("meta.copied"); }, () => { note.textContent = t("meta.copy.fail"); });
+        PROV.tsv(tsv(res), { table: "profile" }).then(tx => navigator.clipboard ? navigator.clipboard.writeText(tx) : Promise.reject()).then(() => { note.textContent = t("meta.copied"); }, () => { note.textContent = t("meta.copy.fail"); });
       }
-      if (e.target.id === "prof-xlsx" && res) dlx("profile.xlsx", [{ name: "Profile", head: head(res), rows: body(res), widths: [28, 12, 12, 10, 14, 14, 14] }]);
+      if (e.target.id === "prof-xlsx" && res) dlx("profile.xlsx", [{ name: "Profile", head: head(res), rows: body(res), widths: [28, 12, 12, 10, 14, 14, 14] }], { table: "profile" });
     };
     box.onsubmit = async e => {
       e.preventDefault();

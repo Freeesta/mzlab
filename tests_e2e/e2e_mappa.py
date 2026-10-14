@@ -135,7 +135,7 @@ try:
             with pg.expect_download(timeout=30000) as dl: pg.click(".pnl.map .mztab [data-t=xl]")
             path = dl.value.path(); rows = xlsx_rows(path)
             head = [c[1] for c in rows[0] if c]; assert len(rows) == 4 and "m/z" in head and "Δm" in head, rows[:2]
-            assert len(xlsx_sheets(path)) == 2, xlsx_sheets(path)                                              # points + metadata
+            assert len(xlsx_sheets(path)) == 3, xlsx_sheets(path)                                              # points + metadata + provenance
         step("the table goes to Excel with a metadata sheet", excel)
         def persist():
             pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change")

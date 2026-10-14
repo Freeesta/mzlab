@@ -235,7 +235,7 @@ const BANCO = (() => {
   }
   async function copyText(p) {
     const t = plotSheets(p); if (!t || !t[0]) return info(I18N.t("bn.noCopy"));
-    const sh = t[0], txt = [sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n");
+    const sh = t[0], txt = await PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
     try { await navigator.clipboard.writeText(txt); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
   }
   function addCell(type) {
@@ -265,7 +265,7 @@ const BANCO = (() => {
     del: () => { const a = act(); if (a) a.el.querySelector(".x").click(); },
     peaks: () => { const a = act(); const b = a && a.el.querySelector('[data-a="iauto"]'); if (b) b.click(); else info(I18N.t("bn.peaksOnly")); sync2(); },
     lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info(I18N.t("bn.pickMs2")); },
-    xls: () => { const a = act(), t = a && plotSheets(a); if (t) dlx(plotName(a) + ".xlsx", t); else info(I18N.t("bn.noExport")); },
+    xls: () => { const a = act(), t = a && plotSheets(a); if (t) dlx(plotName(a) + ".xlsx", t, { p: a, table: "plot" }); else info(I18N.t("bn.noExport")); },
     tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info(I18N.t("bn.treeOnly")); },
   };
   function sync2() {
