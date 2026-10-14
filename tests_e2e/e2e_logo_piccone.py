@@ -37,6 +37,7 @@ def run(p, reduced):
         pg.wait_for_function("document.documentElement.hasAttribute('data-logo-gold')", timeout=8000)
         pg.wait_for_function("getComputedStyle(document.querySelector('header img.logo')).opacity === '1'", timeout=5000)
         g = gold(pg); assert g[1] == "1" and g[2] != "none", g
+        assert pg.evaluate("localStorage.getItem('qqq.admin')") == "1"      # the same gesture is the administrator switch
     step(tag + "5 clicks: logo gold", five)
     def reload():
         pg.reload(); pg.wait_for_selector("#drop", timeout=60000); pg.wait_for_timeout(500)
