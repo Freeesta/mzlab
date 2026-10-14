@@ -831,7 +831,7 @@ function openXic(panel, pre = {}) {
   addRow(first); addRow();
   addB.onclick = () => { if (rows.length < XIC_MAXROWS) addRow().inp.focus(); };
   const ff = scanFiles(tabFiles(panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab));
-  fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map(f => `<option value="${f.k}">${EH(f.label)}</option>`).join("");
+  fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map(f => h`<option value="${f.k}">${f.label}</option>`).join("");
   Q("#xic-no").onclick = () => d.close();
   Q("#xic-go").onclick = async () => {
     await Promise.all(rows.map(r => r.pending));

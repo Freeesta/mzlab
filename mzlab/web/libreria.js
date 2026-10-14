@@ -147,16 +147,16 @@ const LIB = (() => {
       box.querySelectorAll("[data-idx]").forEach(b => b.onclick = () => indexOne(b.dataset.idx));
       if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = f.mode === "opfs" || f.mode == null ? I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")) : ""; }
       if (f.mode === "opfs" && navigator.storage && navigator.storage.persist) { await (await import("./archivio.js")).persistOnce(); const p = await navigator.storage.persisted(); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
-    } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; }
+    } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   const CARTELLA_stem = n => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
   async function indexOne(name) {
     const st = document.querySelector("#libdlg #lib-st");
-    st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.reading")}</div><progress max="1" value="0"></progress>`;
+    st.innerHTML = h`<div class="sm">${name}: ${raw(I18N.t("lib.reading"))}</div><progress max="1" value="0"></progress>`;
     try {
       const r = await call("index", { name }, m => { st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
       st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}.</div>`;
-    } catch (e) { st.innerHTML = `<div class="err">${EHt(name)}: ${EHt(e.message)}</div>`; }
+    } catch (e) { st.innerHTML = h`<div class="err">${name}: ${e.message}</div>`; }
     await refresh();
   }
   async function indexAll() { for (const n of [...toIndex]) await indexOne(n); }
@@ -179,7 +179,7 @@ const LIB = (() => {
       avail = T() ? await call("catalog", { cat: (await nativeJson("lib_catalog")).catalog }) : await call("catalog");
       avail.cfg = T() ? await T().invoke("lib_get_config") : null;
       renderAvail();
-    } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
+    } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
   }
   function renderAvail() {
     const d = document.getElementById("libdlg"), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
@@ -555,7 +555,7 @@ const LIB = (() => {
         st.innerHTML = `<div class="sm">${I18N.t("lib.all.summary", { q: queries.length, ms: Math.round(performance.now() - t0), g: groups.length, r: rows.length })}</div>`;
       };
       show(false);
-    } catch (e) { st.innerHTML = `<p class="err">${EHt(e.message)}</p>`; }
+    } catch (e) { st.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   function gotoScan(sid, d) {                         // the MS2 panel of the DDA trio shows that scan
     try {

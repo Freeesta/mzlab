@@ -248,7 +248,7 @@ function legend(p, all, note = "") {
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
-  } else p.leg.innerHTML = all.map(s => `<span class="tg${off(isHid(p, s))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${sw(s.color)}${EH(s.name)}${legPol(E.files[s.k])}</span>`).join("");
+  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);

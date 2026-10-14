@@ -25,6 +25,7 @@
     "../../mzlab/web/carica.js",
     "../../mzlab/web/frame.js",
     "../../mzlab/web/stato.js",
+    "../../mzlab/web/html-sicuro.js",
     "../../mzlab/web/esperimenti.js",
     "../../mzlab/web/features.js",
     "../../mzlab/web/icons-modi.js",

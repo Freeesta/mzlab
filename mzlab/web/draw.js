@@ -810,5 +810,5 @@ function frameExtras(fr) {
     [t("draw.keys.rightClick.key"), t("draw.keys.rightClick")]];
   if (coarse) rows.push([t("draw.keys.twoFingers.key"), t("draw.keys.twoFingers")], [t("draw.keys.pen.key"), t("draw.keys.pen")], [t("draw.keys.longPress.key"), t("draw.keys.longPress")]);
   else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
-  Q("#keys-body").innerHTML = `<table>${rows.map(r => `<tr><td>${EH(r[0])}</td><td>${EH(r[1])}</td></tr>`).join("")}</table>`;
+  Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();

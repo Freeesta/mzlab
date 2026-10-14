@@ -277,10 +277,10 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
           await post("api/new",{});                                 // closes the open files but keeps the uploaded ones on disk
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
           STATO.aggiunta(false,"adding");await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
-        }catch(e2){$("#gomsg").innerHTML=`<span class="fail">${esc(e2.message)}</span>`;b.disabled=false}finally{loading(false)}
+        }catch(e2){$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {
-      $("#gomsg").innerHTML=`<span class="fail">${esc(e.message)}</span>`;
+      $("#gomsg").innerHTML=h`<span class="fail">${e.message}</span>`;
     }
     b.disabled=false
   }finally{if($("#gomsg").innerHTML==="")loading(false)}
