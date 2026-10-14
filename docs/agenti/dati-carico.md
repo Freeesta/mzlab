@@ -1,0 +1,4 @@
+# Caricamento: primo caricamento e tabella di carico
+Stato attuale.
+- **Primo caricamento in bassa risoluzione** (`bootSession0` in `explore.js`; `e2e_apri_uno`): con più file, anche di tipi diversi (Full Scan, MS2, MRM), si apre solo il PRIMO della lista (come in HR); gli altri restano nell'elenco e un clic sulla riga li apre, con la scheda del suo tipo. Serie (t0, t5, t10) e calibrazioni usano comunque tutti i file letti: `vis` cambia solo cosa è disegnato.
+- **Tabella di carico, campi** (`renderFiles` in `shell.js`; `e2e_tempo_un_clic`): un valore uscito dal campo (clic su un altro campo, Tab) si applica a focus già spostato e la tabella riordinata restituisce il focus al campo (o al pulsante ×) che l'ha ricevuto: un solo clic basta.
