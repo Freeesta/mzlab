@@ -133,6 +133,11 @@ window.MAPPA = (() => {
     g.clearRect(0, 0, a.W, a.H);
     if (!is2d(p)) return;
     drawPoints(p, g);
+    if (s.guide) {                                                         // axis lock (asse.js): the line along which the gesture may move
+      const q = s.guide; g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
+      if (q.ax === "x") { g.moveTo(M.l, q.y + .5); g.lineTo(a.W - M.r, q.y + .5); } else { g.moveTo(q.x + .5, M.t); g.lineTo(q.x + .5, a.H - M.b); }
+      g.stroke(); g.restore();
+    }
     if (s.ex && window.MAPEX) MAPEX.overlay(p, g);
     if (s.feat && window.MAPEX) MAPEX.featOverlay(p, g);
     const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
@@ -337,6 +342,7 @@ window.MAPPA = (() => {
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
+  function guide(p, q) { const s = st(p); if (!q && !s.guide) return; s.guide = q || null; overlay(p); }
   function leave(p) { const s = st(p); if (s.frz) return; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
@@ -389,6 +395,7 @@ window.MAPPA = (() => {
     if (k === "0") { done(); whole(p); return; }
     if (k === "Backspace") { done(); whole(p); return; }
     if (!is2d(p)) return;
+    if (ASSE.key(e)) { done(); overlay(p); return; }                           // X / Y latch the axis of the gestures, Esc frees it
     if (s.ex && window.MAPEX && MAPEX.key(p, e)) { done(); return; }
     if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
     if (k === "l" || k === "L") { done(); ad2(p, null).toggleLock(); return; }
@@ -404,6 +411,7 @@ window.MAPPA = (() => {
     done();
     const cur = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, nx = { ...cur }, dir = k === "ArrowRight" || k === "ArrowUp" ? 1 : -1;
     const set = q => { if (s.lock) s.lock = q; else s.kp = q; follow(p, q); overlay(p); margins(p); };
+    if (ASSE.fix === "x" ? k === "ArrowUp" || k === "ArrowDown" : ASSE.fix === "y" && (k === "ArrowLeft" || k === "ArrowRight")) return;      // the locked axis keeps the other one still
     if (k === "ArrowUp" || k === "ArrowDown") {
       if (e.shiftKey) { fetchSpec(p, cur.rt).then(sp => { const m = peakStep(sp, cur.mz, dir); if (m != null) set({ ...cur, mz: m }); }); return; }   // next local maximum of the spectrum above 3 x noise
       nx.mz = Math.max(a.fullY[0], Math.min(a.fullY[1], cur.mz + dir * binDa(p))); set(nx); return;
@@ -476,10 +484,14 @@ window.MAPPA = (() => {
     if (st(p).ex && window.MAPEX && MAPEX.down(p, e, px, py)) return true;       // the box of «How it is extracted»
     const i = nearPoint(p, px, py); if (i < 0) return false;
     e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
-    const mv = ev => { moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top; list[i].rt = xOf(p, x); list[i].mz = p._a.mzAt(y); overlay(p); };
+    const a0 = p._a, q0 = { rt: list[i].rt, mz: list[i].mz }, g = ASSE.gest(); let ax = null, wait = false;     // Ctrl/⌘ held or X / Y: the point moves along one axis only (asse.js)
+    const mv = ev => {
+      moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top, c = ASSE.clip(g, ev, x - px, y - py); ax = c.ax; wait = !ax && (!!ASSE.fix || ASSE.held(ev));
+      list[i].rt = ax === "y" || wait ? q0.rt : xOf(p, x); list[i].mz = ax === "x" || wait ? q0.mz : p._a.mzAt(y); guide(p, ax && { ax, x: a0.X(q0.rt), y: a0.Y(q0.mz) }); overlay(p);
+    };
     const up = async ev => {
-      removeEventListener("mousemove", mv); removeEventListener("mouseup", up);
-      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { list[i].rt = at.rt; list[i].mz = at.mz; } ptsSave(p); }
+      removeEventListener("mousemove", mv); removeEventListener("mouseup", up); guide(p, null);
+      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { if (ax !== "y") list[i].rt = at.rt; if (ax !== "x") list[i].mz = at.mz; } ptsSave(p); }
       overlay(p); table(p);
     };
     addEventListener("mousemove", mv); addEventListener("mouseup", up);
@@ -773,7 +785,7 @@ window.MAPPA = (() => {
     s[k] = px; p.h = Math.max(200, p.h + px - prev); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
   }
   // ---- sheet of the gestures (one key per row: action|mouse|trackpad|touch|keyboard)
-  const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "interval", "mark", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur"] };
+  const HELP = { "2d": ["zoom", "zoomax", "box", "pan", "reset", "undo", "sight", "lock", "menu", "extract", "interval", "mark", "axis", "full"], "3d": ["rot", "pan", "zoom", "reset", "views", "pick", "menu", "cur", "axis"] };
   function help(kind) {
     const rows = HELP[kind].map(r => I18N.t(`mapnav.h.${kind}.${r}`).split("|").map(x => EH(x.trim()) || "–"));
     const head = ["act", "mouse", "pad", "touch", "key"].map(k => `<th scope="col">${I18N.t(`mapnav.h.${k}`)}</th>`).join("");
@@ -860,7 +872,7 @@ window.MAPPA = (() => {
     }
   }
 
-  return { dbl, open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { guide, dbl, open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
