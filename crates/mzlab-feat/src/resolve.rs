@@ -16,7 +16,7 @@ use mzlab_core::peakq::{detect_prominence, ProminenceParams};
 use crate::ms2::Ms2Links;
 use crate::quality::{around_apex, assess_with, fill_row, QParams, AREA_HALF_WINDOW};
 use crate::table::{FileFeatures, FLAG_MIXTURE, FLAG_RESOLVED};
-use crate::trace::Params;
+use crate::trace::{filled, Params};
 
 #[derive(Debug, Clone)]
 pub struct ResolveParams {
@@ -66,16 +66,16 @@ pub struct Resolved {
 
 /// Cheap necessary condition of a split, on the trace between the edges of a feature smoothed with three points: a point lower than 0.9 times
 /// the lower of the highest points on both sides, the lower of which is at least a twentieth of the highest of the trace.
-fn may_split(y: &[f64]) -> bool {
+fn may_split(y: &[f64]) -> Result<bool> {
     let n = y.len();
     if n < 7 {
-        return false;
+        return Ok(false);
     }
     let sm: Vec<f64> = (0..n)
         .map(|i| (y[i.saturating_sub(1)] + y[i] + y[(i + 1).min(n - 1)]) / 3.0)
         .collect();
     let top = sm.iter().fold(0.0f64, |m, &v| m.max(v));
-    let mut right = vec![0.0f64; n];
+    let mut right = filled(n, 0.0f64)?;
     for i in (0..n).rev() {
         right[i] = sm[i].max(if i + 1 < n { right[i + 1] } else { 0.0 });
     }
@@ -84,10 +84,10 @@ fn may_split(y: &[f64]) -> bool {
         left = left.max(sm[i]);
         let lower = left.min(right[i]);
         if lower >= 0.05 * top && sm[i] < 0.9 * lower {
-            return true;
+            return Ok(true);
         }
     }
-    false
+    Ok(false)
 }
 
 /// Pieces and unseparated maxima found while the traces go by.
@@ -109,7 +109,7 @@ fn look(
     q: &QParams,
     rp: &ResolveParams,
     out: &mut Found,
-) {
+) -> Result<()> {
     let (slo, shi) = (
         f.scan_lo[i] as usize,
         (f.scan_hi[i] as usize).min(rt.len() - 1),
@@ -117,10 +117,10 @@ fn look(
     if f.npts[i] < 2 * p.min_points as u16
         || !(f.scan_hi[i] - f.scan_lo[i] + 1 > p.long_trace || (f.shape[i] as f64) < rp.max_shape)
     {
-        return;
+        return Ok(());
     }
-    if !may_split(&y[slo - w0..=shi - w0]) {
-        return;
+    if !may_split(&y[slo - w0..=shi - w0])? {
+        return Ok(());
     }
     let w1 = w0 + y.len() - 1;
     let mut prom = rp.prom;
@@ -130,7 +130,7 @@ fn look(
         .filter(|pk| pk.apex_i + w0 >= slo && pk.apex_i + w0 <= shi)
         .collect();
     if peaks.len() < 2 {
-        return;
+        return Ok(());
     }
     sortc::any_by_key(&mut peaks, |pk| pk.apex_i);
     // consecutive maxima: separated by a valley or part of the same feature
@@ -155,7 +155,7 @@ fn look(
         if let Some((_, v)) = deepest {
             out.multi.push((i, w0 + v));
         }
-        return;
+        return Ok(());
     }
     let mut bounds = vec![slo - w0];
     bounds.extend(cuts.iter().copied());
@@ -164,6 +164,7 @@ fn look(
         out.pieces
             .push((i, piece(f, i, rt, y, w0, (bounds[g], bounds[g + 1]), p, q)));
     }
+    Ok(())
 }
 
 /// The piece of row `i` between the positions `lo..=hi` of its trace `y` (scans `w0..`): the row with its own apex, edges, area and quality.

@@ -35,24 +35,26 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 - **Struttura e test nuovi**: `tests/` = pytest, `tests_e2e/` = script Playwright (uno per argomento, `lib.py` → `Run`); regole e aiuti in `docs/agenti/test.md`.
 
 ## 4. Architettura
-- **Python = riferimento**: `mzlab/api.py` (`dispatch`: tutte le rotte `/api/...`, errori sempre JSON `{error, error_key, params}`) sopra `App` (`mzlab/app.py`: file aperti, sessione, taccuino). Lo usano `tools/dev_server.py` (solo test e sviluppo) e `tests_e2e/pyref.py` (il riferimento nel processo del test). Una rotta nuova nasce in Rust (`crates/mzlab-core`) con la sua parità; `api.py` si tocca solo per correggere bug trovati dalla parità.
+- **Python = riferimento**: `mzlab/api.py` (`dispatch`: tutte le rotte `/api/...`, errori sempre JSON `{error, error_key, params}`) sopra `App` (`mzlab/app.py`: file aperti, sessione, taccuino). Lo usa `tests_e2e/pyref.py` (il riferimento nel processo del test). Una rotta nuova nasce in Rust (`crates/mzlab-core`) con la sua parità; `api.py` si tocca solo per correggere bug trovati dalla parità.
 - **Nel sito**: `tools/build_site.py` copia `mzlab/web` in `site/static`; `browser.js` passa `fetch("api/...")` al motore Rust/WASM (`rust-bridge.js`, `rust-worker.js`, `lr.js`), che risponde a tutte le rotte (file, sessione, taccuino, cromatogrammi, spettri, MRM, formule, mappe, HR; mzML e `.mzidx` in OPFS).
   Un solo motore e nessun ripiego: se il worker muore due volte in un minuto la pagina chiede di ricaricare (`error.engineFallback`); una richiesta che il motore non sa servire risponde `err.route.unavailable` e finisce in `window.MZLAB_LR_MISS` (i test la vogliono vuota). Pyodide (`tpmine-worker.js`) resta solo per mzFinder. Dettagli in `docs/agenti/dati.md` e `docs/agenti/rust-rotte.md`.
 - **App desktop** (`crates/mzlab-desktop`, Tauri v2): la stessa pagina web con un motore nativo Rust dietro `mzlab://`; dettagli in `docs/agenti/rust-desktop.md`.
 - **Python** (`mzlab/`): `reader/` (mzML senza librerie, profilo, `.dam`, `mzidx.py`: formato in `docs/agenti/mzidx.md`), `explore.py`, `peaks.py`, `project.py`, `chem/` (masse, formule, addotti, albero MSn), `ionfamily.py` (senza verdetti), `demo.py` (file per file: la mappa). `tools/converti.py`: `.raw` con ThermoRawFileParser, `.wiff`/`.d` con MSConvert in Docker.
 - **Indirizzi**: `#/dati` e `#/disegno` nell'app; `#/teoria`, `#/teoria/N` e `#/pratica` portano alla Teoria autonoma `static/teoria/` (senza motore; `docs/agenti/teoria.md`).
-- **Pagina** (`mzlab/web/`): script classici in `index.html` nell'ordine lì scritto, che condividono il campo globale (un nome `function`/`const` doppio in due file rompe la pagina); globali `E` (file e pannelli), `S` (stato), `NB` (taccuino); moduli ES (`m:` nel caricatore) per i file nuovi e le foglie che nessuno chiama per nome; tipi: `// @ts-check` + `tsconfig.json` (job `tipi`); ogni pulsante con `data-ic` sta in `QICON`. Dettagli in `docs/agenti/dati.md`.
+- **Pagina** (`mzlab/web/`): script classici in `index.html` nell'ordine lì scritto, che condividono il campo globale (un nome `function`/`const` doppio in due file rompe la pagina); globali `E` (file e pannelli), `S` (stato), `NB` (taccuino); moduli ES (`m:` nel caricatore) per i file nuovi e le foglie che nessuno chiama per nome; tipi: JSDoc + `tsc` (`tools/tipi/`, job `tipi`): un file nuovo ha `// @ts-check`, sta in un progetto di `tools/tipi/` e ha 0 errori, la base `base_errori.json` scende soltanto; ogni pulsante con `data-ic` sta in `QICON`. Dettagli in `docs/agenti/dati.md`.
 - **Due lingue** (dettagli in `docs/agenti/lingue.md`): ogni testo nuovo nasce come chiave in `lang/it.js` e `lang/en.js`, mai scritto a mano nel codice; `tools/controlla_i18n.py` rifiuta italiano fuori dai cataloghi, chiavi mancanti o orfane.
 - **Sicurezza**: CSP nel meta di `index.html` (niente `unsafe-eval`, `connect-src 'self'`); testi dai file da `EH()`; Ketcher in iframe `sandbox`.
 - **Dati utente nel browser, nomi da NON cambiare mai**: IndexedDB `"qqq_lab"`, localStorage `qqq.*` e `qqq-labels`, cache `qqq-app-*`, `qqq-big-*`, `mzlab-libs`.
-- **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va aggiunto nella lista `L` del caricatore in `index.html` (`docs/agenti/dati.md`).
+- **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va aggiunto nella lista `L` di `carica.js` (`docs/agenti/dati.md`).
 
 ## 5. File d'area (leggi solo quello del tuo lavoro)
 | Se tocchi… | Leggi |
 |---|---|
-| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione, barra laterale, tour | `docs/agenti/dati.md` |
+| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
+| barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
+| carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
@@ -62,16 +64,23 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (e `teoria/LEGGIMI.md` se scrivi capitoli) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
-| mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
+| mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; tabella dei prodotti HR: `mzfinder-tabella.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
+| lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
+| pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
+| ingresso di mzFinder: `.mzidx` per ogni file scelto o da IndexedDB (`TP_Mine/files/finder-idx.js`), lista di trasformazioni dell'utente in Rust | `docs/agenti/mzfinder-ingresso.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`) |
+| ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
+| cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
+| lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, fasi di avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`) |
 | misure dei motori (ultima misura per sezione) | `docs/agenti/misure.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
+| contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM | `docs/agenti/rilascio.md` |
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test che costruiscono il sito) | `docs/agenti/ambiente-cloud.md` |
 

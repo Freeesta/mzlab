@@ -2,7 +2,7 @@
 //! (AsLS/SNIP baseline, Savitzky-Golay, CWT with Ricker wavelets, ridge lines, limits at 5% of the apex).
 //! The Python engine is the reference: any difference in the limits is a difference of logic, not of tolerance.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Peak {
     pub apex_i: usize,
     /// Height of the parabola through the apex (on the smoothed trace).
@@ -212,7 +212,7 @@ fn ridge_apexes(ridges: &[Ridge], widths: &[f64], ys: &[f64], noise: f64, snr: f
         taken.push(apex);
         found.push((apex, r.val[k], w));
     }
-    found.sort_by(|a, b| {
+    crate::sortc::by(&mut found, |a, b| {
         a.0.cmp(&b.0)
             .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     });
@@ -252,7 +252,7 @@ fn peaks_of(found: Vec<(usize, f64, f64)>, rt: &[f64], yc: &[f64], ys: &[f64], p
             snr: rsn,
         });
     }
-    peaks.sort_by(|a, b| {
+    crate::sortc::by(&mut peaks, |a, b| {
         b.height
             .partial_cmp(&a.height)
             .unwrap_or(std::cmp::Ordering::Equal)

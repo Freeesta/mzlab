@@ -12,7 +12,7 @@ use crate::routes::Routes;
 impl<R: ReadAt> Routes<R> {
     /// The section of a level with its scan RTs; None when the level has no peaks to map.
     fn map_level(&mut self, level: u8) -> Result<Option<(usize, Vec<f64>)>> {
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         if self.idx.sections[si].n_peaks == 0 || self.idx.sections[si].n_scans == 0 {
             return Ok(None);
         }
@@ -109,24 +109,20 @@ impl<R: ReadAt> Routes<R> {
         Ok(self.idx.mz_range(si)?.map(|mz| ((rt[first], rt[last]), mz)))
     }
 
-    /// `map_snap`: the most intense peak within ±`drt` minutes and ±1 bin of `dmz` around the click (RT of its scan, its m/z).
-    pub(crate) fn snap(&mut self, level: u8, rt: f64, mz: f64, dmz: f64) -> Result<Option<(f64, f64)>> {
+    /// `map_snap`: the most intense peak within ±`drt` minutes and ±`wm` bins of `dmz` around the click (RT of its scan, its m/z).
+    pub(crate) fn snap(&mut self, level: u8, rt: f64, mz: f64, dmz: f64, drt: f64, wm: f64) -> Result<Option<(f64, f64)>> {
         let Some((si, rts)) = self.map_level(level)? else { return Ok(None) };
         let f = (mz / dmz).floor();
-        let (lo, hi) = ((f - 1.0) * dmz, (f + 2.0) * dmz);
+        let (lo, hi) = ((f - wm) * dmz, (f + 1.0 + wm) * dmz);
         let (a, b) = (self.idx.search(si, lo, false)?, self.idx.search(si, hi, false)?);
-        let mut best: Option<(f64, f64, f64)> = None;
-        self.idx.each_peak(si, a, b.max(a), |p, m, y| {
-            if (rts[p] - rt).abs() <= 0.2 && best.map_or(true, |s| y > s.0) {
-                best = Some((y, rts[p], m));
-            }
-        })?;
-        Ok(best.map(|s| (s.1, s.2)))
+        let mut near: Vec<(f64, f64, f64)> = Vec::new();
+        self.idx.each_peak(si, a, b.max(a), |p, m, y| near.push((rts[p], m, y)))?;
+        Ok(apex(&near, rt, drt))
     }
 
     /// `Item.xic` for one level: the RT of every scan and the summed intensity within `mz ± tol` (empty when the level has no section).
     pub(crate) fn xic_arrays(&mut self, mz: f64, tol: f64, level: u8) -> Result<(Vec<f64>, Vec<f64>)> {
-        let Some(si) = self.idx.section_of(level, None) else { return Ok((vec![], vec![])) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok((vec![], vec![])) };
         let (a, b) = (self.idx.search(si, mz - tol, false)?, self.idx.search(si, mz + tol, true)?);
         let y = if b <= a { vec![0.0; self.idx.sections[si].n_scans] } else { self.idx.sum_window(si, a, b)? };
         Ok((self.idx.arrays(si)?.rt.clone(), y))
@@ -201,5 +197,34 @@ fn finish(acc: Vec<f64>, mean: bool, n_scans: &[usize], nmz: usize) -> Vec<f32> 
         acc.iter().enumerate().map(|(i, v)| (v / n_scans[i / nmz].max(1) as f64) as f32).collect()
     } else {
         acc.iter().map(|&v| v as f32).collect()
+    }
+}
+
+/// The apex of a peak: of the `(rt, m/z, intensity)` points within ±`drt` minutes of `rt`, the most intense one (the first on a tie), as `(rt, m/z)`.
+pub fn apex(points: &[(f64, f64, f64)], rt: f64, drt: f64) -> Option<(f64, f64)> {
+    let mut best: Option<(f64, f64, f64)> = None;
+    for &(r, m, y) in points {
+        if (r - rt).abs() <= drt && best.map_or(true, |b| y > b.0) {
+            best = Some((y, r, m));
+        }
+    }
+    best.map(|b| (b.1, b.2))
+}
+
+#[cfg(test)]
+mod apex_tests {
+    use super::apex;
+
+    #[test]
+    fn slides_to_the_top_of_the_peak() {
+        let p = [(5.00, 300.1, 10.0), (5.02, 300.2, 90.0), (5.04, 300.1, 40.0), (5.30, 300.1, 500.0)];
+        assert_eq!(apex(&p, 5.0, 0.05), Some((5.02, 300.2)));
+        assert_eq!(apex(&p, 5.0, 0.4), Some((5.30, 300.1)));
+    }
+
+    #[test]
+    fn nothing_in_the_window_and_first_on_a_tie() {
+        assert_eq!(apex(&[(9.0, 1.0, 5.0)], 5.0, 0.2), None);
+        assert_eq!(apex(&[(5.0, 1.0, 7.0), (5.1, 2.0, 7.0)], 5.0, 0.2), Some((5.0, 1.0)));
     }
 }

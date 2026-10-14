@@ -3,6 +3,7 @@
   "use strict";
   const ctx = () => QTOOLS.ctx;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const specHtml = sp => !sp ? "" : `<div class="card"><h3>Specificity <span class="mut">(${esc(sp.file)}, ${sp.from}-${sp.to} min)</span></h3><div class="mut" title="Signal in the same file and time window at the m/z of the ion, at ±1 and ±2 Da (neighbours) and at ±0.5 Da (decoy windows). A neighbour or a decoy as strong as the ion says the signal is not specific to its m/z.">ion ${fmtA(sp.signal)}</div><table><tr><th>Δ m/z</th><th>Signal</th></tr>${[...sp.neighbours, ...sp.decoys].map(w => `<tr><td class="n">${w.dm > 0 ? "+" : ""}${w.dm}</td><td class="n">${fmtA(w.signal)}</td></tr>`).join("")}</table><div class="mut">As strong as the ion: ${sp.stronger.neighbours} of ${sp.neighbours.length} neighbours, ${sp.stronger.decoys} of ${sp.decoys.length} decoys.</div></div>`;
   const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
   const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
@@ -16,6 +17,7 @@
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .tp th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted)}.tp td.n{text-align:right;font-variant-numeric:tabular-nums}
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
+.tp input.tp-est{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
 
@@ -29,7 +31,7 @@
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
 .hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
 .tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
-.tp-title{margin:12px 16px 2px;font-size:20px}.tp-sub{margin:0 16px;color:var(--muted);font-size:12px}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 14px;min-width:110px}
 .stat b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat.g b{color:var(--ok)}.stat.a b{color:var(--warn)}.stat.v b{color:var(--accent)}
@@ -42,7 +44,6 @@
 .frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
 .ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
-.tp-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-hd .tp-title{margin-right:0}#tp-hd-struct{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}#tp-hd-struct svg{height:48px;width:auto;max-width:120px}
 .tp-ac{position:relative}.tp-ac input{width:100%}#tp-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:2px 0 0;padding:2px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-height:260px;overflow:auto}
 #tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
 #tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
@@ -64,13 +65,22 @@
     if (ready) return ready;
     ready = (async () => {
       const c = ctx(), base = c.base;
-      const [qq, tpz] = [await fetch(base + "mzfinder/mzlab.zip").then(r => { if (!r.ok) throw new Error("the in-browser compute engine is missing (use the website, not the local program)"); return r.arrayBuffer(); }), c.pyZip];
+      const [qq, tpz] = [window.MZLAB_DESKTOP ? new ArrayBuffer(0) : await fetch(base + "mzfinder/mzlab.zip").then(r => { if (!r.ok) throw new Error("the in-browser compute engine is missing (use the website, not the local program)"); return r.arrayBuffer(); }), c.pyZip];
       const url = URL.createObjectURL(new Blob([c.files["tpmine-worker.js"]], { type: "text/javascript" }));
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
         const m = ev.data;
         if (m.type === "progress") return onProgress(m.text, m.frac, m);
         if (m.type === "step") return onProgress(m.text, null);
+        if (m.type === "notice") {            // a short notice of the worker (a profile file reduced to centroids): its text comes from the catalogs
+          let t = m.key; try { t = window.I18N.t(m.key, m.params || {}) || t; } catch (_) { /* the key is shown */ }
+          const d = document.createElement("div"); d.className = "tp-toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d);
+          setTimeout(() => d.classList.add("out"), 4200); setTimeout(() => d.remove(), 4800); return;
+        }
+        if (m.type === "ask") {               // what only this page can do for the worker: the engine of the Data tab reads the maker's files (docs/agenti/lettura-nativa.md)
+          asked(m.what, m.name).then(value => worker.postMessage({ type: "ask-reply", rid: m.rid, value }), () => worker.postMessage({ type: "ask-reply", rid: m.rid, value: null }));
+          return;
+        }
         if (m.type === "ready") { const p = pending.get("init"); pending.delete("init"); return p && p.res(); }
         const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
         m.error ? p.rej(new Error(m.error)) : p.res(m.result);
@@ -78,7 +88,7 @@
       await new Promise((res, rej) => {
         pending.set("init", { res, rej });
         worker.onerror = e => rej(new Error(e.message || "worker"));
-        worker.postMessage({ type: "init", pyodideMjs: new URL("mzfinder/pyodide/pyodide.mjs", base).href, indexURL: new URL("mzfinder/pyodide/", base).href, qqqZip: qq, tpZip: tpz });
+        worker.postMessage({ type: "init", desktop: !!window.MZLAB_DESKTOP, pyodideMjs: new URL("mzfinder/pyodide/pyodide.mjs", base).href, indexURL: new URL("mzfinder/pyodide/", base).href, qqqZip: qq, tpZip: tpz });
       });
       URL.revokeObjectURL(url);
     })();
@@ -92,17 +102,31 @@
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
+  const mzmls = new Map();                  // the mzML written for a sample (once, for the use that needs it: Pyodide, a profile sample to reduce)
+  async function stubOf(f) {                // the stub of a sample of a maker's file (.raw, .wiff, .D) in files/, null for anything else
+    if (!f || f.size >= 65536) return null;
+    try { const j = JSON.parse(await f.text()); return j.mzlab === "mzlab/nat1" ? j : null; } catch (_) { return null; }
+  }
+  async function asked(what, name) {        // "mzml": the mzML of the sample; "srm": its SRM traces for mzFinder, read from the maker's file without an mzML
+    const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
+    const j = await stubOf(await (await d.getFileHandle(name)).getFile()), rb = await window.MZLAB_RUST_READY;
+    if (!j || !rb) return null;
+    if (what === "srm") return rb.nativeSrm ? await rb.nativeSrm(name) : null;
+    if (!mzmls.has(name)) mzmls.set(name, rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null);
+    return mzmls.get(name);
+  }
   async function opfsFiles() {        // the files of the Data tab kept by the Rust engine (low resolution): OPFS mzlab/files/, as File objects (never read whole here)
     try {
       const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
       const out = [];
-      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) out.push({ name, buf: await h.getFile() });
+      for await (const [name, h] of d.entries()) if (h.kind === "file" && /\.mzml$/i.test(name)) { const f = await h.getFile(); out.push({ name, buf: f, nat: !!(await stubOf(f)) }); }
       return out;
     } catch (_) { return []; }
   }
   async function pageFiles() {
     const o = await opfsFiles(), have = new Set(o.map(f => f.name));
-    return o.concat((await idbFiles()).filter(f => !have.has(f.name)));
+    // by name: the order of the entries of OPFS depends on which write finished first, the one of IndexedDB is by key; the Dig must not depend on it
+    return o.concat((await idbFiles()).filter(f => !have.has(f.name))).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   }
   async function idbFiles() {
     try {
@@ -162,7 +186,6 @@
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     sec.innerHTML = `<div class="tp-wrap">
-<div class="tp-hd"><h2 class="tp-title">mzFinder</h2><div id="tp-hd-struct" aria-live="polite"></div></div><p class="tp-sub">Automated transformation-product discovery</p>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
@@ -174,11 +197,14 @@
   <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
   <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
   <div id="tp-warn" role="status"></div>
-  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
+  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
+  <div class="row"><label class="mut grow" for="tp-prt">RT of the parent (min; empty = automatic)</label><input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
+  <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-minf" title="Low resolution: a peak must appear in at least this many treated samples, or in two consecutive ones at the same RT (fewer when the series is shorter). 0 = off.">Peak in at least (samples)</label><input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
   <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
   <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
@@ -209,6 +235,22 @@
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
+    // low resolution: the window, the tolerance of RT and the void front are proposed from the data (Rust, preview of the first sample); a proposed value is yellow until the user types
+    let estSeq = 0, parentMz = 0;            // parentMz: the m/z of the parent ion (from the preview of the parent), for the drift of its RT
+    for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) $(id).addEventListener("input", ev => { ev.target.dataset.user = "1"; ev.target.classList.remove("tp-est"); });
+    $("#tp-est").addEventListener("click", () => { for (const id of ["#tp-tol", "#tp-rtt", "#tp-rtmin"]) delete $(id).dataset.user; estimateLr(); });
+    async function estimateLr() {
+      const lr = st.files.filter(f => f.kind === "full"), f = lr.find(x => x.type === "sample") || lr[0], seq = ++estSeq;
+      if (!f || st.files.some(x => x.kind === "hr")) return;
+      let e = null;
+      const names = [f.name, ...lr.filter(x => x !== f).map(x => x.name)];       // the first one is previewed; all of them give the drift of the parent
+      try { e = JSON.parse(await callRaw("estimate", JSON.stringify(names), parentMz ? String(parentMz) : "")); } catch (_) { /* no estimate: the defaults stay */ }
+      if (!e || seq !== estSeq) return;
+      const put = (id, v, dec, why) => { const el = $(id); if (v == null || !Number.isFinite(v) || el.dataset.user) return; el.value = v.toFixed(dec); el.classList.add("tp-est"); el.title = why; };
+      put("#tp-tol", e.da && e.da.value, 2, `From the data: 2 × the tolerance measured (3 × the scatter of m/z) on the ${e.da && e.da.n} points of the strongest peaks of ${f.name}`);
+      put("#tp-rtt", e.rt_tol, 2, e.drift && e.drift.value > 2 * (e.fwhm && e.fwhm.value || 0) ? `From the data: the RT of the parent drifts by ${e.drift.value.toFixed(2)} min over ${e.drift.n} files` : `From the data: 2 × the median width at half height of the strongest peaks of ${f.name} (${e.fwhm && e.fwhm.n} peaks)`);
+      put("#tp-rtmin", e.dead, 1, `From the data: the unretained front of ${f.name} ends here`);
+    }
     async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
       msg("Reading files...");
       try {
@@ -216,7 +258,8 @@
         let k = 0;
         for (const f of list) {
           msg(`Reading files... ${k} of ${list.length}`); bar(k++ / list.length);
-          if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
+          if (f.nat) await send({ type: "put", name: f.name, blob: f.file, nat: true });          // the stub of a sample of a maker's file: the worker reads its .mzidx, no mzML is written
+          else if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
           else { const buf = f.file ? await f.file.arrayBuffer() : f.buf; await send({ type: "put", name: f.name, buf }, [buf]); }
         }
         const info = await call("classify", list.map(f => f.name));
@@ -226,6 +269,7 @@
         if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg(""); bar(0);
+        estimateLr();
       } catch (e) { msg(String(e.message || e), true); bar(0); }
     }
     $("#tp-page").onclick = async () => {
@@ -235,7 +279,7 @@
       msg("Looking for the files in browser memory...");
       const f = await pageFiles();
       if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
-      await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
+      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
     }
     $("#tp-pick").onclick = () => $("#tp-in").click();
     $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
@@ -283,22 +327,17 @@
         if (!mol && info && !$("#tp-mol").value.trim()) { $("#tp-mol").value = info.formula; }
         try {
           const r = await call("formula_info", q, ad);
+          const mzNew = r.ok ? +r.mz : 0;
+          if (mzNew !== parentMz) { parentMz = mzNew; if (parentMz) estimateLr(); }
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
           if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
-        header(info ? info.formula : (mol || ""), smi);
       }, 350);
     };
     function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
       if (!t) { el.innerHTML = ""; return; }
       ocl().then(OCL => { el.innerHTML = `<div class="struct">${MOLUI.svg(OCL.Molecule.fromSmiles(t).toSVG(300, 170))}</div>`; }).catch(() => { el.innerHTML = ""; });
-    }
-    function header(formula, smi) {      // small structure + name + formula next to the title
-      const el = $("#tp-hd-struct"); if (!el) return;
-      const nm = $("#tp-name").value.trim();
-      if (!smi) { el.innerHTML = ""; return; }
-      ocl().then(OCL => { el.innerHTML = MOLUI.svg(OCL.Molecule.fromSmiles(smi).toSVG(120, 48)) + `<span>${esc(MOLUI.cap(nm))}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
     }
     $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
 
@@ -345,7 +384,7 @@
       sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(MOLUI.cap(it.c.names[0]))}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
       sugBox.hidden = false; nameIn.setAttribute("aria-expanded", "true"); sugI = -1; sugMark();
     };
-    nameIn.addEventListener("input", () => { delete nameIn.dataset.raw; sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
+    nameIn.addEventListener("input", () => { delete nameIn.dataset.raw; sugShow(); });
     nameIn.addEventListener("keydown", e => {
       if (sugBox.hidden) { if (e.key === "ArrowDown") sugShow(); return; }
       if (e.key === "ArrowDown") { sugI = (sugI + 1) % sugItems.length; sugMark(); e.preventDefault(); }
@@ -375,7 +414,7 @@
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
     };
-    startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); }).catch(e => msg(String(e.message || e), true));
+    startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); if (typeof TPTR !== "undefined") TPTR.mount($("#tp-tr"), callRaw); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
@@ -385,15 +424,18 @@
       const hrMode = st.files.some(f => f.kind === "hr");
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
+      const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
+      const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
+      $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
       setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
-        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
+        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked };
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
+        if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
-          if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), $("#tp-tr").value));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           if (window.TPLIVE) TPLIVE.stop(true);
@@ -549,10 +591,10 @@
     function mrmCard(m) {
       if (!m) return "";
       const q = m.quantifier, qual = m.transitions.slice(1).map(t => t.name), c = m.calibration;
-      const body = m.rows.map(r => { const i = r.ion[q]; return `<tr><td>${esc(r.label)}</td><td>${TYPES[r.type] || r.type}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.conc ?? ""}</td><td class="n">${i.detected ? fmtA(i.area) : "-"}</td><td class="n">${i.rt != null ? i.rt.toFixed(2) : ""}</td><td class="n">${i.snr ? i.snr.toFixed(0) : ""}</td>${qual.map(n => `<td class="n">${r.ion[n].detected ? fmtA(r.ion[n].area) : "-"}</td><td class="n">${r.ratios[n] != null ? r.ratios[n].toFixed(2) : ""}</td>`).join("")}<td>${r.ratio_ok == null ? "" : r.ratio_ok ? "✓" : "<span class='err'>out</span>"}</td><td class="n">${r.quant != null ? (+r.quant.toPrecision(3)) : ""}</td><td>${r.in_range == null ? "" : r.in_range ? "" : "<span class='err' title='outside the range of the calibration points'>off line</span>"}</td></tr>`; }).join("");
+      const body = m.rows.map(r => { const i = r.ion[q]; return `<tr><td>${esc(r.label)}</td><td>${TYPES[r.type] || r.type}</td><td class="n">${r.time ?? ""}</td>${c ? `<td class="n">${r.conc ?? ""}</td>` : ""}<td class="n">${i.detected ? fmtA(i.area) : "-"}</td><td class="n">${i.rt != null ? i.rt.toFixed(2) : ""}</td><td class="n">${i.snr ? i.snr.toFixed(0) : ""}</td>${qual.map(n => `<td class="n">${r.ion[n].detected ? fmtA(r.ion[n].area) : "-"}</td><td class="n">${r.ratios[n] != null ? r.ratios[n].toFixed(2) : ""}</td>`).join("")}<td>${r.ratio_ok == null ? "" : r.ratio_ok ? "✓" : "<span class='err'>out</span>"}</td>${c ? `<td class="n">${r.quant != null ? (+r.quant.toPrecision(3)) : ""}</td><td>${r.in_range == null ? "" : r.in_range ? "" : "<span class='err' title='outside the range of the calibration points'>off line</span>"}</td>` : ""}</tr>`; }).join("");
       return `<div class="card"><h3>MRM: automatic integration</h3><div class="cols"><div><div class="mut">Quantifier ${esc(q)}${qual.length ? ` · qualifier ${qual.map(esc).join(", ")}` : ""} · reference RT ${m.ref_rt ? m.ref_rt.toFixed(2) : "?"} min · ion ratio of the standards ${Object.values(m.ratio_ref).map(v => v == null ? "-" : v.toFixed(2)).join(", ")} (±${Math.round(m.ratio_tol * 100)} %)</div>
-        <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Type</th><th>t</th><th>conc. (mg/L)</th><th>Quant. area</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Qual. area</th><th>Qual/Quant</th>`).join("")}<th>Ratio</th><th>Calculated (mg/L)</th><th></th></tr>${body}</table></div></div>
-        <div>${c ? `<div class="mut">Line: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · weights ${c.weighting} · R² (unweighted) ${c.r2.toFixed(4)} · ${c.points.length} points, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas>` : `<div class="mut">At least three standards with the concentration in the name (e.g. STD_0_6ppm) are needed for the calibration line.</div>`}</div></div></div>`;
+        <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Type</th><th>t</th>${c ? "<th>conc. (mg/L)</th>" : ""}<th>Quant. area</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Qual. area</th><th>Qual/Quant</th>`).join("")}<th>Ratio</th>${c ? "<th>Calculated (mg/L)</th><th></th>" : ""}</tr>${body}</table></div></div>
+        ${c ? `<div><div class="mut">Line: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · weights ${c.weighting} · R² (unweighted) ${c.r2.toFixed(4)} · ${c.points.length} points, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas></div>` : ""}</div></div>`;
     }
     function rows() {
       if (!$("#tp-t")) return;
@@ -595,7 +637,7 @@
         <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
         <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
-        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>`;
+        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
       const isPar = par && id === par.id;
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -637,9 +679,9 @@
     }
     function mrmSheet(m) {
       const q = m.quantifier, qual = m.transitions.slice(1).map(t => t.name);
-      return { name: "MRM", head: ["File", "Type", "t (min)", "Nominal conc. (mg/L)", "Area " + q, "RT", "S/N", ...qual.flatMap(n => ["Area " + n, "Qual/Quant " + n]), "Ion ratio", "Calculated conc. (mg/L)", "Note"],
-        rows: m.rows.map(r => [r.file, r.type, r.time ?? "", r.conc ?? "", Math.round(r.ion[q].area), r.ion[q].rt ?? "", Math.round(r.ion[q].snr), ...qual.flatMap(n => [Math.round(r.ion[n].area), r.ratios[n] ?? ""]), r.ratio_ok == null ? "" : r.ratio_ok ? "ok" : "out", r.quant ?? "", r.in_range === false ? "outside the calibration range" : ""]),
-        widths: [34, 10, 8, 14, 12, 8, 8, ...qual.flatMap(() => [12, 12]), 12, 16, 34] };
+      return { name: "MRM", head: ["File", "Type", "t (min)", ...(m.calibration ? ["Nominal conc. (mg/L)"] : []), "Area " + q, "RT", "S/N", ...qual.flatMap(n => ["Area " + n, "Qual/Quant " + n]), "Ion ratio", ...(m.calibration ? ["Calculated conc. (mg/L)", "Note"] : [])],
+        rows: m.rows.map(r => [r.file, r.type, r.time ?? "", ...(m.calibration ? [r.conc ?? ""] : []), Math.round(r.ion[q].area), r.ion[q].rt ?? "", Math.round(r.ion[q].snr), ...qual.flatMap(n => [Math.round(r.ion[n].area), r.ratios[n] ?? ""]), r.ratio_ok == null ? "" : r.ratio_ok ? "ok" : "out", ...(m.calibration ? [r.quant ?? "", r.in_range === false ? "outside the calibration range" : ""] : [])]),
+        widths: [34, 10, 8, ...(m.calibration ? [14] : []), 12, 8, 8, ...qual.flatMap(() => [12, 12]), 12, ...(m.calibration ? [16, 34] : [])] };
     }
     const dl = (n, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = n; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   }

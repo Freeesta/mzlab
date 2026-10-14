@@ -1896,6 +1896,9 @@ version = "0.1.0"
 dependencies = [
  "memmap2",
  "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-table-wasm",
+ "mzlab-feat-wasm",
  "mzlab-lib",
  "rayon",
  "serde",
@@ -1920,6 +1923,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-feat-grafo-wasm"
+version = "0.1.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-feat-import-wasm"
+version = "0.1.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-feat-table-wasm"
 version = "0.1.0"
 dependencies = [
@@ -1937,6 +1958,18 @@ dependencies = [
  "mzlab-core",
  "mzlab-feat",
  "sha2",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-finder-lr-wasm"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "mzlab-feat",
+ "mzlab-feat-wasm",
+ "serde_json",
  "wasm-bindgen",
 ]
 
@@ -2258,8 +2291,6 @@ dependencies = [
 [[package]]
 name = "opentfraw"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcaaa47960c32c13ba50f7570d1a420a3d0d62866f1486d4b3400b1fce193030"
 dependencies = [
  "openmassspec-core",
  "thiserror 2.0.21",

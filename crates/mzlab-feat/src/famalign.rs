@@ -10,6 +10,8 @@ use crate::align::{align_grouped, AlignParams};
 use crate::rtmap::{build, RtMap, RtParams};
 use crate::sortc;
 use crate::table::{Aligned, FileFeatures, ROLE_M, ROLE_NONE};
+use crate::trace::filled;
+use mzlab_core::error::Result;
 
 /// Parameters of `align_families`.
 #[derive(Debug, Clone, Copy)]
@@ -98,10 +100,10 @@ fn collect(
     ions: &Aligned,
     group_of: &[Vec<u32>],
     p: &FamAlignParams,
-) -> (Votes, Vec<(u32, u32)>) {
+) -> Result<(Votes, Vec<(u32, u32)>)> {
     let mut votes = Votes {
-        base: vec![0; ions.len()],
-        role: vec![[0; 7]; ions.len()],
+        base: filled(ions.len(), 0)?,
+        role: filled(ions.len(), [0; 7])?,
     };
     let mut links = Vec::new();
     for (k, f) in files.iter().enumerate() {
@@ -131,7 +133,7 @@ fn collect(
         }
     }
     sortc::ord(&mut links);
-    (votes, links)
+    Ok((votes, links))
 }
 
 /// Joins each group with the group of the root it follows most often. An ion that is mostly the base of its own family joins only when it follows
@@ -141,8 +143,8 @@ fn link(
     ions: &Aligned,
     group_of: &[Vec<u32>],
     p: &FamAlignParams,
-) -> (Sets, Votes) {
-    let (votes, links) = collect(files, ions, group_of, p);
+) -> Result<(Sets, Votes)> {
+    let (votes, links) = collect(files, ions, group_of, p)?;
     let mut sets = Sets::new(&ions.rt);
     for chunk in links.chunk_by(|a, b| a.0 == b.0) {
         let g = chunk[0].0;
@@ -161,7 +163,7 @@ fn link(
         }
         sets.join(g, best.1, p.max_span);
     }
-    (sets, votes)
+    Ok((sets, votes))
 }
 
 /// Reference ion of a set of groups: the ones that are mostly a base come first; then most votes as the root of a family, the largest total area
@@ -258,8 +260,8 @@ fn rows(mut t: Aligned, sets: &mut Sets, votes: &Votes) -> Aligned {
 }
 
 /// Aligns the files in "per family" mode (each file must carry `family_id`, `role` and `charge`).
-pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Aligned {
-    let first = align_grouped(files, &p.ion, None, false).table;
+pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Result<Aligned> {
+    let first = align_grouped(files, &p.ion, None, false)?.table;
     let map: RtMap = if p.use_rtmap {
         build(&first, &p.rt)
     } else {
@@ -267,8 +269,8 @@ pub fn align_families(files: &[&FileFeatures], p: &FamAlignParams) -> Aligned {
     };
     drop(first);
     let adj = map.ok().then_some(&map);
-    let g = align_grouped(files, &p.ion, adj, true);
-    let (mut sets, votes) = link(files, &g.table, &g.group_of, p);
+    let g = align_grouped(files, &p.ion, adj, true)?;
+    let (mut sets, votes) = link(files, &g.table, &g.group_of, p)?;
     drop(g.group_of);
-    rows(g.table, &mut sets, &votes)
+    Ok(rows(g.table, &mut sets, &votes))
 }

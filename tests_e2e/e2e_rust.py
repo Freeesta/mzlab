@@ -4,7 +4,7 @@ Needs the site: python tools/build_site.py; the .wasm is built here when cargo a
 import shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, mz
-from pyref import PyRef
+from golden_ref import PyRef
 
 PORT = 8832
 errs = []
@@ -109,6 +109,21 @@ try:
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # files reopened, not a fault: nothing counted, no message
             assert not pg.evaluate("(document.querySelector('#rust-note') || {}).textContent || ''").strip(), "a recycle must be silent"
         step("a recycled worker (large and idle) is replaced silently: files reopened, no fault counted", recycled)
+        def die_oom():
+            pg.evaluate("window.MZLAB_RUST.crash(80)")
+            pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)
+            pg.evaluate("window.MZLAB_RUST.crash(80)")        # the second death within a minute with the signature of a lack of memory: not retried as it is, half the budget
+            pg.wait_for_function("window.MZLAB_RUST.stats.halved === 1", timeout=30000)
+            assert pg.evaluate("window.MZLAB_RUST.disabled") is False and pg.evaluate("window.MZLAB_RUST.budgetMb") == 96
+            r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]      # the engine works with the smaller budget
+            pg.evaluate("window.MZLAB_RUST.crash(80)")        # a third: the engine is off with the key of the memory, no loop of restarts
+            pg.wait_for_function("window.MZLAB_RUST.disabled === true", timeout=30000)
+            assert pg.evaluate("window.MZLAB_RUST.stats.restarts") == 3, "restarts must stop at the third death"
+            assert pg.evaluate("window.qqFailed || null") is None and pg.inner_text("#rust-note").strip(), "no message"
+            pg.evaluate("window.MZLAB_RUST.forgetFaults()")      # brings the engine back for the steps that follow
+            pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 0 && window.MZLAB_RUST.disabled === false", timeout=30000)
+            r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] == "rust", r["eng"]
+        step("deaths with the signature of a lack of memory: first restart, then half the budget, then off with error.memoryBudget (no loop)", die_oom)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)

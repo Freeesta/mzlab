@@ -1,3 +1,4 @@
+// @ts-strict
 // What the derived files of the archive say about themselves (docs/agenti/memoria.md): the format version, the crate that wrote them and the SHA-256 of the source.
 // The values are read from the file itself (the meta of `.mzidx` and of `.mzfeatf`/`.mzfeat`), so every producer is covered, also the one that writes OPFS without the archive.
 

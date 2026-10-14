@@ -15,7 +15,7 @@ def hexof(c):                                               # "rgb(r, g, b)" or 
     c = c.strip()
     if c.startswith("#"): return c.lower()
     m = re.findall(r"\d+", c)[:3]; return "#%02x%02x%02x" % tuple(int(v) for v in m)
-r = Run(port=8825, wd="/tmp/wd25", motore="python")
+r = Run(port=8825, wd="/tmp/wd25")
 COLORS = "E.files.filter(f=>f.kind==='full'&&f.type==='sample'&&f.time!=null).sort((a,b)=>a.time-b.time).map(f=>[f.time,f.color,f.rank])"
 def load(pg, times, name):
     shutil.rmtree("/tmp/s25_" + name, ignore_errors=True)
@@ -27,12 +27,18 @@ try:
         load(pg, [60, 0, 30, 5, 15], "5")                        # loaded in a mixed order on purpose
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
+            assert pg.evaluate("document.getElementById('uip-a11y').open") is False, "the accessibility submenu starts closed"
+            assert not pg.is_visible("#uip-pal") and not pg.is_visible("#uip-font") and not pg.is_visible("#uip-hc")
+            pg.click("#uip-a11y > summary"); pg.wait_for_timeout(150); assert pg.is_visible("#uip-pal") and pg.is_visible("#uip-font") and pg.is_visible("#uip-hc")
+            assert pg.evaluate("localStorage.getItem('qqq.set.a11y')") == "1"
+            pg.click("#np-set"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen: it stays as left
+            assert pg.evaluate("document.getElementById('uip-a11y').open") is True, "the state of the submenu is remembered"
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 8, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
+            assert pg.locator("#uipset .row").count() == 7, pg.locator("#uipset .row").count()      # language, theme, font, high contrast, colours, toolbar labels and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
             assert "Dimensione testo" not in t and "Tema" in t and "Colori dei grafici" in t
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 3 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 1      # the merge of the centroids and «Mostra tutti gli esperimenti insieme» (off by default)
+            assert pg.locator("#uipset input[type=checkbox]").count() == 2 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
             assert pg.input_value("#uip-pal") == "time"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
@@ -76,28 +82,28 @@ try:
             seen = {}
             for k in ("time", "cb", "hc", "rainbow"):
                 pg.click("#np-set") if pg.locator("#uipset").count() == 0 else None
-                pg.select_option("#uip-pal", k); pg.wait_for_timeout(500)
+                set_pal(pg, k); pg.wait_for_timeout(500)
                 seen[k] = [hexof(x[1]) for x in pg.evaluate(COLORS)]
                 assert pg.evaluate("UIP.pal") == k and pg.evaluate("document.documentElement.dataset.pal") == k
             print(seen); assert len({tuple(v) for v in seen.values()}) == 4, "each palette changes the colours"
             # contrast of the high-contrast palette: every colour >= 4.5:1 on white
             assert all(1.05 / (lum(h) + 0.05) >= 4.5 for h in seen["hc"]), seen["hc"]
             # colour blind: also a line style per file; time order kept in luminance
-            pg.select_option("#uip-pal", "cb"); pg.wait_for_timeout(300)
+            set_pal(pg, "cb"); pg.wait_for_timeout(300)
             d = pg.evaluate("E.files.filter(f=>f.rank!=null).sort((a,b)=>a.rank-b.rank).map(f=>JSON.stringify(fdash(f)))"); print(d)
             assert len(set(d[:4])) == 4, d
             ls = [lum(h) for h in seen["cb"]]; assert all(ls[i] < ls[i + 1] for i in range(4)), "cividis rises in lightness"
-            pg.select_option("#uip-pal", "hc"); pg.wait_for_timeout(300)
+            set_pal(pg, "hc"); pg.wait_for_timeout(300)
             assert pg.evaluate("LWX()") == 1 and pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()") == "#000"
-            pg.select_option("#uip-pal", "time"); pg.wait_for_timeout(300); assert pg.evaluate("LWX()") == 0
+            set_pal(pg, "time"); pg.wait_for_timeout(300); assert pg.evaluate("LWX()") == 0
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
-            pg.select_option("#uip-pal", "cb"); pg.wait_for_timeout(300)
+            set_pal(pg, "cb"); pg.wait_for_timeout(300)
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"theme": "auto", "pal": "cb", "merge": True}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette
-            pg.select_option("#uip-pal", "time") if pg.locator("#uipset").count() else (pg.click("#np-set"), pg.select_option("#uip-pal", "time"))
+            set_pal(pg, "time") if pg.locator("#uipset").count() else (pg.click("#np-set"), set_pal(pg, "time"))
         step("the palette survives a reload (localStorage qqq.prefs)", persists)
         def traces_use_palette():
             pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
@@ -118,7 +124,7 @@ try:
         step("n = 3 and n = 7: distinct, ordered colours (screenshots 250_scale_*.png)", n_variants)
         def new_session():
             pg.evaluate("localStorage.setItem('qqq.extra','1')"); pg.click("#np-set") if pg.locator("#uipset").count() == 0 else None
-            pg.select_option("#uip-pal", "rainbow"); pg.wait_for_timeout(300)
+            set_pal(pg, "rainbow"); pg.wait_for_timeout(300)
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
             pg.click("#newrun"); pg.wait_for_timeout(500)
             txt = pg.inner_text("#asktxt"); print(txt)

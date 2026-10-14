@@ -1,4 +1,4 @@
-import os, subprocess, time, sys, shutil
+import os, subprocess, time, sys, shutil, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 # The page has a CSP without unsafe-eval: Playwright's wait_for_function evaluates strings with eval, so it is replaced by a polling version that
@@ -18,9 +18,12 @@ from playwright.sync_api import Page as _Page
 _Page.wait_for_function = _wff
 # Every page counts its fetches in flight (window.__qqF) and the time of the last start/end (window.__qqT): ready() below waits for them
 # instead of a fixed pause (the fixed pauses were more than half of the time of the e2e).
-_TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();const f=window.fetch;"
-          "window.fetch=function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
-          "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})}})()")
+# A page that replaces window.fetch (browser.js answers `api/...` itself, with the Rust engine) is counted too: the assignment goes through a setter that wraps it.
+_TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();"
+          "const wrap=f=>function(...a){window.__qqF++;(window.__qqU=window.__qqU||[]).push(String((a[0]&&a[0].url)||a[0]));window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
+          "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})};let cur=wrap(window.fetch);"
+          "Object.defineProperty(window,'fetch',{configurable:true,get:()=>cur,set:f=>{cur=wrap(f)}})})()")
+# The URL of every fetch is kept in window.__qqU (the Rust engine answers `api/...` in the page, so Playwright's request events never see those calls).
 # Short timers pending (<= 0.4 s: debounces, redraws, toasts) and the time of the last DOM change are tracked as well: pg.wait_for_timeout(ms) below returns
 # as soon as the page has been quiet for a moment (no fetch, no pending short timer, no DOM change) instead of sleeping for the whole `ms`.
 _TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=new Map(),st=window.setTimeout,ct=window.clearTimeout;"
@@ -30,7 +33,7 @@ _TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=ne
            "new MutationObserver(()=>{window.__qqT=Date.now()}).observe(document,{subtree:true,childList:true,attributes:true,characterData:true})})()")
 _TRACK = _TRACK + ";" + _TRACK2
 _QUIET = ("(idle)=>{const k=document.getElementById('kframe');if(k&&k.getBoundingClientRect().width>0)return false;"
-          "return document.getAnimations().length===0&&(window.__qqF||0)===0&&(window.__qqP||0)===0&&Date.now()-(window.__qqT||0)>=idle}")
+          "return document.getAnimations().length===0&&(window.__qqF||0)===0&&(typeof E==='undefined'||!E.pending||E.pending.length===0)&&(window.__qqP||0)===0&&Date.now()-(window.__qqT||0)>=idle}")
 _real_wft = _Page.wait_for_timeout
 _STAT = [0, 0]          # milliseconds asked for and really waited by the quiet pauses (MZLAB_E2E_STATS=1 prints them at the end)
 import atexit
@@ -83,21 +86,45 @@ def stage(pg, files, timeout=90000):
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
 
+def attendi(pg, expr, timeout=30000):
+    """Wait until the JavaScript expression is truthy: the state-based way to wait (never a fixed pause, never a raised timeout)."""
+    pg.wait_for_function(expr, timeout=timeout)
+
+
+def saved(pg, timeout=60000):
+    """Save the view now and wait until the notebook (which a reload resumes from) holds the session: it is written in the background."""
+    pg.evaluate("uiSave(true)")
+    pg.wait_for_function("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).length >= 1)", timeout=timeout)
+
+
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t
     t0 = _t.time()
     while True:
-        q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 ? Date.now() - (window.__qqT || 0) : -1; }")
-        if q >= settle: return
+        q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 && (typeof E === 'undefined' || !E.pending || E.pending.length === 0) ? Date.now() - (window.__qqT || 0) : -1; }")
+        if q >= settle:
+            bad = pg.evaluate("() => (typeof STATO === 'undefined' ? [] : STATO.verifica())")
+            if bad: raise AssertionError("page state invariants broken: " + "; ".join(bad))
+            return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def open_kind(pg, kind):
+    """As a student does: click, in the file list, the first file of an experiment type ('full', 'ms2', 'mrm'): that type becomes the current one."""
+    k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)
+    assert k is not None, f"no {kind} file loaded"
+    pg.click(f"#flst .fl[data-k='{k}'] .nm")
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
     if pg.is_visible(sel): pg.click(sel)
+def a11y_open(pg):
+    """The accessibility submenu of the settings is closed at first: open it before touching font, contrast or palette."""
+    pg.evaluate("(d => { if (d) d.open = true; })(document.querySelector('#uip-a11y'))")
+def set_pal(pg, v):
+    a11y_open(pg); pg.select_option("#uip-pal", v)
 def get_env(suffix: str, default=None):
     """Read MZLAB_<suffix> or legacy QQQ_<suffix> (MZLAB_* takes precedence)."""
     return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))
@@ -147,17 +174,14 @@ def free_port() -> int:
 # because a few tests share the fixed ones (they were written to run one after the other)
 PARALLEL = get_env("E2E_PARALLEL") == "1"
 class Run:
-    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=(), motore="sito"):
+    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True):
         if PARALLEL:
             port = free_port(); wd = f"{wd}_{port}"
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
-        if motore == "sito":          # the built site with the Rust engine (tools/prepara_sito.py): what the students get
-            s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
-                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        else:                         # "python": the page against the Python reference (tools/dev_server.py), for the tests not moved yet
-            s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
-                                     cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        s._log = tempfile.TemporaryFile(mode="w+", encoding="utf-8")       # the built site with the Rust engine (tools/prepara_sito.py): what the students get; a log file, not a pipe: nobody drains a pipe and the server blocks on its own request log when it fills
+        s.srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], cwd=str(ROOT),
+                                 stdout=s._log, stderr=subprocess.STDOUT, text=True)
         # ready as soon as the server answers (it was a fixed 2 s wait)
         import urllib.request
         t0 = time.time()
@@ -188,7 +212,7 @@ class Run:
         try: s.b.close()
         except Exception: pass
         s.srv.terminate()
-        s.log = s.srv.stdout.read()
+        s._log.seek(0); s.log = s._log.read()
         shutil.rmtree(s.wd, ignore_errors=True)       # the uploaded files (80 MB each for the high-resolution ones) are not kept: the disk of a session is limited
     def report(s):
         print("--- SERVER LOG (tail)\n", s.log[-1500:])

@@ -34,12 +34,18 @@ impl Slab {
     }
 }
 
-/// Windows of `ppm` around the centres, as ranges for `windows`.
-pub(crate) fn ppm_ranges(centres: &[f64], ppm: f64) -> Vec<(f64, f64)> {
-    let w = ppm * 1e-6;
+/// Windows of `tol` (ppm, or minus Da: `axis::half`) around the centres, as ranges for `windows`.
+pub(crate) fn ppm_ranges(centres: &[f64], tol: f64) -> Vec<(f64, f64)> {
+    let w = tol * 1e-6;
     centres
         .iter()
-        .map(|&c| (c * (1.0 - w), c * (1.0 + w)))
+        .map(|&c| {
+            if tol < 0.0 {
+                (c + tol, c - tol)
+            } else {
+                (c * (1.0 - w), c * (1.0 + w))
+            }
+        })
         .collect()
 }
 

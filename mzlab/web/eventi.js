@@ -1,3 +1,5 @@
+// @ts-strict
+// @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator, tooltips. Split from explore.js: classic script, loaded after picchi.js.
 // ------------------------------------------------------------------ mouse
 function attach(p) {
@@ -32,7 +34,7 @@ function attach(p) {
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
     p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-    if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
   };
   // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
   if (p.ch) {
@@ -97,7 +99,8 @@ function attach(p) {
     const cx = e.clientX, cy = e.clientY;
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.addEventListener("mousemove", e => pendHint(p, e));
+  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
@@ -125,7 +128,7 @@ function attach(p) {
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
-      p._pickIbk = false; p.sel = null; p.bk = ""; p.snip = false; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
+      p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
     if (p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
       if (p.imode === "idel") {
@@ -156,7 +159,7 @@ function attach(p) {
       p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, x0); pushLinked(p, x0 - dt / 2, x0 + dt / 2, k0); nearScan(k0, x0).then(n => { if (n && p.cur === x0) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
-  addEventListener("mouseup", p._up);
+  addEventListener("mouseup", p._up, { signal: p._ac.signal });
   // Ctrl/Cmd + rotella (o pizzico sul trackpad): zoom attorno al cursore. La rotella da sola continua a far scorrere la pagina.
   cv.addEventListener("wheel", e => {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
@@ -175,7 +178,7 @@ function attach(p) {
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
     if (hit) {
-      const v = await ask("Annotazione", hit.ann.text);
+      const v = await ask(I18N.t("ctx.ann.prompt"), hit.ann.text);
       if (v != null) {
         if (v === "") p.anns = p.anns.filter(a => a !== hit.ann);
         else hit.ann.text = v;
@@ -188,9 +191,10 @@ function attach(p) {
       if (window.MAPPA) MAPPA.whole(p); else { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    if (p.type === "mrm") { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }      // MRM has no spectra (a new one would jump to the Full Scan tab): double click = whole view
+    // one rule for every graph: zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
+    if (p.zoom || p.zoomY) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); return; }
+    if (p.type === "mrm" || p.el.classList.contains("max")) return;       // MRM has no spectra (a new one would jump to the Full Scan tab); full screen: nobody would see the new panel
     if (p.type === "chrom" || p.type === "xic") {      // double click = mass spectrum at that retention time (also on the PDA trace)
-      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
@@ -213,7 +217,7 @@ function attach(p) {
     if (!z) return;
     e.preventDefault(); pushZh(p); p.zoom = clampView(z[0], z[1], a.full[0], a.full[1]); draw(p); uiSave();
   });
-  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; if (p.type === "spec" && p._a && measCtx(p, rect(e), recty(e))) { e.preventDefault(); hideHover(p); return; } hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
   if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)
@@ -223,11 +227,13 @@ async function nearScan(k, x) {
 }
 const NEAR = 1e-4;                                      // half width (min) of the window around the RT of one exact scan
 const scanStep = () => { const f = scanFiles(tabFiles())[0]; return f ? Math.max((f.rt_max - f.rt_min) / Math.max(f.ms1 + f.ms2 - 1, 1), 0.005) : 0.02; };
+/** @param {Pannello} p @param {number} x */
 function nearestFile(p, x) {
   const a = p._a; if (a && a.map) return a.f.k; if (!a || !a.sr) return scanFiles(shownFor(p))[0]?.k ?? 0;
+  /** @type {{ v: number, k: number } | null} */
   let best = null;
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
-  return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
+  return best ? /** @type {{ k: number }} */ (best).k : (scanFiles(tabFiles())[0]?.k ?? 0);
 }
 function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
@@ -246,8 +252,8 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
 function stackAfter(p, anchor) {
   if (!p.full || !anchor.full || !p.el || !anchor.el) return;
   const st = stackOrder().filter(q => q !== p); st.splice(st.indexOf(anchor) + 1, 0, p);
-  let y = 0; st.forEach((q, i) => { q.y = y; apply(q); y += q.h + gapAfter(q, st[i + 1]); });
-  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+  placeRows(st);
+  E.panels.sort(LAYOUT.ordine);
 }
 function freezeSpec(s) {
   if (!s.link) return;
@@ -285,6 +291,17 @@ function specPick(p, px, py) {
   if (lb) return lb.m;
   const s = a.snap && a.snap(px); return s ? s.m : null;
 }
+// Low resolution: a peak of a Full Scan spectrum that is the precursor of MS2 scans of an open file (the axis is about 0.3 Da above the nominal mass): the product-ion
+// spectrum of the scan nearest in time to this spectrum
+const ms2OfPeak = (p, m) => p.level === 1 && !(p._a && p._a.hrp) && typeof ms2Exps === "function" ? ms2Exps().find(e => e.prec != null && Math.abs(e.prec - m) <= 0.6) : null;
+async function extractMs2(p, e) {
+  await ms2Goto(e.prec);
+  const c = ms2PairOf(e.prec), sp = c && E.panels.find(q => q.type === "spec" && q.link === c.id && q.el), rt = p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null;
+  if (!c || !sp || rt == null) return;
+  const sn = c._a && c._a.sr ? ms2Near(c, rt, 0) : null; if (!sn) return;
+  c.cur = sn.rt; Object.assign(sp, { k: sn.k, level: 2, r0: sn.rt - sn.g / 2, r1: sn.rt + sn.g / 2, zoom: null });
+  ctl(sp); draw(c); draw(sp); uiSave();
+}
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
   const items = [];
@@ -308,6 +325,7 @@ function ctxFor(p, e, x, px, py) {
     let mark = items.length;                                  // HR: the entries are grouped at the end (tag), the others keep their order
     const tag = g => { for (let i = mark; i < items.length; i++) if (items[i] !== "-" && !items[i].g) items[i].g = g; mark = items.length; };
     if (a.hrp && window.DDA && has) { const q = DDA.ms2For(p, m)[0]; if (q) { items.push({ label: I18N.t("ctx.spec.openMs2", { mz: q.prec.toFixed(mzd(p, 2)) }), aria: I18N.t("ctx.spec.openMs2.aria", { mz: lab }), fn: () => DDA.openMs2(p, q.j) }); tag("ms2"); } }
+    { const e2 = has ? ms2OfPeak(p, m) : null; if (e2) items.push({ label: I18N.t("ctx.spec.extractMs2"), aria: I18N.t("ctx.spec.extractMs2.aria", { mz: lab }), fn: () => extractMs2(p, e2) }); }
     items.push(mi({ label: I18N.t("ctx.spec.xic", { mz: lab }), fn: () => xicDirect(m, p) })); tag("xic");
     if (window.LISTE) {
       const pol = a.data[0].f && a.data[0].f.polarity;
@@ -409,7 +427,7 @@ function lcHtml(lc, row) {
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">${I18N.t("method.time")}</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
   const pda = lc.pda || {};
   const tbl = `<table class="lct"><tr><th class="num">${I18N.t("method.time")}</th><th class="num">% A</th><th class="num">% B</th><th class="num">${I18N.t("method.flow")}</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  const chips = [lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean);
+  const chips = /** @type {string[][]} */ ([lc.run_time != null ? [I18N.t("method.runTime"), lc.run_time + " min"] : null, lc.oven != null ? [I18N.t("method.oven"), lc.oven + " °C"] : null].filter(Boolean));
   return `<section class="msec"><h4>${I18N.t("method.lc.title")}</h4>
    <div class="sm" style="margin:0 0 8px">A = H<sub>2</sub>O + 0.1% FA &nbsp;&middot;&nbsp; B = ACN + 0.1% FA</div>
    <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">${svg}<div style="flex:1 1 300px;max-width:520px">${tbl}</div></div>
@@ -473,7 +491,7 @@ async function showMethod(sel) {
 function loadDam() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dam,.DAM";
   inp.onchange = async () => {
-    const fl = inp.files[0]; if (!fl) return;
+    const fl = /** @type {FileList} */ (inp.files)[0]; if (!fl) return;
     try {
       const j = await (await fetch("api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
       if (j.error) throw I18N.err(j);
@@ -493,13 +511,13 @@ window.openBT = openBT;
 Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
-Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
+Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 addEventListener("resize", () => { fitWidth(); redrawSoon(); });
-document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
+document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
@@ -531,6 +549,27 @@ window.calcToggleFloat = () => {
 };
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden && !calcBox.classList.contains("sb-docked")) calcPlace(); });
+// two-step actions (second peak of a measure, second stretch of the internal blank): a label at the cursor says what the next click does and that Esc cancels
+function pendHint(p, e) {
+  const q = Q("#qtip"); if (!q) return; const k = pendKey(p);
+  if (!k) { if (q._pd === p) { q.hidden = true; q._pd = null; } return; }
+  q._pd = p; q.textContent = I18N.t(k); q.hidden = false;
+  q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, e.clientX + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, e.clientY + 16) + "px";
+}
+// the next click of a two-step action on this panel, as the i18n key of the cursor label (null: nothing pending)
+function pendKey(p) {
+  if (p.type === "spec" && p.meas && p.meas.ref != null) return "pend.peak";
+  if (p._ibkA) return "pend.span";
+  return null;
+}
+// Esc takes back the pending first step (the menus and dialogs keep their own Esc)
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || /** @type {any} */ (e)._ctxWas || e.defaultPrevented || Q("dialog[open]") || (Q("#ctx") && !Q("#ctx").hidden)) return;
+  const p = E.panels.find(q => pendKey(q)); if (!p) return;
+  if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+  const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+  draw(p); uiSave();
+});
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (window.BARRA && BARRA.isDataView()) {
@@ -543,7 +582,7 @@ document.addEventListener("keydown", e => {
   if (calcBox.hidden) return;
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
-const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
+const CALC = { ans: 0, tape: /** @type {{ e: any, r: any }[]} */ ([]), fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
 let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 // the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
 function calcTape() {
@@ -636,16 +675,16 @@ Q("#calcin").oninput = calcRun;
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   document.addEventListener("mouseover", e => {
-    const t = e.target.closest && e.target.closest(SEL);
+    const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (t === cur) return;
     hide();
     if (!t || t.closest("dialog[open]")) return;
-    if (t.hasAttribute("title")) { t.dataset.tip = t.getAttribute("title"); t.removeAttribute("title"); }
+    if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
     timer = setTimeout(() => {
-      if (html) tip.innerHTML = html; else tip.textContent = txt;
+      if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
       tip.hidden = false;
       const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
       tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";

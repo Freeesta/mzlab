@@ -71,7 +71,7 @@ const LIVELLI = (() => {
       const vals = { ent: best.ent, cos: best.cos, shared: best.shared, ppm: best.dprec, nlib: best.nlib, nScans: inp.nScans ?? 1, margin: marginOf(list, "ent"), marginCos: marginOf(list, "cos") };
       res.gates = P.cancelli.map(g => evalGate(g, vals, TT)); res.lines = res.gates.map(g => g.txt);
       const bad = res.gates.filter(g => !g.ok), srcBad = bad.filter(g => g.ruolo === "source"), conf = bad.filter(g => g.ruolo === "confirm"), fl = g => g.map(x => x.txt).join("; ");
-      if (!bad.length) return fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
+      if (!bad.length) return P.tetto ? fin(P.tetto, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: P.tetto })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
       if (!srcBad.length) return fin("3", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));
       if (P.provvisorio && best[P.provvisorio.campo] >= TT[P.provvisorio.soglia]) return fin("3", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
     }

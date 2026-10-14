@@ -10,6 +10,7 @@
 mod extract;
 pub mod join;
 pub mod null;
+pub mod offset;
 
 use crate::sortc;
 use mzlab_core::error::Result;
@@ -25,6 +26,7 @@ use extract::{detected_row, peaks, push_peak, Cand, Section};
 pub struct TargetParams {
     /// Polarity searched (hypotheses of the other polarity are left alone).
     pub polarity: i8,
+    /// Tolerance of m/z, ppm or minus Da (`axis::half`).
     pub ppm: f64,
     /// Lowest S/N, shape and number of points of a peak (the quality limits of the detection; the minimum height is replaced by the S/N).
     pub min_snr: f64,
@@ -45,6 +47,8 @@ pub struct TargetParams {
     /// Decoy masses per file for the chance of a coincidence (0 = not computed, the chance is 1).
     pub decoys: usize,
     pub ms2: Ms2Params,
+    /// Da added to the m/z of every hypothesis before it is looked for: the offset of the calibration of a unit-resolution instrument (`offset::estimate`).
+    pub mz_offset: f64,
 }
 
 impl Default for TargetParams {
@@ -63,6 +67,23 @@ impl Default for TargetParams {
             rt_tol: 0.1,
             decoys: 64,
             ms2: Ms2Params::default(),
+            mz_offset: 0.0,
+        }
+    }
+}
+
+impl TargetParams {
+    /// The unit profile: windows of 0.35 Da and the floor of the unit detection.
+    pub fn lr(floor: f64) -> TargetParams {
+        TargetParams {
+            ppm: crate::axis::da(crate::axis::LR_TOL),
+            floor,
+            ms2: Ms2Params {
+                tol_ppm: crate::axis::da(crate::axis::LR_TOL),
+                default_half_window: 0.5,
+                ..Ms2Params::default()
+            },
+            ..TargetParams::default()
         }
     }
 }
@@ -271,15 +292,16 @@ fn search_file<R: ReadAt>(
     let run = sec.run();
     let mut seen = Vec::new();
     for h in reg.hyps.iter().filter(|h| h.polarity == p.polarity) {
-        let found = peaks(index, &sec, h.mz, window(h, p, run), p)?;
-        let hit = found.iter().find_map(|c| detected_row(f, h.mz, c, p));
+        let mz = h.mz + p.mz_offset;
+        let found = peaks(index, &sec, mz, window(h, p, run), p)?;
+        let hit = found.iter().find_map(|c| detected_row(f, mz, c, p));
         if let Some(i) = hit {
             seen.push(Seen {
                 hyp: h.id,
                 cell: cell_of_feature(f, i),
             });
         } else if let Some(c) = found.first() {
-            push_peak(&mut fp.peaks, h.mz, c);
+            push_peak(&mut fp.peaks, mz, c);
             fp.hyp.push(h.id);
             seen.push(Seen {
                 hyp: h.id,
@@ -332,7 +354,7 @@ pub fn run_loading<R: ReadAt>(
         .hyps
         .iter()
         .filter(|h| h.polarity == p.polarity)
-        .map(|h| h.mz)
+        .map(|h| h.mz + p.mz_offset)
         .collect();
     for k in 0..n {
         let (seen, fp) = search_file(&mut index[k], &load(k)?, reg, p)?;

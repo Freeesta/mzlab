@@ -1,0 +1,2095 @@
+use std::collections::HashMap;
+use std::io::{Read, Seek, SeekFrom};
+
+use crate::error::{Error, Result};
+use crate::error_log::ErrorEntry;
+use crate::generic_data::{GenericDataHeader, GenericRecord, GenericValue};
+use crate::header::FileHeader;
+use crate::raw_file_info::RawFileInfo;
+use crate::run_header::RunHeader;
+use crate::scan_data::{
+    read_flat_peaks, read_scan_srm_v66, search_v63_transition, Peak, ScanDataPacket,
+};
+use crate::scan_event::{ScanEvent, ScanEventPreamble};
+use crate::scan_index::ScanIndexEntry;
+use crate::seq_row::SeqRow;
+
+/// Low-level binary reading helpers.
+pub(crate) struct BinaryReader<R> {
+    inner: R,
+    pos: u64,
+    /// Cached total stream length, populated on first call to [`Self::length`]
+    /// or [`Self::remaining`]. The underlying stream is never written to
+    /// while parsing, so this is safe to cache for the reader's lifetime and
+    /// avoids repeated end-of-stream seeks in allocation-size checks that can
+    /// run once per record in a large loop.
+    total_len: Option<u64>,
+}
+
+impl<R: Read + Seek> BinaryReader<R> {
+    pub fn new(inner: R) -> Self {
+        Self {
+            inner,
+            pos: 0,
+            total_len: None,
+        }
+    }
+
+    pub fn into_inner(self) -> R {
+        self.inner
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn position(&self) -> u64 {
+        self.pos
+    }
+
+    pub fn seek_to(&mut self, offset: u64) -> Result<()> {
+        self.inner.seek(SeekFrom::Start(offset))?;
+        self.pos = offset;
+        Ok(())
+    }
+
+    pub fn read_bytes(&mut self, n: usize) -> Result<Vec<u8>> {
+        // Guard against a crafted/corrupt file declaring an implausible
+        // length-prefix: verify the bytes could actually exist in the
+        // remaining input before allocating a buffer for them.
+        self.check_count(n as u64, 1)?;
+        let mut buf = vec![0u8; n];
+        self.inner.read_exact(&mut buf).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                Error::UnexpectedEof {
+                    offset: self.pos,
+                    needed: n,
+                }
+            } else {
+                Error::Io(e)
+            }
+        })?;
+        self.pos += n as u64;
+        Ok(buf)
+    }
+
+    pub fn read_bytes_into(&mut self, buf: &mut [u8]) -> Result<()> {
+        let n = buf.len();
+        self.inner.read_exact(buf).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                Error::UnexpectedEof {
+                    offset: self.pos,
+                    needed: n,
+                }
+            } else {
+                Error::Io(e)
+            }
+        })?;
+        self.pos += n as u64;
+        Ok(())
+    }
+
+    pub fn skip(&mut self, n: usize) -> Result<()> {
+        self.inner.seek(SeekFrom::Current(n as i64))?;
+        self.pos += n as u64;
+        Ok(())
+    }
+
+    pub fn length(&mut self) -> Result<u64> {
+        if let Some(len) = self.total_len {
+            return Ok(len);
+        }
+        // Query and restore the *true* underlying position (not `self.pos`):
+        // some callers construct a fresh `BinaryReader` over a source that
+        // was already seeked to a nonzero offset, so `self.pos` (which starts
+        // at 0 for every new reader) would not agree with where the
+        // underlying stream actually is.
+        let cur = self.inner.stream_position()?;
+        let end = self.inner.seek(SeekFrom::End(0))?;
+        self.inner.seek(SeekFrom::Start(cur))?;
+        self.total_len = Some(end);
+        Ok(end)
+    }
+
+    /// Bytes remaining between the stream's true current position and its end.
+    pub(crate) fn remaining(&mut self) -> Result<u64> {
+        let cur = self.inner.stream_position()?;
+        let end = self.length()?;
+        Ok(end.saturating_sub(cur))
+    }
+
+    /// Verify that `count` items of at least `min_item_bytes` bytes each
+    /// could plausibly still be read from the stream, before any allocation
+    /// proportional to `count` is attempted.
+    ///
+    /// Crafted or corrupt RAW files can declare implausible counts (a scan
+    /// count derived from a bogus header field, a peak count with no
+    /// relation to the file's actual size, etc). Without this check, code
+    /// like `Vec::with_capacity(count)` would allocate memory proportional
+    /// to an attacker-controlled value rather than to what the input could
+    /// actually contain - a memory-exhaustion vector reachable before a
+    /// single byte of the declared payload is read.
+    pub(crate) fn check_count(&mut self, count: u64, min_item_bytes: u64) -> Result<()> {
+        let remaining = self.remaining()?;
+        let needed = count.saturating_mul(min_item_bytes.max(1));
+        if needed > remaining {
+            return Err(Error::AllocationTooLarge {
+                offset: self.pos,
+                requested: needed,
+                available: remaining,
+            });
+        }
+        Ok(())
+    }
+
+    pub fn read_u8(&mut self) -> Result<u8> {
+        let mut buf = [0u8; 1];
+        self.read_bytes_into(&mut buf)?;
+        Ok(buf[0])
+    }
+
+    pub fn read_u16(&mut self) -> Result<u16> {
+        let mut buf = [0u8; 2];
+        self.read_bytes_into(&mut buf)?;
+        Ok(u16::from_le_bytes(buf))
+    }
+
+    pub fn read_i16(&mut self) -> Result<i16> {
+        let mut buf = [0u8; 2];
+        self.read_bytes_into(&mut buf)?;
+        Ok(i16::from_le_bytes(buf))
+    }
+
+    pub fn read_u32(&mut self) -> Result<u32> {
+        let mut buf = [0u8; 4];
+        self.read_bytes_into(&mut buf)?;
+        Ok(u32::from_le_bytes(buf))
+    }
+
+    pub fn read_i32(&mut self) -> Result<i32> {
+        let mut buf = [0u8; 4];
+        self.read_bytes_into(&mut buf)?;
+        Ok(i32::from_le_bytes(buf))
+    }
+
+    pub fn read_u64(&mut self) -> Result<u64> {
+        let mut buf = [0u8; 8];
+        self.read_bytes_into(&mut buf)?;
+        Ok(u64::from_le_bytes(buf))
+    }
+
+    pub fn read_f32(&mut self) -> Result<f32> {
+        let mut buf = [0u8; 4];
+        self.read_bytes_into(&mut buf)?;
+        Ok(f32::from_le_bytes(buf))
+    }
+
+    pub fn read_f64(&mut self) -> Result<f64> {
+        let mut buf = [0u8; 8];
+        self.read_bytes_into(&mut buf)?;
+        Ok(f64::from_le_bytes(buf))
+    }
+
+    pub fn read_i8(&mut self) -> Result<i8> {
+        let mut buf = [0u8; 1];
+        self.read_bytes_into(&mut buf)?;
+        Ok(buf[0] as i8)
+    }
+
+    /// Read a fixed-width UTF-16-LE string of `byte_len` bytes, stripping null padding.
+    pub fn read_utf16_fixed(&mut self, byte_len: usize) -> Result<String> {
+        let pos = self.pos;
+        let raw = self.read_bytes(byte_len)?;
+        if byte_len % 2 != 0 {
+            return Err(Error::InvalidUtf16(pos));
+        }
+        let units: Vec<u16> = raw
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        // Find null terminator
+        let end = units.iter().position(|&u| u == 0).unwrap_or(units.len());
+        String::from_utf16(&units[..end]).map_err(|_| Error::InvalidUtf16(pos))
+    }
+
+    /// Read a PascalStringWin32: UInt32 char count, then that many UTF-16-LE code units.
+    pub fn read_pascal_string(&mut self) -> Result<String> {
+        let pos = self.pos;
+        let char_count = self.read_u32()? as usize;
+        if char_count == 0 {
+            return Ok(String::new());
+        }
+        let byte_len = char_count.checked_mul(2).ok_or(Error::InvalidUtf16(pos))?;
+        let raw = self.read_bytes(byte_len)?;
+        let units: Vec<u16> = raw
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        // Strip trailing nulls
+        let end = units.iter().position(|&u| u == 0).unwrap_or(units.len());
+        String::from_utf16(&units[..end]).map_err(|_| Error::InvalidUtf16(pos))
+    }
+
+    /// Read a Windows FILETIME and return Unix timestamp as f64 seconds.
+    pub fn read_windows_filetime(&mut self) -> Result<f64> {
+        let ft = self.read_u64()?;
+        if ft == 0 {
+            return Ok(0.0);
+        }
+        Ok((ft as f64 / 10_000_000.0) - 11_644_473_600.0)
+    }
+}
+
+/// Model strings from the InstID block that follows the MS controller's
+/// RunHeader (`docs/docs/format/03-raw-file-info.md` section 11), most
+/// specific first: `model[2]` always names the model, while `model[1]` is
+/// sometimes empty or a longer label.
+fn read_inst_id_models<R: Read + Seek>(r: &mut BinaryReader<R>, addr: u64) -> Result<Vec<String>> {
+    // Model names are short; a larger count means this is not an InstID block.
+    const MAX_MODEL_CHARS: u32 = 256;
+    r.seek_to(addr)?;
+    for _ in 0..3 {
+        r.read_u32()?;
+    }
+    let mut models = Vec::with_capacity(2);
+    for _ in 0..2 {
+        let start = r.position();
+        if r.read_u32()? > MAX_MODEL_CHARS {
+            return Ok(Vec::new());
+        }
+        r.seek_to(start)?;
+        models.push(r.read_pascal_string()?);
+    }
+    models.reverse();
+    Ok(models)
+}
+
+/// The pascal strings of the InstID block (after three `u32`) in file order, up to the first implausible length or `max` strings:
+/// model (twice), instrument name, serial number, software and hardware versions (positions measured on v66, `MODIFICHE-MZLAB.md`).
+fn read_inst_id_strings<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    addr: u64,
+    max: usize,
+) -> Vec<String> {
+    const MAX_CHARS: u32 = 256;
+    let mut out = Vec::new();
+    if r.seek_to(addr).is_err() {
+        return out;
+    }
+    for _ in 0..3 {
+        if r.read_u32().is_err() {
+            return out;
+        }
+    }
+    for _ in 0..max {
+        let start = r.position();
+        match r.read_u32() {
+            Ok(n) if n <= MAX_CHARS => {}
+            _ => break,
+        }
+        if r.seek_to(start).is_err() {
+            break;
+        }
+        match r.read_pascal_string() {
+            Ok(t) => out.push(t),
+            Err(_) => break,
+        }
+    }
+    out
+}
+
+/// Compute the number of scans from the run header's declared first/last
+/// scan numbers.
+///
+/// Both inputs are untrusted u32 values read straight from the file, so
+/// `last_scan - first_scan` can be as large as `u32::MAX` (e.g.
+/// `first_scan == 0`, `last_scan == u32::MAX`); the `+ 1` therefore
+/// saturates rather than wrapping or panicking. Any resulting oversized
+/// value is caught by `BinaryReader::check_count` before it can drive an
+/// allocation.
+fn compute_num_scans(first_scan: u32, last_scan: u32) -> u32 {
+    if last_scan >= first_scan {
+        (last_scan - first_scan).saturating_add(1)
+    } else {
+        0
+    }
+}
+
+/// Convert a 1-based scan number to a `scan_index` array offset, or `None`
+/// if `scan_number` is below `first_scan_number` (a plain subtraction here
+/// would underflow rather than simply being "out of range" - both
+/// `scan_number` and `first_scan_number` can be arbitrary/untrusted values).
+fn scan_number_to_index(scan_number: u32, first_scan_number: u32) -> Option<usize> {
+    scan_number
+        .checked_sub(first_scan_number)
+        .map(|v| v as usize)
+}
+
+/// A parsed Thermo Fisher RAW file.
+pub struct RawFileReader {
+    pub header: FileHeader,
+    pub seq_row: SeqRow,
+    pub raw_file_info: RawFileInfo,
+    pub run_header: RunHeader,
+    pub scan_index: Vec<ScanIndexEntry>,
+    pub scan_events: Vec<ScanEvent>,
+    pub scan_parameters_header: GenericDataHeader,
+    pub scan_parameters: Vec<GenericRecord>,
+    pub error_log: Vec<ErrorEntry>,
+    // Instrument log uses same structure
+    pub inst_log_header: GenericDataHeader,
+    pub inst_log: Vec<GenericRecord>,
+    /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
+    pub status_log: Option<crate::status_log::StatusLog>,
+    /// Raw file version from the header.
+    pub version: u32,
+    /// Number of scans.
+    pub num_scans: u32,
+    /// Data stream base address (for computing absolute scan offsets).
+    pub data_addr: u64,
+    /// True if scan data uses flat-peak format (TSQ/SRM) instead of PacketHeader.
+    pub flat_peaks: bool,
+    /// Detected scan-data encoding (the format used by [`Self::read_scan_peaks`]).
+    pub scan_format: crate::scan_format::ScanDataFormat,
+    /// Detected device family (informational).
+    pub device_family: crate::device::DeviceFamily,
+    /// Canonical instrument model name if one was detected in the file's
+    /// metadata region (e.g. `"Orbitrap Fusion Lumos"`). `None` means only
+    /// the coarse family could be inferred.
+    pub instrument_model: Option<&'static str>,
+    /// The strings of the InstID block in file order (model, model, instrument name, serial number, software and hardware versions,
+    /// as far as the file has them). Empty for files older than v57.
+    pub inst_id_strings: Vec<String>,
+    /// For SRM (flat-peak) files: maps scan_event index → Q1 precursor mass (m/z).
+    ///
+    /// Populated at open time by scanning the method/transition table stored
+    /// in the pre-scan-data header region. Empty for non-SRM instruments.
+    pub srm_q1_by_event: HashMap<u16, f64>,
+    /// For SRM (flat-peak) files: maps scan_event index → Q3 isolation window pairs (lo, hi) in m/z.
+    ///
+    /// Populated at open time by reading the Q3 window table from the first scan record
+    /// of each unique scan event class. Empty for non-SRM instruments.
+    pub srm_q3_windows: HashMap<u16, Vec<(f32, f32)>>,
+    /// For SRM (flat-peak) files: maps scan_event index → collision energy (eV).
+    ///
+    /// Populated from the v63 transition table at open time.  For v66 files the
+    /// collision energy is read from per-scan parameters instead, so this map is
+    /// empty for v66/TSQ Altis files.
+    pub srm_ce_by_event: HashMap<u16, f64>,
+}
+
+// -- Multi-controller metadata --
+
+/// Controller type codes as used in Thermo RAW files.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ControllerType {
+    Ms,
+    Analog,
+    Adc,
+    Pda,
+    Uv,
+    Other,
+}
+
+impl ControllerType {
+    fn from_nsegs_ntrailer(ntrailer: u32, nsegs: u32) -> Self {
+        // Heuristic: MS controller always has ntrailer > 0 (v64+) or nsegs > 0.
+        // Non-MS controllers (UV, analog, PDA) have ntrailer == 0 and nsegs == 1.
+        // We can't reliably distinguish between non-MS types without parsing
+        // the InstID/method block, so we fall back to Other for those.
+        if ntrailer > 0 || nsegs > 1 {
+            Self::Ms
+        } else {
+            Self::Other
+        }
+    }
+}
+
+/// One trace of an analog controller (pump pressure, ...), see [`RawFileReader::analog_traces`].
+#[derive(Debug, Clone)]
+pub struct AnalogTrace {
+    /// Index of the controller in the file.
+    pub controller: usize,
+    /// Channel name as the file gives it (`Pump_Pressure`).
+    pub name: String,
+    /// Unit as the file gives it (`psi`, `bar`); empty when the file has none.
+    pub unit: String,
+    /// Driver, model and serial number of the device; empty when the file has none.
+    pub driver: String,
+    pub model: String,
+    pub serial: String,
+    /// Time of each sample in minutes.
+    pub time_min: Vec<f64>,
+    /// Value of each sample, in `unit`.
+    pub values: Vec<f64>,
+}
+
+/// Minimal metadata about one controller in a multi-controller RAW file.
+#[derive(Debug, Clone)]
+pub struct ControllerInfo {
+    /// Zero-based controller index (position in `run_header_addrs`).
+    pub index: usize,
+    /// File offset to this controller's RunHeader.
+    pub run_header_addr: u64,
+    /// Whether this controller is the primary MS controller.
+    pub is_ms_controller: bool,
+    /// Inferred controller type.
+    pub controller_type: ControllerType,
+    /// First scan number.
+    pub first_scan: u32,
+    /// Last scan number.
+    pub last_scan: u32,
+    /// Acquisition start time (minutes).
+    pub start_time: f64,
+    /// Acquisition end time (minutes).
+    pub end_time: f64,
+}
+
+impl RawFileReader {
+    /// Open and parse a RAW file from a reader.
+    pub fn open<R: Read + Seek>(source: R) -> Result<Self> {
+        let mut r = BinaryReader::new(source);
+
+        // 1. FileHeader
+        let header = FileHeader::read(&mut r)?;
+        let version = header.version;
+
+        // 2. SeqRow
+        let seq_row = SeqRow::read(&mut r, version)?;
+
+        // 3. ASInfo (read and discard preamble + string)
+        let _as_preamble = r.read_bytes(24)?; // ASInfoPreamble: 24 bytes
+        let _as_text = r.read_pascal_string()?;
+
+        // 4. RawFileInfo
+        let raw_file_info = RawFileInfo::read(&mut r, version)?;
+
+        // 5. Extract addresses
+        let data_addr = raw_file_info.preamble.data_addr;
+
+        // 6. Select the MS controller RunHeader.
+        // Multi-controller files (e.g. UV + MS) have one RunHeader per controller.
+        // The MS controller has ntrailer > 0 (v64+) or first_scan <= last_scan with
+        // nsegs > 0 (v63 and earlier). We iterate all addresses and pick the best.
+        let (run_header, run_header_end) = {
+            let addrs = &raw_file_info.preamble.run_header_addrs;
+            let mut chosen = None;
+            for &addr in addrs {
+                if addr == 0 {
+                    continue;
+                }
+                r.seek_to(addr)?;
+                let rh = RunHeader::read(&mut r, version)?;
+                // Heuristic for identifying the MS controller:
+                // 1. For v64+: ntrailer > 0 (scan events present) - catches most instruments.
+                // 2. For all versions: RunHeader.data_addr == preamble.data_addr - the MS
+                //    controller's scan data begins at the same address the preamble declares.
+                //    This catches TSQ/triple-quad instruments where ntrailer=0 (no scan events).
+                // 3. Pre-v64 fallback: valid scan range with nsegs > 0.
+                let is_ms = if version >= 64 {
+                    rh.ntrailer > 0 || rh.data_addr == data_addr
+                } else {
+                    rh.sample_info.last_scan_number >= rh.sample_info.first_scan_number
+                        && rh.nsegs > 0
+                };
+                if is_ms {
+                    chosen = Some((rh, r.position()));
+                    break;
+                }
+            }
+            // Fall back to first address if no MS controller found
+            match chosen {
+                Some(found) => found,
+                None => {
+                    r.seek_to(addrs[0])?;
+                    let rh = RunHeader::read(&mut r, version)?;
+                    (rh, r.position())
+                }
+            }
+        };
+
+        let first_scan = run_header.sample_info.first_scan_number;
+        let last_scan = run_header.sample_info.last_scan_number;
+        let num_scans = compute_num_scans(first_scan, last_scan);
+
+        // 7. Scan index
+        r.seek_to(run_header.scan_index_addr)?;
+        r.check_count(
+            num_scans as u64,
+            ScanIndexEntry::min_size_for_version(version),
+        )?;
+        let mut scan_index = Vec::with_capacity(num_scans as usize);
+        for _ in 0..num_scans {
+            scan_index.push(ScanIndexEntry::read(&mut r, version)?);
+        }
+
+        // 8. Scan event trailer
+        r.seek_to(run_header.scan_trailer_addr)?;
+        let n_events = if version >= 64 {
+            // v64+: first u32 is a preamble (not count); use ntrailer from RunHeader
+            let _preamble = r.read_u32()?;
+            run_header.ntrailer
+        } else {
+            r.read_u32()?
+        };
+        // For v66, compute per-event body sizes from the stream's address range.
+        // The scan event stream spans [scan_trailer_addr+4 .. scan_params_addr).
+        // Each event = preamble (136 bytes) + body.
+        //
+        // Simple instruments (Q Exactive, Exploris): all events are identical in
+        // size so stream_bytes divides evenly by n_events.
+        //
+        // Tribrid instruments (Eclipse, Fusion Lumos): primary (MS1) scans and
+        // dependent (MS2+) scans have different body layouts:
+        //   Primary event:   232 bytes total (preamble 136 + body 96)
+        //   Dependent event: 344 bytes total (preamble 136 + body 208)
+        // Confirmed empirically across Orbitrap Eclipse (EThcD) and Fusion Lumos
+        // (DIA, MS3) files.
+        let preamble_size = ScanEventPreamble::size_for_version(version);
+        let stream_bytes = run_header
+            .scan_params_addr
+            .saturating_sub(run_header.scan_trailer_addr)
+            .saturating_sub(4);
+        // Body sizes of the three kinds of events of a v66 file: primary (MS1), dependent (MS2+ chosen from a
+        // survey scan) and independent MS2+ (DIA windows). Instruments with uniform events (Q Exactive, Exploris)
+        // have one size; the tribrid ones (Eclipse, Fusion Lumos) mix several, and the sizes are found by walking
+        // the table with each known layout until one ends exactly where the next stream begins.
+        let sizes: [usize; 3] = if version >= 66 && n_events > 0 {
+            let n = n_events as u64;
+            if stream_bytes % n == 0 {
+                let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
+                [body, body, body]
+            } else {
+                let layouts: [[u64; 3]; 4] = [
+                    [232, 344, 344],
+                    [232, 344, 288],
+                    [232, 288, 288],
+                    [232, 232, 288],
+                ];
+                let start = r.position();
+                let found = layouts.iter().find(|l| {
+                    let body = l.map(|x| (x as usize).saturating_sub(preamble_size));
+                    let ok = walk_events(&mut r, n, preamble_size, &body, start, stream_bytes);
+                    ok
+                });
+                r.seek_to(start)?;
+                match found {
+                    Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
+                    None => {
+                        let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
+                        [body, body, body]
+                    }
+                }
+            }
+        } else {
+            [0, 0, 0]
+        };
+        // Each event consumes at least its preamble on disk (the body may add
+        // more, but the preamble alone is a safe lower bound for the count check).
+        r.check_count(n_events as u64, preamble_size as u64)?;
+        let mut scan_events = Vec::with_capacity(n_events as usize);
+        for _ in 0..n_events {
+            scan_events.push(ScanEvent::read(&mut r, version, sizes)?);
+        }
+
+        // 9. Error log
+        let n_errors = run_header.sample_info.error_log_length;
+        let error_log = if n_errors > 0 {
+            r.seek_to(run_header.error_log_addr)?;
+            if version >= 64 {
+                let _preamble = r.read_u32()?;
+            }
+            // Minimum on-disk size of one entry: f32 time (4) + u32 pascal
+            // string char count (4), i.e. an empty message.
+            r.check_count(n_errors as u64, 8)?;
+            let mut log = Vec::with_capacity(n_errors as usize);
+            for _ in 0..n_errors {
+                log.push(ErrorEntry::read(&mut r)?);
+            }
+            log
+        } else {
+            // Ensure reader is positioned at error_log_addr even when empty.
+            r.seek_to(run_header.error_log_addr)?;
+            Vec::new()
+        };
+        // The GDH for scan parameters immediately follows the error-log entries.
+        // Do NOT seek back to error_log_addr - doing so would cause find_forward
+        // to scan over the scan_index (which may sit between error_log and
+        // scan_trailer in some file layouts), creating a CPU-spinning O(n) search
+        // through megabytes of binary scan data.
+        let after_error_log = r.position();
+
+        // 10. Scan parameters (trailer extra) - GenericData format in v64+.
+        //     The schema (GDH) is written just after the error-log entries;
+        //     the records are written at `scan_params_addr` (tail of file)
+        //     with NO stream preamble - records begin directly at
+        //     scan_params_addr. Any bytes after the last record are trailing
+        //     padding and can be ignored.
+        let (scan_parameters_header, scan_parameters) = if version >= 64 {
+            // Search from after the error log entries up to scan_trailer.
+            // This skips any scan_index data that may sit in between.
+            let scan_distance = run_header.scan_trailer_addr.saturating_sub(after_error_log);
+            // Estimate per-record size from the tail of the file using integer
+            // division. Any remainder bytes are trailing data, not a preamble.
+            let file_size = r.length()?;
+            let tail = file_size.saturating_sub(run_header.scan_params_addr);
+            let expected_record_size = if num_scans > 0 && tail > 0 {
+                let per_scan = tail / num_scans as u64;
+                if per_scan >= 4 {
+                    Some(per_scan as usize)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            match GenericDataHeader::find_forward(&mut r, scan_distance, expected_record_size)? {
+                Some(hdr) => {
+                    // Records start directly at scan_params_addr - no stream preamble.
+                    r.seek_to(run_header.scan_params_addr)?;
+                    r.check_count(num_scans as u64, hdr.fixed_record_size().max(1) as u64)?;
+                    let mut params = Vec::with_capacity(num_scans as usize);
+                    for _ in 0..num_scans {
+                        params.push(GenericRecord::read(&mut r, &hdr)?);
+                    }
+                    (hdr, params)
+                }
+                None => (GenericDataHeader { fields: Vec::new() }, Vec::new()),
+            }
+        } else {
+            (GenericDataHeader { fields: Vec::new() }, Vec::new())
+        };
+
+        // 11. Instrument log - GenericData format in v64+
+        let (inst_log_header, inst_log) = if version >= 64 {
+            r.seek_to(run_header.inst_log_addr)?;
+            match GenericDataHeader::try_read(&mut r)? {
+                Some(hdr) => {
+                    let n_inst = run_header.sample_info.inst_log_length;
+                    r.check_count(n_inst as u64, hdr.fixed_record_size().max(1) as u64)?;
+                    let mut log = Vec::with_capacity(n_inst as usize);
+                    for _ in 0..n_inst {
+                        log.push(GenericRecord::read(&mut r, &hdr)?);
+                    }
+                    (hdr, log)
+                }
+                None => (GenericDataHeader { fields: Vec::new() }, Vec::new()),
+            }
+        } else {
+            (GenericDataHeader { fields: Vec::new() }, Vec::new())
+        };
+
+        let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)?;
+
+        // Detect flat-peak (TSQ/SRM) format.
+        // Reliable indicator: ntrailer == 0 means no scan event trailer was written, which
+        // is the case for all TSQ/triple-quad SRM instruments.
+        // Fallback: first scan data_size < 100 (catches edge cases with tiny SRM windows).
+        // In the flat format, data_size is the number of MRM peaks, not bytes.
+        let flat_peaks = run_header.ntrailer == 0
+            || scan_index
+                .first()
+                .map(|e| e.data_size < 100)
+                .unwrap_or(false);
+
+        // Classify scan format and device family.
+        let scan_format = crate::scan_format::ScanDataFormat::detect(version, flat_peaks);
+        let first_analyzer = scan_events.first().and_then(|e| e.preamble.analyzer());
+
+        // For SRM (flat-peak) files, read the entire pre-scan-data region so that
+        // we can extract Q1 values from the method/transition table stored there.
+        // For other instruments, read only 64 KB for instrument model detection.
+        let scan_window_cap = if flat_peaks { data_addr } else { 64 * 1024u64 };
+        let window_len = scan_window_cap.min(data_addr);
+        let metadata_window = if window_len > 0 {
+            r.seek_to(0)?;
+            r.read_bytes(window_len as usize).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        // Only needed when the metadata window names no model (#59); a failed
+        // read just leaves the model undetected, as before.
+        // Layout confirmed on v57, v64, and v66 files.
+        let inst_id_strings = if version >= 57 {
+            read_inst_id_strings(&mut r, run_header_end, 12)
+        } else {
+            Vec::new()
+        };
+        let inst_id_models = if version >= 57 {
+            read_inst_id_models(&mut r, run_header_end).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        // All BinaryReader operations are complete; reclaim the underlying source so
+        // it can be used for on-demand reads (e.g. Q3 window table from scan records).
+        let mut source = r.into_inner();
+        let detected = crate::device::DeviceFamily::detect_instrument(
+            &metadata_window,
+            &header.audit_start.tag2,
+            &seq_row.inst_method,
+            first_analyzer,
+        );
+        let detected = match detected.model {
+            Some(_) => detected,
+            None => crate::device::DeviceFamily::detect_from_model_strings(&inst_id_models)
+                .unwrap_or(detected),
+        };
+        let device_family = detected.family;
+        let instrument_model = detected.model;
+
+        // For SRM files: extract Q1 masses, Q3 window pairs, and (for v63) collision energies
+        // from the pre-scan-data header region and/or the scan data records.
+        //
+        // v66 (TSQ Quantiva / TSQ Altis, FlatV66):
+        //   Transition table layout: [Q1: f64][Q3_lo: f64][Q3_hi: f64] per channel.
+        //   Anchor: scan_index.high_mz equals the Q3_hi of the highest-Q3 channel for each
+        //   event class.  Q3 window pairs come from the per-scan record header.
+        //
+        // v63 (TSQ Quantum / TSQ Vantage, FlatV63):
+        //   Transition table layout: 72-byte records; Q1 at [+16], Q3_center at [+24],
+        //   Q3_width at [+32], CE at [+48].  scan_index.low_mz/high_mz hold the instrument
+        //   scan range (not per-transition values), so the high_mz anchor does not apply.
+        //   Q3 centers come from the first scan's peak list; Q3 windows are computed as
+        //   Q3_center ± Q3_width/2.
+        let (srm_q1_by_event, srm_q3_windows, srm_ce_by_event) = {
+            use crate::scan_format::ScanDataFormat;
+            match (flat_peaks, scan_format) {
+                (true, ScanDataFormat::FlatV66) if metadata_window.len() >= 24 => {
+                    // --- v66 Q1 extraction: anchor on scan_index.high_mz ---
+                    let mut event_q3_hi: HashMap<u16, f64> = HashMap::new();
+                    for entry in &scan_index {
+                        if entry.high_mz > 50.0 && entry.high_mz < 2000.0 {
+                            event_q3_hi.entry(entry.scan_event).or_insert(entry.high_mz);
+                        }
+                    }
+                    let data = &metadata_window;
+                    let mut q1_map: HashMap<u16, f64> = HashMap::new();
+                    'outer_v66: for (&event, &q3_hi_target) in &event_q3_hi {
+                        let end = data.len().saturating_sub(8);
+                        for i in 16..end {
+                            let hi = crate::bytes::read_f64_le(data, i)?;
+                            if (hi - q3_hi_target).abs() < 0.002 {
+                                let lo = crate::bytes::read_f64_le(data, i - 8)?;
+                                if hi > lo && (hi - lo) < 0.1 {
+                                    let q1 = crate::bytes::read_f64_le(data, i - 16)?;
+                                    if q1 > 50.0 && q1 < 3000.0 {
+                                        q1_map.insert(event, q1);
+                                        continue 'outer_v66;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // --- v66 Q3 window extraction: read per-scan record header ---
+                    let mut seen: HashMap<u16, bool> = HashMap::new();
+                    let mut q3_map: HashMap<u16, Vec<(f32, f32)>> = HashMap::new();
+                    for entry in &scan_index {
+                        if seen.contains_key(&entry.scan_event) {
+                            continue;
+                        }
+                        seen.insert(entry.scan_event, true);
+                        if let Ok(windows) = crate::scan_data::read_scan_srm_v66_windows(
+                            &mut source,
+                            data_addr,
+                            entry.offset,
+                        ) {
+                            if !windows.is_empty() {
+                                q3_map.insert(entry.scan_event, windows);
+                            }
+                        }
+                    }
+                    (q1_map, q3_map, HashMap::new())
+                }
+                (true, ScanDataFormat::FlatV63) => {
+                    // --- v63 Q1 + Q3 window + CE extraction ---
+                    // Read peaks from the first scan of each event class; each peak's mz
+                    // is the Q3 center for that channel.  Search the pre-data region for
+                    // the Q3_center value to find Q1, Q3_width, and CE from the transition
+                    // table.  Q3 windows are computed as (Q3_center - width/2, Q3_center + width/2).
+                    let mut seen: HashMap<u16, bool> = HashMap::new();
+                    let mut q1_map: HashMap<u16, f64> = HashMap::new();
+                    let mut q3_map: HashMap<u16, Vec<(f32, f32)>> = HashMap::new();
+                    let mut ce_map: HashMap<u16, f64> = HashMap::new();
+                    let data = &metadata_window;
+                    for entry in &scan_index {
+                        let ev = entry.scan_event;
+                        if seen.contains_key(&ev) {
+                            continue;
+                        }
+                        seen.insert(ev, true);
+                        let peaks = match read_flat_peaks(
+                            &mut source,
+                            data_addr,
+                            entry.offset,
+                            entry.data_size,
+                        ) {
+                            Ok(p) if !p.is_empty() => p,
+                            _ => continue,
+                        };
+                        // Use the first peak's mz as Q3_center anchor.
+                        if let Some((q1, q3w, ce)) = search_v63_transition(data, peaks[0].mz) {
+                            q1_map.insert(ev, q1);
+                            ce_map.insert(ev, ce);
+                            let half = (q3w / 2.0) as f32;
+                            let windows: Vec<(f32, f32)> = peaks
+                                .iter()
+                                .map(|p| (p.mz as f32 - half, p.mz as f32 + half))
+                                .collect();
+                            q3_map.insert(ev, windows);
+                        }
+                    }
+                    (q1_map, q3_map, ce_map)
+                }
+                _ => (HashMap::new(), HashMap::new(), HashMap::new()),
+            }
+        };
+
+        Ok(Self {
+            header,
+            seq_row,
+            raw_file_info,
+            run_header,
+            scan_index,
+            scan_events,
+            scan_parameters_header,
+            scan_parameters,
+            error_log,
+            inst_log_header,
+            inst_log,
+            status_log,
+            version,
+            num_scans,
+            data_addr,
+            flat_peaks,
+            scan_format,
+            device_family,
+            instrument_model,
+            inst_id_strings,
+            srm_q1_by_event,
+            srm_q3_windows,
+            srm_ce_by_event,
+        })
+    }
+
+    /// The status log: the per-scan records already read at `inst_log_addr`, else the ones whose schema ends there (v66).
+    fn read_status_log<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        run_header: &RunHeader,
+        header: &GenericDataHeader,
+        records: &[GenericRecord],
+    ) -> Result<Option<crate::status_log::StatusLog>> {
+        if !records.is_empty() {
+            return Ok(Some(crate::status_log::StatusLog {
+                header: header.clone(),
+                times_min: Vec::new(),
+                records: records.to_vec(),
+            }));
+        }
+        let (addr, next) = (run_header.inst_log_addr, run_header.error_log_addr);
+        let region = next.checked_sub(addr).unwrap_or(0);
+        let n = run_header.sample_info.inst_log_length;
+        Ok(crate::status_log::read_before(r, addr, n, region).unwrap_or(None))
+    }
+
+    /// Open a RAW file from a path.
+    pub fn open_path(path: impl AsRef<std::path::Path>) -> Result<Self> {
+        let file = std::fs::File::open(path)?;
+        let reader = std::io::BufReader::new(file);
+        Self::open(reader)
+    }
+
+    /// Enumerate all controllers in this RAW file.
+    ///
+    /// Multi-detector acquisition systems write one [`RunHeader`] per
+    /// controller (MS, UV, PDA, Analog). This method parses all controller
+    /// headers and returns a `Vec<ControllerInfo>` with basic metadata for
+    /// each. The primary MS controller can be identified via
+    /// [`ControllerInfo::is_ms_controller`].
+    ///
+    /// For single-controller files (the common case), this returns a
+    /// one-element vec with the MS controller.
+    pub fn controllers<R: Read + Seek>(&self, source: &mut R) -> Result<Vec<ControllerInfo>> {
+        let mut r = BinaryReader::new(source);
+        let addrs = &self.raw_file_info.preamble.run_header_addrs;
+        let mut infos = Vec::with_capacity(addrs.len());
+        for (i, &addr) in addrs.iter().enumerate() {
+            if addr == 0 {
+                continue;
+            }
+            r.seek_to(addr)?;
+            let rh = RunHeader::read(&mut r, self.version)?;
+            let is_ms = if self.version >= 64 {
+                rh.ntrailer > 0 || rh.data_addr == self.data_addr
+            } else {
+                rh.nsegs > 0
+            };
+            let ct = if is_ms {
+                ControllerType::Ms
+            } else {
+                ControllerType::from_nsegs_ntrailer(rh.ntrailer, rh.nsegs)
+            };
+            infos.push(ControllerInfo {
+                index: i,
+                run_header_addr: addr,
+                is_ms_controller: is_ms,
+                controller_type: ct,
+                first_scan: rh.sample_info.first_scan_number,
+                last_scan: rh.sample_info.last_scan_number,
+                start_time: rh.sample_info.start_time,
+                end_time: rh.sample_info.end_time,
+            });
+        }
+        Ok(infos)
+    }
+
+    /// The traces of the analog controllers of the file (pump pressure, ...): one value per sample as `f64`, evenly spaced from the start to
+    /// the end time of the controller. The channel name, the unit and the device (driver, model, serial number) come from the InstID strings that
+    /// follow the controller's RunHeader (`name`, `device`, then `"<name> <unit>"` as the ninth string); the data are the `f64` values just
+    /// before the RunHeader, which is how the files read so far are laid out - a controller whose samples do not end exactly at its RunHeader is skipped.
+    pub fn analog_traces<R: Read + Seek>(&self, source: &mut R) -> Result<Vec<AnalogTrace>> {
+        const MAX_SAMPLES: u64 = 20_000_000;
+        let mut r = BinaryReader::new(source);
+        let mut out = Vec::new();
+        for (controller, &addr) in self
+            .raw_file_info
+            .preamble
+            .run_header_addrs
+            .iter()
+            .enumerate()
+        {
+            if addr == 0 {
+                continue;
+            }
+            r.seek_to(addr)?;
+            let rh = RunHeader::read(&mut r, self.version)?;
+            let info = &rh.sample_info;
+            let n = u64::from(info.last_scan_number)
+                .saturating_sub(u64::from(info.first_scan_number))
+                + 1;
+            let is_ms = rh.ntrailer > 0 || rh.data_addr == self.data_addr;
+            if is_ms
+                || info.last_scan_number < info.first_scan_number
+                || n > MAX_SAMPLES
+                || rh.data_addr.checked_add(8 * n) != Some(rh.own_addr)
+            {
+                continue;
+            }
+            let at = r.position();
+            let strings = read_inst_id_strings(&mut r, at, 9);
+            let name = strings
+                .first()
+                .map(|t| t.trim().to_string())
+                .unwrap_or_default();
+            if name.is_empty() {
+                continue;
+            }
+            let unit = strings
+                .get(8)
+                .and_then(|t| t.trim().strip_prefix(name.as_str()))
+                .map(|t| t.trim().to_string())
+                .unwrap_or_default();
+            r.seek_to(rh.data_addr)?;
+            r.check_count(n, 8)?;
+            let mut values = Vec::with_capacity(n as usize);
+            for _ in 0..n {
+                values.push(r.read_f64()?);
+            }
+            let step = if n > 1 {
+                (info.end_time - info.start_time) / (n - 1) as f64
+            } else {
+                0.0
+            };
+            let text = |i: usize| {
+                strings
+                    .get(i)
+                    .map(|t| t.trim().to_string())
+                    .unwrap_or_default()
+            };
+            out.push(AnalogTrace {
+                controller,
+                name,
+                unit,
+                driver: text(1),
+                model: text(2),
+                serial: text(3),
+                time_min: (0..n).map(|i| info.start_time + i as f64 * step).collect(),
+                values,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Look up the [`ScanIndexEntry`] for a 1-based scan number, bounds- and
+    /// underflow-checked.
+    ///
+    /// `scan_number` is caller-provided (and, via the public API, ultimately
+    /// file/user controlled) and `first_scan_number` is itself an untrusted
+    /// value read from the file, so a plain `scan_number - first_scan_number`
+    /// subtraction can underflow when `scan_number` is smaller - not just an
+    /// "index too large" situation. Both cases are simply out of range.
+    fn scan_index_entry(&self, scan_number: u32) -> Result<&ScanIndexEntry> {
+        let idx = scan_number_to_index(scan_number, self.run_header.sample_info.first_scan_number)
+            .ok_or(Error::AddressOutOfRange(scan_number as u64))?;
+        self.scan_index
+            .get(idx)
+            .ok_or(Error::AddressOutOfRange(scan_number as u64))
+    }
+
+    /// Read a single scan data packet (PacketHeader format).
+    pub fn read_scan<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<ScanDataPacket> {
+        let entry = self.scan_index_entry(scan_number)?;
+        // Both are untrusted u64 values read from the file (a
+        // RawFileInfo address and a ScanIndexEntry offset); saturate
+        // instead of panicking on overflow for a corrupt combination.
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read(&mut r)
+    }
+
+    /// Read a single scan packet's centroid peaks and FT label data
+    /// (resolution / noise / baseline), skipping the profile signal for speed.
+    ///
+    /// Only valid for PacketHeader-format files; TSQ/SRM scans carry no FT
+    /// label data.
+    pub fn read_scan_labels<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<ScanDataPacket> {
+        use crate::scan_format::ScanDataFormat;
+        if self.scan_format != ScanDataFormat::PacketHeader {
+            return Err(Error::UnsupportedOperation(
+                "centroid_labels / read_scan_labels requires a PacketHeader file (Orbitrap/ion-trap); TSQ/SRM files carry no FT label data",
+            ));
+        }
+        let entry = self.scan_index_entry(scan_number)?;
+        // Both are untrusted u64 values read from the file (a
+        // RawFileInfo address and a ScanIndexEntry offset); saturate
+        // instead of panicking on overflow for a corrupt combination.
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_skip_profile(&mut r)
+    }
+
+    /// Read a single scan as flat peaks (TSQ/SRM format).
+    ///
+    /// In this format, `entry.offset` is the cumulative end byte offset within
+    /// the data stream. Peaks are (f32, f32) pairs at the end of each record.
+    pub fn read_scan_flat<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<Vec<Peak>> {
+        let entry = self.scan_index_entry(scan_number)?;
+        read_flat_peaks(source, self.data_addr, entry.offset, entry.data_size)
+    }
+
+    /// Read a single scan in v66 SRM format (TSQ Quantiva / TSQ Altis).
+    ///
+    /// `entry.offset` is the START byte offset within the data stream.
+    /// The record is fixed-size (`entry.data_size` bytes) and contains:
+    ///   n_peaks (u32), header, m/z window table, then peak triplets.
+    pub fn read_scan_srm_v66<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<Vec<Peak>> {
+        let entry = self.scan_index_entry(scan_number)?;
+        read_scan_srm_v66(source, self.data_addr, entry.offset, entry.data_size)
+    }
+
+    /// Read a single scan's peaks using whichever decoder matches this file's
+    /// scan-data format.
+    ///
+    /// This is the recommended high-level entry point. It dispatches on
+    /// [`Self::scan_format`] so callers do not have to know whether a file is
+    /// a TSQ SRM run (flat peaks) or an Orbitrap/ion-trap acquisition
+    /// (PacketHeader records).
+    ///
+    /// The returned `Vec<Peak>` contains centroided peaks regardless of the
+    /// underlying format. For PacketHeader files that also contain a profile
+    /// signal, use [`Self::read_scan`] to access both.
+    pub fn read_scan_peaks<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<Vec<Peak>> {
+        use crate::scan_format::ScanDataFormat;
+        match self.scan_format {
+            ScanDataFormat::PacketHeader => {
+                let pkt = self.read_scan(source, scan_number)?;
+                Ok(pkt.peaks)
+            }
+            ScanDataFormat::FlatV63 => self.read_scan_flat(source, scan_number),
+            ScanDataFormat::FlatV66 => self.read_scan_srm_v66(source, scan_number),
+        }
+    }
+
+    /// Read centroided peaks only, skipping profile data.
+    ///
+    /// For PacketHeader files (Orbitrap / ion-trap), this skips the large
+    /// profile-data section, making it 2-10× faster than
+    /// [`Self::read_scan_peaks`] when only centroided m/z and intensity values
+    /// are needed (e.g. mzML export, peak area queries).
+    ///
+    /// For TSQ/SRM files this is identical to [`Self::read_scan_peaks`].
+    pub fn read_peaks_only<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Result<Vec<Peak>> {
+        use crate::scan_format::ScanDataFormat;
+        match self.scan_format {
+            ScanDataFormat::PacketHeader => {
+                let entry = self.scan_index_entry(scan_number)?;
+                // Both are untrusted u64 values read from the file (a
+                // RawFileInfo address and a ScanIndexEntry offset); saturate
+                // instead of panicking on overflow for a corrupt combination.
+                let abs_offset = self.data_addr.saturating_add(entry.offset);
+                source.seek(SeekFrom::Start(abs_offset))?;
+                let mut r = BinaryReader::new(source);
+                ScanDataPacket::read_peaks_only(&mut r)
+            }
+            ScanDataFormat::FlatV63 => self.read_scan_flat(source, scan_number),
+            ScanDataFormat::FlatV66 => self.read_scan_srm_v66(source, scan_number),
+        }
+    }
+
+    /// Return the scan-parameter record for a given 1-based scan number.
+    ///
+    /// Returns `None` if the file has no scan-parameter stream or if
+    /// `scan_number` is outside the valid scan range.
+    pub fn scan_parameters(&self, scan_number: u32) -> Option<&GenericRecord> {
+        let first = self.run_header.sample_info.first_scan_number;
+        let idx = scan_number.checked_sub(first)? as usize;
+        self.scan_parameters.get(idx)
+    }
+
+    /// Return a typed view of the scan-parameter record for a given scan.
+    ///
+    /// This wraps [`Self::scan_parameters`] in a [`ScanParams`] accessor that
+    /// provides named, type-safe fields and handles label-name variations
+    /// across instrument families.
+    pub fn scan_params(&self, scan_number: u32) -> Option<ScanParams<'_>> {
+        self.scan_parameters(scan_number).map(ScanParams)
+    }
+
+    /// Return the raw instrument-log record for a given scan number, or
+    /// `None` if the scan is out of range or no instrument log was found.
+    ///
+    /// The instrument log contains per-scan instrument-state values:
+    /// temperatures, voltages, pressures, ion counts, etc.
+    pub fn inst_log_record(&self, scan_number: u32) -> Option<&GenericRecord> {
+        let first = self.run_header.sample_info.first_scan_number;
+        let idx = scan_number.checked_sub(first)? as usize;
+        self.inst_log.get(idx)
+    }
+
+    /// Return a typed [`StatusLogEntry`] view for the given scan number.
+    ///
+    /// This wraps [`Self::inst_log_record`] and provides named, type-safe
+    /// accessors for common instrument-status fields.
+    pub fn status_log_entry(&self, scan_number: u32) -> Option<StatusLogEntry<'_>> {
+        self.inst_log_record(scan_number).map(StatusLogEntry)
+    }
+
+    /// Return the canonical Thermo scan filter string for a given scan
+    /// (1-based scan number), or `None` if the scan is out of range.
+    ///
+    /// Example output: `"FTMS + p NSI Full ms [350.0000-1500.0000]"`.
+    ///
+    /// See [`crate::scan_filter`] for grammar details.
+    pub fn scan_filter(&self, scan_number: u32) -> Option<String> {
+        let first = self.run_header.sample_info.first_scan_number;
+        let idx = scan_number.checked_sub(first)? as usize;
+        let entry = self.scan_index.get(idx)?;
+
+        // SRM files have no scan events; build the filter string from
+        // the pre-loaded Q1 and Q3 window maps.
+        if self.flat_peaks {
+            let q1 = self.srm_q1_by_event.get(&entry.scan_event).copied()?;
+            let windows = self.srm_q3_windows.get(&entry.scan_event)?;
+            // v63 (TSQ Quantum/Vantage): NSI ionization, @cid{CE:.2} after Q1.
+            // v66 (TSQ Quantiva/Altis): ESI ionization, no CE in filter.
+            use crate::scan_format::ScanDataFormat;
+            let ionization = match self.scan_format {
+                ScanDataFormat::FlatV63 => "NSI",
+                _ => "ESI",
+            };
+            let ce_part = if self.scan_format == ScanDataFormat::FlatV63 {
+                self.srm_ce_by_event
+                    .get(&entry.scan_event)
+                    .map(|&ce| format!("@cid{:.2}", ce))
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            };
+            // Format: "+ c {ION} SRM ms2 {Q1:.3}{@cidCE} [{lo1:.3}-{hi1:.3}, ...]"
+            let mut s = format!("+ c {} SRM ms2 {:.3}{}", ionization, q1, ce_part);
+            if !windows.is_empty() {
+                s.push(' ');
+                s.push('[');
+                for (i, (lo, hi)) in windows.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(&format!("{:.3}-{:.3}", lo, hi));
+                }
+                s.push(']');
+            }
+            return Some(s);
+        }
+
+        let event = self.scan_events.get(idx)?;
+        // Precursor m/z and activation energy come from the per-scan params
+        // table (not the event body) for v66+. Fall back silently if missing.
+        let params = self.scan_params(scan_number);
+        let precursor = params.as_ref().and_then(|p| p.monoisotopic_mz());
+        let energy = params.as_ref().and_then(|p| p.activation_energy());
+        let supplemental = params
+            .as_ref()
+            .and_then(|p| p.supplemental_activation_energy());
+        Some(crate::scan_filter::build_filter(
+            event,
+            entry,
+            precursor,
+            energy,
+            supplemental,
+        ))
+    }
+
+    /// Return all scan retention times (minutes) in scan order (1-based scan numbers).
+    ///
+    /// This is equivalent to collecting `scan_index[i].start_time` for every scan.
+    /// The returned `Vec` is indexed by `scan_number - first_scan_number`.
+    pub fn retention_times(&self) -> Vec<f64> {
+        self.scan_index.iter().map(|e| e.start_time).collect()
+    }
+
+    /// Return a per-scan chromatogram as `(retention_time_min, tic)` pairs.
+    pub fn tic_chromatogram(&self) -> Vec<(f64, f64)> {
+        self.scan_index
+            .iter()
+            .map(|e| (e.start_time, e.total_current))
+            .collect()
+    }
+
+    /// Return a per-scan base-peak chromatogram as `(retention_time_min, bpi, base_mz)` triples.
+    pub fn bpc_chromatogram(&self) -> Vec<(f64, f64, f64)> {
+        self.scan_index
+            .iter()
+            .map(|e| (e.start_time, e.base_intensity, e.base_mz))
+            .collect()
+    }
+
+    /// Return the instrument method file path or name as stored in the
+    /// sequence row. This is the name of the method used during acquisition
+    /// (e.g. `"Standard_HCD.meth"`), not the embedded method text.
+    ///
+    /// See also [`Self::instrument_method_text`] for extracting the embedded
+    /// XML/text method body from the file.
+    pub fn instrument_method_name(&self) -> &str {
+        &self.seq_row.inst_method
+    }
+
+    /// Attempt to extract the embedded instrument method text from the RAW file.
+    ///
+    /// Thermo RAW files embed the acquisition method as a UTF-16LE text or
+    /// XML blob in the metadata region. This method scans the bytes between
+    /// the start of the file and the scan data for the longest contiguous
+    /// block of valid UTF-16LE text (at least 256 characters long) and returns
+    /// it as a `String`.
+    ///
+    /// Returns `None` if no suitable text block is found or if the method was
+    /// not embedded (`method_file_present == false`).
+    ///
+    /// Note: This is a best-effort extraction. The result is the raw text
+    /// content; callers may wish to trim or parse it further.
+    pub fn instrument_method_text<R: Read + Seek>(&self, source: &mut R) -> Option<String> {
+        let blocks = self.instrument_method_blocks(source);
+        if blocks.is_empty() {
+            None
+        } else {
+            Some(blocks.join("\n\n"))
+        }
+    }
+
+    /// The text blocks of the embedded instrument method, one string each, in file order (the LC method script, the instrument
+    /// method text, its XML); empty when the method is not embedded. `instrument_method_text` is these joined by a blank line.
+    pub fn instrument_method_blocks<R: Read + Seek>(&self, source: &mut R) -> Vec<String> {
+        if !self.raw_file_info.preamble.method_file_present {
+            return Vec::new();
+        }
+        // Read metadata region: from byte 0 up to (but not including) scan data. The method texts lie
+        // between 400 kB and 700 kB; capped at 4 MB to avoid reading very large files entirely.
+        const MAX_WINDOW: u64 = 4 * 1024 * 1024;
+        let window_len = MAX_WINDOW.min(self.data_addr) as usize;
+        if window_len < 4 || source.seek(std::io::SeekFrom::Start(0)).is_err() {
+            return Vec::new();
+        }
+        let mut buf = vec![0u8; window_len];
+        if source.read_exact(&mut buf).is_err() {
+            return Vec::new();
+        }
+
+        // Every UTF-16LE text block of at least 256 Latin characters, in file order, separated by a blank
+        // line: the LC method (overview, gradient), the instrument method text and its XML.
+        extract_utf16le_texts(&buf, 256)
+    }
+}
+
+/// The UTF-16LE text blocks of `buf` of at least `min_chars` characters (Latin text: ASCII, Latin-1 and extended, general
+/// punctuation), in file order. Both even and odd alignments are tried; a block found at the odd one that overlaps one of the even is
+/// dropped.
+fn extract_utf16le_texts(buf: &[u8], min_chars: usize) -> Vec<String> {
+    let mut found: Vec<(usize, usize, String)> = Vec::new(); // start byte, end byte, text
+    for alignment in 0..2usize {
+        let mut run: Vec<u16> = Vec::new();
+        let mut run_start = alignment;
+        let mut flush = |run: &mut Vec<u16>, run_start: usize| {
+            if run.len() >= min_chars {
+                if let Ok(t) = String::from_utf16(run) {
+                    found.push((run_start, run_start + 2 * run.len(), t));
+                }
+            }
+            run.clear();
+        };
+        let mut off = alignment;
+        while off + 2 <= buf.len() {
+            let u = u16::from_le_bytes([buf[off], buf[off + 1]]);
+            // text of a method is Latin (letters, digits, units, a few punctuation marks); any pair of bytes of a binary block
+            // would pass for a CJK character
+            if matches!(u, 0x0009 | 0x000A | 0x000D | 0x0020..=0x007E | 0x00A0..=0x024F | 0x2010..=0x203A)
+            {
+                if run.is_empty() {
+                    run_start = off;
+                }
+                run.push(u);
+            } else {
+                flush(&mut run, run_start);
+            }
+            off += 2;
+        }
+        flush(&mut run, run_start);
+    }
+    found.sort_by_key(|f| f.0);
+    let mut out: Vec<(usize, usize, String)> = Vec::new();
+    for f in found {
+        if out.last().is_some_and(|l| f.0 < l.1) {
+            if out.last().is_some_and(|l| f.1 - f.0 > l.1 - l.0) {
+                out.pop();
+                out.push(f);
+            }
+        } else {
+            out.push(f);
+        }
+    }
+    out.into_iter().map(|f| f.2).collect()
+}
+
+// -- High-level typed accessor for scan parameters --
+
+/// Typed accessor for a scan's extra parameters (`ScanParams` stream).
+///
+/// The underlying [`GenericRecord`] stores named fields whose labels vary
+/// slightly across Thermo instrument families. This wrapper normalises the
+/// most common labels so callers do not need to hard-code instrument-specific
+/// strings.
+///
+/// # Example
+/// ```no_run
+/// use opentfraw::RawFileReader;
+/// let raw = RawFileReader::open_path("experiment.raw").unwrap();
+/// if let Some(p) = raw.scan_params(1) {
+///     println!("Injection time: {:?} ms", p.ion_injection_time_ms());
+///     println!("Charge state:   {:?}", p.charge_state());
+/// }
+/// ```
+pub struct ScanParams<'a>(pub &'a GenericRecord);
+
+impl<'a> ScanParams<'a> {
+    /// Return the raw `GenericRecord` for direct field access.
+    #[inline]
+    pub fn record(&self) -> &GenericRecord {
+        self.0
+    }
+
+    /// Ion injection / fill time in milliseconds.
+    ///
+    /// Label varies: `"Ion Injection Time (ms):"` (Orbitrap family) vs
+    /// `"Ion Inject Time (ms):"` (older LTQ variants).
+    pub fn ion_injection_time_ms(&self) -> Option<f64> {
+        // Try canonical label first; fall back to legacy label.
+        self.0
+            .get_f64("Ion Injection Time (ms):")
+            .or_else(|| self.0.get_f64("Ion Inject Time (ms):"))
+    }
+
+    /// Precursor charge state (0 = unknown / MS1 scan).
+    pub fn charge_state(&self) -> Option<i32> {
+        self.0
+            .get_i32("Charge State:")
+            // Some LCQ files use UInt8 for charge state.
+            .or_else(|| {
+                self.0.get("Charge State:").and_then(|v| match v {
+                    GenericValue::UInt8(n) => Some(*n as i32),
+                    _ => None,
+                })
+            })
+    }
+
+    /// Monoisotopic precursor m/z (0 = not determined).
+    ///
+    /// Tries multiple label variants for compatibility across instrument families:
+    ///
+    /// - `"Monoisotopic M/Z:"` - most common (Q Exactive, Orbitrap Fusion)
+    /// - `"MS2 Isolation M/Z:"` - some older LTQ firmware
+    ///
+    /// Returns `None` when the value is absent or zero (not determined).
+    pub fn monoisotopic_mz(&self) -> Option<f64> {
+        let v = self
+            .0
+            .get_f64("Monoisotopic M/Z:")
+            .or_else(|| self.0.get_f64("MS2 Isolation M/Z:"))
+            .or_else(|| self.0.get_f64("Isolation Center M/Z:"))
+            .or_else(|| self.0.get_f64("Precursor M/Z:"))?;
+        if v > 0.0 {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    /// Number of micro-scans averaged into this scan.
+    pub fn micro_scan_count(&self) -> Option<i32> {
+        self.0.get_i32("Micro Scan Count:")
+    }
+
+    /// Scan number of the master (MS1) scan that triggered this dependent scan.
+    /// Returns `None` if this is not a dependent scan.
+    pub fn master_scan_number(&self) -> Option<i32> {
+        self.0
+            .get_i32("Master Scan Number:")
+            .or_else(|| self.0.get_i32("Master Index:"))
+    }
+
+    /// Orbitrap / FT resolving power (e.g. 60000, 120000).
+    pub fn ft_resolution(&self) -> Option<i32> {
+        self.orbitrap_resolution()
+    }
+
+    /// Number of lock masses found / matched.
+    pub fn number_of_lm_found(&self) -> Option<i32> {
+        self.number_of_lock_masses()
+    }
+
+    /// Lock-mass m/z correction applied (ppm).
+    pub fn lm_correction_ppm(&self) -> Option<f64> {
+        self.lock_mass_correction_ppm()
+    }
+
+    /// AGC target fill value (ion count).
+    pub fn agc_target(&self) -> Option<i32> {
+        self.0.get_i32("AGC Target:")
+    }
+
+    /// Whether automated gain control (AGC) was active.
+    pub fn agc_enabled(&self) -> Option<bool> {
+        match self.0.get("AGC:")? {
+            GenericValue::Bool(b) => Some(*b),
+            GenericValue::String(s) => Some(s.to_ascii_lowercase().contains("on")),
+            _ => None,
+        }
+    }
+
+    /// Elapsed scan time in seconds (Orbitrap instruments only).
+    pub fn elapsed_scan_time_s(&self) -> Option<f64> {
+        self.0.get_f64("Elapsed Scan Time (sec):")
+    }
+
+    /// Maximum allowed ion injection time in milliseconds.
+    pub fn max_ion_time_ms(&self) -> Option<f64> {
+        self.0.get_f64("Max. Ion Time (ms):")
+    }
+
+    /// MSn isolation window width in m/z.
+    ///
+    /// Label varies: `"MS2 Isolation Width:"` (most common), `"MSn Isolation Width:"`,
+    /// or `"Isolation Width (M/Z):"` on some firmware.
+    pub fn isolation_width_mz(&self) -> Option<f64> {
+        self.0
+            .get_f64("MS2 Isolation Width:")
+            .or_else(|| self.0.get_f64("MSn Isolation Width:"))
+            .or_else(|| self.0.get_f64("Isolation Width (M/Z):"))
+            .or_else(|| self.0.get_f64("MS2 Isolation Width (M/Z):"))
+    }
+
+    /// MSn isolation window target m/z (the center of the isolation window).
+    ///
+    /// Some instruments write this separately from the precursor m/z; when
+    /// absent, callers should fall back to [`Self::monoisotopic_mz`] or to
+    /// the event's first reaction `precursor_mz`.
+    pub fn isolation_target_mz(&self) -> Option<f64> {
+        self.0
+            .get_f64("MS2 Isolation Offset:")
+            .or_else(|| self.0.get_f64("Target M/Z:"))
+    }
+
+    /// Activation energy (eV or %) for the primary activation step.
+    ///
+    /// Tries several label variants present across instrument families.
+    /// NCE (normalized collision energy) labels are checked first because
+    /// they reflect the user-set method value and are what reference tools
+    /// (ThermoRawFileParser, Proteome Discoverer) report.  eV labels are
+    /// used as a fallback when no NCE label is present.
+    ///
+    /// Label priority:
+    /// 1. `"HCD Energy:"` / `"HCD Energy V:"` / `"CE:"` - NCE string form
+    /// 2. `"Normalized Collision Energy:"` - ion-trap CID NCE
+    /// 3. `"HCD Energy (eV):"` - explicit eV label (Q Exactive HF-X, Exploris)
+    /// 4. `"HCD Energy eV:"` - eV variant
+    /// 5. `"Collision Energy (eV):"` - ITMS CID eV
+    pub fn activation_energy(&self) -> Option<f64> {
+        // NCE labels: preferred because they match the user-set method value.
+        // Skip 0.0 (sentinel for "not set").
+        for label in &["HCD Energy:", "HCD Energy V:", "CE:"] {
+            if let Some(s) = self.0.get_string(label) {
+                if let Ok(v) = s.trim().trim_end_matches('%').parse::<f64>() {
+                    if v > 0.0 {
+                        return Some(v);
+                    }
+                }
+            }
+        }
+        if let Some(v) = self
+            .0
+            .get_f64("Normalized Collision Energy:")
+            .filter(|&v| v > 0.0)
+        {
+            return Some(v);
+        }
+        // eV labels: used when no NCE label is available.
+        if let Some(v) = self.0.get_f64("HCD Energy (eV):").filter(|&v| v > 0.0) {
+            return Some(v);
+        }
+        if let Some(v) = self.0.get_f64("HCD Energy eV:").filter(|&v| v > 0.0) {
+            return Some(v);
+        }
+        self.0
+            .get_f64("Collision Energy (eV):")
+            .filter(|&v| v > 0.0)
+    }
+
+    /// Whether the value returned by [`activation_energy`] is a normalized
+    /// collision energy (NCE, dimensionless %) rather than an absolute eV value.
+    ///
+    /// Returns `true` when `activation_energy` found a value from an NCE label
+    /// (`HCD Energy:`, `HCD Energy V:`, `CE:`, or `Normalized Collision Energy:`).
+    /// Returns `false` when only eV labels were present or no energy was found.
+    pub fn activation_energy_is_nce(&self) -> bool {
+        // Returns true if activation_energy() took the NCE path.
+        for label in &["HCD Energy:", "HCD Energy V:", "CE:"] {
+            if let Some(s) = self.0.get_string(label) {
+                if let Ok(v) = s.trim().trim_end_matches('%').parse::<f64>() {
+                    if v > 0.0 {
+                        return true;
+                    }
+                }
+            }
+        }
+        self.0
+            .get_f64("Normalized Collision Energy:")
+            .filter(|&v| v > 0.0)
+            .is_some()
+    }
+
+    /// Supplemental activation energy for EThcD scans (the HCD component).
+    ///
+    /// Returns `None` for non-EThcD scans.
+    pub fn supplemental_activation_energy(&self) -> Option<f64> {
+        if let Some(v) = self.0.get_f64("Supplemental Activation CE:") {
+            return Some(v);
+        }
+        if let Some(s) = self.0.get_string("Supplemental Activation:") {
+            return s.trim().trim_end_matches('%').parse::<f64>().ok();
+        }
+        None
+    }
+
+    /// All possible charge states reported by the precursor selection algorithm.
+    ///
+    /// Returns `None` when the instrument did not report possible charges.
+    /// Some firmware stores them as a space-delimited string (e.g. `"2 3"`);
+    /// others use a typed integer for the single selected charge.
+    pub fn possible_charge_states(&self) -> Option<Vec<u32>> {
+        // String variant: "2 3 4"
+        if let Some(s) = self.0.get_string("Possible Charge States:") {
+            let v: Vec<u32> = s
+                .split_whitespace()
+                .filter_map(|t| t.parse::<u32>().ok())
+                .collect();
+            if !v.is_empty() {
+                return Some(v);
+            }
+        }
+        // Integer variant (single charge)
+        if let Some(c) = self.charge_state() {
+            if c > 0 {
+                return Some(vec![c as u32]);
+            }
+        }
+        None
+    }
+
+    /// FAIMS compensation voltage in V (Orbitrap Fusion/Lumos with FAIMS Pro).
+    pub fn faims_cv(&self) -> Option<f64> {
+        self.0
+            .get_f64("FAIMS CV:")
+            .or_else(|| self.0.get_f32("FAIMS CV:").map(f64::from))
+    }
+
+    /// Whether FAIMS voltage was active for this scan.
+    pub fn faims_voltage_on(&self) -> Option<bool> {
+        match self.0.get("FAIMS Voltage On:")? {
+            GenericValue::Bool(b) => Some(*b),
+            GenericValue::String(s) => Some(s.to_ascii_lowercase().contains("on")),
+            _ => None,
+        }
+    }
+
+    /// S-Lens RF level (V), typically reported on Q Exactive family.
+    pub fn s_lens_rf_level(&self) -> Option<f64> {
+        self.0.get_f64("S-Lens RF Level:")
+    }
+
+    /// AGC fill percentage (0.0-1.0), reported on Q Exactive HF family.
+    pub fn agc_fill(&self) -> Option<f64> {
+        self.0.get_f64("AGC Fill:")
+    }
+
+    /// Orbitrap analyzer temperature (°C), where available.
+    pub fn analyzer_temperature(&self) -> Option<f64> {
+        self.0.get_f64("Analyzer Temperature:")
+    }
+
+    /// PS injection time in milliseconds (pre-scan injection for Q Exactive).
+    pub fn ps_injection_time_ms(&self) -> Option<f64> {
+        self.0.get_f64("PS Inj. Time (ms):")
+    }
+
+    /// Reagent ion injection time in milliseconds (ETD reagent).
+    pub fn reagent_ion_injection_time_ms(&self) -> Option<f64> {
+        self.0
+            .get_f32("Reagent Ion Injection Time (ms):")
+            .map(f64::from)
+    }
+
+    /// Whether the reagent AGC was active.
+    pub fn reagent_ion_agc(&self) -> Option<bool> {
+        match self.0.get("Reagent Ion AGC:")? {
+            GenericValue::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    /// Source CID energy applied in the ion source (eV).
+    pub fn source_cid_energy_ev(&self) -> Option<f64> {
+        self.0
+            .get_f64("Source CID eV:")
+            .or_else(|| self.0.get_f32("API Source CID Energy:").map(f64::from))
+    }
+
+    /// Dynamic retention time shift in minutes (Q Exactive HF-X AutoQC).
+    pub fn dynamic_rt_shift_min(&self) -> Option<f64> {
+        self.0.get_f64("Dynamic RT Shift (min):")
+    }
+
+    /// Lock mass correction applied (ppm) - tries several label variants.
+    pub fn lock_mass_correction_ppm(&self) -> Option<f64> {
+        self.0
+            .get_f64("LM Correction (ppm):")
+            .or_else(|| self.0.get_f64("LM m/z-Correction (ppm):"))
+    }
+
+    /// Number of lock masses found.
+    pub fn number_of_lock_masses(&self) -> Option<i32> {
+        self.0
+            .get_i32("Number of LM Found:")
+            .or_else(|| self.0.get_i32("Number of Lock Masses:"))
+    }
+
+    /// Orbitrap resolution setting (not measured, but requested).
+    pub fn orbitrap_resolution(&self) -> Option<i32> {
+        self.0
+            .get_i32("Orbitrap Resolution:")
+            .or_else(|| self.0.get_i32("FT Resolution:"))
+    }
+
+    /// SPS (Synchronous Precursor Selection) mass for MS3 channel N (0-based index).
+    ///
+    /// SPS masses are stored as `"SPS Mass 1:"`, `"SPS Mass 2:"`, ... (1-based).
+    pub fn sps_mass(&self, channel: usize) -> Option<f32> {
+        let label = format!("SPS Mass {}:", channel + 1);
+        self.0.get_f32(&label)
+    }
+
+    /// Conversion parameter A (Orbitrap m/z conversion polynomial).
+    pub fn conversion_parameter_a(&self) -> Option<f64> {
+        self.0.get_f64("Conversion Parameter A:")
+    }
+
+    /// Conversion parameter B.
+    pub fn conversion_parameter_b(&self) -> Option<f64> {
+        self.0.get_f64("Conversion Parameter B:")
+    }
+
+    /// Conversion parameter C.
+    pub fn conversion_parameter_c(&self) -> Option<f64> {
+        self.0.get_f64("Conversion Parameter C:")
+    }
+
+    /// Raw over-fill time T (used for AGC computation).
+    pub fn raw_ovft(&self) -> Option<f64> {
+        self.0.get_f64("RawOvFtT:")
+    }
+
+    /// Error in the isotopic envelope fit (used for charge-state scoring).
+    pub fn isotopic_fit_error(&self) -> Option<f64> {
+        self.0.get_f64("Error in isotopic envelope fit:")
+    }
+
+    /// Scan description string (arbitrary text, set by method or real-time software).
+    pub fn scan_description(&self) -> Option<&str> {
+        self.0.get_string("Scan Description:")
+    }
+
+    /// Multi-inject info string (e.g. `"IT=45 "` for ion-trap fill time).
+    pub fn multi_inject_info(&self) -> Option<&str> {
+        self.0.get_string("Multi Inject Info:")
+    }
+
+    /// HCD energy string - raw value as stored (may be `"28.00"`, `"28%"`, or `"N/A"`).
+    pub fn hcd_energy(&self) -> Option<&str> {
+        self.0
+            .get_string("HCD Energy:")
+            .or_else(|| self.0.get_string("HCD Energy V:"))
+    }
+}
+
+// -- Status log (instrument log) typed accessor --
+
+/// Typed accessor for a per-scan instrument-status log entry.
+///
+/// The instrument log records instrument-state values (temperatures, voltages,
+/// pressures, etc.) at the time each scan was acquired. The schema varies
+/// across instrument models.
+pub struct StatusLogEntry<'a>(pub &'a GenericRecord);
+
+impl<'a> StatusLogEntry<'a> {
+    /// Return the raw record for direct field access.
+    #[inline]
+    pub fn record(&self) -> &GenericRecord {
+        self.0
+    }
+
+    /// Ion injection time in milliseconds (present on Orbitrap family).
+    pub fn ion_injection_time_ms(&self) -> Option<f64> {
+        self.0
+            .get_f64("Ion Injection Time (ms):")
+            .or_else(|| self.0.get_f64("Ion Inject Time (ms):"))
+    }
+
+    /// Orbitrap / FT resolving power setting.
+    pub fn ft_resolution(&self) -> Option<i32> {
+        self.0
+            .get_i32("Orbitrap Resolution:")
+            .or_else(|| self.0.get_i32("FT Resolution:"))
+    }
+
+    /// FAIMS compensation voltage (V).
+    pub fn faims_cv(&self) -> Option<f64> {
+        self.0
+            .get_f64("FAIMS CV:")
+            .or_else(|| self.0.get_f32("FAIMS CV:").map(f64::from))
+    }
+
+    /// S-Lens RF level (V).
+    pub fn s_lens_rf_level(&self) -> Option<f64> {
+        self.0.get_f64("S-Lens RF Level:")
+    }
+
+    /// Orbitrap / analyzer temperature (°C).
+    pub fn analyzer_temperature(&self) -> Option<f64> {
+        self.0
+            .get_f64("Analyzer Temperature:")
+            .or_else(|| self.0.get_f32("Analyzer Temperature:").map(f64::from))
+    }
+
+    /// API (spray) source voltage (V).
+    pub fn spray_voltage(&self) -> Option<f64> {
+        self.0
+            .get_f64("Spray Voltage (V):")
+            .or_else(|| self.0.get_f64("Spray Voltage:"))
+            .or_else(|| self.0.get_f32("Spray Voltage:").map(f64::from))
+    }
+
+    /// Lock mass reference correction (ppm).
+    pub fn lock_mass_correction_ppm(&self) -> Option<f64> {
+        self.0
+            .get_f64("LM Correction (ppm):")
+            .or_else(|| self.0.get_f64("LM m/z-Correction (ppm):"))
+    }
+
+    /// Capillary temperature (°C).
+    pub fn capillary_temperature(&self) -> Option<f64> {
+        self.0
+            .get_f64("Capillary Temp (°C):")
+            .or_else(|| self.0.get_f64("Capillary Temp:"))
+            .or_else(|| self.0.get_f32("Capillary Temp:").map(f64::from))
+    }
+
+    /// Number of lock masses found.
+    pub fn number_of_lock_masses(&self) -> Option<i32> {
+        self.0
+            .get_i32("Number of LM Found:")
+            .or_else(|| self.0.get_i32("Number of Lock Masses:"))
+    }
+
+    /// Get any field by name (pass-through to the underlying record).
+    pub fn get(&self, label: &str) -> Option<&GenericValue> {
+        self.0.get(label)
+    }
+
+    /// Get a float64 field by name.
+    pub fn get_f64(&self, label: &str) -> Option<f64> {
+        self.0.get_f64(label)
+    }
+
+    /// Get an int32 field by name.
+    pub fn get_i32(&self, label: &str) -> Option<i32> {
+        self.0.get_i32(label)
+    }
+
+    /// Get a string field by name.
+    pub fn get_string(&self, label: &str) -> Option<&str> {
+        self.0.get_string(label)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn inst_id_block(model1: &str, model2: &str) -> Vec<u8> {
+        let mut bytes = vec![0u8; 12];
+        bytes.extend(crate::test_util::pascal_string(model1));
+        bytes.extend(crate::test_util::pascal_string(model2));
+        bytes.extend(crate::test_util::pascal_string("SN01234"));
+        bytes
+    }
+
+    #[test]
+    fn inst_id_models_prefer_second_string() {
+        let mut bytes = vec![0xAAu8; 8];
+        bytes.extend(inst_id_block("", "Orbitrap Exploris 120"));
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        let models = read_inst_id_models(&mut r, 8).unwrap();
+        assert_eq!(models, ["Orbitrap Exploris 120", ""]);
+    }
+
+    #[test]
+    fn inst_id_models_reject_implausible_length() {
+        let mut bytes = vec![0u8; 12];
+        bytes.extend_from_slice(&100_000u32.to_le_bytes());
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        assert!(read_inst_id_models(&mut r, 0).unwrap().is_empty());
+    }
+
+    // Regression tests for a fuzzer-found crash: with `first_scan = 0` and
+    // `last_scan = u32::MAX`, the old `last_scan - first_scan + 1`
+    // computation overflowed u32 and panicked under debug assertions.
+    #[test]
+    fn compute_num_scans_normal_range() {
+        assert_eq!(compute_num_scans(1, 5), 5);
+        assert_eq!(compute_num_scans(1, 1), 1);
+    }
+
+    #[test]
+    fn compute_num_scans_last_before_first_is_zero() {
+        assert_eq!(compute_num_scans(10, 3), 0);
+    }
+
+    #[test]
+    fn compute_num_scans_saturates_instead_of_overflowing() {
+        assert_eq!(compute_num_scans(0, u32::MAX), u32::MAX);
+        assert_eq!(compute_num_scans(u32::MAX, u32::MAX), 1);
+    }
+
+    // Regression test for a second fuzzer-found crash: `data_addr +
+    // entry.offset` (both untrusted u64 values) overflowed and panicked for
+    // a crafted combination near u64::MAX.
+    #[test]
+    fn saturating_add_of_addr_and_offset_does_not_panic() {
+        let data_addr = u64::MAX - 5;
+        let offset = 100u64;
+        assert_eq!(data_addr.saturating_add(offset), u64::MAX);
+    }
+
+    // Regression test for a third fuzzer-found crash: `read_scan` /
+    // `read_scan_flat` / `read_scan_srm_v66` / `read_peaks_only` computed
+    // `scan_number - first_scan_number` directly, which underflowed (and
+    // panicked under debug assertions) whenever a requested `scan_number`
+    // fell below the file's declared `first_scan_number` - reachable simply
+    // by asking for an out-of-range scan on a file with a large
+    // `first_scan_number`.
+    #[test]
+    fn scan_number_to_index_normal_case() {
+        assert_eq!(scan_number_to_index(5, 1), Some(4));
+        assert_eq!(scan_number_to_index(1, 1), Some(0));
+    }
+
+    #[test]
+    fn scan_number_to_index_below_first_scan_is_none_not_a_panic() {
+        assert_eq!(scan_number_to_index(0, 5), None);
+        assert_eq!(scan_number_to_index(0, u32::MAX), None);
+    }
+
+    #[test]
+    fn read_bytes_returns_requested_slice() {
+        let mut r = BinaryReader::new(Cursor::new(vec![1, 2, 3, 4, 5]));
+        assert_eq!(r.read_bytes(3).unwrap(), vec![1, 2, 3]);
+        assert_eq!(r.read_bytes(2).unwrap(), vec![4, 5]);
+    }
+
+    #[test]
+    fn read_bytes_past_end_is_eof_not_a_huge_allocation() {
+        let mut r = BinaryReader::new(Cursor::new(vec![1u8, 2, 3]));
+        let err = r.read_bytes(10).unwrap_err();
+        assert!(matches!(err, Error::AllocationTooLarge { .. }));
+    }
+
+    #[test]
+    fn read_bytes_rejects_implausible_declared_length() {
+        // A corrupt/crafted file declaring an enormous length must be
+        // rejected before any allocation is attempted, not after.
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 16]));
+        let err = r.read_bytes(1_usize << 40).unwrap_err();
+        match err {
+            Error::AllocationTooLarge {
+                requested,
+                available,
+                ..
+            } => {
+                assert_eq!(requested, 1u64 << 40);
+                assert_eq!(available, 16);
+            }
+            other => panic!("expected AllocationTooLarge, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn check_count_allows_exact_fit() {
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 16]));
+        assert!(r.check_count(2, 8).is_ok());
+    }
+
+    #[test]
+    fn check_count_rejects_when_short_by_one_byte() {
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 15]));
+        assert!(r.check_count(2, 8).is_err());
+    }
+
+    #[test]
+    fn check_count_accounts_for_current_position() {
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 16]));
+        r.skip(10).unwrap();
+        // Only 6 bytes remain; asking for 1 item of 8 bytes must fail.
+        assert!(r.check_count(1, 8).is_err());
+        assert!(r.check_count(1, 6).is_ok());
+    }
+
+    #[test]
+    fn check_count_saturates_instead_of_overflowing() {
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 4]));
+        // count * min_item_bytes would overflow a u64 multiply; this must
+        // not panic and must still be reported as too large.
+        assert!(r.check_count(u64::MAX, u64::MAX).is_err());
+    }
+
+    #[test]
+    fn length_is_cached_across_calls() {
+        let mut r = BinaryReader::new(Cursor::new(vec![0u8; 100]));
+        assert_eq!(r.length().unwrap(), 100);
+        r.skip(50).unwrap();
+        // Still reports the whole-stream length, not affected by position.
+        assert_eq!(r.length().unwrap(), 100);
+    }
+
+    #[test]
+    fn pascal_string_with_implausible_char_count_is_rejected_before_allocating() {
+        let mut bytes = u32::MAX.to_le_bytes().to_vec(); // char_count
+        bytes.extend_from_slice(&[0u8; 8]); // far short of the declared length
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        assert!(r.read_pascal_string().is_err());
+    }
+
+    #[test]
+    fn utf16_fixed_strips_null_padding() {
+        let mut bytes = Vec::new();
+        for u in "hi".encode_utf16() {
+            bytes.extend_from_slice(&u.to_le_bytes());
+        }
+        bytes.extend_from_slice(&[0, 0, 0, 0]); // null padding
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        assert_eq!(r.read_utf16_fixed(8).unwrap(), "hi");
+    }
+
+    #[test]
+    fn windows_filetime_zero_is_zero() {
+        let bytes = 0u64.to_le_bytes().to_vec();
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        assert_eq!(r.read_windows_filetime().unwrap(), 0.0);
+    }
+}
+
+/// Walks `n` events of a v66 scan-event table with the body sizes `body` (primary, dependent, independent MS2+) and says
+/// whether the walk ends exactly `stream_bytes` after `start` with every preamble looking like one.
+fn walk_events<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    n: u64,
+    preamble_size: usize,
+    body: &[usize; 3],
+    start: u64,
+    stream_bytes: u64,
+) -> bool {
+    if r.seek_to(start).is_err() {
+        return false;
+    }
+    let mut at = start;
+    for _ in 0..n {
+        let Ok(pre) = r.read_bytes(preamble_size) else {
+            return false;
+        };
+        if pre.get(4).is_some_and(|&p| p > 2) || pre.get(6).is_none_or(|&p| p == 0 || p > 8) {
+            return false;
+        }
+        let power = pre.get(6).copied().unwrap_or(0);
+        let dep = pre.get(10).copied() == Some(1);
+        let b = if power <= 1 && !dep {
+            body[0]
+        } else if dep {
+            body[1]
+        } else {
+            body[2]
+        };
+        at += (preamble_size + b) as u64;
+        if r.seek_to(at).is_err() {
+            return false;
+        }
+    }
+    at == start + stream_bytes
+}

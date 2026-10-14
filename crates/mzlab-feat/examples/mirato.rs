@@ -263,6 +263,7 @@ fn main() {
         families: &[],
         imported: &imp,
         fragments: &[],
+        groups: None,
     };
     let mut reg = generate(&rules, &inp, &hp).expect("hypotheses");
     let tp = TargetParams {

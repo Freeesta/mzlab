@@ -123,6 +123,15 @@ fn after(id: &str, key: &str) -> Option<f64> {
     None
 }
 
+/// `(Q1, Q3, collision energy, name)` an SRM chromatogram id spells (`SRM SIC Q1=... Q3=... ce=... name=...`).
+pub fn srm_id(id: &str) -> (Option<f64>, Option<f64>, Option<f64>, String) {
+    let name = id
+        .find("name=")
+        .map(|p| id[p + 5..].lines().next().unwrap_or("").trim().to_string())
+        .unwrap_or_default();
+    (after(id, "Q1="), after(id, "Q3="), after(id, "ce="), name)
+}
+
 pub struct Mzml<R: ReadAt> {
     pub r: R,
     pub size: u64,
@@ -180,13 +189,7 @@ impl<R: ReadAt> Mzml<R> {
                 d.kind = "pressure".into();
             } else if cid.starts_with("SRM") {
                 d.kind = "srm".into();
-                d.q1 = after(&cid, "Q1=");
-                d.q3 = after(&cid, "Q3=");
-                d.ce = after(&cid, "ce=");
-                d.name = cid
-                    .find("name=")
-                    .map(|p| cid[p + 5..].lines().next().unwrap_or("").trim().to_string())
-                    .unwrap_or_default();
+                (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
                 d.dwell = dwell(&h);
             } else if ![
                 "MS:1000235",
@@ -275,9 +278,16 @@ impl<R: ReadAt> Mzml<R> {
 
     /// The start of the file up to `<run ` plus 3000 bytes, as text (where `fileinfo` finds the time stamp and the processing steps).
     pub fn info_head(&mut self) -> Result<String> {
-        let probe = self.until_run(3000)?;
+        self.run_head(3000)
+    }
+
+    /// The start of the file up to `<run ` plus `extra` bytes, as text (`metodo/1` needs the whole `userParam` that follows the tag).
+    pub fn run_head(&mut self, extra: u64) -> Result<String> {
+        let probe = self.until_run(extra)?;
         let run = find(&probe, b"<run ", 0);
-        let end = run.map_or(0, |p| p) + 3000;
+        let end = run
+            .map_or(0, |p| p)
+            .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
         Ok(text(&probe[..end.min(probe.len())]))
     }
 
@@ -581,13 +591,13 @@ fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
             .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
         raw = out;
     }
-    Ok(if head.contains("accession=\"MS:1000521\"") {
-        raw.chunks_exact(4)
-            .map(|c| f32::from_le_bytes(c.try_into().unwrap()) as f64)
-            .collect()
-    } else {
-        raw.chunks_exact(8)
-            .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
-            .collect()
-    })
+    let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
+        .iter()
+        .find(|a| head.contains(&format!("accession=\"{a}\"")))
+        .and_then(|a| crate::numarray::Num::of_accession(a))
+        .unwrap_or(crate::numarray::Num::F64);
+    Ok(raw
+        .chunks_exact(num.width())
+        .map(|c| num.value(c))
+        .collect())
 }

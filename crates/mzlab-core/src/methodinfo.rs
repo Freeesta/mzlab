@@ -212,7 +212,7 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
                 at += 1;
             }
         }
-        ce.sort_by(|a, b| a.total_cmp(b));
+        crate::sortc::by(&mut ce, |a, b| a.total_cmp(b));
         let mut range = None;
         if d.len() >= 244 {
             let a = f32_at(&d, 40).unwrap_or(f64::NAN);
@@ -274,7 +274,7 @@ fn lc(ole: &Ole, base: &str) -> Option<Lc> {
     let (flow0, b0) = (num(par("Pumps", "Total Flow")), num(par("Pumps", "B Concentration")));
     let tp = cat("System Controller").and_then(|c| c.2.iter().rev().find(|t| t.0 == "Time Program")).map(|t| t.1.clone()).unwrap_or_default();
     let mut events: Vec<(f64, String, Option<f64>)> = tp.iter().filter(|r| r.len() >= 5).filter_map(|r| num(&r[0]).map(|t| (t, r[3].clone(), num(&r[4])))).collect();
-    events.sort_by(|a, b| a.0.total_cmp(&b.0));
+    crate::sortc::any_by(&mut events, |a, b| a.0.total_cmp(&b.0));
     let (mut grad, mut flow, mut bconc, mut stop) = (Vec::new(), flow0, b0, None);
     if b0.is_some() {
         grad.push(GPoint { t: 0.0, b: b0, flow });
@@ -452,7 +452,7 @@ pub fn method_of_sample(ole: &Ole, n: u32) -> Option<Method> {
 pub fn read_methods(data: Vec<u8>, file_name: &str) -> Result<Vec<Method>> {
     let ole = Ole::open(data, file_name)?;
     let mut subs: Vec<String> = ole.paths_list().filter(|k| k.starts_with("MethodSubtree/Method")).filter_map(|k| k.split('/').nth(1)).map(String::from).collect();
-    subs.sort_by_key(|s| digits(s));
+    crate::sortc::any_by_key(&mut subs, |s| digits(s));
     subs.dedup();
     if !subs.is_empty() {
         return Ok(subs

@@ -10,7 +10,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_sottrazione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 files = make_subtraction("/tmp/wd_sottrazione_files", blank=False)
-r = Run(port=8967, wd="/tmp/wd_sottrazione", motore="python")
+r = Run(port=8967, wd="/tmp/wd_sottrazione")
 MINS = "(()=>{const p=E.panels.find(q=>q.type==='%s'); return p&&p._a&&p._a.sr?Object.fromEntries(p._a.sr.map(s=>[E.files[s.k].file,Math.min(...s.y)])):null})()"
 try:
     with sync_playwright() as p:
@@ -60,7 +60,8 @@ try:
         step("the arrow keys move the slider by 0.05 and aria-valuetext says the value", keys)
         def clip():
             pg.check("#sp-clip"); pg.wait_for_timeout(600); ready(pg)
-            m = pg.evaluate(MINS % "xic"); assert all(v >= 0 for v in m.values()), m
+            m = pg.evaluate(MINS.replace("s.y)", "s.ys)") % "xic"); assert all(v >= 0 for v in m.values()), m      # drawn clipped...
+            m = pg.evaluate(MINS % "xic"); assert any(v < 0 for v in m.values()), m                              # ...while the numbers keep their negatives
             pg.uncheck("#sp-clip"); pg.wait_for_timeout(600); ready(pg)
         step("«clip at zero» removes the negatives", clip)
         def norm():
@@ -79,8 +80,9 @@ try:
         def map_words():
             M = "E.panels.find(q=>q.type==='map')"
             leg = pg.evaluate(f"{M}.leg.textContent")
-            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "arancio" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
+            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
             assert pg.evaluate(f"!!{M}._a.ref") and "SUB_t0" in pg.evaluate(f"{M}.leg.textContent"), "the map starts as a difference from the reference of the session"
+            assert "arancio" in pg.evaluate("I18N.t('corr.file.mapdesc')")         # the colours are explained in the tooltip, not in the legend
             for k in ("ctl.map.diff.title", "help.pnlMap.body"): assert "rosso" not in pg.evaluate(f"I18N.t('{k}')"), k
         step("map difference: legend in words (▲ sample, ▼ reference), orange not red", map_words)
         def map_menu_and_explain():

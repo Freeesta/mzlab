@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Panel «Pipeline» of mzFinder (window.PIPE): the six numbers of the feature pipeline with the proof of every estimated value, the preview on one file (number of
 // features, histogram of the heights, three XIC with their edges) and the gate of quality (data/cancello.json). The engine is crates/mzlab-feat-wasm run by feat-worker.js (the .wasm are
 // fetched only when the panel is opened); the .mzidx files are the ones in OPFS (mzlab/idx/). Texts follow the convention of mzFinder (English, no lang/ keys, except the messages of the worker).
@@ -6,7 +7,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const sci = x => (x >= 1e4 || (x > 0 && x < 0.01) ? Number(x).toExponential(1).replace("e+", "e") : String(+Number(x).toPrecision(3)));
   const DEF = { ppm: 5, floor: 2e4, min_height: 2e5, min_points: 5, rt_tol: 0.1, fill: true };
-  const st = { pool: null, crate: "", gate: null, files: [], prev: null, auto: { floor: true, ppm: false }, proofs: null, busy: false };
+  /** @type {any} */ const st = { pool: null, crate: "", gate: null, files: [], prev: null, auto: { floor: true, ppm: false }, proofs: null, busy: false };
   let dlg = null;
   const hooks = [];                       // called after the list of files was read again (the section «Run» refreshes its treatment times)
   const $ = q => dlg.querySelector(q);
@@ -44,7 +45,7 @@
       let d = await navigator.storage.getDirectory();
       for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p);
       const out = [];
-      for await (const [name, h] of d.entries()) if (h.kind === "file" && name.endsWith(".mzidx")) out.push(name);
+      for await (const [name, h] of /** @type {any} */ (d).entries()) if (h.kind === "file" && name.endsWith(".mzidx")) out.push(name);
       return out.sort();
     } catch (_) { return []; }
   }
@@ -57,7 +58,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(url);
     const w = m => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs) }, notify: (k, p) => say(msg(k, p)) });
+    st.pool = mod.createFeatPool({ workerUrl: url, size: 1, wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.table ? { table: w(man.table) } : {}) }, notify: (k, p) => say(msg(k, p)) });
     st.crate = await st.pool.crateVersion();
     return st.pool;
   }
@@ -175,7 +176,7 @@
     if (!st.files.length) say("No .mzidx file: open an mzML in Data first, its index is made there.");
   }
   async function open() {
-    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (window.PIPEV ? window.PIPEV.CSS : ""); document.head.appendChild(s); }
+    if (!document.getElementById("pipe-css")) { const s = document.createElement("style"); s.id = "pipe-css"; s.textContent = CSS + (/** @type {any} */ (window).PIPEV ? /** @type {any} */ (window).PIPEV.CSS : "") + (/** @type {any} */ (window).PIPEQC ? /** @type {any} */ (window).PIPEQC.css : "") + (/** @type {any} */ (window).PIPET ? /** @type {any} */ (window).PIPET.css : "") + (/** @type {any} */ (window).PIPEX ? /** @type {any} */ (window).PIPEX.css : ""); document.head.appendChild(s); }
     if (!dlg) build();
     if (!dlg.open) dlg.showModal();
     st.gate = gateState(readGate(window.QTOOLS.ctx.files), "");

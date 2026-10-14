@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: MALDI with linear TOF. A laser pulse hits the matrix crystals on the target: a plume of ions leaves the plate, the field between the plate
 // and the grid gives all singly charged ions the same energy (v ~ 1/sqrt(m)), then they drift in the field-free tube: the flight time grows with sqrt(m/z).
 (function (G) {

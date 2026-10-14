@@ -14,7 +14,7 @@ const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof Wo
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 
-// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
+// opts: { workerUrl, wasm: { feat: { jsUrl, wasmUrl, sha256? }, proofs: { ... }, table: { ... } }, size, budgetMb (working memory of a step of the .wasm, MB; 0 = 192), notify(key, params), onProgress(info), WorkerClass }
 // The recipe is a JSON string: {"polarity": 1 | -1 | null, "mode": "ion" | "family"}.
 // the supervisor: the workers alive, the queue of jobs, the replacement of a worker that dies
 function createCore(opts) {
@@ -102,16 +102,29 @@ function previewOps(submit, call, opts) {
   };
 }
 
+/** drift of the RT of the parent along a series (JSON of mzlab_feat::params_drift): `stored` = the .mzfeatf of its files, `baseRtTol` = the tolerance from the peak width (NaN = none) */
+function driftOps(submit, call, copy) {
+  return {
+    drift({ stored, parentMz, baseRtTol }) {
+      return submit(async (slot, load) => {
+        await load("feat");
+        const r = await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol });
+        return JSON.parse(r.json);
+      });
+    },
+  };
+}
+
 function proofOps(submit, call, copy, opts) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
     // when it has answered (its memory goes back) and the state it leaves (small) is loaded by the worker of the proofs. Each can be refused with `error.featMemory`.
-    // `hypotheses(...)` resolves with { state, tried, found, registry, ms }; `evidence(...)` with { table }.
-    hypotheses({ stored, paths, rules, parent, parentRt, recipe }) {
+    // `structure`: grafo/1 JSON of the SMILES of the parent (optional). `hypotheses(...)` resolves with { state, tried, found, registry, ms }; `evidence(...)` with { table }.
+    hypotheses({ stored, paths, rules, parent, parentRt, recipe, structure = "" }) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe });
+        const h = await call(slot, { op: "hypotheses", files: copy(stored), paths, rules: rules.slice(), parent, parentRt, recipe, structure });
         slot.recycle = true;                    // the memory of the .wasm is not given back: the worker is closed
         if (opts.onProgress) opts.onProgress({ phase: "hypotheses", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: h.mem / 1048576 });
         return { state: h.state, tried: h.tried, found: h.found, registry: h.registry, ms: Math.round(performance.now() - t0) };
@@ -148,7 +161,15 @@ export function createFeatPool(opts) {
       })));
     },
     ...previewOps(submit, call, opts),
+    ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
+    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
+    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
+      return submit(async (slot, load) => {
+        await load("table");
+        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
+      });
+    },
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe) {
       return submit(async (slot, load) => {
@@ -265,15 +286,18 @@ const OPS = {
     const f = await openAll([m.path]);
     try { return { json: mods.feat.preview_file(f.read, f.sizes[0], m.recipe || "") }; } finally { f.close(); }
   },
+  async drift(m) {
+    return { json: mods.feat.drift_series(arrays(m.files), m.parentMz, m.baseRtTol) };
+  },
   async align(m) {
     const f = await openAll(m.paths), out = memSink();
-    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }
+    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async hypotheses(m) {
     if (hypo) { hypo.free(); hypo = null; }
     const f = await openAll(m.paths);
     try {
-      hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
+      hypo = mods.proofs.run_hypotheses(arrays(m.files), f.read, f.sizes, m.rules, m.structure || "", m.parent, m.parentRt == null ? NaN : m.parentRt, m.recipe);
       return { tried: hypo.tried(), found: hypo.found(), registry: hypo.registry_json(), state: hypo.state() };
     } finally { f.close(); }
   },
@@ -282,8 +306,12 @@ const OPS = {
     if (hypo) hypo.free();
     hypo = mods.proofs.load_hypotheses(new Uint8Array(m.state));
     const nan = v => (v == null ? NaN : v), table = new Uint8Array(m.table), out = memSink();
-    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0);
+    mods.proofs.build_evidence_to((_, off, len) => table.subarray(off, off + len), table.length, hypo, Float64Array.from(m.minutes, nan), nan(m.parentMz), nan(m.parentRt), m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined);
     return { bytes: out.bytes() };
+  },
+  async ms2file(m) {
+    const f = await openAll(m.paths), t = new Uint8Array(m.table);
+    try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {

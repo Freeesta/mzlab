@@ -1,3 +1,5 @@
+// @ts-strict
+// @ts-check
 "use strict";
 // Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possible:
 //  - a cache of single scans (api/spectra, blocks of at most 60) so a step never waits for the server;
@@ -63,6 +65,7 @@ function scAhead(s) {
 }
 
 // ---- frozen intensity axis while walking (the m/z axis is always fixed, see drawSpec). s.lock = {ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
+/** @type {(...a: any[]) => void} */
 function lockStart() { /* the lock never closes by itself (7 Oct 2026, Federico): only the student closes it, with the lock button */ }
 // y = the highest peak of +-20 scans in the visible m/z range (from the cache) x 1.12, and it can only grow (no cut peaks)
 function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
@@ -84,7 +87,7 @@ function lockButton(p) {
   const b = p.el && p.el.querySelector('[data-a="lock"]'); if (!b) return;
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
-  b.style.left = p.cv.offsetLeft + 8 + "px"; b.style.top = p.cv.offsetTop - 10 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
+  b.style.left = p.cv.offsetLeft + 34 + "px"; b.style.top = p.cv.offsetTop - 10 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
   b.title = I18N.t(on ? "lock.on.title" : "lock.off.title");
 }
 function toggleLock(p) {
@@ -97,7 +100,7 @@ function toggleLock(p) {
 // several requests in a frame = one drawing; while a drawing is still waiting for its data the next one is remembered (one, not a queue) and made when it ends
 function drawSoon(p) {
   if (p._ds) return;
-  p._ds = requestAnimationFrame(async () => {
+  p._ds = FRAME.next(async () => {
     p._ds = 0; if (p._dr) { p._dq = true; return; }
     p._dr = true; try { await draw(p); } finally { p._dr = false; if (p._dq) { p._dq = false; drawSoon(p); } }
   });
@@ -119,7 +122,7 @@ function cursorLine(p) {                                           // the vertic
 
 // ---- keys: ← → one scan (Maiusc: five), held = ~15 scans/s, Space = play/pause, Esc = stop, ? = list of the shortcuts
 const KEY = { dir: 0, n: 1, t0: 0, t: 0, raf: 0, p: null };
-const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
+/** @type {any} */ const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
 // the chromatogram that walks: the active one, or the one a linked spectrum follows (after zooming in the spectrum the arrows still walk)
 const walkTarget = (play) => {
   const fp = fsPanel();
@@ -127,7 +130,7 @@ const walkTarget = (play) => {
   if (!fp && ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
   return ap && E.panels.includes(ap) && ap._a && ap._a.sr && (ap.cur != null || (play && ap.sel)) ? ap : null;
 };
-function playStop() { if (PLAY.raf) cancelAnimationFrame(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
+function playStop() { FRAME.cancel(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
 function playStart(p) {
   const sel = p.sel && p.sel[1] > p.sel[0] ? [p.sel[0], p.sel[1]] : null;
   if (sel && (p.cur == null || p.cur < sel[0] || p.cur > sel[1])) p.cur = sel[0];
@@ -139,19 +142,20 @@ function playStart(p) {
       if (sl) { if (PLAY.dir > 0 && q.cur >= sl[1] - 1e-9) PLAY.dir = -1; else if (PLAY.dir < 0 && q.cur <= sl[0] + 1e-9) PLAY.dir = 1; }
       if (!stepScan(q, PLAY.dir, { keepSel: !!sl })) { if (sl) PLAY.dir = -PLAY.dir; else return playStop(); }
     }
-    PLAY.raf = requestAnimationFrame(tick);
+    PLAY.raf = FRAME.next(tick);
   };
-  PLAY.raf = requestAnimationFrame(tick);
+  PLAY.raf = FRAME.next(tick);
 }
 function keyLoop() {
   if (KEY.raf) return;
   const tick = now => {
     KEY.raf = 0; if (!KEY.dir || !KEY.p) return;
     if (now - KEY.t0 >= 350 && paceDue(KEY, now)) { if (!stepScan(KEY.p, KEY.dir * KEY.n)) { KEY.dir = 0; return; } }
-    KEY.raf = requestAnimationFrame(tick);
+    KEY.raf = FRAME.next(tick);
   };
-  KEY.raf = requestAnimationFrame(tick);
+  KEY.raf = FRAME.next(tick);
 }
+document.addEventListener("keyup", e => { if (e.key === " " && PLAY.space) { PLAY.space = false; e.preventDefault(); } });   // Space on a focused button would also click it on release
 const typingNow = () => /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || !!Q("dialog[open]");
 document.addEventListener("keydown", e => {
   if (S.view !== "data") return;
@@ -160,7 +164,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "?") { e.preventDefault(); shortcuts(); return; }
   if (e.key === " ") {
     const ap = walkTarget(true); if (!ap) return;
-    e.preventDefault(); if (e.repeat) return;
+    e.preventDefault(); PLAY.space = true; if (e.repeat) return;
     if (PLAY.p) playStop(); else playStart(ap);
     return;
   }

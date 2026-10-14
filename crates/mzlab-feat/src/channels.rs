@@ -4,7 +4,8 @@
 use crate::sortc;
 use mzlab_core::error::Result;
 
-use crate::trace::{reserve, Params, TOUCH_HEIGHT};
+use crate::axis::{LR_STITCH, LR_TOUCH};
+use crate::trace::{filled, reserve, Params, TOUCH_HEIGHT};
 
 /// A run of scans in one channel.
 #[derive(Clone, Copy)]
@@ -139,6 +140,11 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     let m = segs.len();
     let (touch_ppm, touch_ratio) = (4.0f64, 10.0f64);
     let max_gap = p.max_gap as i64;
+    let touch_height = if p.axis.is_da() {
+        10.0 * p.min_height
+    } else {
+        TOUCH_HEIGHT
+    };
     for i in 0..m {
         let c = segs[i].chan;
         let lo = segs.partition_point(|s| s.chan < c + 1);
@@ -149,11 +155,18 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
             let ov = sj.z.min(si.z) as i64 - sj.a.max(si.a) as i64 + 1;
             let short = (si.z as i64 - si.a as i64 + 1).min(sj.z as i64 - sj.a as i64 + 1);
             let (hi_mx, lo_mx) = (si.mx.max(sj.mx), si.mx.min(sj.mx));
-            let like = (si.mzc - sj.mzc).abs() <= touch_ppm * 1e-6 * si.mzc
+            let near = if p.axis.is_da() {
+                LR_TOUCH
+            } else {
+                touch_ppm * 1e-6 * si.mzc
+            };
+            let like = (si.mzc - sj.mzc).abs() <= near
                 && hi_mx <= touch_ratio * lo_mx
-                && lo_mx >= TOUCH_HEIGHT;
-            let ok =
-                ov as f64 >= 0.5 * short as f64 || (ov >= 1 - max_gap && ov <= max_gap + 1 && like);
+                && lo_mx >= touch_height;
+            // a unit channel holds distinct ions a dalton apart: pieces are one ion only if their centroids are close
+            let overlap = ov as f64 >= 0.5 * short as f64
+                && (!p.axis.is_da() || (si.mzc - sj.mzc).abs() <= LR_STITCH);
+            let ok = overlap || (ov >= 1 - max_gap && ov <= max_gap + 1 && like);
             if ok {
                 let (ra, rb) = (find(parent, i as u32), find(parent, j as u32));
                 if ra != rb {
@@ -184,13 +197,13 @@ fn join(segs: &[Seg], parent: &mut [u32]) -> Result<Vec<Seg>> {
         }
     }
     let k = k as usize;
-    let mut tots = vec![0.0f64; k];
-    let mut mzw = vec![0.0f64; k];
-    let mut ns = vec![0u32; k];
-    let mut mxs = vec![f64::MIN; k];
-    let mut a2 = vec![u32::MAX; k];
-    let mut z2 = vec![0u32; k];
-    let mut best = vec![usize::MAX; k]; // member with the highest height (the first one on ties)
+    let mut tots = filled(k, 0.0f64)?;
+    let mut mzw = filled(k, 0.0f64)?;
+    let mut ns = filled(k, 0u32)?;
+    let mut mxs = filled(k, f64::MIN)?;
+    let mut a2 = filled(k, u32::MAX)?;
+    let mut z2 = filled(k, 0u32)?;
+    let mut best = filled(k, usize::MAX)?; // member with the highest height (the first one on ties)
     for (i, s) in segs.iter().enumerate() {
         let g = gid[root_of[i] as usize] as usize;
         tots[g] += s.tot;

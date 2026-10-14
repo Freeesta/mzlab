@@ -124,14 +124,14 @@ async function ogDrawXics() {
 }
 
 // High-resolution files only, and only with mzFinder on: its list of proofs (adduct step, co-elution, fragment in the MS2 of the parent, ratio across samples).
-// A list of measurements, never a label (mzFinder is English-only, so these texts are not in the catalogs).
+// A list of measurements, never a label (Tabui is English-only, so these texts are not in the catalogs).
 async function ogEvidence(R, box) {
   if (!R.hr || !window.TPCALL || !box) return;
   try {
     const ev = await window.TPCALL("origin_evidence", { report: Object.fromEntries(["mz", "parent_mz", "profile", "ratio", "ratio_constancy", "kinetics", "ms2_peaks"].map(k => [k, R[k]])), pol: R.pol || 1 });
     if (R !== OG.res || !ev || !ev.length) return;
     const mark = { evidence: "+", against: "-", hint: "~", info: "·" };
-    box.innerHTML = `<h4>Proofs (mzFinder)</h4><p class="why">What the data say about the link between the two ions, one proof per line (+ supports, - against, ~ only a hint). They are measurements for you to weigh, not a conclusion.</p><ul>${ev.map(e => `<li><b aria-hidden="true">${mark[e.strength] || "·"}</b> ${EH(e.text)}</li>`).join("")}</ul>`;
+    box.innerHTML = `<h4>Proofs (Tabui)</h4><p class="why">What the data say about the link between the two ions, one proof per line (+ supports, - against, ~ only a hint). They are measurements for you to weigh, not a conclusion.</p><ul>${ev.map(e => `<li><b aria-hidden="true">${mark[e.strength] || "·"}</b> ${EH(e.text)}</li>`).join("")}</ul>`;
     box.hidden = false;
   } catch (_) { /* mzFinder not ready: the report stays as it is */ }
 }
@@ -181,7 +181,7 @@ function ogRender() {
   ta.oninput = () => { NB.origin[key] = ta.value; nbSave(); };
   d.querySelector("#og-xlsx").onclick = () => ogXlsx();
   ogEvidence(R, d.querySelector("#og-ev"));
-  requestAnimationFrame(() => {
+  FRAME.next(() => {
     ogDrawXics();
     const pts = F.points || {}, p = pts.p || [], f = pts.f || [], fit = pts.fit || [];
     const order = p.map((v, i) => i).sort((a, b) => p[a] - p[b]);

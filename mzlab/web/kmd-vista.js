@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Drawing of the Kendrick mass defect section (kmd.js): the plot Kendrick mass against KMD, the table of its values for the «Dati» dialog, the tables of the
 // candidate series and of the ions. Pure functions of the result of KMDCALC.analyse and of the selection (series, row): no state.

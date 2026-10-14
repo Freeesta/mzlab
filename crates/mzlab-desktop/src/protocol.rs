@@ -1,11 +1,11 @@
 //! The `mzlab://localhost/<route>?<query>` protocol: pure function of (path, query), so that the window (`main.rs`) and the tests call
 //! the same code. Answers are bytes: little-endian `f64` arrays (`tic`, `xic`, `spectra`), file chunks (`chunk`) or small JSON
-//! (`open`, `raw2mzml`, errors `{"error_key", "params"}` with status 400). Everything else the page asks of its engine is `rpc` (POST, a JSON body with the
+//! (`open`, errors `{"error_key", "params"}` with status 400). Everything else the page asks of its engine is `rpc` (POST, a JSON body with the
 //! operation `op` and its parameters, see `rpc.rs`) and `lr/upload` (a file that reaches the app as bytes).
 //!
 //! Routes (all GET): `open?slot&id`, `close?slot`, `reset`, `tic?slot&level&px`, `xic?slot&level&mz&tol&px`,
-//! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size), `raw2mzml?id`
-//! (a converted mzML is a file like the others), `file?id&off&len`, and the folder of the libraries under `lib/` (see `lib_route`).
+//! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size),
+//! `rawprogress?id` (how far an mzML being written has got), `file?id&off&len` (also an mzML written by `nat2mzml`), and the folder of the libraries under `lib/` (see `lib_route`).
 
 use std::collections::HashMap;
 
@@ -127,13 +127,6 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
                 bin(state.spectra(slot, level as u8, i0, i1, f("bin").unwrap_or(0.1)))
             }
             _ => bad(),
-        },
-        "raw2mzml" => match u("id") {
-            Some(id) => match state.raw_to_mzml(id, u("profile") == Some(1)) {
-                Ok((tid, size)) => json(200, format!("{{\"id\":{tid},\"size\":{size}}}")),
-                Err(e) => error(&e),
-            },
-            None => bad(),
         },
         "rawprogress" => match u("id").and_then(|id| state.raw_progress(id)) {
             Some((total, read, written, scans, scans_total)) => json(

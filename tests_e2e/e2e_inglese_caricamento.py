@@ -19,7 +19,7 @@ def italian_on_screen(pg):
           for (const a of ['title', 'placeholder', 'aria-label', 'alt']) if (e.getAttribute(a)) out.push(e.getAttribute(a)); }
         return out.join(' | '); }""")
     return sorted({w for w in re.findall(r"[A-Za-zÀ-ÿ]+", t) if w.lower() in WORDS})
-r = Run(port=8830 + 110, wd="/tmp/wd_ingl_b", motore="python")
+r = Run(port=8830 + 110, wd="/tmp/wd_ingl_b")
 try:
     with sync_playwright() as p:
         url = f"http://127.0.0.1:{r.port}/"
@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("1. Load the data files (.mzML)", "Drop the .mzML files here", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("1. Load the data files (.mzML)", "Drop .mzML, .raw or .wiff files here", "Try the example files", "2. Acquisition method", "OPTIONAL", "Load data"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():
@@ -59,8 +59,9 @@ try:
             pg.set_input_files("#pick", "/tmp/x_ingl_b.txt"); pg.wait_for_timeout(800)
             t = pg.inner_text("#unopen"); assert "format not recognised" in t and "x_ingl_b.txt" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
-            pg.set_input_files("#pick", "/tmp/y_ingl_b.raw"); pg.wait_for_timeout(500)
-            t = pg.inner_text("#unopen"); assert "This .raw file can't be opened in the browser" in t and "Close" in t and "How to convert" in t, t
+            pg.set_input_files("#pick", "/tmp/y_ingl_b.raw")
+            pg.wait_for_function("document.body.innerText.includes('The Thermo .raw file cannot be read')", timeout=60000)       # a .raw is read in the browser: a damaged one says so, in English
+            t = pg.inner_text("body"); assert "The Thermo .raw file cannot be read" in t, [l for l in t.split("\n") if "raw" in l]
             open("/tmp/z_ingl_b.mzML", "w").write("not xml")
             pg.set_input_files("#pick", "/tmp/z_ingl_b.mzML"); pg.wait_for_timeout(800)
             assert not italian_on_screen(pg), italian_on_screen(pg)

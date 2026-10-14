@@ -1,3 +1,4 @@
+// @ts-strict
 // Reference of the session (a blank or the t0): one gesture, the same difference on traces, spectrum and map. Module; the page uses window.SUBREF.
 // The state is S.ref = { on: { [tab]: bool }, k: "auto" | file number, factor, norm: "none" | "tic" | "istd", istd: m/z, rttol: min, clip }.
 // The program only shows the difference (sample minus reference): it names nothing (principle 1). The calculation is in mzlab/differenza.py.
@@ -54,7 +55,7 @@ function set(tab, on) {
   refresh(tab, true);
   const o = on ? eff(E.panels.find(p => (p.tab || E.tab) === tab && KINDS.includes(p.type))) : null;
   if (on && !o) { r.on[tab] = false; info(T("sub.none")); }
-  else if (on) say(T("sub.on", { file: o.file.label, f: num(o.factor) }));
+  else if (on) say(T("sub.on", { file: /** @type {any} */ (o).file.label, f: num(/** @type {any} */ (o).factor) }));
   else say(T("sub.off"));
   if (window.BARRA && BARRA.refresh) BARRA.refresh();
 }
@@ -66,7 +67,7 @@ function step(p, d) {
   const o = eff(p), tab = p.tab || E.tab, fs = tabFiles(tab).filter(f => !o || f.k !== o.k); if (fs.length < 1) return;
   E.browse = true;
   const i = fs.findIndex(f => f.k === E.cur);
-  E.cur = fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k;
+  STATO.file(fs[((i < 0 ? (d > 0 ? -1 : 0) : i) + d + fs.length) % fs.length].k, "browse");
   renderNav(); renderFileList(); redrawAll(); uiSave();
 }
 
@@ -77,7 +78,7 @@ function popOpen(p, anchor) {
   if (!pop) {
     pop = document.createElement("div"); pop.id = "subpop"; pop.className = "subpop"; pop.setAttribute("role", "dialog"); pop.hidden = true; document.body.appendChild(pop);
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !pop.hidden) { const a = pop._anchor; popClose(); if (a && a.isConnected) a.focus(); } });
-    document.addEventListener("mousedown", e => { if (!pop.hidden && !e.target.closest("#subpop") && !e.target.closest(".subchip")) popClose(); });
+    document.addEventListener("mousedown", e => { if (!pop.hidden && !/** @type {HTMLElement} */ (e.target).closest("#subpop") && !/** @type {HTMLElement} */ (e.target).closest(".subchip")) popClose(); });
   }
   popP = p; pop._anchor = anchor; popBuild(p);
   pop.hidden = false;

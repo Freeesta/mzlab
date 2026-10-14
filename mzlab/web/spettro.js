@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Tools for the mass spectrum (Full Scan and MS2) and for the time axes. Classic script, loaded after scroll.js: it uses the globals of explore.js
 // (E, Q, EH, M, css, fmt, draw, uiSave, ctl, big, dlx, info, shown, tabPanels, IC_DL, IC_TAB).
@@ -24,6 +25,29 @@ function measClick(p, m) {
 }
 function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
 function measClear(p) { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); draw(p); uiSave(); }
+// Adduct exchanges between two peaks: the short symbol on the chart, the full form in the tooltip. One list for the spectrum ruler and the map (mappa.js).
+const AD_PAIRS = /** @type {Record<string, [number, string, string][]>} */ ({
+  positive: [[21.9819, "Na⁺/H⁺", "[M+Na]⁺ / [M+H]⁺"], [17.0265, "NH₄⁺/H⁺", "[M+NH₄]⁺ / [M+H]⁺"], [37.9559, "K⁺/H⁺", "[M+K]⁺ / [M+H]⁺"]],
+  negative: [[35.9767, "[M+Cl]⁻/[M−H]⁻", "[M+Cl]⁻ / [M−H]⁻"], [45.9929, "[M+HCOO]⁻/[M−H]⁻", "[M+HCOO]⁻ / [M−H]⁻"]]
+});
+/** @param {number} dm difference in m/z @param {boolean} hr @param {string=} polarity "positive" | "negative" | unknown (then the positive list, as the map always did) */
+function adductPair(dm, hr, polarity) {
+  const v = Math.abs(dm), tol = hr ? 0.003 : 0.5, hit = (AD_PAIRS[polarity === "negative" ? "negative" : "positive"]).find(a => Math.abs(v - a[0]) <= tol);
+  return hit ? { short: hit[1], full: hit[2] } : null;
+}
+const specPol = p => { const f = p._a && p._a.data && p._a.data[0] && p._a.data[0].f; return f ? f.polarity : undefined; };
+// opens the sidebar tab of the neutral losses filtered on |dm|, or the adducts when dm is a usual adduct exchange
+function dmOpen(dm, hr, polarity, losses) {
+  const ad = !losses && !!adductPair(dm, hr, polarity), q = String(+Math.abs(dm).toFixed(hr ? 4 : 1));
+  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
+  else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
+}
+/** right click on the label of a measure: straight to the losses or adducts tab; true when the click was on a label */
+function measCtx(p, px, py) {
+  const l = (p._a && p._a.lbls || []).find(b => b.dm != null && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+  if (l) dmOpen(l.dm, l.hr, specPol(p));
+  return !!l;
+}
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }       // zoom or scan changed: the measure is cancelled
@@ -38,14 +62,22 @@ function drawMeas(p, g, X, Y, W) {
     const xa = X(q.a), xb = X(q.b), y = M.t + 26 + (i % 6) * 17;
     g.setLineDash([2, 3]); g.globalAlpha = .55; g.beginPath(); g.moveTo(xa, y); g.lineTo(xa, Y(0)); g.moveTo(xb, y); g.lineTo(xb, Y(0)); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
     g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
-    const dd = Math.abs(q.b - q.a), t = "Δm/z " + dd.toFixed(p._a && p._a.hrp ? p._a.dec : 1) + (p._a && p._a.hrp ? ` (${(dd * 1000).toFixed(1)} mDa)` : ""), cx = Math.max(x0 + 40, Math.min(x1 - 40, (xa + xb) / 2));
-    g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); g.strokeStyle = ac; g.lineWidth = 1;
+    const dd = Math.abs(q.b - q.a), hr = !!(p._a && p._a.hrp), ap = adductPair(dd, hr, specPol(p)), mid = (xa + xb) / 2;
+    const num = dd.toFixed(hr ? p._a.dec : 1) + (hr ? ` (${(dd * 1000).toFixed(1)} mDa)` : "");
+    /** @type {[string, string][]} */ const parts = ap ? [[ap.short, ""]] : [["Δ", ""], ["m/z", "italic "], [" " + num, ""]];             // «m/z» is a symbol of a quantity: italic, with the Δ and the number upright
+    const ws = parts.map(([t, st]) => { g.font = fpx(12, st); return g.measureText(t).width; }), wt = ws.reduce((u, v) => u + v, 0);
+    const bx = Math.max(x0 + 2, Math.min(x1 - wt - 2, mid - wt / 2)); let cx = bx;
+    g.textAlign = "left"; g.lineJoin = "round";
+    parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += ws[j]; });
+    g.font = fpx(12); g.strokeStyle = ac; g.lineWidth = 1;
+    const fv = `<i>m/z</i> ${num}`;                                                                    // the label is a target of the hover box and of the right click (eventi.js)
+    (p._a.lbls = p._a.lbls || []).push({ x: bx - 3, y: y - 5 - 13 * fz(), w: wt + 6, h: 5 + 13 * fz(), dm: dd, ap, hr, tip: ap ? `<b>${ap.full}</b> · Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ad")}</div>` : `Δ${fv}<div class="sm">${I18N.t("spec.dm.tip.ls")}</div>` });
   });
   g.restore();
 }
 function specClick(p, px, py) {                  // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
-  let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  /** @type {any} */ let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
   (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });
   if (lb) { measClick(p, lb.m); return; }
   const s = p._a.snap(px); if (s) measClick(p, s.m);
@@ -57,10 +89,7 @@ function measMenu(p, m) {                          // entries of the right-click
     out.push({
       label: I18N.t("spec.measure.toLosses", { d }),
       tip: I18N.t("spec.measure.toLosses.tip"),
-      fn: () => {
-        if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: d });
-        else if (window.QQQRef) QQQRef.open("ls", { q: d });
-      }
+      fn: () => dmOpen(Math.abs(q.b - q.a), !!(p._a && p._a.hrp), specPol(p), true)
     });
   });
   if (p.meas) out.push({ label: I18N.t("spec.measure.clear"), fn: () => measClear(p) });
@@ -104,12 +133,13 @@ function undoZoom(p) {
   const s = h.pop(); p.zoom = s.zoom; p.zoomY = s.zoomY; if (p.type === "spec") p.lock = null; draw(p); uiSave();
 }
 function undoLast(p) {                                                    // Ctrl/Cmd+Z: the last thing done, whether a zoom or an integration
-  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1];
+  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1], n = Math.max(z ? z.n || 0 : 0, i ? i.n || 0 : 0);
+  if (window.AFFIANCA && AFFIANCA.ultimo() > n) { AFFIANCA.annulla(); return; }      // the last thing done was a change of the arrangement
   if (i && (!z || i.n > (z.n || 0))) undoInt(p); else undoZoom(p);
 }
 document.addEventListener("keydown", e => {
   const a = E.active; if (!a || !a.el || !Q("#dpanels").offsetParent || a.type === "map" && false) return;
-  if (e.target.closest && e.target.closest("input,textarea,select,[contenteditable='true']")) return;
+  if (/** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
   if (document.querySelector("dialog[open]")) return;
   const chosen = a.isel != null && a.ints && a.ints.find(i => i.id === a.isel);
   if ((e.key === "Delete" || e.key === "Backspace") && chosen && !e.ctrlKey && !e.metaKey) { e.preventDefault(); delInts(a, [chosen]); return; }      // with a peak selected, Delete/Backspace remove it (before "whole view")

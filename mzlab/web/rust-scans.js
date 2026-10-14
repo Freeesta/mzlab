@@ -1,3 +1,4 @@
+// @ts-strict
 // Single scans for rust-bridge.js: those of a PROFILE file come from the index; those of a centroid file, and `api/scan` / `api/scanavg`, from slices
 // of the mzML read by offset in the worker (the table of the scans of the index gives where each <spectrum> starts and ends). Returns the JSON
 // text, or null when Pyodide must answer.

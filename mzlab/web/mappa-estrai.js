@@ -1,3 +1,4 @@
+// @ts-strict
 // «How an XIC and a spectrum are extracted» on the RT x m/z map (module, loaded the first time the view is turned on from mappa.js).
 // The student places a box on the map (m/z window x RT window; drag it, drag its edges); beside the map the XIC of the m/z window (sum of the
 // intensities with m/z inside the window, against RT) and the mean spectrum of the RT window are drawn from the SAME box, the integrated zone is
@@ -233,7 +234,7 @@ function found(p, box) {                                               // «How 
     `<p class="muted">${T("mapfeat.note")}</p>`;
   box.appendChild(el);
   const c = el.querySelector("canvas"), t = s.xic;
-  requestAnimationFrame(() => {
+  FRAME.next(() => {
     const r = c.getBoundingClientRect(), dpr = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
     const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); const W = r.width, H = r.height, ml = 6, mb = 16, mt = 8;
     if (!t || !t.rt.length) return;

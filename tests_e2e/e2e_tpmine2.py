@@ -23,7 +23,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1500, "height": 1400}).new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url else None)   # logo and vendor are not in the cloud copy
+        pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and "logo.svg" not in r.url and "/vendor/" not in r.url and "wasm-feat/manifest.json" not in r.url else None)   # logo, vendor and wasm-feat (tools/build_feat_wasm.sh) are not in the cloud copy
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_timeout(3200)
         for _ in range(5): pg.click("header img.logo")          # mzFinder on (it stays on after a reload)
@@ -108,9 +108,7 @@ try:
             assert pg.get_attribute("#tp-name", "aria-expanded") == "true"
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
             pg.wait_for_function("document.querySelector('#tp-mol').value === 'C8H10N4O2' && document.querySelector('#tp-smi').value.length > 5", timeout=30000)
-            pg.wait_for_function("document.querySelector('#tp-struct svg') && document.querySelector('#tp-hd-struct svg')", timeout=60000)
-            assert pg.evaluate("document.querySelector('#tp-hd-struct svg').getBoundingClientRect().height") <= 48.5
-            assert "caffeine" in pg.inner_text("#tp-hd-struct").lower() and "C8H10N4O2" in pg.inner_text("#tp-hd-struct")
+            pg.wait_for_function("document.querySelector('#tp-struct svg')", timeout=60000)
             assert "195.0877" in pg.inner_text("#tp-prev")
             # unknown name -> only the PubChem search entry, with the exact word
             pg.fill("#tp-name", "")

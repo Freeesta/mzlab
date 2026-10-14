@@ -78,6 +78,15 @@ fn versions() -> String {
 }
 
 impl Recipe {
+    /// Window of m/z, ppm or minus Da, in which the summaries of a row look for the peak of a file (`rowmeta`): the Da of the alignment at unit resolution.
+    pub fn row_window(&self) -> f64 {
+        if self.align.ion.ppm < 0.0 {
+            self.align.ion.ppm
+        } else {
+            crate::rowmeta::WINDOW_PPM
+        }
+    }
+
     /// Text of what the table of one file depends on: the versions and the parameters of detection, quality, isotopes, MS2 and families.
     pub fn file_text(&self) -> String {
         let detect = Params {
@@ -119,6 +128,11 @@ impl Recipe {
 }
 
 /// FNV-1a over `text` in two 64-bit lanes with different seeds: 32 hex digits.
+/// True when the recipe text stored in the meta of a file or a table is the one of the unit-resolution profile (m/z axis in Da).
+pub fn is_unit_text(text: &str) -> bool {
+    text.contains("axis: Da {")
+}
+
 pub fn fingerprint(text: &str) -> String {
     let (mut a, mut b) = (0xcbf29ce484222325u64, 0x84222325cbf29ce4u64);
     for &c in text.as_bytes() {

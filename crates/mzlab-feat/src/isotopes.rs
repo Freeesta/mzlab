@@ -11,7 +11,10 @@
 
 use mzlab_core::isoscore::fine_pattern;
 
+use crate::axis::half;
 use crate::table::{FileFeatures, FLAG_ISOTOPE};
+use crate::trace::filled;
+use mzlab_core::error::Result;
 
 const ELECTRON_PROTON: f64 = 1.007_276;
 const D_13C: f64 = 1.003_355;
@@ -24,6 +27,7 @@ const MASS_BIN: f64 = 25.0;
 pub struct IsoParams {
     pub max_charge: i32,
     pub rt_tol: f64,
+    /// Tolerance of m/z, ppm or minus Da (`axis::half`); in Da (unit resolution) only the steps +1 and +2 are looked for.
     pub tol_ppm: f64,
 }
 
@@ -99,9 +103,14 @@ fn plausible(r: f64, k: u8, expect: (f64, f64)) -> bool {
     }
 }
 
-/// The steps `(k, delta)` looked for below a feature.
-fn steps() -> Vec<(u8, f64)> {
+/// The steps `(k, delta)` looked for below a feature. At unit resolution a +1 step is only registered (it may be another ion) and the +2
+/// steps are one (37Cl, 81Br: the ratio decides).
+fn steps(unit: bool) -> Vec<(u8, f64)> {
     let mut v = vec![(1u8, D_13C)];
+    if unit {
+        v.push((2, D_PLUS2[2]));
+        return v;
+    }
     v.extend(D_PLUS2.iter().map(|&d| (2u8, d)));
     v
 }
@@ -119,7 +128,7 @@ fn parent_of(
     for z in 1..=p.max_charge {
         for &(k, d) in st {
             let want = f.mz[j] - d / z as f64;
-            let tol = f.mz[j] * p.tol_ppm * 1e-6 + 3e-4;
+            let tol = half(f.mz[j], p.tol_ppm) + 3e-4;
             let a = f.mz.partition_point(|&m| m < want - tol);
             let b = f.mz.partition_point(|&m| m <= want + tol);
             #[allow(clippy::needless_range_loop)]
@@ -145,12 +154,12 @@ fn parent_of(
 }
 
 /// Group the isotopologues of the table: fills `iso_group`, `charge` and `FLAG_ISOTOPE` (features sorted by m/z).
-pub fn group(f: &mut FileFeatures, p: &IsoParams) {
+pub fn group(f: &mut FileFeatures, p: &IsoParams) -> Result<()> {
     let n = f.len();
     let mut ex = Expect::new();
-    let st = steps();
-    let mut charge = vec![0i8; n];
-    let mut gid = vec![0u32; n];
+    let st = steps(p.tol_ppm < 0.0);
+    let mut charge = filled(n, 0i8)?;
+    let mut gid = filled(n, 0u32)?;
     for j in 0..n {
         let Some((i, z)) = parent_of(f, j, &charge, &mut ex, p, &st) else {
             continue;
@@ -164,4 +173,5 @@ pub fn group(f: &mut FileFeatures, p: &IsoParams) {
     }
     f.iso_group = gid;
     f.charge = charge;
+    Ok(())
 }

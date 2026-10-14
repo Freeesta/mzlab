@@ -1,0 +1,344 @@
+//! The one builder of the tree of an MSn file (`TP_Mine/py/tpmine/hr/msn.py`: `node_key`, `node_id`, the grouping of `build_tree` and
+//! `find_parent`), without chemistry: scans → nodes (one per path of precursors) with their parent, and the consensus spectrum of a node
+//! (`consensus_arrays`). mzFinder (`mzlab_feat::legacy::msn`) puts formulas, calibration and atoms on it.
+
+use std::cmp::Ordering;
+use std::collections::HashMap;
+
+use crate::idxread::Scan;
+
+/// How the scans become nodes; the default is what `msn.py` does.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub enum Tol {
+    /// Precursors rounded to the nominal mass (`node_key`).
+    #[default]
+    Nominale,
+    /// Precursors of a stage closer than this many Da are one (sorted m/z, a gap wider than the tolerance starts a new group).
+    Da(f64),
+    /// The same within this many ppm of the lower m/z.
+    Ppm(f64),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Raggruppa {
+    pub tol: Tol,
+    /// `true` (default): one energy, one node; `false`: the collision energy is out of the key.
+    pub energie: bool,
+}
+
+impl Default for Raggruppa {
+    fn default() -> Self {
+        Raggruppa {
+            tol: Tol::Nominale,
+            energie: true,
+        }
+    }
+}
+
+/// One node (not the root MS1).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Nodo {
+    /// `node_id`: `195@cid30>138@cid35`.
+    pub id: String,
+    /// ((nominal m/z, activation, collision energy), ...) of the path.
+    pub chiave: Vec<(f64, String, f64)>,
+    /// Index into `Albero::nodi` of the parent; `None` = the root MS1.
+    pub genitore: Option<usize>,
+    /// Generations missing between the parent and the node (`via`).
+    pub salto: u8,
+    pub livello: u8,
+    /// Indices of its scans in the input.
+    pub scansioni: Vec<usize>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Albero {
+    /// The level-1 scans (the root).
+    pub ms1: Vec<usize>,
+    /// The nodes in the order (length of the path, path); a parent always comes before its children.
+    pub nodi: Vec<Nodo>,
+    /// MSn scans without a usable path (none in the filter, or not as long as the level asks).
+    pub scartate: usize,
+}
+
+type Key = Vec<(i64, String, u64)>;
+
+/// The groups of the precursors of each stage of the paths (`Tol`): code of an m/z (the nominal mass, or the rank of its group) and the
+/// m/z shown for a code (the nominal mass, or the mean of the group).
+struct Codici {
+    tol: Tol,
+    stadi: Vec<(Vec<f64>, Vec<i64>, Vec<f64>)>,
+}
+
+impl Codici {
+    fn new<'a>(tol: Tol, paths: impl Iterator<Item = &'a [(f64, String, f64)]>) -> Codici {
+        let mut stadi: Vec<(Vec<f64>, Vec<i64>, Vec<f64>)> = vec![];
+        if tol != Tol::Nominale {
+            for p in paths {
+                for (s, (m, _, _)) in p.iter().enumerate() {
+                    if stadi.len() <= s {
+                        stadi.push(Default::default());
+                    }
+                    stadi[s].0.push(*m);
+                }
+            }
+        }
+        for (mz, code, centre) in &mut stadi {
+            crate::sortc::by(mz, f64::total_cmp);
+            mz.dedup();
+            let (mut sum, mut n) = (0.0, 0usize);
+            for (i, m) in mz.iter().enumerate() {
+                let far = match tol {
+                    Tol::Da(d) => i > 0 && m - mz[i - 1] > d,
+                    Tol::Ppm(p) => i > 0 && m - mz[i - 1] > mz[i - 1] * p * 1e-6,
+                    Tol::Nominale => false,
+                };
+                if far {
+                    centre.push(sum / n as f64);
+                    (sum, n) = (0.0, 0);
+                }
+                code.push(centre.len() as i64);
+                sum += m;
+                n += 1;
+            }
+            centre.push(sum / n.max(1) as f64);
+        }
+        Codici { tol, stadi }
+    }
+
+    fn code(&self, stage: usize, mz: f64) -> i64 {
+        if self.tol == Tol::Nominale {
+            return mz.round_ties_even() as i64;
+        }
+        let (v, code, _) = &self.stadi[stage];
+        code[v.partition_point(|x| *x < mz).min(v.len() - 1)]
+    }
+
+    fn mz(&self, stage: usize, code: i64) -> f64 {
+        match self.tol {
+            Tol::Nominale => code as f64,
+            _ => (self.stadi[stage].2[code as usize] * 1e4).round() / 1e4,
+        }
+    }
+}
+
+/// The energy of a key when the energies are merged.
+const NO_CE: f64 = f64::NAN;
+
+fn key_of(path: &[(f64, String, f64)], c: &Codici, energie: bool) -> Key {
+    path.iter()
+        .enumerate()
+        .map(|(s, (mz, act, ce))| {
+            let ce = if energie { *ce } else { NO_CE };
+            (c.code(s, *mz), act.clone(), ce.to_bits())
+        })
+        .collect()
+}
+
+fn key_cmp(a: &Key, b: &Key) -> Ordering {
+    a.len().cmp(&b.len()).then_with(|| {
+        for (x, y) in a.iter().zip(b) {
+            let o =
+                x.0.cmp(&y.0)
+                    .then_with(|| x.1.cmp(&y.1))
+                    .then_with(|| f64::from_bits(x.2).total_cmp(&f64::from_bits(y.2)));
+            if o.is_ne() {
+                return o;
+            }
+        }
+        Ordering::Equal
+    })
+}
+
+/// `node_id`: `195@cid30>138@cid35`, `MS1` for the empty path; an m/z that is not nominal (`Tol::Da`, `Tol::Ppm`) with 4 decimals
+/// (`195.0876@cid30`), a merged energy (`NaN`) left out (`195@cid`).
+pub fn node_id(chiave: &[(f64, String, f64)]) -> String {
+    if chiave.is_empty() {
+        return "MS1".into();
+    }
+    chiave
+        .iter()
+        .map(|(mz, act, ce)| {
+            let m = match mz.fract() == 0.0 {
+                true => (mz.round_ties_even() as i64).to_string(),
+                false => format!("{mz:.4}"),
+            };
+            let e = if ce.is_nan() {
+                String::new()
+            } else {
+                crate::json::fmt_g(*ce)
+            };
+            format!("{m}@{}{e}", act.to_lowercase())
+        })
+        .collect::<Vec<_>>()
+        .join(">")
+}
+
+/// `find_parent`: the node of path[:-1] (the same energy if it exists, else the one with the most scans); the nearest ancestor when that
+/// generation is not in the file. Returns it (empty = the root) and the depth.
+fn find_parent(
+    k: &Key,
+    by_nominal: &HashMap<Vec<i64>, Vec<Key>>,
+    groups: &HashMap<Key, Vec<usize>>,
+) -> (Key, usize) {
+    let (mut pk, mut depth) = (k[..k.len() - 1].to_vec(), 1);
+    loop {
+        if pk.is_empty() {
+            return (pk, depth);
+        }
+        let nom: Vec<i64> = pk.iter().map(|x| x.0).collect();
+        if let Some(cand) = by_nominal.get(&nom).filter(|c| !c.is_empty()) {
+            if cand.contains(&pk) {
+                return (pk, depth);
+            }
+            let mut best = &cand[0];
+            for c in cand {
+                if groups[c].len() > groups[best].len() {
+                    best = c;
+                }
+            }
+            return (best.clone(), depth);
+        }
+        pk.pop();
+        depth += 1;
+    }
+}
+
+/// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: (m/z, mean relative intensity over all the spectra, number of spectra with the peak).
+pub fn consenso(
+    spectra: &[(Vec<f64>, Vec<f64>)],
+    ppm: f64,
+    min_frac: f64,
+    min_rel: f64,
+) -> (Vec<f64>, Vec<f64>, Vec<usize>) {
+    let n = spectra.len();
+    let mut pk: Vec<(f64, f64, usize)> = vec![];
+    for (i, (m, it)) in spectra.iter().enumerate() {
+        let mx = it.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        if m.is_empty() || mx.is_nan() || mx <= 0.0 {
+            continue;
+        }
+        for (&a, &b) in m.iter().zip(it) {
+            let r = b / mx;
+            if r > 0.0 {
+                pk.push((a, r, i));
+            }
+        }
+    }
+    if pk.is_empty() {
+        return (vec![], vec![], vec![]);
+    }
+    crate::sortc::by(&mut pk, |a, b| a.0.total_cmp(&b.0));
+    // groups: a new one where the step to the next m/z exceeds ppm of that m/z
+    let (mut w, mut wm, mut seen): (Vec<f64>, Vec<f64>, Vec<Vec<usize>>) = (vec![], vec![], vec![]);
+    for (j, &(m, r, s)) in pk.iter().enumerate() {
+        if j == 0 || m - pk[j - 1].0 > m * ppm * 1e-6 {
+            w.push(0.0);
+            wm.push(0.0);
+            seen.push(vec![]);
+        }
+        let g = w.len() - 1;
+        w[g] += r;
+        wm[g] += r * m;
+        if !seen[g].contains(&s) {
+            seen[g].push(s);
+        }
+    }
+    let need = (min_frac * n as f64).max(1.0);
+    let (mut cm, mut mean, mut nsc) = (vec![], vec![], vec![]);
+    for g in 0..w.len() {
+        let m = w[g] / n as f64;
+        if seen[g].len() as f64 >= need && m >= min_rel {
+            cm.push(wm[g] / w[g]);
+            mean.push(m);
+            nsc.push(seen[g].len());
+        }
+    }
+    (cm, mean, nsc)
+}
+
+/// The tree of the scans of an MSn file (`.mzidx`).
+pub fn albero(scans: &[Scan], r: &Raggruppa) -> Albero {
+    albero_di(scans.iter().map(|s| (s.level, s.path.as_deref())), r)
+}
+
+/// A scan as (level, path of the filter).
+pub type ScanPath<'a> = (u8, Option<&'a [(f64, String, f64)]>);
+
+/// The tree of scans given as (level, path of the filter).
+pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Raggruppa) -> Albero {
+    let mut out = Albero::default();
+    let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
+    let scans: Vec<_> = scans.into_iter().collect();
+    let usable = |&(level, path): &ScanPath<'a>| {
+        path.filter(|p| level > 1 && !p.is_empty() && p.len() + 1 == level as usize)
+    };
+    let codici = Codici::new(r.tol, scans.iter().filter_map(usable));
+    for (i, sc) in scans.iter().enumerate() {
+        match usable(sc) {
+            _ if sc.0 == 1 => out.ms1.push(i),
+            Some(p) => groups
+                .entry(key_of(p, &codici, r.energie))
+                .or_default()
+                .push(i),
+            None => out.scartate += 1,
+        }
+    }
+    let mut keys: Vec<Key> = groups.keys().cloned().collect();
+    keys.sort_by(key_cmp);
+    let mut by_nominal: HashMap<Vec<i64>, Vec<Key>> = HashMap::new();
+    for k in &keys {
+        by_nominal
+            .entry(k.iter().map(|x| x.0).collect())
+            .or_default()
+            .push(k.clone());
+    }
+    let at: HashMap<&Key, usize> = keys.iter().enumerate().map(|(i, k)| (k, i)).collect();
+    for k in &keys {
+        let (pk, depth) = find_parent(k, &by_nominal, &groups);
+        let chiave: Vec<(f64, String, f64)> = k
+            .iter()
+            .enumerate()
+            .map(|(s, (m, a, ce))| (codici.mz(s, *m), a.clone(), f64::from_bits(*ce)))
+            .collect();
+        out.nodi.push(Nodo {
+            id: node_id(&chiave),
+            livello: (k.len() + 1) as u8,
+            genitore: at.get(&pk).copied(),
+            salto: (depth - 1) as u8,
+            scansioni: groups[k].clone(),
+            chiave,
+        });
+    }
+    out
+}
+
+/// The blocks of each node: runs of its scans with no scan of another node between them (MS1 and unusable scans do not break a run),
+/// as (first, last) indices of the input. A tree from Tune has a few long blocks per node; a cycled method one block per scan.
+pub fn blocchi(a: &Albero, n_scans: usize) -> Vec<Vec<(usize, usize)>> {
+    let mut owned = vec![0usize; n_scans + 1];
+    for n in &a.nodi {
+        for &i in &n.scansioni {
+            owned[i + 1] = 1;
+        }
+    }
+    for i in 1..owned.len() {
+        owned[i] += owned[i - 1];
+    }
+    a.nodi
+        .iter()
+        .map(|n| {
+            let mut out: Vec<(usize, usize)> = vec![];
+            for &i in &n.scansioni {
+                match out.last_mut() {
+                    Some(b) if owned[i] == owned[b.1 + 1] => b.1 = i,
+                    _ => out.push((i, i)),
+                }
+            }
+            out
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests;

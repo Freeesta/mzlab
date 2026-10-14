@@ -1,6 +1,6 @@
 """SCIEX .wiff + .wiff.scan dropped in the start page, on the built site with the Rust engine and WITHOUT Pyodide (?motore=rust&lr=1): the pair is matched by name
-(also when its two files come in different loadings), a .wiff alone gets a notice, a .wiff with several samples gives one mzML per sample, the converted mzML are
-listed (with the button to save them), are recognised as Full Scan / MS2 / MRM and Pyodide is never requested. Synthetic pairs of tools/wiff_riferimento.py (no laboratory data).
+(also when its two files come in different loadings), a .wiff alone gets a notice, a .wiff with several samples gives one file per sample (read as they are, no mzML is made), the samples are
+listed (with the button to save their mzML on request), are recognised as Full Scan / MS2 / MRM and Pyodide is never requested. Synthetic pairs of tools/wiff_riferimento.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -61,7 +61,7 @@ try:
         step("a .wiff with two samples gives one mzML per sample (either order of the files)", several)
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
-            assert {"two.wiff", "serie.wiff", "two_s1.mzML", "two_s2.mzML", "serie.mzML"} <= seen, seen
+            assert {"two.wiff", "serie.wiff"} <= seen, seen
             assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.rows.length") == 0
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
@@ -73,9 +73,6 @@ try:
             pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
             assert pg.locator("#flist tr[aria-busy=true]").count() == 0
         step("a row of the list shows its state and a bar that moves", rows_progress)
-        def pool_converts():                             # the samples are converted by short-lived workers (wiff-worker.js), not by the engine's own thread
-            assert any(u.endswith("wiff-worker.js") for u in reqs), [u for u in reqs if "worker" in u]
-        step("the conversion runs in the pool of workers", pool_converts)
         def downloads():
             assert pg.locator("#flist [data-dl]").count() == 4 and pg.locator("#dlall").count() == 1
         step("the converted mzML can be saved", downloads)
@@ -113,7 +110,6 @@ try:
             pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
             pg.wait_for_function("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).filter(tr => /^prodotto/.test(tr.children[1].textContent.trim())).length === 2", timeout=120000)
-            pg.evaluate("Array.from(document.querySelectorAll('#flist input[data-k=use]')).forEach(i => { const on = /^prodotto_s2/.test(i.closest('tr').children[1].textContent.trim()); if (i.checked !== on) i.click(); })")
             pg.click("#opbtn"); pg.wait_for_function("E.files.length === 2 && E.pending.length === 0 && E.panels.some(q => q.type === 'spec')", timeout=120000); pg.wait_for_timeout(1500)
             for prec, r0, r1 in ((229.1, 3.7, 3.702), (305, 3.7, 3.702), ("305", 1.0, 1.001), (229.1, 6.0, 6.001)):          # narrow windows, most of them without a scan of the precursor
                 pg.evaluate("""([prec, r0, r1]) => { const p = E.panels.find(q => q.type === 'spec'); p._a = null; p.all = false; p.link = null; E.browse = false; p.k = E.files.findIndex(f => /_s2/.test(f.label));

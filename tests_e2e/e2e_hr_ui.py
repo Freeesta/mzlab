@@ -9,7 +9,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_ui.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\\n")[0][:240]))
 D = synth("hrui")
-r = Run(port=8900, wd="/tmp/wdhr10", motore="python")
+r = Run(port=8900, wd="/tmp/wdhr10")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -22,7 +22,7 @@ try:
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)
         def pills_qqq():
-            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
+            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
             assert rows and all(b == [] for a, b in rows), rows
         step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
         def method_qqq():
@@ -55,9 +55,9 @@ try:
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
         def method():
-            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(2500)
+            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
-            assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45 000" in t and "±0.75" in t, t
+            assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
             assert "Manca il metodo di acquisizione" not in t
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)

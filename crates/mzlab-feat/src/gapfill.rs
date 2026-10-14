@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
-use crate::trace::{Params, SLAB_PEAKS};
+use crate::trace::{filled, Params, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
 #[derive(Debug, Clone, Copy)]
@@ -61,7 +61,7 @@ fn median32(mut v: Vec<f32>) -> f32 {
 }
 
 /// Where the peak of `row` is expected in `file`: (centre, half width) in minutes, `None` when no file saw the row.
-fn expected_window(
+pub(crate) fn expected_window(
     al: &Aligned,
     row: usize,
     file: usize,
@@ -88,7 +88,14 @@ fn expected_window(
 }
 
 /// Area (counts x seconds) of the strongest trace whose apex lies in the scans `i0..i1`; `y` holds the summed intensity of the scans `s0..`.
-fn trace_area(y: &[f64], s0: usize, i0: usize, i1: usize, dt: f64, p: &FillParams) -> Option<f64> {
+pub(crate) fn trace_area(
+    y: &[f64],
+    s0: usize,
+    i0: usize,
+    i1: usize,
+    dt: f64,
+    p: &FillParams,
+) -> Option<f64> {
     let x: Vec<f64> = y
         .iter()
         .map(|&v| if v >= p.floor { v } else { 0.0 })
@@ -188,7 +195,7 @@ pub fn fill_file<R: ReadAt>(
     windows(index, si, &ranges, max_peaks, |q, a, b, slab| {
         let t = &list[q];
         let (s0, s1) = (t.i0.saturating_sub(pad), (t.i1 + pad).min(nscan));
-        let mut y = vec![0.0f64; s1 - s0];
+        let mut y = filled(s1 - s0, 0.0f64)?;
         for j in a..b {
             let s = slab.pos[j] as usize;
             if s >= s0 && s < s1 {

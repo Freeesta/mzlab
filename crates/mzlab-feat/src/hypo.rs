@@ -6,6 +6,7 @@
 
 mod rules;
 mod sources;
+mod structure;
 
 use std::collections::BTreeMap;
 
@@ -16,7 +17,9 @@ use mzlab_core::json::{round, Out};
 pub use rules::{
     parse_delta, Counts, Dir, Rule, Rules, FORMAT as RULES_FORMAT, VERSION as RULES_VERSION,
 };
+pub(crate) use sources::from_rules;
 pub use sources::{FamilyBase, Imported};
+pub use structure::Structure;
 
 /// Bits of `Hypothesis::sources`.
 pub const SRC_RULE: u8 = 1;
@@ -24,14 +27,16 @@ pub const SRC_SUSPECT: u8 = 2;
 pub const SRC_FAMILY: u8 = 4;
 pub const SRC_IMPORTED: u8 = 8;
 pub const SRC_CLEAVAGE: u8 = 16;
+pub const SRC_NETWORK: u8 = 32;
 
 pub const REGISTRY_FORMAT: &str = "ipotesi/1";
-const SRC_NAMES: [(u8, &str); 5] = [
+const SRC_NAMES: [(u8, &str); 6] = [
     (SRC_RULE, "regola"),
     (SRC_SUSPECT, "sospetti"),
     (SRC_FAMILY, "famiglia"),
     (SRC_IMPORTED, "importata"),
     (SRC_CLEAVAGE, "rottura"),
+    (SRC_NETWORK, "rete"),
 ];
 
 #[derive(Debug, Clone)]
@@ -45,6 +50,8 @@ pub struct HypoParams {
     pub max_suspects: usize,
     /// Expected members of a family in the other polarity too ([M-H]- of a positive base and the reverse).
     pub other_polarity: bool,
+    /// Unit resolution: two formulas of the same nominal m/z and adduct are one hypothesis, the others are its alternatives.
+    pub nominal: bool,
 }
 
 impl Default for HypoParams {
@@ -55,6 +62,7 @@ impl Default for HypoParams {
             min_mz: 50.0,
             max_suspects: 500,
             other_polarity: false,
+            nominal: false,
         }
     }
 }
@@ -106,6 +114,8 @@ pub struct Inputs<'a> {
     pub imported: &'a [Imported],
     /// Formulas of cleavage products of the parent (the caller knows the structure; formulas alone give no fragments).
     pub fragments: &'a [String],
+    /// Functional groups of the parent (`chem::grafo`), when its structure is known: the rules with groups are used, the `fallback` ones are not.
+    pub groups: Option<&'a [String]>,
 }
 
 pub(crate) fn to_formula(c: &Counts) -> Option<Formula> {
@@ -122,7 +132,12 @@ pub(crate) fn to_formula(c: &Counts) -> Option<Formula> {
 }
 
 pub(crate) fn counts_of(f: &Formula) -> Counts {
-    f.iter().map(|(e, n)| (e.clone(), *n as i64)).collect()
+    // inserted one by one: `collect` into a BTreeMap brings in a sort of its own
+    let mut m = Counts::new();
+    for (e, n) in f {
+        m.insert(e.clone(), *n as i64);
+    }
+    m
 }
 
 /// The adduct of the polarity and the m/z of a neutral mass.
@@ -132,6 +147,14 @@ pub(crate) fn ion(neutral: f64, polarity: i8) -> (&'static str, f64) {
 }
 
 fn same_key(a: &Hypothesis, b: &Hypothesis) -> bool {
+    same_ion(a, b, false)
+}
+
+/// Whether two hypotheses name the same ion: same formula (or, without one, the same m/z and label) and adduct, or at unit resolution the same nominal m/z.
+fn same_ion(a: &Hypothesis, b: &Hypothesis, nominal: bool) -> bool {
+    if nominal {
+        return libm::round(a.mz) == libm::round(b.mz) && a.adduct == b.adduct;
+    }
     if a.formula.is_empty() || b.formula.is_empty() {
         a.mz.to_bits() == b.mz.to_bits() && a.adduct == b.adduct && a.label == b.label
     } else {
@@ -139,10 +162,39 @@ fn same_key(a: &Hypothesis, b: &Hypothesis) -> bool {
     }
 }
 
+/// Registry methods for a later round of hypotheses.
+impl Registry {
+    /// Adds the hypotheses of a later round: those whose ion is already in the registry are dropped, the others are sorted like `generate` does and get the
+    /// next ids, so the ids and outcomes of the first round do not move. Returns how many were added.
+    pub fn append(&mut self, mut extra: Vec<Hypothesis>) -> usize {
+        extra.retain(|h| !self.hyps.iter().any(|x| same_key(x, h)));
+        let mut order: Vec<usize> = (0..extra.len()).collect();
+        crate::sortc::by(&mut order, |&a, &b| {
+            let (a, b) = (&extra[a], &extra[b]);
+            a.mz.total_cmp(&b.mz)
+                .then_with(|| a.adduct.cmp(b.adduct))
+                .then_with(|| a.formula.cmp(&b.formula))
+                .then_with(|| a.label.cmp(&b.label))
+        });
+        let n = extra.len();
+        let mut slots: Vec<Option<Hypothesis>> = extra.into_iter().map(Some).collect();
+        for i in order {
+            if let Some(mut h) = slots[i].take() {
+                h.id = self.hyps.len() as u32;
+                self.hyps.push(h);
+                self.outcomes.push(Outcome::NotSearched);
+            }
+        }
+        n
+    }
+}
+
 /// Merges the hypotheses that name the same ion (same formula and adduct): sources are united, the other labels become alternatives.
-fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
-    raw.sort_by(|a, b| {
-        a.mz.total_cmp(&b.mz)
+fn merge(mut raw: Vec<Hypothesis>, nominal: bool) -> Vec<Hypothesis> {
+    let key = |h: &Hypothesis| if nominal { libm::round(h.mz) } else { h.mz };
+    crate::sortc::any_by(&mut raw, |a, b| {
+        key(a)
+            .total_cmp(&key(b))
             .then_with(|| a.adduct.cmp(b.adduct))
             .then_with(|| a.formula.cmp(&b.formula))
             .then_with(|| a.label.cmp(&b.label))
@@ -150,10 +202,15 @@ fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
     let mut out: Vec<Hypothesis> = Vec::with_capacity(raw.len());
     for h in raw {
         match out.last_mut() {
-            Some(l) if same_key(l, &h) => {
+            Some(l) if same_ion(l, &h, nominal) => {
                 l.sources |= h.sources;
-                if l.label != h.label && !l.alternatives.contains(&h.label) {
-                    l.alternatives.push(h.label);
+                let other = if l.formula == h.formula {
+                    h.label
+                } else {
+                    format!("{} ({})", h.formula, h.label)
+                };
+                if other != l.label && !l.alternatives.contains(&other) {
+                    l.alternatives.push(other);
                 }
                 l.level = if l.level == 0 {
                     h.level
@@ -169,7 +226,7 @@ fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
     }
     for (i, h) in out.iter_mut().enumerate() {
         h.id = i as u32;
-        h.alternatives.sort();
+        crate::sortc::any_by(&mut h.alternatives, |a, b| a.cmp(b));
     }
     out
 }
@@ -178,8 +235,14 @@ fn merge(mut raw: Vec<Hypothesis>) -> Vec<Hypothesis> {
 pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry> {
     let parent = elements::parse_formula(inp.parent)?;
     let pc = counts_of(&parent);
-    let mut raw = sources::from_rules(rules, &pc, p);
+    let mut raw = sources::from_rules(rules, &pc, inp.groups, p);
     raw.extend(sources::from_fragments(inp.fragments, &pc, p)?);
+    raw.extend(sources::from_fragment_products(
+        rules,
+        inp.fragments,
+        &pc,
+        p,
+    )?);
     let mut cut = 0;
     if let Some(s) = inp.suspects {
         let (h, c) = sources::from_suspects(s, &pc, p);
@@ -188,12 +251,12 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
     }
     raw.extend(sources::from_families(inp.families, p));
     raw.extend(sources::from_imported(inp.imported, p)?);
-    let hyps = merge(raw);
+    let hyps = merge(raw, p.nominal);
     let outcomes = vec![Outcome::NotSearched; hyps.len()];
     Ok(Registry {
         hyps,
         outcomes,
-        rules_version: RULES_VERSION,
+        rules_version: rules.version,
         polarity: p.polarity,
         suspects_cut: cut,
     })

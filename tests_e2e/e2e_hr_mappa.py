@@ -5,7 +5,7 @@ Needs the site and the .wasm (python tools/build_site.py)."""
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT
-from pyref import PyRef
+from golden_ref import PyRef
 from lib_hr import synth
 
 sys.path.insert(0, str(ROOT))
@@ -17,9 +17,8 @@ def step(name, fn):
 
 if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
-from mzlab.chem.elements import ion_mz, mass, parse_formula  # noqa: E402
 import dati_sintetici as ds  # noqa: E402
-PARENT = ion_mz(mass(parse_formula(ds.HR_PARENT)), "[M+H]+")
+PARENT = ds.hr_parent_mz()
 D = synth("hrmappa")
 FILES = [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML"]
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

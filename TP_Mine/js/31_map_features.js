@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Features of the last high-resolution result for the RT x m/z map of the page (window.MAPFEAT, read by mzlab/web/mappa-estrai.js): markers, and
 // «How it was found» for the chosen one. Read-only: it only re-reads the result the page already holds (rows, files, settings, inclusion list); the search is not run again.
 // window.MAPFEAT.features(file) -> [{ id, mz, rt, ppm, rt0?, rt1?, filters: [{ key, label, thr, value?, from?, cmp, unit?, note? }] }] or null (no result, or the file is not in it).
@@ -5,7 +6,7 @@
   "use strict";
   const G = typeof window !== "undefined" ? window : globalThis;
   const PPM = 5;                                          // tolerance of the alignment of the traces (hr/features.py, align() and trace_area())
-  const base = n => String(n || "").split(/[\\/]/).pop().replace(/\.(mzml|raw|d|wiff)$/i, "").toLowerCase();
+  const base = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/\.(mzml|raw|d|wiff)$/i, "").toLowerCase();
   const num = v => typeof v === "number" && Number.isFinite(v);
 
   /** The features of a result `s` (mode "hr") that were seen in the file `f` ({file, label}): one per row with a positive area in that file. */

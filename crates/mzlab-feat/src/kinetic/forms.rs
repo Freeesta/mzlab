@@ -93,7 +93,7 @@ impl FormBank {
             .iter()
             .filter_map(|&f| hits[f as usize].map(|h| self.make(f, h, ymax, cols.len())))
             .collect();
-        out.sort_by(|a, b| a.aicc.total_cmp(&b.aicc));
+        crate::sortc::any_by(&mut out, |a, b| a.aicc.total_cmp(&b.aicc));
         out
     }
 

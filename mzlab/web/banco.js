@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Classic script, loaded after tabs.js.
 // A cell is one panel of the page. In the high-resolution world every chromatogram and spectrum cell gets
@@ -9,8 +10,8 @@ const BANCO = (() => {
   const st = document.createElement("style");
   st.textContent = `.hrw .pnl.act{box-shadow:0 0 0 2px var(--accent)}
 .bfw{display:inline-flex;align-items:center;gap:4px;margin-left:6px}.bfw select{max-width:21em;min-width:9em}.bfw .pin{padding:2px 5px}.bfw .pin.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
-.hrw #g-add,.hrw #ovbtn,.hrw .pnl.spec [data-a="par"]{display:none}
-#hrbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0 8px;border-bottom:2px solid var(--line);margin-bottom:8px}
+.hrw #g-add,.hrw .pnl.spec [data-a="par"]{display:none}
+#hrbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:0 0 6px}
 #hrbar[hidden]{display:none}#hrbar .sepv{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
 #hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
 #hrbar button.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}#hrbar button:disabled{opacity:.35;cursor:default}
@@ -413,8 +414,8 @@ const BANCO = (() => {
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
-    cancelAnimationFrame(infoRaf);
-    infoRaf = requestAnimationFrame(() => {
+    FRAME.cancel(infoRaf);
+    infoRaf = FRAME.next(() => {
       const p = act(), b = Q("#hri-body"); if (!b) return;
       Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
       if (!p) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.noCellText")}</div>`);
@@ -442,7 +443,7 @@ const BANCO = (() => {
       const pnlContainer = Q("#sb-panels") || aside;
       pnlContainer.appendChild(c);
       c.style.height = ist.h + "px";
-      new ResizeObserver(() => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } }).observe(c);
+      FRAME.ro(c, () => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } });
     }
     if (window.BARRA) {
       BARRA.syncMode();
@@ -453,13 +454,12 @@ const BANCO = (() => {
     renderInfo();
   }
   function bar() {
-    const host = Q("#dtabs"); if (!host) return;
+    const host = Q("#tools"); if (!host) return;
     let b = Q("#hrbar");
-    if (!sync()) { if (b) b.hidden = true; host.hidden = false; const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
-    host.hidden = true;
+    if (!sync()) { if (b) b.hidden = true; const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
     if (!b) {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
-      host.insertAdjacentElement("afterend", b);
+      host.insertAdjacentElement("beforebegin", b);
       b.innerHTML = barBtn("prev", I18N.t("bn.bar.prev"), ICON.prev) + barBtn("next", I18N.t("bn.bar.next"), ICON.next) + `<span class="sepv"></span>` +
         barBtn("zundo", I18N.t("bn.bar.zundo"), ICON.zundo) + barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall) +
         barBtn("norm", I18N.t("bn.bar.norm"), ICON.norm) + barBtn("pin", I18N.t("bn.bar.pinbtn"), IC_PIN) + `<span class="sepv"></span>` +

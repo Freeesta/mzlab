@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // The three acquisition modes explained once (used by the "?" next to each Dati tab and by the Teoria chapter 9): what each quadrupole does,
 // what the mode is for in the lab, a thumbnail of the typical output, and a comparison table. Classic script; needs icons-modi.js (QICON).
@@ -21,7 +22,6 @@ const QMODI = (() => {
       what: t("modi.mrm.what"), use: t("modi.mrm.use"), out: t("modi.mrm.out"), sel: t("modi.mrm.sel"), res: t("modi.mrm.res") },
   };
   const ORDER = ["full", "prod", "mrm"];
-  const tab2key = { full: "full", ms2: "prod", mrm: "mrm" };
   const th = "padding:3px 8px;border-bottom:1px solid #d9dce2;text-align:left;vertical-align:top;font-weight:600";
   const td = "padding:3px 8px;border-bottom:1px solid #eceef1;vertical-align:top";
   function table(cur) {
@@ -42,5 +42,5 @@ const QMODI = (() => {
   function all() {
     return ORDER.map(k => `<div style="margin:0 0 14px;padding:8px 12px;border:1px solid #d9dce2;border-radius:8px;background:#fff">${html(k).replace(/<table[\s\S]*$/, "")}</div>`).join("") + table("");
   }
-  return { M, ORDER, tab2key, html, all, table };
+  return { M, ORDER, html, all, table };
 })();

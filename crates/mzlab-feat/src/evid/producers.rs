@@ -23,7 +23,7 @@ pub struct FeatIndex<'a> {
 impl<'a> FeatIndex<'a> {
     pub fn new(feats: &'a FileFeatures) -> Self {
         let mut order: Vec<u32> = (0..feats.mz.len() as u32).collect();
-        order.sort_by(|&a, &b| {
+        crate::sortc::by(&mut order, |&a, &b| {
             feats.mz[a as usize]
                 .total_cmp(&feats.mz[b as usize])
                 .then(a.cmp(&b))

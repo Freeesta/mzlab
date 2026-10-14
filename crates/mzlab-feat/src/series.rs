@@ -1,6 +1,7 @@
 //! A series of files from the indexes to the aligned table: the analysis of every file (`analyse_file`), the alignment in the mode of the recipe
 //! and the gap filling (`align_and_fill`). One index is open at a time; the tables of the files are the only thing kept between the steps.
 
+use crate::axis::half;
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -47,7 +48,7 @@ fn weak_tier<R: ReadAt>(
     };
     let mut w = detect(index, &p)?;
     assess(index, &mut w, &p, &r.steps.quality)?;
-    group(&mut w, &r.steps.iso);
+    group(&mut w, &r.steps.iso)?;
     let (ppm, gap) = (r.align.ion.ppm, r.align.ion.rt_gap);
     let mut out = FileFeatures {
         dt: w.dt,
@@ -58,7 +59,7 @@ fn weak_tier<R: ReadAt>(
             && w.flags[i] & FLAG_GOOD != 0
             && w.flags[i] & FLAG_ISOTOPE == 0
     }) {
-        let tol = w.mz[i] * ppm * 1e-6;
+        let tol = half(w.mz[i], ppm);
         let from = strong.mz.partition_point(|&m| m < w.mz[i] - tol);
         let held = (from..strong.len())
             .take_while(|&j| strong.mz[j] <= w.mz[i] + tol)
@@ -79,8 +80,8 @@ pub fn align_and_fill<R: ReadAt>(
 ) -> Result<(Aligned, usize)> {
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let table = match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion),
-        Mode::Family => align_families(&refs, &r.align),
+        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Family => align_families(&refs, &r.align)?,
     };
     let pos = |k: usize| {
         Ok(FileFeatures {
@@ -90,7 +91,7 @@ pub fn align_and_fill<R: ReadAt>(
         })
     };
     let (mut table, filled) = finish(table, &mut { pos }, files.len(), r, None, open)?;
-    crate::rowmeta::compute(&mut table, &mut |k, (lo, hi)| {
+    crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, (lo, hi)| {
         let mut part = FileFeatures {
             dt: files[k].dt,
             ..FileFeatures::default()
@@ -130,7 +131,7 @@ pub(crate) fn finish<R: ReadAt>(
             weak.push(w);
         }
         let refs: Vec<&FileFeatures> = weak.iter().collect();
-        let mut ions = align(&refs, &r.align.ion);
+        let mut ions = align(&refs, &r.align.ion)?;
         ions.retain_recurring(r.weak_files);
         table.append_unheld(&ions, r.align.ion.ppm, r.fill.rt_tol);
     }

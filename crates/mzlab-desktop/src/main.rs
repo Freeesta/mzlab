@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use mzlab_desktop::cartella;
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::scarica::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
@@ -94,6 +95,57 @@ async fn save_mzml(
 #[tauri::command]
 fn register_paths(state: tauri::State<'_, Arc<State>>, paths: Vec<String>) -> Vec<PickedFile> {
     register(&state, paths.into_iter().map(PathBuf::from).collect())
+}
+
+/// The folder of the data pointed at by the user (kept in `config.json`), if it still exists.
+fn data_root(app: &AppHandle) -> Option<PathBuf> {
+    let d = data_dir(app).ok()?;
+    let p = PathBuf::from(librerie::read_config(&d).dati?);
+    p.is_dir().then_some(p)
+}
+
+fn folder_name(p: &std::path::Path) -> String {
+    p.file_name().map_or_else(|| p.to_string_lossy().into_owned(), |n| n.to_string_lossy().into_owned())
+}
+
+/// System dialog to point at the folder of the data; its name, None if the user cancels. The path stays in this side: the page only sees the name.
+#[tauri::command]
+async fn data_choose_dir(app: AppHandle) -> Result<Option<String>, String> {
+    let dlg = app.dialog().file();
+    let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
+        .await
+        .map_err(|e| e.to_string())?;
+    let Some(path) = picked.and_then(|f| f.into_path().ok()) else {
+        return Ok(None);
+    };
+    let name = folder_name(&path);
+    save_config(&app, |c| c.dati = Some(path.to_string_lossy().into_owned()))?;
+    Ok(Some(name))
+}
+
+/// Name of the remembered folder (None if there is none or it is gone).
+#[tauri::command]
+fn data_get_dir(app: AppHandle) -> Option<String> {
+    data_root(&app).map(|p| folder_name(&p))
+}
+
+/// The compatible files of the remembered folder (`cartella.rs`).
+#[tauri::command]
+fn data_list(app: AppHandle) -> Vec<cartella::Item> {
+    data_root(&app).map(|r| cartella::list(&r)).unwrap_or_default()
+}
+
+/// Opens one file of the list (path relative to the folder): it gets its number like a file of the system dialog and the engine reads it from the disk.
+#[tauri::command]
+fn data_register(app: AppHandle, state: tauri::State<'_, Arc<State>>, path: String) -> Result<PickedFile, String> {
+    let root = data_root(&app).ok_or("no folder")?;
+    let full = cartella::resolve(&root, &path).ok_or("bad path")?;
+    register(&state, vec![full]).pop().ok_or_else(|| "cannot open".to_string())
+}
+
+#[tauri::command]
+fn data_forget(app: AppHandle) -> Result<(), String> {
+    save_config(&app, |c| c.dati = None)
 }
 
 /// Version of this native binary (compared with `desktop_min` of the manifest).
@@ -350,6 +402,11 @@ fn main() {
             update_check,
             update_apply,
             update_restart,
+            data_choose_dir,
+            data_get_dir,
+            data_list,
+            data_register,
+            data_forget,
             lib_get_config,
             lib_choose_dir,
             lib_set_external,

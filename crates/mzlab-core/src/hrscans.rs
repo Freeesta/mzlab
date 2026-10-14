@@ -1,14 +1,15 @@
-//! Single scans of CENTROID files read from the mzML by offset (the scan table of the index gives `start..end` of each `<spectrum>`; the whole mzML
-//! is never held): `/api/spectra` (`App.spectra`: the scans `i0..=i1` of a level, each with its own centroids in high resolution, binned and
+//! Single scans of CENTROID files read from their source (`sorgente::Scansioni`: the mzML by offset, the scan table of the index giving `start..end`
+//! of each `<spectrum>`, or a vendor reader; the whole file is never held): `/api/spectra` (`App.spectra`: the scans `i0..=i1` of a level, each with its own centroids in high resolution, binned and
 //! optionally merged by nominal mass otherwise), `/api/scan` (`Item.scan`: one scan as the file has it, with its parent and activation) and
 //! `/api/scanavg` (`Item.scan_avg`: the mean of up to 200 scans on cells of 3 ppm or 0.1 Da). `Ok(None)` = Python's (profile scans, a request
 //! Python must refuse, a scan the index does not know).
 
 use crate::error::Result;
-use crate::idxread::{ReadAt, Scan};
+use crate::idxread::ReadAt;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
+use crate::sorgente::Scansioni;
 use crate::specpeaks::merge_unit;
 use std::collections::BTreeMap;
 
@@ -17,11 +18,15 @@ const MAX_AVERAGE: usize = 200;
 
 impl<R: ReadAt> Routes<R> {
     /// The routes of this module; `None` = not answered here.
-    pub fn mzml_route<M: ReadAt>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    pub fn mzml_route<M: Scansioni + ?Sized>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         if !self.has_scans() {
             return Ok(None);
         }
         self.prime_steps(mzml)?;
+        self.con_opz(q, |r| r.mzml_route_in(path, q, mzml))
+    }
+
+    fn mzml_route_in<M: Scansioni + ?Sized>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         match path {
             "/api/spectrum" => match self.spectrum_exact(q, mzml)? {
                 Some(a) => Ok(Some(a)),
@@ -39,7 +44,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/spectra` of a level with centroids only.
-    fn spectra_centroids<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    fn spectra_centroids<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         let bin = q.num("bin")?.unwrap_or(0.1);
         let Some(p) = self.picked_scans(q, mzml, bin, false)? else { return Ok(None) };
         let mut o = Out::default();
@@ -53,7 +58,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The scans `i0..=i1` of a level of centroids as `App.spectra` / `App.scanbin` have them (`raw_filt`: with a filter the peaks are not binned).
-    pub(crate) fn picked_scans<M: ReadAt>(&mut self, q: &Query, mzml: &mut M, bin: f64, raw_filt: bool) -> Result<Option<Picked>> {
+    pub(crate) fn picked_scans<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M, bin: f64, raw_filt: bool) -> Result<Option<Picked>> {
         let (Some(i0), Some(i1)) = (int(q, "i0"), int(q, "i1")) else { return Ok(None) };
         let level = q.level();
         let of_level = self.idx.scans.iter().filter(|s| s.level == level);
@@ -63,7 +68,7 @@ impl<R: ReadAt> Routes<R> {
         if pool_has_profile || nscans == 0 || !(hr.on || bin > 0.0) {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         let precursor = q.num("prec")?.or(q.num("precursor")?);
         let tol = match precursor {
             Some(p) if level > 1 && p != 0.0 && hr.on => (p * hr.ppm * 1e-6).max(1e-3),
@@ -79,7 +84,7 @@ impl<R: ReadAt> Routes<R> {
         let mut rows = Vec::new();
         for j in i0 as usize..=(i1 as usize).min(sel.len() - 1) {
             let (sid, rt) = (ar.scan_ids[sel[j]], ar.rt[sel[j]]);
-            let (mut mz, mut y) = read_scan(&self.idx.scans[sid as usize], mzml)?;
+            let (mut mz, mut y) = mzml.spettro(&self.idx.scans[sid as usize])?;
             if !hr.on && !mz.is_empty() && !(raw_filt && filt.is_some()) {
                 (mz, y) = bin_cells(&mz, &y, bin);
             }
@@ -92,7 +97,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/scan`: one scan with its own centroids and what the file says about it.
-    fn scan_route<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    fn scan_route<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         let Some(sid) = int(q, "sid").filter(|s| *s >= 0 && (*s as usize) < self.idx.scans.len()) else { return Ok(None) };
         let sid = sid as usize;
         let scans = &self.idx.scans;
@@ -102,7 +107,7 @@ impl<R: ReadAt> Routes<R> {
             p => p,
         };
         let d = hr_profile(scans, s.level == 1, q.get("hr") != Some("0")).dec + 1;
-        let (mz, y) = read_scan(s, mzml)?;
+        let (mz, y) = mzml.spettro(s)?;
         let mut o = Out::default();
         o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(s.number(sid)).raw(",\"parent_no\":");
         match parent {
@@ -134,7 +139,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/scanavg`: the scans `sids` (at most 200, all of the level of the first) summed per cell, the intensity divided by the number of scans.
-    fn scanavg_route<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    fn scanavg_route<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         let Some(list) = q.get("sids") else { return Ok(None) };
         let mut sids = Vec::new();
         for t in list.split(',').filter(|t| !t.is_empty()) {
@@ -153,7 +158,7 @@ impl<R: ReadAt> Routes<R> {
         // sums in the order of the concatenated arrays (np.bincount), the cells ordered (np.unique)
         let mut cells: BTreeMap<i64, (f64, f64)> = BTreeMap::new();
         for &sid in &sids {
-            let (mz, y) = read_scan(&self.idx.scans[sid as usize], mzml)?;
+            let (mz, y) = mzml.spettro(&self.idx.scans[sid as usize])?;
             for (m, v) in mz.iter().zip(&y) {
                 let e = cells.entry(cell(*m)).or_insert((0.0, 0.0));
                 e.0 += v;
@@ -162,8 +167,9 @@ impl<R: ReadAt> Routes<R> {
         }
         let n = sids.len() as f64;
         let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
+        let div = if self.msn.opz.somma { 1.0 } else { n };
         let mz: Vec<f64> = cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect();
-        let y: Vec<f64> = cells.values().map(|(sy, _)| sy / n).collect();
+        let y: Vec<f64> = cells.values().map(|(sy, _)| sy / div).collect();
         let mut o = Out::default();
         o.raw("{\"sids\":[");
         for (k, s) in sids.iter().enumerate() {
@@ -218,19 +224,4 @@ fn bin_cells(mz: &[f64], y: &[f64], bin: f64) -> (Vec<f64>, Vec<f64>) {
         e.1 += v * m;
     }
     (cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect(), cells.values().map(|(sy, _)| *sy).collect())
-}
-
-/// Centroids of one scan as the mzML has them (`Run.read`): m/z and intensity, as many as the shorter array.
-pub(crate) fn read_scan<M: ReadAt>(sc: &Scan, mzml: &mut M) -> Result<(Vec<f64>, Vec<f64>)> {
-    let mut buf = vec![0u8; (sc.end - sc.start) as usize];
-    mzml.read_at(sc.start, &mut buf)?;
-    let mut found = None;
-    crate::mzml::parse(&buf[..], |it| {
-        if let crate::mzml::Item::Spectrum(s) = it {
-            found.get_or_insert(s);
-        }
-    })?;
-    let s = found.ok_or_else(|| crate::error::Error::new("err.scan.outside"))?;
-    let n = s.mz.len().min(s.intensity.len());
-    Ok((s.mz[..n].to_vec(), (0..n).map(|i| s.intensity_f64(i)).collect()))
 }

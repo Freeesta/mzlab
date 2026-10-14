@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of the user. It is read by libreria-worker.js (classic script,
 // loaded with importScripts; node loads it in tests/test_libreria_cartella.py for the pure parts).

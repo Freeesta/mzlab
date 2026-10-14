@@ -18,7 +18,9 @@ fn close(a: f64, b: f64, tol: f64) -> bool {
 }
 
 fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_{}", std::process::id()));
+    // one folder per call: the tests of this file run in parallel threads of one process and would write the same files
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_{}_{}", std::process::id(), CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
     let ok = Command::new("python3").arg(root().join("tools/wiff_riferimento.py")).arg(&out).output().ok().filter(|o| o.status.success());
     if ok.is_none() {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
@@ -175,4 +177,51 @@ fn the_mzml_of_a_sample_reads_back_the_same() {
             assert_eq!(got.chromatograms, want.chromatograms, "{name}/{s}: chromatograms");
         }
     }
+}
+
+/// With `centroid` the same spectra (ids, times, levels) are written as centroids: not profile, fewer points, the processing step MS:1000035 by mzLab centroidi.
+#[test]
+fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
+    let Some((dir, _)) = reference() else { return };
+    let (w, mut scan) = open(&dir, "serie", 1);
+    let want = w.run(&mut scan).unwrap();
+    let mut xml = Vec::new();
+    w.to_mzml_progress(&mut scan, &mut xml, "serie.wiff", true, &mut |_, _| {}).unwrap();
+    let text = String::from_utf8_lossy(&xml);
+    assert!(text.contains("MS:1000035") && text.contains("mzLab centroidi"));
+    let got = mzml::read(&xml[..]).unwrap();
+    assert_eq!(got.spectra.len(), want.spectra.len());
+    let (mut before, mut after) = (0, 0);
+    for (g, e) in got.spectra.iter().zip(&want.spectra) {
+        assert_eq!((&g.id, g.level, g.rt, g.profile), (&e.id, e.level, e.rt, false));
+        before += e.mz.len();
+        after += g.mz.len();
+        assert!(g.mz.windows(2).all(|p| p[0] < p[1]));
+    }
+    assert!(after > 0 && after < before, "{after} against {before}");
+    assert_eq!(got.chromatograms, want.chromatograms);
+}
+
+/// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
+#[test]
+fn the_header_of_a_real_file_carries_model_time_and_hashes() {
+    let Some(d) = dati() else { return };
+    let folder = d.join("3200 qtrap/wiff inquinanti 25-26 B");
+    let Ok(bytes) = std::fs::read(folder.join("MRM.wiff")) else { return };
+    let ole = container(bytes.clone(), "MRM.wiff").unwrap();
+    let mut scan = std::fs::read(folder.join("MRM.wiff.scan")).unwrap();
+    let s = samples(&ole)[0];
+    let mut w = Wiff::open(&ole, "MRM.wiff", Some(scan.len() as u64), s).unwrap();
+    w.wiff_sha1 = Some(ole.sha1_hex());
+    let mut xml = Vec::new();
+    w.to_mzml(&mut scan, &mut xml, "MRM.wiff").unwrap();
+    let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
+    assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
+    assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");
+    let hashes = mzlab_core::metodo::source_sha1s(&head);
+    assert_eq!(hashes.len(), 2);
+    assert_eq!(hashes[0].1, ole.sha1_hex());
+    let n = scan.len() as u64;
+    assert_eq!(hashes[1].1, mzlab_core::metodo::sha1_hex(&mut scan, n).unwrap());
+    eprintln!("model {:?} created {:?}", w.model, w.created);
 }

@@ -1,5 +1,6 @@
-//! The photocatalytic rules as data: `TP_Mine/data/regole_tp.json`, format `regole_tp/1` (documented in `docs/agenti/mzfeat.md`).
-//! A rule is a signed change of formula; the list is the one of mzFinder (`transformation_table`) and can be replaced without touching the code.
+//! The photocatalytic rules as data: `TP_Mine/data/regole_tp_2.json`, format `regole_tp/2` (profiles, mechanistic classes, preconditions on the functional
+//! groups of the parent: `docs/schemi/regole_tp-2.json`, `docs/agenti/mzfeat.md`); a `regole_tp/1` file (one flat list, elements only) is still read.
+//! A rule is a signed change of formula; the lists can be replaced without touching the code.
 
 use std::collections::BTreeMap;
 
@@ -8,7 +9,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 
 pub const FORMAT: &str = "regole_tp";
-pub const VERSION: u32 = 1;
+/// Newest version read (`regole_tp/2`); a `/1` file is read too and says so in `Rules::version`.
+pub const VERSION: u32 = 2;
 
 /// Signed element counts (a change of formula, or a formula), ordered by element symbol.
 pub type Counts = BTreeMap<String, i64>;
@@ -34,11 +36,22 @@ pub struct Rule {
     /// Elements that the parent must have: all of `all` (with at least that count), at least one of `any`.
     pub all: Counts,
     pub any: Vec<String>,
+    /// Mechanistic class (`/2`; the id in a `/1` file).
+    pub class: String,
+    /// Functional groups the parent must have (all of `groups_all`, one of `groups_any`); a rule with groups is used only when the structure is known.
+    pub groups_all: Vec<String>,
+    pub groups_any: Vec<String>,
+    /// A rule for when the structure is not known: left out when it is (the rules with groups say it better).
+    pub fallback: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Rules {
     pub rules: Vec<Rule>,
+    /// Version of the file read (1 or 2).
+    pub version: u32,
+    /// Profile of the rules (empty in a `/1` file).
+    pub profile: String,
 }
 
 fn bad(what: &str) -> Error {
@@ -105,7 +118,10 @@ fn rule_of(v: &Value) -> Result<Rule> {
     let delta =
         parse_delta(&delta_text).map_err(|_| Error::new("error.hypo.rule").with("id", &id))?;
     let source = text("fonte")?;
-    if source != "transformation_table" && !source.starts_with("lit:") {
+    if source != "transformation_table"
+        && !source.starts_with("lit:")
+        && !source.starts_with("classe:")
+    {
         return Err(bad("fonte"));
     }
     let num = |k: &str| {
@@ -115,17 +131,19 @@ fn rule_of(v: &Value) -> Result<Rule> {
             .ok_or_else(|| bad(k))
     };
     let need = v.get("richiede");
-    let any = need
-        .and_then(|n| n.get("almeno_uno"))
-        .map(|a| {
-            a.arr()
-                .iter()
-                .filter_map(|x| x.str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
+    let list = |k: &str| -> Vec<String> {
+        need.and_then(|n| n.get(k))
+            .map(|a| {
+                a.arr()
+                    .iter()
+                    .filter_map(|x| x.str().map(String::from))
+                    .collect()
+            })
+            // fixed size: a rule text, empty when absent
+            .unwrap_or_default()
+    };
     Ok(Rule {
-        id,
+        id: id.clone(),
         delta,
         delta_text,
         max_steps: num("passi_max")?.max(1),
@@ -133,33 +151,87 @@ fn rule_of(v: &Value) -> Result<Rule> {
         source: source.to_string(),
         dir: dir_of(text("direzione_rt")?)?,
         all: counts_of(need.and_then(|n| n.get("tutti")))?,
-        any,
+        any: list("almeno_uno"),
+        class: text("classe").map_or_else(|_| id.clone(), String::from),
+        groups_all: list("gruppi"),
+        groups_any: list("gruppi_almeno_uno"),
+        fallback: v.get("fallback").and_then(Value::bool).unwrap_or(false),
     })
 }
 
+fn rules_of(v: &Value, key: &str) -> Result<Vec<Rule>> {
+    v.get(key)
+        .map(Value::arr)
+        .unwrap_or(&[])
+        .iter()
+        .map(rule_of)
+        .collect()
+}
+
 impl Rules {
-    /// Reads a `regole_tp/1` file; another format or a newer version is refused with an i18n error.
+    /// Reads a `regole_tp` file with its default profile; another format or a newer version is refused with an i18n error.
     pub fn parse(bytes: &[u8]) -> Result<Rules> {
+        Self::parse_profile(bytes, None)
+    }
+
+    /// The same with a profile of a `/2` file (`None` = the default one). A profile that is frozen (no data yet) or missing is refused; a `/1` file has
+    /// no profiles. A profile can `eredita` (inherit) the rules of another.
+    pub fn parse_profile(bytes: &[u8], profile: Option<&str>) -> Result<Rules> {
         let v = json::parse(bytes).map_err(|_| bad("json"))?;
         if v.get("format").and_then(Value::str) != Some(FORMAT) {
             return Err(bad("format"));
         }
         let found = v.get("version").and_then(Value::f64).unwrap_or(0.0) as u32;
+        if found == 1 && profile.is_none() {
+            return Ok(Rules {
+                rules: rules_of(&v, "regole")?,
+                version: 1,
+                profile: String::new(),
+            });
+        }
         if found != VERSION {
             return Err(Error::new("error.hypo.rulesVersion")
                 .with("found", found)
                 .with("need", VERSION));
         }
-        let rules = v.get("regole").map(Value::arr).unwrap_or(&[]);
+        let name = profile
+            .or_else(|| v.get("predefinito").and_then(Value::str))
+            .unwrap_or("");
+        let prof = v
+            .get("profili")
+            .and_then(|p| p.get(name))
+            .ok_or_else(|| Error::new("error.hypo.profile").with("profile", name))?;
+        if prof.get("congelato").and_then(Value::bool) == Some(true) {
+            return Err(Error::new("error.hypo.profileFrozen").with("profile", name));
+        }
+        let mut rules = Vec::new();
+        if let Some(base) = prof.get("eredita").and_then(Value::str) {
+            let b = v
+                .get("profili")
+                .and_then(|p| p.get(base))
+                .ok_or_else(|| Error::new("error.hypo.profile").with("profile", base))?;
+            rules = rules_of(b, "regole")?;
+        }
+        rules.extend(rules_of(prof, "regole")?);
         Ok(Rules {
-            rules: rules.iter().map(rule_of).collect::<Result<_>>()?,
+            rules,
+            version: found,
+            profile: name.to_string(),
         })
     }
 
-    /// Does the parent have what the class rule needs?
-    pub fn applies(&self, r: &Rule, parent: &Counts) -> bool {
+    /// Does the parent have what the class rule needs? Its elements, and its functional groups when the structure is known (`groups`): a rule with
+    /// groups is used only then, a `fallback` rule only without.
+    pub fn applies(&self, r: &Rule, parent: &Counts, groups: Option<&[String]>) -> bool {
         let n = |e: &str| parent.get(e).copied().unwrap_or(0);
+        let has = |g: &String| groups.is_some_and(|l| l.contains(g));
+        let by_structure = !r.groups_all.is_empty() || !r.groups_any.is_empty();
+        if (groups.is_some() && r.fallback) || (groups.is_none() && by_structure) {
+            return false;
+        }
         r.all.iter().all(|(e, k)| n(e) >= *k)
             && (r.any.is_empty() || r.any.iter().any(|e| n(e) > 0))
+            && r.groups_all.iter().all(has)
+            && (r.groups_any.is_empty() || r.groups_any.iter().any(has))
     }
 }

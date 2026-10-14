@@ -5,7 +5,7 @@ use mzlab_core::elements;
 use mzlab_core::roles::PROTON;
 
 use crate::aligned::Aligned;
-use crate::evid::match_hypotheses;
+use crate::evid::match_hypotheses_in;
 use crate::hypo::Hypothesis;
 
 /// Bit 0 of `RowIdent::src`: the detection found the row in at least one file (else it was added by the targeted pass).
@@ -53,7 +53,12 @@ impl RowIdent {
     /// The columns of an aligned table in its final order: each row takes the hypothesis `match_hypotheses` gives it; the others are read as the
     /// ion of the polarity of the registry.
     pub fn compute(table: &Aligned, hyps: &[Hypothesis], polarity: i8) -> RowIdent {
-        let matched = match_hypotheses(hyps, table);
+        Self::compute_in(table, hyps, polarity, crate::evid::HYPOTHESIS_PPM)
+    }
+
+    /// `compute` with the window of m/z of the match (ppm, or minus Da at unit resolution).
+    pub fn compute_in(table: &Aligned, hyps: &[Hypothesis], polarity: i8, win: f64) -> RowIdent {
+        let matched = match_hypotheses_in(hyps, table, win);
         let sign = if polarity >= 0 { 1.0 } else { -1.0 };
         let own = code_of(sign * PROTON);
         let mut out = RowIdent::default();

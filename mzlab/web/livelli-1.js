@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of thresholds. Pure data (JSON inside the assignment): the module
 // livelli.js reads it, tests/test_livelli.py reads it, nothing here is code. A new version of the format is a new file (livelli-2.js), never an edit of the meaning of a key.
@@ -50,7 +51,7 @@ window.LIVELLI_DATI = {
      "frammenti": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.8, "punti": 2}, {"soglia": 0.5, "punti": 1}]},
      "rete": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.5, "punti": 1}]},
      "cinetica": {"op": "<=", "massimo": 0, "massimo_se_pesata": 1, "gradini": [{"soglia": 0.693, "punti": 1}]},
-     "controlli": {"op": ">=", "gradini": []},
+     "controlli": {"op": ">=", "gradini": [{"soglia": 3, "punti": 2}, {"soglia": 1, "punti": 1}]},
      "RT": {"op": ">=", "gradini": []},
      "frequenza": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.75, "punti": 1}]},
      "esterne": {"op": ">=", "gradini": [{"soglia": 0.64, "punti": 2}]}
@@ -117,6 +118,31 @@ window.LIVELLI_DATI = {
     "suspect-RT": "Reference standard, mass + RT only, MS/MS not confirmed (suspect-RT, Lvl 0)",
     "none": "Unannotated (DETECTED)"
    }
+  },
+  "lr": {
+   "visibile": false,
+   "fonte": "unit resolution (triple quadrupole, nominal masses): never above 3, a nominal mass is a candidate and not an identification; 4 when the nominal formula alone explains the ion; 5 otherwise",
+   "tetto": "3",
+   "soglie": {
+    "entropia_min": 0.75,
+    "picchi_min": 6,
+    "picchi_min_pochi": 3,
+    "precursore_ppm_max": 350,
+    "scansioni_min": 2,
+    "margine_min": 0.05,
+    "entropia_provvisorio": 0.60,
+    "analogo_mcos_min": 0.60
+   },
+   "cancelli": [
+    {"id": "prec", "campo": "ppm", "op": "<=", "soglia": "precursore_ppm_max", "assoluto": true, "unita": "mDa", "ruolo": "source"},
+    {"id": "score", "campo": "ent", "op": ">=", "soglia": "entropia_min", "ruolo": "source"},
+    {"id": "shared", "campo": "shared", "op": ">=", "soglia": "picchi_min", "ridotta": {"se_campo": "nlib", "minore_di": 6, "soglia": "picchi_min_pochi"}, "ruolo": "source"},
+    {"id": "scans", "campo": "nScans", "op": ">=", "soglia": "scansioni_min", "ruolo": "confirm"},
+    {"id": "distinct", "campo": "margin", "op": ">=", "soglia": "margine_min", "ruolo": "confirm"}
+   ],
+   "standard": [],
+   "provvisorio": {"campo": "ent", "soglia": "entropia_provvisorio"},
+   "senza_prove": "5"
   }
  }
 };

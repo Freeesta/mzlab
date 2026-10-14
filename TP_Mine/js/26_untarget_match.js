@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted match: every feature with an MS2 goes through the library search (WebAssembly engine in libreria-worker.js, LIB.call("searchAll")) and the level module (LIVELLI);
 // a feature without MS2 stays at 4 or 5. The programme NEVER assigns 2b: only the chemist's «decided level» (LIVELLI.decide). The external annotations of the tables (mzMine, GNPS2, MS-DIAL) are shown as
 // evidence with their source and score and never become a level in the profile «mzlab». Pure but for LIB/LIVELLI/UNT, which are globals of the page (node tests inject them).
@@ -39,6 +40,7 @@
 
   /** table → Map key → result. opt: {tolPpm, frag, profile, onProgress(i, n), isCancelled()} */
   async function run(table, opt = {}) {
+    await G.UNT.ready();          // the formulas of the external sources are checked by the readers' .wasm (a table of the pipeline never loaded it)
     const tol = Math.max(MIN_TOL_PPM, +opt.tolPpm || 10), frag = opt.frag || 0.01, out = new Map(), queries = [], idx = [];
     table.features.forEach((f, i) => {
       if (f.ms2 && f.ms2.mz.length && f.mz > 0) { queries.push({ key: i, rt: f.rt, prec: f.ms2.prec > 0 ? f.ms2.prec : f.mz, pol: f.pol || table.pol || 0, peaks: f.ms2.mz.map((m, j) => [m, f.ms2.it[j]]) }); idx.push(i); }
@@ -52,7 +54,7 @@
       done += part.length; if (opt.onProgress) opt.onProgress(done, queries.length);
     }
     for (let i = 0; i < table.features.length; i++) { const f = table.features[i]; out.set(f.key, assessRow(f, rows.get(i) || null, opt)); }
-    out.stats = { queries: queries.length, ms: Date.now() - t0 };
+    /** @type {any} */ (out).stats = { queries: queries.length, ms: Date.now() - t0 };
     return out;
   }
 

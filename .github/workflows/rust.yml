@@ -31,7 +31,7 @@ jobs:
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/clippy_base\.json)'; then
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/clippy_base\.json)'; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
@@ -67,13 +67,14 @@ jobs:
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
       - name: The libraries crates and mzlab-feat build for WASM
         run: |
-          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib -p mzlab-lib-wasm -p mzlab-feat -p mzlab-feat-grafo-wasm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
       - name: No native dependencies in the WASM graph
         run: |
-          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm; do
+          for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
             tree=$(cargo tree --locked -e no-dev --target wasm32-unknown-unknown -p $p)
             if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
               echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
@@ -88,7 +89,7 @@ jobs:
       - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
         run: python3 tools/controlla_rust.py
 
-  # Advisories, licences and sources of the dependencies (deny.toml).
+  # Licences and sources of the dependencies (deny.toml). The advisories (RustSec) change every day: they are checked by .github/workflows/advisories.yml, not here.
   deny:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -97,7 +98,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
-          command: check advisories licenses sources
+          command: check licenses sources
 
   # The one name for the protection of main: green when rust and deny passed, or were skipped because no Rust path changed.
   rust-ok:

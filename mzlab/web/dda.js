@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Data-dependent acquisition (DDA / IDA): the Full Scan (MS1) and the MS2 scans it triggered, one under the other (classic script, loaded after hr.js).
 //
@@ -46,8 +47,8 @@ const DDA = (() => {
         if (s2.dock == null || !s2.el) return;
         const s1 = byId(s2.dock); if (!s1) return;
         if (s2.extra) return;
-        const row = [s2, ...extras(s1)], n = row.length, w = Math.floor(W / n);
-        set(s1, { x: 0, w: W }); row.forEach((q, i) => { set(q, { x: i * w, w: i === n - 1 ? W - i * w : w, y: s2.y, h: s2.h }); q.el.classList.add("dk"); });
+        const row = [s2, ...extras(s1)], g = LAYOUT.geometria([{ voci: row.map(q => ({ id: q.id, h: s2.h })) }], W, 0, 0);       // equal shares side by side (no minimum: the trio keeps its shape)
+        set(s1, { x: 0, w: W }); row.forEach(q => { const r = g.rett.find(t => t.id === q.id); set(q, { x: r.x, w: r.w, y: s2.y, h: s2.h }); q.el.classList.add("dk"); });
         s2.el.classList.add("dk"); s1.el.classList.add("jb");
         const c = s1.link != null ? byId(s1.link) : null; if (c && c.y + c.h <= s1.y + 1) c.el.classList.add("jt");
       });
@@ -61,7 +62,7 @@ const DDA = (() => {
       const f2 = ms2Item(f); if (!f2) return null;
       if (byId(s1.duo)) return byId(s1.duo);
       const s2 = addPanel("spec", { tab: s1.tab, level: 2, k: f2.k, dda: s1.id, dock: s1.id, sid: null, ion: null, title: "MS2", x: 0, y: s1.y, w: s1.w, h: s1.h, full: true });
-      s1.duo = s2.id; c.ms2tri = true;
+      s1.duo = s2.id;
       stackAfter(s2, s1); relayout(); fitHost();
       ctl(c); preload(f.k).then(() => { draw(c); draw(s1); });
       return s2;
@@ -390,7 +391,7 @@ const DDA = (() => {
       const s1 = E.panels.find(q => q.type === "spec" && q.duo != null && q.el && q.tab === "full"), s2 = s1 && byId(s1.duo); if (!s2) return nearMsg(OFF);
       const D = await get(f.k); s2.ion = g.mz; s2._mixed = null; s2.avg = null;
       await selectMs2(s2, D.sid[g.best]);
-      const c = byId(s1.link); if (c) { c.ms2tri = true; draw(c); }
+      const c = byId(s1.link); if (c) draw(c);
     } catch (e) { fail("fromList", e); }
   }
   // "Mostra le MS2 accanto alla Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)

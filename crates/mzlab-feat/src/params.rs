@@ -6,6 +6,10 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
+use crate::axis::{da, estimate_defect, half, MassAxis, LR_TOL};
+pub use crate::params_unit::{
+    da_from_offsets, dead_time, DA_MAX, DA_MIN, RT_FACTOR, RT_TOL_MAX, RT_TOL_MIN,
+};
 use crate::sortc;
 use crate::table::FileFeatures;
 use crate::trace::{self, Params};
@@ -21,7 +25,6 @@ const STRONG: usize = 80;
 /// Tolerance bounds, ppm.
 const PPM_MIN: f64 = 1.0;
 const PPM_MAX: f64 = 20.0;
-
 /// Histogram of log10 values in bins of `BIN` decades from `LO`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hist {
@@ -31,6 +34,7 @@ pub struct Hist {
 impl Hist {
     pub fn new() -> Hist {
         Hist {
+            // fixed size: BINS histogram counters
             counts: vec![0; BINS],
         }
     }
@@ -123,7 +127,7 @@ pub fn noise_from_hist(h: &Hist) -> Option<Noise> {
 }
 
 /// Median of a slice (sorted in place; `NaN` for an empty one).
-fn median(v: &mut [f64]) -> f64 {
+pub(crate) fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return f64::NAN;
     }
@@ -176,6 +180,16 @@ pub struct Estimate {
     /// Median FWHM of the strong traces, minutes.
     pub fwhm: Option<f64>,
     pub fwhm_n: usize,
+    /// Tolerance of RT, minutes: twice the FWHM within the bounds.
+    pub rt_tol: Option<f64>,
+    /// Unit axis only: half window of m/z (Da), sigma and count of the offsets of the strong traces.
+    pub da: Option<f64>,
+    pub da_sigma: f64,
+    pub da_n: usize,
+    /// End of the void front, minutes.
+    pub dead: Option<f64>,
+    /// Unit axis only: the mass defect of the file (fractional part of m/z where the strong peaks pile up).
+    pub defect: Option<f64>,
 }
 
 /// Peaks read for the histogram of the intensities at most (in pieces of `PIECE` peaks spread over the whole m/z range).
@@ -214,9 +228,10 @@ fn measure<R: ReadAt>(
     rt: &[f64],
     i: usize,
     errors: &mut Vec<f64>,
+    da: bool,
 ) -> Result<Option<f64>> {
     let mz = f.mz[i];
-    let w = 20e-6 * mz;
+    let w = if da { 2.0 * LR_TOL } else { 20e-6 * mz };
     let a = index.search(si, mz - w, false)?;
     let b = index.search(si, mz + w, true)?;
     let (lo, hi) = (f.scan_lo[i] as usize, f.scan_hi[i] as usize);
@@ -225,14 +240,14 @@ fn measure<R: ReadAt>(
     if apex < from || apex >= to {
         return Ok(None);
     }
-    let mut y = vec![0.0; to - from];
+    let mut y = trace::filled(to - from, 0.0f64)?;
     let half = f.height[i] as f64 * 0.2;
     index.each_peak(si, a, b, |p, m, it| {
         if p >= from && p < to && it > y[p - from] {
             y[p - from] = it;
         }
         if p >= lo && p <= hi && it >= half {
-            errors.push((m - mz) / mz * 1e6);
+            errors.push(if da { m - mz } else { (m - mz) / mz * 1e6 });
         }
     })?;
     Ok(fwhm_of_trace(&rt[from..to], &y, apex - from))
@@ -248,6 +263,12 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
         ppm_n: 0,
         fwhm: None,
         fwhm_n: 0,
+        rt_tol: None,
+        da: None,
+        da_sigma: 0.0,
+        da_n: 0,
+        dead: None,
+        defect: None,
     };
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(empty);
@@ -257,19 +278,41 @@ pub fn estimate<R: ReadAt>(index: &mut Index<R>, p: &Params, f: &FileFeatures) -
     let rt = index.arrays(si)?.rt.clone();
     let (mut errors, mut widths) = (Vec::new(), Vec::new());
     for i in strongest(f, STRONG) {
-        if let Some(w) = measure(index, si, f, &rt, i, &mut errors)? {
+        if let Some(w) = measure(index, si, f, &rt, i, &mut errors, p.axis.is_da())? {
             widths.push(w);
         }
     }
-    let tol = tolerance_from_errors(&mut errors);
+    let unit = p.axis.is_da();
+    let n_err = errors.len();
+    let tol = if unit {
+        None
+    } else {
+        tolerance_from_errors(&mut errors)
+    };
+    let da = if unit {
+        da_from_offsets(&mut errors)
+    } else {
+        None
+    };
+    let fwhm = (widths.len() >= 5).then(|| median(&mut widths));
+    let arr = index.arrays(si)?;
     Ok(Estimate {
         intensities,
         noise,
         ppm: tol.map(|t| t.0),
         ppm_sigma: tol.map_or(0.0, |t| t.1),
-        ppm_n: errors.len(),
-        fwhm: (widths.len() >= 5).then(|| median(&mut widths)),
+        ppm_n: if unit { 0 } else { n_err },
+        fwhm,
         fwhm_n: widths.len(),
+        rt_tol: fwhm.map(|w| (RT_FACTOR * w).clamp(RT_TOL_MIN, RT_TOL_MAX)),
+        da: da.map(|d| d.0),
+        da_sigma: da.map_or(0.0, |d| d.1),
+        da_n: if unit { n_err } else { 0 },
+        dead: dead_time(&arr.rt, &arr.sumint),
+        defect: match p.axis {
+            MassAxis::Da { .. } => estimate_defect(index, si, p.floor)?,
+            MassAxis::Ppm => None,
+        },
     })
 }
 
@@ -295,8 +338,9 @@ pub fn example<R: ReadAt>(
         return Ok(None);
     };
     let mz = f.mz[i];
-    let a = index.search(si, mz * (1.0 - 5e-6), false)?;
-    let b = index.search(si, mz * (1.0 + 5e-6), true)?;
+    let w = half(mz, if p.axis.is_da() { da(LR_TOL) } else { 5.0 });
+    let a = index.search(si, mz - w, false)?;
+    let b = index.search(si, mz + w, true)?;
     let y = index.max_window(si, a, b)?;
     let rt = index.arrays(si)?.rt.clone();
     let span = (f.scan_hi[i] - f.scan_lo[i]) as usize + 1;
@@ -392,12 +436,26 @@ pub fn preview_json(est: &Estimate, f: &FileFeatures, examples: &[Example]) -> S
         .opt(est.fwhm);
     o.raw(",\"n\":")
         .int(est.fwhm_n as i64)
+        .raw("},\"rt_tol\":")
+        .opt(est.rt_tol)
+        .raw(",\"dead\":")
+        .opt(est.dead)
+        .raw(",\"da\":{\"value\":")
+        .opt(est.da)
+        .raw(",\"sigma\":")
+        .num(est.da_sigma)
+        .raw(",\"n\":")
+        .int(est.da_n as i64)
         .raw("},\"examples\":[");
     for (i, e) in examples.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         example_json(&mut o, e);
     }
-    o.raw("]}");
+    o.raw("]");
+    if let Some(d) = est.defect {
+        o.raw(",\"defect\":").num(d);
+    }
+    o.raw("}");
     o.0
 }
 
@@ -407,6 +465,13 @@ mod tests;
 
 /// Preview of one file: detection with `p`, the estimates and three example traces, as JSON.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<String> {
+    let mut p = p.clone();
+    if let (MassAxis::Da { .. }, Some(si)) = (p.axis, index.section_of(1, p.polarity)) {
+        if let Some(defect) = estimate_defect(index, si, p.floor)? {
+            p.axis = MassAxis::Da { defect };
+        }
+    }
+    let p = &p;
     let f = trace::detect(index, p)?;
     let est = estimate(index, p, &f)?;
     let mut ex = Vec::new();

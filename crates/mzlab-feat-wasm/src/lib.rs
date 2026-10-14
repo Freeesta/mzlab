@@ -3,14 +3,24 @@
 //! sync handle). Outputs are byte arrays (`.mzfeatf`, `.mzfeat`); errors are JSON `{"error_key": ..., "params": {...}}` strings (the page translates the key).
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 #![forbid(unsafe_code)]
+// the .wasm of `finder` (or `finder_msn`) alone has no step that writes to a sink or reads the stored files
+#![cfg_attr(not(any(feature = "detect", feature = "proofs", feature = "mrm")), allow(dead_code))]
 use js_sys::{Array, Function, Uint8Array};
-use mzlab_core::budget::{Hashing, MemBudget, WriteAt};
+#[cfg(any(feature = "detect", feature = "proofs"))]
+use mzlab_core::budget::MemBudget;
+use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::idxread::{Index, ReadAt};
+#[cfg(any(feature = "detect", feature = "proofs"))]
+use mzlab_core::idxread::Index;
+use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "finder")]
+pub mod finder;
+#[cfg(feature = "finder_msn")]
+pub mod msn;
 pub mod run;
 #[cfg(feature = "proofs")]
 pub mod state;
@@ -80,6 +90,7 @@ impl ReadAt for JsReader {
     }
 }
 
+#[cfg(any(feature = "detect", feature = "proofs"))]
 fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
     let r = JsReader {
         read: read.clone(),
@@ -103,7 +114,11 @@ struct JsSink {
 impl WriteAt for JsSink {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
         self.write
-            .call2(&JsValue::NULL, &(off as f64).into(), &Uint8Array::from(data))
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &Uint8Array::from(data),
+            )
             .map(|_| ())
             .map_err(|_| Error::new("error.io"))
     }
@@ -151,8 +166,8 @@ pub fn detect_file(
     name: &str,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::detect(&mut ix, name, &r).map_err(js_err)
 }
 
@@ -166,8 +181,8 @@ pub fn detect_file_to(
     recipe: &str,
     write: Function,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     to_sink(write, |sink| run::detect_to(&mut ix, name, &r, sink))
 }
 
@@ -180,9 +195,29 @@ pub fn preview_file(
     size: f64,
     recipe: &str,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     run::preview(&mut ix, &r, run::floor_given(recipe)).map_err(js_err)
+}
+
+#[cfg(feature = "detect")]
+/// Drift of the RT of the parent along a series: `files` = the `.mzfeatf` of its files (an `Array` of `Uint8Array`), `parent_mz` the m/z of its ion,
+/// `base_rt_tol` the tolerance from the width of the peaks (NaN = none). JSON `{drift, n, rts, rt_tol}` (`mzlab_feat::params_drift`): `rt_tol` = max(width, drift).
+#[wasm_bindgen]
+pub fn drift_series(
+    files: Array,
+    parent_mz: f64,
+    base_rt_tol: f64,
+) -> std::result::Result<String, JsValue> {
+    let mut src = JsStored { files };
+    let mut all = Vec::new();
+    for k in 0..src.count() {
+        let bytes = src.bytes(k).map_err(js_err)?;
+        all.push(mzlab_feat::store::read_file(&bytes).map_err(js_err)?.0);
+    }
+    let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();
+    let d = mzlab_feat::params_drift::parent_drift(&refs, parent_mz);
+    Ok(mzlab_feat::params_drift::drift_json(&d, base_rt_tol))
 }
 
 #[cfg(feature = "detect")]
@@ -198,11 +233,14 @@ pub fn align_series_to(
     write: Function,
     budget_mb: f64,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
+        .map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let open = |k| open_one(&read, k, sizes[k]);
-    to_sink(write, |sink| run::align_to(&mut src, &budget, &r, open, sink))
+    to_sink(write, |sink| {
+        run::align_to(&mut src, &budget, &r, open, sink)
+    })
 }
 
 #[cfg(feature = "detect")]
@@ -214,13 +252,79 @@ pub fn align_series(
     sizes: Vec<f64>,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
+        .map_err(js_err)?;
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut src = JsStored { files };
     let open = |k| open_one(&read, k, sizes[k]);
     run::align_to(&mut src, &budget, &r, open, &mut out).map_err(js_err)?;
     Ok(out)
+}
+
+#[cfg(feature = "mrm")]
+use mzlab_core::sorgente::TracceMzml;
+
+#[cfg(feature = "mrm")]
+fn mrm_params(min_height: f64) -> mzlab_feat::mrm::MrmParams {
+    let mut p = mzlab_feat::mrm::MrmParams::default();
+    if min_height.is_finite() && min_height > 0.0 {
+        p.min_height = min_height;
+    }
+    p
+}
+
+#[cfg(feature = "mrm")]
+/// L1-L3 of an MRM file (the mzML of `size` bytes read with `read(0, offset, length)`) written to `write(offset, bytes)`: `{"bytes", "sha256"}` of its
+/// `.mzfeatf`, one peak list for every transition. `sha256` is the one of the source (it goes in the meta); `min_height` NaN = the default.
+#[wasm_bindgen]
+pub fn detect_mrm_file(
+    read: Function,
+    size: f64,
+    name: &str,
+    sha256: &str,
+    min_height: f64,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read, k: 0 }, size as u64);
+    let traces = mzlab_feat::mrm::read_srm(&mut TracceMzml::new(&mut m, 0)).map_err(js_err)?;
+    let p = mrm_params(min_height);
+    to_sink(write, |sink| {
+        mzlab_feat::mrm::file_to(&traces, name, sha256, &p, sink)
+    })
+}
+
+#[cfg(feature = "mrm")]
+/// L4-L6 of an MRM series: the `.mzfeatf` (an `Array` of `Uint8Array`) aligned by transition and RT, the cells without a peak integrated on the
+/// chromatogram of their mzML (`read(k, offset, length)`, `sizes[k]` bytes), written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`.
+#[wasm_bindgen]
+pub fn align_mrm_series(
+    files: Array,
+    read: Function,
+    sizes: Vec<f64>,
+    min_height: f64,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let mut src = JsStored { files };
+    let origin = run::origin_of(&mut src).map_err(js_err)?;
+    let tables = (0..src.count())
+        .map(|k| mzlab_feat::store::read_file(&src.bytes(k)?).map(|x| x.0))
+        .collect::<Result<Vec<_>>>()
+        .map_err(js_err)?;
+    let load = |k: usize| {
+        let mut m = mzlab_core::mzmlhead::Mzml::new(
+            JsReader {
+                read: read.clone(),
+                k: k as u32,
+            },
+            sizes[k] as u64,
+        );
+        mzlab_feat::mrm::read_srm(&mut TracceMzml::new(&mut m, 0))
+    };
+    let p = mrm_params(min_height);
+    to_sink(write, |sink| {
+        mzlab_feat::mrm::table_to(&tables, &origin, &p, load, sink)
+    })
 }
 
 #[cfg(feature = "proofs")]
@@ -261,29 +365,46 @@ pub fn load_hypotheses(state: &[u8]) -> std::result::Result<Hypotheses, JsValue>
 }
 
 #[cfg(feature = "proofs")]
-/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp.json` bytes), searched in every file. `parent_rt` NaN = the whole run.
+/// L7: hypotheses of `parent` (formula) from the rules (`regole_tp_2.json` bytes), searched in every file. `structure` is the `grafo/1` JSON of the SMILES of the parent
+/// (with `"profile"` to choose the profile of the rules), or empty text. `parent_rt` NaN = the whole run.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn run_hypotheses(
     files: Array,
     read: Function,
     sizes: Vec<f64>,
     rules: &[u8],
+    structure: &str,
     parent: &str,
     parent_rt: f64,
     recipe: &str,
 ) -> std::result::Result<Hypotheses, JsValue> {
-    let r = run::recipe_from_json(recipe).map_err(js_err)?;
     let mut ix = open_all(&read, &sizes).map_err(js_err)?;
+    let r = match ix.first_mut() {
+        Some(first) => run::recipe_for(recipe, first),
+        None => run::recipe_from_json(recipe),
+    }
+    .map_err(js_err)?;
     let rt = parent_rt.is_finite().then_some(parent_rt);
     let mut src = JsStored { files };
-    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, parent, rt, &r).map_err(js_err)?;
+    let inner = run::hypotheses_stored(&mut ix, &mut src, rules, structure, parent, rt, &r)
+        .map_err(js_err)?;
     Ok(Hypotheses { inner })
+}
+
+#[cfg(feature = "proofs")]
+/// The roles of the files from a `campioni/2` (None or empty = only the minutes, as before).
+fn roles_of(campioni: Option<&str>) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
+    match campioni.filter(|c| !c.is_empty()) {
+        Some(c) => mzlab_feat::tp::TpRoles::from_json(c).map(Some).map_err(js_err),
+        None => Ok(None),
+    }
 }
 
 #[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
-/// parent in the table. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
+/// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
 #[wasm_bindgen]
 pub fn build_evidence_to(
     table_read: Function,
@@ -295,8 +416,10 @@ pub fn build_evidence_to(
     recipe: &str,
     write: Function,
     budget_mb: f64,
+    campioni: Option<String>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref())?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(budget_mb);
     let mut table = JsReader {
@@ -305,7 +428,17 @@ pub fn build_evidence_to(
     };
     to_sink(write, |sink| {
         let size = table_size as u64;
-        run::evidence_to(&mut table, size, &hypotheses.inner, &minutes, parent, &r, &budget, sink)
+        run::evidence_roles_to(
+            &mut table,
+            size,
+            &hypotheses.inner,
+            &minutes,
+            roles.as_ref(),
+            parent,
+            &r,
+            &budget,
+            sink,
+        )
     })
 }
 
@@ -319,13 +452,25 @@ pub fn build_evidence(
     parent_mz: f64,
     parent_rt: f64,
     recipe: &str,
+    campioni: Option<String>,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref())?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut at = mzlab_feat::store::Slice(table);
-    run::evidence_to(&mut at, table.len() as u64, &hypotheses.inner, &minutes, parent, &r, &budget, &mut out)
-        .map_err(js_err)?;
+    run::evidence_roles_to(
+        &mut at,
+        table.len() as u64,
+        &hypotheses.inner,
+        &minutes,
+        roles.as_ref(),
+        parent,
+        &r,
+        &budget,
+        &mut out,
+    )
+    .map_err(js_err)?;
     Ok(out)
 }

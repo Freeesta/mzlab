@@ -6,6 +6,7 @@
 //! - Refusal `error.memoryBudget` (phase `align`, estimate, budget) when not even one slab fits, or in "per family" mode when the series does not fit in
 //!   memory (the families link ions of any m/z, so the series cannot be cut).
 
+use crate::axis::half;
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -81,7 +82,7 @@ fn cuts(all: &mut [f64], slab_rows: usize, ppm: f64) -> Vec<f64> {
     let (mut cuts, mut since) = (vec![f64::NEG_INFINITY], 0usize);
     for i in 1..all.len() {
         since += 1;
-        if since >= slab_rows && all[i] - all[i - 1] > all[i] * ppm * 1e-6 {
+        if since >= slab_rows && all[i] - all[i - 1] > half(all[i], ppm) {
             cuts.push(all[i]);
             since = 0;
         }
@@ -118,7 +119,7 @@ pub fn align_and_fill_stored<R: ReadAt>(
     };
     drop(s);
     let (mut table, filled) = finish(table, &mut |k| lean(src, k, None), n, r, Some(budget), open)?;
-    crate::rowmeta::compute(&mut table, &mut |k, range| {
+    crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, range| {
         let b = src.bytes(k)?;
         let want = Want {
             lean: false,
@@ -135,8 +136,8 @@ fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
         .collect::<Result<Vec<_>>>()?;
     let refs: Vec<&FileFeatures> = files.iter().collect();
     Ok(match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion),
-        Mode::Family => align_families(&refs, &r.align),
+        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Family => align_families(&refs, &r.align)?,
     })
 }
 
@@ -157,7 +158,7 @@ fn slabs(src: &mut dyn Stored, n: usize, cuts: &[f64], budget: &MemBudget, r: &R
         let rows: usize = files.iter().map(FileFeatures::len).sum();
         let _g = budget.reserve("align", rows * (LEAN_ROW + WORK_ROW))?;
         let refs: Vec<&FileFeatures> = files.iter().collect();
-        table.append(&align(&refs, &r.align.ion));
+        table.append(&align(&refs, &r.align.ion)?);
     }
     Ok(table)
 }

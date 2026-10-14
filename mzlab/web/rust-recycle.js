@@ -1,3 +1,4 @@
+// @ts-strict
 // Recycling of the worker of the Rust engine: the memory of a WASM instance is never given back, so a worker whose linear memory has grown past RECYCLE_MB and
 // that has been idle for IDLE_MS (or whose page went to the background) is closed and a new one takes its place. The files of the session are opened again as after
 // a fault, but nothing is counted as a fault and the page is not told. `seen(bytes)` is called with the memory the worker reports with each answer.

@@ -16,6 +16,7 @@ const BARRA = (() => {
   const HR_PANELS = ["hdr", "lst", "fil", "cmp", "iso", "idn", "disp"];
   const MIN_W = 280, MAX_W = 560;
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
+  const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
   const K_LAB = "qqq.barra.etichette";   // words next to the icons: auto (as many as fit) | always | hidden
   const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
@@ -25,6 +26,8 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _open = false;
+  let _restore = false;             // hidden by the narrow window, not by the user: it comes back when the window widens
+  let _forced = false;              // the user opened it in a narrow window: it stays until the window widens
   let _side = "left";
   let _w = 260;
   let _last = { scan: "hdr", form: "cmp" };
@@ -148,7 +151,7 @@ const BARRA = (() => {
     s = lsObj(storageKey());
     _w = typeof s.w === "number" && isFinite(s.w) && s.w >= MIN_W && s.w <= MAX_W ? Math.round(s.w) : defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
-    _open = s.open === undefined ? innerWidth >= 900 : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
+    _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
@@ -156,11 +159,18 @@ const BARRA = (() => {
     let side = null;
     try { side = localStorage.getItem(K_SIDE); } catch (_) { /* none */ }
     _side = side === "right" || side === "left" ? side : s.side === "right" ? "right" : "left";
+    _restore = _forced = false; autoNarrow();
+  }
+
+  // the narrow window hides the panel before anything else; widening gives it back (the saved state never changes)
+  function autoNarrow() {
+    if (window.innerWidth < AUTO_W) { if (_open && !_forced) { _open = false; _restore = true; } }
+    else { _forced = false; if (_restore) { _open = true; _restore = false; } }
   }
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open, w: _w, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open || _restore, w: _w, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
@@ -180,11 +190,11 @@ const BARRA = (() => {
   }
   function refit() {
     if (_refitRaf) return;
-    _refitRaf = requestAnimationFrame(() => { _refitRaf = 0; paintFit(); });
+    _refitRaf = FRAME.next(() => { _refitRaf = 0; paintFit(); });
   }
   // a layout change that is animated (transizioni.js) is refitted at once, in the same frame: one redraw, then the panels slide
   function refitNow() {
-    if (_refitRaf) { cancelAnimationFrame(_refitRaf); _refitRaf = 0; }
+    if (_refitRaf) { FRAME.cancel(_refitRaf); _refitRaf = 0; }
     paintFit();
   }
   // The panels' own observers read a width change that is not theirs (the page narrowed under them) as «resized by hand» and
@@ -206,7 +216,7 @@ const BARRA = (() => {
   function watchWorkspace() {
     const dp = Q1("#dpanels");
     if (!dp || typeof ResizeObserver === "undefined") return;
-    new ResizeObserver(() => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } }).observe(dp);
+    FRAME.ro(dp, () => { if (dp.clientWidth !== _lastW) { snapFull(); refit(); } });
   }
 
   function applyLayout() {
@@ -231,6 +241,7 @@ const BARRA = (() => {
       tg.hidden = !inData();
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
+      const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
     }
     const h = Q1("#sidebar-resize-handle");
     if (h) { h.setAttribute("aria-valuemin", MIN_W); h.setAttribute("aria-valuemax", maxW()); h.setAttribute("aria-valuenow", effW()); }
@@ -354,7 +365,7 @@ const BARRA = (() => {
     if (!inData() || !validTab(id)) return false;
     const wasOpen = _open;
     _tab = id;
-    _open = true;
+    _open = true; _restore = false; _forced = innerWidth < AUTO_W;
     if (!_opener || !wasOpen) _opener = opt.opener || openerFor(id);
     renderPane(id, opt);
     applyLayout();
@@ -379,10 +390,11 @@ const BARRA = (() => {
 
   function close(restoreFocus) {
     if (!_open) return;
-    _open = false;
+    _open = false; _restore = false;
     applyLayout();
     updateButtons();
     saveState();
+    if (restoreFocus && !hintSeen()) hintShow();      // the first time the user hides the tools
     const o = _opener;
     _opener = null;
     if (restoreFocus && o && document.contains(o) && o.offsetParent !== null) o.focus({ preventScroll: true });
@@ -571,7 +583,7 @@ const BARRA = (() => {
   }
   function schedFit() {
     if (_fitRaf) return;
-    _fitRaf = requestAnimationFrame(() => { _fitRaf = 0; fit(); });
+    _fitRaf = FRAME.next(() => { _fitRaf = 0; fit(); });
   }
   function fit() {
     const bar = Q1("#stbar");
@@ -921,6 +933,8 @@ const BARRA = (() => {
     }, true);
 
     window.addEventListener("resize", () => {
+      const o = _open; autoNarrow();
+      if (_open !== o) { if (_open && validTab(_tab) && _painted !== _tab) renderPane(_tab); updateButtons(); }
       applyLayout();
       schedFit();
     });
@@ -957,24 +971,30 @@ const BARRA = (() => {
     fit();
   }
 
-  // First-visit hint anchored under the toolbar. Never together with the tour invitation (it waits until that is answered), closes on Esc, ×, or the first tool opened.
-  let _hintMem = false, _hintTimer = 0;
+  // Hint anchored under the toolbar: shown only the first time the user hides the tools (marked seen at once, so never again), closes on Esc, ×, the first tool opened or after 10 s.
+  let _hintMem = false, _hintTimer = 0, _hintRo = null;
   function hintSeen() { try { return !!localStorage.getItem(K_HINT); } catch (_) { return _hintMem; } }
   function hintMark() { _hintMem = true; try { localStorage.setItem(K_HINT, "1"); } catch (_) { /* none */ } }
   function hintPlace() {
-    const el = document.getElementById("bar-hint"), bar = Q1("#stbar");
+    const el = document.getElementById("bar-hint"), bar = Q1("#stbar"), tg = Q1("#sb-toggle");
     if (!el || !bar) return;
-    const r = bar.getBoundingClientRect();
-    el.style.top = Math.round(r.bottom + 8) + "px";
-    el.style.left = Math.max(8, Math.round(r.left)) + "px";
+    const r = bar.getBoundingClientRect(), tr = tg && tg.offsetParent ? tg.getBoundingClientRect() : null;      // the arrow points at the Panel button (else at the toolbar)
+    const aim = tr ? tr.left + tr.width / 2 : r.left + 24, w = el.offsetWidth, vw = document.documentElement.clientWidth;
+    const left = Math.max(8, Math.min(Math.round(tr ? Math.min(r.left, aim - 28) : r.left), vw - w - 8));
+    el.style.top = Math.round(Math.max(r.bottom, tr ? tr.bottom : 0) + 8) + "px";
+    el.style.left = left + "px";
+    el.style.setProperty("--ha", Math.round(Math.max(10, Math.min(aim - left, w - 20)) - 5) + "px");      // centre of the arrow (10 px wide) on the target
   }
   function hintOnKey(e) { if (e.key === "Escape") hintClose(true); }
   function hintClose(mark) {
     const el = document.getElementById("bar-hint");
-    if (!el) return;             // not on screen yet: leave the waiting timer of hintMaybe alone (show() runs during the boot too)
+    if (!el) return;             // not on screen
+    clearTimeout(_hintTimer);
     el.remove();
     document.removeEventListener("keydown", hintOnKey);
     window.removeEventListener("resize", hintPlace);
+    document.removeEventListener("fullscreenchange", hintPlace);
+    if (_hintRo) { _hintRo(); _hintRo = null; }
     if (mark) hintMark();
   }
   function hintShow() {
@@ -994,26 +1014,14 @@ const BARRA = (() => {
     el.append(txt, x);
     document.body.appendChild(el);
     hintPlace();
+    hintMark();
+    _hintTimer = setTimeout(() => hintClose(false), 10000);
     document.addEventListener("keydown", hintOnKey);
     window.addEventListener("resize", hintPlace);
+    document.addEventListener("fullscreenchange", hintPlace);
+    { const offs = [bar, document.querySelector("header"), el].map(x => x && FRAME.ro(x, hintPlace)); _hintRo = () => offs.forEach(f => f && f()); }      // the header or toolbar change size: the arrow follows
     return true;
   }
-  // Called after loading: waits (up to 2 minutes) until the tour invitation or the tour itself are gone, then shows the hint once.
-  function hintMaybe() {
-    if (hintSeen() || window.QQQ_PHONE) return;
-    clearTimeout(_hintTimer);
-    let n = 0;
-    const tick = () => {
-      if (hintSeen() || ++n > 240) return;
-      const busy = document.getElementById("tour-invito") || (window.TOUR && TOUR.active);
-      let tourKnown = false;       // the tour invitation comes a moment after loading: wait for its state, or 10 s when the tour is never offered (HR)
-      try { tourKnown = !!localStorage.getItem("qqq.tour.lr"); } catch (_) { /* none */ }
-      if (!busy && (tourKnown || n > 20) && inData() && hintShow()) return;
-      _hintTimer = setTimeout(tick, 500);
-    };
-    _hintTimer = setTimeout(tick, 600);
-  }
-
   function init() {
     if (_mounted) return;
     _mounted = true;
@@ -1038,7 +1046,7 @@ const BARRA = (() => {
     dockCalc(true);
     if (typeof ResizeObserver !== "undefined") {
       const bar = Q1("#stbar");
-      if (bar) new ResizeObserver(() => schedFit()).observe(bar);
+      if (bar) FRAME.ro(bar, () => schedFit());
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
     if (_open && inData() && validTab(_tab)) renderPane(_tab);
@@ -1048,7 +1056,6 @@ const BARRA = (() => {
 
   return {
     init,
-    hintMaybe,
     hintShow,
     hintClose,
     commands: CMD,

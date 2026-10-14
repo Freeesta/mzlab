@@ -1,3 +1,4 @@
+// @ts-strict
 // @ts-check
 // The smartphone card (index.html, #phone). Loaded only on a phone (telefono.js sets window.QQQ_PHONE): the Dati and Disegno scripts,
 // the page shell and the engine are never fetched there. Shows the card, wires "info" and "Apri comunque", and warms the Teoria in the
@@ -27,5 +28,5 @@
       try { fetch(u, { priority: "low" }).then(r => r.arrayBuffer()).catch(() => {}); } catch (_) { /* prefetch is optional */ }
     }
   };
-  if (window.requestIdleCallback) requestIdleCallback(warm, { timeout: 3000 }); else setTimeout(warm, 800);
+  if (/** @type {any} */ (window).requestIdleCallback) requestIdleCallback(warm, { timeout: 3000 }); else setTimeout(warm, 800);
 })();

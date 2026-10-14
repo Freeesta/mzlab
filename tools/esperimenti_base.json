@@ -1,0 +1,21 @@
+{
+ "mzlab/web/banco.js": 11,
+ "mzlab/web/composizione.js": 1,
+ "mzlab/web/dda.js": 6,
+ "mzlab/web/eventi.js": 16,
+ "mzlab/web/explore.js": 14,
+ "mzlab/web/grafici.js": 11,
+ "mzlab/web/libreria.js": 1,
+ "mzlab/web/lr-map.js": 1,
+ "mzlab/web/lr-origin.js": 1,
+ "mzlab/web/ordine.js": 1,
+ "mzlab/web/origine.js": 1,
+ "mzlab/web/pannelli.js": 30,
+ "mzlab/web/picchi.js": 7,
+ "mzlab/web/profilo.js": 1,
+ "mzlab/web/qaqc.js": 1,
+ "mzlab/web/shell.js": 2,
+ "mzlab/web/sottrazione.js": 3,
+ "mzlab/web/tabella.js": 1,
+ "mzlab/web/tabs.js": 6
+}

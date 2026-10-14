@@ -1,10 +1,10 @@
+// @ts-strict
 "use strict";
 // Performance meter. Off by default and then it costs nothing (the script returns at once).
 // On with ?perf in the address, or Ctrl+Alt+P (the page asks to reload with ?perf). A small box in the bottom left shows:
-//   - start-up: first paint, engine steps (Pyodide), time to "ready";
-//   - every call to api/... (ms; in the browser version also the time spent in Python, header X-Py-Ms: the rest is waiting and copying);
+//   - start-up: first paint, engine steps, time to "ready";
+//   - every call to api/... (ms);
 //   - every panel draw (ms, with the panel type) and the commands that move around (tab change, arrow step);
-//   - the loading of each file as measured in Python (read of the index, peak table, reading mode) from api/perf;
 //   - long tasks (> 50 ms) where the browser reports them (not Safari).
 // «Copia» puts everything on the clipboard as text. ES module (runs after every classic script); the hooks wrap existing functions, no change to them.
 (() => {
@@ -43,37 +43,16 @@
     const t = performance.now();
     const r = await inner(input, init);
     const ms = performance.now() - t;
-    const py = r.headers && r.headers.get && r.headers.get("X-Py-Ms");
     const q = u.split("?")[1] || "";
-    note("api", m[1] + (q ? "?" + (q.length > 60 ? q.slice(0, 57) + "..." : q) : ""), ms, py != null ? "python " + f1(+py) + " ms" : "");
+    note("api", m[1] + (q ? "?" + (q.length > 60 ? q.slice(0, 57) + "..." : q) : ""), ms, "");
     add("api " + m[1], ms);
-    pyRows();
     return r;
   };
   Object.defineProperty(window, "fetch", { configurable: true, get: () => wrapped, set: f => { inner = f.bind ? f.bind(window) : f; } });
 
-  // ---- the file loading as seen by Python (index, peak table): asked after the calls, only the new numbers are written
-  const seen = new Set();
-  let pyT = 0;
-  function pyRows() {
-    clearTimeout(pyT);
-    pyT = setTimeout(async () => {
-      try {
-        const j = await (await inner("api/perf")).json();
-        for (const f of j.files || []) for (const [k, v] of Object.entries(f.timing || {})) {
-          const key = f.file + k + v;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          note("python", `${f.file}: ${k}`, v * 1000, `${f.mode}, ${(f.size / 1048576).toFixed(0)} MB`);
-          add("python " + k, v * 1000);
-        }
-      } catch (_) { /* old server without api/perf: nothing to add */ }
-    }, 300);
-  }
-
   // ---- panel draws and the commands that move around: wrap the global functions (they are plain function declarations)
   function wrapFn(name, label) {
-    const f = window[name];
+    const f = /** @type {any} */ (window)[name];
     if (typeof f !== "function" || f.__perf) return;
     const w = function (...a) {
       const t = performance.now(), p = a[0];
@@ -85,7 +64,7 @@
       return r;
     };
     w.__perf = true;
-    window[name] = w;
+    /** @type {any} */ (window)[name] = w;
   }
   function hook() { wrapFn("draw", "draw"); wrapFn("setTab", I18N.t("perf.hook.tab")); wrapFn("stepScan", I18N.t("perf.hook.step")); wrapFn("openXic", I18N.t("perf.hook.xic")); }
   hook();
@@ -115,12 +94,12 @@
   function schedule() { if (!pending) { pending = true; setTimeout(() => { pending = false; out.textContent = text(true); out.scrollTop = out.scrollHeight; }, 250); } }
 
   function env() {
-    const n = navigator, c = n.connection || {};
+    const n = /** @type {any} */ (navigator), c = n.connection || {};
     return [`${n.userAgent}`, I18N.t("perf.env", { sw: screen.width, sh: screen.height, iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio, cores: n.hardwareConcurrency || "?", mem: n.deviceMemory || "?", net: c.effectiveType || "?" }),
       I18N.t("perf.version", { app: window.APP_NAME || "?", title: document.title }), I18N.t("perf.engine", { engine: I18N.t(window.QQQ_BROWSER ? "perf.engine.browser" : "perf.engine.local") })];
   }
   function startLines() {
-    const nav = performance.getEntriesByType("navigation")[0], o = [];
+    const nav = /** @type {any} */ (performance.getEntriesByType("navigation")[0]), o = [];
     if (nav) o.push(`pagina: DOM pronto ${f1(nav.domContentLoadedEventEnd)} ms, caricata ${f1(nav.loadEventEnd)} ms`);
     return o;
   }

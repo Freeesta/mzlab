@@ -1,3 +1,4 @@
+// @ts-strict
 // The files and the session of the browser version, answered by the Rust engine. browser.js asks this module: upload, the list of the files, the session (explore, meta, remove, new), the state and the notebook are answered here, from the
 // scan table and the index that the Rust engine reads (rust-worker.js, `lr_*` operations; files and indexes live in OPFS, archivio.js).
 // What this module cannot answer it returns null for: browser.js then answers with the error `err.route.unavailable`.
@@ -8,7 +9,7 @@ const WORKDIR = "/work/sessione";
 const ACCEPT = /\.(mzml|dam)$/i;
 
 // the developer text that Python's UserError carries for the errors of /api/formula (the page translates the key)
-const formulaText = ({ error_key: k, params: p = {} }) => ({
+const formulaText = ({ error_key: k, params: p = /** @type {any} */ ({}) }) => ({
   "err.formula.empty": "empty formula",
   "err.formula.unreadable": `cannot read the formula '${p.formula}'`,
   "err.formula.element": `unknown element '${p.element}' in '${p.formula}'`,
@@ -19,16 +20,20 @@ const formulaText = ({ error_key: k, params: p = {} }) => ({
 import { originRoute } from "./lr-origin.js";
 import { engineRoute, statRoute } from "./lr-map.js";
 import { createMethodRoutes } from "./lr-method.js";
+import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
+import { W } from "./nativo-fasi.js";
 
+/** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload) */
+const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase) => window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase } }));
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const api = { files };
-  const rpc = async (msg) => {
-    const tr = window.MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
-    const r = await rb.rpc(msg);
+  const rpc = async (msg, onp) => {
+    const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
+    const r = await rb.rpc(msg, onp);
     if (tr) tr.push(`rpc ${msg.op} ${msg.name || ""} ${Math.round(performance.now() - t0)}ms${r.error ? " ERR " + r.error : ""}`);
     if (r.dead || r.error) throw Object.assign(new Error(r.error || "engine lost"), { raw: r.error });
     return r;
@@ -38,7 +43,7 @@ export function createLr({ rb }) {
   const sorted = () => [...files.values()].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   const state = () => ({ error: null, phase: "start", app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION });
   const session = () => ({ session: items, app: true, workdir: WORKDIR, files: sorted(), methods: mr.list(), version: VERSION, commit: "dev" });
-  const base = n => String(n || "").split(/[\\/]/).pop();
+  const base = n => String(n || "").split(/[\\/]/).pop() || "";
   // App.safe_name: the name of a file we accept, or null
   const safeName = name => {
     const n = base(name).trim();
@@ -47,7 +52,7 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
-  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; };
+  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; if (rb.clearNative) rb.clearNative(); };
 
   api.boot = async (fresh) => {                                          // fresh: «start from scratch» (the database may be held by another tab: it is not read)
     const r = await rpc({ op: "lr_boot", fresh });
@@ -57,6 +62,7 @@ export function createLr({ rb }) {
       if (/\.dam$/i.test(f.name)) continue;                                           // a method: read on demand
       if (!/\.mzml$/i.test(f.name)) continue;
       try {                                                                           // a file whose index was lost (a stopped upload) is indexed again
+        if (f.nat && rb.markNative) rb.markNative(f.name);                            // a sample of a maker's file: «Download .mzML» makes its mzML
         if (!f.indexed) await rpc({ op: "lr_index", name: f.name });
         files.set(f.name, JSON.parse((await rpc({ op: "lr_entry", name: f.name })).info));
       } catch (_) { /* unreadable: it is left out of the list */ }
@@ -65,7 +71,7 @@ export function createLr({ rb }) {
     if (fresh) return;
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
-      const list = (Array.isArray(nb.session) ? nb.session : []).filter(x => x && safeName(x.file) && files.has(safeName(x.file)));
+      const list = sessionFiles(nb.session, f => safeName(f) && files.has(safeName(f)));
       if (list.length) await explore({ samples: list });
     } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
   };
@@ -73,12 +79,14 @@ export function createLr({ rb }) {
   async function upload(name, blob) {
     const n = safeName(name);
     if (!n) return fail("err.file.notAccepted", { name }, `file type not accepted: ${name}`);
-    if (blob.size > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
-    try {
-      const put = await rpc({ op: "lr_put", name: n, blob });
+    const nat = /** @type {any} */ (blob).mzlabNat || null;                   // a sample of a maker's file (nativo.js): the members go to the browser storage with it
+    if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
+    try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
+      const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : undefined);
+      if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { await rpc({ op: "lr_index", name: n }); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
+      else { await rpc({ op: "lr_index", name: n }, p => tellIndex(n, p.frac, p.phase)); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       return fail(key, { name: n, ...params }, `cannot read the file: ${n}`);
@@ -96,6 +104,7 @@ export function createLr({ rb }) {
       rows.push({ file: n, label: s.label ?? null, type: s.type ?? "sample", time: num(s.time), conc: num(s.conc), cunit: s.cunit ?? null, rep: s.rep ?? null });
     }
     if (!rows.length) return fail("err.session.noFiles", {}, "add at least one file");
+    if (Array.isArray(body.all) && body.all.length > rows.length && !body.append && await mixesResolutions(rpc, body.all.map(safeName), n => n && files.has(n))) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
     const add = [], appended = !!(body.append && items);
     let h = appended ? hr : false, l = appended ? lr : false;
     for (const r of rows) {
@@ -143,12 +152,12 @@ export function createLr({ rb }) {
 
   async function fresh(body) {
     items = null; hr = lr = false;
-    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); }
+    if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); if (rb.clearNative) rb.clearNative(); }
     rb.noteNew();
     return json(state());
   }
 
-  // Returns { status, text } or null (Python answers).
+  // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
     const u = new URL(url, "http://x/"), path = u.pathname.replace(/^\/?(\.\/)?/, "/");
     const text = () => (typeof init.body === "string" ? init.body : null);
@@ -162,7 +171,7 @@ export function createLr({ rb }) {
           catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
-        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = Python)
+        { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = unavailable)
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
         return null;

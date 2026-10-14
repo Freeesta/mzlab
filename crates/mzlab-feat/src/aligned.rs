@@ -20,6 +20,8 @@ pub struct Aligned {
     pub n_files: usize,
     pub mz: Vec<f64>,
     pub rt: Vec<f64>,
+    /// MRM only: the Q3 of the transition of each row (`mz` is its Q1); empty for a table of ions.
+    pub q3: Vec<f64>,
     pub area: Vec<f64>,
     pub height: Vec<f32>,
     pub apex_rt: Vec<f32>,
@@ -84,6 +86,7 @@ impl Aligned {
             + self.area.capacity() * 8
             + (self.height.capacity() + self.apex_rt.capacity() + self.width.capacity()) * 4
             + self.state.capacity()
+            + self.q3.capacity() * 8
             + self.member_start.capacity() * 4
             + self.member_mz.capacity() * 8
             + self.member_rt.capacity() * 4

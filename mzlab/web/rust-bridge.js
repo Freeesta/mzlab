@@ -1,28 +1,34 @@
+// @ts-strict
 // Page side of the Rust engine: browser.js hands every GET of the routes in RUST_ROUTES to this module first. It answers them from
 // rust-worker.js (the same JSON as mzlab/api.py, the reference of the tests); null = the request is not one it answers.
 //
 // Supervisor: if the worker dies (a trap, a lost memory, a script error) it is terminated, a new one is started, the files of the session
 // are opened again and the page shows `error.engineRestarted`; a second death within a minute switches the engine off for the rest of the
-// session (`error.engineFallback`: the page asks to be reloaded).
+// session (`error.engineFallback`: the page asks to be reloaded). A death with the signature of a lack of memory (a trap or `rust_oom` after the memory grew) is not
+// retried as it is: once the engine restarts with half the budget, a second time the engine is off with `error.memoryBudget`, never a loop of restarts.
+// The .wasm is compiled once here and the same WebAssembly.Module goes to every worker of the engine (null = the worker compiles it).
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
-import { makeConvertRaw } from "./rust-raw.js";
+import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
+import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
+import { compileOnce, ordered, judgeDeath, forgetFaults } from "./rust-supervisor.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
-  let worker = null, seq = 0, restarts = [];
+  let worker = null, seq = 0, peakMem = 0;
   const pending = new Map();               // id -> { res, worker }
   const stats = { rust: 0, python: 0, restarts: 0, mzml: 0 };       // mzml: how many times a file was read as an mzML (not from its index)
-  const api = { enabled: true, disabled: false, stats };
-  const base = n => String(n || "").split(/[\\/]/).pop();
-
+  const api = { enabled: true, disabled: false, stats, budgetMb: 0, halved: false, lastPanic: /** @type {string | null} */ (null) };
+  const death = { restarts: /** @type {number[]} */ ([]), api, stats };       // for judgeDeath
+  const base = n => String(n || "").split(/[\\/]/).pop() || "";
   const recycler = api.recycler = makeRecycler({ pending, worker: () => worker, recycleNow: () => { stop(worker, { dead: true }); stats.recycled = (stats.recycled || 0) + 1; respawn(); }, disabled: () => api.disabled });
+  const wasmModule = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", workerUrl));
   function spawn() {
-    const w = new Worker(workerUrl, { type: "module" });
+    const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq);
     w.onmessage = ev => {
       const m = ev.data;
       if (m.op === "ready") return;
@@ -31,19 +37,19 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
-      pending.delete(m.id); recycler.seen(m.mem);
-      if (m.fatal) { p.res({ dead: true, error: m.error }); died(w); } else p.res(m);
+      pending.delete(m.id); peakMem = Math.max(peakMem, m.mem || 0); recycler.seen(m.mem);
+      if (m.fatal) { p.res({ dead: true, error: m.error }); died(w, { text: m.error, panic: m.panic, mem: m.mem }); } else p.res(m);
     };
-    w.onerror = () => died(w);
+    w.onerror = e => died(w, { text: e && e.message });
     worker = w;
   }
-  function recycle(buf) { if (worker) worker.postMessage({ op: "recycle", bufs: [buf] }, [buf]); }
+  function recycle(buf) { if (worker) worker.send({ op: "recycle", bufs: [buf] }, [buf]); }
   function rpc(msg, onp) {
     return new Promise(res => {
       if (!worker || api.disabled) return res({ dead: true });
       const id = ++seq;
       pending.set(id, { res, worker, onp });
-      worker.postMessage({ ...msg, id });
+      worker.send({ ...msg, id });
     });
   }
   function stop(w, res) {
@@ -54,14 +60,12 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     spawn();
     slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
   }
-  function died(w) {
+  function died(w, info) {
     if (w !== worker) return;
     stop(w, { dead: true });
-    const now = Date.now();
-    restarts = restarts.filter(t => now - t < 60000); restarts.push(now); stats.restarts++;
-    if (restarts.length > 1) { api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify("error.engineFallback"); return; }
-    respawn();
-    notify("error.engineRestarted");
+    const act = judgeDeath(death, info, peakMem);
+    if (act === "restart" || act === "halve") { respawn(); notify("error.engineRestarted"); return; }
+    api.disabled = true; slots.forEach(s => { if (s) s.bad = true; }); notify(act === "oom" ? "error.memoryBudget" : "error.engineFallback");
   }
   // A file has ONE reader: its .mzidx (OPFS), which answers TIC, XIC, scan lists and filters without reading the mzML. The mzML itself is opened
   // only for what needs the spectra (single scans), the first time they are asked, or at once when the file has no index (no OPFS).
@@ -72,7 +76,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r.dead || r.error) {
         s.bad = true;
         let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
-        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is left to Python
+        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is not opened (the page tells the user)
         return;
       }
       s.info = JSON.parse(r.info);
@@ -80,41 +84,42 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const needMzml = (k, s) => s.mzml || (s.mzml = s.info ? Promise.resolve() : openMzml(k, s));
   function open(k, s) {
-    return rpc({ op: "idxopen", slot: k, name: s.name }).then(r => {
+    return rpc({ op: "idxopen", slot: k, name: s.name, pol: s.pol }).then(r => {
       s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
   api.start = () => { if (!worker && !api.disabled) spawn(); };
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
-  api.noteRemove = name => { blobs.delete(base(name)); };
+  api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
-  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, except the MRM and polarity parts (Python)
+  // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are
-    if (!more) { slots = []; if (worker && !api.disabled) worker.postMessage({ op: "reset", id: ++seq }); }
+    if (!more) { slots = []; if (worker && !api.disabled) worker.send({ op: "reset", id: ++seq }); }
     const first = more ? slots.length : 0;
     for (const [i, s] of ((body && body.samples) || []).entries()) {
       const k = first + i;
       const f = String(s.file || ""), blob = blobs.get(base(f));
       const tag = f.includes("#") ? f.slice(f.indexOf("#") + 1) : "";
-      if ((tag && /^MRM|[ _](pos|neg)$/i.test(tag)) || api.disabled) { slots[k] = null; continue; }      // MRM and polarity parts: Python (the routes of the index see the whole file)
-      slots[k] = { name: base(f.split("#")[0]), blob: blobs.get(base(f.split("#")[0])) || blob || null, info: null, bad: false, idx: false, mzml: null };
+      if (api.disabled) { slots[k] = null; continue; }
+      slots[k] = { name: base(f.split("#")[0]), blob: blobs.get(base(f.split("#")[0])) || blob || null, info: null, bad: false, idx: false, mzml: null, pol: /[ _]pos$/i.test(tag) ? 1 : /[ _]neg$/i.test(tag) ? -1 : 0 };
       slots[k].opening = open(k, slots[k]);
     }
   };
-  // Thermo .raw -> Blob of mzML, made in the worker (rust-raw.js); cancelling stops the worker and starts a new one (not a fault: no notice)
-  api.convertRaw = makeConvertRaw({ rpc, base, current: () => worker, abort: w => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } });
-  Object.assign(api, wiffApi(rpc, base));                              // wiffSamples, convertWiff (rust-convert.js)
+  // a worker busy in one long call cannot hear a message: cancelling stops it and starts a new one (not a fault). the files of a maker are read as they are, in the browser and in the desktop app (rust-nativo-pagina.js)
+  const cancelable = { rpc, base, current: () => worker, abort: (/** @type {any} */ w) => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } };
+  Object.assign(api, wiffApi(rpc, base), { convertCentroids: makeConvertCentroids(cancelable) }, makeNativo(cancelable));
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;
     await Promise.all(ks.map(k => slots[k].opening));
     return ks.every(k => slots[k] && slots[k].idx && !slots[k].bad);
   };
-  api.crash =() => rpc({ op: "crash" });
+  api.crash = grow => rpc({ op: "crash", grow: grow || 0 });
+  api.forgetFaults = () => { forgetFaults(death); if (!worker) respawn(); };      // test hook: starts the count of deaths again and brings a stopped engine back
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
-  api.rpc = rpc;                                                       // for lr.js (the flow without Pyodide)
+  api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
@@ -136,7 +141,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis)$/;
   const hasRef = q => !!q.get("ref");
-  // Returns { status, text } or null (Pyodide answers).
+  // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url) => {
     if (!api.enabled || api.disabled || method !== "GET" || !worker) return null;
     const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;

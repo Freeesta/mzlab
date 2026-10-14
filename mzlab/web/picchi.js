@@ -234,8 +234,8 @@ function allInts() {
 }
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
-const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "ibk"];
-const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "ibk"].map(k => I18N.t(`export.int.${k}`));
+const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
+const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));
 function intExtra(r) {
   const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find(q => q.key === it.key);
   const pk = s ? chromPeak(s.x, s.y, r.a, r.b) : null, sd = s && it.noise ? noiseSD(s.x, s.y, it.noise[0], it.noise[1]) : null;
@@ -259,11 +259,11 @@ async function showInts() {
     <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
-    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.ibk")}</th><th></th></tr>` +
+    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
     rows.map((r, i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="${I18N.t("int.tbl.pickNoise.title")}">${I18N.t("int.tbl.pickNoise")}</button>`}</td>` : "") +
       (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") +
-      (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.ibk || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
+      (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.corr || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
     `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>`
     : `<div class="muted">${I18N.t("int.tbl.none")}</div>`, () => {
     if (!rows.length) return;
@@ -286,9 +286,9 @@ async function showInts() {
 const MARK_N = 20;
 const markOn = p => (p.mk != null ? !!p.mk : !p._a || (p._a.markN || 0) <= MARK_N);
 // the spectrum a palette command acts on: the active one if it is a spectrum, else the first of the tab; pred tests its drawing state
-const specHere = pred => { const l = [E.active, ...E.panels.filter(q => q.tab === E.tab || allTabs())].filter(q => q && q.type === "spec" && q._a && pred(q._a)); return l[0] || null; };
+const specHere = pred => { const l = [E.active, ...E.panels].filter(q => q && q.type === "spec" && q._a && pred(q._a)); return l[0] || null; };
 // the chromatogram a palette command acts on: the active one, else the first of the tab, that satisfies pred
-const lineHere = pred => [E.active, ...E.panels.filter(q => q.tab === E.tab || allTabs())].find(q => q && (q.type === "chrom" || q.type === "xic" || q.type === "mrm") && q._a && q.el && pred(q)) || null;
+const lineHere = pred => [E.active, ...E.panels].find(q => q && (q.type === "chrom" || q.type === "xic" || q.type === "mrm") && q._a && q.el && pred(q)) || null;
 // MS2 scan of the peak last picked with the right button (palette: «open the MS2 scan»)
 const lastMs2 = () => {
   const p = specHere(a => a.hrp && window.DDA), q = p && p._pm != null ? DDA.ms2For(p, p._pm)[0] : null;
@@ -377,7 +377,7 @@ async function drawSpec(p, snapped) {
   const wide = files.reduce((r, f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
   const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...mzs) - 2, Math.max(...mzs) + 2];
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let ymax = inRange(x0, x1) * 1.12;
+  let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
   const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;

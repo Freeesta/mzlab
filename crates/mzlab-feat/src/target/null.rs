@@ -12,6 +12,8 @@ use super::TargetParams;
 
 /// Distance of a decoy from the mass it is taken from, Da (more than any window in ppm and not an isotope spacing).
 pub const DECOY_SHIFT: f64 = 0.0236;
+/// The same at unit resolution (tolerance in Da): outside the window of the hypothesis and not an isotope spacing.
+pub const DECOY_SHIFT_UNIT: f64 = 0.5;
 
 /// Peaks per decoy per minute in one file; `masses` are the m/z of the hypotheses (any order), of which about `p.decoys` are used.
 pub(crate) fn decoy_rate<R: ReadAt>(
@@ -27,11 +29,12 @@ pub(crate) fn decoy_rate<R: ReadAt>(
     let run = sec.run();
     let (mut found, mut n) = (0usize, 0usize);
     for (k, &mz) in masses.iter().step_by(step).take(p.decoys).enumerate() {
-        let shift = if k % 2 == 0 {
-            DECOY_SHIFT
+        let d = if p.ppm < 0.0 {
+            DECOY_SHIFT_UNIT
         } else {
-            -DECOY_SHIFT
+            DECOY_SHIFT
         };
+        let shift = if k % 2 == 0 { d } else { -d };
         found += peaks(index, sec, mz + shift, run, p)?.len();
         n += 1;
     }
@@ -47,6 +50,7 @@ pub fn coincidence(rates: &[f64], minutes: f64, hits: usize) -> f64 {
     if hits > rates.len() {
         return 0.0;
     }
+    // one value per decoy rate (one per file of the series)
     let mut dp = vec![0.0f64; rates.len() + 1];
     dp[0] = 1.0;
     for (i, r) in rates.iter().enumerate() {

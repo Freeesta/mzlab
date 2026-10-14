@@ -18,7 +18,7 @@ fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) ->
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(v, f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]
@@ -47,9 +47,7 @@ pub(crate) fn cv_value(h: &str, acc: &str) -> Option<String> {
 fn scan_window<R: ReadAt, M: ReadAt>(idx: &Index<R>, mzml: &mut M) -> Result<Option<(f64, f64)>> {
     let mut win: Option<(f64, f64)> = None;
     for s in idx.scans.iter().take(50) {
-        let mut b = vec![0u8; (s.end.saturating_sub(s.start)) as usize];
-        mzml.read_at(s.start, &mut b)?;
-        let h = String::from_utf8_lossy(&b);
+        let h = crate::sorgente::testo_scansione(mzml, s)?;
         let (Some(a), Some(z)) = (cv_value(&h, "MS:1000501").filter(|v| !v.is_empty()), cv_value(&h, "MS:1000500").filter(|v| !v.is_empty())) else { continue };
         let (Ok(a), Ok(z)) = (a.trim().parse::<f64>(), z.trim().parse::<f64>()) else { continue };
         win = Some(win.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));
@@ -103,10 +101,10 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     filters.sort();
     filters.dedup();
     let mut precs: Vec<f64> = ms2.iter().filter_map(|s| s.precursor.filter(|p| *p != 0.0)).map(|p| round(p, 2)).collect();
-    precs.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
     let mut ces: Vec<f64> = ms2.iter().filter_map(|s| s.collision_energy).collect();
-    ces.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut ces, f64::total_cmp);
     ces.dedup();
     let mut o = Out::default();
     o.raw("{\"file\":").str(file).raw(",\"kind\":").str(kind).raw(",\"instrument\":").str(&md.instrument).raw(",\"serial\":").str(&md.serial);

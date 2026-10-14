@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // Sight of the RT x m/z map, the parts that do not touch the page (classic script, loaded before mappa.js; node loads it with require).
 // The same code serves the Python engine (Pyodide) and the Rust one: it only decides WHAT is asked and WHEN, never how the engine answers.

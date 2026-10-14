@@ -3,7 +3,10 @@
 //! features whose consecutive m/z gaps are below `ppm` is one slab (no group crosses its edges): it is cut where it spans more than
 //! `max_ppm_span`, sorted by RT and cut where the RT gap is above `rt_gap`; so one slab is held at a time.
 
+use crate::axis::half;
 use crate::sortc;
+use crate::trace::filled;
+use mzlab_core::error::Result;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -144,10 +147,15 @@ fn split_slab(
     items: &mut Vec<Item>,
     p: &AlignParams,
     adj: Option<&RtMap>,
-) -> Vec<(usize, usize)> {
+) -> Result<Vec<(usize, usize)>> {
     let mz = |t: &Item| files[t.0 as usize].mz[t.1 as usize];
-    let x: Vec<f64> = items.iter().map(|t| libm::log(mz(t)) * 1e6).collect();
-    let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span);
+    // log-ppm axis, or the m/z itself when the tolerances are in Da
+    let unit = p.max_ppm_span < 0.0;
+    let x: Vec<f64> = items
+        .iter()
+        .map(|t| if unit { mz(t) } else { libm::log(mz(t)) * 1e6 })
+        .collect();
+    let mut runs = limit_span(&x, vec![(0, items.len())], p.max_ppm_span.abs());
     // the RT of every feature of the slab, computed once (the corrected RT interpolates a curve)
     let rts: Vec<f64> = items.iter().map(|t| rt_of(files, adj, t)).collect();
     let mut groups = Vec::new();
@@ -166,15 +174,15 @@ fn split_slab(
     }
     *items = sorted.iter().map(|x| x.1).collect();
     if let Some(gap) = p.split_gap {
-        groups = split_duplicates(files.len(), &sorted, groups, gap);
+        groups = split_duplicates(files.len(), &sorted, groups, gap)?;
     }
-    match p.max_rt_span {
+    Ok(match p.max_rt_span {
         None => groups,
         Some(span) => {
             let xr: Vec<f64> = sorted.iter().map(|x| x.0).collect();
             limit_span(&xr, groups, span)
         }
-    }
+    })
 }
 
 /// Cuts the groups where an RT gap above `gap` lies between two features of one file in at least `MIN_SPLIT_FILES` files: two ions (close
@@ -184,12 +192,12 @@ fn split_duplicates(
     sorted: &[(f64, Item)],
     groups: Vec<(usize, usize)>,
     gap: f64,
-) -> Vec<(usize, usize)> {
+) -> Result<Vec<(usize, usize)>> {
     let mut out = Vec::with_capacity(groups.len());
     for (a, b) in groups {
         let mut by_file: Vec<(u32, usize)> = (a..b).map(|i| (sorted[i].1 .0, i)).collect();
-        by_file.sort_unstable();
-        let mut straddle = vec![0i32; b - a + 1];
+        sortc::ord(&mut by_file);
+        let mut straddle = filled(b - a + 1, 0i32)?;
         for w in by_file.chunk_by(|x, y| x.0 == y.0) {
             let (lo, hi) = (w[0].1, w[w.len() - 1].1);
             if hi > lo {
@@ -213,7 +221,7 @@ fn split_duplicates(
         let from = cuts[0];
         out.push((from, b));
     }
-    out
+    Ok(out)
 }
 
 /// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).
@@ -251,8 +259,8 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: O
 }
 
 /// Aligns the files in "per ion" mode. Cells without a feature have area 0, NaN apex and width, state `CELL_ABSENT`.
-pub fn align(files: &[&FileFeatures], p: &AlignParams) -> Aligned {
-    align_grouped(files, p, None, false).table
+pub fn align(files: &[&FileFeatures], p: &AlignParams) -> Result<Aligned> {
+    Ok(align_grouped(files, p, None, false)?.table)
 }
 
 /// `align` with the RT of every feature corrected by `adj` (the reference RT of the map) and, when `record`, the group of every feature.
@@ -261,9 +269,9 @@ pub fn align_grouped(
     p: &AlignParams,
     adj: Option<&RtMap>,
     record: bool,
-) -> Grouped {
+) -> Result<Grouped> {
     let mut n = 0usize;
-    merge_groups(files, p, adj, &mut |_| n += 1);
+    merge_groups(files, p, adj, &mut |_| n += 1)?;
     let mut out = Grouped {
         table: Aligned::with_capacity(files.len(), n),
         group_of: if record {
@@ -280,8 +288,8 @@ pub fn align_grouped(
             }
         }
         push_group(files, items, &mut out.table, adj);
-    });
-    out
+    })?;
+    Ok(out)
 }
 
 /// Calls `sink` with the features of every group, in the order of the table (the slabs are made one at a time).
@@ -290,7 +298,7 @@ fn merge_groups(
     p: &AlignParams,
     adj: Option<&RtMap>,
     sink: &mut dyn FnMut(&[Item]),
-) {
+) -> Result<()> {
     let mut cur: Vec<Cursor> = files.iter().map(|f| Cursor::new(f)).collect();
     let mut heap: BinaryHeap<Head> = BinaryHeap::new();
     let refill = |heap: &mut BinaryHeap<Head>, cur: &mut [Cursor], k: usize| {
@@ -308,14 +316,14 @@ fn merge_groups(
     let mut slab: Vec<Item> = Vec::new();
     let mut last = f64::NAN;
     while let Some(h) = heap.pop() {
-        if !slab.is_empty() && h.mz - last > h.mz * p.ppm * 1e-6 {
-            flush(files, &mut slab, p, adj, sink);
+        if !slab.is_empty() && h.mz - last > half(h.mz, p.ppm) {
+            flush(files, &mut slab, p, adj, sink)?;
         }
         last = h.mz;
         slab.push((h.file, h.pos));
         refill(&mut heap, &mut cur, h.file as usize);
     }
-    flush(files, &mut slab, p, adj, sink);
+    flush(files, &mut slab, p, adj, sink)
 }
 
 fn flush(
@@ -324,12 +332,13 @@ fn flush(
     p: &AlignParams,
     adj: Option<&RtMap>,
     sink: &mut dyn FnMut(&[Item]),
-) {
+) -> Result<()> {
     if slab.is_empty() {
-        return;
+        return Ok(());
     }
-    for (a, b) in split_slab(files, slab, p, adj) {
+    for (a, b) in split_slab(files, slab, p, adj)? {
         sink(&slab[a..b]);
     }
     slab.clear();
+    Ok(())
 }

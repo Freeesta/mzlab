@@ -16,6 +16,9 @@ use crate::originroute::ItemMeta;
 use crate::routes::{Query, Routes};
 
 const STICKS_MAX: usize = 200_000;
+/// The cells of a region follow the canvas (width x height at up to twice the pixel ratio): at most 2048 x 1024 `f32` cells = 8 MB.
+const REGION_RT_MAX: i64 = 2048;
+const REGION_MZ_MAX: i64 = 1024;
 
 type Table<R> = HashMap<u32, Routes<R>>;
 
@@ -97,8 +100,8 @@ fn parse_ask(q: &Query, with_ref: bool) -> Option<Ask> {
         if !(rt1 > rt0 && mz1 > mz0 && mz0 > 0.0) {
             return None;
         }
-        let axis = |k: &str| q.get(k).map_or(Some(400), |v| v.parse::<i64>().ok()).map(|v| v.clamp(1, 1024) as usize);
-        Some((rt0, rt1, mz0, mz1, axis("nrt")?, axis("nmz")?))
+        let axis = |k: &str, top: i64| q.get(k).map_or(Some(400), |v| v.parse::<i64>().ok()).map(|v| v.clamp(1, top) as usize);
+        Some((rt0, rt1, mz0, mz1, axis("nrt", REGION_RT_MAX)?, axis("nmz", REGION_MZ_MAX)?))
     } else {
         None
     };
@@ -205,14 +208,14 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
 fn snap<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Result<Option<String>> {
     let (Some(k), Some(rt), Some(mz)) = (index(q, "k"), number(q, "rt"), number(q, "mz")) else { return Ok(None) };
     let Some(r) = route(items, routes, k) else { return Ok(None) };
-    let found = r.snap(q.level(), rt, mz, number(q, "dmz").unwrap_or(1.0))?;
+    let found = r.snap(q.level(), rt, mz, number(q, "dmz").unwrap_or(1.0), number(q, "drt").unwrap_or(0.2), number(q, "wm").unwrap_or(1.0).max(0.0))?;
     let o = found.map_or_else(Obj::new, |(rt, mz)| Obj::new().n("rt", rt).n("mz", mz));
     Ok(Some(crate::jsonb::write(&o.done())))
 }
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut s, f64::total_cmp);
     match s.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => s[n / 2],

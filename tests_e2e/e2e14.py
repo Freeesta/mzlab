@@ -1,7 +1,7 @@
 """Window sizes: phone, tablet, laptop, large screen, and live resizing. No horizontal page scroll, panels follow the window, nothing unreadable."""
 import sys
 from playwright.sync_api import sync_playwright
-from lib import Run, mz, SH, drawer
+from lib import Run, mz, SH, drawer, stage, ready
 
 SIZES = [(360, 740), (768, 1024), (1024, 700), (1500, 900), (2560, 1300)]
 R = []
@@ -13,18 +13,17 @@ def overflow(pg):
     return pg.evaluate("[document.documentElement.scrollWidth, innerWidth]")
 
 with sync_playwright() as p:
-    run = Run(port=8814, wd="/tmp/wd14", motore="python")
+    run = Run(port=8814, wd="/tmp/wd14")
     pg = run.page(p)
     pg.set_viewport_size({"width": 1500, "height": 900})
-    pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")])
-    pg.wait_for_function("document.querySelectorAll('#flist tr').length >= 6", timeout=60000)
+    stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")])
     for w, h in SIZES[:1]:
         pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(300)
         def start_small():
             sw, iw = overflow(pg); assert sw <= iw + 1, ("start screen overflows", sw, iw)
             pg.screenshot(path=SH + f"140_start_{w}.png")
         step(f"start screen at {w}px", start_small)
-    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); pg.wait_for_timeout(2500)
+    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); ready(pg); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); pg.wait_for_timeout(2500)
     pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
     if pg.is_visible("#dfiles"): pg.click("#sb-x"); pg.wait_for_timeout(500)      # the File panel is open at first start; under 900 px it would replace the workspace
     for w, h in SIZES:
@@ -32,9 +31,9 @@ with sync_playwright() as p:
             pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(900)
             sw, iw = overflow(pg); assert sw <= iw + 2, ("page scrolls sideways", sw, iw)
             host = pg.evaluate("Q('#dpanels').clientWidth")
-            bad = pg.evaluate("E.panels.filter(p=>p.x + p.w > Q('#dpanels').clientWidth + 2).map(p=>[p.type,p.x,p.w])"); assert not bad, ("panel wider than the area", bad, host)
-            full = pg.evaluate("E.panels.filter(p=>p.full && Math.abs(p.w - Q('#dpanels').clientWidth) > 2).length"); assert full == 0, ("full-width panels did not follow", full)
-            cw = pg.evaluate("E.panels.map(p=>p.cv.clientWidth)"); assert all(c > 150 for c in cw), cw
+            bad = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.x + p.w > Q('#dpanels').clientWidth + 2).map(p=>[p.type,p.x,p.w])"); assert not bad, ("panel wider than the area", bad, host)
+            full = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.full && Math.abs(p.w - Q('#dpanels').clientWidth) > 2).length"); assert full == 0, ("full-width panels did not follow", full)
+            cw = pg.evaluate("E.panels.filter(p=>p.tab===E.tab).map(p=>p.cv.clientWidth)"); assert all(c > 150 for c in cw), cw
             hdr = pg.evaluate("(()=>{const h=document.querySelector('header');return [h.scrollWidth,h.clientWidth,h.getBoundingClientRect().height]})()"); assert hdr[0] <= hdr[1] + 2, ("header clipped", hdr)
             pg.screenshot(path=SH + f"141_data_{w}.png")
         step(f"data view at {w}x{h}", at)
@@ -62,6 +61,7 @@ with sync_playwright() as p:
     step("tabs at 360 and 1500", tabs)
     def hidpi():
         c2 = run.b.new_context(device_scale_factor=2, viewport={"width": 1100, "height": 800}); q = c2.new_page(); q.goto(f"http://127.0.0.1:{run.port}/"); q.wait_for_timeout(1500)
+        stage(q, [mz("B_FullMass-t0")]); q.click("#opbtn"); ready(q)      # a new browser context starts empty: the session lives in the browser
         q.wait_for_selector(".pnl.chrom canvas", timeout=30000); q.wait_for_timeout(1500)
         r = q.evaluate("(()=>{const c=E.panels[0].cv;return c.width/c.clientWidth})()"); assert abs(r - 2) < 0.05, r
         c2.close()

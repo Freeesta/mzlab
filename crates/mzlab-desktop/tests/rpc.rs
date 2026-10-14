@@ -33,6 +33,15 @@ fn register_index_open_and_route() {
     assert!(tic.starts_with("{\"rt\":["), "{tic}");
     assert_eq!(text(r("route", json!({"slot": 9, "path": "/api/chrom", "query": ""})).unwrap()), "", "a slot that is not open is not answered");
     assert!(r("nope", json!({})).is_err());
+    let tic_of = |pol: i64| {
+        r("idxopen", json!({"slot": 1, "name": name, "pol": pol})).unwrap();
+        text(r("route", json!({"slot": 1, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap())
+    };
+    assert_eq!(tic_of(0), tic, "pol 0 = every section");
+    assert_ne!(tic_of(-1), tic, "pol is applied to the index as set_polarity of the wasm does");
+    let space: serde_json::Value = serde_json::from_str(&text(r("lr_space", json!({"free": "derived"})).unwrap())).unwrap();
+    assert_eq!(space["idx"], 0, "free = \"derived\" removes every index, as the wasm does: {space}");
+    r("lr_index", json!({"name": name})).unwrap();                      // made again from the source for the rest of the test
     r("lr_kv_set", json!({"key": "notebook", "value": "{\"session\":[]}"})).unwrap();
 
     let st2 = State::new();                                              // a new run of the app on the same folders

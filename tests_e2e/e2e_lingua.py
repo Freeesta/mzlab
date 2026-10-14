@@ -1,5 +1,5 @@
 """Interface language: default from the browser (it-IT -> Italian, en-US/fr-FR -> English), ?lang=, choice from the gear (remembered in
-qqq.lang, files stay open after the reload), the Teoria in English is a courtesy page with a button to the Italian one. Synthetic data."""
+mzlab.lang, files stay open after the reload), the Teoria in English is a courtesy page with a button to the Italian one. Synthetic data."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth
@@ -54,16 +54,18 @@ try:
             pg.click("#np-set"); pg.wait_for_timeout(200)
             assert pg.inner_text("#uipset label, #uipset .row >> nth=0").startswith("Lingua / Language")
             assert pg.evaluate("document.querySelector('#uip-lang').value") == "it"
+            saved(pg)        # the open files come back from the saved session: wait until it is written
             with pg.expect_navigation(): pg.select_option("#uip-lang", "en")
-            pg.wait_for_timeout(500); ready(pg)
-            assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('qqq.lang')") == "en"
+            attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
+            assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
             assert nav(pg) == ["Data", "Drawing", "Theory"]
+            attendi(pg, f"E.files.length === {n}", 60000)
             assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#uip-lang').value") == "en"
             assert pg.inner_text("#uipset .row >> nth=0").startswith("Lingua / Language"), "the label stays bilingual"
-        step("gear: choice remembered (qqq.lang), page reloads in English, open files stay", gear)
+        step("gear: choice remembered (mzlab.lang), page reloads in English, open files stay", gear)
         def remembered():
-            pg = page("it-IT"); pg.evaluate("localStorage.setItem('qqq.lang','en')"); pg.reload(); pg.wait_for_timeout(600)
+            pg = page("it-IT"); pg.evaluate("localStorage.setItem('mzlab.lang','en')"); pg.reload(); pg.wait_for_timeout(600)
             assert pg.evaluate("I18N.lang") == "en", "the explicit choice wins over the browser"
         step("explicit choice wins over the browser language", remembered)
         b.close()

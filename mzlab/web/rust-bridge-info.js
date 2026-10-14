@@ -1,6 +1,7 @@
 // @ts-check
+// @ts-strict
 // The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo` and the `api/chrom` of an MRM file.
-// Returns { status, text, ms } or null (Pyodide answers).
+// Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
 
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0 }) {

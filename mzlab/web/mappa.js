@@ -7,7 +7,9 @@ window.MAPPA = (() => {
   const PREF_KEY = "qqq.mappa";
   const PREF = (() => { return lsObj(PREF_KEY); })();
   const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
-  const BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const GRP0 = 0.02, SHAPES = ["circle", "square", "triangle", "diamond"], GLYPH = ["●", "■", "▲", "◆"];
+  const SHAPE_KEY = { circle: "mappa.shape.circle", square: "mappa.shape.square", triangle: "mappa.shape.triangle", diamond: "mappa.shape.diamond" };     // literal keys: the i18n check finds them     // RT window of a group (min); the shape of a group's points, by turns
+  const GROUP_DA = 2.5, BOTTOM = 140, NARROW = 700, QUIET = 150;
   const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
   const is2d = p => p.type === "map" && p._a && p._a.map;
   const isMax = p => p.el && p.el.classList.contains("max");
@@ -262,7 +264,7 @@ window.MAPPA = (() => {
     if (!s.t0) s.t0 = performance.now();
     ask.panel = p; ask(pt);
   }
-  const frame = p => { const s = st(p); if (!s.raf) s.raf = requestAnimationFrame(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
+  const frame = p => { const s = st(p); if (!s.raf) s.raf = FRAME.next(() => { s.raf = 0; const t = performance.now(); overlay(p); margins(p); if (MEAS) (window.__mirFrame || (window.__mirFrame = [])).push(performance.now() - t); }); };      // pointer events come faster than frames
   const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
   const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
   function canvasOf(c) {
@@ -271,7 +273,7 @@ window.MAPPA = (() => {
     const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
   }
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
-  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8). s.lbls keeps the boxes.
+  // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (at most 8; one per group of peaks within GROUP_DA). s.lbls keeps the boxes.
   function sideLabels(g, W, order, get, x0, s) {
     const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
     for (const i of order) {
@@ -290,13 +292,14 @@ window.MAPPA = (() => {
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke(); g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]);
-    sideLabels(g, W, top.filter(i => sp.y[i] >= ymax * 0.05), i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
+    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), kept = [];
+    for (const i of top) { if (sp.y[i] < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
+    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
@@ -309,8 +312,10 @@ window.MAPPA = (() => {
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
     let ymax = 0; const tr = xi.tr || [];
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
-    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }); }
+    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }, true); }
     const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+    g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();      // intensity axis, like the other chromatograms
+    if (ymax) { g.textAlign = "right"; for (const t of nice(0, ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
     tr.forEach((t, n) => {
       const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
@@ -436,18 +441,21 @@ window.MAPPA = (() => {
   const pts = p => { const k = pairKey(p); if (!k) return []; NB.mappaPunti = NB.mappaPunti || {}; return NB.mappaPunti[k] || (NB.mappaPunti[k] = []); };
   const ptsSave = p => { const k = pairKey(p); if (k && NB.mappaPunti && !NB.mappaPunti[k].length) delete NB.mappaPunti[k]; nbSave(); };
   const ppmOf = f => isHrF(f) ? ((HR.prof(f, f.lv || 1) || {}).tol || 5) : 0;
+  // the apex near (rt, m/z) (Rust, `api/mapsnap`); null when the option «snap» is off or no peak is near
+  async function snapAt(p, rt, mz, dmz) {
+    if (PREF.snap === false) return null; const a = p._a;
+    try { const at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${dmz || a.dmz || 1}`); return at && at.rt != null ? at : null; } catch (e) { return null; }
+  }
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
-    let at = null; try { at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${a.dmz || 1}`); } catch (e) { /* no snap */ }
-    const q = at && at.rt != null ? at : { rt, mz };
+    const q = (await snapAt(p, rt, mz)) || { rt, mz };
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
-    let at = null; try { at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${dmz || 1}`); } catch (e) { /* no snap */ }
-    const q = at && at.rt != null ? at : { rt, mz };
+    const q = (await snapAt(p, rt, mz, dmz || 1)) || { rt, mz };
     const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
@@ -466,7 +474,7 @@ window.MAPPA = (() => {
     const mv = ev => { moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top; list[i].rt = xOf(p, x); list[i].mz = p._a.mzAt(y); overlay(p); };
     const up = async ev => {
       removeEventListener("mousemove", mv); removeEventListener("mouseup", up);
-      if (moved) { const a = p._a; try { const at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${list[i].rt}&mz=${list[i].mz}&dmz=${a.dmz || 1}`); if (at && at.rt != null) { list[i].rt = at.rt; list[i].mz = at.mz; } } catch (e2) { /* keep where dropped */ } ptsSave(p); }
+      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { list[i].rt = at.rt; list[i].mz = at.mz; } ptsSave(p); }
       overlay(p); table(p);
     };
     addEventListener("mousemove", mv); addEventListener("mouseup", up);
@@ -481,12 +489,21 @@ window.MAPPA = (() => {
     addPoint(p, px, py); return true;
   }
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
+  // HR only: the points of one group of RT share a shape (circle, square, triangle, diamond, by turns); with no groups (LR, table not ready) a circle
+  const grpShape = (p, i) => { const r = st(p).rows; return isHrF(p._a.f) && r && r.length === pts(p).length && r[i] && r[i].g ? SHAPES[(r[i].g - 1) % SHAPES.length] : "circle"; };
+  function shapePath(g, kind, x, y, r) {
+    g.beginPath();
+    if (kind === "square") g.rect(x - r * .88, y - r * .88, r * 1.76, r * 1.76);
+    else if (kind === "triangle") { g.moveTo(x, y - r * 1.15); g.lineTo(x + r * 1.1, y + r * .85); g.lineTo(x - r * 1.1, y + r * .85); g.closePath(); }
+    else if (kind === "diamond") { g.moveTo(x, y - r * 1.2); g.lineTo(x + r * 1.2, y); g.lineTo(x, y + r * 1.2); g.lineTo(x - r * 1.2, y); g.closePath(); }
+    else g.arc(x, y, r, 0, 2 * Math.PI);
+  }
   function drawPoints(p, g) {
     const a = p._a, s = st(p); g.save(); g.font = fpx(11, "bold "); g.textAlign = "center";
     pts(p).forEach((q, i) => {
       if (q.rt < a.x0 || q.rt > a.x1 || q.mz < a.y0 || q.mz > a.y1) return;
       const x = a.X(q.rt), y = a.Y(q.mz), on = s.psel === i;
-      g.beginPath(); g.arc(x, y, on ? 9 : 7.5, 0, 2 * Math.PI); g.fillStyle = css("--panel"); g.globalAlpha = .9; g.fill(); g.globalAlpha = 1;
+      shapePath(g, grpShape(p, i), x, y, on ? 9 : 7.5); g.fillStyle = css("--panel"); g.globalAlpha = .9; g.fill(); g.globalAlpha = 1;
       g.lineWidth = on ? 2.4 : 1.4; g.strokeStyle = on ? css("--accent") : css("--ink"); g.stroke();
       g.fillStyle = css("--ink"); g.fillText(String(i + 1), x, y + 4);
     });
@@ -503,31 +520,33 @@ window.MAPPA = (() => {
     const s = st(p), a = p._a; if (!a || !s.grid) return;
     let box = s.tab;
     const list = is2d(p) ? pts(p) : [];
-    if (!list.length) { if (box) { box.remove(); s.tab = null; growTable(p, false); } return; }
-    if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); growTable(p, true); }
+    if (!list.length) { if (box) { box.remove(); s.tab = null; grow(p, "tab", 0); } return; }
+    if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); }
     const f = a.f, ref = a.ref, mzq = list.map(q => `${(+q.rt).toFixed(4)},${(+q.mz).toFixed(5)}`).join(";");
     let rows = [];
-    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? 0.05}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
+    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? GRP0}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
     rows = rows.map((r, i) => ({ ...r, n: i + 1, note: list[i] ? list[i].note || "" : "" }));
     const ri = list.findIndex(q => q.ref);                      // the point the student chose as the reference of Δm (none: the most intense of each group)
     if (ri >= 0 && rows[ri] && rows[ri].mz != null) rows.forEach(r => { r.dm = r.mz == null ? null : r.mz - rows[ri].mz; r.isref = r.n - 1 === ri; });
-    s.rows = rows;
+    s.rows = rows; overlay(p);                                          // the shapes of the points come from the groups of the table
     const so = s.sort || { c: "n", d: 1 }, val = (r, c) => r[c] == null ? -Infinity : r[c];
     const view = rows.slice().sort((u, v) => typeof val(u, so.c) === "string" ? so.d * String(val(u, so.c)).localeCompare(String(val(v, so.c))) : so.d * (val(u, so.c) - val(v, so.c)));
     const dec = mzd(p), hr = isHrF(f), num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
     const head = COLS.map(c => `<th data-c="${c}" title="${T(COLK[c][1])}">${T(COLK[c][0])}${so.c === c ? (so.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + `<th title="${T("mappa.tab.ref.title")}">${T("mappa.tab.ref")}</th><th></th>`;
-    box.innerHTML = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? 0.05}"> min</label>` +
-      `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
-      `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${view.map(r => `<tr data-i="${r.n - 1}" class="${s.psel === r.n - 1 ? "on" : ""}">` +
-      `<td>${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
+    const rowHtml = r => `<tr data-i="${r.n - 1}" class="${s.psel === r.n - 1 ? "on" : ""}">` +
+      `<td>${hr && r.g ? `<span aria-hidden="true">${GLYPH[(r.g - 1) % GLYPH.length]}</span> ` : ""}${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
-      `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`).join("")}</tbody></table></div>`;
+      `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`;
+    box.innerHTML = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? GRP0}"> min</label>` +
+      `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
+      `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${hr ? groupedRows(s, view, rowHtml) : view.map(rowHtml).join("")}</tbody></table></div>`;
+    box.querySelectorAll("[data-gtog]").forEach(b => b.onclick = () => { const g = +b.dataset.gtog; if (s.gcol.has(g)) s.gcol.delete(g); else s.gcol.add(g); tableNow(p); });
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
     box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
     box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };
-    box.querySelectorAll("tbody tr").forEach(tr => {
+    box.querySelectorAll("tbody tr[data-i]").forEach(tr => {
       const i = +tr.dataset.i;
       tr.onclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (!q) return; s.psel = i; s.lock = { rt: q.rt, mz: q.mz }; follow(p, s.lock); overlay(p); margins(p); tableNow(p); };
       tr.ondblclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (q) spectrumAt(p, q.rt); };
@@ -535,11 +554,22 @@ window.MAPPA = (() => {
     box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { q.note = inp.value; ptsSave(p); } });
     box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; ptsSave(p); tableNow(p); });
     box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
-    box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f)); });
+    box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f), f.polarity); });
+    grow(p, "tab", Math.ceil(box.offsetHeight) + 5);                    // the panel grows by the height of the table (it scrolls inside beyond its maximum): the map keeps its size
   }
-  function growTable(p, on) {
-    const s = st(p); if (on === !!s.tgrown || isMax(p)) return;
-    s.tgrown = on; p.h = Math.max(200, p.h + (on ? 1 : -1) * 220); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
+  // HR: the rows of one group (more than one point) sit together under a row of the group that can be folded; the other points follow as they are
+  function groupedRows(s, view, rowHtml) {
+    const gcol = s.gcol || (s.gcol = new Set()), by = new Map(), out = [];
+    view.forEach(r => { if (!by.has(r.g)) by.set(r.g, []); by.get(r.g).push(r); });
+    for (const [g, mem] of by) {
+      if (mem.length < 2) { out.push(rowHtml(mem[0])); continue; }
+      const open = !gcol.has(g), rts = mem.map(r => r.rt).filter(v => v != null), gl = GLYPH[(g - 1) % GLYPH.length], nm = T(SHAPE_KEY[SHAPES[(g - 1) % SHAPES.length]]);
+      const lab = T("mappa.grp.row", { g, shape: nm, n: mem.length, members: mem.map(r => r.n).sort((x, y) => x - y).join(", ") });
+      out.push(`<tr class="mzgr"><td colspan="${COLS.length + 2}"><button data-gtog="${g}" aria-expanded="${open}" aria-label="${T(open ? "mappa.grp.fold" : "mappa.grp.unfold", { g })}" title="${T(open ? "mappa.grp.fold" : "mappa.grp.unfold", { g })}">${open ? "▾" : "▸"}</button> ` +
+        `<b><span aria-hidden="true">${gl}</span> ${EH(lab)}</b> <span class="muted">RT ${Math.min(...rts).toFixed(2)}–${Math.max(...rts).toFixed(2)} min</span></td></tr>`);
+      if (open) mem.forEach(r => out.push(rowHtml(r)));
+    }
+    return out.join("");
   }
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
@@ -549,12 +579,7 @@ window.MAPPA = (() => {
   // XIC of A and B overlaid: a new XIC panel with the m/z; the files of the panel are those of the tab, A and B among them
   function xicAB(p, mz) { xicDirect(mz, p); }
   // delta m: the sidebar tab of the neutral losses (filtered on |delta m|) or, for the usual adduct differences, the adducts
-  const AD_DIFF = [21.9819, 17.0265, 37.9559];
-  function openDm(dm, hr) {
-    const v = Math.abs(dm), tol = hr ? 0.003 : 0.5, ad = dm > 0 && AD_DIFF.some(x => Math.abs(v - x) <= tol), q = String(+v.toFixed(hr ? 4 : 1));
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
-    else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
-  }
+  const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
   function sheetRows(p) {
     const s = st(p), hr = isHrF(p._a.f);
     return (s.rows || []).map(r => [r.n, r.rt != null ? +r.rt.toFixed(3) : "", r.mz != null ? +r.mz.toFixed(hr ? 5 : 2) : "", r.ia ?? "", r.ib ?? "", r.d ?? "", r.ratio != null ? +r.ratio.toFixed(3) : "", r.sn != null ? +r.sn.toFixed(1) : "", r.g ?? "", r.dm != null ? +r.dm.toFixed(hr ? 5 : 2) : "", r.note || ""]);
@@ -562,7 +587,7 @@ window.MAPPA = (() => {
   const headRow = () => COLS.map(c => T(COLK[c][0]));
   function excel(p) {
     const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
-      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? 0.05} min`],
+      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
       [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
     dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
       { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }]);
@@ -669,7 +694,7 @@ window.MAPPA = (() => {
     p.zoom = clampView(x0 - sx, x1 - sx, a.full[0], a.full[1]); p.zoomY = clampView(y0 + sy, y1 + sy, a.fullY[0], a.fullY[1]);
   }
   // ---- the bar on the map: reset, zoom, lock, gestures (the same commands)
-  const BAR = { "2d": ["mapzin", "mapzout", "maplock", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
+  const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };      // 2D: the reset is the «fit» button of the panel head
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(getAd, kind = "2d") {
     const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
@@ -798,7 +823,7 @@ window.MAPPA = (() => {
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
     if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
@@ -807,6 +832,7 @@ window.MAPPA = (() => {
     if (hasRef) Q("show").onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
     const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
+    Q("snap").onclick = ev => { PREF.snap = PREF.snap === false; prefSave(); ev.currentTarget.classList.toggle("on", PREF.snap !== false); ev.currentTarget.setAttribute("aria-pressed", String(PREF.snap !== false)); };
     Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
     Q("menu").onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
   }
@@ -829,7 +855,7 @@ window.MAPPA = (() => {
     }
   }
 
-  return { open3d, addPointAt, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
+  return { open3d, addPointAt, grpShape, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
@@ -845,7 +871,7 @@ window.MAPPA = (() => {
   const pOf = el => E.panels.find(q => q.el === el);
   const simple = p => !(window.DDA && (DDA.docked(p) || E.panels.some(q => q.dock === p.id && DDA.docked(q))));
   const above = p => { let best = null; for (const q of E.panels) if (q !== p && q.full && simple(q) && q.y < p.y && (!best || q.y > best.y)) best = q; return best; };
-  const done = p => { if (p.full && typeof relayout === "function") relayout(); if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
+  const done = p => { if (p.full && typeof relayout === "function") { LAYOUT.altezza(p, E.panels); relayout(); } if (typeof fitHost === "function") fitHost(); if (typeof uiSave === "function") uiSave(); };
   function setH(p, h) { p.h = Math.max(HMIN, Math.round(h)); apply(p); if (p.el) p.el.querySelectorAll(".pgrip").forEach(g => g.setAttribute("aria-valuenow", String(p.h))); }
   function grip(el, side) {
     const g = document.createElement("div"); g.className = "pgrip " + side; g.tabIndex = 0; g.setAttribute("role", "separator"); g.setAttribute("aria-orientation", "horizontal");
@@ -883,8 +909,8 @@ window.MAPPA = (() => {
     const h = host(); if (!h) return;
     h.querySelectorAll(".pnl").forEach(wire);
     new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(wire); }).observe(h, { childList: true });
-    addEventListener("resize", () => requestAnimationFrame(clamp));
-    new ResizeObserver(() => requestAnimationFrame(clamp)).observe(h);
+    addEventListener("resize", () => FRAME.next(clamp));
+    FRAME.ro(h, () => FRAME.next(clamp));
   }
   window.MAPPA_PNL = { clamp, setH };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();

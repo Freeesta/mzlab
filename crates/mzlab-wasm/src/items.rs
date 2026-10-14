@@ -1,6 +1,7 @@
 //! The methods (`.dam`) of the session and the routes of one item that read how it was acquired (`api/method`, `api/method_warnings`, `api/analog`,
 //! `api/delay`, `api/chrom?kind=pda`, `api/gradient`): the same answers as `mzlab/app.py`, from the index and the mzML (low resolution only).
-use super::{error_json, Engine, JsReader};
+use super::{error_json, Engine};
+use crate::nativi::Src;
 use mzlab_core::gradient::{self, Gradient};
 use mzlab_core::json::{self, Out};
 use mzlab_core::labmethods::{self, Lab};
@@ -75,36 +76,38 @@ impl Engine {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };
         let end = r.idx.scans.last().map_or(0, |s| s.end);
-        let mut m = mzlab_core::mzmlhead::Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
         mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, kind).map_err(|e| error_json(&e))
     }
 
     /// `/api/delay` of the item `item` of the file at `slot`.
     pub fn item_delay(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
-        let (mut m, chroms) = self.chroms(slot, size, read)?;
         let r = self.idx.get_mut(&slot).ok_or_else(no_index)?;
+        let end = r.idx.scans.last().map_or(0, |s| s.end);
+        let mut m = self.nat.mzml(slot, read, size)?;
+        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
         r.delay_item(&mut m, &chroms, item).map_err(|e| error_json(&e))
     }
 }
 
 impl Engine {
-    fn labs(&self) -> Vec<Lab> {
+    pub(crate) fn labs(&self) -> Vec<Lab> {
         self.labs.iter().map(|(l, _)| l.clone()).collect()
     }
 
-    fn chroms(&mut self, slot: u32, size: f64, read: Function) -> Result<(Mzml<JsReader>, Vec<Chrom>), JsValue> {
+    fn chroms(&mut self, slot: u32, size: f64, read: Function) -> Result<(Mzml<Src<'_>>, Vec<Chrom>), JsValue> {
         let r = self.idx.get(&slot).ok_or_else(no_index)?;
         let end = r.idx.scans.last().map_or(0, |s| s.end);
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
         Ok((m, chroms))
     }
 
     /// `Item.method()` as JSON.
-    fn item_data(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
+    pub(crate) fn item_data(&mut self, slot: u32, item: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let r = self.idx.get(&slot).ok_or_else(no_index)?;
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        let mut m = self.nat.mzml(slot, read, size)?;
         mzlab_core::itemroutes::item_method(&r.idx, &mut m, item).map_err(|e| error_json(&e))
     }
 }

@@ -5,6 +5,7 @@
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
 pub mod idx;
+pub mod lettore;
 mod run;
 pub mod scan;
 mod window;
@@ -50,6 +51,11 @@ pub struct Wiff {
     /// +1, -1, or 0 when the method has no ion spray voltage.
     pub polarity: i8,
     pub method: Option<Method>,
+    /// `Component ID` of the mass spectrometer in the Log, and the creation time of the file: the header of the mzML.
+    pub model: Option<String>,
+    pub created: Option<String>,
+    /// SHA-1 (hex) of the `.wiff`, for the `sourceFile` of the mzML; the caller that has the bytes sets it (`Ole::sha1_hex`).
+    pub wiff_sha1: Option<String>,
     scan_len: u64,
 }
 
@@ -110,6 +116,7 @@ impl Wiff {
             })
             .collect();
         let method = methodinfo::method_of_sample(ole, sample);
-        Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, scan_len })
+        let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
+        Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, model, created, wiff_sha1: None, scan_len })
     }
 }

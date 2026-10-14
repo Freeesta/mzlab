@@ -127,6 +127,7 @@ fn registry(formula: &str, neg: bool) -> Registry {
         families: &[],
         imported: &[],
         fragments: &[],
+        groups: None,
     };
     let p = HypoParams {
         polarity: if neg { -1 } else { 1 },

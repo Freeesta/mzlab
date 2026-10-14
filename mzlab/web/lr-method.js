@@ -1,3 +1,4 @@
+// @ts-strict
 // The routes of lr.js about the methods (.dam) and how an item was acquired, answered by the Rust engine: /api/method, /api/method_warnings, /api/analog,
 // /api/delay, /api/chrom?kind=pda, /api/gradient (GET and POST), /api/gradient_parse. `get` and `post` return { status, text }, or undefined when the route is
 // not theirs, or null when it is not served (a part of a mixed file with a PDA for the delay, a reference file).
@@ -23,7 +24,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (!its) return json({ warnings: [] });
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
-    if (!["/api/method", "/api/analog", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda")) return undefined;
+    if (!["/api/method", "/api/metodo", "/api/analog", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda")) return undefined;
     const it = item(q), name = it && it.file;
     if (!it || q.get("ref")) return null;
     try {
@@ -33,6 +34,7 @@ export function createMethodRoutes({ rpc, json, items }) {
         return json({ gradient: g || gradients.get(name) || null });
       }
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
+      if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));      // metodo/1 of the item (docs/agenti/metodo.md)
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       if (path === "/api/chrom") return raw(await rpc({ op: "lr_pda", name }));
       return raw(await rpc({ op: "lr_delay", name }));                                 // a part of a mixed file with a PDA reads its own scans: not served (null)

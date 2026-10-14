@@ -2,7 +2,7 @@
 //! and `_spec_json` of `mzlab/explore.py` / `mzlab/app.py`). Anything else (profile spectra, high resolution, a background to subtract) is Python's:
 //! the route returns `None`.
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::hr_profile;
 use crate::json::{round, Out};
@@ -52,6 +52,19 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
+/// The most cells of a summed spectrum (`modo=somma`).
+pub(crate) const MAX_CELLS: usize = 2_000_000;
+
+impl crate::msnroute::Filtro<'_> {
+    /// The one test of `filt` / `filter` on scan `i`: the filter string or the key of the scan, or the scans of an MSn node.
+    pub(crate) fn passa(&self, i: usize, s: &crate::idxread::Scan) -> bool {
+        match self {
+            crate::msnroute::Filtro::Testo(f) => s.filter == *f || s.key() == *f,
+            crate::msnroute::Filtro::Nodo(m) => m.get(i).copied().unwrap_or(false),
+        }
+    }
+}
+
 pub(crate) const EMPTY: &str = "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
 
 impl<R: ReadAt> Routes<R> {
@@ -59,10 +72,12 @@ impl<R: ReadAt> Routes<R> {
     pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, prec_tol: f64, filt: Option<&str>) -> Result<Vec<usize>> {
         let ar = self.idx.arrays(si)?.clone();
         let want_prec = if level > 1 { precursor } else { None };
+        let fl = self.filtro(filt)?;
         Ok((0..ar.rt.len())
             .filter(|&j| {
-                let s = &self.idx.scans[ar.scan_ids[j] as usize];
-                filt.is_none_or(|f| s.filter == f || s.key() == f) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+                let id = ar.scan_ids[j] as usize;
+                let s = &self.idx.scans[id];
+                fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
             })
             .collect())
     }
@@ -74,15 +89,16 @@ impl<R: ReadAt> Routes<R> {
 
     /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
     pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
         let ar = self.idx.arrays(si)?.clone();
         let want_prec = if level > 1 { precursor } else { None };
+        let fl = self.filtro(filt)?;
         let keep = |j: usize, idx: &crate::idxread::Index<R>| {
-            let s = &idx.scans[ar.scan_ids[j] as usize];
-            filt.is_none_or(|f| s.filter == f || s.key() == f)
-                && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+            let id = ar.scan_ids[j] as usize;
+            let s = &idx.scans[id];
+            fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
         };
         let ok: Vec<bool> = (0..ar.rt.len())
             .map(|j| ar.rt[j] >= lo && ar.rt[j] <= hi && keep(j, &self.idx))
@@ -96,6 +112,8 @@ impl<R: ReadAt> Routes<R> {
             .map(|(i, _)| i)
             .collect();
         let (mut mz, mut y) = (vec![], vec![]);
+        // `modo=somma`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
+        let (div, cap) = if self.msn.opz.somma { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
         if n > 0 {
             // the peaks come in order of m/z, so the cells of `floor(mz / bin)` come in order too
             let (mut cell, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);
@@ -107,9 +125,9 @@ impl<R: ReadAt> Routes<R> {
                 }
                 let c = cell_of(m);
                 if c != cell {
-                    if cell != i64::MIN {
+                    if cell != i64::MIN && cm.len() <= cap {
                         cm.push(smy / sy.max(1e-12));
-                        cy.push(sy / n as f64);
+                        cy.push(sy / div);
                     }
                     cell = c;
                     sy = 0.0;
@@ -120,7 +138,10 @@ impl<R: ReadAt> Routes<R> {
             })?;
             if cell != i64::MIN {
                 cm.push(smy / sy.max(1e-12));
-                cy.push(sy / n as f64);
+                cy.push(sy / div);
+            }
+            if cm.len() > cap {
+                return Err(Error::new("err.msn.cells").with("n", cap));
             }
             mz = cm;
             y = cy;

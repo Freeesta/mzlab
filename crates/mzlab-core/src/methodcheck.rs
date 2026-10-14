@@ -144,10 +144,10 @@ pub fn check_against(data: &Value, lab: &Method) -> Vec<Row> {
         }
         if kind == "ms2" {
             let mut ces: Vec<f64> = lab.experiments.iter().flat_map(|e| if let Kind::Scan { ce, .. } = &e.kind { ce.clone() } else { vec![] }).collect();
-            ces.sort_by(f64::total_cmp);
+            crate::sortc::by(&mut ces, f64::total_cmp);
             ces.dedup();
             let mut dce = nums(data.get("ce"));
-            dce.sort_by(f64::total_cmp);
+            crate::sortc::by(&mut dce, f64::total_cmp);
             if !ces.is_empty() && !dce.is_empty() {
                 let ok = ces.len() == dce.len() && ces.iter().zip(&dce).all(|(a, b)| (a - b).abs() < 0.5);
                 let j = |v: &[f64]| v.iter().map(|x| fmt_g(*x)).collect::<Vec<_>>().join(", ");

@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: Paul trap (3D quadrupole ion trap). Ring electrode r^2 = r0^2 + 2 z^2 and two end caps z^2 = z0^2 + r^2/2 with z0 = r0 / sqrt 2
 // (hyperboloids). RF on the ring confines the ions in a pseudo-potential well: the secular motion along z is twice as fast as the radial one
 // (omega_z = 2 omega_r, a Lissajous figure), carrying the fast RF micromotion; lighter ions (larger q) oscillate faster.

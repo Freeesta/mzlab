@@ -72,11 +72,15 @@ pub struct Routes<R: ReadAt> {
     pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>, u64)>,
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
+    /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
+    pub pol: Option<i8>,
+    /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
+    pub(crate) msn: crate::msnroute::Msn,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -89,18 +93,19 @@ impl<R: ReadAt> Routes<R> {
         if !self.has_scans() {
             return Ok(crate::mrmroutes::no_scans(path, q));
         }
-        match path {
-            "/api/chrom" => self.chrom(q),
-            "/api/filters" => self.filters().map(Some),
-            "/api/scanlist" => self.scanlist(q),
-            "/api/nearest_scan" => self.nearest_scan(q),
-            "/api/scan_axis" => self.scan_axis(q),
-            "/api/ms2tr" => self.ms2_transitions().map(Some),
-            "/api/spectrum" => self.spectrum(q),
-            "/api/dda" => self.dda(q),
-            "/api/spectra" => self.spectra_profile(q),
+        self.con_opz(q, |r| match path {
+            "/api/chrom" => r.chrom(q),
+            "/api/filters" => r.filters().map(Some),
+            "/api/scanlist" => r.scanlist(q),
+            "/api/nearest_scan" => r.nearest_scan(q),
+            "/api/scan_axis" => r.scan_axis(q),
+            "/api/ms2tr" => r.ms2_transitions().map(Some),
+            "/api/spectrum" => r.spectrum(q),
+            "/api/dda" => r.dda(q),
+            "/api/spectra" => r.spectra_profile(q),
+            "/api/msn_albero" => r.msn_albero_route(q),
             _ => Ok(None),
-        }
+        })
     }
 
     /// `/api/scaninfo` for scan `sid`, reading the header of that scan from the mzML.
@@ -116,7 +121,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// The XIC of one level as the arrays Python works on (not rounded): the reference difference subtracts these.
     pub fn xic_raw(&mut self, mz: f64, tol: f64, level: u8) -> Result<(Vec<f64>, Vec<f64>)> {
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok((Vec::new(), Vec::new()));
         };
         let (lo, hi) = (mz - tol, mz + tol);
@@ -149,7 +154,7 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let (mz0, mz1, prec) = (q.num("mz0")?, q.num("mz1")?, q.num("prec")?);
         let filt = q.some("filt");
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(Some((Vec::new(), Vec::new())));
         };
         let y = if mz0.is_some() || mz1.is_some() {
@@ -180,10 +185,9 @@ impl<R: ReadAt> Routes<R> {
             (ar.rt.clone(), ar.scan_ids.clone())
         };
         let mut keep = vec![true; rt.len()];
-        if let Some(f) = filt {
+        if let Some(f) = self.filtro(filt)? {
             for (j, &id) in ids.iter().enumerate() {
-                let s = &self.idx.scans[id as usize];
-                keep[j] = s.key() == f || s.filter == f;
+                keep[j] = f.passa(id as usize, &self.idx.scans[id as usize]);
             }
         }
         if let (Some(p), true) = (prec, level > 1) {
@@ -267,20 +271,15 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let filt = q.some("filt");
         let mut o = Out::default();
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             o.raw("{\"level\":").int(level as i64);
             o.raw(",\"n\":0,\"sid\":[],\"no\":[],\"rt\":[],\"tic\":[],\"prec\":[],\"bpmz\":[],\"bpint\":[]}");
             return Ok(Some(o.0));
         };
         let ar = self.idx.arrays(si)?.clone();
+        let fl = self.filtro(filt)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| match filt {
-                None => true,
-                Some(f) => {
-                    let s = &self.idx.scans[ar.scan_ids[j] as usize];
-                    s.key() == f || s.filter == f
-                }
-            })
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &self.idx.scans[ar.scan_ids[j] as usize])))
             .collect();
         let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
@@ -325,15 +324,16 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let filter = q.get("filter");
         let precursor = q.num("precursor")?;
-        let Some(si) = self.idx.section_of(level, None) else {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
         let ar = self.idx.arrays(si)?.clone();
+        let fl = self.filtro(filter)?;
         let mut best: Option<(f64, usize)> = None;
         for &id in &ar.scan_ids {
             let s = &self.idx.scans[id as usize];
-            let ok = match (filter, precursor) {
-                (Some(f), _) => s.filter == f || s.key() == f,
+            let ok = match (&fl, precursor) {
+                (Some(f), _) => f.passa(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
                 (None, None) => true,
             };
@@ -375,12 +375,17 @@ pub(crate) fn next_tick() -> u64 {
     TICK.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Total bytes of the cached maps of the files, and the removal of the least recently used one among them (the byte-budgeted cache of the engine).
+/// Total bytes of the cached maps of the files.
 pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
     files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
 }
 
-/// Drops maps, oldest use first, until the cache holds at most `cap` bytes. Returns how many were dropped.
+/// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
+pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+    map_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+}
+
+/// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
 pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
     let mut dropped = 0;
     while map_cache_bytes(files) > cap {
@@ -388,6 +393,31 @@ pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Rout
         let Some((_, k, i)) = oldest else { break };
         if let Some(r) = files.get_mut(&k) {
             r.maps.remove(i);
+        }
+        dropped += 1;
+    }
+    dropped
+}
+
+/// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
+/// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
+pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+    let mut dropped = 0;
+    while cache_bytes(files) > cap {
+        let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
+        let idx = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k))).min();
+        match (map, idx) {
+            (Some((tm, k, i)), other) if other.is_none_or(|(ti, _)| tm <= ti) => {
+                if let Some(r) = files.get_mut(&k) {
+                    r.maps.remove(i);
+                }
+            }
+            (_, Some((_, k))) => {
+                if let Some(r) = files.get_mut(&k) {
+                    r.idx.evict_oldest();
+                }
+            }
+            _ => break,
         }
         dropped += 1;
     }

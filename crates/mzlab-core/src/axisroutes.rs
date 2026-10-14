@@ -28,7 +28,7 @@ impl<R: ReadAt> Routes<R> {
 
     /// The transitions of the MS2 scans: `[{"q1":..,"q3":..,"y":..}]` (the caller wraps them per file, as for `mrm`).
     pub fn ms2_transitions(&mut self) -> Result<String> {
-        let Some(si) = self.idx.section_of(2, None) else {
+        let Some(si) = self.idx.section_of(2, self.pol) else {
             return Ok("[]".into());
         };
         let ids = self.idx.arrays(si)?.scan_ids.clone();

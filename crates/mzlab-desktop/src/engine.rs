@@ -2,7 +2,7 @@
 //! rounding as `mzlab-wasm` (RT to 4 decimals, intensities to 1, m/z to 3) so that the page gets the numbers it gets from Python.
 
 use std::collections::{BTreeMap, HashMap};
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{Cursor, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -29,7 +29,7 @@ pub struct Picked {
     pub size: u64,
 }
 
-/// How far a `.raw` conversion has got (read by `rawprogress` while `raw_to_mzml` runs in another thread).
+/// How far the writing of an mzML has got (read by `rawprogress` while `nat2mzml` runs in another thread).
 #[derive(Default)]
 pub struct Progress {
     pub total: AtomicU64,
@@ -40,30 +40,10 @@ pub struct Progress {
     pub scans_total: AtomicU64,
 }
 
-/// A reader that tells how far the source has been read.
-struct CountRead<'a> {
-    inner: Cursor<&'a [u8]>,
-    progress: Arc<Progress>,
-}
-impl Read for CountRead<'_> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let n = self.inner.read(buf)?;
-        self.progress
-            .read
-            .fetch_max(self.inner.position(), Ordering::Relaxed);
-        Ok(n)
-    }
-}
-impl Seek for CountRead<'_> {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        self.inner.seek(pos)
-    }
-}
-
 /// A writer that counts the bytes written.
-struct CountWrite<W: Write> {
-    inner: W,
-    progress: Arc<Progress>,
+pub(crate) struct CountWrite<W: Write> {
+    pub(crate) inner: W,
+    pub(crate) progress: Arc<Progress>,
 }
 impl<W: Write> Write for CountWrite<W> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
@@ -79,11 +59,11 @@ impl<W: Write> Write for CountWrite<W> {
 #[derive(Default)]
 pub(crate) struct Inner {
     /// progress of the conversion of each `.raw` (by the number of the picked file)
-    progress: HashMap<u32, Arc<Progress>>,
-    next_id: u32,
+    pub(crate) progress: HashMap<u32, Arc<Progress>>,
+    pub(crate) next_id: u32,
     pub(crate) picked: HashMap<u32, Picked>,
     runs: HashMap<u32, mzml::Run>,
-    /// mzML files written by `raw2mzml` (also in `picked`, so that the page reads and opens them as any file); removed at exit.
+    /// mzML files written by `nat2mzml` (also in `picked`, so that the page reads and opens them as any file); removed at exit.
     pub(crate) temps: Vec<PathBuf>,
 }
 
@@ -99,6 +79,8 @@ pub struct State {
     pub(crate) eng: Mutex<crate::rpc::Eng>,
     /// the files and the notebook of the student between two runs (`store.rs`)
     pub(crate) store: Mutex<crate::store::Store>,
+    /// what the steps of mzFinder leave between two calls (`feat.rs`): the `.mzfeatf`, the table, the hypotheses, the Dig
+    pub(crate) feat: Mutex<crate::feat::FeatState>,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -215,53 +197,6 @@ impl State {
         self.lock().runs.clear();
     }
 
-    /// Converts a Thermo `.raw` of the disk (any size: the file is mapped, not read into memory) to an mzML in the temporary
-    /// folder, registered like a picked file. Returns `(number, size)`; the page reads it with `chunk`.
-    pub fn raw_to_mzml(&self, id: u32, profile: bool) -> Result<(u32, u64)> {
-        let p = self.picked(id)?;
-        let map = Mapped::open(&p.path).map_err(|e| io_error(&e))?;
-        let progress = Arc::new(Progress::default());
-        progress
-            .total
-            .store(map.bytes().len() as u64, Ordering::Relaxed);
-        self.lock().progress.insert(id, progress.clone());
-        let tmp = std::env::temp_dir().join(format!("mzlab-{}-{}.mzML", std::process::id(), id));
-        let mut out = CountWrite {
-            inner: std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?),
-            progress: progress.clone(),
-        };
-        let stem = p.name.rsplit_once('.').map_or(p.name.as_str(), |(s, _)| s);
-        let source = CountRead {
-            inner: Cursor::new(map.bytes()),
-            progress: progress.clone(),
-        };
-        let pr = progress.clone();
-        let mut on_scan = move |done: u32, total: u32| {
-            pr.scans.store(u64::from(done), Ordering::Relaxed);
-            pr.scans_total.store(u64::from(total), Ordering::Relaxed);
-        };
-        raw::to_mzml_progress(source, &mut out, stem, profile, &mut on_scan)?;
-        progress
-            .read
-            .store(map.bytes().len() as u64, Ordering::Relaxed);
-        out.flush().map_err(|e| io_error(&e))?;
-        drop(out);
-        let size = std::fs::metadata(&tmp).map_err(|e| io_error(&e))?.len();
-        let mut g = self.lock();
-        g.next_id += 1;
-        let tid = g.next_id;
-        g.picked.insert(
-            tid,
-            Picked {
-                path: tmp.clone(),
-                name: format!("{stem}.mzML"),
-                size,
-            },
-        );
-        g.temps.push(tmp);
-        Ok((tid, size))
-    }
-
     /// `(total, read, written, scans, scans_total)` of the conversion of the `.raw` with this number: bytes of the file, bytes read,
     /// bytes of the mzML written, scans converted and scans in the file (None if it never started).
     pub fn raw_progress(&self, id: u32) -> Option<(u64, u64, u64, u64, u64)> {
@@ -299,7 +234,7 @@ impl State {
         }
     }
 
-    /// `len` bytes from `off` of a file picked by the user or converted by `raw_to_mzml`.
+    /// `len` bytes from `off` of a file picked by the user or written by `nat2mzml`.
     pub fn chunk(&self, id: u32, off: u64, len: u64) -> Result<Vec<u8>> {
         let map = Mapped::open(&self.picked(id)?.path).map_err(|e| io_error(&e))?;
         let b = map.bytes();

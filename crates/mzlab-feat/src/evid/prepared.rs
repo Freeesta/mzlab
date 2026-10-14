@@ -17,7 +17,7 @@ pub struct Prepared {
 impl Prepared {
     pub fn new(inp: &Inputs) -> Prepared {
         let n = inp.aligned.len();
-        let hyp = match_hypotheses(&inp.registry.hyps, inp.aligned);
+        let hyp = match_hypotheses_in(&inp.registry.hyps, inp.aligned, inp.table.window(HYPOTHESIS_PPM));
         let best = best_hits(inp);
         let sign = f64::from(inp.registry.polarity.signum());
         let neutral: Vec<f64> = (0..n)

@@ -1,3 +1,4 @@
+// @ts-strict
 // Loading-screen analyser: magnetic sector. Ions accelerated through the same potential U have q U = m v^2 / 2; in the field B (into the page, crosses) they follow
 // a circle of radius r = m v / (q B) = sqrt(2 m U / q) / B, i.e. r ~ sqrt(m/z). Only the ion whose radius matches the geometry goes through the slit of the collector.
 (function (G) {

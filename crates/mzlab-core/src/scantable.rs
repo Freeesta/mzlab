@@ -6,6 +6,7 @@
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::Out;
+use crate::lettori::Posizione;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -26,6 +27,9 @@ struct Prec {
 pub struct Row {
     pub start: u64,
     pub end: u64,
+    /// A row of a vendor file: the number of the scan in `Lettore::indice` and where it lies (written in place of `start`, `end`).
+    pub k: Option<usize>,
+    pub posizione: Option<Posizione>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
@@ -289,7 +293,7 @@ fn is_hr(rows: &[&Row]) -> bool {
                 .filter_map(|r| r.res)
                 .filter(|v| *v != 0.0)
                 .collect();
-            res.sort_by(|a, b| a.total_cmp(b));
+            crate::sortc::by(&mut res, |a, b| a.total_cmp(b));
             !res.is_empty() && res[res.len() / 2] >= 10000.0
         }
         _ => false,
@@ -394,6 +398,11 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod rows;
+
+use rows::Head;
+pub(crate) use rows::Rows;
+
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     let mut src = Source { r, size };
@@ -403,72 +412,13 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
         find(&first, b"<run ").map(|p| p as u64)
     };
     let head_bytes = src.read(0, head_end.unwrap_or(200000.min(size)))?;
-    let head = String::from_utf8_lossy(&head_bytes).into_owned();
-    let nce = head.contains("accession=\"MS:1000768\"");
-    let mut ic: Vec<(String, &'static str)> = Vec::new();
-    let mut from = 0;
-    while let Some(i) = head[from..].find("<instrumentConfiguration") {
-        let s = from + i;
-        let after = &head[s + 24..];
-        if !after.starts_with(char::is_whitespace) {
-            from = s + 24;
-            continue;
-        }
-        let Some(close) = after.find("</instrumentConfiguration>") else {
-            break;
-        };
-        let block = &after[..close];
-        from = s + 24 + close;
-        let Some(id) = attr(block.split('>').next().unwrap_or(""), "id") else {
-            continue;
-        };
-        let mut names = Vec::new();
-        let mut a = 0;
-        while let Some(p) = block[a..].find("<analyzer") {
-            let st = a + p;
-            let Some(e) = block[st..].find("</analyzer>") else {
-                break;
-            };
-            let blk = &block[st..st + e];
-            let mut c = 0;
-            while let Some(q) = blk[c..].find("<cvParam ") {
-                let ts = c + q;
-                let te = blk[ts..].find('>').map_or(blk.len(), |g| ts + g);
-                if let Some(n) = blk[ts..te].rfind("name=\"") {
-                    let ns = ts + n + 6;
-                    if let Some(ne) = blk[ns..].find('"') {
-                        names.push(blk[ns..ns + ne].to_string());
-                    }
-                }
-                c = te;
-            }
-            a = st + e;
-        }
-        ic.push((id.to_string(), analyzer_from_components(&names)));
-    }
     let run_tag_lo = head_end.unwrap_or(0);
-    let run_text =
-        String::from_utf8_lossy(&src.read(run_tag_lo, (run_tag_lo + 2000).min(size))?).into_owned();
-    let default_ic = run_text
-        .find("<run")
-        .and_then(|p| {
-            let t = &run_text[p..];
-            let tag = &t[..t.find('>').unwrap_or(t.len())];
-            attr(tag, "defaultInstrumentConfigurationRef").map(String::from)
-        })
-        .filter(|d| ic.iter().any(|(k, _)| k == d))
-        .or_else(|| ic.first().map(|(k, _)| k.clone()));
-    let analyzer = |filt: &str, icref: Option<&str>| -> String {
-        let tok = filt.split(' ').next().unwrap_or("").to_uppercase();
-        if ANALYZERS.contains(&tok.as_str()) {
-            return tok;
-        }
-        let look = |k: &str| ic.iter().find(|(n, _)| n == k).map(|(_, a)| *a);
-        look(icref.unwrap_or(""))
-            .or_else(|| look(default_ic.as_deref().unwrap_or("")))
-            .unwrap_or("?")
-            .to_string()
-    };
+    let run_text = src.read(run_tag_lo, (run_tag_lo + 2000).min(size))?;
+    let mut rows = Rows::with(Head::parse(
+        &String::from_utf8_lossy(&head_bytes),
+        &String::from_utf8_lossy(&run_text),
+    ));
+    drop(head_bytes);
 
     // the spans of the spectra
     let offs = src.offsets()?;
@@ -582,194 +532,9 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     }
 
     // the rows
-    let mut rows: Vec<Row> = Vec::with_capacity(spans.len());
-    let mut refs: std::collections::HashMap<usize, String> = Default::default();
-    let mut level_of: std::collections::HashMap<String, u8> = Default::default();
     for (a, b, h) in &spans {
-        let id = {
-            // first ` id="..."` (\sid="...")
-            let mut from = 0;
-            let mut found = None;
-            while let Some(p) = h[from..].find("id=\"") {
-                let at = from + p;
-                if at > 0 && h.as_bytes()[at - 1].is_ascii_whitespace() {
-                    let s = at + 4;
-                    if let Some(e) = h[s..].find('"') {
-                        found = Some(h[s..s + e].to_string());
-                    }
-                    break;
-                }
-                from = at + 3;
-            }
-            found
-        };
-        let lvl = cv(h, "MS:1000511").filter(|v| !v.is_empty());
-        let pol = if h.contains("accession=\"MS:1000130\"") {
-            1
-        } else if h.contains("accession=\"MS:1000129\"") {
-            -1
-        } else {
-            0
-        };
-        let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
-        if let Some(p) = h.find("accession=\"MS:1000016\"") {
-            let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
-            if let Some(u) = attr(&h[p..tag_end], "unitName") {
-                if u.starts_with("second") {
-                    rt /= 60.0;
-                }
-            }
-        }
-        let level = lvl.and_then(float).map_or(1, |v| v as u8);
-        let hs = h.split("<precursorList").next().unwrap_or("");
-        let filt = cv(hs, "MS:1000512").unwrap_or("").to_string();
-        let (mut prec, mut iso, mut act, mut pint, mut path, mut ce) =
-            (None, None, None::<String>, None, None, None);
-        let mut precs: Vec<Prec> = Vec::new();
-        let mut imm_charge = None;
-        if level > 1 {
-            path = filter_path(&filt);
-            let mut from = 0;
-            while let Some(p) = h[from..].find("<precursor") {
-                let s = from + p;
-                let after = s + 10;
-                let nxt = h.as_bytes().get(after).copied().unwrap_or(b'>');
-                if nxt.is_ascii_alphanumeric() || nxt == b'_' {
-                    from = after;
-                    continue;
-                }
-                let Some(g) = h[after..].find('>') else { break };
-                let attrs = &h[after..after + g];
-                let Some(close) = h[after + g + 1..].find("</precursor>") else {
-                    break;
-                };
-                let body = &h[after + g + 1..after + g + 1 + close];
-                let rf = attr(attrs, "spectrumRef").map(String::from);
-                precs.push(precursor_element(body, rf));
-                from = after + g + 1 + close + 12;
-            }
-            if precs.is_empty() && (h.contains("MS:1000744") || h.contains("MS:1000827")) {
-                precs.push(precursor_element(h, None));
-            }
-            if let Some(m) = immediate(&precs, &path, level, &level_of) {
-                prec = m.selected.or(m.target);
-                let tgt = m.target.or(prec);
-                if let Some(t) = tgt {
-                    let lo = match (m.lo, m.target) {
-                        (Some(_), Some(tg)) => tg - m.lo.unwrap(),
-                        _ => 0.5,
-                    };
-                    let hi = match (m.hi, m.target) {
-                        (Some(_), Some(tg)) => m.hi.unwrap() - tg,
-                        _ => 0.5,
-                    };
-                    iso = Some((t - lo, t + hi));
-                }
-                act = m.act.map(String::from);
-                pint = m.pint;
-                ce = m.ce;
-                imm_charge = m.charge;
-            }
-            if act.is_none() {
-                act = match &path {
-                    Some(p) => Some(p[p.len() - 1].1.clone()),
-                    None => activation_in_filter(&filt),
-                };
-            }
-            if let Some(r) = precs
-                .iter()
-                .find_map(|e| e.refer.clone().filter(|r| !r.is_empty()))
-            {
-                refs.insert(rows.len(), r);
-            }
-        }
-        if ce.is_none() && h.contains("MS:1000045") {
-            ce = cv(h, "MS:1000045").and_then(float);
-        }
-        let icref = hs.find("<scan").and_then(|p| {
-            let t = &hs[p..];
-            let tag = &t[..t.find('>').unwrap_or(t.len())];
-            attr(tag, "instrumentConfigurationRef")
-        });
-        let res = cv(hs, "MS:1000800").and_then(float).or_else(|| {
-            let pat = "<userParam name=\"opentfraw.resolution\" value=\"";
-            h.find(pat).and_then(|p| {
-                let s = p + pat.len();
-                h[s..].find('"').and_then(|e| float(&h[s..s + e]))
-            })
-        });
-        let row = Row {
-            start: *a,
-            end: *b,
-            level,
-            rt,
-            polarity: pol,
-            tic: cv(h, "MS:1000285")
-                .and_then(float)
-                .filter(|v| *v != 0.0)
-                .unwrap_or(0.0),
-            precursor: prec,
-            ce,
-            an: analyzer(&filt, icref),
-            filter: filt,
-            profile: h.contains("accession=\"MS:1000128\""),
-            parent: None,
-            iso,
-            act,
-            res,
-            pint,
-            path,
-            precs,
-            charge: imm_charge,
-            native: id.clone().unwrap_or_default(),
-        };
-        if let Some(i) = id {
-            level_of.insert(i, level);
-        }
-        rows.push(row);
+        rows.spectrum(*a, *b, h);
     }
-
-    // _link_parents
-    let by_native: std::collections::HashMap<&str, usize> = rows
-        .iter()
-        .enumerate()
-        .map(|(i, r)| (r.native.as_str(), i))
-        .collect();
-    let mut parents: Vec<Option<usize>> = vec![None; rows.len()];
-    let mut last: std::collections::HashMap<i8, usize> = Default::default();
-    let mut last_path: std::collections::HashMap<(u8, Vec<(i64, String, u64)>), usize> =
-        Default::default();
-    for (i, s) in rows.iter().enumerate() {
-        if s.level == 1 {
-            last.insert(s.polarity, i);
-            continue;
-        }
-        if s.level == 2 {
-            let mut p = refs
-                .get(&i)
-                .and_then(|r| by_native.get(r.as_str()).copied());
-            if p.is_none() {
-                p = last.get(&s.polarity).or_else(|| last.get(&0)).copied();
-            }
-            parents[i] = p;
-        } else if let Some(pa) = &s.path {
-            parents[i] = last_path
-                .get(&(s.level - 1, path_key(&pa[..pa.len() - 1])))
-                .copied();
-        } else {
-            let j = refs
-                .get(&i)
-                .and_then(|r| by_native.get(r.as_str()).copied());
-            parents[i] = j.filter(|&j| rows[j].level == s.level - 1);
-        }
-        if let Some(pa) = &s.path {
-            last_path.insert((s.level, path_key(pa)), i);
-        }
-    }
-    for (r, p) in rows.iter_mut().zip(parents) {
-        r.parent = p;
-    }
-    let hr1 = is_hr(&rows.iter().filter(|r| r.level == 1).collect::<Vec<_>>());
 
     // chromatograms after the last spectrum
     let mut n_chrom = 0usize;
@@ -786,12 +551,7 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
         }
         pos += chunk.len() as u64 - 13;
     }
-    Ok(Table {
-        rows,
-        nce,
-        hr1,
-        n_chromatograms: n_chrom,
-    })
+    Ok(rows.finish(n_chrom))
 }
 
 fn py_float(o: &mut Out, v: f64) {
@@ -822,21 +582,29 @@ fn opt(o: &mut Out, v: Option<f64>) {
 }
 
 impl Table {
-    /// The rows of `SCAN_COLUMNS` as compact JSON (`json.dumps(rows, separators=(",", ":"))`).
+    /// The rows of `SCAN_COLUMNS` as compact JSON (`json.dumps(rows, separators=(",", ":"))`); a row of a vendor file (`k` set) starts with
+    /// `[membro,offset,lunghezza]` or `null`, and `k` (version 2, `docs/agenti/mzidx.md`).
     pub fn rows_json(&self) -> String {
         let mut o = Out::default();
         o.raw("[");
         for (i, r) in self.rows.iter().enumerate() {
-            if i > 0 {
-                o.raw(",");
-            }
-            o.raw("[")
-                .int(r.start as i64)
-                .raw(",")
-                .int(r.end as i64)
-                .raw(",")
-                .int(r.level as i64)
-                .raw(",");
+            o.raw(if i > 0 { ",[" } else { "[" });
+            match (r.k, r.posizione) {
+                (None, _) => o.int(r.start as i64).raw(",").int(r.end as i64),
+                (Some(k), None) => o.raw("null,").int(k as i64),
+                (Some(k), Some(p)) => {
+                    let (m, n) = (i64::from(p.membro), i64::from(p.lunghezza));
+                    o.raw("[")
+                        .int(m)
+                        .raw(",")
+                        .int(p.offset as i64)
+                        .raw(",")
+                        .int(n)
+                        .raw("],")
+                        .int(k as i64)
+                }
+            };
+            o.raw(",").int(r.level as i64).raw(",");
             py_float(&mut o, r.rt);
             o.raw(",").int(r.polarity as i64).raw(",");
             py_float(&mut o, r.tic);

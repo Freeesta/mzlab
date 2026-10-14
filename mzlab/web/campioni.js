@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Sample metadata («Statistica» panel, first section): one row per file with the fields of the mzmine metadata table
 //   filename, sample_type (sample | blank | qc | standard | dark), time + time_unit, concentration + concentration_unit, replicate.
@@ -46,7 +47,7 @@ const CAMPIONI = (() => {
     return { rows, warnings: warn };
   }
   // name of a file without folder and extension, lower case: how the table and the files are matched
-  const baseName = n => String(n || "").split(/[\\/]/).pop().replace(/#.*$/, "").replace(/\.(mzml|mzxml|raw|wiff|d|dam)$/i, "").toLowerCase();
+  const baseName = n => (String(n || "").split(/[\\/]/).pop() || "").replace(/#.*$/, "").replace(/\.(mzml|mzxml|raw|wiff|d|dam)$/i, "").toLowerCase();
   // replicate group of a file: the one typed, else files of the same type, time and concentration (a file with neither is alone)
   function repKey(f, role) {
     if (f.rep) return String(f.rep);

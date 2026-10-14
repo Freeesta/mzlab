@@ -10,15 +10,15 @@
   },
   {
    "id": "timololo_tp_nei_candidati",
-   "ok": false,
+   "ok": true,
    "soglia": 19,
-   "valore": 12
+   "valore": 19
   },
   {
    "id": "timololo_candidati",
    "ok": true,
    "soglia": 494,
-   "valore": 132
+   "valore": 366
   },
   {
    "id": "timololo_gruppi",
@@ -60,7 +60,7 @@
    "id": "sintetici_richiamo_3x_10x",
    "ok": true,
    "soglia": 0.8,
-   "valore": 0.848
+   "valore": 0.8728
   },
   {
    "id": "sintetici_isomeri_separati",
@@ -147,8 +147,8 @@
    "valore": null
   }
  ],
- "data": "2026-10-12",
+ "data": "2026-10-13",
  "format": "cancello/2",
- "vista_candidati": false,
+ "vista_candidati": true,
  "vista_tabella": true
 }

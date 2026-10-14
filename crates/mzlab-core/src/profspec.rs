@@ -7,6 +7,7 @@ use crate::error::Result;
 use crate::idxread::{ReadAt, Scan};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
+use crate::sorgente::Scansioni;
 use crate::specpeaks::{pad_zeros, profile_peaks};
 
 const MAX_SCANS: usize = 60;
@@ -57,7 +58,7 @@ impl<R: ReadAt> Routes<R> {
         if pool.is_empty() || pool.iter().any(|s| !s.profile) || of_level_count(&self.idx.scans, level) == 0 {
             return Ok(None);
         }
-        let Some(si) = self.idx.section_of(level, None) else { return Ok(None) };
+        let Some(si) = self.idx.section_of(level, self.pol) else { return Ok(None) };
         if self.idx.sections[si].n_scans != of_level_count(&self.idx.scans, level) {
             return Ok(None);
         }
@@ -74,20 +75,20 @@ impl<R: ReadAt> Routes<R> {
 
     /// The spacing of the profile levels whose peak table is single precision (high-resolution survey scans), read from the exact points of the mzML
     /// as `Item._step` does (the index cannot give it: its m/z are rounded to single precision). A no-op for every other level.
-    pub fn prime_steps<M: ReadAt>(&mut self, mzml: &mut M) -> Result<()> {
+    pub fn prime_steps<M: Scansioni + ?Sized>(&mut self, mzml: &mut M) -> Result<()> {
         let mut levels: Vec<u8> = self.idx.scans.iter().map(|s| s.level).collect();
         levels.sort_unstable();
         levels.dedup();
         for level in levels {
             let all_profile = self.idx.scans.iter().filter(|s| s.level == level).all(|s| s.profile);
-            let f4 = self.idx.section_of(level, None).is_some_and(|si| self.idx.sections[si].f4);
+            let f4 = self.idx.section_of(level, self.pol).is_some_and(|si| self.idx.sections[si].f4);
             if !all_profile || !f4 || self.steps.iter().any(|(l, _)| *l == level) {
                 continue;
             }
             let ids: Vec<usize> = (0..self.idx.scans.len()).filter(|&i| self.idx.scans[i].level == level).collect();
             let mut step = None;
             for &i in ids.iter().skip(ids.len() / 2).take(20) {
-                let (mz, _) = crate::hrscans::read_scan(&self.idx.scans[i], mzml)?;
+                let (mz, _) = mzml.spettro(&self.idx.scans[i])?;
                 if mz.len() > 20 {
                     let gap = mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min);
                     step = gap.is_finite().then(|| (gap * 1e4).round_ties_even() / 1e4).filter(|s| *s > 0.0);
@@ -124,11 +125,11 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `spectra_profile` of a level of single-precision peaks: the points of each scan come from the mzML.
-    pub(crate) fn spectra_profile_exact<M: ReadAt>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+    pub(crate) fn spectra_profile_exact<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
         self.spectra_profile_in(q, Some(mzml))
     }
 
-    fn spectra_profile_in<M: ReadAt>(&mut self, q: &Query, mut mzml: Option<&mut M>) -> Result<Option<String>> {
+    fn spectra_profile_in<M: Scansioni + ?Sized>(&mut self, q: &Query, mut mzml: Option<&mut M>) -> Result<Option<String>> {
         let (Some(i0), Some(i1)) = (index(q, "i0"), index(q, "i1")) else { return Ok(None) };
         let level = q.level();
         let bin = q.num("bin")?.unwrap_or(0.1);
@@ -145,7 +146,7 @@ impl<R: ReadAt> Routes<R> {
         let ar = self.idx.arrays(si)?.clone();
         let positions: Vec<usize> = sel[i0 as usize..=i1].to_vec();
         let pts = match mzml.as_mut() {
-            Some(m) => positions.iter().map(|&p| crate::hrscans::read_scan(&self.idx.scans[ar.scan_ids[p] as usize], &mut **m)).collect::<Result<Vec<_>>>()?,
+            Some(m) => positions.iter().map(|&p| m.spettro(&self.idx.scans[ar.scan_ids[p] as usize])).collect::<Result<Vec<_>>>()?,
             None => self.scan_points(si, &positions)?,
         };
         let mut o = Out::default();

@@ -5,7 +5,7 @@
 /// Average ranks (ties share the mean rank), 1-based.
 pub fn rankdata(a: &[f64]) -> Vec<f64> {
     let mut order: Vec<usize> = (0..a.len()).collect();
-    order.sort_by(|&i, &j| a[i].total_cmp(&a[j]));
+    crate::sortc::by(&mut order, |&i, &j| a[i].total_cmp(&a[j]));
     let mut r = vec![0.0; a.len()];
     let mut i = 0;
     while i < a.len() {
@@ -77,7 +77,7 @@ pub fn wpearson(x: &[f64], y: &[f64], w: Option<&[f64]>) -> f64 {
     let vx = col(&|i| w[i] * (x[i] - mx) * (x[i] - mx));
     let vy = col(&|i| w[i] * (y[i] - my) * (y[i] - my));
     if vx <= 1e-300 || vy <= 1e-300 || vx <= 1e-24 * sw * mx * mx || vy <= 1e-24 * sw * my * my {
-        return f64::NAN;                                          // constant up to rounding noise
+        return f64::NAN; // constant up to rounding noise
     }
     col(&|i| w[i] * (x[i] - mx) * (y[i] - my)) / (vx * vy).sqrt()
 }
@@ -119,7 +119,7 @@ pub fn kendall_tau(x: &[f64], y: &[f64]) -> f64 {
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(v, f64::total_cmp);
     let n = v.len();
     if n % 2 == 1 {
         v[n / 2]

@@ -38,17 +38,20 @@ async function fileId(blob, name) {
   return id;
 }
 
+// the members of a dataset (`[{ name, blob }]`, the Files of the window) as `[{ name, fid }]`
+const members = list => Promise.all(list.map(async x => ({ name: x.name, fid: await fileId(x.blob) })));
+
 // the File the bridge keeps for a file of the app: empty, with its number in `type` (the bridge only passes it back)
 const stub = (name, id) => new File([], name, { type: tag(id) });
 
 // The WASM worker does one thing at a time, in the order of the messages (a `reset` sent just before the `idxopen` of the new session cannot overtake it).
 // The native engine answers from several threads, so the messages are put in a line here; only the long ones that have a thread pool or a
-// progress of their own (index builds, .raw conversions) do not wait for the others.
+// progress of their own (index builds, the mzML of a sample written on request) do not wait for the others.
 let line = Promise.resolve();
 onmessage = ev => {
   const m = ev.data;
   if (m.op === "recycle") return;
-  if (m.op === "lr_index" || m.op === "raw2mzml") { handle(m); return; }
+  if (m.op === "lr_index" || m.op === "nat2mzml") { handle(m); return; }
   line = line.then(() => handle(m));
 };
 
@@ -58,20 +61,14 @@ async function handle(m) {
     let buf = null, len = 0, n = 0, info = null, files = null;
     switch (m.op) {
       case "open": info = await (await get("open", { slot: m.slot, id: await fileId(m.blob) })).text(); break;
-      case "raw2mzml": {                                                              // .raw -> mzML on disk (native), then read in chunks
-        const rid = await fileId(m.blob);
-        // the conversion is one long native call: ask now and then how far it has got
+      case "nat2mzml": {                                                              // «Download .mzML» of a sample of a maker's file: written on the disk by the native side, saved from there
+        // one long native call: ask now and then how far it has got (`id` of the message is the number the native side keeps the progress under)
         const poll = setInterval(async () => {
-          try { const p = await (await get("rawprogress", { id: rid })).json(); if (p.total) postMessage({ id, op: "progress", total: p.total, read: p.read, written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
+          try { const p = await (await get("rawprogress", { id })).json(); if (p.scansTotal) postMessage({ id, op: "progress", written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
         }, 300);
         let out;
-        try { out = await (await get("raw2mzml", { id: rid, profile: m.profile ? 1 : 0 })).json(); } finally { clearInterval(poll); }
-        const parts = [];
-        for (let off = 0; off < out.size; off += CHUNK) {
-          parts.push(new Uint8Array(await (await get("file", { id: out.id, off, len: CHUNK })).arrayBuffer()));
-          postMessage({ id, op: "progress", total: 1, read: 1, written: out.size, copied: Math.min(off + CHUNK, out.size), size: out.size });
-        }
-        postMessage({ id, op: m.op, n: parts.length, parts, tid: out.id }, parts.map(a => a.buffer));
+        try { out = await (await post("rpc", undefined, JSON.stringify({ op: m.op, name: m.name, pid: id }))).json(); } finally { clearInterval(poll); }
+        postMessage({ id, op: m.op, n: 0, parts: [], tid: out.id });
         return;
       }
       case "close": await get("close", { slot: m.slot }); await post("rpc", undefined, JSON.stringify({ op: "close", slot: m.slot })); break;
@@ -88,8 +85,10 @@ async function handle(m) {
       }
       default: {                                                                      // every other operation of the page: the native `rpc`
         const p = {};
-        for (const [k, v] of Object.entries(m)) if (k !== "id" && k !== "blob") p[k] = v;
-        if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" ? m.name : undefined);
+        for (const [k, v] of Object.entries(m)) if (k !== "id" && k !== "blob" && k !== "nat" && k !== "members") p[k] = v;
+        if (m.nat) p.nat = { key: m.nat.key, c: m.nat.c, id: m.nat.id, centroid: m.nat.centroid, members: await members(m.nat.members) };      // a sample of a maker's file: its members stay on the disk
+        else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" ? m.name : undefined);
+        if (m.op === "natsamples") p.members = await members(m.members);
         const r = await post("rpc", undefined, JSON.stringify(p));
         if (m.op === "scanbin") {
           buf = await r.arrayBuffer(); len = buf.byteLength; n = len;

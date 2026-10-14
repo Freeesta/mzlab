@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Touch and pen (iPad + Apple Pencil, Android tablets). Classic script, loaded after explore.js, scroll.js, spettro.js and draw.js.
 //
@@ -33,7 +34,7 @@ const TOUCH = (() => {
   // hooks.panDrag                                 true: a sideways pan is a Shift + drag and up / down scrolls the page (the graphs); false: both are wheel events (the editor)
   function engine(doc, hooks) {
     const pts = new Map();                                       // active pointers on a surface: id -> {x, y}
-    let G = null, lastTap = { t: 0, x: 0, y: 0, el: null };
+    /** @type {any} */ let G = null, lastTap = { t: 0, x: 0, y: 0, el: null };
     const surfaceOf = e => (e.target && e.target.closest ? hooks.surface(e.target) : null);
     // the element that gets the mouse event: the graphs listen on the canvas itself; the editor listens on elements INSIDE its drawing area, so the event goes to
     // whatever is under the finger (an event only bubbles up, never down)
@@ -56,7 +57,7 @@ const TOUCH = (() => {
     function move(e) {
       const q = pts.get(e.pointerId); if (!q) return;
       q.x = e.clientX; q.y = e.clientY;
-      if (G && G.two) { if (!G.raf) { const g = G; g.raf = requestAnimationFrame(() => { g.raf = 0; if (G === g) moveTwo(); }); } return; }      // once per frame: both fingers have reported
+      if (G && G.two) { if (!G.raf) { const g = G; g.raf = FRAME.next(() => { g.raf = 0; if (G === g) moveTwo(); }); } return; }      // once per frame: both fingers have reported
       if (!G || e.pointerId !== G.id) return;
       if (G.mode === "wait" && Math.hypot(e.clientX - G.x0, e.clientY - G.y0) > MOVE) {
         clearTimeout(G.timer); G.mode = "drag";                                          // the drag starts where the finger first touched
@@ -137,14 +138,14 @@ const TOUCH = (() => {
   // a long press on a file of the list = right click (rename, colour, remove)
   let lp = null;
   document.addEventListener("pointerdown", e => {
-    if (e.pointerType === "mouse") return; const row = e.target.closest && e.target.closest("#flst .fl"); if (!row) return;
+    if (e.pointerType === "mouse") return; const row = /** @type {HTMLElement} */ (e.target).closest && /** @type {HTMLElement} */ (e.target).closest("#flst .fl"); if (!row) return;
     const x0 = e.clientX, y0 = e.clientY; clearTimeout(lp);
     lp = setTimeout(() => { lp = null; lpFired = true; setTimeout(() => { lpFired = false; }, 8000); row.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, view: window, clientX: x0, clientY: y0, button: 2 })); }, LONG);
     const stop = ev => { if (ev.type === "pointermove" && Math.hypot(ev.clientX - x0, ev.clientY - y0) < MOVE) return; clearTimeout(lp); lp = null; ["pointermove", "pointerup", "pointercancel"].forEach(t => removeEventListener(t, stop, true)); };
     ["pointermove", "pointerup", "pointercancel"].forEach(t => addEventListener(t, stop, true));
   }, true);
   addEventListener("pointerup", e => { if (e.pointerType !== "mouse") lastUp = Date.now(); }, true);
-  document.addEventListener("click", e => { if (e.isTrusted && lpFired && Date.now() - lastUp < 700 && e.target.closest && e.target.closest("#flst .fl")) { lpFired = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener("click", e => { if (e.isTrusted && lpFired && Date.now() - lastUp < 700 && (/** @type {HTMLElement} */ (e.target)).closest && /** @type {HTMLElement} */ (e.target).closest("#flst .fl")) { lpFired = false; e.stopPropagation(); e.preventDefault(); } }, true);
   // the first touch anywhere (a button, the list of files) also switches the touch mode on
   addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") { touchMode(); lastTouch = Date.now(); } }, true);
 
@@ -152,7 +153,7 @@ const TOUCH = (() => {
   const CANVAS = '[class*="StructEditor-module_canvas"]';
   let ketcherDoc = null;
   function bridgeKetcher() {
-    const fr = document.getElementById("kframe"); let d = null;
+    const fr = /** @type {HTMLIFrameElement | null} */ (document.getElementById("kframe")); let d = null;
     try { d = fr && fr.contentDocument; } catch (_) { return; }
     if (!d || d === ketcherDoc || !d.querySelector(CANVAS)) return;
     ketcherDoc = d;

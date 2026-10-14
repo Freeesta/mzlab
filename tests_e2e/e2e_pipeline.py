@@ -5,6 +5,7 @@ Builds the site (python3 tools/build_site.py) and the two .wasm of the feature e
 opens the panel. Needs cargo, the wasm32 target, wasm-bindgen and numpy (SKIP without). MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site (the TP_Mine
 files are copied over it); MZLAB_PIPE_MZIDX=<file .mzidx> adds the time of the preview on a real file (its time is printed).
 Run from the repo root: python3 tests_e2e/e2e_pipeline.py"""
+import re
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -24,6 +25,7 @@ try:
 except ImportError:
     print("SKIP numpy is needed for the synthetic series"); sys.exit(0)
 
+SMILES = "CC12CCC3C(C1CCC2(C)O)CCC4C3(CC5=C(C4)NN=C5O)C"     # a structure of the formula C21H32N2O2 of the synthetic parent (its grafo/1 goes to the hypotheses)
 tmp = Path(tempfile.mkdtemp(prefix="pipeline_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
 site = Path(reuse) if reuse else tmp / "site"
@@ -68,7 +70,7 @@ try:
         pg.evaluate(PUT, names)
 
         def gate_absent():
-            pg.evaluate("PIPE.open()"); pg.wait_for_selector("#pipe[open]")
+            pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open()"); pg.wait_for_selector("#pipe[open]")
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
             assert pg.locator("#pipe-file option").count() >= 1
         step("without cancello.json the panel says «not validated»", gate_absent)
@@ -131,6 +133,65 @@ try:
             assert not small, small
         step("WCAG 2.5.8: the controls of the panel are at least 24 x 24 px", keyboard_and_targets)
 
+        def roles_proposed():
+            pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelectorAll('#pr-tab .pr-role').length === %d" % len(names), timeout=60000)
+            roles = pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-role')].map(e => e.value)")
+            assert roles == ["blank", "dark", "t0", "sample", "sample", "sample"], roles
+            assert pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-time')].map(e => e.value)") == ["", "", "0", "5", "10", "20"]
+            assert pg.locator("#pr-tab tr.pr-prop").count() == 4, "the times proposed from the names are yellow"
+            assert pg.is_disabled("#pipe-run-go") and "not confirmed" in pg.get_attribute("#pipe-run-go", "title"), pg.get_attribute("#pipe-run-go", "title")
+            assert "Times not confirmed" in pg.inner_text("#pr-warn")
+        step("roles and times are proposed from the names, Run is off until the times are confirmed", roles_proposed)
+
+        def roles_confirm():
+            pg.click("#pr-all"); pg.wait_for_function("document.querySelectorAll('#pr-tab tr.pr-prop').length === 0")
+            assert not pg.is_disabled("#pipe-run-go") and "Times not confirmed" not in pg.inner_text("#pr-warn")
+            assert pg.evaluate("PIPER.state.tp.minuti") == [None, None, 0, 5, 10, 20], pg.evaluate("PIPER.state.tp.minuti")
+            pg.fill("#pr-t4", "12"); pg.press("#pr-t4", "Enter"); pg.wait_for_function("document.querySelector('#pr-t4').value === '12'")
+            assert pg.evaluate("document.activeElement.id") == "pr-t4" and pg.evaluate("PIPER.state.tp.minuti[4]") == 12
+            pg.fill("#pr-t4", "10"); pg.press("#pr-t4", "Enter"); pg.wait_for_function("PIPER.state.tp.minuti[4] === 10")
+        step("«Confirm times» and Enter accept the times; the minutes for the pipeline come from the Rust", roles_confirm)
+
+        def roles_warn():
+            pg.select_option("#pr-r2", "qc"); pg.wait_for_function("document.querySelector('#pr-warn').textContent.includes('No t0')")
+            assert not pg.is_disabled("#pipe-run-go")
+            pg.select_option("#pr-r0", "sample"); pg.select_option("#pr-r1", "sample")
+            pg.wait_for_function("document.querySelector('#pipe-run-go').disabled")
+            t = pg.get_attribute("#pipe-run-go", "title"); assert "No t0, blank or dark" in t or "Time missing" in t, t
+            pg.select_option("#pr-r0", "blank"); pg.select_option("#pr-r1", "dark"); pg.select_option("#pr-r2", "t0")
+            pg.wait_for_function("!document.querySelector('#pipe-run-go').disabled && !document.querySelector('#pr-warn').textContent.includes('No t0')")
+        step("without the t0 a short warning; without any control Run is off with the reason in its title", roles_warn)
+
+        def roles_kept():
+            pg.select_option("#pr-r3", "infusion"); pg.wait_for_function("document.querySelector('#pr-t3').disabled")
+            nb = pg.evaluate("NB.campioni"); assert nb["schema"] == "campioni/2" and nb["campioni"][3]["tipo"] == "infusion" and nb["campioni"][3]["tempo"] is None
+            pg.select_option("#pr-r3", "sample"); pg.fill("#pr-t3", "5"); pg.press("#pr-t3", "Enter")
+            pg.wait_for_function("PIPER.state.tp.minuti[3] === 5")
+            pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelectorAll('#pr-tab .pr-role').length > 0")
+            assert pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-role')].map(e => e.value)") == ["blank", "dark", "t0", "sample", "sample", "sample"]
+            assert pg.locator("#pr-tab tr.pr-prop").count() == 0, "the confirmed times stay confirmed"
+        step("a role set in the panel is kept in the notebook (NB.campioni) and found again", roles_kept)
+
+        def roles_from_data_view():
+            pg.evaluate("""() => { window.__c = NB.campioni; delete NB.campioni;
+              NB.session = [{ file: "SIN_t05min.mzML", label: "a", time: 5, type: "blank", conc: null }, { file: "SIN_t10min.mzML", label: "b", time: 10, type: "sample", conc: null }]; return null; }""")
+            pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelector('#pr-r3') && document.querySelector('#pr-r3').value === 'blank'", timeout=20000)
+            assert pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-time')].map(e => e.value)")[4] == "10" and pg.locator("#pr-tab tr.pr-prop").count() == 2
+            pg.evaluate("() => { NB.session = null; NB.campioni = window.__c; return null; }"); pg.evaluate("PIPE.open()")
+            pg.wait_for_function("document.querySelector('#pr-r3').value === 'sample'")
+        step("the roles and times of the Data view are taken over (confirmed), the rest is proposed", roles_from_data_view)
+
+        def roles_names():
+            r = pg.evaluate("""async () => {
+              const url = URL.createObjectURL(new Blob([QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })), R = await import(url);
+              const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.campioni(op, j);
+              const cs = R.build(call, ["S-t5.mzidx", "S-t30 (2).mzidx", "S_blank.mzidx", "S_dark.mzidx", "S_standard_direct-infusion_MSn.mzidx"], null, null);
+              return { roles: cs.map(c => c.tipo), min: cs.map(c => c.tempo_min), conf: cs.map(c => c.tempo_confermato), tp: R.forTp(call, cs), sha: R.canonical(call, cs).sha256 };
+            }""")
+            assert r["roles"] == ["sample", "sample", "blank", "dark", "infusion"] and r["min"][:2] == [5, 30] and not any(r["conf"]), r
+            assert r["tp"]["infusion"] == [4] and r["tp"]["blank"] == [2] and r["tp"]["minuti"][4] is None and len(r["sha"]) == 64, r
+        step("the names S-t5, S-t30 (2), blank, dark and direct infusion give the right roles and minutes (infusion is not a control)", roles_names)
+
         def run_plain():
             pg.evaluate("delete QTOOLS.ctx.files['cancello.json']; PIPE.open();")
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('not validated')", timeout=60000)
@@ -139,14 +200,16 @@ try:
             assert pg.locator("#pv-list [data-cand]").count() == 0 and pg.locator("#pv-dis").count() == 0, "candidates in the DOM without the gate"
             assert "no candidates" in pg.inner_text("#pipe-res")
             assert not pg.evaluate("/C21H32N2O2|against|1\\/\\d/.test(document.querySelector('#pipe-res').textContent)")
+            pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
+            assert "Table view not validated" in pg.inner_text("#pipe-tab") and pg.locator("#ft-g").count() == 0, "the table view needs vista_tabella"
         step("without the gate the run lists rows (traces and families) and no candidate is in the DOM", run_plain)
 
         def run_gated():
             crate = pg.evaluate("PIPE.state.crate")
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version=crate))
             pg.wait_for_function("document.querySelector('#pipe-gate').textContent.includes('candidate view is available')", timeout=60000)
-            pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0")
-            assert pg.input_value("#pipe-times") == ",,0,5,10,20", pg.input_value("#pipe-times")
+            pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0"); pg.fill("#pipe-psmi", SMILES)
+            assert pg.evaluate("PIPER.state.tp.minuti") == [None, None, 0, 5, 10, 20]
             pg.click("#pipe-run-go")
             pg.wait_for_function("document.querySelectorAll('#pv-list [data-cand]').length > 0", timeout=180000)
             assert pg.locator("#pv-list .pv-chip").count() > 0 and pg.locator("#pv-list .pv-cells").count() > 0
@@ -196,6 +259,49 @@ try:
             pg.evaluate("window.fetch = window.__fetch; null")
         step("the click on a row shows proofs, cells, XIC and MS2 (each with its table of data)", detail_charts)
 
+        def qc_step():
+            pg.wait_for_selector("#pipe-qc .qc #qc-m svg", timeout=60000)
+            n = len(names)
+            got = pg.locator("#pipe-qc table >> nth=0 >> tr").count(); assert got == n + 1, f"one row per file: {got} rows for {n} files: " + pg.inner_text("#pipe-qc")[:500]
+            pg.locator("#qc-m svg").focus(); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+            assert pg.locator("#tdati table tr").count() >= n, "the chart has its table of data"
+            pg.keyboard.press("Escape")
+            assert "Table view: validated" in pg.inner_text("#pipe-qc") and "Candidate view: validated" in pg.inner_text("#pipe-qc")
+        step("quality control: matrix D/T/F/A per file with its table, numbers of the engine, state of the gate", qc_step)
+
+        def table_step():
+            pg.wait_for_function("document.querySelector('#ft-n').textContent.includes(' of ')", timeout=60000)
+            txt = pg.inner_text("#ft-n"); kept, total = [int(x.replace(',', '')) for x in re.findall(r"[\d,]+", txt)]
+            assert kept == total > 0, txt
+            assert 0 < pg.locator("#ft-g .ft-win .ft-r").count() < 80
+            pg.select_option("#ft-norm", "somma"); pg.fill("#ft-det", str(len(names) // 2)); pg.wait_for_timeout(600)
+            kept2 = int(re.findall(r"[\d,]+", pg.inner_text("#ft-n"))[0].replace(',', ""))
+            assert kept2 < total, (kept2, total, pg.inner_text("#ft-why"), pg.input_value("#ft-det"), pg.input_value("#ft-norm"))
+            assert pg.inner_text("#ft-why").startswith("Rejected by each filter"), pg.inner_text("#ft-why")
+            pg.click("#ft-g .ft-win .ft-r >> nth=0")
+            pg.wait_for_selector("#pv-det:not([hidden]) #pv-ch .ch.a", timeout=20000)
+            assert pg.locator("#pv-det h4").inner_text().startswith("Row "), pg.locator("#pv-det h4").inner_text()
+            out = os.environ.get("MZLAB_PIPE_SHOTS")
+            if out:
+                pg.wait_for_timeout(500)
+                for sel, nm in (("#pipe-qc", "qc"), ("#pipe-tab", "tabella")): pg.locator(sel).screenshot(path=str(Path(out) / f"pipeline_{nm}.png"))
+        step("table: normalisation and filters as a view with «N of M rows», virtualised grid, click opens the row", table_step)
+
+        def export_step():
+            def get(i):
+                with pg.expect_download(timeout=60000) as d: pg.click("#px-" + i)
+                return Path(d.value.path()).read_bytes()
+            assert get("mzmine").startswith(b"id,mz,rt"), "CSV for mzmine"
+            assert get("full").startswith(b"id,mz,rt")
+            assert get("xlsx")[:2] == b"PK", "xlsx is a zip"
+            assert get("semi").startswith(b"\xef\xbb\xbf"), "CSV with ; has a BOM"
+            z = get("fbmn"); assert z[:2] == b"PK" and b"quant.csv" in z and b"ms2.mgf" in z, "FBMN zip"
+            pg.wait_for_function("document.querySelector('#px-msg').textContent.includes('done')", timeout=20000)
+            get("sirius")
+            html = get("report").decode(); assert "mzFinder feature table" in html and "Quality control" in html and "rows kept" in html or "whole table" in html, html[:300]
+            assert "error" not in pg.inner_text("#px-msg").lower(), pg.inner_text("#px-msg")
+        step("export and report: mzmine, cells, xlsx, CSV with BOM, FBMN zip, SIRIUS and the report come from the engine", export_step)
+
         def unt():
             pg.click("#pv-unt")
             t = pg.evaluate("UNTUI.state.table"); assert t and t["program"] == "mzlab" and len(t["features"]) > 0 and len(t["samples"]) == len(names), t and t["program"]
@@ -218,8 +324,9 @@ try:
             ops = pg.evaluate("NB.ops.filter(o => o.op === 'feature_pipeline')"); assert len(ops) >= 1, ops
             o = ops[-1]; assert not pg.evaluate("WORKFLOW.checkFeatureOp(NB.ops.filter(o => o.op === 'feature_pipeline').pop())")
             assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
-            assert o["genitore"]["formula"] == "C21H32N2O2" and json.loads(o["recipe"]) == o["parametri"]
+            assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
+            c = [x for x in wf["operazioni"] if x["op"] == "campioni"]; assert c and c[-1]["schema"] == "campioni/2" and len(c[-1]["sha256"]) == 64 and len(c[-1]["campioni"]) == len(names), c
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
         step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
 
@@ -228,11 +335,11 @@ try:
             pg.wait_for_function("document.querySelector('#pipe-again').disabled === true", timeout=20000)
             pg.evaluate("WORKFLOW.applyWorkflow(window.__wf)")
             pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelector('#pipe-again') && !document.querySelector('#pipe-again').disabled", timeout=20000)
-            pg.fill("#pipe-floor", "1"); pg.fill("#pipe-pf", "")                       # the recipe must bring them back
+            pg.fill("#pipe-floor", "1"); pg.fill("#pipe-pf", ""); pg.fill("#pipe-psmi", "")   # the recipe must bring them back
             pg.click("#pipe-again")
             pg.wait_for_function("/Re-applied/.test(document.querySelector('#pipe-run-msg').textContent)", timeout=180000)
             m = pg.inner_text("#pipe-run-msg"); assert "identical" in m and pg.evaluate("window.__sha").startswith(m.split("SHA-256 ")[1][:12]), m
-            assert pg.input_value("#pipe-pf") == "C21H32N2O2" and float(pg.evaluate("PIPE.values().floor")) == 5e4
+            assert pg.input_value("#pipe-pf") == "C21H32N2O2" and pg.input_value("#pipe-psmi") == SMILES and float(pg.evaluate("PIPE.values().floor")) == 5e4
         step("saved, reopened and «Re-apply» give the same table (same SHA-256)", reopen_and_again)
 
         def unknown_op():

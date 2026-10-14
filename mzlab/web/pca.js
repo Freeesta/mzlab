@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Exploratory PCA of the feature table (high resolution only; «Statistica» panel). A VIEW of the series, not a test: no p-value, nothing «significant».
 // The work is in mzlab/statistica.py (/api/stat/pca): filters first (above the blank, above an intensity threshold, present in k samples), declared

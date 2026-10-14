@@ -63,4 +63,7 @@ def test_wasm_and_native_write_the_same_files(built, spec):
     view = json.loads((nat / "view.json").read_text()) if spec != "-" else None
     if view:
         assert view["conteggi"]["tenute"] == len(view["righe"]) == len(full) - 1
+    assert json.loads((nat / "qc.json").read_text())["schema"] == "qc/1"
+    assert (nat / "features.csv").read_text().splitlines()[0].startswith("id;mz;rt;")
+    assert len(json.loads((nat / "features.rows.json").read_text())["hojas"][0]["filas"]) == len(full)
     assert json.loads((nat / "report.json").read_text())["schema"] == "report/1"

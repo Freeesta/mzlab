@@ -2,15 +2,15 @@
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def flst_own(pg):
-    """text of the file list without the greyed rows (and heading) of the other tabs"""
-    return pg.evaluate("[...document.querySelectorAll('#flst .fgh:not(.sep), #flst .fl:not(.ghost)')].map(e=>e.innerText).join('\\n')")
+    """text of the file list (headings and rows of every experiment type)"""
+    return pg.evaluate("[...document.querySelectorAll('#flst .fgh, #flst .fl')].map(e=>e.innerText).join('\\n')")
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e12.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
-r = Run(port=8822, wd="/tmp/wd12", motore="python")
+r = Run(port=8822, wd="/tmp/wd12")
 F = FILES + ["B_FullMass-t10"]      # a sixth file of the B series (the old extra file was not in the data repository)
 with sync_playwright() as p:
     pg = r.page(p)
@@ -22,13 +22,14 @@ with sync_playwright() as p:
         assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
         assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # the list is opened file by file: the view starts on the first file of the list, whatever its experiment
     pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
-        assert "FULL SCAN" in t.upper() and "MS2" not in t and "MRM" not in t and "EMS" not in t, t
-        d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
+        assert "FULL SCAN" in t.upper() and "EMS" not in t, t
+        hd = pg.evaluate("[...document.querySelectorAll('#flst .fgh span:not(.chv)')].map(e=>e.innerText)"); assert [h.lower() for h in hd] == ["full scan", "ms2 (product ion)", "mrm"], hd
+        assert pg.locator("#dtabs, #ovbtn, #tabempty").count() == 0, "the three tabs and the overview button are gone"
         assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#flst .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
@@ -75,17 +76,17 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels.find(p=>p.type==='xic').ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
-        pg.click("#dtabs [data-t=ms2]"); ready(pg)
+        open_kind(pg, "ms2"); ready(pg)
         assert pg.locator("#expbar").count() == 0
-        ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
+        ch = pg.evaluate("tabPanels('ms2').filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
-        assert flst_own(pg).upper().count("MS2 (PRODUCT ION)") == 1 and "MRM" not in flst_own(pg)
+        assert flst_own(pg).upper().count("MS2 (PRODUCT ION)") == 1
         pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parametri popover
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)
     def png():
-        pg.click("#dtabs [data-t=full]"); pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(1200)
+        open_kind(pg, "full"); pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(1200)
         assert pg.evaluate("E.panels[0].cur") is not None
         with pg.expect_download() as d: dlmenu(pg, '.pnl.chrom', 'png')
         pg.wait_for_timeout(500); print("PNG", d.value.suggested_filename); d.value.save_as("/tmp/chrom.png")

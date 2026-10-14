@@ -607,13 +607,13 @@ export function open(p, opener) {
   on("ti", "input", e => { V.plane = true; dlg.querySelector('[data-m="pl"]').checked = true; if (V.cur) setCur(+e.target.value, V.cur.j); });
   const playBtn = Q("play");
   if (REDUCED()) { playBtn.hidden = true; }
-  const stop = () => { if (V.playing) { cancelAnimationFrame(V.playing); V.playing = 0; } playBtn.innerHTML = "&#9654;"; playBtn.setAttribute("aria-label", T("m3d.play")); };
+  const stop = () => { if (V.playing) { FRAME.cancel(V.playing); V.playing = 0; } playBtn.innerHTML = "&#9654;"; playBtn.setAttribute("aria-label", T("m3d.play")); };
   on("play", "click", () => {
     if (V.playing) { stop(); return; }
     V.plane = true; dlg.querySelector('[data-m="pl"]').checked = true; playBtn.innerHTML = "&#10074;&#10074;"; playBtn.setAttribute("aria-label", T("m3d.pause"));
     let t0 = performance.now(), i0 = V.cur ? V.cur.i : 0; const dur = 12000;
-    const tick = t => { const g = V.g; if (!g) return; const i = Math.min(g.nrt - 1, i0 + Math.round((t - t0) / dur * g.nrt)); setCur(i, V.cur.j); if (i >= g.nrt - 1) { stop(); return; } V.playing = requestAnimationFrame(tick); };
-    V.playing = requestAnimationFrame(tick);
+    const tick = t => { const g = V.g; if (!g) return; const i = Math.min(g.nrt - 1, i0 + Math.round((t - t0) / dur * g.nrt)); setCur(i, V.cur.j); if (i >= g.nrt - 1) { stop(); return; } V.playing = FRAME.next(tick); };
+    V.playing = FRAME.next(tick);
   });
   on("png", "click", () => exportPng());
   function exportPng() {
@@ -628,16 +628,16 @@ export function open(p, opener) {
 
   // ---- life cycle
   let raf = 0, alive = true;
-  const loop = () => { if (!alive) return; if (V.dirty) { V.dirty = false; frame(); } raf = requestAnimationFrame(loop); };
-  const ro = new ResizeObserver(() => { resize(); });
+  const loop = () => { if (!alive) return; if (V.dirty) { V.dirty = false; frame(); } raf = FRAME.next(loop); };
+  let offRo = () => {};
   function close() { if (dlg.open) dlg.close(); }
   dlg.addEventListener("close", () => {
-    alive = false; stop(); cancelAnimationFrame(raf); ro.disconnect(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); { const c = ctxEl(); if (c && dlg.contains(c)) document.body.appendChild(c); } dlg.remove();
+    alive = false; stop(); FRAME.cancel(raf); offRo(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); { const c = ctxEl(); if (c && dlg.contains(c)) document.body.appendChild(c); } dlg.remove();
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });
   window.__m3d = { V, P, ptrs, setView, pick, project: (...a2) => project(...a2), box, rtAt, mzAt, px, pz, heightAt, frame, close };     // for the tests
-  dlg.showModal(); resize(); ro.observe(main); glc.focus({ preventScroll: true });
+  dlg.showModal(); resize(); offRo = FRAME.ro(main, () => resize()); glc.focus({ preventScroll: true });
   if (!window.ResizeObserver) resize();
-  load().then(() => { raf = requestAnimationFrame(loop); });
+  load().then(() => { raf = FRAME.next(loop); });
 }

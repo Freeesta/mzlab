@@ -19,6 +19,8 @@ pub struct Facts {
     pub srm_rt: Option<(f64, f64)>,
     /// The non-MS traces that are not the PDA (pressure, flow...): chromatogram index, kind, id, unit, first and last time, points.
     pub analog: Vec<Analog>,
+    /// The `.raw` method the file carries (`metodo/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
+    pub lc: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -119,6 +121,21 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     }
 }
 
+/// The name shown for a part of a mixed file: Full Scan, DDA (MS2 scans all tied to a precursor survey), MS2 or MRM, with the polarity suffix of the key.
+pub fn part_label(part: &Part, scans: &[Scan]) -> String {
+    let dda = scans.iter().any(|s| s.level == 1) && {
+        let mut ms2 = scans.iter().filter(|s| s.level >= 2).peekable();
+        ms2.peek().is_some() && ms2.all(|s| s.parent.is_some())
+    };
+    let (name, head) = match part.mode {
+        "ms1" => ("Full Scan", "MS1"),
+        "mrm" => ("MRM", "MRM"),
+        _ if dda => ("DDA", "MS2"),
+        _ => ("MS2", "MS2"),
+    };
+    format!("{name}{}", part.tag.strip_prefix(head).unwrap_or(""))
+}
+
 pub(crate) fn matches(s: &Scan, part: Option<&Part>) -> bool {
     let Some(p) = part else { return true };
     if p.mode == "mrm"
@@ -206,7 +223,7 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
         .filter_map(|s| s.res)
         .filter(|r| *r != 0.0)
         .collect();
-    res.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut res, f64::total_cmp);
     if an == "?" && !res.is_empty() && res[res.len() / 2] >= 10000.0 {
         return Profile {
             hr: true,
@@ -249,7 +266,7 @@ fn median(v: &mut [f64]) -> Option<f64> {
     if v.is_empty() {
         return None;
     }
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(v, f64::total_cmp);
     let n = v.len();
     Some(if n % 2 == 1 {
         v[n / 2]
@@ -291,7 +308,7 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
             .collect();
         let n = centres.len() as f64;
         let mut uniq = centres.clone();
-        uniq.sort_by(f64::total_cmp);
+        crate::sortc::by(&mut uniq, f64::total_cmp);
         uniq.dedup();
         let d = uniq.len() as f64;
         if width >= 5.0 && n / d.max(1.0) >= 3.0 {
@@ -426,7 +443,7 @@ pub fn item_info<R: ReadAt>(
         .filter_map(|s| s.precursor.filter(|p| *p != 0.0))
         .map(|p| round(p, 1))
         .collect();
-    precs.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut precs, f64::total_cmp);
     precs.dedup();
     let nprof = sc.iter().filter(|s| s.profile).count();
     let mode = if !sc.is_empty() && nprof == sc.len() {
@@ -460,15 +477,7 @@ pub fn item_info<R: ReadAt>(
                 .collect::<Vec<_>>(),
         )
     };
-    let infusion = match all.len() {
-        0 => false,
-        1 => true,
-        _ => {
-            let mx = all.iter().map(|s| s.rt).fold(f64::NEG_INFINITY, f64::max);
-            let mn = all.iter().map(|s| s.rt).fold(f64::INFINITY, f64::min);
-            mx - mn < 1e-6
-        }
-    };
+    let msn = crate::infusione::infusione(&idx.scans, facts.lc, &meta.file);
     let dda = !phys1.is_empty() && !phys2.is_empty() && phys2.iter().all(|s| s.parent.is_some());
     let mode_of = |v: &[&Scan]| {
         if v.iter().take(50).any(|s| s.profile) {
@@ -599,7 +608,8 @@ pub fn item_info<R: ReadAt>(
     o.raw(",\"dda\":")
         .raw(if dda { "true" } else { "false" })
         .raw(",\"infusion\":")
-        .raw(if infusion { "true" } else { "false" });
+        .raw(if msn.is_some() { "true" } else { "false" });
+    crate::infusione::json(&mut o, msn.as_ref());
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
@@ -669,6 +679,7 @@ pub fn facts_from<M: ReadAt>(
             });
         }
     }
+    f.lc = crate::infusione::raw_lc(m)?;
     if need_mrm {
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);

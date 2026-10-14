@@ -61,12 +61,12 @@ try:
         step("Range: m/z and RT set and cleared, active state and ×", rng)
         def corr():
             pg.click(f'{X} [data-o=corr]'); pg.wait_for_timeout(200)
-            it = pg.locator(f'{X} .corri'); assert it.count() <= 4 and it.count() == 4, it.count()
+            it = pg.locator(f'{X} .corrw >> nth=0 >> .corri'); assert it.count() == 2, it.count()          # «Sottrai»: none + the file; «Fondo» has its own menu
             assert pg.locator(f'{X} .corrm select').count() == 1, "one file chooser"
             assert pg.locator(f'{X} .corri', has_text="Sottrai file").count() == 1
             assert all(len(t) < 60 for t in pg.locator(f'{X} .corri .sm').all_inner_texts()), "one-line hints"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(100); assert pg.evaluate("document.querySelector('.pnl.xic .corrm').hidden")
-        step("Correz. menu: 4 entries, one file chooser, Esc closes", corr)
+        step("Correz. menus: Sottrai (2 entries, one file chooser), Esc closes", corr)
         def pick():
             exp = pg.evaluate("(()=>{const r=SUBREF.autoFile('full');return r.label})()")
             pg.click(f'{X} [data-o=corr]'); pg.wait_for_timeout(150)
@@ -77,7 +77,7 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corri', has_text="Nessuna").click(); pg.wait_for_timeout(500)
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrw >> nth=0 >> .corri', has_text="Nessuna").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():

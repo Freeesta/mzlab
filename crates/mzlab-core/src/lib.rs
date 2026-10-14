@@ -1,9 +1,11 @@
 //! mzLab core: pure Rust, readable from `Read` or `&[u8]`, no native dependencies in the WASM graph.
 
 #![forbid(unsafe_code)]
+pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
 pub mod budget;
+pub mod centroidi;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;
@@ -23,9 +25,11 @@ pub mod hrscans;
 pub mod error;
 pub mod gradient;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+pub mod idxcache;
 pub mod idxread;
 pub mod isoscore;
 pub mod itemroutes;
+pub mod infusione;
 pub mod iteminfo;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
@@ -46,35 +50,50 @@ pub mod origin;
 pub mod originroute;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzidx;
+pub mod mzidx_lettore;
+pub mod msnalbero;
 pub mod msnroute;
 pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
+pub mod lettori;
+pub mod lettori_centroidi;
+pub mod lettori_mzml;
+pub mod metodo;
+pub mod metodo_raw;
+pub mod metodo_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzml;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+pub mod numarray;
 pub mod mzmlwrite;
 pub mod peakq;
 pub mod peaks;
 pub mod peakext;
 pub mod signal;
+pub mod sortc;
 pub mod profspec;
 pub mod project;
 pub mod pysum;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod raw;
+pub mod rawfilter;
+pub mod rawlettore;
 pub mod rng;
 pub mod rois;
 pub mod roles;
 pub mod routes;
 pub mod scaninfo;
+pub(crate) mod scanrow;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod scanparams;
 pub mod mrmroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod sniff;
+pub mod sorgente;
+pub mod srm;
 pub mod scantable;
 pub mod specdiff;
 pub mod specpeaks;
@@ -95,6 +114,7 @@ pub mod statroute;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
+pub mod campioni;
 
 pub use error::{Error, Result};
 

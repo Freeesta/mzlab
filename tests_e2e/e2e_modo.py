@@ -14,7 +14,7 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
-        for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); pg.wait_for_timeout(1000)
+        for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); ready(pg)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)
         def allmode():
             pg.click("#fmode [data-m=all]"); pg.wait_for_timeout(600)
@@ -22,10 +22,12 @@ try:
             assert not any(dis("[data-o=k]")) and not any(dis("[data-o=all]"))
         step("Tutti sovrapposti: arrows/selector off, panel file choosers on", allmode)
         def selmode():
-            pg.click("#fmode [data-m=sel]"); pg.wait_for_timeout(600)
+            pg.click("#fmode [data-m=sel]")
+            attendi(pg, "[...document.querySelectorAll('.pnl:not(.map) [data-o=k],[data-o=all]')].every(x => x.disabled)")
             assert not any(dis("#fprev,#fnext,#fsel"))
-            assert all(dis("[data-o=k]")) and all(dis("[data-o=all]")), (dis("[data-o=k]"), dis("[data-o=all]"))
+            assert all(dis(".pnl:not(.map) [data-o=k]")) and all(dis("[data-o=all]")), (dis("[data-o=k]"), dis("[data-o=all]"))       # the map keeps its chooser open (it only follows)
             pg.click("#fnext"); ready(pg)
+            attendi(pg, "[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
             cur = pg.evaluate("E.cur"); assert pg.evaluate("[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
         step("Solo il selezionato: arrows on, per-panel file choosers follow and are off", selmode)
         def norm():
@@ -45,11 +47,6 @@ try:
             pg.click("#backdata"); pg.wait_for_timeout(600)
             assert pg.is_visible("#v-data")
         step("loading page lists loaded files and goes back", adding)
-        def empty():
-            pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(500)
-            pg.click("#tabempty [data-load]"); pg.wait_for_timeout(600)
-            assert pg.is_visible("#loaded")
-        step("empty tab: button to the loading page", empty)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

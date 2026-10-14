@@ -46,7 +46,7 @@ pub fn analyse<R: ReadAt>(
         assess(index, &mut f, p, &s.quality)?;
         Vec::new()
     };
-    group(&mut f, &s.iso);
+    group(&mut f, &s.iso)?;
     let links = link(index, &mut f, p, &s.ms2)?;
     mark_mixtures(index, &mut f, &links, &multi, p, &s.resolve)?;
     Ok((f, links))

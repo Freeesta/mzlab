@@ -1,3 +1,4 @@
+// @ts-strict
 // Loader of mzFinder (internal name "TP Mine"): the tools that give answers, only for the course owner.
 // This file is small and contains NO tool code. The tools are in the site in plain text (static/mzfinder/, written by tools/build_site.py
 // from TP_Mine/) but are downloaded and run ONLY after the switch is turned on: with mzFinder off nothing of it is fetched.
@@ -9,14 +10,14 @@
 // (next to Teoria) and a full page; others get a button in the floating bar.
 (() => {
   "use strict";
-  const BASE = new URL(".", document.currentScript ? document.currentScript.src : location.href).href;
+  const BASE = new URL(".", document.currentScript ? /** @type {HTMLScriptElement} */ (document.currentScript).src : location.href).href;
   const DIR = BASE + "mzfinder/";
   const KEY = "qqq.mzfinder";
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
   const reg = window.QTOOLS = {
-    ctx: null,                                     // set before the scripts run: {pyZip: Uint8Array, base: URL of the site static folder, files}
+    ctx: /** @type {any} */ (null),                                     // set before the scripts run: {pyZip: Uint8Array, base: URL of the site static folder, files}
     list: () => on ? tools.slice() : [],
     register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on) addTab(t); render(); },
   };
@@ -25,7 +26,7 @@
   const setOn = v => { try { if (v) localStorage.setItem(KEY, "1"); else localStorage.removeItem(KEY); } catch (_) { /* private mode: only for this page */ } };
 
   function runScript(name) {
-    return new Promise((res, rej) => {
+    return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
       s.onload = () => { s.remove(); res(); };
       s.onerror = () => { s.remove(); rej(new Error("script " + name)); };
@@ -61,21 +62,28 @@
   const tabs = new Map();         // id -> {b, sec, fn}
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
-    if (!nav || !anchor || tabs.has(t.id) || document.getElementById("v-" + t.id)) return;
+    const old = tabs.get(t.id);
+    if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
+      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name);
+      if (old.opened) { old.sec.textContent = ""; openIn(old); }
+      return;
+    }
+    if (!nav || !anchor || old || document.getElementById("v-" + t.id)) return;
     const b = document.createElement("button"); b.dataset.v = t.id; b.title = t.desc || t.name;
     b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
     nav.appendChild(b);
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
-    let opened = false;
+    /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false };
     b.onclick = () => setView(t.id);
-    const fn = ev => {
+    x.fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
-      if (show && !opened) { opened = true; try { t.open(sec, reg.ctx); } catch (e) { sec.textContent = "mzFinder failed: " + (e && e.message || e); } }
-      else if (show && t.onShow) try { t.onShow(); } catch (_) { /* ignore */ }
+      if (show && !x.opened) { x.opened = true; openIn(x); }
+      else if (show && x.t.onShow) try { x.t.onShow(); } catch (_) { /* ignore */ }
     };
-    document.addEventListener("tpview", fn);
-    tabs.set(t.id, { b, sec, fn });
+    document.addEventListener("tpview", x.fn);
+    tabs.set(t.id, x);
   }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
   function removeTabs() {
     for (const x of tabs.values()) {
       const shown = !x.sec.hidden;
@@ -88,23 +96,33 @@
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "mzFinder failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
   }
 
-  // ---- loading (once per page): index, extra files, Python zip, then the scripts in order
+  // ---- loading (once per page): index, then extra files + Python zip + the scripts' downloads in parallel, then the scripts run in order
   async function load() {
     const get = async (name, how) => { const r = await fetch(DIR + name); if (!r.ok) throw new Error(name + " missing"); return r[how](); };
     const idx = await get("indice.json", "json");
+    const js = idx.js || [], names = idx.files || [];
+    const warm = js.map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now; the script tags below then hit the cache
+    const [texts, pyBuf] = await Promise.all([Promise.all(names.map(n => get(n, "text"))), idx.py ? get(idx.py, "arrayBuffer") : null]);
     const files = {};
-    for (const n of idx.files || []) files[n] = await get(n, "text");
-    const pyZip = idx.py ? new Uint8Array(await get(idx.py, "arrayBuffer")) : null;
-    reg.ctx = { pyZip, base: BASE, meta: idx.meta || {}, files };
-    for (const n of idx.js || []) await runScript(n);
+    names.forEach((n, i) => { files[n] = texts[i]; });
+    reg.ctx = { pyZip: pyBuf ? new Uint8Array(pyBuf) : null, base: BASE, meta: idx.meta || {}, files };
+    await Promise.all(warm);
+    for (const n of js) await runScript(n);
   }
+  // the tab appears at once with a short loading note; the real tool takes its place when its script registers
+  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "mzFinder", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   async function turnOn() {
     on = true; ensureUi();
     if (!loaded) loaded = load();
-    try { await loaded; } catch (e) { loaded = null; console.error("mzFinder failed to load:", e); return; }
+    if (!tabs.size) addTab(PLACEHOLDER);
+    try { await loaded; } catch (e) {
+      loaded = null; console.error("Tabui failed to load:", e);
+      const x = tabs.get(PLACEHOLDER.id); if (x && x.ph) x.sec.textContent = "Tabui failed to load. Reload the page to try again.";
+      return;
+    }
     if (!on) return;
     for (const t of tools) if (t.nav) addTab(t);
     render();
@@ -116,7 +134,7 @@
   }
 
   // ---- switch: logo-piccone.js (the five hits on the logo of the header) calls QTOOLS.flip()
-  reg.flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
+  /** @type {any} */ (reg).flip = () => { if (on) { setOn(false); turnOff(); return false; } setOn(true); turnOn(); return true; };      // gives the new state (the logo follows it)
   const start = () => { if (getOn()) turnOn(); };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

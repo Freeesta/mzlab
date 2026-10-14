@@ -1,0 +1,300 @@
+//! The files of a maker read as they are (`.wiff` + `.wiff.scan`, the members of a `.raw` or of a `.D` folder): no mzML is written. A dataset is a
+//! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`lettori::apri`),
+//! builds the `.mzidx` of one sample straight from the reader, and answers the routes that read the file besides its index from the reader and the
+//! `guscio` of the sample (the mzML without its spectra: header, chromatograms, polarities). «Scarica .mzML» writes the whole mzML on request.
+use std::collections::{HashMap, VecDeque};
+use std::rc::Rc;
+
+use js_sys::Function;
+use mzlab_core::idxread::ReadAt;
+use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::sorgente::SorgenteLettore;
+use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
+use wasm_bindgen::prelude::*;
+
+use crate::{error_json, BlockWriter, JsOutput, JsReader};
+
+/// Readers kept open at once (a `.wiff` holds its container in memory).
+const OPEN: usize = 4;
+/// Bytes of `guscio` kept at once.
+pub(crate) const SHELLS: usize = 32 << 20;
+
+/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`.
+struct JsMember {
+    read: Function,
+    i: u32,
+}
+
+impl ReadAt for JsMember {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let bad = || mzlab_core::Error::new("error.badIndex");
+        let v = self
+            .read
+            .call3(
+                &JsValue::NULL,
+                &self.i.into(),
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| bad())?;
+        let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
+        if a.length() as usize != buf.len() {
+            return Err(bad());
+        }
+        a.copy_to(buf);
+        Ok(())
+    }
+}
+
+/// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
+pub(crate) struct Membri {
+    names: Vec<String>,
+    sizes: Vec<f64>,
+    read: Function,
+}
+
+impl Membri {
+    pub(crate) fn new(
+        names: js_sys::Array,
+        sizes: &[f64],
+        read: Function,
+    ) -> Result<Membri, JsValue> {
+        let names: Vec<String> = names
+            .iter()
+            .map(|v| v.as_string().unwrap_or_default())
+            .collect();
+        if names.len() != sizes.len() || names.is_empty() {
+            return Err(error_json(
+                &mzlab_core::Error::new("err.file.notAccepted")
+                    .with("name", names.first().cloned().unwrap_or_default()),
+            ));
+        }
+        Ok(Membri {
+            names,
+            sizes: sizes.to_vec(),
+            read,
+        })
+    }
+
+    fn fileset(&self) -> FileSet {
+        let membri = self
+            .names
+            .iter()
+            .zip(&self.sizes)
+            .enumerate()
+            .map(|(i, (n, &s))| Membro {
+                nome: n.clone(),
+                dim: s as u64,
+                dati: Box::new(JsMember {
+                    read: self.read.clone(),
+                    i: i as u32,
+                }),
+            })
+            .collect();
+        FileSet { membri }
+    }
+
+    /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
+    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
+        let l = lettori::apri(self.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+        Ok(if centroid {
+            lettori_centroidi::centroidato(l)
+        } else {
+            l
+        })
+    }
+}
+
+pub(crate) struct Dataset {
+    pub(crate) membri: Membri,
+    pub(crate) centroid: bool,
+    pub(crate) l: Option<Box<dyn Lettore>>,
+    pub(crate) used: u64,
+}
+
+/// The datasets of the session and which sample of which dataset each slot is.
+#[derive(Default)]
+pub(crate) struct Nativi {
+    pub(crate) sets: HashMap<String, Dataset>,
+    pub(crate) slots: HashMap<u32, (String, usize)>,
+    pub(crate) shells: HashMap<(String, usize), Rc<Vec<u8>>>,
+    pub(crate) order: VecDeque<(String, usize)>,
+    pub(crate) clock: u64,
+}
+
+/// The bytes the routes read for a slot: the mzML through JS, or the `guscio` of a sample with its reader (`ReadAt::lettore`).
+pub(crate) enum Src<'a> {
+    Js(JsReader),
+    Nat {
+        g: Rc<Vec<u8>>,
+        l: &'a mut dyn Lettore,
+        c: usize,
+    },
+}
+
+impl ReadAt for Src<'_> {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        match self {
+            Src::Js(r) => r.read_at(off, buf),
+            Src::Nat { g, .. } => {
+                let s = g
+                    .get(off as usize..off as usize + buf.len())
+                    .ok_or_else(|| mzlab_core::Error::new("error.badIndex"))?;
+                buf.copy_from_slice(s);
+                Ok(())
+            }
+        }
+    }
+    fn lettore(&mut self) -> Option<(&mut dyn Lettore, usize)> {
+        match self {
+            Src::Js(_) => None,
+            Src::Nat { l, c, .. } => Some((&mut **l, *c)),
+        }
+    }
+}
+
+/// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
+pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsValue> {
+    n.clock += 1;
+    let open = n.sets.values().filter(|d| d.l.is_some()).count();
+    if open >= OPEN && n.sets.get(&ds).is_some_and(|d| d.l.is_none()) {
+        if let Some(old) = n
+            .sets
+            .values_mut()
+            .filter(|d| d.l.is_some())
+            .min_by_key(|d| d.used)
+        {
+            old.l = None;
+        }
+    }
+    let d = n
+        .sets
+        .get_mut(&ds)
+        .ok_or_else(|| error_json(&mzlab_core::Error::new("error.badIndex")))?;
+    d.used = n.clock;
+    if d.l.is_none() {
+        d.l = Some(d.membri.open(d.centroid)?);
+    }
+    match d.l.as_deref_mut() {
+        Some(l) => Ok(l),
+        None => Err(error_json(&mzlab_core::Error::new("error.badIndex"))),
+    }
+}
+
+/// The samples of a dataset (`names`, `sizes`, `read(member, offset, length)`): JSON `{"format": id, "samples": [{"id", "name", "scans"}]}`.
+#[wasm_bindgen]
+pub fn native_samples(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+) -> Result<String, JsValue> {
+    use mzlab_core::json::Out;
+    let l = Membri::new(names, sizes, read)?.open(false)?;
+    let mut o = Out::default();
+    o.raw("{\"format\":")
+        .str(&format!("{:?}", l.formato()))
+        .raw(",\"samples\":[");
+    for (i, s) in l.campioni().iter().enumerate() {
+        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+            .int(i64::from(s.id))
+            .raw(",\"name\":")
+            .str(&s.nome)
+            .raw(",\"scans\":")
+            .int(s.scansioni as i64)
+            .raw("}");
+    }
+    o.raw("]}");
+    Ok(o.0)
+}
+
+/// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
+/// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
+/// 2 the scans are read and indexed, 3 the chromatograms and the index are written); JS follows how far each goes from the bytes it is asked for.
+/// Returns the statistics and the SHA-256 of the dataset as JSON.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn build_mzidx_native(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    name: &str,
+    centroid: bool,
+    write: Function,
+    budget_mb: u32,
+    phase: Function,
+) -> Result<String, JsValue> {
+    let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
+    let m = Membri::new(names, sizes, read)?;
+    let mut fs = m.fileset();
+    tell(1);
+    let impronte = upload::impronte(&mut fs).map_err(|e| error_json(&e))?;
+    let l = lettori::apri(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let mut l = if centroid {
+        lettori_centroidi::centroidato(l)
+    } else {
+        l
+    };
+    let c = c as usize;
+    tell(2);
+    let p = upload::prepare_lettore(&mut *l, c, &impronte, name).map_err(|e| error_json(&e))?;
+    tell(3);
+    let mut out = JsOutput { write };
+    let st = mzidx::build_lettore(&p.table, &mut *l, c, &mut out, (budget_mb as usize) << 20)
+        .map_err(|e| error_json(&e))?;
+    Ok(format!(
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\"}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, p.sha256
+    ))
+}
+
+/// The SRM traces of sample `c` of a dataset as `mzlab_core::srm::impacchetta` writes them, given once to `sink(Uint8Array)` (the MRM files of mzFinder: no mzML is made of them).
+#[wasm_bindgen]
+pub fn native_srm(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    centroid: bool,
+    sink: Function,
+) -> Result<(), JsValue> {
+    let mut l = Membri::new(names, sizes, read)?.open(centroid)?;
+    let mut t = SorgenteLettore {
+        l: &mut *l,
+        c: c as usize,
+    };
+    let v = mzlab_core::srm::leggi(&mut t).map_err(|e| error_json(&e))?;
+    let bytes = js_sys::Uint8Array::from(&mzlab_core::srm::impacchetta(&v)[..]);
+    sink.call1(&JsValue::NULL, &bytes).map(|_| ())
+}
+
+/// Sample `c` of a dataset as mzML («Scarica .mzML»), sent to `sink(Uint8Array)` piece by piece; `progress(done, total)` counts the spectra written.
+/// `centroid` as in `build_mzidx_native`: the mzML has the peaks the index was built from.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn native_to_mzml(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    centroid: bool,
+    sink: Function,
+    progress: Function,
+) -> Result<(), JsValue> {
+    let mut l = Membri::new(names, sizes, read)?.open(centroid)?;
+    let mut out = BlockWriter {
+        sink,
+        buf: Vec::new(),
+    };
+    let mut tell = |done: usize, total: usize| {
+        let _ = progress.call2(
+            &JsValue::NULL,
+            &(done as f64).into(),
+            &(total as f64).into(),
+        );
+    };
+    lettori_mzml::scrivi(&mut *l, c as usize, &mut out, &mut tell).map_err(|e| error_json(&e))?;
+    std::io::Write::flush(&mut out).map_err(|_| {
+        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
+    })
+}

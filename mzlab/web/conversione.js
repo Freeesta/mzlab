@@ -5,22 +5,35 @@
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
 const CONV = {
   files: new Map(),
+  made: new Map(),        // name -> mzML written on request for a sample of a maker's file (nativo.js)
   add(name, blob) { this.files.set(name, blob); },
-  has(name) { return this.files.has(name); },
-  get size() { return this.files.size; },
+  // the samples of the maker's files of this page: their mzML is written when it is asked for
+  native() { const rb = typeof window !== "undefined" && window.MZLAB_RUST; return rb && rb.nativeNames ? rb.nativeNames() : []; },
+  has(name) { return this.files.has(name) || this.native().includes(name); },
+  get size() { return new Set([...this.files.keys(), ...this.native()]).size; },
+  // the mzML of a sample of a maker's file, written now into the box of the loading (a panel with the scans done and the cancel button); null if it was cancelled or failed
+  async make(name) {
+    const rb = window.MZLAB_RUST, box = document.getElementById("up");
+    if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
+    const f = (typeof ST !== "undefined" && ST.files || []).find(x => x.name === name), g = ConvUI.group(box, [1]), ui = g.start(1, name);
+    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, p => ui.update(p), g.signal); ui.done(); g.end(); this.made.set(name, blob); return blob; }
+    catch (e) { if (e.cancelled) { ui.done(); g.end(); } else ui.fail(e.json ? I18N.err(e.json).message : e.message); return null; }
+  },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
   async download(name) {
-    const blob = this.files.get(name); if (!blob) return false;
+    let blob = this.files.get(name) || this.made.get(name);
+    if (!blob && this.native().includes(name)) blob = await this.make(name);
+    if (!blob) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !window.MZLAB_SAVE_MZML) return false;
-      try { return !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); }
+      try { const ok = !!(await window.MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
       catch (e) { const n = document.getElementById("up"); if (n) { const d = document.createElement("div"); d.className = "note"; d.textContent = I18N.t("conv.dl.needsApp"); n.appendChild(d); setTimeout(() => d.remove(), 12000); } return false; }
     }
     saveBlob(blob, name, 60000);
     return true;
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)
-  async downloadAll() { for (const n of [...this.files.keys()]) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
+  async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
 // the files being converted (the samples of a SCIEX .wiff), as rows of the list of the files (index.html renderFiles) from the moment their .wiff and .wiff.scan are paired
@@ -58,65 +71,72 @@ const CONVROWS = {
   },
 };
 
-// the panel of the running conversions, inside `box`: "File 1 of 2: name", a button to cancel, the phase (1/3 reading, 2/3 converting; 3/3 indexing is the
-// row that upload() shows next), a progress bar (role=progressbar) of the file, the numbers (scans, MB written, elapsed, time left), and with several files a
-// bar of the total. If no news arrives for 2 s it says it is still working (animated dot, still when the system asks for reduced motion); after 30 s it adds advice.
+// the panel of the running conversions, inside `box`: "File 1 of 2: name", a button to cancel, the phase as text ("Converting to mzML", then "Indexing" while the page builds the
+// .mzidx: g.index), ONE progress bar (role=progressbar) over the whole job (the conversion of all the files counts 3/4 of it, the indexing 1/4), and the numbers (scans, MB
+// written, time elapsed: no estimate of the time left). The digits are tabular and padded to a fixed width, so the text does not move when a number grows. If no news arrives
+// for 2 s it says it is still working (animated dot, still when the system asks for reduced motion); after 30 s it adds advice.
+const CONV_W = 0.75;         // share of the bar taken by the conversion; the rest is the indexing
+const FIG = "\u2007";        // figure space: as wide as a digit
+const convPad = (s, w) => String(s).padStart(w, FIG);
 const ConvUI = {
   group(box, sizes) {
-    const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController();
+    const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController(), t0 = Date.now();
     const el = document.createElement("div"); el.className = "convprog"; el.setAttribute("role", "group"); el.setAttribute("aria-label", T("conv.aria"));
     el.innerHTML = `<div class="cp-head"><b data-r="file"></b> <button type="button" class="sec sm" data-r="cancel"></button></div>
       <div class="cp-phase"><span data-r="phase" role="status" aria-live="polite"></span> <span class="cp-beat muted" data-r="beat" role="status" aria-live="polite"></span></div>
-      <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="bar"><i></i></div><div class="muted sm" data-r="detail"></div>
-      <div class="cp-total" data-r="totbox" hidden><div class="muted sm" data-r="totlab"></div><div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="tot"><i></i></div></div>`;
+      <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="bar"><i></i></div><div class="muted sm cp-num" data-r="detail"></div>`;
     const q = s => el.querySelector(`[data-r=${s}]`);
     const cancel = q("cancel"); cancel.textContent = T("conv.cancel"); cancel.title = cancel.ariaLabel = T("conv.cancel.title");
     cancel.onclick = () => { cancel.disabled = true; q("phase").textContent = T("conv.cancelling"); ctl.abort(); };
     box.appendChild(el);
+    const bar = q("bar"), fill = bar.querySelector("i");
+    const setBar = pc => { if (pc == null) { bar.removeAttribute("aria-valuenow"); fill.style.width = "0%"; } else { bar.setAttribute("aria-valuenow", String(pc)); fill.style.width = pc + "%"; } };
+    let beatStage = "", cur = -1, last = null, doneFrac = 0, stage = "converting", beat = "", changed = t0, key = "", phaseKey = "", indexed = new Map(), nIdx = 0, timer = null;
+    const idxMean = () => nIdx ? [...indexed.values()].reduce((a, b) => a + b, 0) / (100 * nIdx) : 0;
+    const show = () => {
+      const now = Date.now(), elapsed = convElapsed(now - t0), conv = stage === "indexing" ? 100 : convTotalPercent(sizes, Math.max(0, cur), convFraction(last));
+      const known = last && (last.copied != null || last.scansTotal), pc = (conv == null || !known && cur <= 0) && stage === "converting" ? null : Math.min(100, Math.floor(CONV_W * (conv || 0) + (1 - CONV_W) * 100 * idxMean()));
+      const lab = T(stage === "indexing" ? "conv.phase.indexing" : "conv.phase.converting");
+      if (lab !== phaseKey && !cancel.disabled) { phaseKey = lab; q("phase").textContent = lab; }
+      bar.setAttribute("aria-label", lab); setBar(pc);
+      let d;
+      if (stage === "indexing") d = T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
+      else if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
+      else if (last && last.scansTotal) {
+        const w = String(Math.round(last.scansTotal)).length, fp = convPercent(last);
+        const parts = [convPad(fp, 3) + "%", ...(last.several ? [] : [T("conv.detail.scans", { done: convPad(I18N.fix(last.scans, 0), w + Math.floor((w - 1) / 3)), total: I18N.fix(last.scansTotal, 0) })]),
+          T("conv.detail.written", { mb: convPad(convMB(last.written), 6) }), T("conv.detail.elapsed", { elapsed: convPad(elapsed, 5) })];
+        d = parts.join(" · ");
+      } else d = T("conv.detail.wait", { elapsed });
+      q("detail").textContent = d;
+      const quiet = now - changed, b = quiet >= 30000 ? "stall" : quiet >= 2000 ? "beat" : "";
+      if (b !== beat || b === "beat" && beatStage !== stage) { beatStage = stage; beat = b; q("beat").innerHTML = b ? `<span class="cp-spin" aria-hidden="true"></span> <span data-r="beattxt"></span>` : ""; if (b) q("beattxt").textContent = T(b === "stall" ? "conv.stall" : stage === "indexing" ? "conv.beat.indexing" : "conv.beat"); }
+    };
+    const tick = () => { if (!timer) timer = setInterval(show, 1000); };
+    const touch = k => { if (k !== key) { key = k; changed = Date.now(); } };
+    show();
     return {
       signal: ctl.signal,
       start(i, name) {
-        const t0 = Date.now();
-        let last = null, phase = "", beat = "", changed = t0, key = "", samples = [];
+        cur = i - 1; last = null; stage = "converting";
         q("file").textContent = T("conv.file", { i, n, name });
-        q("totbox").hidden = n < 2;
-        const bar = q("bar"), fill = bar.querySelector("i"), tot = q("tot");
-        const setBar = (b, f, pc) => { if (pc == null) { b.removeAttribute("aria-valuenow"); f.style.width = "0%"; } else { b.setAttribute("aria-valuenow", String(pc)); f.style.width = pc + "%"; } };
-        const show = () => {
-          const now = Date.now(), ph = convPhase(last), pc = convPercent(last), elapsed = convElapsed(now - t0);
-          const lab = T(ph === "reading" ? "conv.phase.reading" : "conv.phase.converting");
-          if (ph !== phase && !cancel.disabled) { phase = ph; q("phase").textContent = lab; }
-          bar.setAttribute("aria-label", lab);
-          setBar(bar, fill, pc);
-          let d;
-          if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
-          else if (ph === "converting") {
-            const eta = convEta(samples, now), parts = [pc + "%", ...(last.several ? [] : [T("conv.detail.scans", { done: I18N.fix(last.scans, 0), total: I18N.fix(last.scansTotal, 0) })]),
-              T("conv.detail.written", { mb: convMB(last.written) }), T("conv.detail.elapsed", { elapsed })];
-            if (eta != null) parts.push(T("conv.detail.eta", { eta: convElapsed(eta * 1000) }));
-            d = parts.join(" · ");
-          } else d = T("conv.detail.wait", { elapsed });
-          q("detail").textContent = d;
-          if (n > 1) { const tp = convTotalPercent(sizes, i - 1, convFraction(last)); q("totlab").textContent = T("conv.total", { pc: tp == null ? 0 : tp }); setBar(tot, tot.querySelector("i"), tp); tot.setAttribute("aria-label", T("conv.total", { pc: tp == null ? 0 : tp })); }
-          const quiet = now - changed, b = quiet >= 30000 ? "stall" : quiet >= 2000 ? "beat" : "";
-          if (b !== beat) { beat = b; q("beat").innerHTML = b ? `<span class="cp-spin" aria-hidden="true"></span> <span data-r="beattxt"></span>` : ""; if (b) q("beattxt").textContent = T(b === "stall" ? "conv.stall" : "conv.beat"); }
-        };
-        show();
-        const timer = setInterval(show, 1000);
+        tick(); show();
         return {
-          update(p) {
-            const k = [p.scans, p.read, p.written, p.copied].join(",");
-            if (k !== key) { key = k; changed = Date.now(); }
-            last = p;
-            if (p.scansTotal) { const f = convFraction(p), z = samples[samples.length - 1]; if (!z || f !== z.f) { samples.push({ t: Date.now(), f }); if (samples.length > 60) samples.shift(); } }
-            show();
-          },
+          update(p) { touch([p.scans, p.read, p.written, p.copied].join(",")); last = p; show(); },
           title(text) { q("file").textContent = text; },       // replaces "File i of n: name" (conversions running together: "Samples converted: 3 of 23")
-          done() { clearInterval(timer); },
-          fail(msg) { clearInterval(timer); el.remove(); const f = document.createElement("div"); f.className = "fail"; f.textContent = name + ": " + msg; box.appendChild(f); },
+          done() { doneFrac = (cur + 1) / n; },
+          fail(msg) { clearInterval(timer); timer = null; el.remove(); const f = document.createElement("div"); f.className = "fail"; f.textContent = name + ": " + msg; box.appendChild(f); },
         };
       },
-      end() { el.remove(); },
+      // the page builds the index of each converted file (index.html upload): `pc` 0..100 of `name`; the bar goes on from where the conversion left it
+      index(name, pc) {
+        if (!indexed.has(name)) nIdx++;
+        indexed.set(name, Math.max(indexed.get(name) || 0, pc));        // never backwards: the builder reads the file more than once
+        if (stage !== "indexing") { stage = "indexing"; q("file").textContent = ""; cancel.hidden = true; }
+        touch("idx" + [...indexed.values()].join(","));
+        tick(); show();
+      },
+      end() { clearInterval(timer); timer = null; el.remove(); },
     };
   },
 };
@@ -149,15 +169,6 @@ function convTotalPercent(sizes, i, frac) {
   const before = sizes.slice(0, i).reduce((a, b) => a + b, 0);
   return Math.min(100, Math.floor(100 * (before + sizes[i] * frac) / all));
 }
-// seconds left from samples [{ t (ms), f (fraction 0..1) }] of the last seconds (moving average over the last 15 s); null until the
-// samples span 4 s and have moved forward
-function convEta(samples, now) {
-  const w = (samples || []).filter(x => now - x.t <= 15000);
-  if (w.length < 2) return null;
-  const a = w[0], z = w[w.length - 1], span = z.t - a.t, df = z.f - a.f;
-  if (span < 4000 || df <= 0) return null;
-  return Math.ceil((1 - z.f) / (df / span) / 1000 - 1e-6);
-}
 // name of the mzML made from a .raw: "x.raw" -> "x.mzML"; when that name is taken (a real x.mzML in the same loading or already open) the extension
 // stays in the key, "x.raw.mzML", so both files are listed. `taken`: names (any case) that are already in use.
 function convName(rawName, taken) {
@@ -170,11 +181,11 @@ function wiffName(stem, sample, several, taken) {
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index" }[state] || "conv.row.wait"; }
+function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convPhase, convFraction, convPercent, convTotalPercent, convEta, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };

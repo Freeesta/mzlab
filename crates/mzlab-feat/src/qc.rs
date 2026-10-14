@@ -56,7 +56,7 @@ fn cv(v: &[f64]) -> f64 {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    v.sort_by(f64::total_cmp);
+    crate::sortc::by(&mut v, f64::total_cmp);
     match v.len() {
         0 => f64::NAN,
         n if n % 2 == 1 => v[n / 2],
@@ -106,6 +106,28 @@ pub fn standard_cv(t: &Aligned, samples: &[Sample], method: &Method) -> Option<f
     (v.len() >= 2).then(|| cv(&v))
 }
 
+/// Rows that have a peak in at least one blank: (blank files, rows considered, rows with a peak in a blank). The rows are those of the view, or all of the table.
+pub fn blank_share(t: &Aligned, samples: &[Sample], view: Option<&View>) -> (usize, usize, usize) {
+    let blanks: Vec<usize> = (0..t.n_files).filter(|&k| samples[k].kind == "blank").collect();
+    let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
+    let hit = rows.iter().filter(|&&r| blanks.iter().any(|&k| measured(t, r as usize, k).is_some_and(|a| a > 0.0))).count();
+    (blanks.len(), rows.len(), hit)
+}
+
+/// M+1/M of the rows (of the view, or all) that have one: (rows with it, minimum, median, maximum). None when the table has no summaries of the rows.
+pub fn isotope_ratio(t: &Aligned, view: Option<&View>) -> Option<(usize, f64, f64, f64)> {
+    if t.meta.is_empty() {
+        return None;
+    }
+    let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
+    let v: Vec<f64> = rows.iter().map(|&r| f64::from(t.meta.iso_m1[r as usize])).filter(|x| x.is_finite()).collect();
+    if v.is_empty() {
+        return None;
+    }
+    let (lo, hi) = (v.iter().copied().fold(f64::INFINITY, f64::min), v.iter().copied().fold(f64::NEG_INFINITY, f64::max));
+    Some((v.len(), lo, median(v), hi))
+}
+
 /// The `qc/1` document: per file the counts and the total, per condition the agreement of the replicates, and the stability of the standard.
 pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
     let mut j = Out::default();
@@ -126,6 +148,20 @@ pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
     j.raw("],\"standard_cv\":");
     let method = view.map(|v| v.method.clone());
     j.opt(method.and_then(|m| standard_cv(t, samples, &m)));
-    j.raw("}");
+    let (nb, n, hit) = blank_share(t, samples, view);
+    j.raw(",\"bianchi\":{\"file\":").int(nb as i64).raw(",\"righe\":").int(n as i64).raw(",\"righe_con_picco\":").int(hit as i64).raw("}");
+    j.raw(",\"m1_su_m\":");
+    match isotope_ratio(t, view) {
+        Some((n, lo, med, hi)) => j.raw("{\"righe\":").int(n as i64).raw(",\"min\":").num(lo).raw(",\"mediana\":").num(med).raw(",\"max\":").num(hi).raw("}"),
+        None => j.raw("null"),
+    };
+    j.raw(",\"scartate\":[");
+    if let Some(v) = view {
+        for (i, r) in v.rules.iter().enumerate() {
+            let n = v.why.iter().filter(|&&w| w as usize == i + 1).count();
+            j.raw(if i > 0 { ",{\"regola\":" } else { "{\"regola\":" }).str(r.name()).raw(",\"righe\":").int(n as i64).raw("}");
+        }
+    }
+    j.raw("]}");
     j.0
 }

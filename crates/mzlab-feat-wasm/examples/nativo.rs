@@ -1,11 +1,11 @@
-//! The pipeline of the bridge on files, natively: the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
+//! The pipeline of the bridge on files, natively (the recipe fits the first index: high or unit resolution, as the site chooses it): the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
 //!
 //!     cargo run --release -p mzlab-feat-wasm --example nativo -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N]
 //!
 //! With `--budget-mb` the steps run as the browser runs them under that memory budget: outputs written at offsets to files (hashed on the way), the series
 //! read file by file, slabs and streams when the budget asks for them. The lines printed are the same as without it.
 //!
-//! Writes `<name>.mzfeatf` for every file and `series.mzfeat`, and prints the SHA-256 of each; `--parent FORMULA --rules regole_tp.json` adds the
+//! Writes `<name>.mzfeatf` for every file and `series.mzfeat`, and prints the SHA-256 of each; `--parent FORMULA [--smiles SMILES] --rules regole_tp.json` adds the
 //! hypotheses and the graph of the proofs (`series_evid.mzfeat`; times from `tNNNmin` in the name, `--parent-mz M --parent-rt R` for the parent row).
 
 use std::fs::File;
@@ -59,13 +59,25 @@ impl WriteAt for FileSink {
 }
 
 fn sink(out: &str, name: &str) -> Hashing<FileSink> {
-    Hashing::new(FileSink(File::create(Path::new(out).join(name)).expect("create")))
+    Hashing::new(FileSink(
+        File::create(Path::new(out).join(name)).expect("create"),
+    ))
 }
 
 /// The pipeline under a budget, outputs to files; prints the same lines.
 #[allow(clippy::too_many_arguments)]
-fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, rules: &str, pmz: f64, prt: f64) {
-    let r = run::recipe_from_json(recipe).expect("recipe");
+fn budgeted(
+    files: &[String],
+    recipe: &str,
+    out: &str,
+    mb: f64,
+    parent: &str,
+    structure: &str,
+    rules: &str,
+    pmz: f64,
+    prt: f64,
+) {
+    let r = run::recipe_for(recipe, &mut open(&files[0])).expect("recipe");
     let budget = MemBudget::mb(mb);
     for p in files {
         let mut s = sink(out, &format!("{}.mzfeatf", base(p)));
@@ -77,7 +89,8 @@ fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, ru
         .map(|p| std::fs::read(Path::new(out).join(format!("{}.mzfeatf", base(p)))).expect("read"))
         .collect();
     let mut s = sink(out, "series.mzfeat");
-    run::align_to(&mut stored, &budget, &r, |k| Ok(open(&files[k])), &mut s).unwrap_or_else(|e| panic!("align: {e}"));
+    run::align_to(&mut stored, &budget, &r, |k| Ok(open(&files[k])), &mut s)
+        .unwrap_or_else(|e| panic!("align: {e}"));
     println!("series.mzfeat {}", s.finish().2);
     if parent.is_empty() {
         return;
@@ -85,16 +98,21 @@ fn budgeted(files: &[String], recipe: &str, out: &str, mb: f64, parent: &str, ru
     let mut ix: Vec<_> = files.iter().map(|p| open(p)).collect();
     let rt = prt.is_finite().then_some(prt);
     let rules = std::fs::read(rules).expect("rules");
-    let h = run::hypotheses_stored(&mut ix, &mut stored, &rules, parent, rt, &r).expect("hypotheses");
+    let h = run::hypotheses_stored(&mut ix, &mut stored, &rules, structure, parent, rt, &r)
+        .expect("hypotheses");
     // the proofs run on the state as another worker would receive it
     let h = mzlab_feat_wasm::state::load(&mzlab_feat_wasm::state::dump(&h)).expect("state");
-    println!("hypotheses {} tried, {} found", h.result.tried, h.result.found);
+    println!(
+        "hypotheses {} tried, {} found",
+        h.result.tried, h.result.found
+    );
     let mins: Vec<f64> = files.iter().map(|p| minutes(&base(p))).collect();
     let par = (pmz.is_finite() && prt.is_finite()).then_some((pmz, prt));
     let mut table = File::open(Path::new(out).join("series.mzfeat")).expect("table");
     let size = table.metadata().expect("size").len();
     let mut s = sink(out, "series_evid.mzfeat");
-    run::evidence_to(&mut table, size, &h, &mins, par, &r, &budget, &mut s).unwrap_or_else(|e| panic!("evidence: {e}"));
+    run::evidence_to(&mut table, size, &h, &mins, par, &r, &budget, &mut s)
+        .unwrap_or_else(|e| panic!("evidence: {e}"));
     println!("series_evid.mzfeat {}", s.finish().2);
 }
 
@@ -102,6 +120,7 @@ fn main() {
     let (mut files, mut recipe, mut out) = (Vec::<String>::new(), String::new(), String::new());
     let (mut parent, mut rules, mut pmz, mut prt) =
         (String::new(), String::new(), f64::NAN, f64::NAN);
+    let mut structure = String::new();
     let mut budget_mb = f64::NAN;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -110,6 +129,9 @@ fn main() {
             "--recipe" => recipe = next(),
             "--parent" => parent = next(),
             "--rules" => rules = next(),
+            "--smiles" => {
+                structure = mzlab_feat::chem::grafo::analyse_json(&next()).expect("smiles")
+            }
             "--parent-mz" => pmz = next().parse().expect("number"),
             "--parent-rt" => prt = next().parse().expect("number"),
             "--budget-mb" => budget_mb = next().parse().expect("number"),
@@ -118,9 +140,9 @@ fn main() {
         }
     }
     if budget_mb.is_finite() {
-        return budgeted(&files, &recipe, &out, budget_mb, &parent, &rules, pmz, prt);
+        return budgeted(&files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt);
     }
-    let r = run::recipe_from_json(&recipe).expect("recipe");
+    let r = run::recipe_for(&recipe, &mut open(&files[0])).expect("recipe");
     let t0 = Instant::now();
     let mut stored = Vec::new();
     for p in &files {
@@ -142,7 +164,7 @@ fn main() {
     let fr: Vec<_> = feats.iter().collect();
     let rt = prt.is_finite().then_some(prt);
     let rules = std::fs::read(rules).expect("rules");
-    let h = run::hypotheses(&mut ix, &fr, &rules, &parent, rt, &r).expect("hypotheses");
+    let h = run::hypotheses(&mut ix, &fr, &rules, &structure, &parent, rt, &r).expect("hypotheses");
     println!(
         "hypotheses {} tried, {} found",
         h.result.tried, h.result.found

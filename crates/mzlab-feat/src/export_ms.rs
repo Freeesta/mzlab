@@ -31,8 +31,18 @@ fn peaks(out: &mut Vec<String>, s: &Ms2) {
 
 /// MGF with one block per row that has a spectrum; the comment lines (`#`) say what table it comes from.
 pub fn mgf(c: &Ctx, spectra: &[Option<Ms2>]) -> String {
+    mgf_with(c, spectra, None)
+}
+
+/// The MGF of a unit-resolution table: the same blocks, with a comment that tells the destination the masses are nominal (chosen explicitly, never by default).
+pub fn mgf_unit(c: &Ctx, spectra: &[Option<Ms2>]) -> String {
+    mgf_with(c, spectra, Some("# unit resolution, tolerance 0.5 Da"))
+}
+
+fn mgf_with(c: &Ctx, spectra: &[Option<Ms2>], note: Option<&str>) -> String {
     let (charge, ionmode) = mode(c.polarity);
     let mut out = c.header();
+    out.extend(note.map(str::to_string));
     for (&r, s) in c.rows().iter().zip(spectra) {
         let Some(s) = s.as_ref().filter(|s| !s.mz.is_empty()) else { continue };
         let id = c.table.id(r);

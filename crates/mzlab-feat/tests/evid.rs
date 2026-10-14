@@ -65,7 +65,12 @@ fn steps_of_the_table() {
         Some(5.0),
         "the lowest step when none is reached"
     );
-    assert_eq!(t.grade(Kind::Controls, 1.0, None).threshold, None);
+    let ctl = |fc: f64| t.grade(Kind::Controls, fc, None).points;
+    assert_eq!(
+        (ctl(3.5), ctl(1.5), ctl(0.5), ctl(f64::NAN)),
+        (2.0, 1.0, 0.0, 0.0),
+        "the controls weigh: 8 times over the blank, 2 times"
+    );
     assert_eq!((t.mass_ppm, t.ms2_margin), (5.0, 0.05));
 }
 
@@ -290,4 +295,20 @@ fn a_file_without_points_or_of_another_format_is_refused() {
     )
     .is_err());
     assert!(PointsTable::parse(b"not json").is_err());
+}
+
+#[test]
+fn the_unit_table_uses_windows_in_da() {
+    let hr = table();
+    assert_eq!(hr.window(5.0), 5.0);
+    let unit = table().with_unit();
+    assert!(unit.unit);
+    assert_eq!(
+        unit.window(5.0),
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    );
+    assert_eq!(
+        unit.mass_ppm,
+        mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL)
+    );
 }

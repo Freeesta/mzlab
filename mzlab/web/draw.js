@@ -3,6 +3,10 @@
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
 // Module script; helpers come from explore.js (window).
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
+import { applyFont, mountFont } from "./disegno-font.js";
+import { mountBar } from "./disegno-barra.js";
+import { fragmentItems } from "./disegno-frammenti.js";
+import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 let OCL = null;
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -32,9 +36,9 @@ function start() {
     startTimeout = setTimeout(() => { removeEventListener("message", on); starting = null; reject(new Error(I18N.t("draw.error.ketcherNotStarted"))); }, 60000);
   });
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
-  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
-    k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
-    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
+  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); });
+    k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
+    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
@@ -62,6 +66,34 @@ function start() {
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
+let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
+// zoom in / zoom out / reset (100 % and centred) next to the centre button: buttons, no plain-key shortcuts (Ketcher uses «+» and «-» for the charge)
+function addZoomButtons(d, fr, fullBtn, btn) {
+  const ZB = [["zoom-in-tp", "draw.zoom.in", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/>', () => stepZoom(1.25)],
+              ["zoom-out-tp", "draw.zoom.out", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6"/>', () => stepZoom(0.8)],
+              ["zoom-reset-tp", "draw.zoom.reset", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/><text x="11" y="13.6" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif">1:1</text>', () => { fitZoom(K, fr); drawLabels(); }]];
+  let after = btn;
+  ZB.forEach(([id, key, ico, fn]) => {
+    if (d.querySelector('[data-testid="' + id + '"]')) return;
+    const b = d.createElement("button");
+    b.setAttribute("data-testid", id); b.setAttribute("type", "button");
+    b.setAttribute("title", I18N.t(key)); b.setAttribute("aria-label", I18N.t(key));
+    b.className = fullBtn.className;
+    b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + ico + '</svg>';
+    b.onclick = fn;
+    after.after(b); after = b;
+  });
+}
+// the «Show panels» pill (outside the iframe, top right) is centred on the top bar; the bar keeps a free strip under it so no button is covered (icon only on a narrow editor)
+function placePill(d) {
+  const pill = document.querySelector("#side-toggle"), corner = document.querySelector("#side-corner"), top = d.querySelector('[class*="App-module_top"]');
+  if (!pill || !corner || !top) return;
+  const inCorner = pill.parentNode === corner;
+  pill.classList.toggle("ico", inCorner && d.defaultView.innerWidth < 600);
+  const tb = top.getBoundingClientRect();
+  corner.style.top = Math.max(0, Math.round(tb.top + (tb.height - pill.offsetHeight) / 2)) + "px";
+  d.documentElement.style.setProperty("--tpill", inCorner ? pill.offsetWidth + 14 + "px" : "0px");
+}
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(fr) {
   try {
@@ -69,8 +101,10 @@ function hideMacro(fr) {
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
-      '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important}' +
+      '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important;padding-right:var(--tpill,0px)!important}' +
       '[class*="App-module_top"] kbd{display:none!important}' +
+      '[data-testid="fullscreen-mode-button"],[data-testid="center-struct-button"],[data-testid="zoom-in-tp"],[data-testid="zoom-out-tp"],[data-testid="zoom-reset-tp"]{display:inline-flex!important;align-items:center;justify-content:center}' +
+      '[data-testid="fullscreen-mode-button"] svg,[data-testid="center-struct-button"] svg,[data-testid="zoom-in-tp"] svg,[data-testid="zoom-out-tp"] svg,[data-testid="zoom-reset-tp"] svg{margin:0!important;display:block}' +
       '[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
       // the quick rings (Ketcher's bottom bar) become a column on the far left: the bottom row disappears and the canvas gets the whole height
       '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
@@ -121,6 +155,7 @@ function hideMacro(fr) {
         }
       };
       fullBtn.after(btn);
+      addZoomButtons(d, fr, fullBtn, btn);
     }
 
     // Context menu on canvas / molecule
@@ -135,7 +170,7 @@ function hideMacro(fr) {
       (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = await K.getSmiles(); } catch (_) {} }
+      if (!smi) { try { smi = plainSmiles(await K.getSmiles()); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
@@ -161,6 +196,10 @@ function hideMacro(fr) {
         const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
         m.appendChild(brk);
       }
+      for (const it of [...await partialItems(K, ev, set, fragHelpers).catch(() => []), ...await fragmentItems(K, ev, fragHelpers).catch(() => [])]) {   // brackets with a delta (disegno-parziali.js); the two pieces of the bond, all cuts
+        const row = document.createElement("div"); row.textContent = it.text; if (it.title) row.title = it.title;
+        row.onclick = () => { m.hidden = true; if (it.run) it.run(); }; m.appendChild(row);
+      }
       m.hidden = false;
       m.style.left = Math.min(mx, innerWidth - 240) + "px";
       m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
@@ -168,17 +207,18 @@ function hideMacro(fr) {
 
     const fit = () => {
       const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches, root = d.documentElement;
-      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.15, (w - 24) / 1020)).toFixed(3)));
+      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.05, (w - 24) / 1020)).toFixed(3)));
       // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
       root.style.setProperty("--ksz", "1");
       const need = Math.max(300, ...['[class*="LeftToolbar-module_buttons"]', '[class*="RightToolbar-module_buttons"]', '[class*="BottomToolbar-module_group"]']
-        .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 : 0; }));
+        .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 + (q.includes("Left") ? (d.getElementById("tp-bar")?.offsetHeight || 0) : 0) : 0; }));
       const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
-      root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.4, (h - th - 24) / need)).toFixed(3)));
+      root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
-    kFit = fit;
-    fit(); d.defaultView.addEventListener("resize", fit);
+    const fit0 = fit; kFit = () => { fit0(); placePill(d); };
+    fit(); placePill(d); d.defaultView.addEventListener("resize", () => kFit());
     d.head.appendChild(st);
+    kBar = mountBar(d, k => I18N.t(k));
     applyTools();
   } catch (_) { /* not critical */ }
 }
@@ -216,9 +256,10 @@ function applyTools() {
     const w = d.defaultView;
     d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach(g => {
       g.style.display = "";
-      const bs = [...g.querySelectorAll("[data-testid]")];
-      if (bs.length === 0 || bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
+      const bs = g.matches("[data-testid]") ? [g] : [...g.querySelectorAll("[data-testid]")];          // a bare button (periodic table) is its own group
+      if (bs.length === 0 || bs.every(b => b.getClientRects().length === 0)) g.style.display = "none";   // no box = hidden by the sheet or by a parent
     });
+    if (kBar) kBar.update(ch);
     kFit();
     const kl = Q("#kload"); if (kl) kl.hidden = true;
   } catch (_) { /* editor not loaded yet: applied when it starts */ }
@@ -233,7 +274,7 @@ function toolCard() {
   Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
   Q("#tools-def").onclick = () => { try { localStorage.removeItem(TKEY); } catch (_) { /* nothing saved */ } applyTools(); toolCard(); };
 }
-toolCard();
+toolCard(); mountFont(Q("#font-body"), () => K, k => I18N.t(k));
 // Zoom preset: 100%. Re-centres if there is content.
 function fitZoom(k, fr) {
   try {
@@ -242,6 +283,14 @@ function fitZoom(k, fr) {
     try { k.editor.event.zoomChanged.dispatch(); } catch (_) { /* the «100 %» label of Ketcher is only updated by this event */ }
     const st = k.editor.struct();
     if (st && !st.isBlank() && typeof k.editor.zoomAccordingContent === "function") { k.editor.zoomAccordingContent(st); k.editor.centerStruct(); }
+  } catch (_) { /* default zoom */ }
+}
+function stepZoom(f) {
+  try {
+    const e = K && K.editor; if (!e || typeof e.zoom !== "function") return;
+    e.zoom(Math.min(4, Math.max(0.2, e.zoom() * f)));
+    try { e.event.zoomChanged.dispatch(); } catch (_) { /* the zoom label of Ketcher is only updated by this event */ }
+    drawLabels();
   } catch (_) { /* default zoom */ }
 }
 async function restore() {
@@ -320,6 +369,8 @@ function breakBonds(ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
+const fragHelpers = { pieces: () => pieces(), pieceMolfile: ids => pieceMolfile(ids), t: (k, p) => I18N.t(k, p), copy: s => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
+  num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o), ask: (q, d) => ask(EH(q), d), note: s => (window.toast ? toast(s) : dnote(s)) };
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
@@ -341,6 +392,7 @@ async function showInfo1() {
   await loadOCL();
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
   const all = pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) }));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;
@@ -475,6 +527,7 @@ function drawLabels() {
   if (!g) { g = doc.createElementNS(ns, "g"); g.id = "qqq-labels"; g.setAttribute("pointer-events", "none"); }
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
+  drawPartials(K, svg, sc);                               // brackets of the partial structures, always drawn
   if (!labelsOn()) return;
   // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
@@ -622,10 +675,11 @@ function noBackground(svgText) {
 }
 async function image(format) {
   await start();
-  const raw = await K.getKet(), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
+  const raw = ketWithoutPartials(await K.getKet()), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
+  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportPartials(K, svgText, po);       // brackets and Δ of the partial structures (disegno-parziali.js)
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
@@ -687,7 +741,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
+window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
 try { if (S.view === "draw") start(); } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/disegno, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -696,7 +750,7 @@ document.addEventListener("nbreset", () => {
   clearTimeout(timer);
   Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-a").checked = false; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
   Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
-  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; requestAnimationFrame(() => { drawLabels(); showInfo(); }); }
+  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; FRAME.next(() => { drawLabels(); showInfo(); }); }
 });
 
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
@@ -734,13 +788,13 @@ function labelMenu(ev, d, fr) {
 const SKEY = "qqq.disegno.riquadri";
 function sideApply(hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
-  const b = Q("#side-toggle"); b.textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
+  const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide"); b.setAttribute("aria-label", Q("#side-toggle .tl").textContent);
   Q(hidden ? "#side-corner" : "#side-row").appendChild(b);   // the button sits above the cards, or in the canvas corner when they are hidden
   try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
   setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
 }
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
-try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").textContent = I18N.t("draw.side.show"); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle .tl").textContent = I18N.t("draw.side.show"); Q("#side-toggle").setAttribute("aria-label", I18N.t("draw.side.show")); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
 function frameExtras(fr) {
   const d = fr.contentDocument; if (!d) return;

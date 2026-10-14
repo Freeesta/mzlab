@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Guided tour of the Dati view (low-resolution only).
 // Global object TOUR, no external libraries. Pure JS, accessible dialog and spotlight.
@@ -50,19 +51,13 @@ const TOUR = (() => {
   const STEPS_CAP1 = [
     {
       id: "file",
-      prep: () => {
-        // the file list is a drawer of the toolbar: the tour opens it for this step and closes it again when the step ends
-        if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
-          const wasOpen = BARRA.isOpen();
-          BARRA.show("file", { noFocus: true, instant: true });
-          return () => { if (!wasOpen) BARRA.close(false); };
-        }
-      },
+      prep: openFileDrawer,
       target: () => document.getElementById("sb-pane")
     },
     {
-      id: "schede",
-      target: () => document.getElementById("dtabs")
+      id: "gruppi",
+      prep: openFileDrawer,
+      target: () => document.querySelector("#flst .fgh")
     },
     {
       id: "tic",
@@ -96,7 +91,7 @@ const TOUR = (() => {
       },
       attesa: state => {
         const count = (typeof E !== "undefined" && E.panels) ? E.panels.filter(p => p.type === "xic").length : 0;
-        return count > state.count || document.querySelector(".pnl.xic") != null;
+        return count > state.count;
       }
     },
     {
@@ -140,6 +135,38 @@ const TOUR = (() => {
     }
   ];
 
+  // Disegno: elements of the Ketcher iframe have no rectangle in the page, so a target can be a stand-in that adds the offset of the iframe
+  const frameBox = sels => {
+    const fr = document.getElementById("kframe"), doc = fr instanceof HTMLIFrameElement ? fr.contentDocument : null;
+    const els = doc ? sels.map(q => doc.querySelector(q)).filter(Boolean) : [];
+    if (!fr || !els.length) return null;
+    return {
+      offsetParent: fr.offsetParent,
+      scrollIntoView: () => {},
+      getBoundingClientRect: () => {
+        const o = fr.getBoundingClientRect(), r = els.map(e => e.getBoundingClientRect());
+        const l = Math.min(...r.map(x => x.left)), t = Math.min(...r.map(x => x.top)), rr = Math.max(...r.map(x => x.right)), b = Math.max(...r.map(x => x.bottom));
+        return new DOMRect(o.left + l, o.top + t, rr - l, b - t);
+      }
+    };
+  };
+  const card = (/** @type {string} */ sel) => document.querySelector(sel)?.closest(".card") || null;
+  // the right-hand panels may be hidden by the student: the steps about them show them and hide them again when the step ends
+  function showSidePanels() {
+    const v = document.getElementById("v-draw"), b = document.getElementById("side-toggle");
+    if (v && b && v.classList.contains("noside")) { b.click(); return () => { if (!v.classList.contains("noside")) b.click(); }; }
+  }
+  const STEPS_D = [
+    { id: "d_tela", target: () => document.getElementById("kframe") },
+    { id: "d_zoom", target: () => frameBox(['[data-testid="zoom-in-tp"]', '[data-testid="zoom-out-tp"]', '[data-testid="zoom-reset-tp"]']) },
+    { id: "d_riquadri", target: () => document.getElementById("side-toggle") },
+    { id: "d_etichette", prep: showSidePanels, target: () => card("#lb-f") },
+    { id: "d_proprieta", prep: showSidePanels, target: () => document.getElementById("prop-card") },
+    { id: "d_parziali", target: () => document.getElementById("kframe") },
+    { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
+  ];
+  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? STEPS_CAP1 : cap === 3 ? STEPS_D : STEPS_CAP2;
+
   let active = false;
   let curCap = 1;
   let curStep = 0;
@@ -149,20 +176,28 @@ const TOUR = (() => {
   let currentTargetEl = null;
   let curLeave = null;      // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
 
+  // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
+  function openFileDrawer() {
+    if (window.BARRA && BARRA.isDataView() && !BARRA.isOpen("file")) {
+      const wasOpen = BARRA.isOpen();
+      BARRA.show("file", { noFocus: true, instant: true });
+      return () => { if (!wasOpen) BARRA.close(false); };
+    }
+  }
   const isReducedMotion = () => {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   };
 
   let memState = null;   // fallback when localStorage is unavailable: the invitation must not return at every step
   const readState = () => {
-    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return v; } catch (_) {}
+    try { const v = localStorage.getItem(STORAGE_KEY); if (v) return v; } catch (_) { /* storage blocked: the tour state is simply not remembered */ }
     return memState;
   };
   const saveState = status => {
     memState = status;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ stato: status, data: new Date().toISOString() }));
-    } catch (_) {}
+    } catch (_) { /* storage blocked: the tour state is simply not saved */ }
   };
 
   const ensureStyles = () => {
@@ -202,16 +237,16 @@ const TOUR = (() => {
         transform: rotate(45deg);
       }
       #tour-dialog.tour-side-bottom .tour-arrow {
-        top: -6px; left: 24px; border-right: none; border-bottom: none;
+        top: -6px; left: var(--ta, 24px); border-right: none; border-bottom: none;
       }
       #tour-dialog.tour-side-top .tour-arrow {
-        bottom: -6px; left: 24px; border-left: none; border-top: none;
+        bottom: -6px; left: var(--ta, 24px); border-left: none; border-top: none;
       }
       #tour-dialog.tour-side-right .tour-arrow {
-        left: -6px; top: 20px; border-top: none; border-right: none;
+        left: -6px; top: var(--ta, 20px); border-top: none; border-right: none;
       }
       #tour-dialog.tour-side-left .tour-arrow {
-        right: -6px; top: 20px; border-bottom: none; border-left: none;
+        right: -6px; top: var(--ta, 20px); border-bottom: none; border-left: none;
       }
       #tour-dialog.tour-side-bottom-dock .tour-arrow {
         display: none;
@@ -357,13 +392,17 @@ const TOUR = (() => {
     dlg.style.top = pos.top + "px";
     dlg.style.left = pos.left + "px";
     dlg.className = "tour-side-" + pos.side;
+    // the arrow points at the centre of the target (kept inside the bubble)
+    const horiz = pos.side === "bottom" || pos.side === "top";
+    const aim = horiz ? r.left + r.width / 2 - pos.left : r.top + r.height / 2 - pos.top, len = horiz ? dlgW : dlgH;
+    dlg.style.setProperty("--ta", Math.round(Math.max(10, Math.min(aim, len - 20)) - 5) + "px");
   };
 
   let rafScroll = null;
   const onScrollOrResize = () => {
     if (!active) return;
-    if (rafScroll) cancelAnimationFrame(rafScroll);
-    rafScroll = requestAnimationFrame(updatePosition);
+    if (rafScroll) FRAME.cancel(rafScroll);
+    rafScroll = FRAME.next(updatePosition);
   };
 
   const stopProvaTimer = () => {
@@ -376,7 +415,7 @@ const TOUR = (() => {
 
   const renderStep = () => {
     stopProvaTimer();
-    const list = curCap === 1 ? STEPS_CAP1 : STEPS_CAP2;
+    const list = stepsOf(curCap);
     if (curStep >= list.length) {
       if (curCap === 1) {
         TOUR.continua();
@@ -403,7 +442,7 @@ const TOUR = (() => {
 
     const totalSteps = list.length;
     const stepNumber = curStep + 1;
-    const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : "tour.cap2");
+    const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : curCap === 3 ? "tour.cap3" : "tour.cap2");
     const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
     const titleText = I18N.t(`tour.${step.id}.titolo`);
     const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
@@ -411,7 +450,7 @@ const TOUR = (() => {
 
     const dlg = getDialogEl();
     const isCap1End = curCap === 1 && curStep === list.length - 1;
-    const isCap2End = curCap === 2 && curStep === list.length - 1;
+    const isCap2End = curCap !== 1 && curStep === list.length - 1;
 
     let tryHtml = "";
     if (step.prova && provaText) {
@@ -436,7 +475,7 @@ const TOUR = (() => {
         <button type="button" id="tour-btn-fine">${I18N.t("tour.fine")}</button>
       `;
     } else {
-      const backDisabled = (curCap === 1 && curStep === 0) ? "disabled" : "";
+      const backDisabled = ((curCap === 1 || curCap === 3) && curStep === 0) ? "disabled" : "";
       buttonsHtml = `
         <button type="button" id="tour-btn-back" ${backDisabled}>${I18N.t("tour.indietro")}</button>
         <button type="button" id="tour-btn-next">${I18N.t("tour.avanti")}</button>
@@ -557,10 +596,13 @@ const TOUR = (() => {
       `;
       document.body.appendChild(div);
 
+      let idle = 0;
       const closeInv = () => {
+        clearTimeout(idle);
         if (div.parentNode) div.remove();
         document.removeEventListener("keydown", onInvKeyDown);
       };
+      idle = setTimeout(closeInv, 60000);      // no answer within a minute counts as «Not now» (the invitation is already marked as offered)
 
       const onInvKeyDown = e => {
         if (e.key === "Escape") {
@@ -569,7 +611,8 @@ const TOUR = (() => {
       };
 
       document.addEventListener("keydown", onInvKeyDown);
-      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) {}
+      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the invitation works without it */ }
+      ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));      // whoever is reading or choosing keeps it
 
       div.querySelector("#tour-inv-si").onclick = () => {
         closeInv();
@@ -577,7 +620,7 @@ const TOUR = (() => {
       };
       div.querySelector("#tour-inv-no").onclick = () => {
         closeInv();
-        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) {}
+        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the settings panel works without it */ }
       };
     },
 
@@ -597,6 +640,7 @@ const TOUR = (() => {
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
+      document.addEventListener("fullscreenchange", onScrollOrResize);
       document.addEventListener("keydown", onKeyDown);
 
       renderStep();
@@ -614,7 +658,7 @@ const TOUR = (() => {
 
     avanti: () => {
       if (!active) return;
-      const list = curCap === 1 ? STEPS_CAP1 : STEPS_CAP2;
+      const list = stepsOf(curCap);
       if (curStep < list.length - 1) {
         curStep++;
         renderStep();
@@ -643,13 +687,16 @@ const TOUR = (() => {
       renderStep();
     },
 
+    // the tour of the Disegno view: its own chapter, and it leaves the state of the Dati invitation alone
+    disegno: () => TOUR.inizia(3, 0),
+
     fine: () => {
-      saveState("fatto");
+      if (curCap !== 3) saveState("fatto");
       TOUR.chiudi();
     },
 
     salta: () => {
-      saveState("saltato");
+      if (curCap !== 3) saveState("saltato");
       TOUR.chiudi();
     },
 
@@ -661,6 +708,7 @@ const TOUR = (() => {
 
       window.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
+      document.removeEventListener("fullscreenchange", onScrollOrResize);
       document.removeEventListener("keydown", onKeyDown);
 
       const spot = document.getElementById("tour-spotlight");
@@ -670,7 +718,7 @@ const TOUR = (() => {
 
       const targetFocus = (prevFocus && document.body.contains(prevFocus) && prevFocus !== document.body) ? prevFocus : document.getElementById("np-set");
       if (targetFocus) {
-        try { targetFocus.focus(); } catch (_) {}
+        try { targetFocus.focus(); } catch (_) { /* focus is only a help: the target may be hidden or removed */ }
       }
     },
 
@@ -684,7 +732,7 @@ const TOUR = (() => {
         if (typeof upload === "function") {
           await upload([file], "data");
         }
-        const op = document.getElementById("opbtn");
+        const op = /** @type {HTMLButtonElement | null} */ (document.getElementById("opbtn"));
         if (op && !op.disabled) {
           op.click();
         }
@@ -709,7 +757,7 @@ if (typeof window !== "undefined") {
   // «New session» / «Start from scratch»: the invitation is a user datum too, so it comes back with the clean slate
   const hard = window.qqHardReset;
   if (typeof hard === "function") {
-    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) {} return hard(); };
+    window.qqHardReset = () => { try { localStorage.removeItem("qqq.tour.lr"); } catch (_) { /* storage blocked: nothing to reset */ } return hard(); };
   }
 }
 

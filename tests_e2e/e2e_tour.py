@@ -21,14 +21,13 @@ try:
         pg.evaluate("try { localStorage.removeItem('qqq.tour.lr'); } catch (_) {}")
 
         # 1. First load of LR data shows invitation
-        pg.set_input_files("#pick", [TMP_LR])
-        pg.wait_for_timeout(800)
+        stage(pg, [TMP_LR])
         pg.click("text=Carica dati")
         ready(pg)
 
-        pg.wait_for_selector("#tour-invito", timeout=5000)
+        pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
         inv_text = pg.inner_text("#tour-invito")
-        assert "Prima volta qui?" in inv_text, inv_text
+        assert "Primo accesso? Un tour guidato degli strumenti." in inv_text and "minut" not in inv_text, inv_text
 
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()
@@ -67,13 +66,13 @@ try:
         assert ttl == "Qui ci sono i file caricati", ttl
         assert pg.get_attribute("#tour-btn-back", "disabled") is not None, "back disabled on step 1"
 
-        # Advance to Step 2: schede
+        # Advance to Step 2: gruppi
         pg.click("#tour-btn-next")
         pg.wait_for_timeout(300)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
         assert "Passo 2 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Una scheda per esperimento", ttl
+        assert ttl == "Un gruppo per esperimento", ttl
 
         # Test Back button returns to Step 1
         pg.click("#tour-btn-back")
@@ -235,6 +234,7 @@ try:
         # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=it"); ready(pg)
         pg.evaluate("localStorage.setItem('qqq.tour.lr', JSON.stringify({stato:'saltato'}))")
+        pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 8)):
             for i in range(n):
@@ -242,7 +242,7 @@ try:
                 hd = pg.inner_text("#tour-dialog .tour-hd")
                 assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
                 sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
-                assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i == 0), (cap, i)
+                assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i in (0, 1)), (cap, i)
                 if cap == 2 and i == 5:
                     bar = pg.evaluate("(()=>{const b=document.querySelector('#stbar').getBoundingClientRect();return [Math.round(b.left),Math.round(b.top)]})()")
                     assert abs(sp[0] - bar[0]) < 20 and abs(sp[1] - bar[1]) < 20, (sp, bar)      # the «barra» step points at the toolbar

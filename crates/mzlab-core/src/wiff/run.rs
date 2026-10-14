@@ -5,9 +5,11 @@ use std::io::Write;
 
 use super::window::Window;
 use super::{scan, Wiff};
+use crate::centroidi::{self, Buf};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::Kind;
+use crate::metodo::sha1_hex;
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter};
 
@@ -39,23 +41,47 @@ impl Wiff {
                 if p.mz.is_empty() {
                     continue;
                 }
-                let e = self.experiments.get(r.experiment).cloned().unwrap_or_default();
-                on(Spectrum {
-                    index: n,
-                    id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
-                    level: e.level.max(1),
-                    rt: r.time_min,
-                    polarity: self.polarity,
-                    profile: true,
-                    filter: String::new(),
-                    precursor: e.precursor,
-                    mz: p.mz,
-                    intensity: p.intensity.iter().map(|&v| v as f32).collect(),
-                    wide: Some(p.intensity),
-                })?;
+                on(self.spectrum_of(n, r, p))?;
                 n += 1;
             } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
                 let m = &mut mrm[r.experiment];
+                m.time.push(r.time_min);
+                m.tic.push(r.tic);
+                m.cols.resize(v.len(), Vec::new());
+                v.iter().zip(&mut m.cols).for_each(|(x, col)| col.push(*x));
+            }
+        }
+        let mut chroms = Vec::new();
+        self.add_chromatograms(&mut chroms, mrm);
+        Ok(chroms)
+    }
+
+    /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::LettoreWiff::scansione` serves.
+    pub(super) fn spectrum_of(&self, n: usize, r: &super::Record, p: scan::Points) -> Spectrum {
+        let e = self.experiments.get(r.experiment).cloned().unwrap_or_default();
+        Spectrum {
+            index: n,
+            id: format!("sample={} period=1 cycle={} experiment={}", self.sample, r.cycle + 1, r.experiment + 1),
+            level: e.level.max(1),
+            rt: r.time_min,
+            polarity: self.polarity,
+            profile: true,
+            filter: String::new(),
+            precursor: e.precursor,
+            mz: p.mz,
+            intensity: p.intensity.iter().map(|&v| v as f32).collect(),
+            wide: Some(p.intensity),
+        }
+    }
+
+    /// The chromatograms of the MRM blocks only (no scan is decoded).
+    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
+        let mut mrm: Vec<Mrm> = (0..self.experiments.len().max(1)).map(|_| Mrm::default()).collect();
+        for r in &self.records {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
+                continue;
+            }
+            if let (Some(v), Some(m)) = (scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?, mrm.get_mut(r.experiment)) {
                 m.time.push(r.time_min);
                 m.tic.push(r.tic);
                 m.cols.resize(v.len(), Vec::new());
@@ -78,22 +104,35 @@ impl Wiff {
 
     /// Writes the sample as mzML (`name`: the `.wiff`), one spectrum at a time; the `.wiff.scan` is read block by block.
     pub fn to_mzml<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str) -> Result<()> {
-        self.to_mzml_progress(scan, out, name, &mut |_, _| {})
+        self.to_mzml_progress(scan, out, name, false, &mut |_, _| {})
     }
 
-    /// As `to_mzml`; `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
-    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
-        let header = Header {
-            run: name.trim_end_matches(".wiff").to_string(),
-            sources: vec![name.to_string(), format!("{name}.scan")],
-            instrument: Some(("MS:1000651".into(), "3200 QTRAP".into())),
-            components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
-                .iter()
-                .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
-                .collect(),
-            software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
-        };
+    /// Parameters of the centroids from at most 64 equally spaced scans (read and dropped), as `centroidi::estimate`.
+    fn centroid_params<R: ReadAt>(&self, scan: &mut R) -> Result<centroidi::Params> {
+        let mut good = Vec::new();
+        for r in &self.records {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
+                good.push((r.at, r.end));
+            }
+        }
+        let n = good.len().min(64);
+        let pick = (0..n).filter_map(|i| good.get(i * good.len() / n).copied());
+        let mut scans = Vec::new();
+        for (at, end) in pick {
+            if let Some(p) = scan::read_scan(scan, self.scan_len, at, end)? {
+                scans.push((p.mz, p.intensity));
+            }
+        }
+        let refs: Vec<(&[f64], &[f64])> = scans.iter().map(|(a, b)| (a.as_slice(), b.as_slice())).collect();
+        Ok(centroidi::estimate(&refs, 0.7).params)
+    }
+
+    /// As `to_mzml`; with `centroid` every spectrum is reduced to one point per peak (`centroidi`, MS:1000035). `progress(done, total)` is called every few spectra with the spectra written and the spectra to write.
+    pub fn to_mzml_progress<R: ReadAt, W: Write>(&self, scan: &mut R, out: W, name: &str, centroid: bool, progress: &mut dyn FnMut(usize, usize)) -> Result<()> {
         let mut scan = Window::new(scan, self.scan_len);
+        let header = self.header(name, sha1_hex(&mut scan, self.scan_len).ok(), centroid);
+        let cp = if centroid { Some(self.centroid_params(&mut scan)?) } else { None };
+        let mut buf = Buf::default();
         let mut w = MzmlWriter::new(out, &header)?;
         let count = self.spectrum_count(&mut scan)?;
         if count > 0 {
@@ -101,7 +140,15 @@ impl Wiff {
         }
         let mut done = 0;
         progress(0, count);
-        let chroms = self.visit(&mut scan, &mut |s| {
+        let chroms = self.visit(&mut scan, &mut |mut s| {
+            if let Some(p) = &cp {
+                let c = centroidi::centroids(&s.mz, s.wide.as_deref().unwrap_or(&[]), p, &mut buf);
+                s.mz = c.iter().map(|c| c.mz).collect();
+                let v: Vec<f64> = c.iter().map(|c| c.value).collect();
+                s.intensity = v.iter().map(|&x| narrow(x)).collect();
+                s.wide = Some(v);
+                s.profile = false;
+            }
             w.spectrum(&s)?;
             done += 1;
             if done % 32 == 0 {
@@ -122,6 +169,36 @@ impl Wiff {
         }
         w.finish()?;
         Ok(())
+    }
+
+    /// The header of the mzML of `name` (the `.wiff`); `scan_sha1`: SHA-1 of the `.wiff.scan` when it could be read.
+    pub(crate) fn header(&self, name: &str, scan_sha1: Option<String>, centroid: bool) -> Header {
+        let (instrument, run_params) = self.instrument_terms();
+        Header {
+            run: name.trim_end_matches(".wiff").to_string(),
+            sources: vec![name.to_string(), format!("{name}.scan")],
+            source_sha1: self.wiff_sha1.iter().cloned().chain(scan_sha1).collect(),
+            acquired: self.created.clone(),
+            run_params,
+            instrument: Some(instrument),
+            components: [("source", "MS:1000073", "electrospray ionization"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000081", "quadrupole"), ("analyzer", "MS:1000078", "axial ejection linear ion trap"), ("detector", "MS:1000253", "electron multiplier")]
+                .iter()
+                .map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
+                .collect(),
+            software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+            centroided: centroid,
+            ..Default::default()
+        }
+    }
+
+    /// The instrument of the header: the CV term of the model the Log names (the known models), otherwise the generic `instrument model` and
+    /// the name as a userParam of the run; without a Log, the 3200 QTRAP this reader was written for.
+    fn instrument_terms(&self) -> ((String, String), Vec<(String, String)>) {
+        match self.model.as_deref() {
+            None => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            Some(m) if m.replace(' ', "").contains("3200QTRAP") => (("MS:1000651".into(), "3200 QTRAP".into()), Vec::new()),
+            Some(m) => (("MS:1000031".into(), "instrument model".into()), vec![("instrument model".into(), m.to_string())]),
+        }
     }
 
     fn add_chromatograms(&self, chroms: &mut Vec<Chromatogram>, mrm: Vec<Mrm>) {
@@ -150,4 +227,10 @@ struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,
     cols: Vec<Vec<f64>>,
+}
+
+/// The f32 copy of a value written as f64 (`Spectrum::intensity` next to `wide`).
+#[allow(clippy::cast_possible_truncation)]
+fn narrow(x: f64) -> f32 {
+    x as f32
 }

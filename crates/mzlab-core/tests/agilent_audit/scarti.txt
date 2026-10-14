@@ -1,0 +1,5 @@
+# path prefix (relative to the .D folder) | why it is not read. A file or folder that is neither read nor listed here fails the audit.
+AcqData/MSPeak.bin|points: decoded by the reader; its 68 byte header is constant (03 01 and zeros) and carries nothing
+AcqData/MSScan.bin|records: decoded by the reader; the 160 byte header is declared with size and SHA-1 (MSScan.bin#header)
+AcqData/MSIndex.bin|scan times per segment: equal to the times of the records (checked on the first segment)
+TEMPBASE|empty file

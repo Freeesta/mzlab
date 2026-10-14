@@ -2,13 +2,21 @@
 //! Files are memory-mapped from the disk (`memmap2` lives only in this crate, never in the WASM graph); the answers are binary
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
+pub mod cartella;
 pub mod engine;
+mod feat;
+mod feat_finder;
+mod feat_msn;
 pub mod idxbuild;
+mod idxbuild_nat;
 pub mod librerie;
 pub mod mapped;
+mod nativi;
+mod nativi_slots;
 pub mod protocol;
 pub mod rpc;
 mod rpc_lr;
+mod rpc_nat;
 pub mod scarica;
 pub mod store;
 pub mod update;

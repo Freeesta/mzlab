@@ -24,6 +24,11 @@ impl Default for Rules {
 }
 
 impl Rules {
+    /// Unit resolution: the tolerance is in tenths of a dalton, the steps are nominal and an edge needs an MS2 to be more than "not determined".
+    pub fn nominal(&self) -> bool {
+        self.abs_da >= 0.1
+    }
+
     pub fn tol(&self, mz: f64) -> f64 {
         self.abs_da.max(mz.abs() * self.ppm * 1e-6)
     }
@@ -35,10 +40,10 @@ impl Rules {
         }
         let mut k: Vec<usize> = (0..mz.len()).collect();
         if mz.len() > self.max_peaks {
-            k.sort_by(|&a, &b| it[b].total_cmp(&it[a]));
+            crate::sortc::by(&mut k, |&a, &b| it[b].total_cmp(&it[a]));
             k.truncate(self.max_peaks);
         }
-        k.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]).then(a.cmp(&b)));
+        crate::sortc::by(&mut k, |&a, &b| mz[a].total_cmp(&mz[b]).then(a.cmp(&b)));
         Some(Spec {
             mz: k.iter().map(|&i| mz[i]).collect(),
             it: k.iter().map(|&i| it[i]).collect(),
@@ -390,11 +395,18 @@ pub fn edge_evidence(t: &Tables, r: &Rules, p: &Pair) -> Edge {
     if tl_hit && loss_rels.iter().all(|x| x.name == super::rel::NH3_NAME) {
         isf_ok = false;
     }
-    let kind = decide(
+    let mut kind = decide(
         !adduct_rels.is_empty(),
         !loss_rels.is_empty(),
         (pos, neg, isf_ok),
     );
+    if r.nominal()
+        && p.ms2_lo.is_none()
+        && p.ms2_up.is_none()
+        && matches!(kind, EdgeKind::Adduct | EdgeKind::Isf)
+    {
+        kind = EdgeKind::Undetermined;
+    }
     Edge {
         kind,
         readings,

@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // «Difference from the reference» (high resolution only; «Statistica» panel): for every feature of the feature table (TABELLA) the numbers against a
 // reference chosen by the user (default: the files at time <= 0, blanks and dark controls of the sample table). Highest treated / reference, log2 fold
@@ -9,7 +10,7 @@ const RIFERIMENTO = (() => {
   const t = (k, p) => I18N.t(k, p);
   const eh = s => EH(s == null ? "" : s);
   const SHAPES = ["rises", "rises_falls", "falls", "flat"];
-  let st = { factor: 3, stat: "max", min: 1, pseudo: "auto", floor: 1000, sort: "log2fc", dir: -1, show: "kept", shape: "all", ref: null };
+  let st = { factor: 3, stat: "max", min: 1, pseudo: "auto", floor: 1000, sort: "log2fc", dir: -1, show: "kept", shape: "all", ref: /** @type {any} */ (null) };
   let res = null;                      // {r (server answer), tb (table), names, rows: [{i, f, q, idn, lst}]}
   let busy = null;
   Object.assign(st, lsObj(KEY));
@@ -79,7 +80,7 @@ const RIFERIMENTO = (() => {
     const th = cols.map(([id, key, sortable]) => sortable
       ? `<th scope="col" aria-sort="${st.sort === id ? (st.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" class="ref-sort" data-sort="${id}">${eh(t(key))}${st.sort === id ? (st.dir < 0 ? " ▼" : " ▲") : ""}</button></th>`
       : `<th scope="col">${eh(t(key))}</th>`).join("");
-    const tr = shown.map(x => { const c = cells(x, false); return `<tr data-i="${x.i}" data-mz="${x.f.mz}" data-rt="${x.f.rt}" tabindex="0" role="button" aria-label="${eh(t("ref.row.aria", { id: x.f.id, mz: fmt(x.f.mz), rt: fmt(x.f.rt, 2) }))}">${cols.map(([id]) => `<td${["id", "absent", "shape", "rep", "state", "reason", "ident", "list"].includes(id) ? "" : ' class="num"'}>${eh(c[id])}</td>`).join("")}</tr>`; }).join("");
+    const tr = shown.map(x => { const c = cells(x, false); return `<tr data-i="${x.i}" data-mz="${x.f.mz}" data-rt="${x.f.rt}" tabindex="0" role="button" aria-label="${eh(t("ref.row.aria", { id: x.f.id, mz: fmt(x.f.mz), rt: fmt(x.f.rt, 2) }))}">${cols.map(([id]) => `<td${["id", "absent", "shape", "rep", "state", "reason", "ident", "list"].includes(/** @type {string} */ (id)) ? "" : ' class="num"'}>${eh(/** @type {any} */ (c[id]))}</td>`).join("")}</tr>`; }).join("");
     return `<div class="sm" role="status" id="ref-count">${t("ref.count", { n: shown.length, tot: v.length, all: res.rows.length })}${v.length > shown.length ? " " + t("ref.cap", { n: MAX_ROWS }) : ""}</div>
 <div class="qq-scroll"><table class="qq-tab" id="ref-tab" aria-label="${eh(t("ref.title"))}"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
   }

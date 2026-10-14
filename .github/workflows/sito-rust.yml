@@ -1,15 +1,21 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
 # Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
+# Three jobs side by side, `sito` is the summary (like rust-ok): `sito-e2e` builds the site + .wasm and runs the e2e;
+# `sito-unit` runs the rest of tools/verifica.py (syntax, i18n, code map, sizes, pytest) with pytest-xdist.
+# The run on main only fills the Rust cache: a cache saved on a pull request is not visible to the other pull requests.
 name: sito-rust
 
 on:
+  push:
+    branches: [main]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", ".github/workflows/sito-rust.yml"]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
   workflow_dispatch:
     inputs:
       solo:
         description: "e2e to run (comma separated)"
-        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf"
 
 permissions:
   contents: read
@@ -19,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sito:
+  sito-e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -31,7 +37,8 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: cache
         with:
           path: |
             ~/.cargo/registry
@@ -40,6 +47,7 @@ jobs:
             ~/.cache/ms-playwright
             target
           key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
+          restore-keys: sito-rust-${{ runner.os }}-
       - name: Install
         run: |
           python -m pip install -e ".[test]" playwright
@@ -52,15 +60,26 @@ jobs:
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1572864 engine
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1703936 engine
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
           tools/build_feat_wasm.sh site/static
+      # saved right after the build, so a red e2e does not lose the cache (the automatic save at the end of a job is skipped on failure)
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cache/ms-playwright
+            target
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline' }}"
+          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf' }}"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
@@ -75,3 +94,38 @@ jobs:
           path: .verifica/
           include-hidden-files: true
           if-no-files-found: ignore
+
+  # Everything of tools/verifica.py except the e2e, as the single job ran it; pytest spread over the CPUs (PYTEST_ADDOPTS, no change to the tests).
+  sito-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e ".[test]" pytest-xdist
+      - name: Checks and pytest (no e2e)
+        env:
+          PYTEST_ADDOPTS: "-n auto"
+        run: python tools/verifica.py --senza-e2e
+      - name: Print the logs of the failed checks
+        if: failure()
+        shell: bash
+        run: |
+          cat .verifica/ultimo.md | cut -c1-2000
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_ ]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log" 2>/dev/null; done
+
+  # The name `sito` stays: one check that sums up the two jobs.
+  sito:
+    if: always()
+    needs: [sito-e2e, sito-unit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Both jobs passed
+        run: |
+          echo "sito-e2e: ${{ needs.sito-e2e.result }}, sito-unit: ${{ needs.sito-unit.result }}"
+          test "${{ needs.sito-e2e.result }}" = success && test "${{ needs.sito-unit.result }}" = success

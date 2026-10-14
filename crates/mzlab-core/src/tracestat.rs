@@ -25,7 +25,7 @@ pub struct PeakX {
 /// `ionfamily.detect_peaks(rt, y)["peaks"]`, highest first.
 pub fn detect(rt: &[f64], y: &[f64]) -> Vec<PeakX> {
     let d = detect_full(rt, y, Params::default());
-    d.peaks.iter().map(|p| PeakX { p: p.clone(), e: extras(rt, &d.ys, p) }).collect()
+    d.peaks.iter().map(|p| PeakX { p: *p, e: extras(rt, &d.ys, p) }).collect()
 }
 
 /// `ionfamily._pick_peak`: the peak closest to `near_i` (within `tol_scans`) or the highest one.
@@ -53,7 +53,7 @@ pub fn roll(a: &[f64], s: i64) -> Vec<f64> {
 /// `np.percentile(a, q)` (linear interpolation), `q` in 0..=100.
 pub fn percentile(a: &[f64], q: f64) -> f64 {
     let mut s = a.to_vec();
-    s.sort_by(|x, y| x.total_cmp(y));
+    crate::sortc::by(&mut s, f64::total_cmp);
     let pos = (s.len() - 1) as f64 * q / 100.0;
     let (lo, hi) = (pos.floor() as usize, pos.ceil() as usize);
     s[lo] + (s[hi] - s[lo]) * (pos - lo as f64)

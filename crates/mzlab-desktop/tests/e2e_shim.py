@@ -103,6 +103,12 @@ try:
             pg.wait_for_function("window.MZLAB_RUST.stats.rust > 0", timeout=60000)
             assert not pg.evaluate("window.MZLAB_LR_MISS || []"), pg.evaluate("window.MZLAB_LR_MISS")
         step("files picked in the dialog are opened and the TIC is drawn by the native engine", load)
+        def native_listing():                                    # a dataset the readers do not know is refused through the whole way: bridge, shim, rpc, readers
+            f = LR_PICK[0]
+            r = pg.evaluate("""async f => { const file = new File([], "a.bin", { type: "application/x-mzlab-file;id=" + f.id }); Object.defineProperty(file, "size", { value: f.size });
+              try { await window.MZLAB_RUST.nativeSamples([{ name: "a.bin", blob: file }]); return "listed"; } catch (e) { return (e.json && e.json.error_key) || String(e); } }""", f)
+            assert r != "listed" and r.startswith("err."), r
+        step("natsamples reaches the readers of the native engine and refuses a file they do not know", native_listing)
         ref = {}
         def state_same():
             sess = pg.evaluate(JSON, "api/session")["j"]
@@ -112,8 +118,10 @@ try:
             ref["py"] = PyRef([str(EX / n.split("#")[0]) for n in dict.fromkeys(ref["names"])], nb)
             py = {"state": ref["py"].get("api/state")["j"], "session": ref["py"].get("api/session")["j"]}
             st = pg.evaluate(JSON, "api/state")["j"]
-            json_close(st["files"], py["state"]["files"], path="state.files")
-            json_close({k: v for k, v in sess.items() if k not in ("workdir", "commit")}, {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
+            # the engine reads the infusion MSn of a file (`msn`, mzlab-core/src/infusione.rs); the Python reference does not
+            nomsn = lambda x: {k: nomsn(v) for k, v in x.items() if k != "msn"} if isinstance(x, dict) else [nomsn(v) for v in x] if isinstance(x, list) else x
+            json_close(nomsn(st["files"]), py["state"]["files"], path="state.files")
+            json_close(nomsn({k: v for k, v in sess.items() if k not in ("workdir", "commit")}), {k: v for k, v in py["session"].items() if k not in ("workdir", "commit")}, path="session")
         step("api/state and api/session: the JSON of the Python reference", state_same)
         def routes_same():
             names = ref["names"]; k = {n.split("#")[0]: i for i, n in reversed(list(enumerate(names)))}

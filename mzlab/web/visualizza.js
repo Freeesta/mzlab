@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // «Opzioni di visualizzazione» of the high-resolution world: right click on a chromatogram or a spectrum → a panel of the drawer with the display options of that
 // kind of chart, instead of buttons and fields scattered in the bars. EXTENDABLE: another work package adds its options with DISP.register(type, item), one list per
@@ -10,7 +11,7 @@ const DISP = (() => {
   css0.textContent = `.dsp{display:flex;flex-direction:column;gap:8px}.dsp .row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}.dsp label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}.dsp input[type=number]{width:56px;padding:2px 5px}.dsp select{padding:2px 4px;max-width:100%}.dsp button{padding:2px 8px}`;
   document.head.appendChild(css0);
   const t = (k, p) => I18N.t(k, p);
-  const items = { spec: [], chrom: [] };
+  /** @type {{ spec: any[], chrom: any[] }} */ const items = { spec: [], chrom: [] };
   const register = (type, it) => { const l = items[type] || (items[type] = []), i = l.findIndex(x => x.id === it.id); if (i >= 0) l[i] = it; else l.push(it); };
   const typeOf = p => (!p ? null : p.type === "spec" ? "spec" : p.type === "chrom" || p.type === "xic" ? "chrom" : null);
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };

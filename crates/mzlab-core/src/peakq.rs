@@ -200,7 +200,7 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         let area = (1..seg.len()).map(|i| (seg[i] + seg[i - 1]) / 2.0 * (rt[lo2 + i] - rt[lo2 + i - 1])).sum();
         out.push(Peak { apex_i: apex, height: parabola_height(rt, &ys, apex), area, lo: lo2, hi: hi2, n_scans: hi2 - lo2 + 1, snr: prom / noise });
     }
-    out.sort_by(|a, b| b.height.partial_cmp(&a.height).unwrap_or(std::cmp::Ordering::Equal));
+    crate::sortc::by(&mut out, |a, b| b.height.partial_cmp(&a.height).unwrap_or(std::cmp::Ordering::Equal));
     out
 }
 

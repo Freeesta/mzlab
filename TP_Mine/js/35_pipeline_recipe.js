@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Recipe of the pipeline in the .mzflow (window.PIPEREC): the record of the operation «feature_pipeline» (schema docs/schemi/feature_pipeline-1.json; the reader and the check of
 // the record are in mzlab/web/workflow.js) and the comparison of a re-application with the table that was recorded. Pure but for UNT.sha256Hex (a global of the page, injected by the node tests).
 (() => {
@@ -7,13 +8,13 @@
   const bytesOf = d => (typeof d === "string" ? new TextEncoder().encode(d) : d);
   const verOf = (text, re) => { const m = re.exec(String(text || "")); return m ? +m[1] : null; };
 
-  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({versione, sha256}|null) } */
+  /** the record of a run. a: { recipe (text), proofs, parent ({formula, mz, rt, minutes, smiles?} | null), out (result of runFeatPipeline), data (PIPEV.readFeat of the table), crate, rules (bytes|text|null), levels (text|null), suspects ({versione, sha256}|null) } */
   async function record(a) {
     const rulesText = a.rules == null ? null : typeof a.rules === "string" ? a.rules : new TextDecoder().decode(a.rules);
     const reg = a.out.registry == null ? null : typeof a.out.registry === "string" ? a.out.registry : new TextDecoder().decode(a.out.registry);
     return {
       op: "feature_pipeline", t: new Date().toISOString(), schema: "feature_pipeline/1", crate_version: a.crate, recipe: a.recipe, parametri: JSON.parse(a.recipe), prove: a.proofs || null,
-      genitore: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minuti: a.parent.minuti.map(m => (Number.isFinite(m) ? m : null)) } : null,
+      genitore: a.parent ? { formula: a.parent.formula, mz: Number.isFinite(a.parent.mz) ? a.parent.mz : null, rt: Number.isFinite(a.parent.rt) ? a.parent.rt : null, minuti: a.parent.minuti.map(m => (Number.isFinite(m) ? m : null)), ...(a.parent.smiles ? { smiles: a.parent.smiles } : {}) } : null,
       ingressi: (a.data.meta.inputs || []).map(i => ({ nome: i.name, sha256: i.sha256 })),
       tabella_sha256: await sha(a.out.evid || a.out.table),
       regole: rulesText == null ? null : { nome: "regole_tp/1", versione: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },
@@ -23,6 +24,9 @@
       giri: 1,
     };
   }
+
+  /** the operation «campioni» of the log (next to «feature_pipeline»): the canonical campioni/2 of the run and its SHA-256, both of the Rust (finder-ruoli.js `canonical`) */
+  function campioniOp(c) { const d = JSON.parse(c.json); return { schema: d.schema, campioni: d.campioni, sha256: c.sha256 }; }
 
   /** the last operation feature_pipeline of the log that can be re-applied (null when none) */
   function lastOp(ops, check) {
@@ -40,6 +44,6 @@
     return { same, filesSame: !missing.length, crateSame: now.crate_version === op.crate_version, lines };
   }
 
-  G.PIPEREC = { record, lastOp, compare };
+  G.PIPEREC = { record, lastOp, compare, campioniOp };
   if (typeof module !== "undefined") module.exports = G.PIPEREC;
 })();
