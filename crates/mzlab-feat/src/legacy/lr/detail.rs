@@ -193,16 +193,3 @@ pub fn detail<R: ReadAt>(
     o.raw("}");
     Ok(o.0)
 }
-
-/// `api.frag_tree` of a series without MS2 scans (`fragtree.lr`): the note, no nodes.
-pub fn frag_tree(_d: &LrDig) -> String {
-    r#"{"ok":false,"mode":"lr","note":"no MS2 of the parent in the files","nodes":[]}"#.into()
-}
-
-/// `api.frag_tree_compare(id)` of a series without MS2 scans (`fragtree.compare_lr`): the note, no marks.
-pub fn frag_tree_compare(d: &LrDig, id: i64) -> Res<String> {
-    if !d.entries.iter().any(|e| e.id == id) {
-        return Err("candidate not found".into());
-    }
-    Ok(r#"{"ok":false,"note":"no MS2 of the product","marks":{}}"#.into())
-}

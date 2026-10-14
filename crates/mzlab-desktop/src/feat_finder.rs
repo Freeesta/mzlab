@@ -75,15 +75,27 @@ impl State {
         } else {
             s("settings")
         };
-        let d = legacy::lr::dig(s("files"), s("parent"), settings, table, s("registry"))
+        let mut d = legacy::lr::dig(s("files"), s("parent"), settings, table, s("registry"))
             .map_err(user)?;
+        let names: Vec<String> = (d.lc.iter().map(|f| f.name.clone()))
+            .chain(
+                d.files
+                    .iter()
+                    .filter(|f| f.kind == "ms2")
+                    .map(|f| f.name.clone()),
+            )
+            .collect();
+        d.isf = legacy::lr::isf::evaluate(&d, &mut |k| {
+            self.open_idx(names.get(k).map_or("", |n| n.as_str()))
+                .map_err(|e| e.key.to_string())
+        })
+        .map_err(user)?;
         let timing = if s("timing").is_empty() {
             "{}"
         } else {
             s("timing")
         };
         let out = legacy::lr::summary::summary(&d, timing);
-        let names = d.lc.iter().map(|f| f.name.clone()).collect();
         g.lr = Some((d, names));
         g.dig = None;
         g.msn = None;
@@ -154,15 +166,15 @@ impl State {
         names: &[String],
     ) -> Result<Answer> {
         let id = p["id"].as_i64().unwrap_or(0);
+        let mut open = |k: usize| {
+            self.open_idx(names.get(k).map_or("", |n| n.as_str()))
+                .map_err(|e| e.key.to_string())
+        };
         text(match op {
-            "finder/detail" => legacy::lr::detail::detail(d, id, |k| {
-                self.open_idx(names.get(k).map_or("", |n| n.as_str()))
-                    .map_err(|e| e.key.to_string())
-            })
-            .map_err(user)?,
-            "finder/frag_tree" => legacy::lr::detail::frag_tree(d),
+            "finder/detail" => legacy::lr::detail::detail(d, id, &mut open).map_err(user)?,
+            "finder/frag_tree" => legacy::lr::tree::frag_tree(d, &mut open).map_err(user)?,
             "finder/frag_tree_compare" => {
-                legacy::lr::detail::frag_tree_compare(d, id).map_err(user)?
+                legacy::lr::tree::frag_tree_compare(d, id, &mut open).map_err(user)?
             }
             _ => return Err(Error::new("rpc.unknown")),
         })

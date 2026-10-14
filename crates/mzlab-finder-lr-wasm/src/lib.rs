@@ -120,6 +120,14 @@ pub struct FinderLrDig {
 
 #[wasm_bindgen]
 impl FinderLrDig {
+    /// The in-source-fragment evidence of the rows (`row.isf`, `row.insource` of the summary): `read`/`sizes` give the `.mzidx` of the columns. Call it before `summary`.
+    pub fn isf(&mut self, read: Function, sizes: Vec<f64>) -> std::result::Result<(), JsValue> {
+        self.inner.isf = lr::isf::evaluate(&self.inner, &mut |k| {
+            open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN))
+        })
+        .map_err(user)?;
+        Ok(())
+    }
     /// The JSON of `api.run`; `timing` is a JSON object copied into it.
     pub fn summary(&self, timing: &str) -> String {
         lr::summary::summary(&self.inner, timing)
@@ -140,13 +148,28 @@ impl FinderLrDig {
         })
         .map_err(user)
     }
-    /// `api.frag_tree`: the tree of the MS2 of the parent (a note while the series has none).
-    pub fn frag_tree(&self) -> String {
-        lr::detail::frag_tree(&self.inner)
+    /// `api.frag_tree`: the supposed tree of the MS2 of the parent (a note while the series has none); `read`/`sizes` give the `.mzidx` of the columns then the MS2 files.
+    pub fn frag_tree(
+        &self,
+        read: Function,
+        sizes: Vec<f64>,
+    ) -> std::result::Result<String, JsValue> {
+        lr::tree::frag_tree(&self.inner, &mut |k| {
+            open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN))
+        })
+        .map_err(user)
     }
     /// `api.frag_tree_compare(id)`: the nodes of the tree found in the MS2 of a product.
-    pub fn frag_tree_compare(&self, id: f64) -> std::result::Result<String, JsValue> {
-        lr::detail::frag_tree_compare(&self.inner, id as i64).map_err(user)
+    pub fn frag_tree_compare(
+        &self,
+        id: f64,
+        read: Function,
+        sizes: Vec<f64>,
+    ) -> std::result::Result<String, JsValue> {
+        lr::tree::frag_tree_compare(&self.inner, id as i64, &mut |k| {
+            open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN))
+        })
+        .map_err(user)
     }
 }
 

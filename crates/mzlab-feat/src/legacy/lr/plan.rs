@@ -1,6 +1,6 @@
 //! What the low-resolution Dig reads from the page: every file of `api.run` (with the kind `classify` gave it), the parent and the settings.
 
-use mzlab_core::elements::{ion_mz, mass};
+use mzlab_core::elements::{fmt, ion_mz, mass};
 use mzlab_core::json::{self, Out, Value};
 
 use super::super::sample::guess;
@@ -60,6 +60,10 @@ pub struct ParentLr {
     pub formula: String,
     pub neutral_mass: f64,
     pub mz: f64,
+    /// Formula of the [M+H]+ ion (`None` for another adduct or without a formula).
+    pub ion_formula: Option<String>,
+    /// The SMILES of the parent, for the fragmentation tree.
+    pub smiles: Option<String>,
 }
 
 /// The files of the series that are columns of the table (full scan samples, blanks and controls), in the order of the table.
@@ -119,6 +123,8 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
             formula: p.formula(),
             neutral_mass: mass(&p.neutral),
             mz: p.mz,
+            ion_formula: (p.adduct == "[M+H]+").then(|| fmt(&p.ion)),
+            smiles: p.smiles,
         });
     }
     let v = json::parse(parent_json.as_bytes()).map_err(|e| e.to_string())?;
@@ -137,6 +143,8 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
         formula: String::new(),
         neutral_mass: mz - shift,
         mz,
+        ion_formula: None,
+        smiles: None,
     })
 }
 

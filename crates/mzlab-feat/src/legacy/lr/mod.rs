@@ -3,6 +3,7 @@
 //! `TP_Mine/js/20_tpmine.js` reads. The rows of the table are the peaks: no second peak search. MS2, MRM and the in-source fragments come later.
 
 pub mod detail;
+pub mod isf;
 pub mod kin;
 pub mod labels;
 pub mod mrm;
@@ -12,6 +13,7 @@ pub mod plan;
 pub mod rows;
 pub mod spec;
 pub mod summary;
+pub mod tree;
 
 use std::collections::BTreeSet;
 
@@ -72,6 +74,8 @@ pub struct LrDig {
     pub offset: Option<Offset>,
     pub decay: Option<Decay>,
     pub entries: Vec<Entry>,
+    /// Evidence of in-source fragments, `(entry id, verdict)` (`isf::evaluate`; empty until the page asks for it).
+    pub isf: Vec<(i64, crate::legacy::lrisf::IsfVerdict)>,
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -220,5 +224,6 @@ pub fn dig(
         offset,
         decay: dec,
         entries,
+        isf: Vec::new(),
     })
 }
