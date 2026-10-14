@@ -140,7 +140,7 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
         "lookup" => match (q.get("name"), n("size")) {
             (Some(name), Some(size)) => match state.find(&decode(name), size) {
                 Some(id) => json(200, format!("{{\"id\":{id}}}")),
-                None => error(&Error::new("err.file.raw").with("detail", "unknown file")),
+                None => error(&Error::new("err.file.unknown").with("detail", "unknown file")),
             },
             _ => bad(),
         },

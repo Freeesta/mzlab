@@ -289,6 +289,24 @@ window.MAPPA = (() => {
     }
     g.lineWidth = 1;
   }
+  // Profile line of a scan (pmz/py, ascending m/z): the slice inside [lo, hi] plus one neighbour per side, and its highest point.
+  function profRange(sp, lo, hi) {
+    const m = sp.pmz, n = m.length; let a = 0, b = n;
+    while (a < b) { const h = (a + b) >> 1; if (m[h] < lo) a = h + 1; else b = h; }
+    let c = a; b = n; while (c < b) { const h = (c + b) >> 1; if (m[h] <= hi) c = h + 1; else b = h; }
+    const i0 = Math.max(0, a - 1), i1 = Math.min(n, c + 1); let max = 0; for (let i = i0; i < i1; i++) if (sp.py[i] > max) max = sp.py[i];
+    return { i0, i1, max };
+  }
+  // Continuous area turned on its side: every point while there is at most one per pixel row (zoomed in), otherwise the highest of each row (min-max decimation: no peak top is lost).
+  function profSide(g, sp, pr, Y, x0, x1, ymax, col) {
+    const m = sp.pmz, v = sp.py, X = u => x0 + (x1 - x0) * u / ymax, rows = new Map(), n = pr.i1 - pr.i0;
+    for (let i = pr.i0; i < pr.i1; i++) { const r = Math.round(Y(m[i])), u = rows.get(r); if (u === undefined || v[i] > u) rows.set(r, v[i]); }
+    const pts = rows.size >= n ? Array.from({ length: n }, (_, k) => [Y(m[pr.i0 + k]), v[pr.i0 + k]]) : [...rows].sort((p, q) => q[0] - p[0]);
+    const trace = () => { g.beginPath(); g.moveTo(X(pts[0][1]), pts[0][0]); for (const q of pts) g.lineTo(X(q[1]), q[0]); };
+    trace(); g.lineTo(x0, pts[pts.length - 1][0]); g.lineTo(x0, pts[0][0]); g.closePath();
+    const al = g.globalAlpha; g.globalAlpha = al * .25; g.fillStyle = col; g.fill(); g.globalAlpha = al; trace();
+    return { pts: pts.length, full: n };
+  }
   function drawSide(p, pt, sp, prev) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
@@ -296,9 +314,13 @@ window.MAPPA = (() => {
     g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
     let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
+    const pr = !prev && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
+    if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
     if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
+    if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || css("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
+    if (!pr)
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke(); g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels

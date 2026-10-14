@@ -39,6 +39,9 @@ impl State {
     /// of the files made by the app. Returns the number of the file when the last piece is in.
     pub fn upload_chunk(&self, name: &str, off: u64, total: u64, body: &[u8]) -> Result<Option<u32>> {
         let name = crate::store::clean(name)?;
+        if body.is_empty() && total > 0 {
+            return Err(Error::new("err.file.unknown").with("detail", "empty upload"));      // a webview that drops the body of a POST must not look like a file that was received
+        }
         let dir = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?;
         let part = dir.join(format!("{name}.part"));
         let mut f = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&part).map_err(|e| io_error(&e))?;
