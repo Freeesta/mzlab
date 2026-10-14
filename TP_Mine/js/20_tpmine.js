@@ -107,10 +107,11 @@
     if (!f || f.size >= 65536) return null;
     try { const j = JSON.parse(await f.text()); return j.mzlab === "mzlab/nat1" ? j : null; } catch (_) { return null; }
   }
-  async function asked(what, name) {        // "mzml": the mzML of the sample; "srm": its SRM traces for mzFinder, read from the maker's file without an mzML
+  async function asked(what, name) {        // "mzml": the mzML of the sample; "cenidx": its centroid index, built apart (true); "srm": its SRM traces for mzFinder, read from the maker's file without an mzML
     const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab").then(r => r.getDirectoryHandle("files"));
     const j = await stubOf(await (await d.getFileHandle(name)).getFile()), rb = await window.MZLAB_RUST_READY;
     if (!j || !rb) return null;
+    if (what === "cenidx") return rb.nativeCentroidIndex ? (await rb.nativeCentroidIndex(name), true) : false;
     if (what === "srm") return rb.nativeSrm ? await rb.nativeSrm(name) : null;
     if (!mzmls.has(name)) mzmls.set(name, rb.nativeToMzml ? await rb.nativeToMzml(name, j.size || 0) : null);
     return mzmls.get(name);

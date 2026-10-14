@@ -45,13 +45,23 @@ async function idxFile(name) {
   } catch (_) { return null; }
 }
 
-/** a sample of a maker's file whose index (the Data tab's, version 2) mzFinder can read as it is; otherwise its mzML replaces the stub in `held` (false: the file goes the way of any mzML) @param {string} name @param {Map<string, any>} held @param {Set<string>} natives @param {((what: string, name: string) => Promise<any>) | undefined} ask */
-async function stubIndexed(name, held, natives, ask) {
+/**
+ * a sample of a maker's file whose index mzFinder can read: the Data tab's (version 2) when its scans are centroids, else the centroid index `<name>.cen` that the page builds apart
+ * (`ask("cenidx", name)`; `cen` is told the name). Without an index the mzML of the page replaces the stub in `held` (false: the file goes the way of any mzML)
+ * @param {string} name @param {Map<string, any>} held @param {Set<string>} natives @param {Set<string>} cen @param {((what: string, name: string) => Promise<any>) | undefined} ask
+ */
+async function stubIndexed(name, held, natives, cen, ask) {
   const ix = await idxFile(name), stub = held.get(name), size = stub instanceof Blob ? JSON.parse(await stub.text()).size : -1;
-  if (ix && await recordedSize(ix) === size && !(await idxIsProfile(ix))) return true;
+  if (ix && await recordedSize(ix) === size) {
+    if (!(await idxIsProfile(ix))) { cen.delete(name); return true; }
+    const cx = await idxFile(name + ".cen");
+    if (!(cx && await recordedSize(cx) === size) && !(ask && await ask("cenidx", name))) throw new Error(`cannot read ${name}`);
+    cen.add(name);
+    return true;
+  }
   const mzml = ask && await ask("mzml", name);
   if (!mzml) throw new Error(`cannot read ${name}`);
-  held.set(name, mzml); natives.delete(name);
+  held.set(name, mzml); natives.delete(name); cen.delete(name);
   return false;
 }
 
@@ -60,6 +70,7 @@ export function createIngress(base, say, notify = () => {}) {
   /** @type {Promise<any> | null} */ let lib = null;
   /** @type {WeakSet<Blob>} the copies made here: already centroids */ const cens = new WeakSet();
   /** @type {any} */ let engine = null;
+  /** @type {Set<string>} the samples of a maker's file whose index for mzFinder is `<name>.cen` (their scans are profile) */ const cen = new Set();
   /** the index builder: the compiled .wasm of the main program, its scan-table function, the pool of workers and the archive helpers (made at the first file that needs an index) */
   const tools = () => lib || (lib = (async () => {
     const url = base + "wasm/mzlab_wasm_bg.wasm";
@@ -105,16 +116,18 @@ export function createIngress(base, say, notify = () => {}) {
   }
 
   return {
+    /** the name of the index mzFinder reads for `name` (without `.mzidx`): `<name>.cen` for a profile sample of a maker's file @param {string} name */
+    idxName: name => cen.has(name) ? name + ".cen" : name,
     /**
      * every named file the page sent (name -> Blob | ArrayBuffer) has a fresh .mzidx when this returns; one that cannot be indexed rejects.
      * `natives` = the names whose held bytes are the stub of a sample of a maker's file (docs/agenti/lettura-nativa.md): its index (version 2) is the one of the Data tab and no mzML is
-     * written; only a sample with profile scans (mzFinder works on centroids) or without an index gets its mzML from the page (`ask("mzml", name)`) and goes the way of any mzML.
+     * written; a sample with profile scans (mzFinder works on centroids) gets a centroid index apart, `<name>.cen` (`ask("cenidx", name)`, see `idxName`); only one without an index gets its mzML from the page (`ask("mzml", name)`) and goes the way of any mzML.
      * @param {string[]} names @param {Map<string, any>} held @param {Set<string>} [natives] @param {(what: string, name: string) => Promise<any>} [ask]
      */
     async ensure(names, held, natives = new Set(), ask) {
       /** @type {Promise<void>[]} */ const jobs = [];
       for (const name of names) {
-        if (natives.has(name) && await stubIndexed(name, held, natives, ask)) continue;
+        if (natives.has(name) && await stubIndexed(name, held, natives, cen, ask)) continue;
         const src = held.get(name);
         if (!src) continue;                              // not sent by the page: it keeps whatever index it has
         let blob = src instanceof Blob ? src : new Blob([src]);

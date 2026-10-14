@@ -10,7 +10,8 @@ Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, 
 
 - **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
-- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent. Per gli altri formati si converte in mzML (guida nella schermata di caricamento).
+- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop (ultima versione). I file Waters, Shimadzu e Bruker non si leggono direttamente: convertire in mzML con MSConvert (guida nella schermata di caricamento).
+  *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the latest desktop app. Waters, Shimadzu and Bruker files are not read directly: convert them to mzML with MSConvert.)*
 - **Da smartphone** il sito mostra solo la Teoria; Dati, Disegno e giochi vanno usati da computer o tablet.
 
 ## Le schede
@@ -41,6 +42,8 @@ Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di
 - **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
 - **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), usato solo da mzFinder (nascosto), scaricato dalla build del sito: https://github.com/pyodide/pyodide
 - **NumPy** (incluso in Pyodide, solo mzFinder), BSD-3-Clause: https://numpy.org
+- **Testi di Teoria e Pratica**: CC BY 4.0 (© Federico Cristaudo).
+- **File d'esempio** (`mzlab/web/esempi/`): dati sintetici, CC0 1.0.
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).
 - **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
 

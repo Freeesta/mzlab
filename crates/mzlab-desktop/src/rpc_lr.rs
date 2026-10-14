@@ -10,6 +10,7 @@ use mzlab_core::{Error, Result};
 use serde_json::{json, Value};
 
 use crate::engine::State;
+use crate::nativi::Src;
 use crate::rpc::*;
 use crate::store::clean;
 
@@ -31,10 +32,10 @@ impl State {
     }
 
     /// The chromatograms of the mzML of `name` and the reader to go on with.
-    pub(crate) fn chroms(&self, eng: &mut Eng, name: &str) -> Result<(Mzml<MapAt>, Vec<Chrom>, u32)> {
+    pub(crate) fn chroms<'a>(&self, eng: &'a mut Eng, name: &str) -> Result<(Mzml<Src<'a>>, Vec<Chrom>, u32)> {
         let slot = self.open_lr(eng, name)?;
         let end = eng.idx[&slot].idx.scans.last().map_or(0, |s| s.end);
-        let (r, size) = self.mzml_named(name)?;
+        let (r, size) = self.src_named(&mut eng.nat, slot, name)?;
         let mut m = Mzml::new(r, size);
         let chroms = m.chromatograms(end)?;
         Ok((m, chroms, slot))
@@ -51,20 +52,21 @@ impl State {
                 let list = self.store.lock().unwrap_or_else(|e| e.into_inner()).list();
                 let mut rows = Vec::new();
                 for (name, e, changed) in list {
-                    let mzml = name.to_ascii_lowercase().ends_with(".mzml");
+                    let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
                     if changed {
                         self.indexer()?.remove(&name);
-                        if let Some(slot) = eng.lr_slot.get(&name).copied() {
-                            eng.idx.remove(&slot);
-                        }
+                        Self::drop_slot(eng, &name);
                     }
                     let indexed = mzml && self.open_lr(eng, &name).is_ok();
-                    rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "id": self.pick_path(&e.path) }));
+                    rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }));
                 }
                 text(Value::Array(rows).to_string())
             }
             "lr_put" => {
                 let name = clean(s("name"))?;
+                if p["nat"].is_object() {
+                    return self.put_native(eng, name, &p["nat"]);
+                }
                 let pk = self.picked(u("fid"))?;
                 let path = if self.is_temp(&pk.path) {
                     let dest = self.store.lock().unwrap_or_else(|e| e.into_inner()).own_dir()?.join(name);
@@ -73,9 +75,7 @@ impl State {
                 } else {
                     pk.path
                 };
-                if let Some(slot) = eng.lr_slot.get(name) {
-                    eng.idx.remove(slot);
-                }
+                Self::drop_slot(eng, name);
                 self.indexer()?.remove(name);
                 let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put(name, path)?;
                 text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
@@ -83,16 +83,20 @@ impl State {
             "lr_entry" => {
                 let name = s("name");
                 let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
+                let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
                 let mut m = Mzml::new(rd, size);
                 let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
-                text(mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size)?)
+                let entry = mzlab_core::lr::file_entry(&mut r.idx, &mut m, name, size)?;
+                match self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name) {
+                    Some(e) if e.nat.is_some() => text(native_entry(&entry, e.size)),             // the size of a sample of a maker's file is the one of its members
+                    _ => text(entry),
+                }
             }
             "lr_items" => {
                 use mzlab_core::json::Value as J;
                 let name = s("name");
                 let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
+                let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
                 let mut m = Mzml::new(rd, size);
                 let v = json::parse(p["sample"].to_string().as_bytes())?;
                 let st = |k: &str| v.get(k).and_then(J::str).map(String::from);
@@ -140,8 +144,9 @@ impl State {
             }
             "lr_remove" => {
                 let name = s("name");
-                if let Some(slot) = eng.lr_slot.get(name) {
-                    eng.idx.remove(slot);
+                if let Some(slot) = eng.lr_slot.get(name).copied() {
+                    eng.idx.remove(&slot);
+                    eng.nat.forget(slot);
                 }
                 self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
                 text("{}")
@@ -163,6 +168,7 @@ impl State {
             }
             "lr_clear" => {
                 eng.idx.retain(|k, _| *k < LR_BASE);
+                eng.nat.clear();
                 eng.lr_slot.clear();
                 eng.labs.clear();
                 eng.labs_sig = None;
@@ -217,7 +223,7 @@ impl State {
                 let item = s("name");
                 let name = item.split('#').next().unwrap_or(item);
                 let slot = self.open_lr(eng, name)?;
-                let (rd, size) = self.mzml_named(name)?;
+                let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
                 let mut m = Mzml::new(rd, size);
                 let data = mzlab_core::itemroutes::item_method(&eng.idx[&slot].idx, &mut m, item)?;
                 let labs = Self::labs_of(eng);
@@ -242,12 +248,53 @@ impl State {
             }
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
-                let (mut m, chroms, slot) = self.chroms(eng, name)?;
+                let slot = self.open_lr(eng, name)?;
+                let end = eng.idx[&slot].idx.scans.last().map_or(0, |s| s.end);
+                let (rd, size) = self.src_named(&mut eng.nat, slot, name)?;
+                let mut m = Mzml::new(rd, size);
+                let chroms = m.chromatograms(end)?;
                 let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
                 text(r.delay_item(&mut m, &chroms, s("name"))?)
             }
 
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+}
+
+/// The entry of a native sample as the page lists it: the size of the members and `nat`.
+fn native_entry(entry: &str, size: u64) -> String {
+    match serde_json::from_str::<Value>(entry) {
+        Ok(mut v) => {
+            v["size"] = json!(size);
+            v["nat"] = json!(true);
+            v.to_string()
+        }
+        Err(_) => entry.to_string(),
+    }
+}
+
+impl State {
+    /// `lr_put` of a sample of a maker's file: `nat` = `{key, c, id, centroid, members: [{name, fid}]}`; the members stay where they are on the disk.
+    fn put_native(&self, eng: &mut Eng, name: &str, nat: &Value) -> Result<Answer> {
+        let mut members = Vec::new();
+        for m in nat["members"].as_array().map_or(&[][..], |a| a.as_slice()) {
+            let n = m["name"].as_str().unwrap_or("");
+            members.push((n.to_string(), self.picked(m["fid"].as_u64().unwrap_or(0) as u32)?.path));
+        }
+        if let Some(slot) = eng.lr_slot.get(name).copied() {
+            eng.idx.remove(&slot);
+            eng.nat.forget(slot);
+        }
+        self.indexer()?.remove(name);
+        let n = crate::store::Nat {
+            ds: nat["key"].as_str().unwrap_or("").to_string(),
+            c: nat["c"].as_u64().unwrap_or(0) as usize,
+            id: nat["id"].as_u64().unwrap_or(0) as u32,
+            centroid: nat["centroid"].as_bool().unwrap_or(false),
+            members,
+        };
+        let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put_nat(name, n)?;
+        text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
     }
 }
