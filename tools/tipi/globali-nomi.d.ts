@@ -109,6 +109,7 @@ declare var LUTS_SEQ: any;
 declare var LUT_DIV: any;
 declare var LWX: any;
 declare var M: any;
+declare var MAPTAB: any;
 declare var MAP_PAL: any;
 declare var MARK_N: any;
 declare var MERGE: any;
