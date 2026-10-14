@@ -1,3 +1,4 @@
+// @ts-strict
 // TPMINE-PRIVATE  Untargeted tables: ONE model of the features of a LC-HRMS table (id, m/z, RT, areas per sample, MS2, external annotations with their source).
 // The readers (mzMine full table, annotations, FBMN quant + MGF + IIN edges, MS-DIAL, GNPS2 library and network) are Rust: crates/mzlab-feat/src/import, the .wasm «import» of wasm-feat/manifest.json
 // (crates/mzlab-feat-import-wasm, docs/agenti/mzfinder-import.md). Here: loading it, the calls (the arguments in, the table as JSON out; no number is calculated here) and the rest of the model
@@ -25,7 +26,8 @@
     if (g.sha256 && hex(await crypto.subtle.digest("SHA-256", bytes)) !== g.sha256) throw fail("error.featWasmHash");
     const m = await import(u(g.js)); await m.default({ module_or_path: bytes }); return use(m);
   }
-  if (typeof process !== "undefined" && process.env && process.env.MZLAB_IMPORT_PKG) use(require(process.env.MZLAB_IMPORT_PKG + "/mzlab_feat_import_wasm.js"));
+  /** @type {any} */ const nodeProc = /** @type {any} */ (globalThis).process || null;   // node only (tests)
+  if (nodeProc && nodeProc.env && nodeProc.env.MZLAB_IMPORT_PKG) use(require(nodeProc.env.MZLAB_IMPORT_PKG + "/mzlab_feat_import_wasm.js"));
   const need = () => { if (!W) throw fail("error.featFailed", "the readers of the tables are not loaded (UNT.ready())"); return W; };
   const nan = x => (Number.isNaN(x) ? null : x);
   /** an error of the .wasm is a JSON string {error_key, params: {message}} */
@@ -48,7 +50,7 @@
   }
   const keyOf = (pol, id) => (pol > 0 ? "POS" : pol < 0 ? "NEG" : "UNK") + ":" + id;
   function addFeature(t, id, mz, rt) {
-    const f = { key: keyOf(t.pol, id), id: String(id), pol: t.pol, mz, rt, areas: {}, detected: null, ms2: null, ann: [], group: null, iin: null, component: null, nScans: null, program: t.program };
+    const f = { key: keyOf(t.pol, id), id: String(id), pol: t.pol, mz, rt, areas: {}, detected: null, ms2: null, ann: /** @type {any[]} */ ([]), group: null, iin: null, component: null, nScans: null, program: t.program };
     t.features.push(f); t.byId.set(f.id, f); return f;
   }
 
