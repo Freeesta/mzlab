@@ -81,7 +81,7 @@ export async function writeAll(ah, data, at) { if (writeFull(ah, data, at) < dat
 // write `size` bytes produced by chunk(offset, length) -> Uint8Array into kind/name (replacing it); the partial file is removed if something fails
 function write(kind, name, size, chunk) { return locked(kind, name, () => writeNow(kind, name, size, chunk)); }
 async function writeNow(kind, name, size, chunk) {
-  dropLease(kind, name);
+  await dropLease(kind, name);
   const d = await dir(kind);
   const fh = await d.getFileHandle(name, { create: true });
   const ah = await fh.createSyncAccessHandle();
@@ -113,7 +113,7 @@ export async function put(kind, name, data) {
 
 // a file written under a temporary name (by a worker of the pool) takes its final name; a half-written file never has it
 export async function promote(kind, from, to) {
-  dropLease(kind, from); dropLease(kind, to);
+  await dropLease(kind, from); await dropLease(kind, to);
   const d = await dir(kind), fh = await d.getFileHandle(from);
   try { await d.removeEntry(to); } catch (_) { /* nothing to replace */ }
   if (typeof fh.move === "function") { await fh.move(to); const f = await (await d.getFileHandle(to)).getFile(); told("put", kind, to, f.size); return f; }
@@ -130,17 +130,23 @@ const lkey = (kind, name) => kind + "/" + name;
 function park(l) { clearTimeout(l.timer); l.timer = 0; if (l.ah) { try { l.ah.close(); } catch (_) { /* already closed */ } l.ah = null; } }
 function arm(l) { l.timer = setTimeout(() => { const rest = l.last + LEASE_IDLE - performance.now(); if (rest > 0) { arm(l); } else park(l); }, LEASE_IDLE); }
 async function openLease(l) {
-  if (l.ah || l.busy) return;
-  l.busy = true;
-  try { l.ah = await (await (await dir(l.kind)).getFileHandle(l.name)).createSyncAccessHandle(); l.last = performance.now(); arm(l); }
-  catch (_) { l.ah = null; }
-  finally { l.busy = false; }
+  if (l.ah || l.open) return l.open;
+  l.open = (async () => {
+    try {
+      const ah = await (await (await dir(l.kind)).getFileHandle(l.name)).createSyncAccessHandle();
+      if (l.dead) { try { ah.close(); } catch (_) { /* already closed */ } return; }          // dropped while it was opening: never keep a handle nobody owns
+      l.ah = ah; l.last = performance.now(); arm(l);
+    } catch (_) { l.ah = null; }
+    finally { l.open = null; }
+  })();
+  return l.open;
 }
-export function dropLease(kind, name) { const k = lkey(kind, name), l = leases.get(k); if (l) { park(l); leases.delete(k); } }
+// the file is about to be written, moved or removed by this worker: the handle is closed first (an opening in flight is waited for)
+export async function dropLease(kind, name) { const k = lkey(kind, name), l = leases.get(k); if (!l) return; leases.delete(k); l.dead = true; await l.open; park(l); }
 export async function lease(kind, name) {
   if (!available()) return false;
   const k = lkey(kind, name);
-  if (!leases.has(k)) leases.set(k, { kind, name, ah: null, timer: 0, last: 0, busy: false });
+  if (!leases.has(k)) leases.set(k, { kind, name, ah: null, timer: 0, last: 0, open: null, dead: false });
   const l = leases.get(k); await openLease(l); return !!l.ah;
 }
 export async function wake() { await Promise.all([...leases.values()].map(l => (l.ah ? (l.last = performance.now(), 0) : openLease(l)))); }
@@ -165,7 +171,7 @@ export async function list(kind) {
 }
 
 export async function remove(kind, name) {
-  dropLease(kind, name);
+  await dropLease(kind, name);
   try { await (await dir(kind)).removeEntry(name); told("del", kind, name, 0); return true; } catch (_) { return false; }
 }
 
