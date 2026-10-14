@@ -6,7 +6,6 @@ authors:
   - family-names: Cristaudo
     given-names: Federico
     affiliation: "Università degli Studi di Torino"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # DA COMPILARE da Federico
 repository-code: "https://github.com/Freeesta/mzlab"
 url: "https://freeesta.github.io/mzlab/"
 license: MIT

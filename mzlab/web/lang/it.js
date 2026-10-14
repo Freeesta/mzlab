@@ -439,7 +439,7 @@ I18N.add("it", {
   "load.dropWiff": "<b>Trascina qui i file .mzML, .raw o .wiff</b> (il .wiff con il suo .wiff.scan)<br>oppure <u>clicca per sceglierli dal computer</u>",
   "conv.help.summary": "Non hai file mzML?",
   "conv.help.hint": "Hai caricato file {types}: convertili così.",
-  "conv.help.step1": "Scarica <b>ProteoWizard</b> (contiene MSConvert), gratis, per Windows: <a href=\"https://proteowizard.sourceforge.io/download.html\" target=\"_blank\" rel=\"noopener noreferrer\">proteowizard.sourceforge.io</a>.",
+  "conv.help.step1": "I file Waters, Shimadzu e Bruker non si leggono direttamente: convertili in mzML con MSConvert. Scarica <b>ProteoWizard</b> (contiene MSConvert), gratis, per Windows: <a href=\"https://proteowizard.sourceforge.io/download.html\" target=\"_blank\" rel=\"noopener noreferrer\">proteowizard.sourceforge.io</a>.",
   "conv.help.step2": "Apri <b>MSConvert</b>, trascina i tuoi file (<code>.raw</code>, <code>.wiff</code>, <code>.d</code>…) nell'elenco e premi <b>Add</b> (un <code>.wiff</code> deve stare accanto al suo <code>.wiff.scan</code>).",
   "conv.help.step3": "Formato di uscita: <b>mzML</b>. Le impostazioni predefinite vanno bene così: non cambiare altro.",
   "conv.help.step4": "Premi <b>Start</b>: i file <code>.mzML</code> compaiono nella cartella di output.",
