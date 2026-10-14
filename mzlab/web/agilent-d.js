@@ -32,6 +32,21 @@ const AgilentD = (() => {
     return { runs: list, rest };
   }
 
+  // method folders *.m outside any .D run (the acquisition method of a GC/MS, e.g. «Geosmin and MIB method for scan.m»): their files are not data and not «ignored»; they are held
+  // here with their folder name, so the Method section can read them. { methods: [{ name, root, files: [File] }], rest }. Hidden files inside (.DS_Store) are dropped.
+  const held = /** @type {{ name: string, root: string, files: File[] }[]} */ ([]);
+  function groupMethods(files) {
+    const found = new Map(), rest = [];
+    for (const f of files) {
+      const parts = (dirOf(f) + f.name).split("/"), i = parts.findIndex((p, k) => k < parts.length - 1 && /\.m$/i.test(p) && p.length > 2);
+      if (i < 0) { rest.push(f); continue; }
+      const root = parts.slice(0, i + 1).join("/") + "/", m = found.get(root) || { name: parts[i], root, files: [] };
+      found.set(root, m);
+      if (f.name[0] !== ".") m.files.push(f);
+    }
+    return { methods: [...found.values()], rest };
+  }
+
   // name of the mzML of a run: «x.D» → «x.mzML»; two runs of the same name in different folders take the name of the folder above (as cartella-carica.js does for equal names)
   function mzmlName(run, taken) {
     const base = run.name.replace(/\.d$/i, "");
@@ -65,6 +80,6 @@ const AgilentD = (() => {
     return out.files;
   }
 
-  return { NEED, locate, group, mzmlName, toMzml };
+  return { NEED, locate, group, groupMethods, held, mzmlName, toMzml };
 })();
 if (typeof module !== "undefined") module.exports = AgilentD;
