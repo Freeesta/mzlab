@@ -111,7 +111,7 @@ Apertura = invio dei file, lettura, scrittura in OPFS e costruzione dell'indice 
 | 15 HR DDA (140 MB each) | python | 15 | 2101.0 | 299.63 | 1010.2 | 1.85 | 12.19 | 0 | 77a5810c63d1 |
 | 15 HR DDA (140 MB each) | pool | 15 | 2101.0 | 252.59 | 1321.9 | 1.34 | 11.61 | 3 | 77a5810c63d1 |
 
-Lettore mzML nativo (`.wasm` del motore 1.703.705 → 1.703.631 B; `cargo run --release -p mzlab-core --example carico -- FILE.mzML` e `--example mzidx -- FILE.mzML OUT.mzidx`, 4 CPU, un file Orbitrap sintetico di 101 MB con gli spettri ripetuti 25 volte, 19.800 scansioni e 2,55 M di picchi; mediana di 3 giri): lettura e somma del TIC 1,34 s → 0,85 s; costruzione del `.mzidx` (`build`) 1,74 s → 1,16 s. `.mzidx` identico con `cmp` su 37 file sintetici e sul file grande, TIC identico.
+Lettore mzML nativo (`.wasm` del motore 1.703.705 → 1.703.558 B; `cargo run --release -p mzlab-core --example carico -- FILE.mzML` e `--example mzidx -- FILE.mzML OUT.mzidx`, 4 CPU, un file Orbitrap sintetico di 101 MB con gli spettri ripetuti 25 volte, 19.800 scansioni e 2,55 M di picchi; mediana di 3 giri): lettura e somma del TIC 1,34 s → 0,85 s; costruzione del `.mzidx` (`build`) 1,74 s → 1,16 s. `.mzidx` identico con `cmp` su 37 file sintetici e sul file grande, TIC identico.
 
 ## Schermata smartphone (iPhone 390×844, touch, server di sviluppo, mediana di 5)
 | | valore |
