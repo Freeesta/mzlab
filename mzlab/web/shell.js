@@ -308,18 +308,20 @@ $("#newrun").onclick=()=>QQRESET.ask();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16);
   if(e.closest("header"))e.querySelectorAll("svg").forEach(v=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});   // the header icons sit next to their text label (the icon names are Italian)
 // What is downloaded when (decided 8/10/2026, measured on the site): the engine (~10 MB compressed) at once, because Dati needs it;
-// after it, when the browser is idle, the small things that make the next clicks instant (Teoria ~60 kB, OpenChemLib ~340 kB:
-// under the threshold of 1 MB); Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
+// after it, one step per idle moment: OpenChemLib ~340 kB, then (fast connection) Ketcher, then the Teoria ~60 kB; Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
 // and not metered (Chrome: navigator.connection, downlink >= 10 Mbit/s, no data saver); the example files (~28 MB) only with their button.
 function prefetch(urls,as){urls.forEach(u=>{const l=document.createElement("link");l.rel=as==="module"?"modulepreload":"prefetch";l.href=u;if(as&&as!=="module")l.as=as;document.head.appendChild(l)})}
 let kPre=false;
 function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
   fetch("static/vendor/ketcher/index.html").then(r=>r.text()).then(t=>{const u=[...t.matchAll(/(?:src|href)="\.?\/?(assets\/[^"]+)"/g)].map(m=>"static/vendor/ketcher/"+m[1]);
     u.forEach(x=>fetch(x,{priority:"low"}).then(r=>r.arrayBuffer()).catch(()=>{}))}).catch(()=>{kPre=false})}
-function prefetchIdle(){const go=()=>{const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
-  prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"]);
-  prefetch(["static/vendor/openchemlib.js"],"module");
-  if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
-  /** @type {any} */ (window).requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
+function prefetchIdle(){const idle=/** @type {any} */ (window).requestIdleCallback;
+  const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
+  const fast=c.downlink>=10&&!/2g|3g/.test(c.effectiveType||"");
+  // one step per idle moment, in this order: Disegno (OpenChemLib, Ketcher if fast), then the Teoria (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
+  const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module"),()=>{if(fast)prefetchKetcher()},
+    ()=>prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"])];
+  const next=()=>{const f=steps.shift();if(!f)return;f();idle?idle(next,{timeout:8000}):setTimeout(next,2000)};
+  idle?idle(next,{timeout:8000}):setTimeout(next,2000)}
 {const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
 {const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
