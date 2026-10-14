@@ -80,6 +80,10 @@ export function createDesktopPool(opts = {}) {
       if (pool.onProgress) pool.onProgress({ phase: "proofs", ms: Math.round(performance.now() - t0) });
       return { table: await tableBytes(r.bytes) };
     },
+    /** a view of the table the last step holds in the app (`feat/table`): `kind` = samples (no table needed) | qc | view | report | export | ms2, the answer is the engine's text @param {string} kind @param {Record<string, any>} [p] */
+    async table(kind, p) { return (await call("feat/table", { kind, ...p })).text(); },
+    /** the MS2 text (FBMN `.mgf`, SIRIUS `.ms`) of the table: the best MS2 of each row is read from the index of its file @param {{ samples: string, spec: string, sha: string, pol: number, kind: string, paths: string[] }} a */
+    ms2File(a) { return pool.table("ms2", { samples: a.samples, spec: a.spec, sha256: a.sha, polarity: a.pol, export_kind: a.kind, names: a.paths.map(nameOf) }); },
     cancel() {},
     resume() {},
   };
