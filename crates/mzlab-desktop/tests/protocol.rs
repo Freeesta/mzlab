@@ -150,3 +150,16 @@ fn rawprogress_of_a_file_that_never_converted_is_empty() {
     assert_eq!(r.status, 200);
     assert_eq!(String::from_utf8(r.body).unwrap(), "{}");
 }
+
+/// A webview that drops the body of a POST (WKWebView with a Blob) must get an error that says the file did not arrive, never an id.
+#[test]
+fn an_upload_without_bytes_is_refused() {
+    let state = State::new();
+    state.set_data_folder(std::env::temp_dir().join(format!("mzlab-up-{}", std::process::id())));
+    let r = mzlab_desktop::handle_body(&state, "lr/upload", "name=a.mzML&off=0&total=10", &[]);
+    assert_eq!(r.status, 400);
+    assert!(String::from_utf8_lossy(&r.body).contains("err.file.unknown"));
+    let ok = mzlab_desktop::handle_body(&state, "lr/upload", "name=a.mzML&off=0&total=3", b"abc");
+    assert_eq!(ok.status, 200);
+    assert!(String::from_utf8_lossy(&ok.body).contains("\"id\""));
+}

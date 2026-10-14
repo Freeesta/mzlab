@@ -31,9 +31,12 @@ async function fileId(blob, name) {
   if (!nm) throw JSON.stringify({ error_key: "err.file.raw", params: { detail: "no file" } });
   let id = null;
   for (let off = 0; off === 0 || off < blob.size; off += CHUNK) {
-    const j = await (await post("lr/upload", { name: nm, off, total: blob.size }, blob.slice(off, off + CHUNK))).json();
+    // bytes, not a Blob: WKWebView (macOS) hands a custom-scheme handler an empty body for a Blob
+    const piece = new Uint8Array(await blob.slice(off, off + CHUNK).arrayBuffer());
+    const j = await (await post("lr/upload", { name: nm, off, total: blob.size }, piece)).json();
     if (j.id) id = j.id;
   }
+  if (!id) throw JSON.stringify({ error_key: "err.file.unknown", params: { detail: "upload" } });
   known.set(blob, id);
   return id;
 }
