@@ -2,6 +2,8 @@
 //! an independent encoder (skipped without python3; `MZLAB_GOLDEN_STRICT=1` fails instead), and (2) the ProteoWizard mzML of the real 3200 files
 //! in the private data repository (skipped without it). Spectra: m/z and intensity within 1e-9, times and counts equal.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

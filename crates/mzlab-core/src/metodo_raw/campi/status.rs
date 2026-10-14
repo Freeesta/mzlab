@@ -55,7 +55,7 @@ fn channel(label: &str, vals: &[&GenericValue]) -> Option<Campo> {
         (format!("{lo}..{hi}"), format!("{name} (min..max)"))
     } else {
         let mut u = texts.clone();
-        u.sort();
+        crate::sortc::slice_ord(&mut u);
         u.dedup();
         (u.len().to_string(), format!("{name} (distinct values)"))
     };

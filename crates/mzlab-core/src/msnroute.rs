@@ -83,7 +83,7 @@ impl<R: ReadAt> Routes<R> {
         let (t0, t1) = span(&mut a.ms1.iter().copied());
         o.raw(",\"rt0\":").opt(t0.is_finite().then(|| round(t0, 4))).raw(",\"rt1\":").opt(t1.is_finite().then(|| round(t1, 4)));
         let mut livelli: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
-        livelli.sort_unstable();
+        crate::sortc::slice_ord(&mut livelli);
         livelli.dedup();
         o.raw("},\"livelli\":[").raw(&livelli.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodi\":[");
         for (k, (n, bl)) in a.nodi.iter().zip(blocchi(&a, scans.len())).enumerate() {

@@ -123,7 +123,7 @@ fn get(v: &Value, k: &str) -> f64 {
 /// Kinetics of an ion against the parent: areas `parent_area` and `ion_area` at treatment `times` (any order, sorted here).
 pub fn kinetics(times: &[f64], parent_area: &[f64], ion_area: &[f64]) -> Value {
     let mut o: Vec<usize> = (0..times.len()).collect();
-    o.sort_by(|&a, &b| times[a].total_cmp(&times[b]));
+    crate::sortc::slice_by(&mut o, |&a, &b| times[a].total_cmp(&times[b]));
     let t: Vec<f64> = o.iter().map(|&i| times[i]).collect();
     let p: Vec<f64> = o.iter().map(|&i| parent_area[i]).collect();
     let x: Vec<f64> = o.iter().map(|&i| ion_area[i]).collect();

@@ -3,6 +3,8 @@
 //! allocation out of proportion to the file. Synthetic seeds only (the `.wiff` ones need python3 and skip without it); no `MZLAB_DATI`.
 //! `ROBUSTEZZA_TRACCIA=1 cargo test -p mzlab-core --test robustezza_comune -- --nocapture` prints every case before it runs (to find the one that aborts).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_synth;
 mod robustezza;
 

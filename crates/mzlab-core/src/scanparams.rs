@@ -60,7 +60,7 @@ pub(crate) fn write<R: ReadAt, M: ReadAt>(idx: &Index<R>, mzml: &mut M, instrume
     } else {
         let acts: Vec<String> = {
             let mut a: Vec<String> = sc2.iter().filter_map(|s| s.act.clone()).filter(|a| !a.is_empty()).collect();
-            a.sort();
+            crate::sortc::slice_ord(&mut a);
             a.dedup();
             a
         };

@@ -2,6 +2,8 @@
 //! centroid, low-resolution profile and high-resolution sessions): same lines, numbers within 1e-9; a request Python refuses is left to Python.
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_FONDO_DIR` = a folder already written by the script.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;

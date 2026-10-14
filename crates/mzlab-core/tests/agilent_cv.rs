@@ -1,6 +1,8 @@
 //! Every cvParam that msconvert writes for the real runs must be in our mzML too (the audit of FILE_PRODUTTORI): the header, one spectrum of each kind
 //! and the TIC chromatogram. The exceptions are listed here with the reason. Skipped without the data repository (`MZLAB_DATI`).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 

@@ -113,7 +113,7 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
         rows.push(row(&subs[i].0, subs[i].1, &w, &rt, &full, Some(i) == full_i));
     }
     let mut merged: Vec<(usize, usize)> = spans.iter().filter(|s| s.1 > s.0).cloned().collect();
-    merged.sort();
+    crate::sortc::slice_ord(&mut merged);
     let mut comb = vec![0.0; rt.len()];
     let mut done = 0;
     for (a, b) in merged {                                   // the union of the windows: a peak inside two of them counts once
@@ -126,7 +126,7 @@ pub fn subxic<R: ReadAt>(r: &mut Routes<R>, k: i64, q: &Query) -> Result<Option<
         }
         done = done.max(b);
     }
-    rows.sort_by(|x, y| y.0.total_cmp(&x.0));
+    crate::sortc::slice_by(&mut rows, |x, y| y.0.total_cmp(&x.0));
     let r4 = |v: &[f64], nd: usize| floats(&v.iter().map(|&x| round(x, nd)).collect::<Vec<_>>());
     let n_hit = rows.len();
     let o = Obj::new().i("k", k).n("ppm", ppm).n("min_mz", min_mz).i("z", z as i64).put("rt", r4(&rt, 4)).put("y", r4(&comb, 1)).put("full", r4(&full, 1));

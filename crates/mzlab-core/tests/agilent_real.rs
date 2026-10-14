@@ -2,6 +2,8 @@
 //! record, the scan counts of `MSTS.xml`, the end of `MSPeak.bin`, the ions of the method, the side files. Skipped without the data.
 //! The comparison with msconvert is in `agilent_msconvert.rs`, the synthetic folders in `agilent_parity.rs`.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_folder;
 
 use agilent_folder::*;

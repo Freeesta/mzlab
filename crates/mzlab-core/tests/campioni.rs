@@ -1,6 +1,8 @@
 //! `campioni/2`: the table of the names, the same minutes and roles as `project::guess_sample` on the generated names of `project_parity`,
 //! the findings of `valida`, the migration of `da_legacy`, the indices of `per_tp`, the canonical JSON and its schema.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::campioni::{
     self, da_legacy, from_json, per_tp, proponi, to_json, valida, Campione,
 };

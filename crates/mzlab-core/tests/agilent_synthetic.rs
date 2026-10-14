@@ -1,6 +1,8 @@
 //! The Agilent `.D` reader on synthetic folders written here with an encoder that shares no code with the reader (layout of `MSScan.xsd`); no laboratory
 //! data. The real runs are in `agilent_real.rs` and `agilent_msconvert.rs`.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::agilent::scan::Layout;
 use mzlab_core::agilent::{AgilentD, Files};
 use mzlab_core::mzml;

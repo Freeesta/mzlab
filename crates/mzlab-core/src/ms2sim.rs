@@ -17,7 +17,7 @@ fn matching(a: &[f64], ya: &[f64], b: &[f64], yb: &[f64], tol: f64, shifts: &[f6
             }
         }
     }
-    cand.sort_by(|x, y| y.2.total_cmp(&x.2));
+    crate::sortc::slice_by(&mut cand, |x, y| y.2.total_cmp(&x.2));
     let (mut ua, mut ub) = (vec![false; a.len()], vec![false; b.len()]);
     let mut out = Vec::new();
     for (i, j, _) in cand {

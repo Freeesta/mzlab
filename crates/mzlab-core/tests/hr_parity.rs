@@ -2,6 +2,8 @@
 //! Orbitrap DDA files): the same columns and peaks, numbers within 1e-9; a window of one scan is read from the mzML (`spectrum_exact`; the index alone answers `None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_HR_DIR` = a folder already written by the script.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

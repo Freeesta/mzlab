@@ -234,7 +234,7 @@ pub fn parse(text: &str) -> Result<Gradient> {
         }
     }
     let mut rows: Vec<(f64, Slot)> = rows.into_iter().filter(|(_, s)| s.b.is_some() || s.flow.is_some()).collect();
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    crate::sortc::slice_by(&mut rows, |a, b| a.0.total_cmp(&b.0));
     let pt = |t: f64, b: f64, flow: Option<f64>, curve: Option<i64>| Raw { t: Some(t), b: Some(b), flow, curve, shown: (t.to_string(), b.to_string()) };
     let (mut b, mut flow_v) = (initial.b, initial.flow);
     let mut pts = Vec::new();

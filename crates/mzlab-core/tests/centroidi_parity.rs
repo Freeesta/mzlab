@@ -1,6 +1,8 @@
 //! `centroidi` answers like `tools/centroidi_riferimento.py`: same number of centroids, same flags, m/z and values within 1e-9 relative, and the same
 //! estimated parameters. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

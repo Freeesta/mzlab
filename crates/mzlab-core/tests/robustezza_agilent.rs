@@ -1,6 +1,8 @@
 //! The Agilent `.D` reader against folders that are not what they say: no `AcqData`, files of size zero, a declared size of 16 EB, a size that does not divide
 //! by the record, `MSPeak.bin` shorter than the records say, a `DATA.MS` that is only its magic.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_synth;
 mod robustezza;
 

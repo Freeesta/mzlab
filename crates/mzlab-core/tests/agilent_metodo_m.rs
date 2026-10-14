@@ -1,6 +1,8 @@
 //! The `metodo/1` document of the real Agilent method folders `GC-MS/*.m` (skipped without the data repository): the compounds, qualifier ions and calibration levels
 //! are the values read from `quantitative.xml` with an independent parse (Python ElementTree), every name/value of the files is in `campi`, and every key is in the schema.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_folder;
 
 use agilent_folder::dati;
