@@ -104,6 +104,26 @@ pub struct Check {
     pub adduct: Option<String>,
 }
 
+impl Check {
+    /// `{"ok": true|false|null, "ppm", "adduct"}`, the text the `.wasm` and the native route of the app answer.
+    pub fn json(&self) -> String {
+        let mut o = mzlab_core::json::Out::default();
+        o.raw("{\"ok\":").raw(match self.ok {
+            Some(true) => "true",
+            Some(false) => "false",
+            None => "null",
+        });
+        if let Some(p) = self.ppm {
+            o.raw(",\"ppm\":").num(p);
+        }
+        if let Some(a) = &self.adduct {
+            o.raw(",\"adduct\":").str(a);
+        }
+        o.raw("}");
+        o.0
+    }
+}
+
 /// Does the library structure of a match agree with the precursor of its entry (declared adduct first, then the common ones of the polarity)?
 pub fn check_structure(
     formula: &str,
