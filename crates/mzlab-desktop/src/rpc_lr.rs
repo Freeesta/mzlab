@@ -157,6 +157,7 @@ impl State {
                 Some(Ok(j)) => text(j),
                 Some(Err(j)) => text(format!("E{j}")),
             },
+            "lr_campioni" => text(mzlab_core::campioni::route(s("cop"), s("body"))?),
             "lr_formula" => {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)

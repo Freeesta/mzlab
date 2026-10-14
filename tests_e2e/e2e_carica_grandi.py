@@ -53,6 +53,9 @@ def room_enough():        # room for everything: pressed while reading, the butt
             pg.evaluate("window.__seen = []; new MutationObserver(() => window.__seen.push(document.getElementById('ldmsg').textContent)).observe(document.getElementById('ldmsg'), {childList: true, characterData: true, subtree: true})")
             pg.evaluate("addEventListener('mzlab-index', () => document.getElementById('opbtn').click(), {once: true})")     # pressed at the first sign of progress: the files are surely still being read
             pg.set_input_files("#pick", names)
+            pg.wait_for_function("UPBUSY === 0 && ST.files.length === 3 && !document.getElementById('start').hidden", timeout=240000)
+            import lib; lib._tempi(pg)                              # the press while reading waited for the files, then «Open» asked for the times (roles and times of the table): written, pressed again
+            pg.click("#opbtn")
             ready(pg, timeout=240000)
             seen = pg.evaluate("window.__seen")
             assert any("%" in m for m in seen), f"no percentage on the overlay while reading: {seen[:5]}"

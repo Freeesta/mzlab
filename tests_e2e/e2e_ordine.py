@@ -51,6 +51,7 @@ try:
         step("the file list shows the chosen unit", list_unit)
         r2 = Run(port=8922, wd="/tmp/wd_ordine2"); pg2 = r2.page(p)
         def nolabel():
+            import lib; lib.AUTO_TEMPI = False       # the test is about names with no time: nothing is written for it
             stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"])
             assert pg2.evaluate(NAMES) == ["campione2.mzML", "campione10.mzML"], pg2.evaluate(NAMES)
             assert not pg2.is_visible("#tunit"), "no time in the names: no unit"

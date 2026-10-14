@@ -40,6 +40,16 @@ pub fn build(ctx: &str) -> Result<String> {
         return Err(Error::new("err.provenance.unreadable"));
     }
     let version = env!("CARGO_PKG_VERSION");
+    let rows = rows_of(&v, version);
+    let mut line = format!("# mzLab {version}");
+    for (k, s) in rows.iter().skip(1) {
+        line.push_str(&format!(" · {k}={s}"));
+    }
+    Ok(render(version, &line, &rows))
+}
+
+/// The version row followed by the known, non-empty fields in their fixed order.
+fn rows_of(v: &Value, version: &str) -> Vec<(String, String)> {
     let mut rows: Vec<(String, String)> = vec![("mzLab".into(), version.into())];
     for k in FIELDS {
         let s = match v.get(k) {
@@ -52,17 +62,17 @@ pub fn build(ctx: &str) -> Result<String> {
             rows.push((k.into(), s));
         }
     }
-    let mut line = format!("# mzLab {version}");
-    for (k, s) in rows.iter().skip(1) {
-        line.push_str(&format!(" · {k}={s}"));
-    }
+    rows
+}
+
+fn render(version: &str, line: &str, rows: &[(String, String)]) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":")
         .str(SCHEMA)
         .raw(",\"version\":")
         .str(version)
         .raw(",\"line\":")
-        .str(&line)
+        .str(line)
         .raw(",\"rows\":[");
     for (i, (k, s)) in rows.iter().enumerate() {
         o.raw(if i == 0 { "[" } else { ",[" })
@@ -72,7 +82,7 @@ pub fn build(ctx: &str) -> Result<String> {
             .raw("]");
     }
     o.raw("]}");
-    Ok(o.0)
+    o.0
 }
 
 #[cfg(test)]
