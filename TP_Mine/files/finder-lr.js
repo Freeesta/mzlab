@@ -13,7 +13,7 @@
  * @typedef {{ featUrl: (p: string) => string, base: () => string, manifest: () => Promise<any>, sha: (b: ArrayBuffer) => Promise<string>,
  *   pool: () => Promise<any>, idxFiles: (n: string[]) => Promise<File[] | null>, openIdx: (n: string[]) => Promise<any>,
  *   detect: (p: any, files: {name: string, path: string}[], idx: File[]) => Promise<Uint8Array[]>, held: Map<string, any>,
- *   natives: Set<string>, ask: (what: string, name: string) => Promise<any> }} Ctx
+ *   natives: Set<string>, ask: (what: string, name: string) => Promise<any>, idxBase: (n: string) => string }} Ctx
  */
 
 /** the finder_lr module of wasm-feat/manifest.json, checked against its SHA-256 @param {Ctx} c */
@@ -77,7 +77,7 @@ export async function run(c, a) {
   const got = await plan(c, a);
   if (!got) return false;
   const { p, idx, x } = got, t0 = performance.now(), pool = await c.pool();
-  const files = p.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + n + ".mzidx" })), paths = files.map((/** @type {any} */ f) => f.path);
+  const files = p.lc.map((/** @type {string} */ n) => ({ name: n, path: "mzlab/idx/" + c.idxBase(n) + ".mzidx" })), paths = files.map((/** @type {any} */ f) => f.path);
   const timing = /** @type {Record<string, number>} */ ({}), lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
   let t = performance.now();
   progress(`Detecting the peaks of ${files.length} files...`, 0.02, "calibration");
