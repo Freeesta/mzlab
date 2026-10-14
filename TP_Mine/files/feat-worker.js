@@ -102,6 +102,19 @@ function previewOps(submit, call, opts) {
   };
 }
 
+/** drift of the RT of the parent along a series (JSON of mzlab_feat::params_drift): `stored` = the .mzfeatf of its files, `baseRtTol` = the tolerance from the peak width (NaN = none) */
+function driftOps(submit, call, copy) {
+  return {
+    drift({ stored, parentMz, baseRtTol }) {
+      return submit(async (slot, load) => {
+        await load("feat");
+        const r = await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol });
+        return JSON.parse(r.json);
+      });
+    },
+  };
+}
+
 function proofOps(submit, call, copy, opts) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
@@ -148,6 +161,7 @@ export function createFeatPool(opts) {
       })));
     },
     ...previewOps(submit, call, opts),
+    ...driftOps(submit, call, copy),
     ...proofOps(submit, call, copy, opts),
     // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
     ms2File({ table, samples, spec, sha, pol, kind, paths }) {
@@ -271,6 +285,9 @@ const OPS = {
   async preview(m) {
     const f = await openAll([m.path]);
     try { return { json: mods.feat.preview_file(f.read, f.sizes[0], m.recipe || "") }; } finally { f.close(); }
+  },
+  async drift(m) {
+    return { json: mods.feat.drift_series(arrays(m.files), m.parentMz, m.baseRtTol) };
   },
   async align(m) {
     const f = await openAll(m.paths), out = memSink();

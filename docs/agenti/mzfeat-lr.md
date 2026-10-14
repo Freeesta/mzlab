@@ -17,6 +17,7 @@ La pipeline di `crates/mzlab-feat` gira anche sui dati LR (SCIEX 3200 QTRAP, Q1 
 
 - Stime del Dig dai dati: l'anteprima (`params::preview`, profilo `lr`) riporta `da` (mezza finestra di m/z: il doppio della tolleranza misurata, cioè 3 sigma robuste degli scarti dei picchi forti dalla loro traccia, 0,1-0,5 Da), `rt_tol` (il doppio della FWHM mediana dei picchi forti, 0,05-1 min) e `dead` (fine del fronte non trattenuto del TIC nel primo quinto della corsa, null se non c'è); funzioni in `params_unit.rs`.
 - La pagina le riceve da `tpmine-worker.js` (`estimate`) e riempie XIC ±Da, tolleranza RT e «Ignora RT prima di» in giallo finché l'utente non scrive. Prova: `lr_fullscan` (`unit_preview_*`) e `params_tests.rs`.
+- Deriva dell'RT del progenitore (`params_drift.rs`, export `drift_series(files, parent_mz, base_rt_tol)` di `mzlab-feat-wasm`, operazione `drift` del pool): sui `.mzfeatf` di tutti i file pieni, per file la feature più alta entro ±0,6 Da dal m/z del progenitore e ±2 min dall'RT della più forte della serie; deriva = massimo − minimo degli RT (almeno due file). `estimate(nomi, mz)` di `tpmine-worker.js` restituisce `rt_tol = max(2·FWHM, deriva)` e `drift {value, n}`; la pagina rifà la stima quando cambia il m/z del progenitore.
 
 ## Livelli
 - Profilo `lr` di `livelli/1` (nascosto): mai sopra il 3 (`tetto`: tutti i cancelli superati danno 3), 4 se la sola formula nominale spiega lo ione, altrimenti 5. Il profilo non ha `punti`: la tabella `PointsTable::bundled()` legge solo il profilo predefinito.
