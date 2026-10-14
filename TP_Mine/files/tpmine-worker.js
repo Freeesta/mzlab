@@ -15,6 +15,12 @@
 /** @type {Record<string, any>} */ const mods = {};   // the modules of the manifest already loaded (wasm-bindgen): finder, finder_msn
 /** @type {any} */ let man = null;                // wasm-feat/manifest.json
 /** @type {any} */ let featPool = null;
+/** @type {Set<string>} the held files that are the stub of a sample of a maker's file and have no mzML in `held` (finder-idx.js reads their .mzidx as it is) */ const natives = new Set();
+/** @type {Set<string>} every stub the page sent: Pyodide, if it is needed, gets their mzML (written then, for that use only) */ const stubs = new Set();
+/** @type {Map<number, (v: any) => void>} the answers the page owes to `ask` */ const asked = new Map();
+let askSeq = 0;
+/** the page makes what only it can: `what` "mzml" = the mzML of a sample of a maker's file (a Blob), "srm" = its SRM traces as `srm::impacchetta` bytes (an ArrayBuffer); null when it cannot @param {string} what @param {string} name @returns {Promise<any>} */
+const ask = (what, name) => new Promise(res => { const rid = ++askSeq; asked.set(rid, res); postMessage({ type: "ask", rid, what, name }); });
 /** @type {Map<string, any>} */ const held = new Map();    // the Blob or ArrayBuffer of every file the page sent: the source of the .mzidx that finder-idx.js builds when OPFS has none
 /** @type {any} */ let ingress = null;            // finder-idx.js
 /** @type {any} */ let desk = null;               // finder-desktop.js: in the desktop app every call but the default list goes to the native engine
@@ -137,7 +143,7 @@ const finder = () => load("finder");
 /** every file the page sent has a fresh .mzidx in OPFS (finder-idx.js builds the missing ones) @param {string[]} names */
 async function ensureIdx(names) {
   if (!ingress) ingress = (await import(base() + "mzfinder/finder-idx.js")).createIngress(base(), say, (key, params) => postMessage({ type: "notice", key, params }));
-  await ingress.ensure(names, held);
+  await ingress.ensure(names, held, natives, ask);
 }
 async function pool() {
   if (featPool) return featPool;
@@ -239,7 +245,7 @@ async function rustRun(a) {
 
 /** the low-resolution Dig in Rust (finder-lr.js) and what it borrows from this worker */
 const lrMod = () => import(base() + "mzfinder/finder-lr.js");
-const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held };
+const lrCtx = { featUrl, base, manifest, sha, pool, idxFiles, openIdx, detect, held, natives, ask };
 /** every file has its .mzidx: waits a little for the one that the main program is still writing (a file taken from the Data tab sends no bytes here) @param {string[]} names */
 async function waitIdx(names) {
   for (let i = 0; i < 60; i++) {
@@ -307,6 +313,12 @@ async function call(fn, a) {
 }
 /** @param {string} fn @param {any[]} a */
 async function toPy(fn, a) {
+  for (const name of stubs) {                        // Pyodide reads mzML only
+    const b = await ask("mzml", name);
+    if (!b) throw new Error(`cannot read ${name}`);
+    if (py) putPy(name, { blob: b }); else puts.set(name, { name, blob: b });
+  }
+  stubs.clear();
   const r = (await pyodide())[fn](...a);
   return typeof r === "string" ? r : String(r);
 }
@@ -319,9 +331,13 @@ onmessage = async ev => {
       postMessage({ type: "ready" });
     } else if (m.type === "put") {
       held.set(m.name, m.blob || m.buf);
-      if (py) putPy(m.name, m);
+      stubs.delete(m.name); natives.delete(m.name);
+      if (m.nat) { stubs.add(m.name); natives.add(m.name); puts.delete(m.name); }         // a stub is no mzML: Pyodide gets the real one only when it runs (toPy)
+      else if (py) putPy(m.name, m);
       else { puts.delete(m.name); puts.set(m.name, m); }
       postMessage({ id: m.id, result: true });
+    } else if (m.type === "ask-reply") {
+      const r = asked.get(m.rid); asked.delete(m.rid); if (r) r(m.value);
     } else if (m.type === "mem") {          // size of the WebAssembly memory: it only grows, so at the end it is the peak of the run (used by the tests)
       postMessage({ id: m.id, result: { wasm: py ? py._module.HEAPU8.length : 0 } });
     } else if (m.type === "call") {

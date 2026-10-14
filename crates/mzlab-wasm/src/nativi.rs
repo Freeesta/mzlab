@@ -8,6 +8,7 @@ use std::rc::Rc;
 use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::sorgente::SorgenteLettore;
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
 use wasm_bindgen::prelude::*;
 
@@ -245,6 +246,26 @@ pub fn build_mzidx_native(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\"}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes, p.sha256
     ))
+}
+
+/// The SRM traces of sample `c` of a dataset as `mzlab_core::srm::impacchetta` writes them, given once to `sink(Uint8Array)` (the MRM files of mzFinder: no mzML is made of them).
+#[wasm_bindgen]
+pub fn native_srm(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+    centroid: bool,
+    sink: Function,
+) -> Result<(), JsValue> {
+    let mut l = Membri::new(names, sizes, read)?.open(centroid)?;
+    let mut t = SorgenteLettore {
+        l: &mut *l,
+        c: c as usize,
+    };
+    let v = mzlab_core::srm::leggi(&mut t).map_err(|e| error_json(&e))?;
+    let bytes = js_sys::Uint8Array::from(&mzlab_core::srm::impacchetta(&v)[..]);
+    sink.call1(&JsValue::NULL, &bytes).map(|_| ())
 }
 
 /// Sample `c` of a dataset as mzML («Scarica .mzML»), sent to `sink(Uint8Array)` piece by piece; `progress(done, total)` counts the spectra written.

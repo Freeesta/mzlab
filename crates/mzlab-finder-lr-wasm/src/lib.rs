@@ -57,18 +57,26 @@ fn open(read: &Function, k: usize, size: f64) -> std::result::Result<Index<JsRea
 
 /// The integration table of the MRM files of the series (`d.mrm` of `api.run`): `read(k, offset, length)` gives the bytes of the mzML of the `k`-th
 /// file with kind `mrm` (the order of `mrm` in `finder_lr_plan`), `sizes` its size and `ends` where its last scan ends (0 without scans).
+/// A file with `sizes[k]` < 0 is a sample of a maker's file: its traces are `packed[k]` (`Uint8Array`, `mzlab_core::srm::impacchetta`).
 #[wasm_bindgen]
 pub fn finder_lr_mrm(
     files_json: &str,
     read: Function,
     sizes: Vec<f64>,
     ends: Vec<f64>,
+    packed: js_sys::Array,
     rt_tol: f64,
 ) -> std::result::Result<String, JsValue> {
     let fs = lr::plan::files(files_json).map_err(user)?;
     let mut out = Vec::new();
     for (k, f) in fs.iter().filter(|f| f.kind == "mrm").enumerate() {
         let size = sizes.get(k).copied().unwrap_or(f64::NAN);
+        if size < 0.0 && packed.get(k as u32).is_instance_of::<js_sys::Uint8Array>() {
+            let b = js_sys::Uint8Array::new(&packed.get(k as u32)).to_vec();
+            let t = mzlab_core::srm::spacchetta(&b).map_err(|e| user(e.to_string()))?;
+            out.push(lr::mrm::file_from_traces(f, t));
+            continue;
+        }
         if size.is_nan() || size < 0.0 {
             return Err(user("no mzML of the file: open it again".into()));
         }

@@ -93,6 +93,7 @@ pub mod mrmroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod sniff;
 pub mod sorgente;
+pub mod srm;
 pub mod scantable;
 pub mod specdiff;
 pub mod specpeaks;
