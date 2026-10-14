@@ -302,6 +302,6 @@ impl State {
     }
 }
 
-fn user(e: String) -> Error {
+pub(crate) fn user(e: String) -> Error {
     Error::new("error.finder").with("detail", e)
 }
