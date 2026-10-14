@@ -22,7 +22,7 @@ const HELP = {
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
   "adducts": [I18N.t("help.adducts.title"), I18N.t("help.adducts.body")],
   "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
-  "header": ["", I18N.t("help.header.body")],
+  "header": ["", I18N.t("help.header.body") + (window.__TAURI__ ? "" : I18N.t("help.header.app"))],      // the download link is pointless inside the desktop app
 };
 
 (() => {
