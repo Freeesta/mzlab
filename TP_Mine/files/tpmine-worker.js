@@ -274,7 +274,7 @@ async function estimate(a) {
 
 /** one call of the page @param {string} fn @param {any[]} a */
 async function call(fn, a) {
-  if (fn === "estimate") return estimate(a);
+  if (fn === "estimate" && !init.desktop) return estimate(a);
   if (fn === "default_transformations") return DEFAULT_TR;
   if (fn === "tp_table" && !init.desktop) return tpTable(a[0]);
   if (fn === "transf_rows" && !init.desktop) return (await finder()).finder_transf_rows(a[0]);       // the table of the list of transformations (in the desktop app finder-desktop.js asks the native engine)

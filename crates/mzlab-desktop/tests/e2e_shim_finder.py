@@ -91,6 +91,7 @@ def py_localization(d, library):
 sys.path.insert(0, str(ROOT / "TP_Mine" / "tests")); import lr_synth  # noqa: E402
 lrs = lr_synth.write_series(tmp / "lr")
 LR_FILES = [{"name": f["name"], "type": f["type"], "time": f["time"], "kind": "full"} for f in lrs]
+demo_mz = lr_synth.demo.PARENT_MZ
 LR_PARENT = {"name": "parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "adduct": "[M+H]+"}
 (tmp / "lr_files.json").write_text(json.dumps(LR_FILES)); (tmp / "lr_parent.json").write_text(json.dumps(LR_PARENT))
 (tmp / "lr_nat").mkdir()
@@ -214,6 +215,33 @@ try:
             t = pg.evaluate("() => window.TPCALL('frag_tree')")
             assert t == {"ok": False, "mode": "lr", "note": "no MS2 of the parent in the files", "nodes": []}, t
         step("a low-resolution series: the Dig and the details equal the native example's", lr_series)
+        def lr_ms2_mrm():
+            import dati_sintetici as DS; from valida import lr_sintetici as LS; from tpmine import demo
+            rng = numpy.random.default_rng(3); pm = demo.PARENT_MZ + demo.SHIFT
+            epi, std, t0 = (tmp / "lr" / n for n in ("lr_EPI.mzML", "lr_MRM-std.mzML", "lr_MRM-t0.mzML"))
+            DS._write(epi, [DS._spec(i, 8.8 + 0.02 * i, numpy.array([pm - 61, pm - 44, pm - 17]), numpy.array([120., 500., 900.]) * rng.normal(1, 0.05), level=2, prec=pm, ce=30) for i in range(21)], [])
+            LS.scrivi_mrm(std, 10.0, 1); LS.scrivi_mrm(t0, 3.0, 2)
+            pg.set_input_files("#tp-in", [str(x) for x in (epi, std, t0)])
+            pg.wait_for_function("[...document.querySelectorAll('#tp-files tr')].filter(r => /lr_(EPI|MRM)/.test(r.textContent)).length >= 3", timeout=300000)
+            files = LR_FILES + [{"name": epi.name, "type": "sample", "time": None, "kind": "ms2"}, {"name": std.name, "type": "standard", "time": None, "kind": "mrm"}, {"name": t0.name, "type": "sample", "time": 0, "kind": "mrm"}]
+            call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
+            run = call("run", files, LR_PARENT, {}, "")
+            assert run["rows"][0]["label"] == "progenitore" and [r["id"] for r in run["rows"]] == [r["id"] for r in lr_native["run"]["rows"]], "the rows change with MS2 and MRM files"
+            m = run["mrm"]; assert m and len(m["rows"]) == 2 and len(m["transitions"]) >= 2, m          # the integration of every transition, no calibration line
+            assert m["calibration"] is None and not [k for k in ("slope", "intercept") if k in json.dumps(m).lower()], "the program draws no calibration line"
+            d = call("detail", run["rows"][0]["id"])
+            assert d["ms2"] and d["ms2"]["scans"] > 0 and d["ms2"]["fragments"], d.get("ms2")           # the EPI scans of the parent, with their fragments
+            t = call("frag_tree"); assert t["mode"] == "lr", t
+            e = call("estimate", [f["name"] for f in LR_FILES if f["type"] != "blank"], str(demo.PARENT_MZ))
+            e = json.loads(e) if isinstance(e, str) else e
+            assert e and all(k in e for k in ("da", "rt_tol", "dead", "fwhm")), e
+            assert e["drift"]["n"] >= 2 and e["rt_tol"] >= e["drift"]["value"], e                   # rt_tol = max(2 x FWHM, drift of the parent)
+        step("a low-resolution series with MS2 EPI and MRM files: rows, mrm table, MS2 of the parent, tree and estimate", lr_ms2_mrm)
+        def lr_no_formula():
+            call = lambda fn, *a: pg.evaluate("([fn, a]) => window.TPCALL(fn, ...a)", [fn, list(a)])
+            run = call("run", LR_FILES, {"name": "parent", "mz": demo_mz}, {}, "")
+            assert run["rows"] and run["rows"][0]["label"] == "progenitore" and run["parent"]["formula"] == "", (run["parent"], run["rows"][:1])
+        step("a low-resolution series with a parent known only by its m/z runs in the app", lr_no_formula)
         def clean():
             bad = [u for u in reqs if re.search(r"pyodide|wasm-feat|mzlab\.zip", u, re.I)]
             assert not bad, bad[:5]

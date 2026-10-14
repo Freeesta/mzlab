@@ -6,7 +6,6 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_feat::legacy::lr::mrm::{MrmFile, Trace};
 use mzlab_feat::legacy::lr::{self, LrDig};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -79,29 +78,7 @@ pub fn finder_lr_mrm(
         };
         let mut m = Mzml::new(r, size as u64);
         let end = ends.get(k).copied().unwrap_or(0.0) as u64;
-        let chroms = m.chromatograms(end).map_err(|e| user(e.to_string()))?;
-        let mut traces = Vec::new();
-        for c in chroms.iter().filter(|c| c.kind == "srm") {
-            let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
-                continue;
-            };
-            let (rt, y) = m.chromatogram(c).map_err(|e| user(e.to_string()))?;
-            traces.push(Trace {
-                q1,
-                q3,
-                ce: c.ce,
-                name: c.name.clone(),
-                rt,
-                y,
-            });
-        }
-        out.push(MrmFile {
-            name: f.name.clone(),
-            label: f.label.clone(),
-            kind_type: f.kind_type.clone(),
-            time: f.time,
-            traces,
-        });
+        out.push(lr::mrm::file_from_mzml(f, &mut m, end).map_err(|e| user(e.to_string()))?);
     }
     Ok(lr::mrm::analyse(&out, rt_tol).unwrap_or_else(|| "null".into()))
 }

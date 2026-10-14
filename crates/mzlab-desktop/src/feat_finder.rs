@@ -2,13 +2,14 @@
 //! `finder/dig` keeps the Dig in `FeatState` for `finder/detail`, `inclusion_csv`, `frag_tree` and `frag_tree_compare`. The text errors of `legacy` come back as `error.finder`
 //! with the English text in `detail`.
 
+use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::{Error, Result};
 use mzlab_feat::legacy;
 use mzlab_feat::store::Slice;
 use serde_json::Value;
 
 use crate::engine::State;
-use crate::feat::FeatState;
+use crate::feat::{names, FeatState};
 use crate::feat_msn::Msn;
 use crate::rpc::{text, Answer};
 
@@ -100,6 +101,61 @@ impl State {
         g.dig = None;
         g.msn = None;
         text(out)
+    }
+
+    /// `finder/lr_mrm`: the integration table of the MRM files of the series (`d.mrm` of `finder/lr_dig`, `"null"` without any), read from the registered mzML.
+    fn finder_lr_mrm(&self, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let fs = legacy::lr::plan::files(s("files")).map_err(user)?;
+        let mut out = Vec::new();
+        for f in fs.iter().filter(|f| f.kind == "mrm") {
+            let (rd, size) = self.mzml_named(&f.name)?;
+            let mut m = Mzml::new(rd, size);
+            // the scans of an MRM file are few; where they end tells where the chromatograms start
+            let end = self
+                .open_idx(&f.name)
+                .ok()
+                .and_then(|ix| ix.scans.last().map(|x| x.end))
+                .unwrap_or(0);
+            out.push(legacy::lr::mrm::file_from_mzml(f, &mut m, end)?);
+        }
+        let tol = p["rt_tol"].as_f64().filter(|t| *t > 0.0).unwrap_or(0.25);
+        text(legacy::lr::mrm::analyse(&out, tol).unwrap_or_else(|| "null".into()))
+    }
+
+    /// `finder/estimate`: the settings of the low-resolution Dig proposed from the data, as the worker of the site writes them: `{da, rt_tol, dead, fwhm, drift?}` from the preview
+    /// of the first file (profile `lr`); with the m/z of the parent and two files or more `rt_tol` is the larger of 2 x FWHM and the drift of the parent. `"null"` without a preview.
+    fn finder_estimate(&self, p: &Value) -> Result<Answer> {
+        let ns = names(p);
+        let Some(first) = ns.first() else {
+            return text("null".to_string());
+        };
+        let mut ix = self.open_idx(first)?;
+        let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
+        let pv: Value = serde_json::from_str(&mzlab_feat_wasm::run::preview(&mut ix, &r, false)?)
+            .map_err(|_| Error::new("error.badRecipe"))?;
+        let mut out = serde_json::json!({ "da": pv["da"], "rt_tol": pv["rt_tol"], "dead": pv["dead"], "fwhm": pv["fwhm"] });
+        let mz = p["mz"].as_f64().unwrap_or(0.0);
+        if ns.len() > 1 && mz > 0.0 {
+            let mut all = Vec::new();
+            for n in &ns {
+                let mut ix = self.open_idx(n)?;
+                let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
+                all.push(
+                    mzlab_feat::store::read_file(&mzlab_feat_wasm::run::detect(&mut ix, n, &r)?)?.0,
+                );
+            }
+            let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();
+            let d = mzlab_feat::params_drift::parent_drift(&refs, mz);
+            let base = pv["rt_tol"].as_f64().unwrap_or(f64::NAN);
+            let dj: Value = serde_json::from_str(&mzlab_feat::params_drift::drift_json(&d, base))
+                .unwrap_or(Value::Null);
+            if !dj["drift"].is_null() {
+                out["drift"] = serde_json::json!({ "value": dj["drift"], "n": dj["n"] });
+                out["rt_tol"] = dj["rt_tol"].clone();
+            }
+        }
+        text(out.to_string())
     }
 
     fn finder_plan(&self, p: &Value) -> Result<Answer> {
@@ -225,6 +281,8 @@ impl State {
             "finder/dig" => self.finder_dig(p),
             "finder/lr_plan" => self.finder_lr_plan(p),
             "finder/lr_dig" => self.finder_lr_dig(p),
+            "finder/lr_mrm" => self.finder_lr_mrm(p),
+            "finder/estimate" => self.finder_estimate(p),
             "finder/detail"
             | "finder/inclusion_csv"
             | "finder/msn_tree"

@@ -45,6 +45,17 @@ async function rulesOf(base, list) {
   return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
 }
 
+/** the seconds each step of a Dig took, in `timing` of its answer */
+function timer() {
+  const timing = /** @type {Record<string, number>} */ ({});
+  return { t0: performance.now(), timing, lap: (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; } };
+}
+
+/** the hypotheses of the parent over the aligned series (`feat/hypotheses`) @param {string} base @param {string[]} names @param {string | undefined} list @param {string} structure @param {string} parent */
+async function hypotheses(base, names, list, structure, parent) {
+  return JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, list), structure, parent, recipe: "" }));
+}
+
 /** the numbers of the table of the products: the roles of campioni/2 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
 async function tpTable(hr, rows) {
   if (!hr) return "null";
@@ -52,29 +63,31 @@ async function tpTable(hr, rows) {
   return rpc("finder/tp_table", { samples, rows: rows || "" });
 }
 
+/** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {Map<string, any>} held @param {(text: string) => void} say @param {string[]} names */
+async function ensureFiles(held, say, names) {
+  const boot = /** @type {{name: string, size: number, indexed: boolean, id: number}[]} */ (JSON.parse(await rpc("lr_boot")));
+  /** @type {string[]} */ const todo = [];
+  for (const name of names) {
+    const src = held.get(name), row = boot.find(x => x.name === name);
+    const size = src instanceof Blob ? src.size : src ? src.byteLength : 0;
+    let fid = tagged(src);
+    if (fid == null && size > 0 && !(row && row.size === size)) { say(`Sending ${name}...`); fid = await upload(name, src instanceof Blob ? src : new Blob([src])); }
+    if (fid != null && !(row && row.id === fid)) { await rpc("lr_put", { name, fid }); todo.push(name); }
+    else if (!row || !row.indexed) todo.push(name);
+  }
+  for (const name of todo) { say(`Indexing ${name}...`); await rpc("lr_index", { name }); }
+}
+
 /** @param {string} base the static folder of the site @param {(text: string) => void} say @param {Map<string, any>} held */
 export function createDesktop(base, say, held) {
   /** the series of the last high-resolution Dig, for the roles of the table of the products @type {{lc: string[], files: any[]} | null} */ let lastHr = null;
-  /** every named file is registered in the app and has its .mzidx (a file the page lost the bytes of, an empty stub of the Data tab, is already registered by name) @param {string[]} names */
-  async function ensure(names) {
-    const boot = /** @type {{name: string, size: number, indexed: boolean, id: number}[]} */ (JSON.parse(await rpc("lr_boot")));
-    /** @type {string[]} */ const todo = [];
-    for (const name of names) {
-      const src = held.get(name), row = boot.find(x => x.name === name);
-      const size = src instanceof Blob ? src.size : src ? src.byteLength : 0;
-      let fid = tagged(src);
-      if (fid == null && size > 0 && !(row && row.size === size)) { say(`Sending ${name}...`); fid = await upload(name, src instanceof Blob ? src : new Blob([src])); }
-      if (fid != null && !(row && row.id === fid)) { await rpc("lr_put", { name, fid }); todo.push(name); }
-      else if (!row || !row.indexed) todo.push(name);
-    }
-    for (const name of todo) { say(`Indexing ${name}...`); await rpc("lr_index", { name }); }
-  }
+  const ensure = (/** @type {string[]} */ names) => ensureFiles(held, say, names);
 
   /** the Dig of a high-resolution series: the pipeline L1-L9 in the app, then the adapter; the MSn file of the standard (if any) is not in the series, the app builds its tree @param {string[]} a */
   async function run(a) {
     const all = JSON.parse(a[0]), msn = all.find((/** @type {any} */ f) => f.kind === "msn"), parentJson = a[1], settingsJson = a[2];
-    const filesJson = JSON.stringify(all.filter((/** @type {any} */ f) => f.kind !== "msn")), t0 = performance.now(), timing = /** @type {Record<string, number>} */ ({});
-    const lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
+    const filesJson = JSON.stringify(all.filter((/** @type {any} */ f) => f.kind !== "msn"));
+    const { t0, timing, lap } = timer();
     const plan = JSON.parse(await rpc("finder/plan", { files: filesJson, parent: parentJson })), names = /** @type {string[]} */ (plan.lc);
     await ensure(msn ? [...names, msn.name] : names);
     let t = performance.now();
@@ -82,7 +95,7 @@ export function createDesktop(base, say, held) {
     lap("feature", t); t = performance.now();
     say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
-    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: plan.structure, parent: plan.formula, recipe: "" }));
+    const h = await hypotheses(base, names, a[3], plan.structure, plan.formula);
     await rpc("feat/evidence", { minutes: plan.minutes, recipe: "" }); lap("proofs", t); t = performance.now();
     say("Ranking the candidates...");
     const out = await rpc("finder/dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}", msn: msn ? msn.name : "" });
@@ -91,23 +104,27 @@ export function createDesktop(base, say, held) {
     return JSON.stringify({ ...JSON.parse(out), timing });
   }
 
-  /** the Dig of a low-resolution series (full scans only): detection, alignment and the hypotheses of the parent in the app, then the Dig of the low-resolution adapter @param {string[]} a @param {any} plan */
+  /** the Dig of a low-resolution series (full scans, MS2 EPI and MRM files): detection, alignment and the hypotheses of the parent in the app, then the Dig of the low-resolution adapter @param {string[]} a @param {any} plan */
   async function runLr(a, plan) {
-    const [filesJson, parentJson, settingsJson] = a, t0 = performance.now(), timing = /** @type {Record<string, number>} */ ({});
-    const lap = (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; };
+    const [filesJson, parentJson, settingsJson] = a;
+    const { t0, timing, lap } = timer();
     const names = /** @type {string[]} */ (plan.lc);
     lastHr = null;
-    await ensure(names);
+    await ensure([...names, ...plan.ms2, ...plan.mrm]);       // the MS2 files are read from their .mzidx, the MRM files from their mzML
     let t = performance.now();
     for (const [k, name] of names.entries()) { say(`Detecting the peaks of ${name} (${k + 1} of ${names.length})...`); await rpc("feat/detect", { name, recipe: "" }); }
     lap("feature", t); t = performance.now();
     say("Aligning the peaks of the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Generating candidates...");
-    const h = JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, a[3]), structure: "", parent: plan.formula, recipe: "" })); lap("candidates", t); t = performance.now();
+    // a parent known only by its m/z has no transformations to apply: the Dig keeps its row and the unexpected ions
+    const registry = plan.formula ? JSON.stringify((await hypotheses(base, names, a[3], "", plan.formula)).registry) : "";
+    lap("candidates", t); t = performance.now();
     say("Computing the tables...");
-    const out = await rpc("finder/lr_dig", { files: filesJson, parent: parentJson, registry: JSON.stringify(h.registry), settings: settingsJson || "{}", timing: "{}" });
+    const out = await rpc("finder/lr_dig", { files: filesJson, parent: parentJson, registry, settings: settingsJson || "{}", timing: "{}" });
+    const d = JSON.parse(out);
+    if (plan.mrm.length) d.mrm = JSON.parse(await rpc("finder/lr_mrm", { files: filesJson, rt_tol: JSON.parse(settingsJson || "{}").rt_tol_min }));       // no calibration line: the program gives no concentrations
     lap("dig", t); lap("total", t0);
-    return JSON.stringify({ ...JSON.parse(out), timing });
+    return JSON.stringify({ ...d, timing });
   }
 
   return {
@@ -118,12 +135,13 @@ export function createDesktop(base, say, held) {
       if (fn === "formula_info") return rpc("finder/formula_info", { text: a[0], adduct: a[1] });
       if (STATELESS.has(fn)) return rpc("finder/" + fn, { payload: a[0] });
       if (OF_DIG.has(fn)) return rpc("finder/" + fn, { id: +(a[0] || 0) });
+      if (fn === "estimate") { const names = JSON.parse(a[0]); await ensure(names); return rpc("finder/estimate", { names, mz: +a[1] || 0 }); }
       if (fn === "classify") { const names = JSON.parse(a[0]); await ensure(names); return rpc("finder/classify", { names }); }
       if (fn === "run") {
         const files = JSON.parse(a[0]);
         if (!files.some((/** @type {any} */ f) => f.kind === "hr")) {
-          const plan = files.length && files.every((/** @type {any} */ f) => f.kind === "full") ? JSON.parse(await rpc("finder/lr_plan", { files: a[0], parent: a[1] })) : null;
-          if (!plan || !plan.rust) throw new Error("this low-resolution series (MS2 or MRM files, or a parent without formula) is not in the app yet: use the website for this series");
+          const plan = files.length && files.every((/** @type {any} */ f) => ["full", "ms2", "mrm"].includes(f.kind)) ? JSON.parse(await rpc("finder/lr_plan", { files: a[0], parent: a[1] })) : null;
+          if (!plan || !plan.lc.length) throw new Error("this low-resolution series has no full-scan file the app can read");
           return runLr(a, plan);
         }
         return run(a);
