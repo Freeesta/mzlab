@@ -204,8 +204,7 @@ const WORKFLOW = (() => {
     if (p.soglie_libreria && window.LIVELLI) LIVELLI.importState(p.soglie_libreria);
     if (typeof UIP !== "undefined") {
       const ppm = FILESICURI.num(p.ppm, 0, 1e4), dec = FILESICURI.num(p.dec, 0, 10);
-      if (ppm != null) UIP.hrPpm = ppm;
-      if (dec != null) UIP.hrDec = dec;
+      if (ppm != null) UIP.hrPpm = ppm; if (dec != null) UIP.hrDec = dec;
       if (["auto", "light", "dark"].includes(p.tema)) UIP.theme = p.tema;
       if (typeof PALS !== "undefined" && typeof p.tavolozza === "string" && Object.prototype.hasOwnProperty.call(PALS, p.tavolozza)) UIP.pal = p.tavolozza;
       if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
