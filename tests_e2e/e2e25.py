@@ -117,7 +117,7 @@ try:
         step("the chromatogram traces use the file colours", traces_use_palette)
         def n_variants():
             for n, times in ((3, [0, 15, 60]), (7, [0, 5, 10, 15, 30, 45, 60])):
-                pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(2500)
+                pg.click("#newrun"); pg.click("#resetdlg [data-reset=files]"); pg.wait_for_timeout(2500)
                 load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «Per tempo»
                 c = pg.evaluate(COLORS); hs = [hexof(x[1]) for x in c]; ls = [lum(h) for h in hs]
                 assert len(c) == n and len(set(hs)) == n and all(ls[i] < ls[i + 1] for i in range(n - 1)), (n, hs)
@@ -128,11 +128,10 @@ try:
             set_pal(pg, "rainbow"); pg.wait_for_timeout(300)
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
             pg.click("#newrun"); pg.wait_for_timeout(500)
-            txt = pg.inner_text("#asktxt"); print(txt)
-            assert "il lavoro salvato" in txt.lower() and "da zero" in txt and "i file sul tuo computer non vengono toccati" in txt
-            pg.click("#askno"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
+            assert pg.is_visible("#resetdlg [data-reset=all]") and pg.is_visible("#resetdlg [data-reset=files]")
+            pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
             assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('qqq.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
-            pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(3000)
+            pg.click("#newrun"); pg.click("#resetdlg [data-reset=all]"); pg.wait_for_timeout(3000)
             print("after:", pg.evaluate("[E.files.length, localStorage.getItem('qqq.extra'), localStorage.getItem('qqq.prefs')]"))
             assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('qqq.extra')") is None and pg.evaluate("localStorage.getItem('qqq.prefs')") is None
             assert pg.evaluate("UIP.pal") == "file" and pg.evaluate("document.documentElement.dataset.pal") == "file" and pg.evaluate("UIP.font") is None

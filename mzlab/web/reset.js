@@ -2,8 +2,8 @@
 // The one clean slate. mzLab keeps what the student loaded (files and their indexes in OPFS, the session and the notebook in IndexedDB, the offline copy of the
 // app in the Cache API and the service worker) and the preferences (localStorage) in THIS browser, so a reload - even Cmd/Ctrl+Shift+R, which only skips the HTTP
 // cache - brings the files back. This file removes them, by NAME (what the browser lists, never a fixed list: other parts of the program add their own folders and
-// databases), and reloads. Three variants: "all" (everything, as if the program had never run here), "files" (the files, their indexes and the session; the
-// preferences, language, theme and the saved libraries stay) and "cold" (below). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
+// databases), and reloads. Variants: "all" (everything, as if the program had never run here) and "files" (the files, their indexes and the session; the
+// preferences, language, theme and the saved libraries stay), both offered by the question of ask(); also "cold" and "cold" (below). Loaded before the engine (browser.js) so that ?reset=all|files|1 acts before anything is opened.
 (() => {
   "use strict";
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
@@ -78,17 +78,16 @@
     return rep;
   }
 
-  // ---- the question: what is lost, in words, one button per variant
-  function ask(only) {
-    const T = (k, o) => I18N.t(k, o), modes = only ? [only] : ["all", "files"];
+  // ---- «Start a new session»: the one entry to every reset (header button, reminder): a short question with two ways to clear and Cancel (Esc too)
+  function ask() {
+    const T = (k, o) => I18N.t(k, o), btn = (m, cls, lab, sub) => `<button type="button" class="rs-big ${cls}" data-reset="${m}"><b>${lab}</b><span>${sub}</span></button>`;
     document.getElementById("resetdlg")?.remove();
-    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-label", T("reset.title"));
-    d.innerHTML = modes.map(m => `<div class="rs-opt"><button type="button" class="${m === "all" ? "danger" : ""}" data-reset="${m}">${I18N.t(`reset.${m}.btn`)}</button><span class="sm">${I18N.t(`reset.${m}.desc`)}</span></div>`).join("") +
-      `<div class="rs-end"><button type="button" data-reset="">${T("reset.cancel")}</button></div>`;
+    const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "rs-t"); d.setAttribute("aria-describedby", "rs-d");
+    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3><p id="rs-d">${T("reset.choose")}</p>${btn("all", "rs-red", T("reset.all.btn"), T("reset.all.sub"))}${btn("files", "rs-blue", T("reset.files.btn"), T("reset.files.sub"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
     document.body.appendChild(d);
     d.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-reset]")); if (!b) return; if (b.dataset.reset) { d.querySelectorAll("button").forEach(x => { x.disabled = true; }); run(b.dataset.reset); } else d.close(); });
     d.addEventListener("close", () => d.remove());
-    d.showModal(); const first = d.querySelector("button[data-reset]:not([data-reset=''])"); if (first) first.focus();
+    d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-cancel"))?.focus();
   }
   // ---- once: «the files stay in the browser» (a reload does not remove them; this says how)
   function remind() {

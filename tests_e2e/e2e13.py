@@ -64,7 +64,7 @@ try:
             pg.wait_for_function("E.panels.some(p=>p.type==='mrm' && p._a && p._a.sr.length>0)", timeout=60000)
         step("spectrum and MRM panels", mrm_spec)
         def clear_all():
-            pg.click("#newrun"); pg.click("#askyes") if pg.locator("#askyes").count() else None
+            pg.click("#newrun"); pg.click("#resetdlg [data-reset=files]")
             pg.wait_for_timeout(2000)
         step("new session", clear_all)
         def offline():

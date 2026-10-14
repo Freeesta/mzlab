@@ -12,6 +12,18 @@ function soloFile(/** @type {any} */ f0) {
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
+/** Removes a file from the session and, in the browser, frees what it holds: the copy in OPFS and its derived indexes (a shared source, like a .wiff with several samples, stays while another sample uses it). */
+async function removeFile(/** @type {any} */ f) {
+  if (!await yesno(I18N.t("files.remove.confirm", { label: EH(f.label) }))) return;
+  f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k); paintFiles();
+  E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
+  if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
+  renderFileList(); renderNav();
+  // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
+  toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
+  const src = (/** @type {any} */ g) => (g.file || "").split("#")[0];
+  if (window.MZLAB_BROWSER && !E.files.some(g => g !== f && !g.gone && src(g) === src(f))) post("api/remove", { name: src(f) }).catch(() => { /* not in the browser store: nothing to free */ });
+}
 let _lastBox = /** @type {number | null} */ (null);
 function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e) {
   const all = /** @type {HTMLInputElement[]} */ ([...Q("#flst").querySelectorAll(".fl:not(.pr) > input[data-k]")]), i = all.indexOf(x), j = all.findIndex(b => +(b.dataset.k || -1) === _lastBox);
