@@ -59,8 +59,8 @@ const isCal=f=>f.type==="standard";   // concentration exists only for standards
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
-    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
-  sortFiles();renderFiles()}
+    gT:o?o.gT:time!=null&&type==="sample",gC:o?o.gC:conc!=null,role:o&&o.role,sub:o&&o.sub,prop:o&&o.prop,ed:o&&o.ed}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
+  sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then(c=>{if(c){sortFiles();renderFiles()}})}   // roles and times proposed from the names by the engine (campioni/2)
 // order of the table: experiment (Full Scan, MS2, MRM, the rest), then blank, standards, samples; inside each, the rule of ordine.js (time, else concentration, else natural name)
 const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
 function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc*CU[ST.unit][1]);ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||c(a,b))}
@@ -78,34 +78,33 @@ const mixedText=m=>{const ns=[];for(const p of m){const n=p.name==="MS2"&&ns.inc
 const expCell=f=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind?`<b>${expn(f.kind)}</b>${f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""}`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">${I18N.t("load.exp.nameHint",{hint:expn(f.hint),kind:expn(f.kind)})}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
-  const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
-  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;
+  const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null||RUOLI.timed(f)),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
+  const ncol=7+(hasCal?1:0),GN={0:"Full Scan",1:"MS2 (Product Ion)",2:"MRM",3:I18N.t("load.group.other")},GUESS=` title="${I18N.t("load.guess.title")}"`;   // GUESS: concentration cells
   let last=-1,rows="";
   F.forEach((f,i)=>{const g=EXPORD[f.kind]??3;
     if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]}${typeof polHead==="function"&&g<3?polHead(F.filter(x=>(EXPORD[x.kind]??3)===g)):""} <span class="muted">${I18N.t("load.group.count",{n:F.filter(x=>(EXPORD[x.kind]??3)===g).length})}</span></td></tr>`}
     rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
-   `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>${I18N.t("load.type.sample")}</option><option value="blank" ${f.type==="blank"?"selected":""}>${I18N.t("load.type.blank")}</option><option value="standard" ${f.type==="standard"?"selected":""}>${I18N.t("load.type.standard")}</option></select></td>`+
-   `<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:80px" data-i="${i}" data-k="time" value="${timeShown(f.time,tu)??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
+   RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu,I18N.t("load.guess.title"))+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
-  el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th>${I18N.t("load.table.file")}</th><th>${I18N.t("load.table.experiment")}</th><th>${I18N.t("load.table.type")}</th><th class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
+  el.innerHTML=F.length||CONVROWS.rows.length?(CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+RUOLI.bar(F)+`<table style="margin-top:8px"><tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
       if(k==="time"||k==="conc"){v=parseDecimal(x.value);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=timeStored(v,tunitGet())}
-      f[k]=k==="use"?x.checked:v;
+      if(k==="type"){f.ed=1;RUOLI.setRole(f,x.value)}else f[k]=k==="use"?x.checked:v;
       if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
-      if(k==="type"){if(f.type!=="sample"){f.time=null;f.gT=false}if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
+      if(k==="type"){if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
       // the table is sorted again when a value is committed (change/blur/Enter), never while typing. A change caused by leaving the field (click on another field, Tab) is applied
       // once the focus has moved, and the focus goes back to the field that received it: the rebuilt table must not swallow the click
       const go=()=>{const a=/** @type {HTMLElement} */(document.activeElement),ok=a&&el.contains(a),nk=ok&&a.dataset.k?{name:F[+(a.dataset.i||0)].name,k:a.dataset.k}:ok&&a.dataset.rm?{name:F[+a.dataset.rm].name,rm:1}:keep;sortFiles();renderFiles();
         if(nk){const i=F.findIndex(q=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
       if(keep)go();else setTimeout(go,0)};
-    if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
+    if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote();RUOLI.paint(el,F)}})});
   el.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>CONV.download(b.dataset.dl));const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.downloadAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
-  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
+  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote();RUOLI.bind(el,F,()=>{sortFiles();renderFiles()})}
 function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
@@ -266,7 +265,8 @@ async function openRest(rest,tok){
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
   try{if(UPBUSY>0){WAITING=true;waitStato();await idle();WAITING=false;loadingStato(null)}
     if(!ST.files.some(usable)){checkGo();return}
-    const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
+    if(await RUOLI.gate($("#flist"),ST.files)){loading(false);checkGo();$("#gomsg").textContent=I18N.t("load.time.required");return}      // two or more samples: every time is written and confirmed first
+    const rest=await exploreList(ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label})));STATO.aggiunta(false,"adding");await bootSession();ST.files.forEach(f=>{const r=RUOLI.roleOf(f);if(window.QAQC&&(r==="qc"||r==="dark"))QAQC.setRole(f.name,r)});applyView();window.scrollTo(0,0);await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
   catch(e){
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 

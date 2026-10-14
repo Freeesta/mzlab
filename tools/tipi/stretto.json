@@ -29,6 +29,7 @@
     "../../mzlab/web/icons-modi.js",
     "../../mzlab/web/modi.js",
     "../../mzlab/web/ordine.js",
+    "../../mzlab/web/ruoli-carica.js",
     "../../mzlab/web/conversione.js",
     "../../mzlab/web/cartella-carica.js",
     "../../mzlab/web/cartella-puntata.js",

@@ -5,7 +5,7 @@
 // (min, h, d) only changes what is shown and typed. The order of the files has ONE rule, here: by time if the names give a time, else standards
 // by growing concentration, else natural alphabetical order (file2 before file10).
 
-const TIME_UNITS = { min: 1, h: 60, d: 1440 };
+const TIME_UNITS = { s: 1 / 60, min: 1, h: 60, d: 1440 };
 const CONC_MGL = { "mg/L": 1, "µg/L": 1e-3, "ng/L": 1e-6, "g/L": 1e3 };       // concentration labels of the load table -> factor to mg/L
 
 // natural comparison of two strings: digit runs compare as numbers, the rest case-insensitively by code point (no locale: same order everywhere)
@@ -75,7 +75,7 @@ function tunitSet(u) {
   try { localStorage.setItem("qqq.tunit", u); } catch (_) { /* no storage */ }
 }
 // "30 min", "0.5 h", "2 d" for a time in minutes
-const tunitLabel = u => typeof I18N !== "undefined" ? { min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
+const tunitLabel = u => typeof I18N !== "undefined" ? { s: I18N.t("unit.t.s"), min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
 const fmtTime = min => min == null ? "" : timeShown(min, tunitGet()) + " " + tunitLabel(tunitGet());
 
 if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, hrGroup, fileBase, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime };
