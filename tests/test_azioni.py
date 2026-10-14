@@ -73,3 +73,19 @@ def test_trace_actions_have_texts_in_both_languages():
         cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
+
+
+def test_double_click_takes_the_first_available_claim():
+    r = run("""const log=[];
+      const reg=(id,o)=>AZIONI.registra({id,gruppo:'xic',viste:['v'],nome:()=>id,esegui:c=>log.push(id),...o});
+      reg('main',{doppio:()=>true,doppioOrd:9});reg('zoom',{doppio:c=>c.z,disponibile:c=>c.z,doppioOrd:2});reg('ann',{doppio:c=>c.a,doppioOrd:1,disponibile:c=>c.a});reg('quiet',{});
+      const out=[AZIONI.doppio({vista:'v'}),AZIONI.doppio({vista:'v',z:true}),AZIONI.doppio({vista:'v',z:true,a:true}),AZIONI.doppio({vista:'w'})];
+      console.log(JSON.stringify({out,log}))""")
+    assert r["log"] == ["main", "zoom", "ann"] and r["out"] == [True, True, True, False]
+
+
+def test_reset_zoom_first_and_annotations_last():
+    r = run("""const reg=(id,g)=>AZIONI.registra({id,gruppo:g,viste:['v'],nome:()=>id,esegui:()=>0});
+      reg('ann','ann');reg('x','xic');reg('help','help');reg('reset','reset');
+      console.log(JSON.stringify(AZIONI.per({vista:'v'}).map(i=>i==='-'?'-':i.id)))""")
+    assert r == ["reset", "-", "x", "-", "help", "-", "ann"]

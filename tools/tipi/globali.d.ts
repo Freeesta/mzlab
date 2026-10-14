@@ -151,6 +151,7 @@ interface Window {
   BANCO: typeof BANCO;
   BARRA: typeof BARRA;
   BIANCO: typeof BIANCO;
+  CDOC: typeof CDOC;
   COMP: typeof COMP;
   DDA: typeof DDA;
   DISP: typeof DISP;

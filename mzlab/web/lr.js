@@ -71,7 +71,7 @@ export function createLr({ rb }) {
     if (fresh) return;
     try {
       const nb = JSON.parse(JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value || "{}");
-      const list = sessionFiles(nb.session, f => safeName(f) && files.has(safeName(f)));
+      const list = sessionFiles(nb.session, f => safeName(f) && files.has(safeName(f)), nb.ui && nb.ui.files);
       if (list.length) await explore({ samples: list });
     } catch (_) { items = null; hr = lr = false; }                    // a broken notebook never stops the program
   };
@@ -126,7 +126,7 @@ export function createLr({ rb }) {
       const name = String(e.file || "");
       for (const it of items) {
         if (name !== it.file && name !== it.file.split("#")[0]) continue;
-        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;
+        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;      // the roles of campioni/2 (role, sub, tconf) travel with the item: the page reads them back with the session; for (const k of ["role", "sub", "tconf"]) if (k in e) it[k] = e[k];
         if ("time" in e) it.time = num(e.time);
         if ("conc" in e) it.conc = num(e.conc);
         if ("cunit" in e) it.cunit = e.cunit || null;
