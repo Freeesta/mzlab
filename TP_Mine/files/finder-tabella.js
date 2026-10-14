@@ -9,13 +9,13 @@ import * as ruoli from "./finder-ruoli.js";
 /**
  * campioni/1 of the files of a Dig, in the order of the table, for the Rust of the table. The roles and the minutes are those of campioni/2 (finder-ruoli.js, the Rust
  * `per_tp`): the type and the time the user set on the page are written into the model as explicit choices, and the model gives the indices per role.
- * @param {(op: string, json: string) => string} call the operation `campioni` of the table .wasm
+ * @param {(op: string, json: string) => string | Promise<string>} call the operation `campioni`: the table .wasm (synchronous) or the native route of the desktop app (asynchronous)
  * @param {string[]} lc names of the files of the series, in the order of the table
  * @param {{name: string, type?: string, time?: number | null}[]} files the files of the page
  */
-export function samplesOf(call, lc, files) {
+export async function samplesOf(call, lc, files) {
   const by = new Map(files.map(f => [f.name, f]));
-  const cs = ruoli.build(call, lc, null, null);
+  const cs = await ruoli.build(call, lc, null, null);
   cs.forEach((c, i) => {
     const f = by.get(lc[i]);
     if (!f) return;
@@ -24,7 +24,7 @@ export function samplesOf(call, lc, files) {
     else if (f.type === "control") ruoli.setRole(cs, i, "dark");
     else { ruoli.setRole(cs, i, "sample"); ruoli.setTime(cs, i, time, "min"); }
   });
-  const p = ruoli.forTp(call, cs), kind = new Map();
+  const p = await ruoli.forTp(call, cs), kind = new Map();
   for (const k of p.treated) kind.set(k, "sample");
   for (const k of p.t0) kind.set(k, "t0");
   for (const k of p.blank) kind.set(k, "blank");
@@ -33,28 +33,6 @@ export function samplesOf(call, lc, files) {
     schema: "campioni/1",
     campioni: lc.map((name, k) => ({ file: name, sha256: "", tipo: kind.get(k) || "std", tempo_min: p.minuti[k], replica: 1, gruppo: "", concentrazione: null, unita: null, ordine_iniezione: k + 1, istd: false, note: "" })),
   });
-}
-
-/**
- * samplesOf where the operations of campioni/2 are asynchronous (the desktop app asks its native engine): the synchronous code runs again over the answers already received.
- * @param {(op: string, json: string) => Promise<string>} callAsync @param {string[]} lc @param {{name: string, type?: string, time?: number | null}[]} files
- */
-export async function samplesOfAsync(callAsync, lc, files) {
-  /** @type {Map<string, string>} */ const got = new Map(), miss = new Map();
-  for (;;) {
-    miss.clear();
-    try {
-      return samplesOf((op, j) => {
-        const k = op + "\n" + j, v = got.get(k);
-        if (v !== undefined) return v;
-        miss.set(k, j);
-        throw new Error("pending");
-      }, lc, files);
-    } catch (e) {
-      if (!miss.size) throw e;
-      for (const [k, j] of miss) got.set(k, await callAsync(k.slice(0, k.indexOf("\n")), j));
-    }
-  }
 }
 
 /**
@@ -74,5 +52,5 @@ export async function tpTable(deps, run, rowsJson) {
     mod = js;
   }
   const t = run.table;
-  return mod.tp_table((/** @type {number} */ _k, /** @type {number} */ off, /** @type {number} */ len) => t.subarray(off, off + len), t.length, samplesOf((/** @type {string} */ op, /** @type {string} */ j) => mod.campioni(op, j), run.lc, run.files), rowsJson);
+  return mod.tp_table((/** @type {number} */ _k, /** @type {number} */ off, /** @type {number} */ len) => t.subarray(off, off + len), t.length, await samplesOf((/** @type {string} */ op, /** @type {string} */ j) => mod.campioni(op, j), run.lc, run.files), rowsJson);
 }
