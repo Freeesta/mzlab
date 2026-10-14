@@ -81,7 +81,7 @@ try:
         step("type, time (decimal comma), replicate edit the files, QAQC roles and the server copy; a non-number is refused", edit)
         def tsv():
             t = pg.evaluate("CAMPIONI.toTsv(CAMPIONI.rows(), tunitGet())").splitlines()
-            assert t[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate" and len(t) == 5, t
+            assert t[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\tblank_type\ttime_confirmed" and len(t) == 5, t
             body = "\n".join(l.replace("S_t30.mzML\tsample\t30\tmin", "S_t30.mzML\tblank\t2\th") for l in t) + "\n"
             n = pg.evaluate("(tx)=>CAMPIONI.importTsv(tx).changed", body)
             assert n == 4

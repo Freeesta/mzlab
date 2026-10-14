@@ -55,5 +55,9 @@ const RUOLI = /** @type {any} */ ((() => {
     }
     return changed;
   }
-  return { t, eh, post, OPTS, BASE, TIMED, BOXES, REQUIRED, BOX_ROLE, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
+  /** the roles, subtypes and confirmed times of the table go to the files just opened (CAMPIONI.apply is the only writer) */
+  function commit(/** @type {Voce[]} */ F) {
+    CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r, sub: r === "blank" ? f.sub || null : undefined }); if (TIMED.has(r) || r === "t0") { e.time = r === "t0" ? 0 : f.time ?? null; e.tconf = !f.gT; } return e; }), true);
+  }
+  return { commit, t, eh, post, OPTS, BASE, TIMED, BOXES, REQUIRED, BOX_ROLE, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
 })());

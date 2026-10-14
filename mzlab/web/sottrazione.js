@@ -8,9 +8,10 @@ const R = () => S.ref;
 const num = v => I18N.fix(v, 2);
 const fileOf = k => (k != null && k !== "" && E.files[+k] && !E.files[+k].gone ? E.files[+k] : null);
 
-// the file chosen by "auto" in a tab: the only blank of the tab, otherwise the first by time (files without a time come after those with one)
+// the file chosen by "auto" in a tab: the t0 (the first one), otherwise the only blank of the tab, otherwise the first by time (files without a time come after those with one)
 function autoFile(tab) {
   const fs = tabFiles(tab); if (!fs.length) return null;
+  const z = fs.filter(f => window.CDOC && CDOC.kindOf(f) === "t0"); if (z.length) return z[0];
   const bl = fs.filter(f => f.type === "blank"); if (bl.length === 1) return bl[0];
   const timed = fs.filter(f => f.time != null && isFinite(f.time));
   return timed.length ? timed.reduce((a, b) => (b.time < a.time ? b : a)) : fs[0];

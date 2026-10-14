@@ -19,7 +19,7 @@ const QAQC = (() => {
   let st = blankState();
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
   Object.assign(st, lsObj(KEY));
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...st, roles: {} })); } catch (_) { /* no storage */ } };      // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
 
   // ---------------------------------------------------------------- the series and the type of each file
   const series = () => (typeof E !== "undefined" && E.files ? E.files : []).filter(f => !f.gone && (f.lv || 1) === 1 && f.kind !== "mrm" && f.kind !== "empty");
@@ -29,8 +29,8 @@ const QAQC = (() => {
     if (/(^|[_\-\s.])(dark|buio)([_\-\s.\d]|$)/i.test(n)) return "dark";
     return f.type === "blank" ? "blank" : f.type === "standard" ? "standard" : "sample";
   }
-  const roleOf = f => (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));
-  const setRole = (file, role) => { if (ROLES.includes(role)) { st.roles[file] = role; save(); } };       // the sample table (campioni.js) writes the type of a file here
+  const FROM_CAMPIONI = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };      // role of campioni/2 -> role of the QA/QC
+  const roleOf = f => (f.role && FROM_CAMPIONI[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));      // st.roles only holds the old roles read at loading (migration of the notebook v1)
   const roleName = r => (r === "blank" ? t("qaqc.role.blank") : r === "qc" ? t("qaqc.role.qc") : r === "standard" ? t("qaqc.role.standard") : r === "dark" ? t("qaqc.role.dark") : t("qaqc.role.sample"));
 
   // ---------------------------------------------------------------- ions: m/z or formula, RT expected
@@ -205,7 +205,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     if (st.ions.length) refresh(box);
     box.onchange = e => {
       const r = e.target.closest("select[data-role]");
-      if (r) { st.roles[r.dataset.role] = r.value; save(); refresh(box); }
+      if (r) { CAMPIONI.apply([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
       if (e.target.id === "qq-thr") { st.thr = +e.target.value; save(); if (res.ratio) runRatio().then(() => paint(box)).catch(() => {}); }
       if (e.target.id === "qq-win") { const v = numIt(e.target.value); if (v > 0) { st.win = v; save(); refresh(box); } }
     };
@@ -231,7 +231,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   }
 
   // ---------------------------------------------------------------- workflow file and report
-  const exportState = () => ({ ruoli: { ...st.roles }, ioni: st.ions.map(i => ({ ...i })), soglia: st.thr, finestra_rt: st.win, rapporto: { ...st.ratio } });
+  const exportState = () => ({ ruoli: Object.fromEntries(series().map(f => [f.file, roleOf(f)])), ioni: st.ions.map(i => ({ ...i })), soglia: st.thr, finestra_rt: st.win, rapporto: { ...st.ratio } });
   function importState(s) {
     if (!s || typeof s !== "object") return;
     st = { ...blankState(), roles: { ...(s.ruoli || {}) }, ions: (s.ioni || []).map(i => ({ ...i })), thr: s.soglia === 10 ? 10 : 3, win: +s.finestra_rt > 0 ? +s.finestra_rt : 0.5, ratio: { text: "", rt: "", ...(s.rapporto || {}) } };
@@ -240,6 +240,6 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     save();
   }
 
-  return { mount, run, setRole, runRatio, runFeatures, addIon, exportState, importState, series, roleOf, roleName, guessRole, get state() { return st; }, get results() { return res; }, chart, ROLES };
+  return { mount, run, runRatio, runFeatures, addIon, exportState, importState, series, roleOf, roleName, guessRole, get state() { return st; }, get results() { return res; }, chart, ROLES };
 })();
 window.QAQC = QAQC;
