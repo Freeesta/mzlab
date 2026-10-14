@@ -69,7 +69,7 @@
       const c = cellsOf(f, i);
       return { id: i + 1, mz: f.mz[i], rt: f.rt[i], areas: c.map(x => (x.area > 0 ? x.area : 0)), detected: c.map((x, j) => (x.state <= 1 ? j : -1)).filter(j => j >= 0) };
     });
-    return G.UNT.fromRows(rows, samples, { name: "mzFinder pipeline", pol });
+    return G.UNT.fromRows(rows, samples, { name: "Tabui pipeline", pol });
   }
 
   // ------------------------------------------------------------ DOM: virtualized list

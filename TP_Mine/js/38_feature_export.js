@@ -24,8 +24,8 @@
   /** the report as a page: all the numbers are those of `report/1` */
   function reportHtml(/** @type {any} */ r, /** @type {string[]} */ names) {
     const row = (/** @type {any[]} */ c, /** @type {string} */ t = "td") => `<tr>${c.map(x => `<${t}>${esc(x)}</${t}>`).join("")}</tr>`, f = G.PIPEQC.fmt, q = r.qc, cl = r.celle, v = r.vista;
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>mzFinder report</title><style>body{font:14px/1.45 system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111;background:#fff}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #bbb;padding:3px 8px;text-align:left}code{word-break:break-all}</style></head><body>
-<h1>mzFinder feature table</h1><p>mzlab-feat ${esc(r.crate)}<br>Table SHA-256 <code>${esc(r.tabella_sha256)}</code><br>Samples SHA-256 <code>${esc(r.campioni_sha256)}</code></p>
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Tabui report</title><style>body{font:14px/1.45 system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111;background:#fff}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #bbb;padding:3px 8px;text-align:left}code{word-break:break-all}</style></head><body>
+<h1>Tabui feature table</h1><p>mzlab-feat ${esc(r.crate)}<br>Table SHA-256 <code>${esc(r.tabella_sha256)}</code><br>Samples SHA-256 <code>${esc(r.campioni_sha256)}</code></p>
 <h2>Series</h2><p>${r.righe} rows, ${r.file} files: ${names.map(esc).join(", ")}.</p>
 <table>${row(["Detected cells", "Targeted", "Filled", "Absent"], "th")}${row([cl.rilevate, cl.mirate, cl.riempite, cl.assenti])}</table>
 <h2>View</h2>${v ? `<p>${v.conteggi.tenute} of ${v.conteggi.righe} rows kept.</p><p>Parameters: <code>${esc(JSON.stringify(v.parametri))}</code></p>` : "<p>No filter or normalisation: the whole table, areas as measured.</p>"}
@@ -39,7 +39,7 @@ ${q.gruppi.length ? `<table>${row(["Type", "Group", "Time (min)", "Files", "Rows
     box.innerHTML = html();
     const msg = (/** @type {string} */ t) => { const e = /** @type {HTMLElement} */ (box.querySelector("#px-msg")); e.textContent = t; };
     const btn = (/** @type {string} */ id) => /** @type {HTMLButtonElement} */ (box.querySelector("#px-" + id));
-    const stem = o.stem || "mzfinder";
+    const stem = o.stem || "tabui";
     /** the MS2 text of the engine (the pool reads the .mzidx of the files that hold the best MS2 of each row) */
     const ms2 = async (/** @type {string} */ kind) => (await o.pool()).ms2File({ table: o.session.bytes, samples: o.session.samples, spec: o.spec(), sha: o.session.sha, pol: o.pol, kind, paths: o.names.map((/** @type {string} */ n) => "mzlab/idx/" + n + ".mzidx") });
     const enc = new TextEncoder();

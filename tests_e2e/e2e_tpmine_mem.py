@@ -32,7 +32,6 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_timeout(3200)
-        for _ in range(5): pg.click("header img.logo")          # mzFinder on (it stays on after a reload)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         files = sorted(series, key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if "min" in f else -1) + [str(DATI / msn["file"])]
