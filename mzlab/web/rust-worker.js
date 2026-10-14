@@ -27,9 +27,24 @@ const started = new Promise(res => { startInit = res; });
 const ready = started.then(module => { wasmModule = module || null; return module ? init({ module_or_path: module }) : init(); }).then(ex => { wasmMem = ex.memory; engine = new Engine(); }).then(() => within(archiveReady, 5000)).then(() => postMessage({ op: "ready" }));
 ready.then(() => fetch(new URL("./idx-worker.js", import.meta.url)).catch(() => {}));      // the index builder script goes into the service worker cache: an upload works offline too
 
-function readerFor(blob) {
+// `held` = [kind, name] of a file with a read lease in archivio.js (the index in use): read straight from its SyncAccessHandle into a buffer reused by the next read (the WASM
+// copies it at once); no handle, or a short read -> the FileReaderSync of the Blob. `rdStat` counts the time spent inside the readers (sent with every answer: tools/bench_mappa.py)
+const rdStat = { ms: 0, n: 0, bytes: 0, hand: 0 };
+function readerFor(blob, held) {
   const fr = new FileReaderSync();
-  return (offset, length) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(offset, offset + length)));
+  let buf = held ? new Uint8Array(1 << 20) : null;
+  return (offset, length) => {
+    const t = performance.now();
+    let out = null;
+    if (held) {
+      if (buf.length < length) buf = new Uint8Array(length);
+      const o = buf.subarray(0, length);
+      if (ARCH.leaseRead(held[0], held[1], o, offset) === length) { out = o; rdStat.hand += length; }
+    }
+    if (!out) out = new Uint8Array(fr.readAsArrayBuffer(blob.slice(offset, offset + length)));
+    rdStat.ms += performance.now() - t; rdStat.n++; rdStat.bytes += length;
+    return out;
+  };
 }
 
 
@@ -51,7 +66,8 @@ const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
   if (!ix) return false;
-  engine.open_index(slotOf(name), ix.size, readerFor(ix));
+  await ARCH.lease("idx", name + ".mzidx");
+  engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"]));
   await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
   return true;
 }
@@ -212,12 +228,13 @@ onmessage = async ev => {
   if (m.op === "module") { startInit(m.module); return; } startInit(null);
   if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
   await ready;
+  await ARCH.wake();                                                              // the read handles parked while idle are reopened before the request reads
   const { id } = m;
   try {
     let out = null, n = 0, info = null;
     if (m.op.startsWith("lr_")) {
       const r = await labOp(m) || await lrOp(m);
-      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null, mem: memNow() });
+      postMessage({ id, op: m.op, n: 0, info: r.info, buf: null, len: 0, files: r.files || null, mem: memNow(), rd: rdStat });
       return;
     }
     switch (m.op) {
@@ -248,7 +265,8 @@ onmessage = async ev => {
         let blob;
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
-        info = engine.open_index(m.slot, blob.size, readerFor(blob)); engine.set_polarity(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
+        await ARCH.lease("idx", m.name + ".mzidx");
+        info = engine.open_index(m.slot, blob.size, readerFor(blob, ["idx", m.name + ".mzidx"])); engine.set_polarity(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
@@ -276,7 +294,7 @@ onmessage = async ev => {
       }
       default: throw new Error("unknown operation " + m.op);
     }
-    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow() }, out ? [out.buffer] : []);
+    postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow(), rd: rdStat }, out ? [out.buffer] : []);
   } catch (e) {
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else
