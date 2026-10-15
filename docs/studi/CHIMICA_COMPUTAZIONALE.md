@@ -121,7 +121,7 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 
 | Pacchetto | Fase | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|
-| CC-01 | 1 | — | nessuno | 1,5 | da fare |
+| CC-01 | 1 | — | nessuno | 1,5 | fatto: 781 righe di codice (`chem/posizioni/`), 10 prove |
 | CC-02 | 1 | CC-01 | `grafo` | 1,5 | da fare |
 | CC-03 | 2 | CC-02 + sì di Federico | `grafo` | 2 | da decidere |
 | CC-04 | 2 | CC-02 + sì di Federico | `grafo` | 1 | da decidere |
