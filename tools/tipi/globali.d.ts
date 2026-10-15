@@ -96,6 +96,7 @@ declare var _mxy: any;
 declare var _sheetXml: any;
 declare var _tunit: any;
 declare var _xe: any;
+declare var avvisoAuto: any;
 declare var breakBonds: any;
 declare var calcEval: any;
 declare var calcFmt: any;

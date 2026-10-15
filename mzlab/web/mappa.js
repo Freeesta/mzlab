@@ -41,6 +41,7 @@ window.MAPPA = (() => {
     Object.assign(st(p), { ov, sp, xc, grid });
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
+    document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); });
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
     const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
     const wrap = () => {
@@ -60,8 +61,12 @@ window.MAPPA = (() => {
     } else if (fsByUs === p && document.fullscreenElement) { fsByUs = null; document.exitFullscreen().catch(() => {}); }
   }
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsByUs) { const p = fsByUs; fsByUs = null; if (isMax(p)) p._setMax(false); } });
+  function mirBtn(p) {                                                  // the button shows the real state of the sight (on in full screen, off in the page, until it is clicked or M is pressed)
+    const b = p.el && p.el.querySelector('[data-mz="mir"]'); if (!b) return;
+    const on = !!mirOn(p); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  }
   function layout(p) {
-    const s = st(p); if (!s.grid) return;
+    mirBtn(p); const s = st(p); if (!s.grid) return;
     const m = mirOn(p) && is2dView(p) && wide(p);
     s.grid.classList.toggle("mir", m); s.sp.hidden = !m; s.xc.hidden = !m;
     p.el.classList.toggle("mzmir", m);
@@ -195,7 +200,7 @@ window.MAPPA = (() => {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
     if (!pt || !(mirOn(p) || st(p).lock)) return;
     const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sp = specFor(p, pt), sc = sp && sp.sid != null ? T("mappa.read.scan", { n: sp.sid + 1 }) + " · " : "";
-    p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
+    p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}${s.sl && s.sl.ax ? " · " + T(s.sl.ax === "x" ? "asse.x" : "asse.y") : ""}`;
   }
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
@@ -392,17 +397,35 @@ window.MAPPA = (() => {
   }
 
   // ---------------------------------------------------------------- mouse
-  function move(p, px, py) {
+  // Shift held while the pointer moves with no button down: the sight is held on the line or the column picked by the first pixels (same m/z or same RT),
+  // so the spectrum and the XIC at the margins follow a straight line; releasing Shift frees it. s.sl = { ax, rt, mz, x, y } (anchor point and pixel); s.lpx = last pixel
+  function shiftSight(p, s, px, py) {
+    if (!s.sl) { const h = s.hov || xy2pt(p, px, py); s.sl = { ax: null, rt: h.rt, mz: h.mz, x: s.lpx ? s.lpx[0] : px, y: s.lpx ? s.lpx[1] : py }; }
+    const q = s.sl, dx = px - q.x, dy = py - q.y;
+    if (!q.ax && Math.max(Math.abs(dx), Math.abs(dy)) >= ASSE.THR) q.ax = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+    return q.ax === "x" ? { rt: xOf(p, px), mz: q.mz } : q.ax === "y" ? { rt: q.rt, mz: p._a.mzAt(py) } : { rt: q.rt, mz: q.mz };
+  }
+  const xy2pt = (p, px, py) => ({ rt: xOf(p, px), mz: p._a.mzAt(py) });
+  function move(p, px, py, e) {
     if (!is2d(p)) return; const s = st(p), a = p._a;
     if (s.feat && window.MAPEX && MAPEX.featHover(p, px, py)) return;
     if (s.ex && window.MAPEX && MAPEX.hover(p, px, py)) return;
     if (s.frz) return;                                                  // the menu is open: the sight stays on the clicked point
-    if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
+    const held = !!(e && e.shiftKey && !e.buttons && mirOn(p) && !s.lock);
+    if (!held) s.sl = null;
+    if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; }
+    else { s.hov = held ? shiftSight(p, s, px, py) : xy2pt(p, px, py); s.kp = null; }
+    s.lpx = [px, py];
     if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
     if (!s.lock) frame(p); else readout(p);
   }
   function guide(p, q) { const s = st(p); if (!q && !s.guide) return; s.guide = q || null; overlay(p); }
-  function leave(p) { const s = st(p); if (s.frz) return; s.hov = null; if (!s.lock && s.ovg) frame(p); }
+  function shiftUp(p, e) {                                              // Shift released: the sight is free again, at the pointer
+    const s = st(p); if (e.key !== "Shift" || !s.sl) return;
+    s.sl = null; if (s.hov && s.lpx && !s.frz) s.hov = xy2pt(p, s.lpx[0], s.lpx[1]);
+    frame(p);
+  }
+  function leave(p) { const s = st(p); if (s.frz) return; s.sl = null; s.hov = null; if (!s.lock && s.ovg) frame(p); }
   function wheel(p, e, px, py) {
     if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel (a pinch on the trackpad) keeps the zoom of explore.js
     e.preventDefault();
@@ -429,7 +452,7 @@ window.MAPPA = (() => {
   }
   function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
   function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
-  // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
+  // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry)
   function ctx(p, e, px, py) {
     if (!is2d(p)) return false;
     e.preventDefault(); hideHover(p);
@@ -438,7 +461,7 @@ window.MAPPA = (() => {
     if (Date.now() - (st(p).lpAt || 0) < 900) return true;             // the long press has just opened the menu (Android also sends contextmenu)
     showMenu(ad2(p, inside ? { rt: xOf(p, px), mz: a.mzAt(py) } : null), e); return true;
   }
-  // the «⋯» menu: the old right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
+  // the menu of the Menu key / Shift+F10: the right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
   function menuAt(p, btn, kbd) {
     const a = p._a; if (!a) return; const pt = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, r = btn.getBoundingClientRect();
     showMenu(ad2(p, pt), { preventDefault() {}, clientX: r.left + (kbd ? r.width / 2 : 0), clientY: kbd ? r.top + r.height / 2 : r.bottom + 4, kbd: !!kbd });
@@ -523,14 +546,14 @@ window.MAPPA = (() => {
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
     const q = (await snapAt(p, rt, mz)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
     const q = (await snapAt(p, rt, mz, dmz || 1, 0.2)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   const markedAt = (p, q) => p._a ? nearPoint(p, p._a.X(q.rt), p._a.Y(q.mz)) : -1;      // index of the marked point under (rt, m/z), -1 if none
@@ -569,7 +592,7 @@ window.MAPPA = (() => {
   function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
   // tolerance of the RT groups: the student's value, else about one peak width (5 scans, between 0.02 and 0.15 min)
   const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
-  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, forms);
+  const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, shapeNew, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, { ...forms, grpShape });
   async function spectrumAt(p, rt, k) {
     const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
@@ -787,7 +810,7 @@ window.MAPPA = (() => {
     cv.addEventListener("touchend", end); cv.addEventListener("touchcancel", () => { clearTimeout(lp); g = null; });
   }
 
-  // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
+  // ---------------------------------------------------------------- buttons in the controls of the map: mark, snap, sight, 3D
   function decorate(p, c) {
     if (p.type !== "map") return;
     const hasRef = corrState(p).now[0] === "f", o = diffOpt(hasRef), pal = PREF.pal === "cividis" ? "cividis" : "viridis";
@@ -797,7 +820,7 @@ window.MAPPA = (() => {
       `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>`;
     if (dif) dif.outerHTML = hasRef ? `<select data-mz="show" title="${T("mappa.show.title")}">${opt("all", o.show, T("mappa.show.all"))}${opt("up", o.show, T("mappa.show.up"))}${opt("down", o.show, T("mappa.show.down"))}</select>` : "";
     const g = document.createElement("span"); g.className = "mzg"; g.setAttribute("role", "group"); g.setAttribute("aria-label", T("ctl.map.grp.tools"));
-    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button></span>` +
+    g.innerHTML = `<span class="seg mzbt"><button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="snap" class="${PREF.snap === false ? "" : "on"}" aria-pressed="${PREF.snap !== false}" title="${T("mappa.btn.snap.title")}">${T("mappa.btn.snap")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" aria-pressed="${!!mirOn(p)}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button></span>` +
       `<button data-o="view" data-v="3d" title="${T("ctl.map.open3d.title")}" aria-label="${T("ctl.map.open3d.title")}">${T("ctl.map.open3d")}</button>`;
     c.appendChild(g);
     const Q = k => c.querySelector(`[data-mz="${k}"]`), num = el => numIt(el.value);
@@ -807,8 +830,7 @@ window.MAPPA = (() => {
     const dc = c.querySelector("details.mzcol"); if (dc) dc.ontoggle = () => { p._colOpen = dc.open; };
     Q("mark").onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     Q("snap").onclick = ev => { PREF.snap = PREF.snap === false; prefSave(); ev.currentTarget.classList.toggle("on", PREF.snap !== false); ev.currentTarget.setAttribute("aria-pressed", String(PREF.snap !== false)); };
-    Q("mir").onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
-    Q("menu").onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
+    Q("mir").onclick = () => { const s = st(p); s.mir = !mirOn(p); layout(p); draw(p); };
   }
 
   function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }

@@ -10,7 +10,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#qqq-labels');return g?g.childNodes.length:-1})()"
-KEYS = ["qqq.a11y", "qqq.banco.info", "qqq.barra.etichette", "qqq.barra.hr", "qqq.barra.lato", "qqq.barra.lr", "qqq.bianco", "qqq.comp", "qqq.contaminanti",
+KEYS = ["qqq.a11y", "qqq.banco.info", "qqq.barra.hr", "qqq.barra.lato", "qqq.barra.lr", "qqq.bianco", "qqq.comp", "qqq.contaminanti",
         "qqq.contaminanti.esclusi", "qqq.contaminanti.on", "qqq.convopen", "qqq.disegno.riquadri", "qqq.disegno.strumenti", "qqq.fair", "qqq.flgrp",
         "qqq.gradiente.ultimo", "mzlab.lang", "qqq.lib.cartella", "qqq.lib.soglie", "qqq.liste.attive", "qqq.lr", "qqq.mappa", "qqq.pca",
         "qqq.picchi", "qqq.pool", "qqq.prefs", "qqq.profilo", "qqq.qaqc", "qqq.riferimento", "qqq.tunit", "qqq.unopen", "qqq.upd.last", "qqq-labels", "qqq-theme"]

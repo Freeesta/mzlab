@@ -203,7 +203,7 @@ function groupHash(files){const s=files.map(f=>f.name+":"+f.size).sort().join("|
 function groupSeen(h){let a=[];try{a=JSON.parse(ssGet("qqq.unopen")||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
 function groupMark(h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet("qqq.unopen")||"[]");a.push(h);ssSet("qqq.unopen",JSON.stringify(a.slice(-50)))}catch(e){}}
 function namesCut(a,max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
-// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats, read errors and big files, one line per kind
+// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats and read errors, one line per kind
 function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
 function openConvHelp(focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
 function reportLoad(rep){
@@ -218,7 +218,6 @@ function reportLoad(rep){
   if(rep.moved.dam.length)L.push(`<p>${T("load.note.movedToDam",{name:namesCut(rep.moved.dam,3)})}</p>`);
   if(rep.moved.data.length)L.push(`<p>${T("load.note.movedToData",{name:namesCut(rep.moved.data,3)})}</p>`);
   for(const n of rep.notes||[])L.push(`<p>${esc(n)}</p>`);
-  if(rep.big.length)L.push(`<p>${T("load.note.big",{n:rep.big.length})}</p>`);
   if(!L.length)return;
   const needHelp=rep.unopen.length||rep.other.length;
   u.innerHTML=L.join("")+`<div class="row">${needHelp?`<button type="button" class="sec" data-a="help">${T("unopen.how")}</button>`:""}<button type="button" class="sec" data-a="close">${T("common.close")}</button></div>`;
@@ -242,7 +241,7 @@ function dropDups(files){const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.fi
   return files.filter(f=>!dups.includes(f))}
 async function upload(files,into){const box=$("#up");fail();files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)));if(!UPBUSY){BATCH.tot=0;BATCH.done=0}BATCH.tot+=files.length;UPBUSY++;checkGo();const mine=files;try{await upload0(files,into,box)}finally{mine.forEach(f=>INFLIGHT.delete(fkey(f)));UPBUSY--;checkGo();if(!UPBUSY)IDLE.splice(0).forEach(ok=>ok())}}
 async function upload0(files,into,box){
-  const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},big:[],notes:[]}),rejected=/** @type {any[]} */ ([]);
+  const rep=/** @type {any} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {any[]} */ ([]);
   const one=async f=>{const isDam=isMethodFile(f.name);
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     const pn=panel&&CONV.has(f.name)?panel:null,row=document.createElement("div");      // a converted file: its index is the last phase of the bar of the conversion
@@ -252,7 +251,7 @@ async function upload0(files,into,box){
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(!pn)row.querySelector("i").style.width=(100*a/b)+"%";CONVROWS.set(f.name,"index",Math.floor(100*a/b));if(pn)pn.index(f.name,Math.floor(100*a/b))});
       if(j.error)throw I18N.err(j);CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
-      LOADFAIL.delete(f.name);if(window.QQQ_BROWSER&&NATIVO.size(f)>300*1048576)rep.big.push(f.name)}
+      LOADFAIL.delete(f.name)}
     catch(e){row.remove();CONVROWS.drop(f.name);LOADFAIL.add(f.name);(rep.errs[e.message]=rep.errs[e.message]||[]).push(f.name)}finally{removeEventListener("mzlab-index",onIdx);LOADP.delete(f.name);BATCH.done++;waitStato()}};
   let panel=null;
   const wr=await wiffToMzml(files,box);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=files.panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
