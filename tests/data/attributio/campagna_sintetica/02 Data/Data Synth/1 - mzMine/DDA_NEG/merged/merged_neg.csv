@@ -1,0 +1,3 @@
+id,mz,rt,datafile:SiteA_OA_ddaNEG.mzML:feature_state,datafile:SiteA_OA_ddaNEG.mzML:area,datafile:SiteA_EC_ddaNEG.mzML:feature_state,datafile:SiteA_EC_ddaNEG.mzML:area,datafile:SiteB_OA_ddaNEG.mzML:feature_state,datafile:SiteB_OA_ddaNEG.mzML:area,datafile:SiteB_EC_ddaNEG.mzML:feature_state,datafile:SiteB_EC_ddaNEG.mzML:area
+1,220.0500,5.50,UNKNOWN,0,UNKNOWN,0,DETECTED,70000,UNKNOWN,0
+2,230.0700,6.50,DETECTED,40000,UNKNOWN,0,UNKNOWN,0,UNKNOWN,0

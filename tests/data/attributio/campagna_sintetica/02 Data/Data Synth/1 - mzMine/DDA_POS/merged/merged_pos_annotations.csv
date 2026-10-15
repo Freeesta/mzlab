@@ -1,0 +1,6 @@
+id,score,compound_name,method,inchi_key,smiles,precursor_mz,adduct,mol_formula
+2,0.85,Fictacin B,MS/MS match,AAAAAAAAAAAAAAAAAAAAAAAAAA-UHFFFAOYSA-N,,250.1234,[M+H]+,
+8,0.9,Fictamine,MS/MS match,DDDDDDDDDDDDDD-UHFFFAOYSA-N,,301.1547,[M+H]+,C17H20N2O3
+9,0.88,Fictamol,MS/MS match,FFFFFFFFFFFFFF-UHFFFAOYSA-N,,299.1754,[M+H]+,C18H22N2O2
+6,0.95,FA 12:0,matchedlipid,,,310.3,[M+H]+,
+6,0.93,Fictoxin,MS/MS match,GGGGGGGGGGGGGG-UHFFFAOYSA-N,,310.3,[M+H]+,

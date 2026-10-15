@@ -1,0 +1,5 @@
+pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione;group
+POS;2;250.1234;6.00;3;;Fictacin B;2026-09-24;test;fictional: single library, evidence below 2a;
+POS;4;300.1500;4.10;;Caffeine;Fictastructin;2026-09-24;test;fictional: same compound as POS 3;
+POS;99;999.9999;9.99;3;;Nothing;2026-09-24;test;fictional: no such feature, must only warn;
+POS;13;240.2000;12.00;;;Fictolol isomer, RT 12.0 min;2026-09-28;test;fictional: not defensible from this feature's evidence;ambiguous
