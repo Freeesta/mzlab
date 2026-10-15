@@ -12,6 +12,11 @@ use mzlab_feat::legacy::lr::{self, detail::detail, summary::summary};
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 
+#[path = "lr_dig/ms2_window.rs"]
+mod ms2_window;
+#[path = "lr_dig/ms2_real.rs"]
+mod ms2_real;
+
 const SHIFT: f64 = 0.30;
 const TIMES: [f64; 7] = [0.0, 5.0, 10.0, 15.0, 30.0, 45.0, 60.0];
 const PARENT: &str = r#"{"name": "Parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"}"#;
@@ -144,7 +149,11 @@ fn series() -> (String, Vec<Vec<u8>>) {
 
 /// The pipeline as the pool runs it: detection, alignment, hypotheses of the parent; then the Dig.
 fn dig(files: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
-    let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, PARENT).unwrap()).unwrap();
+    dig_for(files, PARENT, idxs)
+}
+
+fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
+    let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, parent).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
     let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
     // as detect_file_to of the pool: the recipe of every file from its own index, the file name as the name
@@ -173,7 +182,7 @@ fn dig(files: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
     let refs: Vec<_> = feats.iter().collect();
     let formula = plan["formula"].as_str().unwrap();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
-    lr::dig(files, PARENT, "{}", &table, &h.registry.to_json()).unwrap()
+    lr::dig(files, parent, "{}", &table, &h.registry.to_json()).unwrap()
 }
 
 fn golden() -> Value {
