@@ -80,8 +80,8 @@ const PRIMA: &[(&str, [&str; 4])] = &[
     (
         "PXD077492",
         [
-            "525f99e4a199a17e7767effe21e43f329f005f1b0bf0447bfb9aa928eb62cec7",
-            "25b4350a38d61c7ed8d9739b9c378798760dc029d10fb63de041b9b892ec41e9",
+            "1516465e726f8ab470f4f6e2e3655bc6ac2dd63a16b57824caa05e7d7530e09f",
+            "13f991a1a8f1d019ceb6790215e031a8a02fbf29270af759aebf939e31a39a03",
             "1006c10f52ddcfcf4bc358ce4cd7773e6bb4e5257865e9aaa72e159c022d81a3",
             "41be13e4d786327c12cbb8e8ce7c5af7b539ec228957534da5473d1169544d6b",
         ],
@@ -89,8 +89,8 @@ const PRIMA: &[(&str, [&str; 4])] = &[
     (
         "BAF",
         [
-            "718df5a030a3b976d70c5e50992d3786f73b483353e5ccaea356771d7fa13fd8",
-            "4073de0ba4fd9efea52dcb2d376a3f8182ebcfe705cadf27871ee6e0d775e4c3",
+            "e35a63eba81e3a872f74dd9903d83a4f9bc9748076c471c536a0250c0cd43cd6",
+            "1da5d58af5ca8cec238230d4857553296726cbee9642b7d18308c84b153ef2bc",
             "4f9312ccd9e290b25cb0d305e933e1a102855f200a5a53435439bfa9f822a36a",
             "648a3fded6940230011583d50681cbcd96940f7e1a2f20605751e626751b8e7a",
         ],

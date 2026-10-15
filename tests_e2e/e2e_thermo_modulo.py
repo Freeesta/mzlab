@@ -119,7 +119,8 @@ try:
             pg4.set_input_files("#pick", str(big))
             pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=600000)
             pg4.click("#opbtn"); pg4.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=900000)
-            pg4.click("#np-map"); pg4.wait_for_selector(".pnl.map canvas", timeout=600000)
+            pg4.wait_for_function("(() => { const l = document.querySelector('#loading'); return !l || l.hidden; })()", timeout=600000)
+            pg4.click("#np-map", timeout=600000); pg4.wait_for_selector(".pnl.map canvas", timeout=600000)
             pg4.wait_for_function("(() => { const m = E.panels.find(q => q.type === 'map'); return !!m && !!m.cv && m.cv.width > 0; })()", timeout=600000)
             miss = [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "api/spectrum" not in m]
             assert not miss, miss
