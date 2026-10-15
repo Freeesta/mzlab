@@ -125,7 +125,13 @@ pub(super) fn evaluate(e: &mut Entry, t: &Aligned, lc: &[FileIn], p: labels::Per
 }
 
 /// Isotope check and kinetic generation of one entry (`snapshot` = the entries the isotope is looked for in).
-pub(super) fn finish_one(e: &mut Entry, snapshot: &[Entry], lc: &[FileIn], s: &Settings, gens: &Gens) {
+pub(super) fn finish_one(
+    e: &mut Entry,
+    snapshot: &[Entry],
+    lc: &[FileIn],
+    s: &Settings,
+    gens: &Gens,
+) {
     let hit = rows::isotope_of(e, snapshot, s.tol_da, s.rt_tol_min);
     rows::isotope_crit(e, hit);
     if status(&e.criteria, GROWS) == "pass" {

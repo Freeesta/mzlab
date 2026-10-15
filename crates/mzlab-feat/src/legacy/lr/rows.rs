@@ -157,7 +157,14 @@ pub fn calibrate(
 }
 
 /// An entry with its identity and no evaluation yet.
-pub(super) fn entry(id: i64, unexpected: bool, name: String, mz: f64, mz_x: f64, row: Option<usize>) -> Entry {
+pub(super) fn entry(
+    id: i64,
+    unexpected: bool,
+    name: String,
+    mz: f64,
+    mz_x: f64,
+    row: Option<usize>,
+) -> Entry {
     Entry {
         id,
         unexpected,

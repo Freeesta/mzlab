@@ -32,7 +32,11 @@ fn open(idx: &[u8]) -> Index<Vec<u8>> {
 
 fn main() {
     let mut a: Vec<String> = std::env::args().skip(1).collect();
-    let diag = a.iter().position(|x| x == "--diag").map(|i| a.remove(i)).is_some();
+    let diag = a
+        .iter()
+        .position(|x| x == "--diag")
+        .map(|i| a.remove(i))
+        .is_some();
     let ms2 = match a.iter().position(|x| x == "--ms2") {
         Some(i) => {
             let n = a[i + 1].parse::<usize>().expect("--ms2 N");

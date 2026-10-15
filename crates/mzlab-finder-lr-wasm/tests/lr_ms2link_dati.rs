@@ -125,20 +125,31 @@ fn check(d: &LrDig, t: &Value) {
     // an ion that is no row of the Dig: not matched to a product (a weak isotope peak of a row is shown, not pooled)
     let near = |k: usize| (e.peaks[k].apex - apex).abs() <= 0.1;
     let made = target_row(d, i, &near);
-    let ok = made.is_some() || l.unmatched.iter().any(|u| {
-        u.exp == Some(i)
-            && u.peak.is_some_and(near)
-            && matches!(u.reason, "no_row" | "no_row_at_rt")
-    }) || l
-        .links
-        .iter()
-        .any(|k| k.exp == i && near(k.peak) && k.state == State::Isotope);
+    let ok = made.is_some()
+        || l.unmatched.iter().any(|u| {
+            u.exp == Some(i)
+                && u.peak.is_some_and(near)
+                && matches!(u.reason, "no_row" | "no_row_at_rt")
+        })
+        || l.links
+            .iter()
+            .any(|k| k.exp == i && near(k.peak) && k.state == State::Isotope);
     assert!(ok, "{file} {p}: {:?} {:?}", l.links, l.unmatched);
     if let Some(e) = made {
-        assert!((e.ref_rt.unwrap_or(f64::NAN) - apex).abs() <= 0.1, "{file} {p}: {:?}", e.ref_rt);
+        assert!(
+            (e.ref_rt.unwrap_or(f64::NAN) - apex).abs() <= 0.1,
+            "{file} {p}: {:?}",
+            e.ref_rt
+        );
         // the cell of the full-scan file with the same sampling time is not empty
-        let k = d.lc.iter().position(|f| f.time == l.exps[i].time && f.time.is_some());
-        assert!(k.is_some_and(|k| e.cells[k].detected || e.cells[k].area > 0.0), "{file} {p}: {:?}", e.cells);
+        let k =
+            d.lc.iter()
+                .position(|f| f.time == l.exps[i].time && f.time.is_some());
+        assert!(
+            k.is_some_and(|k| e.cells[k].detected || e.cells[k].area > 0.0),
+            "{file} {p}: {:?}",
+            e.cells
+        );
     } else if t["expect"] == "target" {
         eprintln!("NOTE {file} {p}: target of the truth without a row of its own (isotope link or listed): {:?}", l.links);
     }

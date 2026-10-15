@@ -30,11 +30,7 @@ fn link(d: &mut lr::LrDig, name: &str, f: &[u8], ov: &[Override]) {
         kind: "ms2".into(),
     });
     let cols = &with_target().0;
-    let all: Vec<&[u8]> = cols
-        .iter()
-        .map(|c| c.as_slice())
-        .chain([f].into_iter())
-        .collect();
+    let all: Vec<&[u8]> = cols.iter().map(|c| c.as_slice()).chain([f]).collect();
     ms2link::ms2_link(d, ov, &mut |k| Ok(open(all[k]))).unwrap();
 }
 
