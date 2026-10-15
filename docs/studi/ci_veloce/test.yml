@@ -1,0 +1,192 @@
+# Level 2 of the tests (AGENTS.md §3): quick checks on every pull request and on every push to main (goal < 6 min).
+# Unit tests on Linux with the oldest supported and the newest Python, JavaScript syntax, the e2e smoke tests on Chromium.
+# The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
+name: test
+
+# No paths-ignore: these 4 jobs are the required checks of the "main protetto" ruleset, so they must run on every pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# a new push stops the run still going on the same branch / pull request
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
+
+jobs:
+  pytest:
+    name: pytest (ubuntu-latest, ${{ matrix.python }})   # same names as before: required checks of the ruleset
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      # the tests that build a .wasm (test_untarget*, three of test_fair) are skipped without the wasm32 target and wasm-bindgen
+      - name: Toolchain (version pinned in rust-toolchain.toml) and wasm32 target
+        run: |
+          rustup show
+          rustup target add wasm32-unknown-unknown
+      # Every run restores the newest cache; only main saves one, keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
+      # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          restore-keys: pytest-wasm-${{ runner.os }}-
+      - name: wasm-bindgen-cli (same version as Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then
+            cargo install wasm-bindgen-cli --version "$ver" --locked --force
+          fi
+      - name: Install
+        run: python -m pip install -e ".[test]" pytest-xdist
+      # the tests spread over the 4 CPUs of the runner; --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
+      - name: Unit tests
+        env:
+          MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
+        run: python -m pytest -q -n auto --dist loadfile tests
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+
+  # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
+  # No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
+  browser:
+    name: browser (ubuntu-latest, chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
+          restore-keys: playwright-${{ runner.os }}-chromium-
+      - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+            target
+          key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          restore-keys: sito-e2e-${{ runner.os }}-
+      - name: Install
+        run: |
+          python -m pip install -e ".[test]" playwright axe-playwright-python
+          python -m playwright install --with-deps chromium
+      - name: Smoke tests
+        run: python tools/verifica.py --browser chromium --fumo
+      # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - name: Print the logs of the failed tests (readable in the job log)
+        if: failure()
+        shell: bash
+        run: |
+          cat .verifica/ultimo.md | cut -c1-600
+          # only the logs of the tests that failed (the others are in the artifact)
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
+      - name: Logs of the failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verifica-ubuntu-chromium
+          path: .verifica/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  javascript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax check
+        run: |
+          # every script of the page; module-style files are checked as .mjs (new files are picked up by themselves)
+          for f in mzlab/web/*.js; do
+            b=$(basename "$f" .js)
+            case "$b" in
+              archivio|qqq-db|draw|sw|rust-worker|rust-bridge|mappa3d|workflow|perf|qualita|peaks-worker) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
+              *) node --check "$f" ;;
+            esac
+          done
+          python3 - <<'PY'
+          import re, pathlib
+          html = pathlib.Path("mzlab/web/index.html").read_text(encoding="utf-8")
+          inline = re.findall(r"<script>(.*?)</script>", html, re.S)
+          pathlib.Path("/tmp/inline.js").write_text("\n".join(inline), encoding="utf-8")
+          PY
+          # classic scripts share globals: check explore.js + inline together (no duplicate const)
+          cat mzlab/web/explore.js mzlab/web/pannelli.js mzlab/web/grafici.js mzlab/web/picchi.js mzlab/web/eventi.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Map of the code and size limits
+        run: |
+          python3 tools/indice.py --controlla
+          python3 tools/controlla.py
+      - name: Teoria chapters (no private data)
+        run: python3 tools/controlla_teoria.py
+
+  # Types without a build step: tsc on the projects of tools/tipi/ (pagina, moduli, worker); the errors per file may only go down (tools/tipi/base_errori.json).
+  tipi:
+    name: tipi (tsc)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Globals
+        run: python3 tools/tipi/genera_globali.py --controlla
+      - name: tsc
+        run: python3 tools/tipi/controlla_tsc.py
