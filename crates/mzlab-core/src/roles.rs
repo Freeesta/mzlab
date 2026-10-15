@@ -59,7 +59,7 @@ impl Losses {
                 }
             }
         }
-        out.sort_by(|a, b| {
+        crate::sortc::slice_by(&mut out, |a, b| {
             (delta - a.1).abs().total_cmp(&(delta - b.1).abs()).then(a.0.matches('+').count().cmp(&b.0.matches('+').count()))
         });
         out

@@ -1,5 +1,7 @@
 //! The single mzML writer on top of `Lettore` gives the file the Agilent converter wrote before it (synthetic folder, no laboratory data).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_synth;
 
 use agilent_synth::*;

@@ -599,14 +599,14 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         });
     }
     // np.unique(axis=0): rows in lexicographic order, the first of equal rows kept
-    cands.sort_by(|p, q| p.x.cmp(&q.x));
+    crate::sortc::slice_by(&mut cands, |p, q| p.x.cmp(&q.x));
     cands.dedup_by(|b, a| a.x == b.x);
     if cands.is_empty() {
         return Ok(empty(o.ion));
     }
     let n_candidates = cands.len();
     // np.lexsort((nfail, |E|)): by |E|, then by the rules broken; stable
-    cands.sort_by(|p, q| {
+    crate::sortc::slice_by(&mut cands, |p, q| {
         let nf = |c: &Cand| c.failed.iter().filter(|b| **b).count();
         p.e.abs().total_cmp(&q.e.abs()).then(nf(p).cmp(&nf(q)))
     });
@@ -715,7 +715,7 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         });
     }
     if scored {
-        res.sort_by(|a, b| b.total.total_cmp(&a.total));
+        crate::sortc::slice_by(&mut res, |a, b| b.total.total_cmp(&a.total));
         if !o.frags.is_empty() {
             res.truncate(o.max_results.max(40));
             let ppm = o
@@ -732,7 +732,7 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
                 r.total = round(combined(r.mass_t, r.iso_t, f.explained, o.weights), 4);
                 r.frag = Some(f);
             }
-            res.sort_by(|a, b| b.total.total_cmp(&a.total));
+            crate::sortc::slice_by(&mut res, |a, b| b.total.total_cmp(&a.total));
         }
         res.truncate(o.max_results);
     }

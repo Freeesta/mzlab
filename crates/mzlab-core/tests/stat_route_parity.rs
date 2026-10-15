@@ -2,6 +2,8 @@
 //! the same JSON (numbers within 1e-9, indices, counts, labels and error keys identical). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::Path;
 use std::process::Command;
 

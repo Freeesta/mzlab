@@ -104,7 +104,7 @@ fn candidates(w: &Window, a: usize, b: usize, pw: &[f64], apex: f64, r: &Request
     let n = w.n_scans;
     let area: Vec<f64> = (0..w.n_roi()).map(|j| sum_range(&w.x[j * n..(j + 1) * n], a, b)).collect();
     let mut order: Vec<usize> = (0..area.len()).collect();
-    order.sort_by(|&i, &j| area[j].total_cmp(&area[i]));
+    crate::sortc::slice_by(&mut order, |&i, &j| area[j].total_cmp(&area[i]));
     let pmax = vmax(&area);
     let mut out: Vec<(f64, Value)> = Vec::new();
     for &j in order.iter().take(r.top) {
@@ -123,7 +123,7 @@ fn candidates(w: &Window, a: usize, b: usize, pw: &[f64], apex: f64, r: &Request
         let key = s2.get("pearson").and_then(|v| v.f64()).filter(|v| v.is_finite()).unwrap_or(-2.0);
         out.push((-key, o.done()));
     }
-    out.sort_by(|x, y| x.0.total_cmp(&y.0));
+    crate::sortc::slice_by(&mut out, |x, y| x.0.total_cmp(&y.0));
     Ok(out.into_iter().map(|c| c.1).collect())
 }
 

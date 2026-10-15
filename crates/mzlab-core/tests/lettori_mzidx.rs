@@ -4,6 +4,7 @@
 //! offset and the reader) give the same peaks and traces. Synthetic `.D` always, synthetic `.wiff` with
 //! python3, the real `.wiff`, `.D` and `.raw` with the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without them.
 #![allow(clippy::indexing_slicing)]
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
 mod lettori_rotte;

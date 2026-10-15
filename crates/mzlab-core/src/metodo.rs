@@ -132,7 +132,7 @@ pub fn origin(src: &Source, created: Option<&str>) -> Option<V> {
 /// Parameters sorted by id: the order the file stores them in is an accident of the writer (a `.dam` and the same method inside a `.wiff` differ).
 fn params(p: &[Param]) -> V {
     let mut p: Vec<&Param> = p.iter().collect();
-    p.sort_by(|a, b| a.id.cmp(&b.id));
+    crate::sortc::slice_by(&mut p, |a, b| a.id.cmp(&b.id));
     V::Arr(
         p.into_iter()
             .filter_map(|p| {

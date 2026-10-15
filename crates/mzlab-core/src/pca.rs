@@ -107,6 +107,8 @@ fn align(full: &[f64], kf: usize, sub: &[f64], ks: usize, p: usize) -> Vec<f64> 
     for j in 0..kf {
         let c: Vec<f64> = (0..ks).map(|i| dot(j, i)).collect();
         let mut order: Vec<usize> = (0..ks).filter(|&i| !used[i]).collect();
+        // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+        #[allow(clippy::disallowed_methods)]
         order.sort_by(|&a, &b| c[b].abs().partial_cmp(&c[a].abs()).unwrap_or(Equal));
         let Some(&i) = order.first() else { continue };
         used[i] = true;

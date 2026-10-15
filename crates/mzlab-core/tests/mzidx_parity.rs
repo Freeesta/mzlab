@@ -2,6 +2,8 @@
 //! files and the synthetic ones, with a large budget (peaks kept from the first pass) and a tiny one (rounds of buckets).
 //! Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

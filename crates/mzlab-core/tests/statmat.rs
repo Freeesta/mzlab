@@ -1,6 +1,8 @@
 //! `statmat`: the SVD reconstructs the matrix with orthonormal factors and descending values; `eigh` solves symmetric matrices;
 //! the 2×2 case has numpy's signs (checked against numpy in `stat_parity.rs`).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::statmat::{eigh, svd};
 
 fn lcg(seed: &mut u64) -> f64 {

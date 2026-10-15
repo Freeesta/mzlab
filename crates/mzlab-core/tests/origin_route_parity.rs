@@ -2,6 +2,8 @@
 //! unit-resolution centroids, unit-resolution profile and high-resolution centroids, each with a product-ion file; same keys, indices and counts
 //! identical, numbers within 1e-8 relative. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;

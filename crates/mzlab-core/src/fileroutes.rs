@@ -110,7 +110,7 @@ pub fn fileinfo<R: ReadAt, M: ReadAt>(
         v
     };
     let mut conv = tag_attrs(head, "<processingMethod", "softwareRef");
-    conv.sort();
+    crate::sortc::slice_ord(&mut conv);
     conv.dedup();
     let scans = &routes.idx.scans;
     let rt = |f: fn(f64, f64) -> f64, init: f64| {
@@ -131,7 +131,7 @@ pub fn fileinfo<R: ReadAt, M: ReadAt>(
             None => levels.push((s.level, 1)),
         }
     }
-    levels.sort();
+    crate::sortc::slice_ord(&mut levels);
     let n = scans.len();
     let filters = routes.filters()?;
     let filters = filters

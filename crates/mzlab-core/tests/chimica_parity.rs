@@ -1,6 +1,8 @@
 //! `elements` and `subformulas` answer like `mzlab/chem` (`tools/chimica_riferimento.py`): the same JSON (numbers within 1e-9 relative, rounded
 //! values equal), the same names in the same order, the same error keys. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
