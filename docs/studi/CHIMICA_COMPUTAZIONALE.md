@@ -1,10 +1,10 @@
 # Chimica computazionale e posizione della sostituzione negli isomeri dei TP
 
-Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un calcolo di chimica computazionale (siti di attacco di OH•, altre reazioni) e altre prove scientifiche per capire DOVE sta la sostituzione in un isomero posizionale (per esempio i TP idrossilati)? Prompt dei pacchetti in `docs/studi/PROMPT_CHIMICA_COMPUTAZIONALE/`.
+Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un calcolo di chimica computazionale (siti di attacco di OH•, altre reazioni) e altre prove scientifiche per capire DOVE sta la sostituzione in un isomero posizionale (per esempio i TP idrossilati)? Su richiesta di Federico la valutazione copre tutte le reazioni di trasformazione degli inquinanti (§2b), non solo OH•. Prompt dei pacchetti in `docs/studi/PROMPT_CHIMICA_COMPUTAZIONALE/`.
 
 ## 0. Riassunto (10 righe)
 1. Risposta: **sì, ma ridotto**. Il valore vero non sta nel calcolo quantistico ma nel confronto ordinato tra le posizioni possibili e lo spettro MS2 misurato.
-2. Gli indici di Fukui e la DFT dicono «dove è più probabile» l'attacco di OH• su molecole semplici; sui TP reali sono qualitativi, cambiano con il metodo e non sono mai una prova di struttura.
+2. Gli indici di Fukui e la DFT dicono «dove è più probabile» l'attacco di OH• su molecole semplici; sui TP reali sono qualitativi, cambiano con il metodo e non sono mai una prova di struttura. Vale lo stesso per ozono, cloro, fotolisi, idrolisi, riduzione, SO4•⁻/Cl• e biotrasformazione (§2b): la previsione della posizione è validata bene solo per l'alogenazione aromatica (90-96 %) e, meno, per il metabolismo P450 (top-2 circa 76-82 %).
 3. Su TiO2 l'attacco non è solo OH• libero in soluzione (lacune, superficie, adsorbimento): una previsione fatta in acqua omogenea vale ancora meno.
 4. Nessun calcolo pesante (xtb, CREST, DFT) può girare nel browser in modo sensato: Fortran, minuti o ore per molecola, megabyte di `.wasm`. Si può solo importare un calcolo fatto fuori.
 5. La prova più solida per localizzare un -OH resta la MS2: se un frammento porta +16 Da, l'OH sta in quel pezzo. Questo si può calcolare in Rust con il grafo SMILES che mzLab ha già.
@@ -35,6 +35,26 @@ Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un c
 
 **Conclusione per §2**. Una stima di reattività può ordinare le posizioni («più probabile/meno probabile»), con un'accuratezza che sui micro-inquinanti nessuno ha misurato bene. È un indizio a priori, non una prova, e non decide mai tra due isomeri che lo spettro non separa.
 
+## 2b. Tutte le reazioni di trasformazione: cosa si prevede e cosa serve per la posizione
+Per ogni reazione: cosa sanno prevedere gli strumenti, quanto è stato verificato contro l'esperimento, e se aiuta a dire DOVE sta la modifica in un isomero. «Posizione» = scegliere tra siti equivalenti per formula (orto/meta/para, quale metile, quale N).
+
+| Reazione | Strumenti e metodi | Validazione sperimentale e accuratezza | Utile per la posizione? | Nel programma |
+|---|---|---|---|---|
+| OH• (AOP, TiO2, fotolisi indiretta) | Fukui, DFT con stati di transizione, contributi di gruppo (Minakata 2009), QCD-MLP, Radical-Net | k entro un fattore ~2 (gruppi); sito: fenolo 77/23 orto/para come l'esperimento (DFT); ML AUC 0,93 su 345 reazioni; nessun banco ampio sul sito (§2) | debole: ordina i siti dentro un anello, senza misura affidabile | fase 1 (classi dalla MS2); stima «Prev.» solo in fase 2 se passa la validazione |
+| O3 (ozonazione) | piattaforma a regole di Lee et al. 2017 (~340 regole + k da E_HOMO); QSAR di Lee e von Gunten 2012 | k: errore medio circa un fattore 6 su 284 composti; prodotti coerenti su 3 composti di prova (carbamazepina, tramadolo, triclosan); il 74 % dei k QSAR entro un fattore 3 | sì per il **gruppo** attaccato (olefina, ammina, fenolo attivato), poco per la posizione nell'anello | no: le regole per gruppo stanno già in `regole_tp/2`; rifare 340 regole non vale il costo |
+| Cloro libero (HOCl, disinfezione), Br | sostituzione elettrofila aromatica: RegioSQM (affinità protonica con PM3/xtb), RegioML; DFT su casi (carbamazepina + HOCl, Tandarić 2016: barriere 96-106 kJ/mol contro 98 sperimentale) | alogenazione aromatica: sito giusto nel 96 % di >525 esempi (RegioSQM 2018), 90-93 % (RegioML 2022); N-clorurazione delle ammine: regole di gruppo | **sì**: è il caso meglio validato; orto/para rispetto a OH e NH sono previsti bene | fase 1: `+Cl-H` e `+Br-H` tra le trasformazioni delle classi; fase 2: stima di Wheland (Hückel) validata sull'alogenazione |
+| SO4•⁻ (persolfato) | ML dei k (Tang et al. 2024); trasferimento elettronico come primo passo | k sì (modelli ad albero); sito: nessuna previsione validata trovata | no | no |
+| Cl•, Cl2•⁻ (UV/cloro) | QCD-MLP (AUC 0,89 su 150 reazioni), DFT su sonde | pochi casi | debole | no |
+| Fotolisi diretta | libreria di regole CTS (Yuan et al. 2020, 2021); TD-DFT per l'assorbimento | regole valutate su dati interni ed esterni; resa quantica non prevedibile in modo affidabile | no: la posizione la decide il cromoforo, raramente ambigua | no |
+| Fotolisi indiretta (¹O2, ³CDOM*, OH•) | QSAR dei k; per OH• vedi sopra | k sì per classi; sito come OH• o ¹O2 (gruppi ricchi di elettroni) | debole | solo tramite la riga OH• |
+| Idrolisi | libreria CTS (24 schemi, Tebes-Stevens et al. 2017); HYDROWIN | prodotti e velocità per classe ben documentati | no: il sito è il gruppo idrolizzabile, non c'è ambiguità posizionale | già in `grafo.rs` (rotture di idrolisi) |
+| Riduzione abiotica (nitro → ammina, dealogenazione) | libreria CTS in prova, senza validazione pubblicata | scarsa | sì solo per quale alogeno si perde: si vede dalla formula e dal frammento | coperta dalla fase 1 come «quale atomo cambia» se la trasformazione è nelle regole |
+| Biotrasformazione microbica (fanghi, suolo) | EAWAG-BBD/PPS, enviPath (regole + ML «relative reasoning»), BioTransformer | percorsi: buoni per le liste di sospetti, precisione bassa (Trostel et al. 2023; Hafner et al. 2024; Tam et al. 2021) | debole: le regole dicono il gruppo (dealchilazione, idrossilazione), non la posizione | no nel sito: i loro prodotti entrano come lista di sospetti |
+| Metabolismo di fase I (P450) | SMARTCyp (2D), FAME 3, XenoSite, GLORYx, SyGMa, BioTransformer 3.0, MetaTrans | sito: top-2 76 % su 394 substrati CYP3A4 (SMARTCyp), circa 82 % in media su 9 isoforme; FAME 3 top-2 > 80 %; prodotti: richiamo 60-77 %, precisione 6-14 % (GLORYx, SyGMa) | **sì in parte**: il miglior caso dopo l'alogenazione, ma vale per enzimi, non per TiO2 | fase 2 facoltativa, solo per campagne di metabolismo: ordine dei siti come «Prev.» |
+| Fase II e coniugazioni (glucuronide, solfato, GSH, acetile) | GLORYx, BioTransformer, SyGMa | richiamo come sopra; sito: quale OH/NH è coniugato poco validato | debole: in MS2 il coniugato si perde intero (−176, −80), quindi i frammenti non localizzano | no; prova sperimentale: idrolisi enzimatica e confronto |
+
+Sintesi di §2b: la **posizione** dentro un anello si prevede bene solo per l'alogenazione elettrofila e, meno, per il P450; per le reazioni dei nostri esperimenti (OH• su TiO2, ozono, fotolisi) gli strumenti dicono il **gruppo** reattivo, e il gruppo mzLab lo sa già da `regole_tp/2`. La prova che separa davvero gli isomeri resta sperimentale (MS2, MS3, H/D, standard).
+
 ## 3. Prove per localizzare la sostituzione da MS (provate e no)
 | Prova | Cosa dice | Provata? | Con il nostro strumento |
 |---|---|---|---|
@@ -54,19 +74,24 @@ Studio dell'Architetto sulla domanda di Federico: ha senso mettere in mzLab un c
 Il punto chiave: la MS2 localizza l'O nel **pezzo** che lo porta. Se il pezzo è un anello aromatico intero, le posizioni dentro quell'anello restano indistinguibili con la sola MS2 e il risultato onesto è «OH su uno di questi atomi»: esattamente il multicentro del Disegno e il livello 3a.
 
 ## 4. Fattibilità nel nostro stack
-| Opzione | Dove gira | Peso | Tempo per molecola | Licenza | Giudizio |
-|---|---|---|---|---|---|
-| A. Posizioni compatibili con la MS2 (enumerazione + spostamento dei frammenti) | Rust, `.wasm` `grafo` | stima < 40 KB in più | millisecondi | MIT (nostro) | **fase 1** |
-| B. Tipo di ossidazione dalle perdite neutre e suggerimento H/D | Rust, stesso modulo | pochi KB | millisecondi | MIT | **fase 1** |
-| C. Reattività qualitativa (Hückel π + classi di BDE C-H per l'astrazione) | Rust, `.wasm` `grafo` | stima < 60 KB | millisecondi | MIT | fase 2, solo se passa la validazione |
-| D. Importazione di un calcolo esterno (CSV `siti/1`, uscita `--vfukui` di xtb) | Rust (lettore), calcolo fuori | pochi KB | lo decide chi calcola | xtb LGPL-3.0 usato come programma separato: nessun vincolo per noi | fase 2 |
-| E. Contributi di gruppo k(OH•) (Minakata 2009) | Rust | piccolo | millisecondi | dati pubblicati | no per ora: dà la velocità, non la posizione |
-| F. xtb/tblite/CREST nel browser | WASM da Fortran + LAPACK | diversi MB, nessuna compilazione WASM nota | minuti-ore (CREST) | LGPL-3.0 (link statico nel `.wasm` = obblighi di rilinkaggio) | **no** |
-| G. DFT (ORCA, Psi4) | fuori | — | ore-giorni | ORCA proprietario, Psi4 LGPL-3.0 | solo come D |
-| H. CFM-ID, MetFrag, SIRIUS nel sito | fuori (Java/C++) | decine di MB | secondi-minuti | SIRIUS AGPL-3.0; CFM-ID e MetFrag da verificare | no nel sito; i risultati entrano già da Attributio (AT-06) |
-| I. RDKit nel browser (MinimalLib) | WASM | qualche MB | — | BSD-3 | no: abbiamo già il grafo in Rust |
-| J. RT o CCS previsti per ogni isomero | — | — | — | — | no: errore maggiore della differenza |
-| K. ML per i siti (QCD-MLP e simili) | Python + descrittori DFT | — | — | da verificare | no: chiede DFT per ogni molecola e il codice non è nel nostro linguaggio |
+| Opzione | Reazione | Dove gira | Peso | Tempo per molecola | Licenza | Giudizio |
+|---|---|---|---|---|---|---|
+| A. Posizioni compatibili con la MS2 (enumerazione + spostamento dei frammenti) | tutte (+O, −CH2, +O−2H, +Cl−H, +Br−H) | Rust, `.wasm` `grafo` | stima < 40 KB in più | millisecondi | MIT (nostro) | **fase 1** |
+| B. Tipo di ossidazione dalle perdite neutre e suggerimento H/D | ossidazioni (OH•, O3, P450) | Rust, stesso modulo | pochi KB | millisecondi | MIT | **fase 1** |
+| C. Reattività qualitativa (Hückel π + classi di BDE C-H per l'astrazione) | OH•, alogenazione; P450 se richiesto | Rust, `.wasm` `grafo` | stima < 60 KB | millisecondi | MIT | fase 2, solo se passa la validazione |
+| D. Importazione di un calcolo esterno (CSV `siti/1`, uscita `--vfukui` di xtb) | tutte | Rust (lettore), calcolo fuori | pochi KB | lo decide chi calcola | xtb LGPL-3.0 usato come programma separato: nessun vincolo per noi | fase 2 |
+| E. Contributi di gruppo k(OH•) (Minakata 2009) | OH• | Rust | piccolo | millisecondi | dati pubblicati | no per ora: dà la velocità, non la posizione |
+| F. xtb/tblite/CREST nel browser | tutte | WASM da Fortran + LAPACK | diversi MB, nessuna compilazione WASM nota | minuti-ore (CREST) | LGPL-3.0 (link statico nel `.wasm` = obblighi di rilinkaggio) | **no** |
+| G. DFT (ORCA, Psi4) | tutte | fuori | — | ore-giorni | ORCA proprietario, Psi4 LGPL-3.0 | solo come D |
+| H. CFM-ID, MetFrag, SIRIUS nel sito | tutte | fuori (Java/C++) | decine di MB | secondi-minuti | SIRIUS AGPL-3.0; CFM-ID e MetFrag da verificare | no nel sito; i risultati entrano già da Attributio (AT-06) |
+| I. RDKit nel browser (MinimalLib) | tutte | WASM | qualche MB | — | BSD-3 | no: abbiamo già il grafo in Rust |
+| J. RT o CCS previsti per ogni isomero | tutte | — | — | — | — | no: errore maggiore della differenza |
+| K. ML per i siti (QCD-MLP e simili) | OH•, Cl• | Python + descrittori DFT | — | — | da verificare | no: chiede DFT per ogni molecola e il codice non è nel nostro linguaggio |
+| L. Regole di ozono di Lee et al. 2017 riscritte | O3 | Rust | grande (~340 regole) | — | da verificare (applicazione a sé) | no: dà il gruppo, già in `regole_tp/2` |
+| M. Libreria CTS (idrolisi, fotolisi, riduzione) | idrolisi, fotolisi diretta, riduzione | servizio web EPA | — | — | servizio pubblico | no nel sito: i prodotti entrano come sospetti; nessuna ambiguità di posizione |
+| N. enviPath, EAWAG-PPS, BioTransformer, GLORYx, SyGMa | biotrasformazione, fase I/II | fuori (servizi web, Java/Python) | — | secondi | da verificare per ognuno | no nel sito: liste di sospetti; la posizione non la danno in modo affidabile |
+| O. Stima di sito P450 alla SMARTCyp (metodo pubblicato riscritto in Rust) | P450 | Rust, `grafo` | stima < 80 KB | millisecondi | MIT (metodo dall'articolo, non il codice) | fase 2 facoltativa, solo con il sì di Federico e la validazione |
+| P. Contributi di gruppo per SO4•⁻, Cl•, fotolisi indiretta | SO4•⁻, Cl•, ¹O2 | — | — | — | — | no: danno k, non la posizione |
 
 Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGPL-3.0; SIRIUS AGPL-3.0; RDKit BSD-3. Le opzioni scelte (A-D) non includono codice di terzi: leggiamo numeri prodotti da altri programmi o calcoliamo con codice nostro.
 
@@ -82,11 +107,11 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 
 ## 6. Raccomandazione: SÌ ridotto, a gradini
 **Fase 1 (alto valore, basso costo, circa 3 giorni-chat)**
-- **CC-01** (Rust, nessuna interfaccia): dato il genitore (SMILES) e la trasformazione (+O, −CH2, +O−2H), enumera le posizioni possibili (C-H aromatico, C-H alifatico, N-ossido, S-ossido; quale metile perso), le raccoglie per simmetria, calcola per ognuna i frammenti attesi con lo spostamento e le confronta con la MS2 osservata. Uscita `posiz/1`: classi di posizioni che lo spettro non distingue, con i frammenti che le sostengono o le escludono, il tipo di ossidazione dalle perdite neutre e gli esperimenti suggeriti (H/D, MS3).
+- **CC-01** (Rust, nessuna interfaccia): dato il genitore (SMILES) e la trasformazione (+O, −CH2, +O−2H, +Cl−H, +Br−H), enumera le posizioni possibili (C-H aromatico, C-H alifatico, N-ossido, S-ossido; quale metile perso), le raccoglie per simmetria, calcola per ognuna i frammenti attesi con lo spostamento e le confronta con la MS2 osservata. Uscita `posiz/1`: classi di posizioni che lo spettro non distingue, con i frammenti che le sostengono o le escludono, il tipo di ossidazione dalle perdite neutre e gli esperimenti suggeriti (H/D, MS3).
 - **CC-02** (`.wasm` `grafo` + Tabui, amministratore): pannello «Substitution position» nella riga di un TP con MS2, in LR (0,5 Da) e HR (ppm), con tabella dei dati; il contratto `posiz/1` resta pronto per il Banco 2b di AT-07.
 
 **Fase 2 (facoltativa, parte solo con il sì di Federico dopo aver visto la fase 1)**
-- **CC-03**: stima di reattività qualitativa in Rust (densità di frontiera di Hückel per l'addizione all'anello, classi di BDE per l'astrazione di H), mostrata come «Prev.». Parte con una prova su almeno 20 composti con regioselettività di OH• misurata in letteratura (DOI per ognuno); si pubblica solo se il sito vero sta tra i primi due in almeno il 70 % dei casi e batte la scelta a caso.
+- **CC-03**: stima di reattività qualitativa in Rust, per reazione: OH• (densità di frontiera di Hückel, classi di BDE per l'astrazione di H) e alogenazione elettrofila (energia di localizzazione di Wheland, il caso meglio validato in letteratura), mostrata come «Prev.»; il P450 alla SMARTCyp resta un'opzione separata (§4 riga O) solo se Federico la chiede. Parte con una prova su almeno 20 composti con regioselettività di OH• misurata in letteratura (DOI per ognuno); si pubblica solo se il sito vero sta tra i primi due in almeno il 70 % dei casi e batte la scelta a caso.
 - **CC-04**: importazione di calcoli esterni (CSV `siti/1` e uscita `--vfukui` di xtb) con la ricetta per farli fuori dal sito; i valori si mostrano accanto alle classi, con metodo e fonte.
 
 **No**: xtb/DFT/CREST nel browser, RT o CCS previsti per scegliere l'isomero, ML dei siti, frammentatori in silico nel sito.
@@ -100,7 +125,8 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 
 ## 7. Domande per Federico (con la scelta predefinita che i prompt seguono)
 - **D1**: fase 1 solo in Tabui (amministratore)? Predefinito: sì; Attributio la usa quando nasce il Banco 2b (AT-07 legge `posiz/1`).
-- **D2**: trasformazioni della fase 1: +O, −CH2, +O−2H. Predefinito: sì; altre (+Cl−H, +2O) dopo.
+- **D2**: trasformazioni della fase 1: +O, −CH2, +O−2H, +Cl−H, +Br−H. Predefinito: sì; altre (+2O, coniugazioni) dopo.
+- **D6**: serve una stima dei siti del P450 (metabolismo, non TiO2) per altre campagne? Predefinito: no.
 - **D3**: fase 2 (CC-03, CC-04): si decide dopo aver visto la fase 1 sui dati veri. Predefinito: ferma.
 - **D4**: un paragrafo in Teoria su «dove sta l'OH: cosa dice la MS2 e cosa no»? Predefinito: no finché non lo chiedi tu.
 - **D5**: in laboratorio, provare lo scambio H/D (D2O nella fase mobile) e una MS3 sul QTRAP per un TP idrossilato? Non è software: è la prova più economica che abbiamo.
@@ -142,3 +168,20 @@ Licenze verificate sui file del repository a monte: xtb, CREST, tblite, Psi4 LGP
 - Wicker J. et al. (2016) enviPath: the environmental contaminant biotransformation pathway resource. Nucleic Acids Res. doi:10.1093/nar/gkv1229
 - Wildman S. A., Crippen G. M. (1999) Prediction of physicochemical parameters by atomic contributions. J. Chem. Inf. Comput. Sci. doi:10.1021/ci990307l
 - Zhou Z. et al. (2020) Ion mobility collision cross-section atlas for known and unknown metabolite annotation. Nat. Commun. doi:10.1038/s41467-020-18171-8
+- de Bruyn Kops C. et al. (2020) GLORYx: prediction of the metabolites resulting from phase 1 and phase 2 biotransformations of xenobiotics. Chem. Res. Toxicol. doi:10.1021/acs.chemrestox.0c00224
+- Gao J., Ellis L. B. M., Wackett L. P. (2010) The University of Minnesota Biocatalysis/Biodegradation Database: improving public access. Nucleic Acids Res. doi:10.1093/nar/gkp771
+- Hafner J. et al. (2024) Advancements in biotransformation pathway prediction: enhancements, datasets, and novel functionalities in enviPath. J. Cheminform. doi:10.1186/s13321-024-00881-6
+- Kromann J. C. et al. (2018) Fast and accurate prediction of the regioselectivity of electrophilic aromatic substitution reactions (RegioSQM). Chem. Sci. doi:10.1039/C7SC04156J
+- Lee Y., von Gunten U. (2012) QSARs for the transformation of organic micropollutants during oxidative water treatment. Water Res. doi:10.1016/j.watres.2012.06.006
+- Lee Y., von Gunten U. (2016) Advances in predicting organic contaminant abatement during ozonation of municipal wastewater effluent. Environ. Sci.: Water Res. Technol. doi:10.1039/C6EW00025H
+- Litsa E. E. et al. (2020) Prediction of drug metabolites using neural machine translation (MetaTrans). Chem. Sci. doi:10.1039/D0SC02639E
+- Ridder L., Wagener M. (2008) SyGMa: combining expert knowledge and empirical scoring in the prediction of metabolites. ChemMedChem. doi:10.1002/cmdc.200700312
+- Tam J. et al. (2021) Holistic evaluation of biodegradation pathway prediction: assessing multi-step reactions and intermediate products. J. Cheminform. doi:10.1186/s13321-021-00543-x
+- Tandarić T., Vrček V., Šakić D. (2016) A quantum chemical study of HOCl-induced transformations of carbamazepine. Org. Biomol. Chem. doi:10.1039/C6OB02166B
+- Tang et al. (2024) Machine learning models with molecular fingerprints and chemical structures to predict sulfate radical rate constants. Processes. doi:10.3390/pr12020384
+- Tebes-Stevens C. et al. (2017) Prediction of hydrolysis products of organic chemicals under environmental pH conditions. Environ. Sci. Technol. doi:10.1021/acs.est.6b05412
+- Trostel L. et al. (2023) Combining predictive and analytical methods to elucidate pharmaceutical biotransformation in activated sludge. Environ. Sci.: Processes Impacts. doi:10.1039/D3EM00161J
+- Wishart D. S. et al. (2022) BioTransformer 3.0: a web server for accurately predicting metabolic transformation products. Nucleic Acids Res. doi:10.1093/nar/gkac313
+- Yuan C., Tebes-Stevens C., Weber E. J. (2020) Reaction library to predict direct photochemical transformation products of environmental organic contaminants. Environ. Sci. Technol. doi:10.1021/acs.est.0c00484
+- Yuan C., Tebes-Stevens C., Weber E. J. (2021) Prioritizing direct photolysis products predicted by the Chemical Transformation Simulator. Environ. Sci. Technol. doi:10.1021/acs.est.0c08745
+- Zhu et al. (2024) MetaPredictor: in silico prediction of drug metabolites based on deep language models. Brief. Bioinform. doi:10.1093/bib/bbae374

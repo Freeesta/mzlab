@@ -1,13 +1,13 @@
 # Prompt delle chat DEV: posizione della sostituzione negli isomeri dei TP
 
-Un file per pacchetto; ognuno si copia in una chat DEV da sotto la riga «---» ed è autosufficiente (le regole comuni sono in fondo a ogni file). Lo studio è `docs/studi/CHIMICA_COMPUTAZIONALE.md`: §3 prove da MS, §4 fattibilità, §5 rischi, §6 piano, §7 domande D1-D5 con le scelte predefinite che i prompt seguono. Titolo di ogni chat: inizia con «mzLab» (per esempio «mzLab CC-01 posizioni della sostituzione»).
+Un file per pacchetto; ognuno si copia in una chat DEV da sotto la riga «---» ed è autosufficiente (le regole comuni sono in fondo a ogni file). Lo studio è `docs/studi/CHIMICA_COMPUTAZIONALE.md`: §2b tutte le reazioni di trasformazione, §3 prove da MS, §4 fattibilità, §5 rischi, §6 piano, §7 domande D1-D6 con le scelte predefinite che i prompt seguono. Titolo di ogni chat: inizia con «mzLab» (per esempio «mzLab CC-01 posizioni della sostituzione»).
 
 ## Ordine
 | Passo | Pacchetto | Parte dopo | `.wasm` | Stima (giorni-chat) |
 |---|---|---|---|---|
 | 1 | CC-01 posizioni compatibili con la MS2 (Rust, contratto `posiz/1`, `docs/agenti/posizioni.md`) | — | nessuno | 1,5 |
 | 2 | CC-02 pannello «Substitution position» in Tabui (amministratore) | merge di CC-01 | `grafo` | 1,5 |
-| 3 (facoltativo) | CC-03 stima di reattività «Prev.», solo se passa la validazione | merge di CC-02 + sì di Federico | `grafo` | 2 |
+| 3 (facoltativo) | CC-03 stima di reattività «Prev.» per OH• e alogenazione, solo se passa la validazione | merge di CC-02 + sì di Federico | `grafo` | 2 |
 | 3 (facoltativo) | CC-04 importazione di calcoli esterni (`siti/1`, xtb `--vfukui`) | merge di CC-02 + sì di Federico | `grafo` | 1 |
 
 CC-01 e CC-02 vanno in serie. CC-03 e CC-04 possono correre in parallelo tra loro; toccano entrambi `grafo` e `posiz/1`: chi unisce per secondo fa `git merge origin/main` e prova di nuovo.
