@@ -627,7 +627,7 @@ I18N.add("en", {
   "err.hr.mix": "Low- and high-resolution files cannot be mixed.",
   "err.file.notAccepted": "File type not accepted: {name}. Use an .mzML file, or a .dam method; convert a .wiff to .mzML first.",
   "err.file.notMzml": "{name} does not look like an mzML file.",
-  "err.file.numpress": "Numpress compression is not supported: convert with zlib or no compression.",
+  "err.file.netcdf4": "This is a netCDF-4 (HDF5) file: export it as netCDF-3/AIA (.cdf) from the instrument software.", "err.file.numpress": "Numpress compression is not supported: convert with zlib or no compression.",
   "err.file.notDam": "{name} is not a valid .dam method.",
   "err.dam.unreadable": "cannot read this file ({message})",
   "err.upload.noWorkFolder": "No work folder.",
