@@ -4,7 +4,8 @@ The files carry every case that the stages of mzmine treat differently: isolated
 with a hole of one zero, a long background trace with a peak on top, an isotope pair of charge 1 and one of charge 2, a retention-time drift between files (join),
 and a peak that one file lacks (gap filling: it is below the minimum height there but present in the raw data). Usage:
     python3 tools/bench/oro_mzmine.py --genera DIR        write the four mzML (they never go into the repository)
-    python3 tools/bench/oro_mzmine.py --oro [DIR]         run mzmine 3.9.0 and write the CSV and the LEGGIMI of `tests/data/untargeted/mzmine39/`"""
+    python3 tools/bench/oro_mzmine.py --oro [DIR]         run mzmine 3.9.0 and write the CSV and the LEGGIMI of `tests/data/untargeted/mzmine39/`
+    python3 tools/bench/oro_mzmine.py --reale MZML_DIR DEST  ADAP lists of mzmine on the first two mzML of a folder (real-data test of the ADAP builder)"""
 from __future__ import annotations
 
 import argparse
@@ -115,8 +116,8 @@ def _numero(x: str) -> float | None:
 def _per_file(fasi: Path, prefisso: str) -> list[tuple[str, list[dict]]]:
     """The exports `<prefix>_<file>.mzML_<list name>.csv` of one stage, by file name."""
     out = []
-    for p in sorted(fasi.glob(f"{prefisso}_oro_*.csv")):
-        out.append((re.match(rf"{prefisso}_(oro_\d)\.mzML", p.name).group(1), _leggi(p)))
+    for p in sorted(fasi.glob(f"{prefisso}_*.mzML_*.csv")):
+        out.append((re.match(rf"{prefisso}_(.+?)\.mzML", p.name).group(1), _leggi(p)))
     return out
 
 
@@ -204,6 +205,31 @@ def scrivi_oro(dest: Path) -> None:
         (dest / "LEGGIMI.md").write_text(_leggimi(shas, [java[0], java[1]] if len(java) > 1 else java, _sostituisci(xml_a.read_text(), t), _sostituisci(xml_b.read_text(), t)), encoding="utf-8")
 
 
+def scrivi_reali(cartella: Path, dest: Path, quanti: int = 2) -> None:
+    """Runs mzmine 3.9.0 on the first `quanti` mzML of `cartella` and writes `adap_<file>.csv` (columns of `adap.csv`) in `dest`: the lists the real-data test of the ADAP builder reads."""
+    mm, jh = corri_mzmine.installa_39()
+    par = corri.parametri("mzmine", "predefinita")
+    fs = sorted(cartella.glob("*.mzML"))[:quanti]
+    if not fs:
+        raise SystemExit(f"no mzML in {cartella}")
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        fasi = t / "fasi"
+        fasi.mkdir()
+        xml = fasi / "fasi.xml"
+        xml.write_text(corri_mzmine.batch_xml(fs, fasi / "finale.csv", par, fasi=fasi), encoding="utf-8")
+        ignoti = corri_mzmine.parametri_non_letti(xml, mm)
+        if ignoti:
+            raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
+        r = corri_mzmine.esegui_batch(xml, mm, jh, t / "tmp")
+        if r.returncode or "SEVERE" in r.stdout + r.stderr:
+            raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")
+        dest.mkdir(parents=True, exist_ok=True)
+        col, righe = _fase_per_file(fasi, "adap", False)
+        for f in sorted({r[0] for r in righe}):
+            _scrivi_csv(dest / f"adap_{f}.csv", col, [r for r in righe if r[0] == f], ("id",))
+
+
 def _leggimi(shas: dict[str, str], java: list[str], xml_a: str, xml_b: str) -> str:
     file = "".join(f"- `{n}`: `{h}`\n" for n, h in shas.items())
     return f"""# Gold data of mzmine 3.9.0 per stage (synthetic files)
@@ -242,12 +268,15 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--genera", metavar="DIR")
     ap.add_argument("--oro", nargs="?", const=str(DEST), metavar="DIR")
+    ap.add_argument("--reale", nargs=2, metavar=("MZML_DIR", "DEST"), help="ADAP lists of mzmine on the first mzML of a folder (for the real-data test)")
     a = ap.parse_args()
     if a.genera:
         for n, h in genera(Path(a.genera)).items():
             print(h, n)
     if a.oro:
         scrivi_oro(Path(a.oro))
+    if a.reale:
+        scrivi_reali(Path(a.reale[0]), Path(a.reale[1]))
 
 
 if __name__ == "__main__":

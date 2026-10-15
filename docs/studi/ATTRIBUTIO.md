@@ -137,7 +137,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | AT-07 | Banco 2b: revisione, lista di controllo, alternative con la stessa formula, `rules.py`, scrittura delle decisioni | 6 | AT-04, AT-06 | `attributio` (in serie) | 2 | da fare |
 | AT-08 | prove esportate, cartella di Schymanski, tabella per la pubblicazione, quantificazione e gradiente | 7 | AT-07 | `attributio` (in serie) | 1 | da fare |
 | MZ-00 | diagnosi della concordanza con mzmine (protocollo corretto, motivi) e dati d'oro per stadio | 1 | — | nessuno | 1,5 | strumenti e dati d'oro fatti (`docs/agenti/attributio.md`); sui 4 sintetici recall 0,538→0,692, |log2| 0,080→0,028; misura sul Timolol vero da fare con il privato |
-| MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | da fare |
+| MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/adap.rs`, 45/45 cromatogrammi uguali a mzmine 3.9.0 sui sintetici, lastre = stessa uscita (≥ 200 000 punti, 1 MB); prova sui dati veri pronta, da girare con il privato |
 | MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | da fare |
 | MZ-03 | join aligner e riempimento | 2 | MZ-00 | nessuno | 1 | da fare |
 | MZ-04 | `.wasm` `untargeted`, ricetta e voce di amministratore | 3 | MZ-01, MZ-02, MZ-03 | crea `untargeted` | 1 | da fare |
