@@ -62,6 +62,70 @@ def write_old(root: Path, name: str = "vecchia.D", n: int = 60) -> Path:
     return d
 
 
+XSD = """<?xml version="1.0" encoding="utf-8"?><xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="ScanRecordType"><xs:sequence>""" + "".join(
+    f'<xs:element name="{n}" type="xs:{t}"/>'
+    for n, t in (
+        ("ScanID", "int"), ("ScanMethodID", "int"), ("TimeSegmentID", "int"), ("ScanTime", "double"), ("MSLevel", "int"), ("ScanType", "int"), ("TIC", "double"),
+        ("BasePeakMZ", "double"), ("BasePeakValue", "double"), ("CalibrationID", "int"), ("CycleNumber", "int"), ("IonMode", "int"), ("IonPolarity", "int"),
+        ("Fragmentor", "double"), ("CollisionEnergy", "double"), ("MzOfInterest", "double"), ("AbundanceLimit", "double"), ("SamplingPeriod", "double"),
+        ("Threshold", "double"), ("ChargeState", "int"), ("ChromScaleFactor", "float"), ("MassCalOffset", "long"), ("ActualsOffset", "long"), ("NumOfActualsPerScan", "int"),
+    )
+) + """<xs:element name="DataDependentScanParamType" type="DataDependentScanParamType"/><xs:element name="SpectrumParamValues" type="SpectrumParamsType" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+<xs:complexType name="SpectrumParamsType"><xs:sequence><xs:element name="SpectrumFormatID" type="xs:int"/><xs:element name="SpectrumOffset" type="xs:long"/><xs:element name="ByteCount" type="xs:int"/><xs:element name="PointCount" type="xs:int"/><xs:element name="UncompressedByteCount" type="xs:int"/><xs:element name="MinX" type="xs:double"/><xs:element name="MaxX" type="xs:double"/><xs:element name="MinY" type="xs:double"/><xs:element name="MaxY" type="xs:double"/><xs:element name="MeasuredNoise" type="xs:double"/></xs:sequence></xs:complexType>
+<xs:complexType name="DataDependentScanParamType"><xs:sequence><xs:element name="DDScanID" type="xs:int"/><xs:element name="DDScanParamMz" type="xs:double"/></xs:sequence></xs:complexType></xs:schema>"""
+LREC = struct.Struct("<iiidiiddd" "iiii" "dddddd" "i" "f" "qq" "i" "id" "iqiii" "ddddd")
+assert LREC.size == 220
+
+
+def lzf_literal(b: bytes) -> bytes:
+    """An LZF stream that has only literal runs (the shortest valid encoder)."""
+    return b"".join(bytes([len(b[i : i + 32]) - 1]) + b[i : i + 32] for i in range(0, len(b), 32))
+
+
+def write_lcms(root: Path, name: str, kind: str, n: int = 40) -> Path:
+    """An LC/MS run with the layout of the Q-TOF/QqQ xsd. kind "mrm": one MRM visit per cycle, two transitions of the precursor 301.1 (Q3 150.05 and 200.05), negative polarity;
+    kind "profile": MS1 profile scans (MSProfile.bin, LZF, calibration of DefaultMassCal.xml) with a peak at m/z 297.6 and a centroided MS2 scan every 10 cycles."""
+    d = root / name
+    (d / "AcqData").mkdir(parents=True, exist_ok=True)
+    data, head, recs = bytearray(), bytearray(160), bytearray()
+    head[0:2] = b"\x01\x01"
+    head[88:92] = struct.pack("<i", 160)
+    a, x0, dx, npts = 0.1, 170.0, 0.05, 100
+    for k in range(n):
+        t = 1.0 + 0.05 * k
+        g = math.exp(-(((t - 2.0) / 0.2) ** 2))
+        off = len(data)
+        if kind == "mrm":
+            mz, ys = [150.05, 200.05], [100.0 + 4000.0 * g, 60.0 + 2500.0 * g]
+            data += b"".join(struct.pack("<d", m) for m in mz) + b"".join(struct.pack("<f", y) for y in ys)
+            recs += LREC.pack(k + 1, 1, 1, t, 2, 256, sum(ys), mz[0], ys[0], 1, k + 1, 0, 1, 120.0, 20.0, 301.1, 0.0, 0.0, 0.0, 0, 1.0, 0, 0, 0, 0, 0.0,
+                              3, off, 24, 2, 24, mz[0], mz[1], min(ys), max(ys), 0.0)
+        elif k % 10 == 9:
+            mz, ys = [105.07, 150.1], [80.0, 900.0 * (1 + g)]
+            data += b"".join(struct.pack("<d", m) for m in mz) + b"".join(struct.pack("<f", y) for y in ys)
+            recs += LREC.pack(k + 1, 2, 1, t, 2, 512, sum(ys), mz[1], ys[1], 1, k + 1, 1, 0, 175.0, 20.0, 297.6, 0.0, 0.0, 0.0, 0, 1.0, 0, 0, 0, 0, 297.6,
+                              2, off, 24, 2, 24, mz[0], mz[1], min(ys), max(ys), 0.0)
+        else:
+            ys = [int(30 + 6000 * g * math.exp(-(((i - 50) / 3.0) ** 2))) for i in range(npts)]
+            raw = struct.pack("<dd", x0, dx) + b"".join(struct.pack("<i", y) for y in ys)
+            blk = lzf_literal(raw)
+            data += blk
+            recs += LREC.pack(k + 1, 1, 1, t, 1, 1, float(sum(ys)), 297.6, float(max(ys)), 1, k + 1, 1, 0, 175.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1.0, 0, 0, 0, 0, 0.0,
+                              1, off, len(blk), npts, len(raw), 0.0, 0.0, 0.0, 0.0, 0.0)
+    (d / "AcqData/MSScan.bin").write_bytes(bytes(head + recs))
+    (d / "AcqData" / ("MSPeak.bin" if kind == "mrm" else "MSProfile.bin")).write_bytes(bytes(data))
+    (d / "AcqData/MSScan.xsd").write_text(XSD, encoding="utf-8")
+    (d / "AcqData/MSTS.xml").write_text(f'<?xml version="1.0"?><TimeSegments><Version>3</Version><TimeSegment TimeSegmentID="1"><StartTime>1</StartTime><EndTime>{1 + 0.05 * n}</EndTime><NumOfScans>{n}</NumOfScans></TimeSegment></TimeSegments>', encoding="utf-8")
+    (d / "AcqData/Devices.xml").write_text('<Devices><Device DeviceID="1"><Name>QTOF</Name><ModelNumber>G6550A</ModelNumber><SerialNumber>SYNTH0002</SerialNumber></Device></Devices>', encoding="utf-8")
+    (d / "AcqData/Contents.xml").write_text("<Contents><AcquiredTime>2025-02-03T09:10:11.5+01:00</AcquiredTime><SeparationTechnique>1</SeparationTechnique></Contents>", encoding="utf-8")
+    if kind == "profile":
+        (d / "AcqData/DefaultMassCal.xml").write_text(
+            f'<?xml version="1.0"?><DefaultMassCal><DefaultCalibration DefaultCalibrationID="1"><Step StepNumber="1"><CalibrationFormula>Traditional</CalibrationFormula><Value Number="1">{a}</Value><Value Number="2">0</Value></Step></DefaultCalibration></DefaultMassCal>',
+            encoding="utf-8",
+        )
+    return d
+
+
 if __name__ == "__main__":
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)

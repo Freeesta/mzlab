@@ -190,3 +190,16 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     };
     assert!(lettori::apri(set(&idx, true), &few).is_err());
 }
+
+/// The GC/MS runs are not a variant: the engine's reader opens and reads them, so the probe of the module does not send them away.
+#[cfg(feature = "estesi")]
+#[test]
+fn a_gc_run_is_not_a_variant() {
+    let Some(all) = folders() else { return };
+    for f in all {
+        assert!(
+            !mzlab_core::agilent::lettore::variante(&mut set_of(&f)),
+            "{f:?}"
+        );
+    }
+}

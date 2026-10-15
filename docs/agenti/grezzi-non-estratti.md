@@ -19,3 +19,4 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 
 ## Agilent `.D`
 - Tipo di campione (`sequence.xml`), metodo GC completo (`acqmeth.txt`, `7890Method.bin`), valori effettivi (`GC.ini`), metodo di quantificazione, audit trail.
+- LC/MS (modulo `agilent`, `agilent-lcms.md`): i dati del rivelatore a diodi (`AcqData/DAD1.cd/.cg/.sd/.sp`), le tracce dei moduli (pressione, flusso, temperatura: `*.cd`/`*.cg`), i valori effettivi per scansione (`MSActual.bin`) e i file binari che non si decodificano (`MSMassCal.bin` si legge, il resto no) sono nominati in `campi` con dimensione e SHA-1 (se sotto 4 MiB) e in `avvisi` (`meta.nonDecodificato`); `rivelatori` viene dal metodo, non dai dati. I file ChemStation `.ch`/`.uv` non esistono nelle corse vere.

@@ -26,6 +26,8 @@ if not reuse:
 N = 120
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", N)
 top = folder.parent
+lc_top = tmp / "lc"
+agilent_sintetico.write_lcms(lc_top, "mrm.D", "mrm"); agilent_sintetico.write_lcms(lc_top, "perfil.D", "profile")
 
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -89,6 +91,25 @@ try:
             r = mod.evaluate("""async () => { const c = new AbortController(); c.abort(); try { await LETTORI_MOD.toMzml("agilent", [{ name: "a", blob: new Blob([]) }], 0, "x.mzML", undefined, c.signal); return "no"; } catch (e) { return e.cancelled ? "cancelled" : String(e); } }""")
             assert r == "cancelled", r
         step("a cancelled conversion stops", cancel)
+        def lc_runs():
+            lc = page(b, "&lettori=modulo")
+            lc.set_input_files("#pickdir", str(lc_top))
+            lc.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
+            lc.click("#opbtn"); lc.wait_for_selector(".pnl.chrom canvas", timeout=120000)
+            lc.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
+            r = lc.evaluate("""async () => {
+              const rb = await window.MZLAB_RUST_READY, out = {};
+              for (const n of ["mrm.mzML", "perfil.mzML"]) {
+                const f = CONV.files.get(n) || await rb.nativeToMzml(n, 1 << 20, undefined, undefined);
+                out[n] = await f.text();
+              }
+              return { names: ST.files.map(x => x.name).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
+            }""")
+            assert r["names"] == ["mrm.mzML", "perfil.mzML"] and r["miss"] == 0, (r["names"], r["miss"])
+            assert "SRM SIC Q1=301.1 Q3=150.05" in r["mrm"] and "SRM SIC Q1=301.1 Q3=200.05" in r["mrm"], "no SRM chromatograms"
+            assert "MS:1000129" in r["mrm"] or "negative scan" in r["mrm"], "negative polarity"
+            assert 'spectrumList count="40"' in r["perfil"], "profile spectra"
+        step("a QqQ MRM run and a Q-TOF profile run open through the module (SRM chromatograms, profile spectra)", lc_runs)
         b.close()
 finally:
     srv.terminate()
