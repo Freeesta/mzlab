@@ -5,6 +5,7 @@
 - **`.github/workflows/release.yml`** (due avvii: tag `v*` da terminale, oppure `workflow_dispatch` a mano con la versione scritta due volte; senza versione = prova a vuoto, nessuna release). Il job `controllo` decide: sul tag con una release già esistente non fa nulla (è il giro che parte quando la bozza pubblicata crea il suo tag); da `workflow_dispatch` rifiuta se la versione non è `X.Y.Z`, se la conferma è diversa, se non è `main` o se tag o release esistono già:
   `versione` (controllo di versione e note) → `sito` (gli stessi passi di `pages.yml`, zip del sito + `tools/sbom.py`) in parallelo a
   `desktop` (richiama `desktop.yml`: `.dmg` macOS universale, `.exe` Windows, AppImage e `.deb` Linux, non firmati) e `sbom` (richiama `sbom.yml`: CycloneDX di ogni crate) → `bozza` (ambiente `release`): raccoglie i file, scrive `SHA256SUMS` e crea una **release in bozza** con le note del changelog. Nulla è pubblicato da solo.
+- Il passo «Installer» di `desktop.yml` costruisce l'app con `cargo tauri build --features app ${{ matrix.args }} -- --profile desktop` (profilo `desktop` del `Cargo.toml`, `opt-level = 3`; vedi `docs/agenti/rust-desktop.md`); i `.wasm` restano sul profilo `release`.
 - Se si cambiano i passi di build in `pages.yml`, cambiano anche nel job `sito` di `release.yml`.
 - **`tools/sbom.py`**: CycloneDX 1.5 dei componenti JS e WASM del sito (Ketcher, OpenChemLib, Pyodide, numpy); le versioni sono lette da `mzlab/web/vendor/README.md` e `tools/build_site.py`.
 - **Passi di Federico** (il codice non li fa):
