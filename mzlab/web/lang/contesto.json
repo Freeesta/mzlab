@@ -362,6 +362,7 @@
   "bn.drop": "Suggerimento del pulsante «×» di un grafico impilato; {name} = etichetta del grafico.",
   "bn.h.nParams": "Riga sopra la tabella dell'intestazione di una scansione; {n} = numero di parametri.",
   "bn.iso.failed": "Avviso quando il profilo isotopico non si calcola; {message} = testo dell'errore.",
+  "bn.scan.count": "Riga sotto l'elenco del selettore «+ scansione»; {n} = numero di scansioni.",
   "bn.l.count": "Riga sopra l'elenco delle scansioni; {n} = numero di scansioni.",
   "bn.maxRanges": "Avviso quando si supera il numero massimo di grafici impilati; {n} = massimo.",
   "bn.pks.done": "Messaggio dopo «Integra in tutte le celle»; {t} = tempo del picco in minuti, {n} = tracce integrate.",
