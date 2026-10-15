@@ -4,33 +4,28 @@
 //! bytes of an overflow chain. A write-ahead log (`analysis.tdf-wal`, left by an acquisition that did not close its database) is read too: the latest committed frame of each page wins.
 
 use super::sqlite_schema::colonne_di;
+
 use super::sqlite_wal::leggi_wal;
+
 use mzlab_core::error::{Error, Result};
+
 use mzlab_core::idxread::ReadAt;
+
 use mzlab_core::lettori::Limiti;
+
 use std::collections::{HashMap, HashSet};
 
 const MAGIC: &[u8; 16] = b"SQLite format 3\0";
+
 /// The pages of a b-tree interior or leaf, of a table.
 const INT_TAB: u8 = 5;
+
 const FOGLIA_TAB: u8 = 13;
+
 /// The pages of the b-tree of a `WITHOUT ROWID` table (an index tree whose keys are the rows).
 const INT_IDX: u8 = 2;
+
 const FOGLIA_IDX: u8 = 10;
-
-pub(super) fn guasto(m: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", format!("sqlite: {m}"))
-}
-
-/// A value of a record.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Val {
-    Null,
-    Int(i64),
-    Real(f64),
-    Text(String),
-    Blob(Vec<u8>),
-}
 
 impl Val {
     pub fn f64(&self) -> Option<f64> {
@@ -64,71 +59,12 @@ impl Val {
     }
 }
 
-/// A table of the file: its root page, the names of its columns (from the `CREATE TABLE` text) and which column is the alias of the rowid.
-#[derive(Debug, Clone)]
-pub struct Tabella {
-    pub nome: String,
-    pub radice: u32,
-    pub colonne: Vec<String>,
-    /// Index of the `INTEGER PRIMARY KEY` column, whose record value is NULL (the rowid stands for it).
-    pub alias_rowid: Option<usize>,
-    /// `WITHOUT ROWID` table: the column stored at each position of the record (the primary key comes first).
-    pub ordine: Option<Vec<usize>>,
-}
-
 impl Tabella {
     pub fn col(&self, nome: &str) -> Option<usize> {
         self.colonne
             .iter()
             .position(|c| c.eq_ignore_ascii_case(nome))
     }
-}
-
-pub struct Sqlite {
-    main: Box<dyn ReadAt>,
-    dim: u64,
-    /// Pages of the main file.
-    pagine_main: u64,
-    /// The write-ahead log: its bytes and, for each page, the offset of its latest committed frame.
-    wal: Option<(Box<dyn ReadAt>, HashMap<u32, u64>)>,
-    pagina: usize,
-    /// Bytes of a page usable by cells (page size minus the reserved space).
-    utile: usize,
-    pagine: u64,
-    tabelle: Vec<Tabella>,
-    limiti: Limiti,
-}
-
-/// Reads `n` bytes at `off` (an error when the file is shorter).
-pub(super) fn leggi(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
-    let mut b = vec![0u8; n];
-    d.read_at(off, &mut b).map_err(|_| guasto("short read"))?;
-    Ok(b)
-}
-
-/// A varint of up to 9 bytes at the start of `b`: (value, bytes used).
-pub fn varint(b: &[u8]) -> Option<(u64, usize)> {
-    let mut v: u64 = 0;
-    for i in 0..8 {
-        let x = *b.get(i)?;
-        v = (v << 7) | u64::from(x & 0x7f);
-        if x & 0x80 == 0 {
-            return Some((v, i + 1));
-        }
-    }
-    let x = *b.get(8)?;
-    Some(((v << 8) | u64::from(x), 9))
-}
-
-fn u16_be(b: &[u8], o: usize) -> Option<usize> {
-    Some(usize::from(u16::from_be_bytes([
-        *b.get(o)?,
-        *b.get(o + 1)?,
-    ])))
-}
-
-pub(super) fn u32_be(b: &[u8], o: usize) -> Option<u32> {
-    Some(u32::from_be_bytes(b.get(o..o + 4)?.try_into().ok()?))
 }
 
 impl Sqlite {
@@ -186,8 +122,14 @@ impl Sqlite {
         if p1[56..60] != [0, 0, 0, 1] && p1[56..60] != [0, 0, 0, 0] {
             return Err(guasto("text encoding"));
         }
+        s.leggi_schema()?;
+        Ok(s)
+    }
+
+    /// The tables of `sqlite_schema` (page 1): name, root page, columns.
+    fn leggi_schema(&mut self) -> Result<()> {
         let mut righe = Vec::new();
-        s.scorri(1, |_, v| {
+        self.scorri(1, |_, v| {
             righe.push(v);
             Ok(true)
         })?;
@@ -201,7 +143,7 @@ impl Sqlite {
                     continue;
                 };
                 let (colonne, alias_rowid, ordine) = colonne_di(sql);
-                s.tabelle.push(Tabella {
+                self.tabelle.push(Tabella {
                     nome: nome.to_string(),
                     radice: u32::try_from(radice).unwrap_or(0),
                     colonne,
@@ -210,7 +152,7 @@ impl Sqlite {
                 });
             }
         }
-        Ok(s)
+        Ok(())
     }
 
     /// SHA-1 of the main file of the database (not of its log).
@@ -403,6 +345,79 @@ impl Sqlite {
             f(&v)
         })
     }
+}
+
+pub(super) fn guasto(m: &str) -> Error {
+    Error::new("err.dam.unreadable").with("message", format!("sqlite: {m}"))
+}
+
+/// A value of a record.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Val {
+    Null,
+    Int(i64),
+    Real(f64),
+    Text(String),
+    Blob(Vec<u8>),
+}
+
+/// A table of the file: its root page, the names of its columns (from the `CREATE TABLE` text) and which column is the alias of the rowid.
+#[derive(Debug, Clone)]
+pub struct Tabella {
+    pub nome: String,
+    pub radice: u32,
+    pub colonne: Vec<String>,
+    /// Index of the `INTEGER PRIMARY KEY` column, whose record value is NULL (the rowid stands for it).
+    pub alias_rowid: Option<usize>,
+    /// `WITHOUT ROWID` table: the column stored at each position of the record (the primary key comes first).
+    pub ordine: Option<Vec<usize>>,
+}
+
+pub struct Sqlite {
+    main: Box<dyn ReadAt>,
+    dim: u64,
+    /// Pages of the main file.
+    pagine_main: u64,
+    /// The write-ahead log: its bytes and, for each page, the offset of its latest committed frame.
+    wal: Option<(Box<dyn ReadAt>, HashMap<u32, u64>)>,
+    pagina: usize,
+    /// Bytes of a page usable by cells (page size minus the reserved space).
+    utile: usize,
+    pagine: u64,
+    tabelle: Vec<Tabella>,
+    limiti: Limiti,
+}
+
+/// Reads `n` bytes at `off` (an error when the file is shorter).
+pub(super) fn leggi(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
+    let mut b = vec![0u8; n];
+    d.read_at(off, &mut b).map_err(|_| guasto("short read"))?;
+    Ok(b)
+}
+
+/// A varint of up to 9 bytes at the start of `b`: (value, bytes used).
+pub fn varint(b: &[u8]) -> Option<(u64, usize)> {
+    let mut v: u64 = 0;
+    for i in 0..8 {
+        let x = *b.get(i)?;
+        v = (v << 7) | u64::from(x & 0x7f);
+        if x & 0x80 == 0 {
+            return Some((v, i + 1));
+        }
+    }
+    let x = *b.get(8)?;
+    Some(((v << 8) | u64::from(x), 9))
+}
+
+fn u16_be(b: &[u8], o: usize) -> Option<usize> {
+    Some(usize::from(u16::from_be_bytes([
+        *b.get(o)?,
+        *b.get(o + 1)?,
+    ])))
+}
+
+pub(super) fn u32_be(b: &[u8], o: usize) -> Option<u32> {
+    Some(u32::from_be_bytes(b.get(o..o + 4)?.try_into().ok()?))
 }
 
 /// The values of a record: header (size, serial types) then the bodies.

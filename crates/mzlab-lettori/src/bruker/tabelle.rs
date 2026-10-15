@@ -2,116 +2,14 @@
 //! Every table is optional (a file lacks what its acquisition mode does not use); every count is checked against `Limiti`.
 
 use super::calib::MzCal;
+
 use super::sqlite_min::{Sqlite, Val};
+
 use mzlab_core::error::Result;
+
 use mzlab_core::lettori::Limiti;
+
 use std::collections::{BTreeMap, HashMap};
-
-#[derive(Debug, Clone, Default)]
-pub struct Frame {
-    pub id: i64,
-    /// Seconds.
-    pub tempo: f64,
-    pub polarita: i8,
-    pub modo: i64,
-    pub tipo: i64,
-    /// Offset of the block in `*_bin`.
-    pub pos: i64,
-    pub somma: f64,
-    pub max: f64,
-    pub scansioni: u64,
-    pub picchi: u64,
-    pub cal: i64,
-    pub t1: f64,
-    pub t2: f64,
-    /// Ms of ion accumulation: `SummedIntensities` and `MaxIntensity` are normalised to 100 ms, the counts of `tdf_bin` are not.
-    pub accumulo: f64,
-}
-
-/// An isolation window with the scans of the mobility ramp it covers.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Finestra {
-    pub scan: (u32, u32),
-    pub mz: f64,
-    pub larghezza: f64,
-    pub ce: f64,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Precursore {
-    pub mz: Option<f64>,
-    pub carica: Option<i64>,
-    pub intensita: Option<f64>,
-}
-
-/// `FrameMsMsInfo` (isolation of a whole frame: MRM and MALDI MS/MS).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct InfoFrame {
-    pub mz: f64,
-    pub larghezza: f64,
-    pub carica: Option<i64>,
-    pub ce: f64,
-}
-
-#[derive(Debug, Default)]
-pub struct Dati {
-    pub frames: Vec<Frame>,
-    pub cal: HashMap<i64, MzCal>,
-    pub meta: BTreeMap<String, String>,
-    pub precursori: HashMap<i64, Precursore>,
-    /// `(frame, precursor, window)` of DDA-PASEF.
-    pub pasef: Vec<(i64, i64, Finestra)>,
-    pub dia_gruppi: HashMap<i64, Vec<Finestra>>,
-    pub dia_frame: HashMap<i64, i64>,
-    /// `(frame, target, window)` of PRM-PASEF.
-    pub prm: Vec<(i64, i64, Finestra)>,
-    pub info_frame: HashMap<i64, InfoFrame>,
-    /// `(name, value, unit)` of the properties of the first frame's group.
-    pub proprieta: Vec<(String, String, String)>,
-    /// Rows of `TimsCalibration` as `(column, value)`.
-    pub tims: Vec<(String, String)>,
-}
-
-/// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows.
-fn righe<F>(db: &mut Sqlite, limiti: &Limiti, nome: &str, colonne: &[&str], mut f: F) -> Result<()>
-where
-    F: FnMut(&[Val]),
-{
-    let Some(t) = db.tabella(nome).cloned() else {
-        return Ok(());
-    };
-    let idx: Vec<Option<usize>> = colonne.iter().map(|c| t.col(c)).collect();
-    let mut n = 0u64;
-    db.righe(&t, |r| {
-        n += 1;
-        limiti.voci_ok(n)?;
-        let v: Vec<Val> = idx
-            .iter()
-            .map(|i| i.and_then(|i| r.get(i).cloned()).unwrap_or(Val::Null))
-            .collect();
-        f(&v);
-        Ok(true)
-    })
-}
-
-fn n(v: &Val) -> f64 {
-    v.f64().unwrap_or(0.0)
-}
-fn i(v: &Val) -> i64 {
-    v.i64().unwrap_or(0)
-}
-fn scan(v: &Val) -> u32 {
-    u32::try_from(i(v).max(0)).unwrap_or(u32::MAX)
-}
-
-fn finestra(r: &[Val]) -> Finestra {
-    Finestra {
-        scan: (scan(&r[0]), scan(&r[1])),
-        mz: n(&r[2]),
-        larghezza: n(&r[3]),
-        ce: n(&r[4]),
-    }
-}
 
 impl Frame {
     /// The sum of the counts of the frame as `tdf_bin` holds them (the table's sum, undone from the normalisation to 100 ms).
@@ -134,11 +32,17 @@ impl Dati {
         })?;
         d.frames_e_calibrazioni(db, limiti)?;
         d.msms(db, limiti)?;
+        d.dia_prm(db, limiti)?;
         d.proprieta(db, limiti)?;
         Ok(d)
     }
 
     fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
+        self.frames(db, limiti)?;
+        self.calibrazioni(db, limiti)
+    }
+
+    fn frames(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
         let mut fr = Vec::new();
         let c = [
             "Id",
@@ -180,6 +84,10 @@ impl Dati {
         })?;
         fr.sort_by_key(|f| f.id);
         self.frames = fr;
+        Ok(())
+    }
+
+    fn calibrazioni(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
         let mut cal = HashMap::new();
         let c = [
             "Id",
@@ -262,6 +170,10 @@ impl Dati {
             p.push((i(&r[0]), i(&r[1]), finestra(&r[2..])))
         })?;
         self.pasef = p;
+        Ok(())
+    }
+
+    fn dia_prm(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
         let mut g: HashMap<i64, Vec<Finestra>> = HashMap::new();
         let c = [
             "WindowGroup",
@@ -367,5 +279,113 @@ impl Dati {
         )?;
         self.proprieta = out;
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Frame {
+    pub id: i64,
+    /// Seconds.
+    pub tempo: f64,
+    pub polarita: i8,
+    pub modo: i64,
+    pub tipo: i64,
+    /// Offset of the block in `*_bin`.
+    pub pos: i64,
+    pub somma: f64,
+    pub max: f64,
+    pub scansioni: u64,
+    pub picchi: u64,
+    pub cal: i64,
+    pub t1: f64,
+    pub t2: f64,
+    /// Ms of ion accumulation: `SummedIntensities` and `MaxIntensity` are normalised to 100 ms, the counts of `tdf_bin` are not.
+    pub accumulo: f64,
+}
+
+/// An isolation window with the scans of the mobility ramp it covers.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Finestra {
+    pub scan: (u32, u32),
+    pub mz: f64,
+    pub larghezza: f64,
+    pub ce: f64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Precursore {
+    pub mz: Option<f64>,
+    pub carica: Option<i64>,
+    pub intensita: Option<f64>,
+}
+
+/// `FrameMsMsInfo` (isolation of a whole frame: MRM and MALDI MS/MS).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct InfoFrame {
+    pub mz: f64,
+    pub larghezza: f64,
+    pub carica: Option<i64>,
+    pub ce: f64,
+}
+
+#[derive(Debug, Default)]
+pub struct Dati {
+    pub frames: Vec<Frame>,
+    pub cal: HashMap<i64, MzCal>,
+    pub meta: BTreeMap<String, String>,
+    pub precursori: HashMap<i64, Precursore>,
+    /// `(frame, precursor, window)` of DDA-PASEF.
+    pub pasef: Vec<(i64, i64, Finestra)>,
+    pub dia_gruppi: HashMap<i64, Vec<Finestra>>,
+    pub dia_frame: HashMap<i64, i64>,
+    /// `(frame, target, window)` of PRM-PASEF.
+    pub prm: Vec<(i64, i64, Finestra)>,
+    pub info_frame: HashMap<i64, InfoFrame>,
+    /// `(name, value, unit)` of the properties of the first frame's group.
+    pub proprieta: Vec<(String, String, String)>,
+    /// Rows of `TimsCalibration` as `(column, value)`.
+    pub tims: Vec<(String, String)>,
+}
+
+/// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows.
+fn righe<F>(db: &mut Sqlite, limiti: &Limiti, nome: &str, colonne: &[&str], mut f: F) -> Result<()>
+where
+    F: FnMut(&[Val]),
+{
+    let Some(t) = db.tabella(nome).cloned() else {
+        return Ok(());
+    };
+    let idx: Vec<Option<usize>> = colonne.iter().map(|c| t.col(c)).collect();
+    let mut n = 0u64;
+    db.righe(&t, |r| {
+        n += 1;
+        limiti.voci_ok(n)?;
+        let v: Vec<Val> = idx
+            .iter()
+            .map(|i| i.and_then(|i| r.get(i).cloned()).unwrap_or(Val::Null))
+            .collect();
+        f(&v);
+        Ok(true)
+    })
+}
+
+fn n(v: &Val) -> f64 {
+    v.f64().unwrap_or(0.0)
+}
+
+fn i(v: &Val) -> i64 {
+    v.i64().unwrap_or(0)
+}
+
+fn scan(v: &Val) -> u32 {
+    u32::try_from(i(v).max(0)).unwrap_or(u32::MAX)
+}
+
+fn finestra(r: &[Val]) -> Finestra {
+    Finestra {
+        scan: (scan(&r[0]), scan(&r[1])),
+        mz: n(&r[2]),
+        larghezza: n(&r[3]),
+        ce: n(&r[4]),
     }
 }

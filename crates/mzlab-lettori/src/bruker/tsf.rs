@@ -2,8 +2,11 @@
 //! spectrum (zstd: `NumPeaks` `f64` TOF positions and as many `f32` intensities) and the profile (zstd: `DigitizerNumSamples` `u32` samples). Same tables and calibration as the TDF.
 
 use super::blocco::zstd;
+
 use mzlab_core::error::{Error, Result};
+
 use mzlab_core::idxread::ReadAt;
+
 use mzlab_core::lettori::Limiti;
 
 fn guasto(m: &str) -> Error {
@@ -46,27 +49,7 @@ pub fn leggi_frame(
     if riga > 0 && picchi > 0 {
         let n = limiti.voci_ok(picchi)?;
         let z = leggi(d, pos + 8, riga)?;
-        let b = zstd(
-            &z,
-            n.checked_mul(12).ok_or_else(|| guasto("peaks"))?,
-            limiti,
-        )?;
-        let tof = (0..n)
-            .map(|i| f64::from_le_bytes(b[8 * i..8 * i + 8].try_into().unwrap_or([0; 8])))
-            .collect();
-        let o = 8 * n;
-        let int = (0..n)
-            .map(|i| {
-                f64::from(f32::from_le_bytes(
-                    b[o + 4 * i..o + 4 * i + 4].try_into().unwrap_or([0; 4]),
-                ))
-            })
-            .collect();
-        return Ok(Linee {
-            tof,
-            int,
-            profilo: false,
-        });
+        return linee(&z, n, limiti);
     }
     if prof == 0 {
         return Ok(Linee {
@@ -77,13 +60,38 @@ pub fn leggi_frame(
     }
     let n = limiti.voci_ok(campioni)?;
     let z = leggi(d, pos + 8 + riga, prof)?;
+    profilo(&z, n, limiti)
+}
+
+/// The line spectrum of a block: `n` TOF positions (f64) then `n` intensities (f32).
+fn linee(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
+    let b = zstd(z, n.checked_mul(12).ok_or_else(|| guasto("peaks"))?, limiti)?;
+    let tof = (0..n)
+        .map(|i| f64::from_le_bytes(b[8 * i..8 * i + 8].try_into().unwrap_or([0; 8])))
+        .collect();
+    let o = 8 * n;
+    let int = (0..n)
+        .map(|i| {
+            f64::from(f32::from_le_bytes(
+                b[o + 4 * i..o + 4 * i + 4].try_into().unwrap_or([0; 4]),
+            ))
+        })
+        .collect();
+    Ok(Linee {
+        tof,
+        int,
+        profilo: false,
+    })
+}
+
+/// The profile of a block: `n` samples (u32), kept where there is signal or a neighbour has it (the rest is zero).
+fn profilo(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
     let b = zstd(
-        &z,
+        z,
         n.checked_mul(4).ok_or_else(|| guasto("samples"))?,
         limiti,
     )?;
     let v: Vec<u32> = b.chunks_exact(4).map(u32_le).collect();
-    // only the samples with signal and their neighbours: the rest of the profile is zero
     let (mut tof, mut int) = (Vec::new(), Vec::new());
     for i in 0..v.len() {
         if v[i] > 0 || v.get(i + 1).is_some_and(|&x| x > 0) || (i > 0 && v[i - 1] > 0) {

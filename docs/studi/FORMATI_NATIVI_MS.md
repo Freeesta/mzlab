@@ -30,7 +30,8 @@ Registro dei lettori nativi: `LETTORI` in `crates/mzlab-core/src/lettori.rs:218`
 | **netCDF / ANDI-MS (`.cdf`)** | letto dal modulo `andi` | `crates/mzlab-lettori/src/andi/` (`netcdf.rs`, `ms.rs`, `cromato.rs`, `docs/agenti/lettori-andi.md`) | spettri (centroidi o profilo, SIM, polarità), TIC, RT, finestra di massa, `metodo/1` con strumento e operatore; ANDI-Chromatography come traccia analogica | P (3 `.cdf` veri di ChemStation/MassHunter; parità con la cartella `.D` della stessa corsa) |
 | **MGF / MSP / JSON / `.mzlib`** | letto **come libreria**, non come corsa | Rust `crates/mzlab-lib/src/parse.rs` (`detect`, `parse_all`) + `libreria-worker.js` (`formatOf`) | spettri di riferimento (precursore, polarità, metadati); `.lib`/`.mzvault`/`sqlite`/NIST → `lib.err.unsupported` (`libreria-worker.js:93`) | `crates/mzlab-lib/tests/parse.rs`; nessun MGF trattato come file di dati della vista Dati |
 | **Waters `.raw` (cartella MassLynx)** | assente | — | guida di conversione | — |
-| **Bruker `.d`** (TDF/TSF timsTOF, BAF) | assente | — | `.d` va al lettore Agilent, che lo rifiuta senza `MSScan.bin` | — |
+| **Bruker `.d`** (TDF/TSF timsTOF) | P (DDA-PASEF e MRM confrontati con msconvert; diaPASEF e TSF letti, senza mzML di riferimento) | Rust `crates/mzlab-lettori/src/bruker/` (`bruker-tdf`, `bruker-tsf`, modulo `bruker`, `docs/agenti/bruker.md`) | MS1, DDA-PASEF, diaPASEF, PRM-PASEF, TSF (linee o profilo), `metodo/1`, calibrazione m/z con temperatura; 1/K0 per punto non calcolato | `bruker_dati.rs`, `robustezza_bruker.rs`, `test_bruker_d.py` |
+| **Bruker BAF** | assente (impossibile senza SDK) | — | `err.file.brukerBaf`: esporta in mzML | `robustezza_bruker.rs` |
 | **Shimadzu `.lcd` / `.qgd`** | assente | — | `.lcd`/`.lcdx` in `UNOPEN_RE`; `.qgd` «non riconosciuto» | — |
 | **JEOL, LECO (`.peg`, `.smp`), PerkinElmer, Bruker ion trap (`.yep`)** | non letti (solo la loro esportazione ANDI, modulo `andi`) | — | — | — |
 

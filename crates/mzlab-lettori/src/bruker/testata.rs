@@ -2,40 +2,15 @@
 //! the mzML we write. Every key of `GlobalMetadata` goes into `campi` (nothing is lost); names, serials and paths are marked `identita`.
 
 use super::tabelle::Dati;
+
 use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
+
 use mzlab_core::metodo_campi::Campo;
+
 use mzlab_core::mzmlwrite::Header;
 
 /// The most fields kept from a run.
 const CAMPI_MAX: usize = 2000;
-
-#[derive(Default)]
-pub struct Testata {
-    pub campi: Vec<Campo>,
-    pub modello: Option<String>,
-    pub serie: Option<String>,
-    pub produttore: Option<String>,
-    pub software: Option<(String, Option<String>)>,
-    pub firmware: Option<String>,
-    pub creato: Option<String>,
-    pub utente: Option<String>,
-    pub campione: Option<String>,
-    pub tsf: bool,
-}
-
-fn identita(nome: &str) -> bool {
-    let n = nome.to_ascii_lowercase();
-    [
-        "operator",
-        "serial",
-        "path",
-        "directory",
-        "computer",
-        "user",
-    ]
-    .iter()
-    .any(|k| n.contains(k))
-}
 
 impl Testata {
     pub fn leggi(d: &Dati, tsf: bool) -> Testata {
@@ -176,4 +151,32 @@ impl Testata {
         h.run_params.push((metodo::USERPARAM.to_string(), doc));
         h
     }
+}
+
+#[derive(Default)]
+pub struct Testata {
+    pub campi: Vec<Campo>,
+    pub modello: Option<String>,
+    pub serie: Option<String>,
+    pub produttore: Option<String>,
+    pub software: Option<(String, Option<String>)>,
+    pub firmware: Option<String>,
+    pub creato: Option<String>,
+    pub utente: Option<String>,
+    pub campione: Option<String>,
+    pub tsf: bool,
+}
+
+fn identita(nome: &str) -> bool {
+    let n = nome.to_ascii_lowercase();
+    [
+        "operator",
+        "serial",
+        "path",
+        "directory",
+        "computer",
+        "user",
+    ]
+    .iter()
+    .any(|k| n.contains(k))
 }

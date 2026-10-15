@@ -2,22 +2,34 @@
 //! The tables come from `sqlite_min`, the peaks of a frame from `blocco` (TDF) or `tsf`, the cut of a frame into spectra from `spettri`.
 
 use super::blocco::{decodifica, leggi_blocco, Picchi};
+
 use super::spettri::{costruisci, somma, Desc};
+
 use super::sqlite_min::Sqlite;
+
 use super::tabelle::Dati;
+
 use super::testata::Testata;
+
 use super::tsf;
+
 use mzlab_core::error::{Error, Result};
+
 use mzlab_core::idxread::ReadAt;
+
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
     VoceScansione, CONTRATTO,
 };
+
 use mzlab_core::metodo::SrcFile;
+
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 const UNITA: &str = "Arbitrary Intensity Units";
+
 const MAGIA: &[u8; 16] = b"SQLite format 3\0";
 
 pub const VOCE: VoceLettore = VoceLettore {
@@ -35,68 +47,6 @@ pub const VOCE_TSF: VoceLettore = VoceLettore {
     riconosci: riconosci_tsf,
     apri: apri_tsf,
 };
-
-fn riconosci_tdf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tdf")
-}
-fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tsf")
-}
-
-/// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
-fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
-    let Some(i) = fs.trova(base) else {
-        return if fs.trova("analysis.baf").is_some()
-            && fs.trova("analysis.tdf").is_none()
-            && fs.trova("analysis.tsf").is_none()
-        {
-            Fiducia::Forse
-        } else {
-            Fiducia::No
-        };
-    };
-    if fs.testa(i, 16) != MAGIA || fs.trova(&format!("{base}_bin")).is_none() {
-        return Fiducia::No;
-    }
-    Fiducia::Si
-}
-
-fn apri_tdf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    LettoreBruker::apri(fs, limiti, false).map(|l| Box::new(l) as Box<dyn Lettore>)
-}
-fn apri_tsf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    LettoreBruker::apri(fs, limiti, true).map(|l| Box::new(l) as Box<dyn Lettore>)
-}
-
-fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<mzlab_core::lettori::Membro> {
-    let i = fs.trova(suffisso)?;
-    Some(fs.membri.remove(i))
-}
-
-fn indice_cattivo(k: impl std::fmt::Display) -> Error {
-    Error::new("error.badIndex").with("k", k)
-}
-
-pub struct LettoreBruker {
-    tsf: bool,
-    /// Name of the database file as given (`x.d/analysis.tdf`).
-    nome: String,
-    nome_bin: String,
-    db: Sqlite,
-    bin: Box<dyn ReadAt>,
-    dim_bin: u64,
-    dim_db: u64,
-    dati: Dati,
-    desc: Vec<Desc>,
-    limiti: Limiti,
-    testata: Testata,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
-    tic_noto: bool,
-    cache: Option<(usize, Picchi)>,
-    sha1: Option<Option<String>>,
-    compressione: u32,
-}
 
 impl LettoreBruker {
     fn apri(mut fs: FileSet, limiti: &Limiti, tsf: bool) -> Result<LettoreBruker> {
@@ -467,4 +417,68 @@ impl Lettore for LettoreBruker {
             params,
         }
     }
+}
+
+fn riconosci_tdf(fs: &mut FileSet) -> Fiducia {
+    riconosci(fs, "analysis.tdf")
+}
+
+fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
+    riconosci(fs, "analysis.tsf")
+}
+
+/// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
+fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
+    let Some(i) = fs.trova(base) else {
+        return if fs.trova("analysis.baf").is_some()
+            && fs.trova("analysis.tdf").is_none()
+            && fs.trova("analysis.tsf").is_none()
+        {
+            Fiducia::Forse
+        } else {
+            Fiducia::No
+        };
+    };
+    if fs.testa(i, 16) != MAGIA || fs.trova(&format!("{base}_bin")).is_none() {
+        return Fiducia::No;
+    }
+    Fiducia::Si
+}
+
+fn apri_tdf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+    LettoreBruker::apri(fs, limiti, false).map(|l| Box::new(l) as Box<dyn Lettore>)
+}
+
+fn apri_tsf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+    LettoreBruker::apri(fs, limiti, true).map(|l| Box::new(l) as Box<dyn Lettore>)
+}
+
+fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<mzlab_core::lettori::Membro> {
+    let i = fs.trova(suffisso)?;
+    Some(fs.membri.remove(i))
+}
+
+fn indice_cattivo(k: impl std::fmt::Display) -> Error {
+    Error::new("error.badIndex").with("k", k)
+}
+
+pub struct LettoreBruker {
+    tsf: bool,
+    /// Name of the database file as given (`x.d/analysis.tdf`).
+    nome: String,
+    nome_bin: String,
+    db: Sqlite,
+    bin: Box<dyn ReadAt>,
+    dim_bin: u64,
+    dim_db: u64,
+    dati: Dati,
+    desc: Vec<Desc>,
+    limiti: Limiti,
+    testata: Testata,
+    campioni: Vec<Campione>,
+    indice: Vec<VoceScansione>,
+    tic_noto: bool,
+    cache: Option<(usize, Picchi)>,
+    sha1: Option<Option<String>>,
+    compressione: u32,
 }
