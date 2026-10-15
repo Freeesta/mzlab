@@ -45,6 +45,7 @@ declare var ConvUI: any;
 declare var DASHES: any;
 declare var DDA: any;
 declare var DEMO_SETS: any;
+declare var DIAG: any;
 declare var DISP: any;
 declare var DIV: any;
 declare var E: any;

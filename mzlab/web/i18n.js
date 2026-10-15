@@ -101,7 +101,7 @@
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
-    return Object.assign(new Error(t(j.error_key, j.params || {})), { key: j.error_key });
+    return Object.assign(new Error(t(j.error_key, j.params || {})), { key: j.error_key, params: j.params });
   }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js

@@ -38,6 +38,7 @@
     "../../mzlab/web/progresso.js",
     "../../mzlab/web/conversione.js",
     "../../mzlab/web/nativo.js",
+    "../../mzlab/web/diagnosi.js",
     "../../mzlab/web/cartella-carica.js",
     "../../mzlab/web/cartella-puntata.js",
     "../../mzlab/web/cartella-puntata-desktop.js",
