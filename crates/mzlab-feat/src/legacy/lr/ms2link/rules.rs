@@ -5,6 +5,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::round;
 
 use super::exp::{Exp, PeakL};
+use super::follow::{corrections, leftovers};
 use super::{
     runs, small, Link, Links, Override, State, Unmatched, FEW_OUTSIDE, ISO, PREC_TOL, SN_DRIFT,
     SN_LINK,
@@ -15,31 +16,31 @@ use crate::legacy::lr::{summary, Entry, LrDig};
 use crate::legacy::Res;
 
 /// Two peaks of a trace closer than this are the same peak, minutes.
-const SAME_PEAK: f64 = 0.05;
+pub(super) const SAME_PEAK: f64 = 0.05;
 /// A correction finds its peak within this of the apex it was made on (fraction of `rt_tol_min`), and a precursor / CE within this.
-const KEY_APEX: f64 = 0.5;
-const KEY_TOL: f64 = 0.05;
+pub(super) const KEY_APEX: f64 = 0.5;
+pub(super) const KEY_TOL: f64 = 0.05;
 /// An isotope peak of a molecule of this size is never more than about this fraction of the ion it comes from.
-const ISO_MAX: f64 = 0.5;
+pub(super) const ISO_MAX: f64 = 0.5;
 
 #[derive(Clone, Copy)]
-struct Hit {
-    apex: f64,
-    lo: f64,
-    hi: f64,
-    sn: f64,
-    window: bool,
+pub(super) struct Hit {
+    pub(super) apex: f64,
+    pub(super) lo: f64,
+    pub(super) hi: f64,
+    pub(super) sn: f64,
+    pub(super) window: bool,
 }
 
 #[derive(Clone, Copy)]
-struct Pair<'a> {
-    row: &'a Entry,
-    hit: Hit,
-    dmz: f64,
-    drt: f64,
+pub(super) struct Pair<'a> {
+    pub(super) row: &'a Entry,
+    pub(super) hit: Hit,
+    pub(super) dmz: f64,
+    pub(super) drt: f64,
 }
 
-fn median(v: &mut [f64]) -> f64 {
+pub(super) fn median(v: &mut [f64]) -> f64 {
     small(v, |a, b| a.total_cmp(b));
     let n = v.len();
     if n % 2 == 1 {
@@ -51,7 +52,7 @@ fn median(v: &mut [f64]) -> f64 {
 
 /// Rule 4: the peak of the trace around `at`. An experiment acquired only around that time (fewer than `FEW_OUTSIDE` scans farther than `tol`) is
 /// one peak, the scans inside the window.
-fn find(e: &Exp, at: f64, tol: f64) -> Option<Hit> {
+pub(super) fn find(e: &Exp, at: f64, tol: f64) -> Option<Hit> {
     let outside = e.rt.iter().filter(|t| (**t - at).abs() > tol).count();
     if outside < FEW_OUTSIDE {
         let inside: Vec<usize> = (0..e.rt.len())
@@ -80,7 +81,7 @@ fn find(e: &Exp, at: f64, tol: f64) -> Option<Hit> {
 }
 
 /// The index of the peak of the trace that `h` is, added when the list does not have it.
-fn register(e: &mut Exp, h: &Hit) -> usize {
+pub(super) fn register(e: &mut Exp, h: &Hit) -> usize {
     let n = e.rt.iter().filter(|t| **t >= h.lo && **t <= h.hi).count();
     if let Some(i) = e
         .peaks
@@ -102,12 +103,12 @@ fn register(e: &mut Exp, h: &Hit) -> usize {
     e.peaks.len() - 1
 }
 
-fn dmz(r: &Entry, p: f64) -> f64 {
+pub(super) fn dmz(r: &Entry, p: f64) -> f64 {
     (p - r.mz).abs().min((p - r.mz_x).abs())
 }
 
 /// Rule 2: the rows whose m/z (calculated or extracted) is within `PREC_TOL` of the precursor. A row that is the isotope peak of another is not one.
-fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
+pub(super) fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
     d.entries
         .iter()
         .filter(|e| e.ref_rt.is_some() && e.isotope_of.is_none() && dmz(e, p) <= PREC_TOL)
@@ -115,7 +116,7 @@ fn compatible(d: &LrDig, p: f64) -> Vec<&Entry> {
 }
 
 /// Time of the row in the full-scan file with the sampling time of the experiment (its apex there), else its reference RT.
-fn expected(d: &LrDig, r: &Entry, e: &Exp) -> f64 {
+pub(super) fn expected(d: &LrDig, r: &Entry, e: &Exp) -> f64 {
     let at = e.time.and_then(|t| {
         d.lc.iter()
             .position(|f| f.time.is_some_and(|x| (x - t).abs() < 1e-6))
@@ -129,7 +130,7 @@ fn expected(d: &LrDig, r: &Entry, e: &Exp) -> f64 {
 
 /// Rule 5: the drift of every MS2 file, median of (apex of the trace - expected time) over the rows alone at their precursor with S/N >= `SN_DRIFT`;
 /// from two matches, at most `rt_tol_min`.
-fn drifts(d: &LrDig, exps: &[Exp]) -> Vec<(usize, f64)> {
+pub(super) fn drifts(d: &LrDig, exps: &[Exp]) -> Vec<(usize, f64)> {
     let tol = d.settings.rt_tol_min;
     let mut by: Vec<(usize, f64)> = Vec::new();
     for e in exps {
@@ -148,16 +149,16 @@ fn drifts(d: &LrDig, exps: &[Exp]) -> Vec<(usize, f64)> {
         .collect()
 }
 
-struct Ctx<'a> {
-    d: &'a LrDig,
-    polarity: i8,
-    ov: &'a [Override],
-    used: Vec<bool>,
-    links: Vec<Link>,
-    un: Vec<Unmatched>,
+pub(super) struct Ctx<'a> {
+    pub(super) d: &'a LrDig,
+    pub(super) polarity: i8,
+    pub(super) ov: &'a [Override],
+    pub(super) used: Vec<bool>,
+    pub(super) links: Vec<Link>,
+    pub(super) un: Vec<Unmatched>,
 }
 
-fn side(drt: f64) -> &'static str {
+pub(super) fn side(drt: f64) -> &'static str {
     if drt >= 0.0 {
         "after"
     } else {
@@ -165,7 +166,14 @@ fn side(drt: f64) -> &'static str {
     }
 }
 
-fn link_of(x: usize, peak: usize, p: &Pair, state: State, alt: Vec<i64>, tail: &str) -> Link {
+pub(super) fn link_of(
+    x: usize,
+    peak: usize,
+    p: &Pair,
+    state: State,
+    alt: Vec<i64>,
+    tail: &str,
+) -> Link {
     let when = if p.hit.window {
         "acquired only around this time".to_string()
     } else {
@@ -190,7 +198,7 @@ fn link_of(x: usize, peak: usize, p: &Pair, state: State, alt: Vec<i64>, tail: &
     }
 }
 
-fn pair<'a>(d: &LrDig, e: &Exp, r: &'a Entry) -> Option<Pair<'a>> {
+pub(super) fn pair<'a>(d: &LrDig, e: &Exp, r: &'a Entry) -> Option<Pair<'a>> {
     let at = expected(d, r, e);
     let hit = find(e, at + e.drift, d.settings.rt_tol_min)?;
     Some(Pair {
@@ -202,7 +210,7 @@ fn pair<'a>(d: &LrDig, e: &Exp, r: &'a Entry) -> Option<Pair<'a>> {
 }
 
 /// Height of the XIC of `mz` ± `half` in column `k` within `tol` of `apex`.
-fn height<R: ReadAt>(
+pub(super) fn height<R: ReadAt>(
     ix: &mut Index<R>,
     mz: f64,
     half: f64,
@@ -221,7 +229,7 @@ fn height<R: ReadAt>(
 
 /// Rule 3: the row of which the precursor is the isotope peak, when no compatible row is closer, the row has its peak in the trace and the ion at
 /// the isotope mass is at most `ISO_MAX` times the row in its strongest file (a stronger one is an ion of its own).
-fn isotope<'a, R: ReadAt>(
+pub(super) fn isotope<'a, R: ReadAt>(
     d: &'a LrDig,
     e: &Exp,
     comp: &[&Entry],
@@ -270,77 +278,13 @@ fn isotope<'a, R: ReadAt>(
     Ok(None)
 }
 
-/// Rule 10: the corrections that name this experiment. Returns the peaks they took.
-fn corrections(c: &mut Ctx, e: &mut Exp, x: usize) -> Vec<usize> {
-    let d = c.d;
-    let tol = d.settings.rt_tol_min;
-    let mut taken = Vec::new();
-    for (i, o) in c.ov.iter().enumerate() {
-        let same_ce = match (o.ce, e.ce) {
-            (None, None) => true,
-            (Some(a), Some(b)) => (a - b).abs() <= KEY_TOL,
-            _ => false,
-        };
-        if o.file != e.file || (o.precursor - e.precursor).abs() > KEY_TOL || !same_ce {
-            continue;
-        }
-        let near = (0..e.peaks.len())
-            .filter(|&p| (e.peaks[p].apex - o.apex).abs() <= KEY_APEX * tol)
-            .min_by(|a, b| {
-                (e.peaks[*a].apex - o.apex)
-                    .abs()
-                    .total_cmp(&(e.peaks[*b].apex - o.apex).abs())
-            });
-        let peak = match near {
-            Some(p) => p,
-            None => match find(e, o.apex, KEY_APEX * tol) {
-                Some(h) => register(e, &h),
-                None => continue,
-            },
-        };
-        let row = o.row.map(|id| d.entries.iter().find(|r| r.id == id));
-        match row {
-            Some(None) => continue,
-            Some(Some(r)) => {
-                let at = expected(d, r, e);
-                let hit = Hit {
-                    apex: e.peaks[peak].apex,
-                    lo: e.peaks[peak].lo,
-                    hi: e.peaks[peak].hi,
-                    sn: e.peaks[peak].sn,
-                    window: false,
-                };
-                let p = Pair {
-                    row: r,
-                    dmz: dmz(r, e.precursor),
-                    drt: hit.apex - at,
-                    hit,
-                };
-                let mut l = link_of(x, peak, &p, State::User, vec![], "");
-                l.why = "set by the user".into();
-                c.links.push(l);
-            }
-            None => c.un.push(Unmatched {
-                exp: Some(x),
-                peak: Some(peak),
-                reason: "user",
-                rows: vec![],
-                why: "set by the user: not this ion".into(),
-            }),
-        }
-        c.used[i] = true;
-        taken.push(peak);
-    }
-    taken
-}
-
-fn lighter_than_parent(d: &LrDig, e: &Exp) -> bool {
+pub(super) fn lighter_than_parent(d: &LrDig, e: &Exp) -> bool {
     e.precursor < d.parent.mz - PREC_TOL
 }
 
 /// Rule 7: pairs at the time of the parent with a precursor lighter than it. An in-source row keeps its pair (state `isf`); the others do not
 /// get it: the peak is listed as `parent_rt`. Returns the ids of the rows that are in-source.
-fn in_source<'a>(
+pub(super) fn in_source<'a>(
     c: &mut Ctx,
     e: &mut Exp,
     x: usize,
@@ -389,7 +333,7 @@ fn in_source<'a>(
 }
 
 /// Rule 6: one peak, several rows: the row with the smaller |ΔRT| (then |Δm/z|) gets it, `ambiguous`, the others are its alternatives.
-fn assign(
+pub(super) fn assign(
     c: &mut Ctx,
     e: &mut Exp,
     x: usize,
@@ -428,76 +372,7 @@ fn assign(
     claimed
 }
 
-/// Rule 11: the peaks (and, without any, the experiment) that no row got.
-fn leftovers(
-    c: &mut Ctx,
-    e: &Exp,
-    x: usize,
-    comp: &[&Entry],
-    claimed: &[usize],
-    any_pair: bool,
-    any_link: bool,
-) {
-    let ids: Vec<i64> = comp.iter().map(|r| r.id).collect();
-    for (i, p) in e
-        .peaks
-        .iter()
-        .enumerate()
-        .filter(|(i, _)| !claimed.contains(i))
-    {
-        let (reason, why) = if comp.is_empty() {
-            ("no_row", format!("no row at m/z {:.2}", e.precursor))
-        } else {
-            (
-                "no_row_at_rt",
-                format!(
-                    "rows at m/z {:.2}, but not at {:.2} min",
-                    e.precursor, p.apex
-                ),
-            )
-        };
-        c.un.push(Unmatched {
-            exp: Some(x),
-            peak: Some(i),
-            reason,
-            rows: ids.clone(),
-            why,
-        });
-    }
-    if any_pair || any_link {
-        return;
-    }
-    let (reason, why) = if e.peaks.is_empty() && e.front {
-        (
-            "front",
-            format!("signal only before {:.2} min", c.d.settings.rt_min),
-        )
-    } else if !comp.is_empty() {
-        (
-            "no_signal",
-            format!(
-                "no MS2 signal at the time of the row(s) at m/z {:.2}",
-                e.precursor
-            ),
-        )
-    } else if e.peaks.is_empty() {
-        (
-            "no_row",
-            format!("no row at m/z {:.2}, and no peak in the trace", e.precursor),
-        )
-    } else {
-        return;
-    };
-    c.un.push(Unmatched {
-        exp: Some(x),
-        peak: None,
-        reason,
-        rows: ids,
-        why,
-    });
-}
-
-fn one<R: ReadAt>(
+pub(super) fn one<R: ReadAt>(
     c: &mut Ctx,
     e: &mut Exp,
     x: usize,

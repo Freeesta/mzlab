@@ -4,6 +4,7 @@
 //! `exp` builds the experiments and their traces, `rules` matches them, `json` writes the contract.
 
 mod exp;
+mod follow;
 mod json;
 mod rules;
 
