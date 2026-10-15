@@ -2,4 +2,8 @@
 
 pub mod mzml_numpress;
 mod mzml_testata;
+pub mod mzxml;
+mod mzxml_indice;
+mod mzxml_scan;
+mod mzxml_testata;
 mod np_riscrivi;

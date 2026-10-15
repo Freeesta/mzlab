@@ -6,7 +6,7 @@
 /** @typedef {{ ext: string[], membri: string[], errori: string[], soloModulo: string[] }} Famiglia */
 /** @type {Record<string, Famiglia>} */
 const LETTORI_FAM = {
-  aperti: { ext: [".mzml"], membri: [], errori: ["err.file.numpress"], soloModulo: [] },
+  aperti: { ext: [".mzml", ".mzxml"], membri: [], errori: ["err.file.numpress"], soloModulo: [".mzxml"] },
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [] },

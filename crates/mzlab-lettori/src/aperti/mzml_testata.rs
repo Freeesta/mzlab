@@ -9,15 +9,15 @@ const CAMPI_MAX: usize = 64;
 
 // ---- a tiny scanner of tags: the header of an mzML is cut before `<run` (and so not a document), and the module may not take a new XML crate ----
 
-struct Tag {
-    nome: String,
-    attr: Vec<(String, String)>,
-    chiusura: bool,
-    vuoto: bool,
+pub(super) struct Tag {
+    pub(super) nome: String,
+    pub(super) attr: Vec<(String, String)>,
+    pub(super) chiusura: bool,
+    pub(super) vuoto: bool,
 }
 
 impl Tag {
-    fn get(&self, n: &str) -> &str {
+    pub(super) fn get(&self, n: &str) -> &str {
         self.attr
             .iter()
             .find(|(k, _)| k == n)
@@ -25,7 +25,7 @@ impl Tag {
     }
 }
 
-fn unescape(s: &str) -> String {
+pub(super) fn unescape(s: &str) -> String {
     if !s.contains('&') {
         return s.to_string();
     }
@@ -40,7 +40,7 @@ fn unescape(s: &str) -> String {
 }
 
 /// The tags of `s` in order (declarations, comments and text are skipped). A tag ends at the first `>` outside quotes.
-fn tag_di(s: &str) -> Vec<Tag> {
+pub(super) fn tag_di(s: &str) -> Vec<Tag> {
     let mut out = Vec::new();
     let b = s.as_bytes();
     let mut i = 0;
