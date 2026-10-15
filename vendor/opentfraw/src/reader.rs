@@ -895,7 +895,6 @@ impl RawFileReader {
         Self::open(reader)
     }
 
-
     /// Enumerate all controllers in this RAW file.
     ///
     /// Multi-detector acquisition systems write one [`RunHeader`] per

@@ -67,9 +67,7 @@ pub fn from_method(t: &str) -> Option<FromMethod> {
                     .filter_map(|x| x.trim().parse::<f64>().ok())
                     .filter(|x| x.is_finite() && *x > 0.0)
                     .collect();
-            } else if !n.trim().is_empty() {
-                break;
-            } else if cur.is_some() && out.lists.len() + 1 >= 2 {
+            } else if !n.trim().is_empty() || (cur.is_some() && out.lists.len() + 1 >= 2) {
                 break;
             }
             lines.next();
@@ -126,7 +124,7 @@ pub fn section(raw: &RawFileReader, blocks: &[String]) -> Option<V> {
             "modo",
             m.as_ref().and_then(|m| m.mode.as_deref()).and_then(text),
         ),
-        ("elenchi", (!lists.is_empty()).then(|| V::Arr(lists))),
+        ("elenchi", (!lists.is_empty()).then_some(V::Arr(lists))),
         (
             "numero_nel_trailer",
             num(range(raw, "Number of Lock Masses").map(|r| r.1)),
