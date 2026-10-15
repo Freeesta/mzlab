@@ -14,7 +14,8 @@ agilent = []
 sciex = ["mzlab-core/sciex"]
 waters = []
 shimadzu = []
-bruker = []
+# the SQLite reader is written in the crate (bruker/sqlite_min.rs); ruzstd (MIT, pure Rust) decodes the blocks of analysis.tdf_bin
+bruker = ["dep:ruzstd"]
 tutte = ["aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 
 [dependencies]
@@ -25,6 +26,8 @@ mzlab-core = { path = "../mzlab-core", default-features = false, features = ["es
 base64 = "0.23"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 
+# the zstd decoder of the Bruker blocks (already in the workspace for the .mzlib format); without the checksum feature: the blocks have none
+ruzstd = { version = "0.9", optional = true, default-features = false, features = ["std"] }
 [dev-dependencies]
 # the tests check the keys of metodo/1 against its schema
 serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
