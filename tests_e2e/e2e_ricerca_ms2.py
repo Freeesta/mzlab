@@ -65,7 +65,7 @@ try:
             assert lv in ("2a", "3a"), lv
             pg.select_option("#libres #lv-dec", "2b"); pg.wait_for_timeout(300)
             assert "L2b" in pg.inner_text("#libres .vd .lvb"), pg.inner_text("#libres .vd")
-            assert "Livello proposto: " + lv in pg.inner_text("#libres .vd").replace("\n", " "), "the proposal stays"
+            assert "Livello proposto: L" + lv in pg.inner_text("#libres .vd").replace("\n", " "), "the proposal stays"
             pg.select_option("#libres #lv-dec", "1"); pg.wait_for_timeout(300)
             assert "standard" in pg.inner_text("#libres #lv-msg") and pg.input_value("#libres #lv-dec") == "2b"
             pg.select_option("#libres #lv-dec", ""); pg.wait_for_timeout(200)

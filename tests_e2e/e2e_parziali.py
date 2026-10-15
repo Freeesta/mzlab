@@ -52,7 +52,7 @@ try:
         def export():
             pg.keyboard.press("Escape"); s = call("TPDraw.smiles()"); assert "|" not in s and s, s
             o = call("TPDraw.partial()"); assert o["delta"] == "+O" and o["level"] == "3b" and "|" not in o["smiles"], o
-        step("TPDraw.smiles() without «|…|», TPDraw.partial() = {smiles, delta, level: "3b"}", export)
+        step("TPDraw.smiles() without «|…|», TPDraw.partial() = {smiles, delta, level: 3b}", export)
         def svg_text():                                                   # the exported SVG, as text
             return call("TPDraw.image('svg').then(b => b.text())")
         def export_svg():
