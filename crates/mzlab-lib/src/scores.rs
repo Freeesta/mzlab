@@ -290,12 +290,17 @@ pub fn gnps_prepare(mz: &[f64], it: &[f64], prec: f64) -> (Vec<f64>, Vec<f64>) {
     (m, v)
 }
 
-/// GNPS cosine of a sample against a reference with an absolute tolerance in Da. `modified`: a reference peak at `m` may also pair with a sample
-/// peak at `m + delta`, `delta = prec(sample) - prec(reference)`. Ties in the product: the unshifted pair first, then the higher indices.
-pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) -> GnpsMatch {
-    let (am, ai) = gnps_prepare(&sample.mz, &sample.it, sample.prec);
-    let (bm, bi) = gnps_prepare(&reference.mz, &reference.it, reference.prec);
-    let delta = sample.prec - reference.prec;
+/// The matching of `gnps_cosine` on spectra already prepared (`gnps_prepare`: the intensities are the square roots) and an explicit shift `delta`
+/// (sample precursor minus reference precursor): callers that clean the peaks their own way, or score against a precursor that is not the reference's, use this.
+pub fn gnps_match_prepared(
+    am: &[f64],
+    ai: &[f64],
+    bm: &[f64],
+    bi: &[f64],
+    delta: f64,
+    tol: f64,
+    modified: bool,
+) -> GnpsMatch {
     let mut c: Vec<(usize, usize, f64, bool)> = Vec::new();
     for i in 0..am.len() {
         for j in 0..bm.len() {
@@ -337,6 +342,14 @@ pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) ->
         n_shifted,
         pairs,
     }
+}
+
+/// GNPS cosine of a sample against a reference with an absolute tolerance in Da. `modified`: a reference peak at `m` may also pair with a sample
+/// peak at `m + delta`, `delta = prec(sample) - prec(reference)`. Ties in the product: the unshifted pair first, then the higher indices.
+pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) -> GnpsMatch {
+    let (am, ai) = gnps_prepare(&sample.mz, &sample.it, sample.prec);
+    let (bm, bi) = gnps_prepare(&reference.mz, &reference.it, reference.prec);
+    gnps_match_prepared(&am, &ai, &bm, &bi, sample.prec - reference.prec, tol, modified)
 }
 
 #[cfg(test)]

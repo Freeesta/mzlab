@@ -12,10 +12,13 @@ crate-type = ["rlib"]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
 default = ["chem"]
 chem = []
+# `attributio`: the port of Attributio (cascade of levels, review); off by default and not part of any .wasm yet (`docs/agenti/attributio.md`).
+attributio = ["dep:mzlab-lib"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
 libm = "0.2"
+mzlab-lib = { path = "../mzlab-lib", optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }

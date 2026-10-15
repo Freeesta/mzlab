@@ -4,10 +4,11 @@ Scritti da `tools/attributio_riferimento.py` con Attributio 1.12.0:
 
     ATTRIBUTIO_SRC=<percorso di attributio/src> python3 tools/attributio_riferimento.py [--controlla]
 
-Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
+Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, abbinamenti). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
 
 | File | sha256 |
 |---|---|
+| `abbinamenti.json` | `76b17e4119e86eb4bb8d44b8ca92e0887bd52af8f472daa0e7c870c3f1985dda` |
 | `campagna.json` | `1ef6b5cd901833371fc1b69c6093b7d72e3cbf558144d9c7a689b220ff767e37` |
 | `decisioni.json` | `9dd58a5ffe1e0bb904e8357330d4d57f32fc355d9de5708440cdde2d81669941` |
 | `identita.json` | `2ec61d93274e86c5a1a8d353e5e1b69088fe58375b0eac971d35418cfe6fd6f7` |

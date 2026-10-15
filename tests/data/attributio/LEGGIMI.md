@@ -20,3 +20,5 @@ Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synth
 | `library/ms2_pos.json` | `05d845806d09b3c77fe546cd7eca75e579b40f33a21879e272c870bad3f01830` |
 | `library/standards.csv` | `89072ddab2272840b11d7511bbc9c9f3b014dd3119f494352a35084c1bc3b2b2` |
 | `livelli_attesi.csv` | `bd5ec6fa530537be04959a616389a7f5bfab63d5184de5604e9cbfd5f0e53b55` |
+
+Inoltre `librerie_sintetiche/` (MGF, MSP, JSON a righe, MassBank) e `fonti_sintetiche/` (tabelle di SIRIUS e GNPS2 per POS e NEG): dati inventati per lo stadio `abbinamenti`.

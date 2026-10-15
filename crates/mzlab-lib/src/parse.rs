@@ -265,7 +265,7 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         formula: g(&["formula", "molformula", "molecularformula"]),
         inchikey: g(&["inchikey", "inchikeysmiles"]),
         smiles: g(&["smiles", "isomericsmiles"]),
-        accession: g(&["accession", "spectrumid", "id"]),
+        accession: g(&["accession", "spectrumid", "libid", "usi", "db#", "id"]),
         authors: g(&["authors", "author"]),
         license: g(&["license", "licence"]),
     };
@@ -638,7 +638,7 @@ fn split_key(t: &str, sep: char) -> Option<(&str, &str)> {
     let first = ch.next()?;
     let ok = (first.is_ascii_alphabetic() || (sep == '=' && first == '_'))
         && k.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '_' || c == '-');
+            .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '_' || c == '-' || (sep == ':' && c == '#'));
     ok.then(|| (k.trim_end(), &t[i + sep.len_utf8()..]))
 }
 
