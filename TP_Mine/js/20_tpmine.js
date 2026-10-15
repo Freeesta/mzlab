@@ -691,6 +691,7 @@
         <div class="card">${window.TPMS2.detail(d)}${d.sim && window.TPHR ? `<h3 style="margin-top:8px">Similarity to the parent's MS2</h3>${window.TPHR.simCard(d.sim)}` : ""}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
       window.TPMS2.bindDetail(D, d);
+      if (window.TPPOS && d.ms2 && d.ms2.scans) window.TPPOS.mount(D, { smiles: ($("#tp-smi").value || "").trim(), delta: d.delta || "", peaks: d.ms2.fragments.map(f => [f.mz, f.rel]), positive: !window.TPPOS.negative($("#tp-add").value), tol: 0.5, ppm: false, label: "Change" });
       const isPar = par && id === par.id;
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });

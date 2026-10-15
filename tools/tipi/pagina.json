@@ -151,6 +151,7 @@
     "../../TP_Mine/js/41_tabui_campi.js",
     "../../TP_Mine/js/42_tp_table.js",
     "../../TP_Mine/js/43_trasformazioni.js",
-    "../../TP_Mine/js/44_tp_riga.js"
+    "../../TP_Mine/js/44_tp_riga.js",
+    "../../TP_Mine/js/44_posizioni.js"
   ]
 }

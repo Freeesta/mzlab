@@ -226,6 +226,7 @@
       $("#hr-kleg").innerHTML = series.map(x => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px solid ${x.color};vertical-align:middle"></span> ${x.label === "?" ? "area" : "session " + esc(x.label)}</span>`).join("") +
         ((d.row.filled || []).length ? `<span class="mut"><span class="rta-open"></span> filled: area re-integrated where no peak was found (${d.row.filled.map(k => t[k]).join(", ")} min)</span>` : "");
       if (d.ms2) mirror($("#hr-ms2"), d);
+      if (window.TPPOS && d.ms2 && d.ms2.candidate && d.ms2.candidate.mz) window.TPPOS.mount(D, { smiles: ($("#tp-smi").value || "").trim(), delta: r.delta || "", peaks: d.ms2.candidate.mz.map((v, i) => [v, d.ms2.candidate.rel[i]]), positive: !window.TPPOS.negative($("#tp-add").value), tol: 10, ppm: true, label: "Change" });
       const cb = $("#hr-cmp-tree");
       if (cb) cb.onclick = () => { window.TPALBERO && window.TPALBERO.compare(id); const t = $("#hr-tree"); if (t) t.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
     }

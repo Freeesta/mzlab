@@ -86,6 +86,7 @@ declare var TPHR: any;
 declare var TPLIVE: any;
 declare var TPMINE_MEM: any;
 declare var TPMS2: any;
+declare var TPPOS: any;
 declare var TPTR: any;
 declare var TRANS: any;
 declare var UNTUI: any;
