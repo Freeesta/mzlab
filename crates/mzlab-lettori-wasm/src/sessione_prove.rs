@@ -106,3 +106,51 @@ fn la_sessione_risponde_e_chiude() {
     s.chiudi(h);
     assert_eq!(s.campioni(h).err().map(|e| e.key), Some("error.badIndex"));
 }
+
+/// The index is written without a `Value` per scan, but it is the same text that `serde_json::json!` gave (keys in alphabetical order, floats with `.0`, NaN as `null`).
+#[test]
+fn l_indice_scritto_a_flusso_e_il_testo_di_serde_json() {
+    use mzlab_core::lettori::Posizione;
+    let voci = vec![
+        VoceScansione {
+            id: "scan=1 \"q\"\n\u{8}é".into(),
+            rt: 1.0,
+            livello: 2,
+            polarita: -1,
+            tic: 1e21,
+            picco_base: None,
+            filtro: "FTMS + c ESI Full ms2 445.12@hcd30.00 [50.00-500.00]".into(),
+            precursore: Some(445.12),
+            posizione: Some(Posizione {
+                membro: 3,
+                offset: 1 << 40,
+                lunghezza: 77,
+            }),
+        },
+        VoceScansione {
+            id: String::new(),
+            rt: f64::NAN,
+            livello: 1,
+            polarita: 0,
+            tic: 0.1 + 0.2,
+            picco_base: Some(f64::INFINITY),
+            filtro: String::new(),
+            precursore: None,
+            posizione: None,
+        },
+    ];
+    let vecchio: Vec<_> = voci
+        .iter()
+        .map(|r| {
+            let pos = r.posizione.map(|p| serde_json::json!([p.membro, p.offset, p.lunghezza]));
+            serde_json::json!({ "id": r.id, "rt": r.rt, "level": r.livello, "polarity": r.polarita, "tic": r.tic, "base": r.picco_base, "filter": r.filtro, "precursor": r.precursore, "pos": pos })
+        })
+        .collect();
+    let atteso = serde_json::Value::Array(vecchio).to_string();
+    let mut s = Sessioni::default();
+    let h = s.inserisci(Box::new(Finto {
+        campioni: vec![],
+        indice: voci,
+    }));
+    assert_eq!(s.indice(h, 0).unwrap(), atteso);
+}

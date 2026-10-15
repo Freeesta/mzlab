@@ -7,6 +7,7 @@ use crate::metodo::V;
 pub use crate::metodo_campi::{Campo, Ident};
 use opentfraw::generic_data::GenericValue;
 use opentfraw::RawFileReader;
+use std::io::{Read, Seek};
 
 fn shown(v: &GenericValue) -> String {
     match v {
@@ -24,35 +25,81 @@ fn shown(v: &GenericValue) -> String {
     }
 }
 
-/// The 62 fields of the scan trailer: the value when it is the same in every scan, else `min..max` (numbers) or the number of distinct values.
-fn trailer(raw: &RawFileReader) -> Vec<Campo> {
+/// What one pass over the trailer keeps of a field.
+struct Col {
+    first: Option<String>,
+    all_empty: bool,
+    same: bool,
+    /// Every value is a number (the type of the field says so): the range is kept, not the distinct values.
+    numeric: bool,
+    lo: f64,
+    hi: f64,
+    distinct: std::collections::HashSet<String>,
+}
+
+/// The 62 fields of the scan trailer: the value when it is the same in every scan, else `min..max` (numbers) or the number of distinct values. One pass over the
+/// records of the file (the trailer is not kept in memory), a chunk at a time.
+fn trailer<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Campo> {
+    use opentfraw::GenericType as T;
     const FROM: &str = "thermo-raw:ScanParameters";
+    let fields = &raw.scan_parameters_header.fields;
+    let mut cols: Vec<Col> = fields
+        .iter()
+        .map(|d| Col {
+            first: None,
+            all_empty: true,
+            same: true,
+            numeric: matches!(
+                d.field_type,
+                T::Int8
+                    | T::UInt8
+                    | T::Int16
+                    | T::UInt16
+                    | T::Int32
+                    | T::UInt32
+                    | T::Float32
+                    | T::Float64
+            ),
+            lo: f64::INFINITY,
+            hi: f64::NEG_INFINITY,
+            distinct: Default::default(),
+        })
+        .collect();
+    raw.scan_parameters.for_each(source, &mut |_, rec| {
+        for (i, c) in cols.iter_mut().enumerate() {
+            let Some(v) = rec.value(i) else { continue };
+            let t = shown(&v);
+            c.all_empty &= t.is_empty();
+            match &c.first {
+                None => c.first = Some(t.clone()),
+                Some(f) => c.same &= *f == t,
+            }
+            if c.numeric {
+                if let Some(x) = v.as_f64() {
+                    c.lo = c.lo.min(x);
+                    c.hi = c.hi.max(x);
+                }
+            } else {
+                c.distinct.insert(t);
+            }
+        }
+    });
     let mut out = Vec::new();
-    for (i, d) in raw.scan_parameters_header.fields.iter().enumerate() {
+    for (d, c) in fields.iter().zip(cols) {
         let label = d.label.trim().trim_end_matches(':').trim();
-        let vals: Vec<&GenericValue> = raw
-            .scan_parameters
-            .iter()
-            .filter_map(|r| r.values.get(i).map(|v| &v.1))
-            .collect();
-        let Some(first) = vals.first() else { continue };
-        let texts: Vec<String> = vals.iter().map(|v| shown(v)).collect();
-        if label.is_empty() || texts.iter().all(String::is_empty) {
+        let Some(first) = c.first else { continue };
+        if label.is_empty() || c.all_empty {
             continue;
         }
-        let same = texts.iter().all(|t| Some(t) == texts.first());
-        let nums: Vec<f64> = vals.iter().filter_map(|v| v.as_f64()).collect();
-        let (value, key) = if same {
-            (shown(first), label.to_string())
-        } else if nums.len() == vals.len() {
-            let lo = nums.iter().copied().fold(f64::INFINITY, f64::min);
-            let hi = nums.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-            (format!("{lo}..{hi}"), format!("{label} (min..max)"))
+        let (value, key) = if c.same {
+            (first, label.to_string())
+        } else if c.numeric {
+            (format!("{}..{}", c.lo, c.hi), format!("{label} (min..max)"))
         } else {
-            let mut u = texts.clone();
-            crate::sortc::slice_ord(&mut u);
-            u.dedup();
-            (u.len().to_string(), format!("{label} (distinct values)"))
+            (
+                c.distinct.len().to_string(),
+                format!("{label} (distinct values)"),
+            )
         };
         out.push(Campo::new(FROM, &key, value));
     }
@@ -222,8 +269,9 @@ fn script_map(key: &str) -> Option<&'static str> {
 }
 
 /// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identita`.
-pub fn fields(
+pub fn fields<R: Read + Seek>(
     raw: &RawFileReader,
+    source: &mut R,
     traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
@@ -233,7 +281,7 @@ pub fn fields(
     all.extend(instid(raw));
     all.extend(run_header(raw));
     all.extend(analog(traces));
-    all.extend(trailer(raw));
+    all.extend(trailer(raw, source));
     if let Some(log) = &raw.status_log {
         all.extend(status::fields(log));
     }
