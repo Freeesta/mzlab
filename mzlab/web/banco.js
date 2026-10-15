@@ -115,7 +115,7 @@ const BANCO = (() => {
     const txt = (/** @type {any} */ s) => `${s.no} · ${s.rt.toFixed(3)} min · MS${s.level}${s.prec != null ? " → " + s.prec.toFixed(2) : ""}`;
     const paint = () => {
       const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5);
-      L.innerHTML = `<div style="height:${rows.length * H}px"></div>` + rows.slice(a, z).map((s, j) => `<div class="r${a + j === cur ? " on" : ""}" role="option" id="bsp-${a + j}" aria-selected="${a + j === cur}" data-i="${a + j}" style="top:${(a + j) * H}px">${EH(txt(s))}</div>`).join("");
+      L.innerHTML = h`<div style="height:${rows.length * H}px"></div>${raw(rows.slice(a, z).map((s, j) => h`<div class="r${a + j === cur ? " on" : ""}" role="option" id="bsp-${a + j}" aria-selected="${a + j === cur}" data-i="${a + j}" style="top:${(a + j) * H}px">${txt(s)}</div>`).join(""))}`;
       L.setAttribute("aria-activedescendant", "bsp-" + cur);
     };
     const go = (/** @type {number} */ i) => { const s = rows[i]; if (!s) return; closeScanPop(); openScan(p, f, s, wh.value); };

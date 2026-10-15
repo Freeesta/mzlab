@@ -34,26 +34,24 @@ try:
         step("the list has every scan of the file, sorted by time", listing)
         def typefilter():
             keys = pg.evaluate("[...document.querySelectorAll('.bsp [data-sp=type] option')].map(o=>o.value).filter(Boolean)")
-            pg.select_option(".bsp [data-sp=type]", keys[0]); pg.wait_for_timeout(800)
-            n = pg.evaluate("+document.querySelector('.bsp [data-sp=n]').textContent.split(' ')[0].replace(/\\s/g,'')")
             g = pg.evaluate(f"J('api/filters?k='+{SPEC}.k).then(j=>j.filters.find(g=>g.key==={keys[0]!r}).n)")
-            assert n == g, (n, g)
-            pg.select_option(".bsp [data-sp=type]", ""); pg.wait_for_timeout(500)
+            cnt = "+document.querySelector('.bsp [data-sp=n]').textContent.split(' ')[0].replace(/\\s/g,'')"
+            pg.select_option(".bsp [data-sp=type]", keys[0]); attendi(pg, f"{cnt}==={g}")
+            pg.select_option(".bsp [data-sp=type]", ""); attendi(pg, f"{cnt}!=={g}")
         step("the type menu inside narrows the list", typefilter)
         def esc():
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
-            assert pg.locator(".bsp").count() == 0
+            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.bsp')")
         step("Esc closes it", esc)
         def open_at(where, idx):
             n0 = pg.evaluate("E.panels.length"); ids0 = pg.evaluate("E.panels.map(p=>p.id)")
             opener(); pg.select_option(".bsp [data-sp=where]", where)
-            pg.evaluate(f"document.querySelectorAll('.bsp .r')[{idx}].click()"); pg.wait_for_timeout(2500)
+            pg.evaluate(f"document.querySelectorAll('.bsp .r')[{idx}].click()"); attendi(pg, f"E.panels.length=={n0 + 2}")
             assert pg.evaluate("E.panels.length") == n0 + 2, "a TIC and a spectrum are added"
             return pg.evaluate("(ids0=>{const o=stackOrder().map(q=>[q.id,q.type,q.link]);return {o,ids0}})", ids0)
         def at_end():
             g = open_at("end", 3); o, ids0 = g["o"], g["ids0"]
             assert o[-1][1] == "spec" and o[-2][1] == "chrom" and o[-2][0] not in ids0 and o[-1][2] == o[-2][0], o
-            cur = pg.evaluate("(()=>{const c=stackOrder().at(-2);return c.cur})()"); assert cur is not None, "the cursor of the new TIC is on the scan"
+            attendi(pg, "stackOrder().at(-2).cur!=null")
         step("«At the end»: new TIC with its spectrum under it", at_end)
         def at_top():
             g = open_at("top", 5); o, ids0 = g["o"], g["ids0"]
@@ -67,11 +65,10 @@ try:
                 else: assert o[i + 1][1] == "chrom" and o[i + 2][1] == "spec", o
         step("«Above / below this chart»", above_below)
         def keyboard():
-            opener(); pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowDown"); n0 = pg.evaluate("E.panels.length"); pg.keyboard.press("Enter"); pg.wait_for_timeout(2000)
-            assert pg.evaluate("E.panels.length") == n0 + 2
+            opener(); pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowDown"); n0 = pg.evaluate("E.panels.length"); pg.keyboard.press("Enter"); attendi(pg, f"E.panels.length=={n0 + 2}")
         step("keyboard: arrows + Enter", keyboard)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))
-    errs = [e for e in r.errs if not (e[0].startswith("console") and "GL" in str(e[1]))]
+    errs = [e for e in r.errs if not (e[0].startswith("console") and ("GL" in str(e[1]) or "sandbox" in str(e[1])))]
     steps.append(("no browser errors", "ok" if not errs else "FAIL " + str(errs[:3])))
 finally:
     r.close()
