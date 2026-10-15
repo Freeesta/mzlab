@@ -79,7 +79,7 @@ Lo studente acquisisce una MS2 perché ha già visto quello ione: se un picco de
 - D3 Stesso precursore, CE diverse: (a) spettri separati; (b) sommati.
 - D4 Picco al tempo del genitore: (a) segnalato, non attaccato a un TP; (b) attaccato.
 - D5 Correzioni: (a) ricordate nel browser per quell'insieme di file ed esportate; (b) solo per la sessione.
-- D6 Una MS2 abbinata con almeno 2 frammenti spiegati dal genitore (uguali o spostati) alza la riga al livello 3: (a) no, resta 4/5 con la prova scritta; (b) sì.
+- D6 Una MS2 abbinata con almeno 2 frammenti spiegati dal genitore (uguali o spostati) alza la riga al livello 3: DECISO NO. Resta 4/5 con la prova scritta (`lr/summary.rs`); il tetto del profilo `lr` di `livelli-1.js` è 4.
 
 ## 10. Pacchetti
 | Pacchetto | Cosa | Dipende da |
@@ -89,7 +89,7 @@ Lo studente acquisisce una MS2 perché ha già visto quello ione: se un picco de
 | M2 | Motore `lr/ms2link.rs`, pool dagli abbinamenti, `ms2_links/1`, `relink`, worker | M0 unita |
 | M3 | Bersagli MS2 (§6) e diagnosi delle righe mancanti | M2 unita |
 | M4 | Interfaccia: avvio con le MS2, scheda «MS2 matches», correzioni, esportazioni, e2e | M2 unita (parallelo a M3) |
-| M5 | Confronto col genitore come in HR (`pair_components` con tolleranza in Da) e D6 | M4 unita |
+| M5 | Confronto col genitore come in HR (`pair_components` con tolleranza in Da); la prova resta scritta, il livello no (D6) | M4 unita |
 
 ## 11. Trappole
 - Il nome del composto del corso, i suoi TP e i loro m/z non vanno nel repository pubblico: i test con dati veri leggono la verità da `scratchpad/tabui_ms2_lr_truth.json` del repository privato e saltano senza `MZLAB_DATI`.

@@ -24,9 +24,9 @@
   const LV_TEXT = { 3: "region localised", 4: "formula and derivation", 5: "appears with the treatment" };       // the badges and the colours are those of livelli.js (.lvb, .lv-N)
   const SIM_LABEL = ["equal fragments", "shifted fragments", "common neutral losses"], SIM_VAR = ["--sim-eq", "--sim-sh", "--sim-nl"], SIM_DASH = [[], [6, 3], [2, 3]];
   const PD_TEXT = { 1: "confirmed by the data", 2: "observed in the literature", 3: "specific to the class", 4: "generic rule" };
-  const predBadge = r => r.pred ? `<span class="lvb pd-${r.pred}" title="prediction level ${r.pred}: ${esc(PD_TEXT[r.pred])}">P${r.pred}</span>` : "";
+  const predBadge = r => r.pred ? `<span class="lvb pd-${r.pred}" title="prediction scale (Löffler et al. 2025), not the Schymanski level: Prev. ${r.pred}, ${esc(PD_TEXT[r.pred])}">Prev. ${r.pred}</span>` : "";
   const simBar = sim => sim ? `<span class="sim-bar" role="img" aria-label="cosine: equal ${sim.cos[0]}, shifted ${sim.cos[1]}, neutral losses ${sim.cos[2]}" title="cosine: equal ${sim.cos[0]} · shifted ${sim.cos[1]} · common neutral losses ${sim.cos[2]}">${sim.cos.map((v, i) => `<i style="width:${Math.round(100 * v)}%;background:var(${SIM_VAR[i]})"></i>`).join("")}</span>` : "";
-  const lvBadge = (r, title) => `<span class="lvb lv-${r.level}" title="${esc(title)}">${r.level}${r.diagnostic ? " ◆" : ""}</span>`;
+  const lvBadge = (r, title) => `<span class="lvb lv-${r.level}" title="${esc(title)}">L${r.level}${r.diagnostic ? " ◆" : ""}</span>`;
 
   // Shift of the apex of the anchor features in every file against the median over the files (piecewise linear between the nodes of the curve).
   const RTA_DASH = [[], [6, 3], [2, 3], [8, 2, 2, 2]];
@@ -52,8 +52,8 @@
     const yn = (r, k) => !r.ctl ? `<span class="tpt-no" title="not available for this run">–</span>` : r.ctl[k] ? `<span title="detected: ${(100 * r.ctl[k + "_ratio"]).toFixed(0)}% of the maximum of the treated samples" aria-label="yes">●</span>` : `<span class="tpt-no" aria-label="no">○</span>`;
     return [
       { key: "rank", off: true, label: "#", num: true, sort: r => rank.get(r), cell: r => String(rank.get(r)) },
-      { key: "level", label: "Lvl", sort: r => lvRank(r) * 1e6 + r.score, cell: r => lvBadge(r, r.diagnostic ? "level 3, diagnostic evidence" : LV_TEXT[r.level] || "") },
-      { key: "pred", off: true, label: "Pred.", title: "prediction level (Löffler et al. 2025)", sort: r => r.pred ?? 9, cell: r => predBadge(r) },
+      { key: "level", label: "Lvl", sort: r => lvRank(r) * 1e6 + r.score, cell: r => lvBadge(r, r.diagnostic ? "level L3, diagnostic evidence" : LV_TEXT[r.level] || "") },
+      { key: "pred", off: true, label: "Prev.", title: "prediction scale (Löffler et al. 2025), another scale than the Schymanski level", sort: r => r.pred ?? 9, cell: r => predBadge(r) },
       { key: "sim", off: true, label: "Sim.", title: "modified cosine split in equal / shifted / common neutral loss fragments", sort: r => r.modcos, cell: r => simBar(r.sim) },
       { key: "score", label: "Score", num: true, sort: r => r.score, cell: r => String(r.score) },
       { key: "mz", label: "<i>m/z</i>", num: true, sort: r => r.mz, cell: r => r.mz.toFixed(4) },
@@ -80,7 +80,7 @@
     const nMs2 = rows.filter(r => r.ms2_scans > 0).length;
     R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">⛏</span>
       <div><h2>Ranking of possible TPs</h2><div class="hero-s">${esc(s.parent.name || "")} ${esc(s.parent.formula)} · ${esc(s.parent.ion)} <i>m/z</i> ${s.parent.mz}${s.parent.rt ? ` · RT ${s.parent.rt} min` : ""} · high resolution · ${s.timing.total} s</div></div></div>
-      <div class="stats"><div class="stat g"><b>${nDiag}</b><span>level 3, diagnostic evidence ◆</span></div><div class="stat a"><b>${n("3")}</b><span>level 3</span></div><div class="stat v"><b>${n("4") + n("5")}</b><span>level 4-5</span></div>
+      <div class="stats"><div class="stat g"><b>${nDiag}</b><span>L3, diagnostic evidence ◆</span></div><div class="stat a"><b>${n("3")}</b><span>L3</span></div><div class="stat v"><b>${n("4") + n("5")}</b><span>L4-L5</span></div>
       <div class="stat"><b>${nMs2}</b><span>with MS<sup>2</sup></span></div><div class="stat"><b>${s.n_candidates}</b><span>candidates after filters</span></div><div class="stat"><b>${s.files.length}</b><span>files</span></div></div>
       <div class="row" style="margin-top:10px"><button id="hr-x-xlsx">Excel (.xlsx)</button><button id="hr-x-csv">CSV</button><button id="hr-x-json">JSON</button><button id="hr-x-incl" title="Inclusion list for a second targeted injection: the best candidates without MS2">Inclusion list (CSV)</button></div></div>
       <div class="card hrn">Each row is a hypothesis, not an identification: the level says how much evidence supports it (5 appears with the treatment, 4 unique and derivable formula, 3 MS² linked to the parent and region localised; ◆ diagnostic evidence: site determined with margin, consistent RT and kinetics, which only the chemist can turn into level 2b). Levels 2a and 1 require a standard.</div>

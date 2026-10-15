@@ -1,6 +1,6 @@
 """Disegno: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
-TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3}; «Remove the brackets» takes them away. Multicentre: ring atoms +
+TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: "3b"}; «Remove the brackets» takes them away. Multicentre: ring atoms +
 the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
 positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
@@ -51,8 +51,8 @@ try:
             raise AssertionError("no answer: " + js)
         def export():
             pg.keyboard.press("Escape"); s = call("TPDraw.smiles()"); assert "|" not in s and s, s
-            o = call("TPDraw.partial()"); assert o["delta"] == "+O" and o["level"] == 3 and "|" not in o["smiles"], o
-        step("TPDraw.smiles() without «|…|», TPDraw.partial() = {smiles, delta, level: 3}", export)
+            o = call("TPDraw.partial()"); assert o["delta"] == "+O" and o["level"] == "3b" and "|" not in o["smiles"], o
+        step("TPDraw.smiles() without «|…|», TPDraw.partial() = {smiles, delta, level: "3b"}", export)
         def svg_text():                                                   # the exported SVG, as text
             return call("TPDraw.image('svg').then(b => b.text())")
         def export_svg():
@@ -76,7 +76,7 @@ try:
             pg.wait_for_function("document.querySelector('#kframe').contentDocument.querySelectorAll('#mz-parziali .mz-multicentro circle').length === 3", timeout=8000)
             assert pg.evaluate("!!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro line[stroke-dasharray]')"), "no dashed bond"
             o = call("TPDraw.partial()"); mf = o["molfile"]
-            assert o["positionUnknown"] is True and o["level"] == 3 and o["delta"] == "", o
+            assert o["positionUnknown"] is True and o["level"] == "3b" and o["delta"] == "", o
             lines = mf.split("\n")
             assert "M  V30 COUNTS 10 9 0 0 0" in mf and any(l.split()[3:4] == ["*"] for l in lines if l.startswith("M  V30 ")), mf
             assert any("ENDPTS=(3 " in l and l.endswith("ATTACH=ANY") for l in lines), mf
