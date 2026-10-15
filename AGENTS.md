@@ -72,6 +72,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
+| lettore Shimadzu `.qgd` e `.lcd` (`crates/mzlab-lettori/src/shimadzu/`, modulo `shimadzu`) | `docs/agenti/shimadzu.md` |
 | lettore cartelle Waters MassLynx `.raw` (`crates/mzlab-lettori/src/waters/`, modulo `waters`, raggruppamento in `waters-raw.js`) | `docs/agenti/waters.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |

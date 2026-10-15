@@ -16,7 +16,7 @@ const LETTORI_FAM = {
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [], sonda: true },
   waters: { ext: [".raw"], membri: ["_func001.dat"], errori: [], soloModulo: [] },
-  shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
+  shimadzu: { ext: [".qgd", ".lcd"], membri: [], errori: ["err.file.shimadzu"], soloModulo: [".qgd", ".lcd"] },
 };
 /** @type {any} */ (window).LETTORI_FAM = LETTORI_FAM;
 export default LETTORI_FAM;

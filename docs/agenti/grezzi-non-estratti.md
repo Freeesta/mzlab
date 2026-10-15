@@ -36,3 +36,6 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - Non decodificati: le righe di `_FUNCnnn.STS`/`.EE` oltre «Set Mass» e «Collision Energy» (stanno solo nei byte), la tabella `_HISTORY.INF`, i parametri di rampa oltre quelli di `_extern.inf`, la codifica a 6 byte (nessun file vero) e le funzioni di tipo MALDI.
 - Identità (`User Name`, `Submitter`, `Laboratory Name`, percorsi del computer): in `metodo/1.campi` marcate `identita`, mai nell'mzML.
 
+## Shimadzu `.qgd` / `.lcd` (modulo `shimadzu`)
+- Non letti: programma del forno e dell'iniettore (`GC-2010/GC17A Instrument Parameters`), `GCMS Configuration` (solo il nome dello strumento), il metodo `.qgm` incorporato, `Status` e `Status Curve` (pressioni, temperature), `MS Status Data`, `Mass Parameters`, `GUMM_Information`; UV (`LSS Raw Data`, `PDA 3D Raw Data`); l'evento della polarità di `Mass Raw Data`; energia di collisione e tempo di attesa dei record MRM; il Q-TOF/IT-TOF/9030 (`QTFL RawData`) per intero.
+- Non portati nell'mzML: operatore, computer, percorsi e nomi dei file di dati, metodo, tune e batch (`identita`). Dettagli e offset in `docs/agenti/shimadzu.md`.

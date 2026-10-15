@@ -10,6 +10,8 @@ pub mod andi;
 pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
+#[cfg(any(feature = "shimadzu", feature = "tutte"))]
+pub mod shimadzu;
 pub mod srm;
 #[cfg(any(feature = "waters", feature = "tutte"))]
 pub mod waters;
@@ -25,6 +27,8 @@ static VOCE_ANDI: VoceLettore = andi::ms::VOCE;
 static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
 static VOCE_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
+#[cfg(any(feature = "shimadzu", feature = "tutte"))]
+static VOCE_SHIMADZU: VoceLettore = shimadzu::VOCE;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
 static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
@@ -72,6 +76,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_AGILENT),
         #[cfg(any(feature = "sciex", feature = "tutte"))]
         Some(&VOCE_SCIEX),
+        #[cfg(any(feature = "shimadzu", feature = "tutte"))]
+        Some(&VOCE_SHIMADZU),
         #[cfg(any(feature = "thermo", feature = "tutte"))]
         Some(&VOCE_THERMO),
         #[cfg(any(feature = "bruker", feature = "tutte"))]
