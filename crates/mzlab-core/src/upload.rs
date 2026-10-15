@@ -33,7 +33,8 @@ pub struct Passata {
     size: u64,
     seen: u64,
     sha256: Sha256,
-    sha1: Sha1,
+    /// `None` when the caller does not want the SHA-1 of every byte (an mzML upload: only the SHA-256 and the `probe` are used).
+    sha1: Option<Sha1>,
     head: Vec<u8>,
     tail: Vec<u8>,
 }
@@ -44,14 +45,23 @@ impl Passata {
             size,
             seen: 0,
             sha256: Sha256::new(),
-            sha1: Sha1::new(),
+            sha1: Some(Sha1::new()),
             head: Vec::new(),
             tail: Vec::new(),
         }
     }
+    /// Only the SHA-256 and the `probe`: `fine` gives an empty SHA-1.
+    pub fn senza_sha1(size: u64) -> Passata {
+        Passata {
+            sha1: None,
+            ..Passata::new(size)
+        }
+    }
     pub fn aggiorna(&mut self, b: &[u8]) {
         self.sha256.update(b);
-        self.sha1.update(b);
+        if let Some(h) = self.sha1.as_mut() {
+            h.update(b);
+        }
         let n = (PROBE as usize)
             .saturating_sub(self.head.len())
             .min(b.len());
@@ -73,7 +83,7 @@ impl Passata {
         p.update(&self.tail);
         Some((
             hex(&self.sha256.finalize()),
-            hex(&self.sha1.finalize()),
+            self.sha1.map(|h| hex(&h.finalize())).unwrap_or_default(),
             hex(&p.finalize()),
         ))
     }
@@ -81,7 +91,10 @@ impl Passata {
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
 pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
-    let mut p = Passata::new(size);
+    fingerprint(r, size, Passata::new(size))
+}
+
+fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String, String, String)> {
     let mut at = 0;
     let mut buf = vec![0u8; STEP as usize];
     while at < size {
@@ -96,7 +109,7 @@ pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, St
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
-    let (sha256, _, probe) = fingerprint3(r, size)?;
+    let (sha256, _, probe) = fingerprint(r, size, Passata::senza_sha1(size))?;
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");

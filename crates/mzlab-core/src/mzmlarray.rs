@@ -17,54 +17,61 @@ pub(crate) enum Want {
     Both,
 }
 
-/// The inflater of the parse: one `Decompress` and one output buffer reused by every array.
+/// The inflater of the parse: one `Decompress` and one output buffer reused by every array. The buffer is zeroed only when it grows (`decompress_vec`
+/// would zero all its spare room on every call).
 pub(crate) struct Inflate {
     dec: Decompress,
-    out: Vec<u8>,
+    buf: Vec<u8>,
+    /// Bytes of `buf` that hold the last array.
+    n: usize,
 }
 
 impl Inflate {
     pub(crate) fn new() -> Self {
         Inflate {
             dec: Decompress::new(true),
-            out: Vec::new(),
+            buf: Vec::new(),
+            n: 0,
         }
     }
 
-    /// Inflates the zlib stream into `self.out` (at most `limit` bytes), with the errors of `flate2::read::ZlibDecoder`.
+    /// What the last `run` inflated.
+    fn out(&self) -> &[u8] {
+        &self.buf[..self.n]
+    }
+
+    /// Inflates the zlib stream into `self.buf` (at most `limit` bytes), with the errors of `flate2::read::ZlibDecoder`.
     fn run(&mut self, raw: &[u8], limit: usize) -> Result<()> {
         self.dec.reset(true);
-        self.out.clear();
-        self.out
-            .try_reserve(limit.min(raw.len().saturating_mul(1032)))
-            .map_err(|_| Error::memory_budget())?;
+        self.n = 0;
+        // never more than `limit + 1` bytes: one over the limit is the proof of a bomb
+        let max = limit.saturating_add(1);
+        let first = limit.min(raw.len().saturating_mul(1032)).saturating_add(1).min(max);
+        self.grow(first)?;
         let mut pos = 0usize;
         loop {
-            // never more than `limit + 1` bytes: one over the limit is the proof of a bomb
-            let room = limit.saturating_add(1) - self.out.len();
-            if self.out.capacity() == self.out.len() {
-                let more = self.out.capacity().max(1 << 16).min(room);
-                self.out
-                    .try_reserve(more)
-                    .map_err(|_| Error::memory_budget())?;
+            if self.n == self.buf.len() {
+                let more = self.buf.len().max(1 << 16).min(max - self.n);
+                self.grow(self.n + more)?;
             }
             let (before_in, before_out) = (self.dec.total_in(), self.dec.total_out());
             let st = self
                 .dec
-                .decompress_vec(
+                .decompress(
                     raw.get(pos..).unwrap_or_default(),
-                    &mut self.out,
+                    &mut self.buf[self.n..],
                     FlushDecompress::None,
                 )
                 .map_err(|_| zlib_error(ErrorKind::InvalidInput, "corrupt deflate stream"))?;
             pos += usize::try_from(self.dec.total_in() - before_in).unwrap_or(raw.len());
-            let made = self.dec.total_out() - before_out;
-            if self.out.len() > limit {
+            let made = usize::try_from(self.dec.total_out() - before_out).unwrap_or(0);
+            self.n += made;
+            if self.n > limit {
                 return Err(Error::memory_budget());
             }
             match st {
                 Status::StreamEnd => return Ok(()),
-                _ if made == 0 && self.out.capacity() > self.out.len() => {
+                _ if made == 0 && self.n < self.buf.len() => {
                     return Err(zlib_error(
                         ErrorKind::UnexpectedEof,
                         "incomplete deflate stream",
@@ -73,6 +80,17 @@ impl Inflate {
                 _ => {}
             }
         }
+    }
+
+    /// `buf` at least `len` bytes long (new bytes zeroed).
+    fn grow(&mut self, len: usize) -> Result<()> {
+        if self.buf.len() < len {
+            self.buf
+                .try_reserve_exact(len - self.buf.len())
+                .map_err(|_| Error::memory_budget())?;
+            self.buf.resize(len, 0);
+        }
+        Ok(())
     }
 }
 
@@ -117,7 +135,7 @@ pub(crate) fn decode_array(
             n => n,
         };
         inf.run(&raw, limit)?;
-        &inf.out
+        inf.out()
     } else {
         &raw
     };
