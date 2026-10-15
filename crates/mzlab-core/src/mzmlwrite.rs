@@ -271,7 +271,7 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
         s += &mz_cv("MS:1000528", "lowest observed m/z", lo);
         s += &mz_cv("MS:1000527", "highest observed m/z", hi);
     }
-    for (k, v) in &extra.params {
+    for (k, v) in &extra.params { #[cfg(feature = "sciex")] if let Some(acc) = k.strip_prefix("cv:") { s += &cv(acc, v, ""); continue; }
         s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
     }
     if !sp.filter.is_empty() {
