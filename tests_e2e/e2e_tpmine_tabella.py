@@ -68,7 +68,7 @@ try:
             assert pg.locator("#hr-t").evaluate("t => t.tagName") == "TABLE" and n0 >= 1, n0
             heads = pg.locator("#hr-t thead th").all_inner_texts()
             for h in ("m/z", "RT", "t0", "Blank", "Kinetics"): assert any(h in x for x in heads), (h, heads)
-            assert not any(x.strip() in ("Class", "Region", "Pred.") for x in heads), heads          # few columns by default
+            assert not any(x.strip() in ("Class", "Region", "Prev.") for x in heads), heads          # few columns by default
             pg.locator("#hr-colm summary").click(); pg.check('#hr-cols input[data-col="class"]')
             assert any("Class" in x for x in pg.locator("#hr-t thead th").all_inner_texts())
             pg.uncheck('#hr-cols input[data-col="class"]')

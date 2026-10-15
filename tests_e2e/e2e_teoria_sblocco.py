@@ -1,5 +1,5 @@
 """Administrator mode of the Teoria (sblocco.js): a single click on the logo still goes to the program; five quick clicks set qqq.admin, say it in a
-role=status message and reload with html.esteso; with reduced motion nothing is animated; once unlocked the logo is a plain link again."""
+role=status message and reload with html.esteso; with reduced motion nothing is animated; five more clicks leave the mode; a single click still follows the link."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -30,9 +30,9 @@ try:
             assert q.inner_text("#sblocco").strip() == "Sbloccato" and ls(q) == "1"
             q.wait_for_function("document.documentElement.classList.contains('esteso')", timeout=8000)
             assert q.locator("#sblocco.on").count() == 0 and q.evaluate("TEORIA.esteso()") is True
-            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=3000)   # unlocked: a plain link, no delay, no counting
+            q.click("#logo"); q.wait_for_url("**/#/dati", timeout=3000)   # unlocked: a single click still follows the link (after 600 ms)
             c.close()
-        step("five quick clicks: flag, status message, reload with html.esteso; then the logo is a plain link", five)
+        step("five quick clicks: flag, status message, reload with html.esteso; a single click still follows the link", five)
         def calm():
             c, q = ctx(reduced_motion="reduce"); q.goto(T + "01-tp.html"); q.wait_for_selector("#logo")
             for i in range(5):
@@ -56,11 +56,11 @@ try:
             q.wait_for_function("document.documentElement.classList.contains('esteso')", timeout=8000)
             q.wait_for_selector("#tc-editor", timeout=5000)
             q.reload(); q.wait_for_selector("#tc-editor", timeout=8000)          # the state survives a reload
-            q.click("#a11y-btn"); q.click("#a11y-admin-exit")                      # the way out, in the settings
+            for _ in range(5): q.click("#logo", delay=20, no_wait_after=True)      # the way out: the same five clicks
             q.wait_for_function("localStorage.getItem('qqq.admin')===null", timeout=3000)
             q.wait_for_function("!document.documentElement.classList.contains('esteso')", timeout=8000)
             q.wait_for_function("!!window.TEORIA_EDITOR", timeout=8000); assert q.locator("#tc-editor").count() == 0; c.close()
-        step("editor button and Alt+E only in administrator mode: off, 5 clicks, reload, exit", editor)
+        step("editor button and Alt+E only in administrator mode: off, 5 clicks, reload, 5 clicks again to leave", editor)
         def legacy():
             c, q = ctx(); q.add_init_script("try{localStorage.setItem('qqq.teoria.esteso','1')}catch(_){}"); q.goto(T + "01-tp.html")
             q.wait_for_selector("#tc-editor", timeout=8000); c.close()

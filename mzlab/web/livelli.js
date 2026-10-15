@@ -71,13 +71,13 @@ const LIVELLI = (() => {
       const vals = { ent: best.ent, cos: best.cos, shared: best.shared, ppm: best.dprec, nlib: best.nlib, nScans: inp.nScans ?? 1, margin: marginOf(list, "ent"), marginCos: marginOf(list, "cos") };
       res.gates = P.cancelli.map(g => evalGate(g, vals, TT)); res.lines = res.gates.map(g => g.txt);
       const bad = res.gates.filter(g => !g.ok), srcBad = bad.filter(g => g.ruolo === "source"), conf = bad.filter(g => g.ruolo === "confirm"), fl = g => g.map(x => x.txt).join("; ");
-      if (!bad.length) return P.tetto ? fin(P.tetto, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: P.tetto })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
-      if (!srcBad.length) return fin("3", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));
-      if (P.provvisorio && best[P.provvisorio.campo] >= TT[P.provvisorio.soglia]) return fin("3", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
+      if (!bad.length) return P.tetto ? fin(P.tetto, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: tag(P.tetto) })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
+      if (!srcBad.length) return fin("3a", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));
+      if (P.provvisorio && best[P.provvisorio.campo] >= TT[P.provvisorio.soglia]) return fin("3a", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
     }
     const an = ranked(inp.analogs, "mcos")[0];
     if (an && TT.analogo_mcos_min != null && an.mcos >= TT.analogo_mcos_min) {
-      res.analog = an; return fin("3", "analogo", t("lv.dec.3an", { name: nm(an), cos: num(an.mcos, 2), delta: (an.delta >= 0 ? "+" : "−") + num(Math.abs(an.delta), 4) }));
+      res.analog = an; return fin("3b", "analogo", t("lv.dec.3an", { name: nm(an), cos: num(an.mcos, 2), delta: (an.delta >= 0 ? "+" : "−") + num(Math.abs(an.delta), 4) }));
     }
     if (best) {
       const g = res.gates.filter(x => !x.ok).sort((a, b) => (a.ruolo === "source" ? 0 : 1) - (b.ruolo === "source" ? 0 : 1))[0];
@@ -88,20 +88,21 @@ const LIVELLI = (() => {
     if (!best) res.decisive = t(P.senza_prove === "5" ? "lv.dec.5" : "lv.dec.0");
     return res;
   }
-  // the chemist's decision: 2b only from 3 or 2a (the programme never assigns it); refused on 4, 5 and 0; 1 only when a standard was marked
+  // the chemist's decision: 2b only by the chemist (the programme never assigns it), from 2a, 3a, 3b or 4; refused on 5 and 0; 1 only when a standard was marked
   function decide(res, lv) {
     if (lv === "" || lv == null) { res.decided = null; return { ok: true }; }
     if (!ORDER.includes(lv)) return { ok: false, msg: t("lv.refuse.unknown") };
-    if (lv === "2b" && !["2a", "3"].includes(res.proposed)) return { ok: false, msg: t("lv.refuse.2b", { lv: res.proposed }) };
+    if (lv === "2b" && !["2a", "3a", "3b", "4"].includes(res.proposed)) return { ok: false, msg: t("lv.refuse.2b", { lv: tag(res.proposed) }) };
     if (lv === "1" && !res.std) return { ok: false, msg: t("lv.refuse.1") };
     res.decided = lv; return { ok: true };
   }
   const shown = res => res.decided || res.proposed;                 // the level written in the lists: the decision when there is one
   const cls = lv => "lv-" + String(lv);
+  const tag = lv => "L" + String(lv);                              // the label of the Schymanski scale (L2a, L3b): never the bare digit, which would be confused with the prediction scale «Prev. N»
   const name = lv => t(`lv.name.${lv}`);
-  const sentence = lv => t("lv.sentence", { lv, name: name(lv) });  // «Candidate · level 2a», never «it is X»
+  const sentence = lv => t("lv.sentence", { lv: tag(lv), name: name(lv) });  // «Candidate · level 2a», never «it is X»
   const rank = lv => ORDER.indexOf(lv);
-  return { names, profile, profileName, thresholds, setThreshold, reset, exportState, importState, assess, decide, shown, cls, name, sentence, rank, ikKey, marginOf, data: D, ORDER };
+  return { names, profile, profileName, thresholds, setThreshold, reset, exportState, importState, assess, decide, shown, cls, tag, name, sentence, rank, ikKey, marginOf, data: D, ORDER };
 })();
 if (typeof window !== "undefined") window.LIVELLI = LIVELLI;
 if (typeof module !== "undefined") module.exports = LIVELLI;

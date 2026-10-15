@@ -37,7 +37,7 @@ try:
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
             assert pg.evaluate("document.querySelector('.pm-bar') === null") and pg.evaluate("document.querySelectorAll('#tp-minecard button').length") == 1 and pg.evaluate("document.querySelector('#tp-go svg') !== null")
             assert pg.evaluate("[...document.querySelectorAll('#tp-files tr')].slice(1).filter(t => !t.hidden).length") == 6 and pg.get_attribute("#tp-more", "aria-expanded") == "false"
-            assert pg.inner_text("#tp-fsum").strip() != "" and pg.evaluate("document.getElementById('tp-disc').offsetParent !== null") and pg.get_attribute("#tp-disc-h", "title")
+            assert pg.inner_text("#tp-fsum").strip() != "" and pg.evaluate("document.getElementById('tp-disc').offsetParent !== null") and pg.get_attribute("#tp-disc-h", "data-tt")
             pg.click("#tp-more"); assert pg.evaluate("[...document.querySelectorAll('#tp-files tr')].slice(1).every(t => !t.hidden)") and pg.get_attribute("#tp-more", "aria-expanded") == "true"
             assert pg.input_value("#tp-tol") == "0.35" and pg.input_value("#tp-rtt") == "0.25"
             pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")

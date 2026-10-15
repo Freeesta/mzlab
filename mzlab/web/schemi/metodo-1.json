@@ -492,6 +492,45 @@
           },
           "testo": {
             "type": "string"
+          },
+          "t_min": {
+            "type": "number"
+          },
+          "livello": {
+            "enum": [
+              "Info",
+              "Warning",
+              "Error"
+            ]
+          }
+        }
+      }
+    },
+    "serie_registro": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "gruppo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "unita": {
+            "type": "string"
+          },
+          "n": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
           }
         }
       }

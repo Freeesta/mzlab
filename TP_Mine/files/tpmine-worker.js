@@ -29,7 +29,7 @@ const ask = (what, name) => new Promise(res => { const rid = ++askSeq; asked.set
 let last = "", bigN = 0;                          // the engine of the last run: "rust" | "rust-lr" | "py"
 /** @type {Map<string, Uint8Array>} */ const detected = new Map();   // .mzfeatf of a .mzidx (name, size, date): a second Dig skips the detection
 const ALWAYS = new Set(["formula_info", "identity_graph", "polarity_pairs", "origin_evidence"]);
-const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare"]);
+const OF_DIG = new Set(["detail", "inclusion_csv", "msn_tree", "frag_tree", "frag_tree_compare", "ms2_relink"]);
 // chem.transformations_text() of the Python engine (tests/test_tpmine_worker.py keeps them equal)
 const DEFAULT_TR = `hydroxylation;+O;one extra oxygen (aromatic or aliphatic OH)
 dihydroxylation;+O2;two extra oxygens
@@ -106,8 +106,15 @@ async function idxFiles(names) {
 async function openIdx(names) {
   const d = await idxDir(), hs = /** @type {any[]} */ ([]);
   if (!d) throw new Error("no index of the file: open it again");
-  try { for (const n of names) hs.push(await /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx")).createSyncAccessHandle()); }
-  catch (e) { for (const h of hs) h.close(); throw e; }
+  try {
+    for (const n of names) {
+      const fh = /** @type {any} */ (await d.getFileHandle(idxBase(n) + ".mzidx"));
+      for (let i = 0; ; i++) {          // the index builder of the Data tab (a short-lived worker) releases its handle a moment after it ends
+        try { hs.push(await fh.createSyncAccessHandle()); break; }
+        catch (e) { if (i >= 40 || /** @type {any} */ (e).name !== "NoModificationAllowedError") throw e; await new Promise(r => setTimeout(r, 50)); }
+      }
+    }
+  } catch (e) { for (const h of hs) h.close(); throw e; }
   let buf = new Uint8Array(1 << 16);
   const read = (/** @type {number} */ k, /** @type {number} */ off, /** @type {number} */ len) => {
     if (buf.length < len) buf = new Uint8Array(Math.max(len, buf.length * 2));
@@ -302,6 +309,7 @@ async function call(fn, a) {
     if (lr !== false) { last = "rust-lr"; return lr; }
   }
   if (OF_DIG.has(fn) && last === "rust-lr") return fn === "msn_tree" ? "null" : (await lrMod()).ofDig(lrCtx, fn, a);     // a low-resolution run has no MSn tree
+  if (fn === "ms2_relink" && last !== "rust-lr") throw new Error("MS2 matches need the Rust engine");   // Pyodide and the high-resolution engine have no matches
   if (OF_DIG.has(fn) && last === "rust") {
     if (fn === "detail") return detail(+a[0]);
     if (fn === "inclusion_csv") return dig.inclusion_csv(+(a[0] || 0));

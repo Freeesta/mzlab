@@ -15,15 +15,15 @@ function pick(x, lo, hi) {
 }
 function lineData(p) {
   const a = p._a; if (!a || !a.sr) return null;
-  const rows = [], dec = p.kind === "press" ? 1 : 0;
+  const rows = [], dec = p.kind === "press" ? 1 : 0, reg = p.kind === "reg";
   a.sr.forEach(s => {
-    pick(s.x, a.x0, a.x1).forEach(i => rows.push([s.name, nm(s.x[i], 4), nm(s.y[i], dec || 1)]));
+    pick(s.x, a.x0, a.x1).forEach(i => rows.push([s.name, nm(s.x[i], 4), reg ? nm(s.y[i], 6) : nm(s.y[i], dec || 1)]));
     (p.ints || []).filter(it => it.key === s.key).forEach(it => {
       let b = -1; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= it.a && s.x[i] <= it.b && (b < 0 || s.y[i] > s.y[b])) b = i;
       if (b >= 0) rows.push([`${s.name} · ${T("tdati.apex", { a: nm(it.a, 2), b: nm(it.b, 2) })}`, nm(s.x[b], 4), nm(s.y[b], 1)]);
     });
   });
-  const unit = p.kind === "press" ? T("axis.pressure") : T("tdati.col.int");
+  const unit = p.kind === "press" ? T("axis.pressure") : reg ? `${T("tdati.col.value")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : T("tdati.col.int");
   return { title: ptitle(p), head: [T("tdati.col.trace"), T("tdati.col.rt"), unit], rows, rowHeader: true, note: T("tdati.note.line", { a: nm(a.x0, 2), b: nm(a.x1, 2), n: MAXROWS }) };
 }
 function specData(p) {

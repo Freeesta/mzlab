@@ -126,6 +126,7 @@
     "../../mzlab/web/telefono-scheda.js",
     "../../TP_Mine/js/20_tpmine.js",
     "../../TP_Mine/js/21_tpmine_hr.js",
+    "../../TP_Mine/js/22_tpmine_ms2.js",
     "../../TP_Mine/js/23_tpmine_albero.js",
     "../../TP_Mine/js/24_tpmine_diretta.js",
     "../../TP_Mine/js/25_untarget.js",
@@ -142,7 +143,11 @@
     "../../TP_Mine/js/36_feature_qc.js",
     "../../TP_Mine/js/37_feature_table.js",
     "../../TP_Mine/js/38_feature_export.js",
+    "../../TP_Mine/js/40_tabui_testi.js",
+    "../../TP_Mine/js/41_tabui_aiuto.js",
+    "../../TP_Mine/js/41_tabui_campi.js",
     "../../TP_Mine/js/42_tp_table.js",
-    "../../TP_Mine/js/43_trasformazioni.js"
+    "../../TP_Mine/js/43_trasformazioni.js",
+    "../../TP_Mine/js/44_tp_riga.js"
   ]
 }

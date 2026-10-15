@@ -42,12 +42,12 @@
     const box = document.createElement("div"); box.className = "tptr";
     box.innerHTML = `<div class="tr-bar"><button type="button" class="tr-mode" aria-pressed="false" title="Show the list as plain text: name;change;note, # = off">Edit as text</button><span class="mut">Rows that are off are not searched.</span></div>
       <div class="tr-tab"></div>
-      <div class="tr-add" role="group" aria-label="Add a transformation"><input type="text" class="tr-n" placeholder="Name" aria-label="Name of the transformation" spellcheck="false"><input type="text" class="tr-c" placeholder="Change, e.g. +O-H2" aria-label="Change of formula, e.g. +O-H2" spellcheck="false"><input type="text" class="tr-o" placeholder="Note (optional)" aria-label="Note" spellcheck="false"><button type="button" class="tr-go">Add</button></div>
+      <div class="tr-add" role="group" aria-label="Add a transformation"><input type="text" class="tr-n" placeholder="Name" aria-label="Name of the transformation" spellcheck="false"><input type="text" class="tr-c" placeholder="Change" aria-label="Change of formula, e.g. +O-H2" spellcheck="false"><input type="text" class="tr-o" placeholder="Note" aria-label="Note" spellcheck="false"><button type="button" class="tr-go">Add</button></div>
       <div class="tr-msg" role="status"></div>`;
     det.insertBefore(box, ta);
     const $ = (/** @type {string} */ q) => /** @type {HTMLElement} */ (box.querySelector(q));
     const tab = $(".tr-tab"), msg = $(".tr-msg"), mode = $(".tr-mode");
-    const say = (/** @type {string} */ t, err = false) => { msg.textContent = t; msg.classList.toggle("err", err); };
+    const say = (/** @type {string} */ t, err = false) => { msg.textContent = t; msg.classList.toggle("err", err); delete msg.dataset.f; };
     let text = false, seq = 0;
     ta.hidden = true;
     /** @param {string} t */ const rows = async t => JSON.parse(await call("transf_rows", t)).rows;
@@ -79,17 +79,19 @@
     ta.addEventListener("input", render);
     det.addEventListener("toggle", render);
     /** the line typed in the three boxes, or "" @returns {string} */
+    const invalid = (/** @type {(string | false)[]} */ qs) => { const f = /** @type {HTMLElement[]} */ (qs.filter(Boolean).map(q => $(/** @type {string} */ (q)))); if (!f.length) return; msg.id = msg.id || "tr-msg"; G.TPFIELD.set(f, msg); msg.dataset.f = "1"; f[0].focus(); };
     const typed = () => { const v = (/** @type {string} */ q) => /** @type {HTMLInputElement} */ ($(q)).value.trim().replace(/;/g, ","); return v(".tr-n") + ";" + v(".tr-c") + (v(".tr-o") ? ";" + v(".tr-o") : ""); };
     let prev = 0;
     $(".tr-add").addEventListener("input", async () => {            // Δm of what is typed, before adding it
+      if (msg.dataset.f) say("");
       const me = ++prev; const n = /** @type {HTMLInputElement} */ ($(".tr-c")).value.trim(); if (!n) { say(""); return; }
       try { const r = (await rows("x;" + n))[0]; if (me === prev) say(r && !r.error ? "Δm " + (r.dm > 0 ? "+" : "") + r.dm.toFixed(4) + " Da" : "", false); } catch (_) { /* no preview */ }
     });
     $(".tr-go").addEventListener("click", async () => {
       const n = /** @type {HTMLInputElement} */ ($(".tr-n")).value.trim(), c = /** @type {HTMLInputElement} */ ($(".tr-c")).value.trim();
-      if (!n || !c) { say("Give a name and a change.", true); return; }
-      let r; try { r = (await rows(typed()))[0]; } catch (e) { say(String(/** @type {any} */ (e).message || e), true); return; }
-      if (!r || r.error) { say(r ? r.error : "Not a valid change.", true); return; }
+      if (!n || !c) { say("Name and change needed.", true); invalid([!n && ".tr-n", !c && ".tr-c"]); return; }
+      let r; try { r = (await rows(typed()))[0]; } catch (e) { say(String(/** @type {any} */ (e).message || e), true); invalid([".tr-c"]); return; }
+      if (!r || r.error) { say(r ? r.error : "Not a valid change.", true); invalid([".tr-c"]); return; }
       const l = lines(); while (l.length && !l[l.length - 1].trim()) l.pop(); l.push(typed()); put(l);
       box.querySelectorAll(".tr-add input").forEach(i => { /** @type {HTMLInputElement} */ (i).value = ""; });
       say("Added: " + r.name + " (Δm " + (r.dm > 0 ? "+" : "") + r.dm.toFixed(4) + " Da)");

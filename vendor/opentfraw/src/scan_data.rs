@@ -1,6 +1,36 @@
+use crate::bytes::{read_f32_le, read_f64_le, read_u32_le};
 use crate::error::{Error, Result};
 use crate::reader::BinaryReader;
+use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom};
+
+thread_local! {
+    /// The bytes of the block being decoded: one buffer for every scan, so a scan costs no allocation for it.
+    static BLOCCO: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Above this a block does not stay in `BLOCCO` (a profile of an unusually big scan).
+const BLOCCO_MAX: usize = 1 << 20;
+
+/// Reads the next `n` bytes with ONE read and gives them to `f` as a slice: the fields are decoded from memory, not one read each (a read of the module is a call across the
+/// WASM boundary). The cursor ends where the block ends, as after `n` bytes read field by field.
+fn con_blocco<R: Read + Seek, T>(
+    r: &mut BinaryReader<R>,
+    n: usize,
+    f: impl FnOnce(&[u8]) -> T,
+) -> Result<T> {
+    BLOCCO.with(|b| {
+        let mut b = b.borrow_mut();
+        b.clear();
+        b.resize(n, 0);
+        let letto = r.read_bytes_into(&mut b[..]);
+        let esito = letto.map(|()| f(&b[..]));
+        if b.capacity() > BLOCCO_MAX {
+            *b = Vec::new();
+        }
+        esito
+    })
+}
 
 /// A single centroid peak (m/z + abundance).
 #[derive(Debug, Clone)]
@@ -140,19 +170,26 @@ impl ScanDataPacket {
             return Ok(Vec::new());
         }
         let count = r.read_u32()?;
-        let item_size: u64 = if wide_mz { 12 } else { 8 };
-        r.check_count(count as u64, item_size)?;
-        let mut peaks = Vec::with_capacity(count as usize);
-        for _ in 0..count {
-            let mz = if wide_mz {
-                r.read_f64()?
-            } else {
-                r.read_f32()? as f64
-            };
-            let abundance = r.read_f32()?;
-            peaks.push(Peak { mz, abundance });
-        }
-        Ok(peaks)
+        let item_size: usize = if wide_mz { 12 } else { 8 };
+        let n = r.block_len(count as u64, item_size as u64)?;
+        // the whole list in one read, decoded from the slice
+        con_blocco(r, n, |b| {
+            b.chunks_exact(item_size)
+                .map(|c| {
+                    if wide_mz {
+                        Ok(Peak {
+                            mz: read_f64_le(c, 0)?,
+                            abundance: read_f32_le(c, 8)?,
+                        })
+                    } else {
+                        Ok(Peak {
+                            mz: read_f32_le(c, 0)? as f64,
+                            abundance: read_f32_le(c, 4)?,
+                        })
+                    }
+                })
+                .collect::<Result<Vec<Peak>>>()
+        })?
     }
 
     /// Decode the per-peak label streams that follow the centroid peak list:
@@ -180,13 +217,14 @@ impl ScanDataPacket {
         // size matches that layout; otherwise skip it so other encodings are
         // left untouched.
         let resolutions = if n_peaks > 0 && header.unknown_stream_size as usize == n_peaks + 1 {
-            let _count = r.read_u32()?;
-            r.check_count(n_peaks as u64, 4)?;
-            let mut res = Vec::with_capacity(n_peaks);
-            for _ in 0..n_peaks {
-                res.push(r.read_f32()?);
-            }
-            res
+            // the count word and the n resolutions in one read
+            let n = r.block_len(n_peaks as u64 + 1, 4)?;
+            con_blocco(r, n, |b| {
+                b.chunks_exact(4)
+                    .skip(1)
+                    .map(|c| read_f32_le(c, 0))
+                    .collect::<Result<Vec<f32>>>()
+            })??
         } else {
             // Same overflow hazard as the descriptor stream above: widen
             // before multiplying.
@@ -200,18 +238,18 @@ impl ScanDataPacket {
         // f32 nodes. Per-peak noise/baseline come from interpolating this at
         // the peak m/z (see `noise_at`).
         let node_count = header.triplet_stream_size / 3;
-        r.check_count(node_count as u64, 12)?;
-        let mut noise_nodes = Vec::with_capacity(node_count as usize);
-        for _ in 0..node_count {
-            let mz = r.read_f32()?;
-            let noise = r.read_f32()?;
-            let baseline = r.read_f32()?;
-            noise_nodes.push(NoiseNode {
-                mz,
-                noise,
-                baseline,
-            });
-        }
+        let n = r.block_len(node_count as u64, 12)?;
+        let noise_nodes = con_blocco(r, n, |b| {
+            b.chunks_exact(12)
+                .map(|c| {
+                    Ok(NoiseNode {
+                        mz: read_f32_le(c, 0)?,
+                        noise: read_f32_le(c, 4)?,
+                        baseline: read_f32_le(c, 8)?,
+                    })
+                })
+                .collect::<Result<Vec<NoiseNode>>>()
+        })??;
         // Skip any trailing words if the stream size is not a multiple of 3.
         // The remainder here is always < 3 (by construction of `node_count`
         // as a floor division), so widening before multiplying isn't
@@ -254,50 +292,56 @@ impl ScanDataPacket {
 
 impl PacketHeader {
     fn read<R: Read + Seek>(r: &mut BinaryReader<R>) -> Result<Self> {
-        let _unk1 = r.read_u32()?;
-        let profile_size = r.read_u32()?;
-        let peak_list_size = r.read_u32()?;
-        let layout = r.read_u32()?;
-        let descriptor_list_size = r.read_u32()?;
-        let unknown_stream_size = r.read_u32()?;
-        let triplet_stream_size = r.read_u32()?;
-        let _unk2 = r.read_u32()?;
-        let low_mz = r.read_f32()?;
-        let high_mz = r.read_f32()?;
-
-        Ok(Self {
-            profile_size,
-            peak_list_size,
-            layout,
-            descriptor_list_size,
-            unknown_stream_size,
-            triplet_stream_size,
-            low_mz,
-            high_mz,
-        })
+        // 40 bytes: _unk1, profile_size, peak_list_size, layout, descriptor_list_size, unknown_stream_size, triplet_stream_size, _unk2 (u32), low_mz, high_mz (f32)
+        con_blocco(r, 40, |b| {
+            Ok(Self {
+                profile_size: read_u32_le(b, 4)?,
+                peak_list_size: read_u32_le(b, 8)?,
+                layout: read_u32_le(b, 12)?,
+                descriptor_list_size: read_u32_le(b, 16)?,
+                unknown_stream_size: read_u32_le(b, 20)?,
+                triplet_stream_size: read_u32_le(b, 24)?,
+                low_mz: read_f32_le(b, 32)?,
+                high_mz: read_f32_le(b, 36)?,
+            })
+        })?
     }
 }
 
 impl Profile {
     fn read<R: Read + Seek>(r: &mut BinaryReader<R>, layout: u32) -> Result<Self> {
-        let first_value = r.read_f64()?;
-        let step = r.read_f64()?;
-        let peak_count = r.read_u32()?;
-        let nbins = r.read_u32()?;
+        let (first_value, step, peak_count, nbins) = con_blocco(r, 24, |b| {
+            Ok::<_, Error>((
+                read_f64_le(b, 0)?,
+                read_f64_le(b, 8)?,
+                read_u32_le(b, 16)?,
+                read_u32_le(b, 20)?,
+            ))
+        })??;
 
         let has_fudge = layout & 0xFF != 0;
         // Minimum on-disk size of one chunk: first_bin(4) + chunk_nbins(4).
         r.check_count(peak_count as u64, 8)?;
         let mut chunks = Vec::with_capacity(peak_count as usize);
         for _ in 0..peak_count {
-            let first_bin = r.read_u32()?;
-            let chunk_nbins = r.read_u32()?;
-            let fudge = if has_fudge { Some(r.read_f32()?) } else { None };
-            r.check_count(chunk_nbins as u64, 4)?;
-            let mut signal = Vec::with_capacity(chunk_nbins as usize);
-            for _ in 0..chunk_nbins {
-                signal.push(r.read_f32()?);
-            }
+            let (first_bin, chunk_nbins, fudge) =
+                con_blocco(r, if has_fudge { 12 } else { 8 }, |b| {
+                    Ok::<_, Error>((
+                        read_u32_le(b, 0)?,
+                        read_u32_le(b, 4)?,
+                        if has_fudge {
+                            Some(read_f32_le(b, 8)?)
+                        } else {
+                            None
+                        },
+                    ))
+                })??;
+            let n = r.block_len(chunk_nbins as u64, 4)?;
+            let signal = con_blocco(r, n, |b| {
+                b.chunks_exact(4)
+                    .map(|c| read_f32_le(c, 0))
+                    .collect::<Result<Vec<f32>>>()
+            })??;
             chunks.push(ProfileChunk {
                 first_bin,
                 signal,
@@ -415,13 +459,17 @@ pub fn read_flat_peaks<R: Read + Seek>(
         source.seek(SeekFrom::Start(peaks_start))?;
         let mut r = BinaryReader::new(&mut *source);
 
-        r.check_count(peak_count as u64, 8)?;
-        let mut peaks = Vec::with_capacity(peak_count);
-        for _ in 0..peak_count {
-            let mz = r.read_f32()? as f64;
-            let abundance = r.read_f32()?;
-            peaks.push(Peak { mz, abundance });
-        }
+        let n = r.block_len(peak_count as u64, 8)?;
+        let peaks = con_blocco(&mut r, n, |b| {
+            b.chunks_exact(8)
+                .map(|c| {
+                    Ok(Peak {
+                        mz: read_f32_le(c, 0)? as f64,
+                        abundance: read_f32_le(c, 4)?,
+                    })
+                })
+                .collect::<Result<Vec<Peak>>>()
+        })??;
 
         // Validate: first peak mz should be a plausible mass value (or zero for empty transitions)
         let looks_valid = if let Some(first) = peaks.first() {
@@ -478,16 +526,18 @@ pub fn read_scan_srm_v66<R: Read + Seek>(
     r.skip(n_peaks * 8)?;
 
     // Read peak records: (u32 channel_idx, f32 mz, f32 intensity) × n_peaks
-    r.check_count(n_peaks as u64, 12)?;
-    let mut peaks = Vec::with_capacity(n_peaks);
-    for _ in 0..n_peaks {
-        let _channel = r.read_u32()?;
-        let mz = r.read_f32()? as f64;
-        let abundance = r.read_f32()?;
-        peaks.push(Peak { mz, abundance });
-    }
-
-    Ok(peaks)
+    let n = r.block_len(n_peaks as u64, 12)?;
+    con_blocco(&mut r, n, |b| {
+        b.chunks_exact(12)
+            .map(|c| {
+                // c[0..4] is the channel index
+                Ok(Peak {
+                    mz: read_f32_le(c, 4)? as f64,
+                    abundance: read_f32_le(c, 8)?,
+                })
+            })
+            .collect::<Result<Vec<Peak>>>()
+    })?
 }
 
 /// Read the Q3 isolation window table from an SRM v66 scan record.
@@ -823,5 +873,154 @@ mod tests {
         // Correct: 1.0 + 0.25. Frequency-domain application would instead
         // give 1e6 / 1000.25^2 = 0.99950..., a shift in the wrong direction.
         assert!((mz - 1.25).abs() < 1e-12, "got {mz}");
+    }
+
+    /// A `Cursor` that counts the reads it serves.
+    struct Contato {
+        c: Cursor<Vec<u8>>,
+        letture: std::rc::Rc<std::cell::Cell<usize>>,
+    }
+
+    impl Read for Contato {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.letture.set(self.letture.get() + 1);
+            self.c.read(buf)
+        }
+    }
+
+    impl Seek for Contato {
+        fn seek(&mut self, p: SeekFrom) -> std::io::Result<u64> {
+            self.c.seek(p)
+        }
+    }
+
+    fn u32s(v: &mut Vec<u8>, x: &[u32]) {
+        x.iter().for_each(|x| v.extend_from_slice(&x.to_le_bytes()));
+    }
+
+    fn f32s(v: &mut Vec<u8>, x: &[f32]) {
+        x.iter().for_each(|x| v.extend_from_slice(&x.to_le_bytes()));
+    }
+
+    /// A whole packet: profile of two chunks (with fudge), `n` centroids, resolutions, descriptors and noise nodes.
+    fn pacchetto(n: usize, wide: bool) -> (Vec<u8>, Vec<(f64, f32)>) {
+        let layout = if wide { 0x10001u32 } else { 1 };
+        let chunk = |bin: u32, sig: &[f32]| {
+            let mut v = Vec::new();
+            u32s(&mut v, &[bin, sig.len() as u32]);
+            f32s(&mut v, &[0.25]);
+            f32s(&mut v, sig);
+            v
+        };
+        let mut profilo = Vec::new();
+        profilo.extend_from_slice(&1000.5f64.to_le_bytes());
+        profilo.extend_from_slice(&0.125f64.to_le_bytes());
+        u32s(&mut profilo, &[2, 7]);
+        profilo.extend(chunk(3, &[1.0, 2.0, 3.0]));
+        profilo.extend(chunk(9, &[4.5, 5.5]));
+        let peaks: Vec<(f64, f32)> = (0..n)
+            .map(|i| (100.0 + i as f64 * 0.5, 10.0 + i as f32))
+            .collect();
+        let mut lista = Vec::new();
+        u32s(&mut lista, &[n as u32]);
+        for (mz, a) in &peaks {
+            if wide {
+                lista.extend_from_slice(&mz.to_le_bytes());
+            } else {
+                lista.extend_from_slice(&(*mz as f32).to_le_bytes());
+            }
+            lista.extend_from_slice(&a.to_le_bytes());
+        }
+        let size = |b: &Vec<u8>| (b.len() / 4) as u32;
+        let mut v = Vec::new();
+        let peak_words = size(&lista);
+        let descr = n as u32;
+        let unk = n as u32 + 1;
+        u32s(
+            &mut v,
+            &[0, size(&profilo), peak_words, layout, descr, unk, 6, 0],
+        );
+        f32s(&mut v, &[100.0, 900.0]);
+        v.extend(&profilo);
+        v.extend(&lista);
+        u32s(&mut v, &(0..n as u32).collect::<Vec<_>>());
+        u32s(&mut v, &[n as u32]);
+        f32s(
+            &mut v,
+            &(0..n).map(|i| 1000.0 + i as f32).collect::<Vec<_>>(),
+        );
+        f32s(&mut v, &[100.0, 5.0, 1.0, 900.0, 6.0, 2.0]);
+        let esatti = if wide {
+            peaks.clone()
+        } else {
+            peaks.iter().map(|(m, a)| (*m as f32 as f64, *a)).collect()
+        };
+        (v, esatti)
+    }
+
+    #[test]
+    fn il_pacchetto_letto_a_blocchi_ha_gli_stessi_valori() {
+        for wide in [false, true] {
+            let (bytes, attesi) = pacchetto(40, wide);
+            let tutto =
+                ScanDataPacket::read(&mut BinaryReader::new(Cursor::new(bytes.clone()))).unwrap();
+            assert_eq!(tutto.header.profile_size, 17);
+            let p = tutto.profile.as_ref().unwrap();
+            assert_eq!(
+                (p.first_value, p.step, p.peak_count, p.nbins),
+                (1000.5, 0.125, 2, 7)
+            );
+            assert_eq!(p.chunks[0].first_bin, 3);
+            assert_eq!(p.chunks[0].signal, vec![1.0, 2.0, 3.0]);
+            assert_eq!(p.chunks[1].fudge, Some(0.25));
+            assert_eq!(p.chunks[1].signal, vec![4.5, 5.5]);
+            let got: Vec<(f64, f32)> = tutto.peaks.iter().map(|p| (p.mz, p.abundance)).collect();
+            assert_eq!(got, attesi);
+            assert_eq!(
+                tutto.resolutions,
+                (0..40).map(|i| 1000.0 + i as f32).collect::<Vec<_>>()
+            );
+            assert_eq!(tutto.noise_nodes.len(), 2);
+            assert_eq!(tutto.noise_nodes[1].baseline, 2.0);
+            assert_eq!(tutto.header.low_mz, 100.0);
+            // the other two entry points give the same peaks and labels
+            let senza = ScanDataPacket::read_skip_profile(&mut BinaryReader::new(Cursor::new(
+                bytes.clone(),
+            )))
+            .unwrap();
+            assert_eq!(senza.resolutions, tutto.resolutions);
+            let solo = ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(bytes)))
+                .unwrap();
+            assert_eq!(
+                solo.iter().map(|p| (p.mz, p.abundance)).collect::<Vec<_>>(),
+                attesi
+            );
+        }
+    }
+
+    /// The reads a scan costs do not depend on its peaks: before, every field was a read of its own (2 per peak).
+    #[test]
+    fn le_letture_non_dipendono_dal_numero_di_picchi() {
+        let conta = |n: usize| {
+            let (bytes, _) = pacchetto(n, false);
+            let letture = std::rc::Rc::new(std::cell::Cell::new(0));
+            let mut r = BinaryReader::new(Contato {
+                c: Cursor::new(bytes),
+                letture: letture.clone(),
+            });
+            ScanDataPacket::read_peaks_only(&mut r).unwrap();
+            letture.get()
+        };
+        assert_eq!(conta(10), conta(1000));
+        assert!(conta(1000) <= 3, "{}", conta(1000));
+    }
+
+    #[test]
+    fn un_pacchetto_troncato_da_errore() {
+        let (bytes, _) = pacchetto(40, false);
+        for n in [0, 20, 39, 60, bytes.len() / 2, bytes.len() - 1] {
+            let r = ScanDataPacket::read(&mut BinaryReader::new(Cursor::new(bytes[..n].to_vec())));
+            assert!(r.is_err(), "{n}");
+        }
     }
 }

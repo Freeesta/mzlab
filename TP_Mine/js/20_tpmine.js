@@ -20,13 +20,14 @@
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp input.tp-est{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
-.tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
+.tp .b-forte{background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ink);border-color:var(--ok)}.tp .b-possibile{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--ink);border-color:var(--warn)}.tp .b-debole{color:var(--muted)}
 
+.tp .tp-lr{margin:4px 0;font-size:12px}.tp-lr .bar{margin-top:2px}
 .tp .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.tp .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}
 .tp .crit li{margin:2px 0}.tp .crit .pass{color:var(--ok)}.tp .crit .fail{color:var(--bad)}.tp .crit .na{color:var(--muted)}
 .tp .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1300px){.tp .cols{grid-template-columns:1fr}}
-.tp .err{color:var(--bad)}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
+.tp .err{color:var(--bad)}.tp [aria-invalid="true"]{border:2px solid var(--bad);box-shadow:inset 4px 0 0 var(--bad)}.tp .row>.grow-in{flex:1;width:auto;min-width:0}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
@@ -188,37 +189,41 @@
   // ---------------------------------------------------------------- the tab
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
+    const W = /** @type {any} */ (window), hb = (k, l, id) => (W.TPHELP ? W.TPHELP.button(k, l, id) : "");
     sec.innerHTML = `<div class="tp-wrap">
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the mzML files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick">Choose mzML...</button></div>
-  <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
-  <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title="mzML, or the files of the instrument as they are (.raw, .wiff + .wiff.scan): they are prepared in the Data tab and join the list here">Choose files...</button><button id="tp-pickdir" title="A whole folder, for example an Agilent .D">Choose folder...</button></div>
+  <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
+  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
-  <div class="row tp-ac"><input type="text" id="tp-name" placeholder="Name (type 2 letters to search the list)" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
-  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
-  <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
+  <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
+  <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Formula")}</div>
+  <div class="row"><input type="text" id="tp-smi" class="grow-in" placeholder="SMILES" aria-label="SMILES" spellcheck="false"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button>${hb("ft.f.smiles", "SMILES")}</div>
   <div id="tp-warn" role="status"></div>
-  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
-  <div class="row"><label class="mut grow" for="tp-prt">RT of the parent (min; empty = automatic)</label><input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
+  <div class="row"><label class="mut" for="tp-add">Adduct</label>${hb("ft.f.adduct", "Adduct")}<select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+HCOO]-</option></select><span class="mut" id="tp-prev"></span></div>
+  <div class="row"><label class="mut grow" for="tp-prt">RT (min)</label>${hb("ft.f.prt", "RT")}<input type="number" id="tp-prt" step="0.05" min="0" placeholder="auto" style="width:70px"></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><button id="tp-est" type="button" title="Low resolution: propose the XIC window, the RT tolerance and the start of the analysis from the loaded files (yellow values, editable)">Estimate from data</button></div>
-  <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
-  <div class="row"><label class="mut grow" for="tp-minf" title="Low resolution: a peak must appear in at least this many treated samples, or in two consecutive ones at the same RT (fewer when the series is shorter). 0 = off.">Peak in at least (samples)</label><input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
+  <div class="row"><label class="mut grow" id="tp-tol-l" for="tp-tol">XIC ±Da</label>${hb("ft.f.tol", "XIC")}<input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtt">RT ±min</label>${hb("ft.f.rtt", "RT tolerance")}<input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-steps">Steps</label>${hb("ft.f.steps", "Steps")}<input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-minf">Min. samples</label>${hb("ft.f.minf", "Min. samples")}<input type="number" id="tp-minf" value="3" min="0" max="20" style="width:70px"></div>
+  <div class="row"><label class="mut grow" for="tp-rtmin">RT from (min)</label>${hb("ft.f.rtmin", "RT from")}<input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
+  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Unexpected ions</label>${hb("ft.f.disc", "Unexpected ions", "tp-disc-h")}</div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
  <div class="card" id="tp-untcard"><h3>Feature tables</h3><div class="mut">mzMine, MS-DIAL or GNPS2 tables: match every feature with an MS<sup>2</sup> against the spectral libraries and assign a level.</div><div class="row"><button id="tp-unt" type="button" aria-haspopup="dialog">Match a feature table...</button></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: Tabui calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
+    if (W.TPHELP) W.TPHELP.attach(sec);
+    const FIELD = () => W.TPFIELD, parentFields = () => [$("#tp-mol"), $("#tp-smi")];
+    if (W.TPFIELD) W.TPFIELD.watch(sec, () => { if ($("#tp-msg").dataset.field) msg(""); });       // the group returns to normal on a click or a key in it; so does its message
     /** @type {any} */
     const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
-    const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
+    const msg = (t, err) => { const m = $("#tp-msg"); m.textContent = t || ""; m.className = "mut" + (err ? " err" : ""); delete m.dataset.field; };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
 
@@ -270,7 +275,7 @@
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
         st.files = st.files.filter(f => !info.some(i => i.name === f.name));
         for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
-        if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
+        if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr" || (f.kind === "ms2" && !st.files.some(x => x.kind === "hr")));   // automatic start: the Full Scan / HRMS series, and its MS2 files when it is low resolution
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg(""); bar(0);
         estimateLr();
@@ -278,15 +283,47 @@
     }
     $("#tp-page").onclick = async () => {
       await loadFromData(false); };
+    const forAdd = x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf };
+    // files of the instrument (.raw, .wiff + .wiff.scan, a .D folder): the Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of nativo-fasi.js), they appear in its list too, and Tabui takes the stubs as "Reload from Data" does
+    const PHASE = { read: "Reading", scans: "Scans", chrom: "Chromatograms" };
+    async function loadMaker(fs, folder) {
+      if (typeof upload !== "function" || typeof CartCarica === "undefined" || typeof ST === "undefined") return msg("The Data tab is not ready: try again in a moment.", true);
+      const before = new Set((ST.files || []).map(f => f.name)), rows = new Map(), box = $("#tp-load");
+      const onIdx = ev => {
+        const d = ev.detail || {}; if (!d.name || before.has(d.name)) return;
+        let r = rows.get(d.name);
+        if (!r) { r = document.createElement("div"); r.className = "tp-lr"; r.innerHTML = `<span class="tp-lrn"></span> <span class="mut tp-lrp"></span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i></i></div>`; r.querySelector(".tp-lrn").textContent = d.name.replace(/\.mzml$/i, ""); box.appendChild(r); rows.set(d.name, r); }
+        const w = Math.min(100, Math.round(100 * (d.frac || 0)));
+        r.querySelector(".tp-lrp").textContent = `${PHASE[d.phase] || "Indexing"} ${w}%`; r.querySelector("i").style.width = w + "%";
+        const b = r.querySelector(".bar"); b.setAttribute("aria-valuenow", String(w)); b.setAttribute("aria-label", `${d.name}: ${PHASE[d.phase] || "Indexing"}`);
+      };
+      addEventListener("mzlab-index", onIdx);
+      msg(`Preparing ${fs.length} file${fs.length === 1 ? "" : "s"} in the Data tab...`);
+      try {
+        if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data");
+        const fresh = new Set((ST.files || []).map(f => f.name).filter(n => !before.has(n)));
+        const got = (await pageFiles()).filter(x => fresh.has(x.name));
+        if (!got.length) return msg("No new sample was added: the files are already in the Data tab, or they cannot be read (see the notice there).", true);
+        await addFiles(got.map(forAdd));
+      } catch (e) { msg(String(e.message || e), true); }
+      finally { removeEventListener("mzlab-index", onIdx); box.textContent = ""; }
+    }
     // default: the Full Scan / HRMS files already loaded in the Data tab (browser memory) are taken at once
     async function loadFromData(quiet) {
       msg("Looking for the files in browser memory...");
       const f = await pageFiles();
-      if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
-      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf }), quiet);
+      if (!f.length) return msg(quiet ? "" : "No file in the Data tab of this browser: open them there or use “Choose files...”.", !quiet);
+      await addFiles(f.map(forAdd), quiet);
     }
     $("#tp-pick").onclick = () => $("#tp-in").click();
-    $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
+    $("#tp-in").onchange = async ev => {
+      const fs = [...ev.target.files]; ev.target.value = "";
+      const mz = fs.filter(f => /\.mzml$/i.test(f.name)), other = fs.filter(f => !/\.mzml$/i.test(f.name));
+      if (mz.length) await addFiles(mz.map(f => ({ name: f.name, file: f })));
+      if (other.length) await loadMaker(other, false);
+    };
+    $("#tp-pickdir").onclick = () => { const i = $("#tp-dir"); i.setAttribute("webkitdirectory", ""); i.click(); };
+    $("#tp-dir").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; if (fs.length) await loadMaker(fs, true); };
     // mode: high resolution -> XIC window in ppm (default 5) and RT tolerance from the chromatographic method; unit resolution -> Da and 0.25 min
     let curMode = "";
     function modeUI() {
@@ -295,11 +332,11 @@
       if (m !== curMode) {
         curMode = m;
         if (m === "hr") {
-          $("#tp-tol-l").textContent = "XIC window ±ppm"; t.value = 5; t.step = 1; t.min = 1;
+          $("#tp-tol-l").textContent = "XIC ±ppm"; t.value = 5; t.step = 1; t.min = 1;
           const span = Math.max(0, ...st.files.filter(f => f.kind === "hr").map(f => f.rt_max || 0));
           r.value = span ? Math.max(0.05, Math.round(span * 0.005 / 0.05) * 0.05).toFixed(2) : "0.10";      // 0.5 % of the gradient length (20 min: 0.10)
           r.title = "From the chromatographic method (0.5 % of the run length)";
-        } else { $("#tp-tol-l").textContent = "XIC window ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
+        } else { $("#tp-tol-l").textContent = "XIC ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;
       $("#tp-disc").closest(".row").hidden = m === "hr";                // the HR pipeline is already untargeted
@@ -323,6 +360,7 @@
       pvT = setTimeout(async () => {
         const { mol, smi } = parentVals(), ad = $("#tp-add").value;
         $("#tp-warn").textContent = "";
+        FIELD().clear(parentFields());
         if (!mol && !smi) { $("#tp-prev").textContent = ""; structure(""); return; }
         structure(smi);
         let info = null;
@@ -334,6 +372,7 @@
           const mzNew = r.ok ? +r.mz : 0;
           if (mzNew !== parentMz) { parentMz = mzNew; if (parentMz) estimateLr(); }
           $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
+          if (!r.ok) FIELD().set([$(mol ? "#tp-mol" : "#tp-smi")], $("#tp-prev"));
           if (r.ok && mol && info) $("#tp-warn").textContent = MOLUI.mismatchText(r.formula, info.formula);       // compositions, not strings: the order of the elements is irrelevant
         } catch (e) { $("#tp-prev").textContent = ""; }
       }, 350);
@@ -405,16 +444,23 @@
     let dbar = document.getElementById("tp-drawbar");
     if (!dbar) {
       dbar = document.createElement("div"); dbar.id = "tp-drawbar"; dbar.hidden = true; dbar.setAttribute("role", "region"); dbar.setAttribute("aria-label", "Tabui: parent structure");
-      dbar.innerHTML = `<span>Drawing the Tabui parent</span><button type="button" id="tp-draw-use" class="imp">Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
+      dbar.innerHTML = `<span>Drawing the Tabui parent</span><span id="tp-draw-st" role="status"></span><button type="button" id="tp-draw-use" class="imp" disabled>Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
       document.body.appendChild(dbar);
     }
     let drawing = false;
     const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
-    drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
+    const dst = /** @type {HTMLElement} */ (document.getElementById("tp-draw-st")), duse = /** @type {HTMLButtonElement} */ (document.getElementById("tp-draw-use"));
+    const dsay = (/** @type {string} */ t) => { dst.textContent = t; };
+    drawBtn.onclick = async () => {                                        // the editor loads on demand: «Use» waits for it, and the typed SMILES is shown in it
+      drawing = true; dbar.hidden = false; duse.disabled = true; dsay("Loading the editor..."); setView("draw");
+      const smi = $("#tp-smi").value.trim();
+      try { if (smi) await window.TPDraw.load(smi); else await window.TPDraw.when(); duse.disabled = false; dsay(""); }
+      catch (e) { dsay("The editor did not start: " + String((e && e.message) || e)); }
+    };
     document.addEventListener("tpview", /** @type {(e: any) => void} */ e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
     /** @type {any} */ (document.getElementById("tp-draw-no")).onclick = back;
     /** @type {any} */ (document.getElementById("tp-draw-use")).onclick = async () => {
-      let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
+      let t = ""; try { t = await window.TPDraw.smiles(); } catch (e) { dsay("Could not read the drawing: " + String((e && e.message) || e)); return; }
       if (!t) { toast("Nothing drawn yet."); return; }
       $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
     };
@@ -426,8 +472,8 @@
     $("#tp-go").onclick = async () => {
       const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");
+      if (!mol) { msg("Enter a formula or SMILES.", true); $("#tp-msg").dataset.field = "1"; FIELD().set(parentFields(), $("#tp-msg")); $("#tp-mol").focus(); return; }
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
-      if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
       const have = new Set(st.files.map(f => String(f.name || "").split(/[\\/]/).pop()));            // files loaded but not in this series: failed to read, or still being opened
       const lost = [...new Set([...(window.QQQ_LOADFAIL || []), ...(((typeof E !== "undefined" && E.pending) || []).filter(x => x.state === "err" || x.state === "wait").map(x => x.file))])].filter(n => !have.has(n));
       $("#tp-warn").textContent = lost.length ? `Warning: ${lost.length} file${lost.length > 1 ? "s" : ""} not read and left out of this run (${lost.slice(0, 4).join(", ")}${lost.length > 4 ? ", ..." : ""}). Load ${lost.length > 1 ? "them" : "it"} again before trusting the series.` : "";
@@ -435,7 +481,7 @@
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
-        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked };
+        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [] };
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
@@ -488,7 +534,8 @@
         <div class="stat"><b data-count="${s.rows.length}">0</b><span>ions analysed</span></div></div>
         <div class="row" style="margin-top:10px"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">📋 Copy summary</button></div></div>
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
-        <div id="tp-view"></div>${mrmCard(s.mrm)}<div id="tp-det"></div>`;
+        <div id="tp-view"></div>${window.TPMS2 ? window.TPMS2.card(s) : ""}${mrmCard(s.mrm)}<div id="tp-det"></div>`;
+      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
       R.querySelectorAll(".stat b").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
@@ -600,14 +647,22 @@
         <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Type</th><th>t</th>${c ? "<th>conc. (mg/L)</th>" : ""}<th>Quant. area</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Qual. area</th><th>Qual/Quant</th>`).join("")}<th>Ratio</th>${c ? "<th>Calculated (mg/L)</th><th></th>" : ""}</tr>${body}</table></div></div>
         ${c ? `<div><div class="mut">Line: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · weights ${c.weighting} · R² (unweighted) ${c.r2.toFixed(4)} · ${c.points.length} points, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas></div>` : ""}</div></div>`;
     }
+    const hasMs2 = (/** @type {any} */ s) => !!(s.ms2_links && s.ms2_links.experiments && s.ms2_links.experiments.length);      // a series without MS2 file has no card and no column
+    /** @param {number[]} touched */
+    function ms2Refresh(touched) {          // after a correction of the MS2 matches: the card, the table of rows and the open detail
+      const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
+      const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
+      window.TPMS2.mount({ st, call, refresh: ms2Refresh }); rows();
+      if (st.sel != null && (touched.includes(st.sel))) show(st.sel);
+    }
     function rows() {
       if (!$("#tp-t")) return;
       const s = st.summary, f = st.filter;
       const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
-      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
+      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th>${hasMs2(s) ? "<th>MS2</th>" : ""}</tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
         <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lvb lv-${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
         <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(MOLUI.cap(r.name))}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
-        <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td></tr>`).join("");
+        <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td>${hasMs2(s) ? `<td class="n">${window.TPMS2.cell(r)}</td>` : ""}</tr>`).join("");
       $("#tp-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
     }
     function words(d, par) {
@@ -618,7 +673,7 @@
       P.push(`<b>${esc(MOLUI.cap(d.name))}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
       if (first && mx) P.push(`Appears at ${first.time} min and peaks at ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "it is absent from the blank." : "something shows in the blank: be careful.") : "there is no blank to rule out a contaminant."}`);
       if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
-      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor}): ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
+      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor})${window.TPMS2 ? window.TPMS2.from(d) : ""}: ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
       else P.push("No MS2 with this precursor: a Product Ion Scan on the peak is needed to raise the level.");
       P.push(d.level_text ? esc(d.level_text) : "");
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
@@ -640,8 +695,9 @@
         <div class="card"><h3>Kinetics (peak area)</h3><canvas id="tp-c-kin"></canvas></div></div>
         <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
-        <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
+        <div class="card">${window.TPMS2.detail(d)}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
+      window.TPMS2.bindDetail(D, d);
       const isPar = par && id === par.id;
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -669,11 +725,12 @@
         const head = ["#", "Candidate", "Formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
         const line = r => [r.id, r.name, r.formula, r.delta, r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", Math.round(r.max_area), ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
-        if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det }, null, 1), "application/json");
+        if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
         const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || ""])), widths: [6, 38, 12, 9, 9, 50] },
+          ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
           { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
           { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];

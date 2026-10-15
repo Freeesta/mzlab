@@ -1,4 +1,4 @@
-"""mzFinder HR: parent-TP pairs. Synthetic series whose products carry fragments shifted by the mass difference: the Pred. and Sim. columns, the three
+"""mzFinder HR: parent-TP pairs. Synthetic series whose products carry fragments shifted by the mass difference: the Prev. and Sim. columns, the three
 components of the similarity and the mirror, the prediction level, the network of mass differences (SVG, table, keyboard). Run from the repo root:
 python3 tests_e2e/e2e_tpmine_ms2.py   (env: PYODIDE_DIR)"""
 import os, shutil, subprocess, sys, time, tempfile
@@ -41,7 +41,7 @@ try:
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             pg.locator("#hr-colm summary").click(); pg.check('#hr-cols input[data-col="pred"]'); pg.check('#hr-cols input[data-col="sim"]')          # off by default
             tab = pg.inner_text("#hr-t")
-            assert "Pred." in tab and "Sim." in tab, tab[:300]
+            assert "Prev." in tab and "Sim." in tab, tab[:300]
             assert pg.evaluate("document.querySelectorAll('#hr-t .lvb.pd-1').length") >= 2          # both known products are confirmed by their shifted fragments
             assert pg.evaluate("document.querySelectorAll('#hr-t .sim-bar i').length") >= 6
             pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_selector("#tp-det .sim3", timeout=10000)

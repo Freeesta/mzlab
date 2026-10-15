@@ -47,10 +47,11 @@ async function corrected(p, all) {
   return out;
 }
 async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
-// the kinds of chromatogram that come from an analog trace of the file: the pump pressure ("press") and any other device trace ("an:<id>")
-const isAnalog = k => k === "press" || (typeof k === "string" && k.startsWith("an:"));
+// the kinds of chromatogram that come from an analog trace of the file: the pump pressure ("press"), any other device trace ("an:<id>") and a series of the instrument log ("reg", registro-serie.js)
+const isAnalog = k => k === "press" || k === "reg" || (typeof k === "string" && k.startsWith("an:"));
 const analogOf = (f, kind) => (f.analog || []).find(a => (kind === "press" ? a.kind === "pressure" : a.id === String(kind).slice(3)));
 async function analogSeries(p) {
+  if (p.kind === "reg") return window.REGISTRO ? REGISTRO.series(p, shownFor(p)) : [];
   const r = await Promise.all(shownFor(p).filter(f => analogOf(f, p.kind)).map(f => {
     const a = analogOf(f, p.kind);
     return memo(`an${f.k}|${a.i}`, () => J(`api/analog?k=${f.k}&i=${a.i}&n=2000`)).then(d => ({ x: d.t, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `a|${f.k}|${a.i}`, ion: a.id, time: f.time, unit: d.unit, unitNote: d.unit_note }));
@@ -171,7 +172,7 @@ function syncView(p) {
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 // title of the y axis: what the corrected trace is (blank file, background or both)
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
-const analogTitle = (p, sr) => (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
+const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
@@ -575,6 +576,7 @@ async function drawMap(p) {
   };
   const rng = B ? [`<span title="${EH(I18N.t("map.leg2d.up.tip"))}">${I18N.t("map.leg2d.up")}</span>`, `<span title="${EH(I18N.t("map.leg2d.down.tip"))}">${I18N.t("map.leg2d.down")}</span>`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? "" : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span>`;
+  if (p.corrbar) p.corrbar.innerHTML = "";
   if (window.SUBREF && B) SUBREF.chip(p);
   if (window.MAPPA) MAPPA.after(p);
 }

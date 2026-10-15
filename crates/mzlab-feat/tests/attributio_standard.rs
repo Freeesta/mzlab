@@ -347,7 +347,7 @@ fn decision_errors_have_the_messages_of_attributio() {
     };
     assert_eq!(
         err("POS;1;;;4;;;;;"),
-        "f.csv: livello must be '2b', '3', '2' or empty, found ['4']"
+        "f.csv: livello must be '2b', '3a', '3b', '3', '2' or empty, found ['4']"
     );
     assert_eq!(
         err("POS;1;;;2b;;;;;"),

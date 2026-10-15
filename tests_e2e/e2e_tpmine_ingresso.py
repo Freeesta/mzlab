@@ -1,4 +1,4 @@
-"""mzFinder, ingress (TP_Mine/files/finder-idx.js): a high-resolution mzML that has no .mzidx in OPFS (picked with «Choose mzML...» or taken from the IndexedDB of an older visit)
+"""mzFinder, ingress (TP_Mine/files/finder-idx.js): a high-resolution mzML that has no .mzidx in OPFS (picked with «Choose files...» or taken from the IndexedDB of an older visit)
 gets its index from the SAME builder as the main program (same bytes), then classify and the Dig run in Rust, equal to the case «Reload from Data», and Pyodide is never requested.
 Builds the site (python3 tools/build_site.py) and static/wasm-feat (tools/build_feat_wasm.sh); SKIP without cargo, wasm-bindgen or numpy. MZLAB_PIPE_SITE=<built site with
 static/wasm-feat> reuses a site (the TP_Mine files are copied over it). Run from the repo root: python3 tests_e2e/e2e_tpmine_ingresso.py"""
@@ -119,13 +119,13 @@ try:
                 q.wait_for_timeout(500); got = q.evaluate(SHAS)
             return got
 
-        def chosen():                                       # a new profile: no file, no index in OPFS; «Choose mzML...» gives the files to the worker
+        def chosen():                                       # a new profile: no file, no index in OPFS; «Choose files...» gives the files to the worker
             q = fresh(b); assert q.evaluate(SHAS) == {}
             q.click('#nav button[data-v="tpmine"]'); q.wait_for_selector("#tp-go")
             q.set_input_files("#tp-in", mzml); rows_ready(q)
             got = settle(q); assert same(got), (got, ref)
             t = dig(q); assert t == ref["table"], "the Dig of the chosen files differs from the one from the Data tab: " + diff(t, ref["table"])
-        step("Choose mzML...: the .mzidx equals the one of the main program, the Dig equals the one from the Data tab", chosen)
+        step("Choose files...: the .mzidx equals the one of the main program, the Dig equals the one from the Data tab", chosen)
 
         def from_idb():                                     # a new profile with the bytes only in IndexedDB (an older visit), no index in OPFS
             q = fresh(b)

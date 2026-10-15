@@ -139,6 +139,17 @@ impl<R: Read + Seek> BinaryReader<R> {
         Ok(())
     }
 
+    /// [`Self::check_count`], and the size in bytes of `count` items of `item_bytes` as a `usize` (an error where it does not fit the address space).
+    pub(crate) fn block_len(&mut self, count: u64, item_bytes: u64) -> Result<usize> {
+        self.check_count(count, item_bytes)?;
+        let needed = count.saturating_mul(item_bytes.max(1));
+        usize::try_from(needed).map_err(|_| Error::AllocationTooLarge {
+            offset: self.pos,
+            requested: needed,
+            available: usize::MAX as u64,
+        })
+    }
+
     pub fn read_u8(&mut self) -> Result<u8> {
         let mut buf = [0u8; 1];
         self.read_bytes_into(&mut buf)?;

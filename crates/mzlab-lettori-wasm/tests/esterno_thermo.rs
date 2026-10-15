@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
-use mzlab_lettori_wasm::sessione::{Scansione, Sessioni};
+use mzlab_lettori_wasm::sessione::Sessioni;
 use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
 
 fn raw_files() -> Vec<PathBuf> {
@@ -66,16 +66,14 @@ impl Modulo for ViaSessione {
     fn campioni(&mut self) -> Result<String> {
         self.s.campioni(self.h)
     }
-    fn indice(&mut self, c: usize) -> Result<String> {
+    fn protocollo(&mut self) -> Result<u32> {
+        Ok(mzlab_core::trasporto::PROTOCOLLO)
+    }
+    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
         self.s.indice(self.h, c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<(Vec<f64>, Vec<f64>, String)> {
-        let Scansione {
-            mz,
-            intensita,
-            meta,
-        } = self.s.scansione(self.h, c, k)?;
-        Ok((mz, intensita, meta))
+    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        self.s.scansione(self.h, c, k)
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
         self.s.intestazione(self.h, c, k)

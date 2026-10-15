@@ -4,13 +4,17 @@
 //! code runs on the files the browser holds, on the desktop and in the tests. Paths are text with «/», relative to the campaign folder. The result is a set of
 //! typed rows (`Sources`) that the level cascade uses without opening a file again.
 
+pub mod annotate;
 pub mod campaign;
 mod campaign_read;
+pub mod checks;
 pub mod detection;
 pub mod error;
+pub mod formula;
 pub mod frame;
 pub mod io;
 pub mod readers;
+pub mod rt_logp;
 pub mod sorbents;
 pub mod sources;
 pub mod toml;

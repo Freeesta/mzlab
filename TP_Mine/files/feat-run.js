@@ -21,21 +21,23 @@ export async function runFeatPipeline(pool, { files, recipe, parent, save = fals
   pool.onProgress = p => { mem = Math.max(mem, p.memMB || 0); if (p.phase === "detect") perFile.push(p.ms);
     if (p.phase !== "detect") peaks[p.phase] = p.memMB; if (prev) prev(p); };
   const refused = e => e && e.key === "error.featMemory";
+  // the engine «untargeted» (mzmine-like, Attributio): its own detect and align calls, no hypotheses or proofs
+  const unt = (() => { try { return JSON.parse(recipe).engine === "untargeted"; } catch (_) { return false; } })();
   const putFiles = async () => { for (let i = 0; i < files.length; i++) await pool.fs.write("mzlab/feat/" + files[i].name + ".mzfeatf", stored[i].slice()); };
   const putTable = bytes => pool.fs.write("mzlab/feat/series.mzfeat", bytes.slice());
   let stored, table;
   try {
     let row;
-    [stored, row] = await phase("detect", () => pool.detectAll(files, recipe));
+    [stored, row] = await phase("detect", () => unt ? pool.detectAllUnt(files, recipe) : pool.detectAll(files, recipe));
     row.files = files.length; row.perFileMs = perFile.slice(); row.peakMB = mem;
     if (save) await phase("save", putFiles);
     let arow;
-    try { [table, arow] = await phase("align", () => pool.align(stored, files.map(f => f.path), recipe)); }
+    try { [table, arow] = await phase("align", () => (unt ? pool.alignUnt : pool.align)(stored, files.map(f => f.path), recipe)); }
     catch (e) { if (refused(e)) e.params = { ...e.params, files: files.length }; throw e; }
     arow.peakMB = peaks.align;
     if (save) await phase("save", () => putTable(table));
     const out = { stored, table, evid: null, tried: 0, found: 0, registry: null, timings, degraded: null };
-    if (parent) {
+    if (parent && !unt) {
       const args = { table, stored, paths: files.map(f => f.path), recipe, ...parent };
       try {
         const [h, hrow] = await phase("hypotheses", () => pool.hypotheses(args));

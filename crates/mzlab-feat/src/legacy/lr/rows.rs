@@ -113,12 +113,12 @@ pub fn cells(t: &Aligned, r: usize) -> Vec<Cell> {
         .collect()
 }
 
-fn is_treated(f: &FileIn) -> bool {
+pub(super) fn is_treated(f: &FileIn) -> bool {
     f.kind == "sample" && f.time.is_none_or(|t| t > 0.0)
 }
 
 /// Largest detected area of row `r` in the files `sel` keeps.
-fn best_area(t: &Aligned, files: &[FileIn], r: usize, sel: fn(&FileIn) -> bool) -> f64 {
+pub(super) fn best_area(t: &Aligned, files: &[FileIn], r: usize, sel: fn(&FileIn) -> bool) -> f64 {
     (0..t.n_files)
         .filter(|&k| {
             sel(&files[k])
@@ -157,7 +157,14 @@ pub fn calibrate(
 }
 
 /// An entry with its identity and no evaluation yet.
-fn entry(id: i64, unexpected: bool, name: String, mz: f64, mz_x: f64, row: Option<usize>) -> Entry {
+pub(super) fn entry(
+    id: i64,
+    unexpected: bool,
+    name: String,
+    mz: f64,
+    mz_x: f64,
+    row: Option<usize>,
+) -> Entry {
     Entry {
         id,
         unexpected,

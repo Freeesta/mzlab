@@ -8,8 +8,10 @@ mod impostazioni;
 mod inclusione;
 mod lock;
 mod ole_raw;
+mod registro;
 mod rivelatori;
 mod script;
+pub(crate) mod serie;
 pub(crate) mod tsq;
 
 use crate::agilent;
@@ -319,6 +321,11 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             Some(V::Arr(campi::fields(
                 raw, source, &traces, &pairs, &items, &ident,
             ))),
+        ),
+        ("registro", Some(V::Arr(registro::voci(&raw.error_log)))),
+        (
+            "serie_registro",
+            Some(V::Arr(serie::sezione(&serie::indice(raw, source)))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),

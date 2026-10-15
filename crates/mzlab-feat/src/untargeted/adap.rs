@@ -87,6 +87,8 @@ pub struct Chrom {
     pub mz_mean: f64,
     pub scan: Vec<u32>,
     pub int: Vec<f32>,
+    /// m/z of each point (0.0 on the padded zeros), parallel to `scan`: the resolver weights the m/z of a peak with it.
+    pub point_mz: Vec<f64>,
     /// Real points (without the padded zeros).
     pub points: usize,
 }
@@ -126,9 +128,14 @@ impl Building {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, PartialEq)]
 struct Key(f64);
 impl Eq for Key {}
+impl PartialOrd for Key {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
 impl Ord for Key {
     fn cmp(&self, o: &Self) -> std::cmp::Ordering {
         self.0.total_cmp(&o.0)
@@ -285,8 +292,8 @@ fn finish(c: Building, nscans: usize, p: &AdapParams) -> Option<Chrom> {
         return None;
     }
     let extra = zeros(&c, nscans);
-    let mut rows: Vec<(u32, f32)> = c.pts.iter().map(|(s, (i, _))| (*s, *i)).collect();
-    rows.extend(extra.into_iter().map(|s| (s, 0.0)));
+    let mut rows: Vec<(u32, f32, f64)> = c.pts.iter().map(|(s, (i, m))| (*s, *i, *m)).collect();
+    rows.extend(extra.into_iter().map(|s| (s, 0.0, 0.0)));
     rows.sort_by_key(|r| r.0);
     let wsum: f64 = c.pts.values().map(|(i, _)| *i as f64).sum();
     let weighted = c.pts.values().map(|(i, m)| *i as f64 * m).sum::<f64>() / wsum;
@@ -300,6 +307,7 @@ fn finish(c: Building, nscans: usize, p: &AdapParams) -> Option<Chrom> {
         points: c.pts.len(),
         scan: rows.iter().map(|r| r.0).collect(),
         int: rows.iter().map(|r| r.1).collect(),
+        point_mz: rows.iter().map(|r| r.2).collect(),
     })
 }
 
@@ -345,10 +353,20 @@ pub fn slab_count(scans: &[Ms1Scan], p: &AdapParams, budget_bytes: usize) -> usi
 
 /// The same chromatograms as `build`, one slab of m/z at a time so that no more than about `budget_bytes` of points are alive.
 pub fn build_slabs(scans: &[Ms1Scan], p: &AdapParams, budget_bytes: usize) -> Vec<Chrom> {
-    let cuts = cuts(scans, p, (budget_bytes / POINT_BYTES).max(1));
     let mut out = Vec::new();
-    for w in cuts.windows(2) {
-        out.extend(run(gather(scans, Some((w[0], w[1]))), scans.len(), p));
-    }
+    each_slab(scans, p, budget_bytes, |c| out.extend(c));
     out
+}
+
+/// `build_slabs` handing each slab to `f` as soon as it is built, so a caller that reduces the chromatograms (the resolver) never holds them all.
+pub fn each_slab(
+    scans: &[Ms1Scan],
+    p: &AdapParams,
+    budget_bytes: usize,
+    mut f: impl FnMut(Vec<Chrom>),
+) {
+    let cuts = cuts(scans, p, (budget_bytes / POINT_BYTES).max(1));
+    for w in cuts.windows(2) {
+        f(run(gather(scans, Some((w[0], w[1]))), scans.len(), p));
+    }
 }
