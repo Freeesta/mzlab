@@ -169,6 +169,11 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.extractMs2", gruppo: "xic", visibile: /** @param {any} c */ c => c.p.level === 1 && !c.a.hrp && typeof ms2Exps === "function" && ms2Exps().length > 0, disponibile: /** @param {any} c */ c => c.has && !!ms2OfPeak(c.p, c.m), nome: () => T("ctx.spec.extractMs2"), aria: /** @param {any} c */ c => T("ctx.spec.extractMs2.aria", { mz: c.lab }),
     esegui: /** @param {any} c */ c => { const e2 = ms2OfPeak(c.p, c.m); if (e2) extractMs2(c.p, e2); } });
   reg({ id: "spec.xic", gruppo: "xic", disponibile: /** @param {any} c */ c => c.has, nome: /** @param {any} c */ c => T("ctx.spec.xic", { mz: c.lab }), esegui: /** @param {any} c */ c => xicDirect(c.m, c.p) });
+  // the double click on a peak: its MS2 when a scan of that precursor exists (tolerance of the Banco in HR, 0.6 in unit resolution), otherwise its XIC (not a menu entry)
+  reg({ id: "spec.peak", gruppo: "xic", menu: false, doppio: /** @param {any} c */ c => !!c.has, doppioOrd: 6, esegui: /** @param {any} c */ c => {
+    const id = c.a.hrp ? "spec.ms2" : "spec.extractMs2", a = AZIONI.voce(id);
+    if (a && AZIONI.pronta(a, c)) AZIONI.esegui(id, c); else AZIONI.esegui("spec.xic", c);
+  } });
   // the m/z on an XIC already open: one row per XIC, or one row that lists them when they are more than 3
   reg({ id: "spec.overlay", gruppo: "xic", voci: /** @param {any} c */ c => {
     const xs = tabPanels().filter(q => q.type === "xic"), tip = T("ctx.spec.overlay.tip");
