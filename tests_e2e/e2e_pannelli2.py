@@ -33,6 +33,19 @@ try:
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
             attendi(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
         step("Correzione: the two subtract buttons have different icons and explicit names", corr_icons)
+        def corr_info():
+            B, M = ".pnl.chrom [data-o=cinfo]", ".pnl.chrom .corrbar"
+            assert pg.is_visible(B) and not pg.is_visible(M) and pg.evaluate(f"document.querySelector('{M}').offsetHeight") == 0, "one icon, no bar taking height"
+            assert pg.is_hidden(B + " .cidot"), "no dot without a correction"
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
+            attendi(pg, f"!document.querySelector('{B} .cidot').hidden")
+            assert pg.is_visible(B + " .cidot"), "the dot says that a correction is active"
+            pg.click(B); assert pg.is_visible(M) and pg.get_attribute(B, "aria-expanded") == "true" and pg.inner_text(M).strip() not in ("", "Nessuna correzione attiva"), pg.inner_text(M)
+            pg.keyboard.press("Escape"); assert pg.is_hidden(M), "Esc closes the summary"
+            pg.click(B); assert pg.is_visible(M); pg.mouse.click(5, 5); assert pg.is_hidden(M), "a click outside closes the summary"
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
+            attendi(pg, f"document.querySelector('{B} .cidot').hidden")
+        step("Correzioni: one icon opens the summary popover (Esc / click outside close it), the dot follows the state", corr_info)
         def subtract():
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_timeout(200)
             pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_timeout(1500)
