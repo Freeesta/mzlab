@@ -811,7 +811,7 @@ I18N.add("it", {
   "corr.snip.desc": "Toglie la base sotto i picchi",
   "corr.button.title": "Correzione del fondo (una alla volta)",
   "corr.sub.title": "Sottrai un file",
-  "corr.fondo.title": "Fondo (tolto dopo la differenza)",
+  "corr.fondo.title": "Sottrai il fondo",
   "fondo.auto.text": "fondo automatico, finestra {w} min",
   "export.meta.fondoAuto": "Fondo automatico",
   "export.note.fondoAuto": "Le intensità di questo foglio hanno già il fondo automatico tolto (baseline SNIP centrata sul livello medio del rumore): le aree possono differire da quelle del segnale grezzo.",
