@@ -57,7 +57,7 @@ Preparare i moduli `.wasm` dei lettori, **uno per famiglia di formato** (`aperti
    - Scrive con `rawSink` di `mzlab/web/rust-opfs.js`.
    - Righe «In conversione» con `CONVROWS` (`mzlab/web/conversione.js`), nome con `convName`. «Scarica .mzML» passa da `CONV` senza riconvertire; «Annulla» ferma.
    - `fileKind`/`UNOPEN_RE` (`shell.js:169-170`) non rifiutano più le estensioni di una famiglia che ha un modulo nel manifesto.
-   - Chiavi nuove: `err.file.lettoriLoad` (modulo non caricabile, con la famiglia nei `params`), `conv.row.mod` se serve una fase nuova.
+   - Nessuna chiave nuova: il modulo non caricabile usa `err.file.wiffLoad` (famiglia nei `params`).
 8. Prova del percorso senza formati nuovi:
    - Il parametro di pagina `?lettori=modulo` manda al modulo `agilent` anche un `.D` GC/MS.
    - `tests_e2e/e2e_lettori_modulo.py`, con la cartella sintetica di `tools/agilent_sintetico.py`, controlla:

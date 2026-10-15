@@ -34,7 +34,7 @@ Il `.raw` deve restare letto **senza mzML intermedio** (`docs/agenti/lettura-nat
      - passa al motore l'oggetto di funzioni.
    - Fai lo stesso nei worker di `mzlab/web/idxpool.js`, che costruiscono gli indici in parallelo.
    - Il modulo si scarica solo al primo `.raw`: prova che un `.wiff` non lo chiede.
-   - Errore di caricamento: `err.file.lettoriLoad` con `famiglia: "thermo"` (chiave di DEV-00).
+   - Errore di caricamento: `err.file.wiffLoad` con `famiglia: "thermo"` (chiave esistente, riusata da DEV-00).
    - `nativo.js::raws` e `shell.js::rawToMzml` restano uguali.
 6. Desktop: `mzlab-desktop` usa `mzlab-core` con `default` (Thermo nel motore nativo): nessun lettore esterno. Verifica con la sua prova.
 7. Memoria (`docs/agenti/memoria.md`): il modulo `thermo` ha un suo heap. Misura il picco su un `.raw` vero (indice + 20 scansioni) e scrivilo in `docs/agenti/misure.md`.
