@@ -418,7 +418,7 @@ function paintFiles() {
   const P = PALS[UIP.pal], dark = isDark();
   const blankCol = dark && P.blankDark ? P.blankDark : P.blank;
   const stdCol = dark && P.stdDark ? P.stdDark : P.std;
-  const byTime = kind => E.files.filter(f => !f.gone && f.kind === kind && f.type === "sample" && f.time != null).sort((a, b) => a.time - b.time || a.k - b.k);
+  const byTime = kind => E.files.filter(f => !f.gone && f.kind === kind && f.type === "sample" && f.time != null && !(window.CDOC && CDOC.kindOf(f) === "dark")).sort((a, b) => a.time - b.time || a.k - b.k);
   const scales = [byTime("full"), byTime("mrm")], inScale = new Set(scales.flat());
   E.files.forEach(f => { f.rank = null; });
   const cal = E.files.filter(f => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((a, b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);

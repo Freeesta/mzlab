@@ -114,6 +114,7 @@ declare var convRowKey: any;
 declare var convTotalPercent: any;
 declare var cpCross: any;
 declare var cpNear: any;
+declare var darkTime: any;
 declare var dlx: any;
 declare var fetch: any;
 declare var fileBase: any;
