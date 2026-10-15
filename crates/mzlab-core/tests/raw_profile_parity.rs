@@ -1,3 +1,4 @@
+#![cfg(feature = "thermo")]
 //! A Thermo `.raw` in PROFILE against the mzML msconvert made from it (profile, 64-bit, zlib, no peak picking), scan by scan, on the mzML
 //! that `raw::to_mzml_progress` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
 //! the scan it comes from), number of points, m/z and intensity. Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside

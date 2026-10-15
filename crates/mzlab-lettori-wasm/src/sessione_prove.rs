@@ -102,6 +102,7 @@ fn la_sessione_risponde_e_chiude() {
         .unwrap()
         .contains("\"intensity\":[3.0,4.0]"));
     assert_eq!(s.metodo(h, 0).unwrap(), "{}");
+    assert_eq!(s.testata(h, 0).unwrap(), "null");
     s.chiudi(h);
     assert_eq!(s.campioni(h).err().map(|e| e.key), Some("error.badIndex"));
 }

@@ -21,7 +21,11 @@ tutte = ["mzlab-lettori/tutte"]
 
 [dependencies]
 js-sys = "0.3.106"
-mzlab-core = { path = "../mzlab-core" }
+mzlab-core = { path = "../mzlab-core", default-features = false }
 mzlab-lettori = { path = "../mzlab-lettori", default-features = false }
 serde_json = "1"
 wasm-bindgen = "0.2"
+
+[dev-dependencies]
+# the proof of the external reader of the engine (`LettoreEsterno`) over the session of this module, on a real `.raw` (tests/esterno_thermo.rs)
+mzlab-wasm = { path = "../mzlab-wasm", default-features = false }
