@@ -57,7 +57,7 @@ SHA = """async n => { const rb = await window.MZLAB_RUST_READY, f = CONV.files.g
 res = {}
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None, args=["--unlimited-storage"])       # the big .raw is copied into OPFS: a headless browser can have a small quota
         thermo = []; pg = page(b, thermo)
         def opens():
             pg.set_input_files("#pick", str(raw))
@@ -113,6 +113,9 @@ try:
             if big is None:
                 print("   SKIP e2e_thermo_modulo BAF: the big .raw is not around (MZLAB_RAW_BAF)"); return
             pg4 = page(b, [])
+            room = pg4.evaluate("navigator.storage.estimate().then(e => e.quota - e.usage)")
+            if room < 1.8 * big.stat().st_size:       # the page copies the file into OPFS and says «not enough space» (the quota of a headless browser can be small): not a fault of the reader
+                print(f"   SKIP e2e_thermo_modulo BAF: the browser has {room >> 20} MB of storage for a file of {big.stat().st_size >> 20} MB"); return
             pg4.set_input_files("#pick", str(big))
             pg4.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=600000)
             pg4.click("#opbtn"); pg4.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=900000)
