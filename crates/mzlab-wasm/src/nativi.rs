@@ -259,6 +259,8 @@ pub fn native_samples(
 
 /// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
 /// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
+/// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
+/// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
 #[wasm_bindgen]
 pub struct Passata(Option<upload::Passata>);
 
@@ -269,12 +271,10 @@ impl Passata {
         Passata(Some(upload::Passata::new(size as u64)))
     }
     pub fn aggiorna(&mut self, piece: &[u8]) {
-        if let Some(p) = self.0.as_mut() {
-            p.aggiorna(piece);
-        }
+        self.0.as_mut().unwrap().aggiorna(piece);
     }
-    pub fn fine(&mut self) -> Option<js_sys::Array> {
-        let (a, b, c) = self.0.take()?.fine()?;
+    pub fn fine(self) -> Option<js_sys::Array> {
+        let (a, b, c) = self.0?.fine()?;
         Some([a, b, c].iter().map(|x| JsValue::from_str(x)).collect())
     }
 }
@@ -301,16 +301,16 @@ pub fn build_mzidx_native(
     let m = Membri::new(names, sizes, read)?;
     let mut fs = m.fileset();
     // the fingerprints taken while the members were copied (`Passata`): [sha256, sha1, probe] of each; without them (or not matching) the members are read here
-    let given = prints.and_then(|a| {
-        let t: Vec<String> = a.iter().map(|v| v.as_string().unwrap_or_default()).collect();
-        let v: Vec<(String, String, String)> = t
-            .chunks_exact(3)
-            .filter(|c| c.iter().all(|x| !x.is_empty()))
-            .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
-            .collect();
-        (v.len() * 3 == t.len()).then_some(v)
+    let given: Vec<String> = prints.map_or(vec![], |a| {
+        a.iter()
+            .map(|v| v.as_string().unwrap_or_default())
+            .collect()
     });
-    let impronte = match given.and_then(|v| upload::impronte_note(&mut fs, &v)) {
+    let given: Vec<(String, String, String)> = given
+        .chunks_exact(3)
+        .map(|c| (c[0].clone(), c[1].clone(), c[2].clone()))
+        .collect();
+    let impronte = match upload::impronte_note(&mut fs, &given) {
         Some(i) => i,
         None => {
             tell(1);

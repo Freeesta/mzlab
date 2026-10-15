@@ -52,15 +52,14 @@ impl Passata {
     pub fn aggiorna(&mut self, b: &[u8]) {
         self.sha256.update(b);
         self.sha1.update(b);
-        let h = (PROBE as usize)
+        let n = (PROBE as usize)
             .saturating_sub(self.head.len())
             .min(b.len());
-        self.head.extend_from_slice(&b[..h]);
-        self.tail
-            .extend_from_slice(&b[b.len().saturating_sub(PROBE as usize)..]);
-        if self.tail.len() > PROBE as usize {
-            self.tail.drain(..self.tail.len() - PROBE as usize);
-        }
+        self.head.extend_from_slice(&b[..n]);
+        let old = self.tail.len();
+        let from = (old + b.len()).saturating_sub(PROBE as usize);
+        self.tail.drain(..from.min(old));
+        self.tail.extend_from_slice(&b[from.saturating_sub(old)..]);
         self.seen += b.len() as u64;
     }
     /// `(sha256, sha1, probe)` as lower-case hex; `None` when the pieces given are not exactly `size` bytes.
@@ -81,7 +80,7 @@ impl Passata {
 }
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.
-pub fn fingerprint3<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String, String)> {
+pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
     let mut p = Passata::new(size);
     let mut at = 0;
     let mut buf = vec![0u8; STEP as usize];
@@ -94,16 +93,10 @@ pub fn fingerprint3<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String,
     p.fine().ok_or_else(|| Error::new("err.file.unknown"))
 }
 
-/// `(sha256, probe)` of a file, read once.
-pub fn fingerprint<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<(String, String)> {
-    let (sha256, _, probe) = fingerprint3(r, size)?;
-    Ok((sha256, probe))
-}
-
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
-    let (sha256, probe) = fingerprint(r, size)?;
+    let (sha256, _, probe) = fingerprint3(r, size)?;
     let mut source = Out::default();
     source_head(&mut source, name, size, &probe, &sha256);
     source.raw("}");

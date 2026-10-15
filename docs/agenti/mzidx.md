@@ -23,7 +23,7 @@ total      dimensione del file: un file di dimensione diversa (troncato) non si 
 ```
 - **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
 - **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
-- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (la stessa che usa `.mzflow`).
+- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (calcolata durante la copia in OPFS o, senza, da `upload::impronte`: stesso valore) (la stessa che usa `.mzflow`).
 - **Scrittura atomica**: file temporaneo accanto alla destinazione, poi rinomina; l'intestazione si scrive per ultima.
 
 ## Indice di un file del produttore (versione 2)
