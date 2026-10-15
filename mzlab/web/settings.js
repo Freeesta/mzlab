@@ -122,7 +122,6 @@ function uipOpen(btn) {
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)">${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}</div>
-    ${uipAdminOn() ? `<div class="row"><button id="uip-admin-exit" type="button">${I18N.t("settings.admin.exit")}</button></div>` : ""}
     ${window.DESKUPD ? DESKUPD.row() : ""}
     ${window.MZLAB_DESKTOP ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.ext.title")}"><input type="checkbox" id="uip-ext"> <span>${I18N.t("settings.ext")}</span></label>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
@@ -130,7 +129,6 @@ function uipOpen(btn) {
     ` : ""}
     `;
   document.body.appendChild(d);
-  const adm = d.querySelector("#uip-admin-exit"); if (adm) adm.onclick = () => { try { localStorage.removeItem("qqq.admin"); localStorage.removeItem("qqq.teoria.esteso"); } catch (_) { /* nothing to clear */ } d.remove(); location.reload(); };
   if (window.DESKUPD) DESKUPD.bind(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)

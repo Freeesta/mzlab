@@ -554,7 +554,6 @@ I18N.add("en", {
   "settings.pal.hc": "High contrast",
   "settings.pal.rainbow": "Rainbow",
   "settings.pal.bw": "Black and white",
-  "settings.admin.exit": "Exit administrator mode",
   "settings.merge": "Merge the centroids of the same nominal mass",
   "settings.libs.label": "Spectral libraries",
   "settings.libs.button": "Libraries…",
