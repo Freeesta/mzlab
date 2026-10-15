@@ -114,22 +114,24 @@ impl GenericDataHeader {
     /// types (String/WideString) the descriptor's `length` field is used as
     /// the storage allocation - which is the fixed on-disk size per record.
     pub(crate) fn fixed_record_size(&self) -> usize {
-        self.fields
-            .iter()
-            .map(|f| match f.field_type {
-                GenericType::Gap => 0,
-                GenericType::Int8
-                | GenericType::Bool
-                | GenericType::BoolYesNo
-                | GenericType::BoolOnOff
-                | GenericType::UInt8 => 1,
-                GenericType::Int16 | GenericType::UInt16 => 2,
-                GenericType::Int32 | GenericType::UInt32 | GenericType::Float32 => 4,
-                GenericType::Float64 => 8,
-                GenericType::AsciiString => f.length as usize,
-                GenericType::WideString => f.length as usize * 2,
-            })
-            .sum()
+        self.fields.iter().map(Self::field_size).sum()
+    }
+
+    /// Bytes one field takes in a record.
+    pub(crate) fn field_size(f: &GenericDataDescriptor) -> usize {
+        match f.field_type {
+            GenericType::Gap => 0,
+            GenericType::Int8
+            | GenericType::Bool
+            | GenericType::BoolYesNo
+            | GenericType::BoolOnOff
+            | GenericType::UInt8 => 1,
+            GenericType::Int16 | GenericType::UInt16 => 2,
+            GenericType::Int32 | GenericType::UInt32 | GenericType::Float32 => 4,
+            GenericType::Float64 => 8,
+            GenericType::AsciiString => f.length as usize,
+            GenericType::WideString => f.length as usize * 2,
+        }
     }
 
     /// Scan forward from the current position for a plausible GenericDataHeader
@@ -198,40 +200,7 @@ impl GenericRecord {
     ) -> Result<Self> {
         let mut values = Vec::with_capacity(header.fields.len());
         for desc in &header.fields {
-            let label = desc.label.clone();
-            let value = match desc.field_type {
-                GenericType::Gap => GenericValue::Gap,
-                GenericType::Int8 => GenericValue::Int8(r.read_i8()?),
-                GenericType::Bool | GenericType::BoolYesNo | GenericType::BoolOnOff => {
-                    GenericValue::Bool(r.read_u8()? != 0)
-                }
-                GenericType::UInt8 => GenericValue::UInt8(r.read_u8()?),
-                GenericType::Int16 => GenericValue::Int16(r.read_i16()?),
-                GenericType::UInt16 => GenericValue::UInt16(r.read_u16()?),
-                GenericType::Int32 => GenericValue::Int32(r.read_i32()?),
-                GenericType::UInt32 => GenericValue::UInt32(r.read_u32()?),
-                GenericType::Float32 => GenericValue::Float32(r.read_f32()?),
-                GenericType::Float64 => GenericValue::Float64(r.read_f64()?),
-                GenericType::AsciiString => {
-                    let s = if desc.length > 0 {
-                        let bytes = r.read_bytes(desc.length as usize)?;
-                        let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-                        String::from_utf8_lossy(&bytes[..end]).into_owned()
-                    } else {
-                        String::new()
-                    };
-                    GenericValue::String(s)
-                }
-                GenericType::WideString => {
-                    let s = if desc.length > 0 {
-                        r.read_utf16_fixed(desc.length as usize * 2)?
-                    } else {
-                        String::new()
-                    };
-                    GenericValue::String(s)
-                }
-            };
-            values.push((label, value));
+            values.push((desc.label.clone(), read_value(r, desc)?));
         }
         Ok(Self { values })
     }
@@ -275,6 +244,205 @@ impl GenericRecord {
             GenericValue::String(v) => Some(v.as_str()),
             _ => None,
         }
+    }
+}
+
+/// One value of the field `desc`, read at the current position.
+fn read_value<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    desc: &GenericDataDescriptor,
+) -> Result<GenericValue> {
+    Ok(match desc.field_type {
+        GenericType::Gap => GenericValue::Gap,
+        GenericType::Int8 => GenericValue::Int8(r.read_i8()?),
+        GenericType::Bool | GenericType::BoolYesNo | GenericType::BoolOnOff => {
+            GenericValue::Bool(r.read_u8()? != 0)
+        }
+        GenericType::UInt8 => GenericValue::UInt8(r.read_u8()?),
+        GenericType::Int16 => GenericValue::Int16(r.read_i16()?),
+        GenericType::UInt16 => GenericValue::UInt16(r.read_u16()?),
+        GenericType::Int32 => GenericValue::Int32(r.read_i32()?),
+        GenericType::UInt32 => GenericValue::UInt32(r.read_u32()?),
+        GenericType::Float32 => GenericValue::Float32(r.read_f32()?),
+        GenericType::Float64 => GenericValue::Float64(r.read_f64()?),
+        GenericType::AsciiString => {
+            let s = if desc.length > 0 {
+                let bytes = r.read_bytes(desc.length as usize)?;
+                let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+                String::from_utf8_lossy(&bytes[..end]).into_owned()
+            } else {
+                String::new()
+            };
+            GenericValue::String(s)
+        }
+        GenericType::WideString => {
+            let s = if desc.length > 0 {
+                r.read_utf16_fixed(desc.length as usize * 2)?
+            } else {
+                String::new()
+            };
+            GenericValue::String(s)
+        }
+    })
+}
+
+/// The records of a stream left in the file: the header, the address and the number of the records (all of the fixed size of the header). A record or a column is
+/// read when asked, from the source that opened the file, so neither the names of the fields nor the values are kept once per scan.
+#[derive(Debug)]
+pub struct GenericRecordStream {
+    header: GenericDataHeader,
+    /// Byte offset of each field inside a record.
+    offsets: Vec<usize>,
+    record_size: usize,
+    n: usize,
+    addr: u64,
+    /// The last group of `GROUP` records read by `get` (index of its first record, bytes): a scan asks for its record between two reads of its peaks, far from it in the file,
+    /// so reading a group makes the neighbours (the next scans) cost no read.
+    group: std::sync::Mutex<(usize, Vec<u8>)>,
+}
+
+impl Clone for GenericRecordStream {
+    fn clone(&self) -> Self {
+        Self {
+            header: self.header.clone(),
+            offsets: self.offsets.clone(),
+            record_size: self.record_size,
+            n: self.n,
+            addr: self.addr,
+            group: Default::default(),
+        }
+    }
+}
+
+/// Records read at a time by [`GenericRecordStream::get`].
+const GROUP: usize = 64;
+
+/// Records read at a time by [`GenericRecordStream::for_each`].
+const CHUNK: usize = 256;
+
+/// One record of a chunk read by [`GenericRecordStream::for_each`].
+pub struct RecordView<'a> {
+    stream: &'a GenericRecordStream,
+    bytes: &'a [u8],
+}
+
+impl RecordView<'_> {
+    /// Field `field` of the record, decoded.
+    pub fn value(&self, field: usize) -> Option<GenericValue> {
+        self.stream.decode(self.bytes, field)
+    }
+}
+
+impl GenericRecordStream {
+    /// A stream without records.
+    pub fn empty() -> Self {
+        Self {
+            header: GenericDataHeader { fields: Vec::new() },
+            offsets: Vec::new(),
+            record_size: 0,
+            n: 0,
+            addr: 0,
+            group: Default::default(),
+        }
+    }
+
+    /// `n` records of `header` that start at `addr`; the file must hold them all.
+    pub(crate) fn new<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        header: &GenericDataHeader,
+        addr: u64,
+        n: usize,
+    ) -> Result<Self> {
+        let record_size = header.fixed_record_size();
+        r.seek_to(addr)?;
+        r.check_count(n as u64, record_size.max(1) as u64)?;
+        let mut offsets = Vec::with_capacity(header.fields.len());
+        let mut at = 0;
+        for f in &header.fields {
+            offsets.push(at);
+            at += GenericDataHeader::field_size(f);
+        }
+        Ok(Self {
+            header: header.clone(),
+            offsets,
+            record_size,
+            n,
+            addr,
+            group: Default::default(),
+        })
+    }
+
+    pub fn header(&self) -> &GenericDataHeader {
+        &self.header
+    }
+
+    pub fn len(&self) -> usize {
+        self.n
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.n == 0
+    }
+
+    fn decode(&self, rec: &[u8], field: usize) -> Option<GenericValue> {
+        let desc = self.header.fields.get(field)?;
+        let mut r = BinaryReader::new(Cursor::new(rec.get(*self.offsets.get(field)?..)?));
+        read_value(&mut r, desc).ok()
+    }
+
+    /// Record `i`, read from `source` and decoded; `None` when out of range or not readable.
+    pub fn get<R: Read + Seek>(&self, source: &mut R, i: usize) -> Option<GenericRecord> {
+        if i >= self.n {
+            return None;
+        }
+        let first = i / GROUP * GROUP;
+        let mut g = self.group.lock().ok()?;
+        if g.1.is_empty() || g.0 != first {
+            let k = GROUP.min(self.n - first);
+            let mut buf = vec![0u8; k * self.record_size];
+            source
+                .seek(std::io::SeekFrom::Start(
+                    self.addr + (first * self.record_size) as u64,
+                ))
+                .ok()?;
+            source.read_exact(&mut buf).ok()?;
+            *g = (first, buf);
+        }
+        let at = (i - first) * self.record_size;
+        let mut r = BinaryReader::new(Cursor::new(&g.1[at..at + self.record_size]));
+        GenericRecord::read(&mut r, &self.header).ok()
+    }
+
+    /// Calls `f(i, record)` for every record in order, reading the file `CHUNK` records at a time. Stops (and says `false`) when the file cannot be read.
+    pub fn for_each<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        mut f: impl FnMut(usize, &RecordView<'_>),
+    ) -> bool {
+        let mut buf = vec![0u8; CHUNK * self.record_size];
+        let mut i = 0;
+        while i < self.n {
+            let k = CHUNK.min(self.n - i);
+            let bytes = &mut buf[..k * self.record_size];
+            let at = self.addr + (i * self.record_size) as u64;
+            if source.seek(std::io::SeekFrom::Start(at)).is_err()
+                || source.read_exact(bytes).is_err()
+            {
+                return false;
+            }
+            for j in 0..k {
+                let rec = &bytes[j * self.record_size..(j + 1) * self.record_size];
+                f(
+                    i + j,
+                    &RecordView {
+                        stream: self,
+                        bytes: rec,
+                    },
+                );
+            }
+            i += k;
+        }
+        true
     }
 }
 

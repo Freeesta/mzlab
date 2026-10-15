@@ -12,7 +12,9 @@
 //! want leaner output can pick fields with [`ExtraFields`].
 
 use std::collections::BTreeMap;
+use std::io::{Read, Seek};
 
+use crate::generic_data::GenericRecord;
 use crate::mzml::ScanMetadata;
 use crate::reader::{ScanParams, StatusLogEntry};
 use crate::RawFileReader;
@@ -286,15 +288,21 @@ fn value_text(v: &crate::generic_data::GenericValue) -> Option<String> {
 
 /// The trailer fields of a scan that no registered field carries, as `opentfraw.trailer.<label>` (label without the colon, blanks as `_`),
 /// so that none of the values of the trailer is lost. Fields left out by `fields` and empty ones are omitted.
-pub fn trailer_extras(
+pub fn trailer_extras<R: Read + Seek>(
     raw: &RawFileReader,
+    source: &mut R,
     scan_number: u32,
     fields: &ExtraFields,
 ) -> BTreeMap<String, String> {
+    match raw.scan_parameters(source, scan_number) {
+        Some(rec) => trailer_extras_of(&rec, fields),
+        None => BTreeMap::new(),
+    }
+}
+
+/// [`trailer_extras`] of a record already read.
+pub fn trailer_extras_of(rec: &GenericRecord, fields: &ExtraFields) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
-    let Some(rec) = raw.scan_parameters(scan_number) else {
-        return out;
-    };
     for (label, value) in &rec.values {
         if READ_LABELS.contains(&label.as_str()) || label.contains("===") {
             continue;
@@ -323,8 +331,22 @@ pub fn extra_field_keys() -> impl Iterator<Item = &'static str> {
 
 /// The selected extra fields for one scan, keyed by their `opentfraw.*`
 /// name. Fields the scan does not carry are left out.
-pub fn scan_extras(
+pub fn scan_extras<R: Read + Seek>(
     raw: &RawFileReader,
+    source: &mut R,
+    meta: &ScanMetadata,
+    fields: &ExtraFields,
+) -> BTreeMap<String, String> {
+    if *fields == ExtraFields::None {
+        return BTreeMap::new();
+    }
+    scan_extras_with(raw, raw.scan_params(source, meta.scan_number), meta, fields)
+}
+
+/// [`scan_extras`] with the trailer record of the scan already read (`RawFileReader::scan_params`).
+pub fn scan_extras_with(
+    raw: &RawFileReader,
+    params: Option<ScanParams<'_>>,
     meta: &ScanMetadata,
     fields: &ExtraFields,
 ) -> BTreeMap<String, String> {
@@ -333,7 +355,7 @@ pub fn scan_extras(
     }
     let scan = Scan {
         meta,
-        params: raw.scan_params(meta.scan_number),
+        params,
         status: raw.status_log_entry(meta.scan_number),
     };
     let mut out: BTreeMap<String, String> = EXTRA_FIELDS
@@ -341,7 +363,9 @@ pub fn scan_extras(
         .filter(|(key, _)| fields.includes(key))
         .filter_map(|(key, get)| get(&scan).map(|value| (key.to_string(), value)))
         .collect();
-    out.extend(trailer_extras(raw, meta.scan_number, fields));
+    if let Some(p) = &scan.params {
+        out.extend(trailer_extras_of(p.record(), fields));
+    }
     out
 }
 

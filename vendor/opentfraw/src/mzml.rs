@@ -16,7 +16,7 @@
 use std::io::{Read, Seek, Write};
 
 use crate::error::Result;
-use crate::extra::{scan_extras, ExtraFields};
+use crate::extra::{scan_extras_with, ExtraFields};
 use crate::scan_event::ScanEvent;
 use crate::types::{Activation, MsPower, Polarity};
 use crate::RawFileReader;
@@ -130,7 +130,24 @@ pub struct ScanMetadata {
 /// `openmassspec_core` adapter and the Python bindings all build on it, so a
 /// field wired here reaches every output. Returns `None` if `idx` is out of
 /// range.
-pub fn scan_metadata(raw: &RawFileReader, idx: u32) -> Option<ScanMetadata> {
+pub fn scan_metadata<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    idx: u32,
+) -> Option<ScanMetadata> {
+    if idx >= raw.num_scans {
+        return None;
+    }
+    let params = raw.scan_params(source, raw.run_header.sample_info.first_scan_number + idx);
+    scan_metadata_with(raw, idx, params)
+}
+
+/// [`scan_metadata`] with the trailer record of the scan already read (`RawFileReader::scan_params`), for a caller that needs it again.
+pub fn scan_metadata_with(
+    raw: &RawFileReader,
+    idx: u32,
+    params: Option<crate::reader::ScanParams<'_>>,
+) -> Option<ScanMetadata> {
     if idx >= raw.num_scans {
         return None;
     }
@@ -138,7 +155,7 @@ pub fn scan_metadata(raw: &RawFileReader, idx: u32) -> Option<ScanMetadata> {
     let scan_number = first_scan + idx;
     let entry = &raw.scan_index[idx as usize];
     let event = raw.scan_events.get(idx as usize);
-    let params = raw.scan_params(scan_number);
+    let event = event.as_ref();
 
     let is_srm = raw.flat_peaks;
     let level = if is_srm {
@@ -159,7 +176,7 @@ pub fn scan_metadata(raw: &RawFileReader, idx: u32) -> Option<ScanMetadata> {
     } else {
         event.and_then(|e| e.preamble.scan_mode())
     };
-    let filter = raw.scan_filter(scan_number);
+    let filter = raw.scan_filter_with(scan_number, params.as_ref());
     let is_ms1 = !is_srm && level == 1;
     let is_dia = event.is_some_and(|e| e.preamble.is_dia());
     let is_wideband = event.is_some_and(|e| e.preamble.is_wideband());
@@ -319,17 +336,31 @@ fn extract_parts<R: Read + Seek>(
     idx: u32,
     include_profile: bool,
 ) -> Option<ScanParts> {
-    let meta = scan_metadata(raw, idx)?;
+    extract_parts_with_params(raw, source, idx, include_profile).map(|(p, _)| p)
+}
+
+/// [`extract_parts`] and the trailer record of the scan (read once for the metadata and the extra fields).
+fn extract_parts_with_params<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    idx: u32,
+    include_profile: bool,
+) -> Option<(ScanParts, Option<crate::reader::ScanParams<'static>>)> {
+    if idx >= raw.num_scans {
+        return None;
+    }
+    let params = raw.scan_params(source, raw.run_header.sample_info.first_scan_number + idx);
+    let meta = scan_metadata_with(raw, idx, params.as_ref().map(|p| p.borrowed()))?;
     let event = raw.scan_events.get(idx as usize);
     let (mz, intensity, effective_scan_mode) = resolve_scan_arrays(
         raw,
         source,
         meta.scan_number,
         include_profile,
-        event,
+        event.as_ref(),
         meta.scan_mode,
     )?;
-    Some((meta, mz, intensity, effective_scan_mode))
+    Some(((meta, mz, intensity, effective_scan_mode), params))
 }
 
 /// Iterate every scan in `raw` as a [`SpectrumRecord`].
@@ -831,7 +862,7 @@ impl<'a, R: Read + Seek> OpenTfRawSource<'a, R> {
 /// Distinct analyzers across the file's scan events, in first-seen order.
 fn run_analyzers(raw: &RawFileReader) -> Vec<msc::Analyzer> {
     let mut out = Vec::new();
-    for event in &raw.scan_events {
+    for event in raw.scan_events.iter() {
         if let Some(a) = convert_analyzer(event.preamble.analyzer()) {
             if !out.contains(&a) {
                 out.push(a);
@@ -980,8 +1011,10 @@ impl<'a, R: Read + Seek> msc::SpectrumSource for OpenTfRawSource<'a, R> {
             while idx < n {
                 let cur = idx;
                 idx += 1;
-                if let Some(parts) = extract_parts(raw, source, cur, include_profile) {
-                    let extra = scan_extras(raw, &parts.0, extra_fields);
+                if let Some((parts, params)) =
+                    extract_parts_with_params(raw, source, cur, include_profile)
+                {
+                    let extra = scan_extras_with(raw, params, &parts.0, extra_fields);
                     return Some(to_msc_record(parts, extra));
                 }
             }

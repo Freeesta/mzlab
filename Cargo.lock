@@ -2044,6 +2044,7 @@ dependencies = [
  "mzlab-core",
  "mzlab-lettori",
  "mzlab-wasm",
+ "serde",
  "serde_json",
  "wasm-bindgen",
 ]

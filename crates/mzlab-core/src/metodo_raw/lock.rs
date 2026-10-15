@@ -3,6 +3,7 @@
 
 use crate::metodo::{num, obj, text, V};
 use opentfraw::RawFileReader;
+use std::io::{Read, Seek};
 
 /// A list of the method: polarity, name and masses (`(none)` is an empty list).
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -78,22 +79,32 @@ pub fn from_method(t: &str) -> Option<FromMethod> {
     (out.mode.is_some() || !out.lists.is_empty()).then_some(out)
 }
 
-/// `[min, max]` of the numbers of the trailer field named `label` over the scans.
-fn range(raw: &RawFileReader, label: &str) -> Option<(f64, f64)> {
-    let i = raw
-        .scan_parameters_header
-        .fields
-        .iter()
-        .position(|d| d.label.trim().trim_end_matches(':').trim() == label)?;
-    let mut r: Option<(f64, f64)> = None;
-    for row in &raw.scan_parameters {
-        let Some(x) = row.values.get(i).and_then(|v| v.1.as_f64()) else {
-            continue;
-        };
-        if x.is_finite() {
-            r = Some(r.map_or((x, x), |(a, b)| (a.min(x), b.max(x))));
-        }
+/// `[min, max]` of the numbers of the trailer fields named `labels` over the scans, in one pass over the file.
+fn ranges<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    labels: [&str; 2],
+) -> [Option<(f64, f64)>; 2] {
+    let at = labels.map(|label| {
+        raw.scan_parameters_header
+            .fields
+            .iter()
+            .position(|d| d.label.trim().trim_end_matches(':').trim() == label)
+    });
+    let mut r: [Option<(f64, f64)>; 2] = [None, None];
+    if at.iter().all(Option::is_none) {
+        return r;
     }
+    raw.scan_parameters.for_each(source, |_, rec| {
+        for (k, i) in at.iter().enumerate() {
+            let Some(x) = i.and_then(|i| rec.value(i)).and_then(|v| v.as_f64()) else {
+                continue;
+            };
+            if x.is_finite() {
+                r[k] = Some(r[k].map_or((x, x), |(a, b)| (a.min(x), b.max(x))));
+            }
+        }
+    });
     r
 }
 
@@ -103,7 +114,16 @@ fn pair(r: Option<(f64, f64)>) -> Option<V> {
 
 /// The `lock_mass` object of `ms.calibrazione`: the mode and the lists of the method, how many lock masses the trailer says and the range of the correction. The masses
 /// and the search window of the trailer stay in `campi` (`Lock Mass #n (m/z)`, `LM Search Window (ppm)`).
-pub fn section(raw: &RawFileReader, blocks: &[String]) -> Option<V> {
+pub fn section<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    blocks: &[String],
+) -> Option<V> {
+    let [number, correction] = ranges(
+        raw,
+        source,
+        ["Number of Lock Masses", "LM m/z-Correction (ppm)"],
+    );
     let m = blocks.iter().find_map(|b| from_method(b));
     let lists: Vec<V> = m
         .iter()
@@ -125,14 +145,8 @@ pub fn section(raw: &RawFileReader, blocks: &[String]) -> Option<V> {
             m.as_ref().and_then(|m| m.mode.as_deref()).and_then(text),
         ),
         ("elenchi", (!lists.is_empty()).then_some(V::Arr(lists))),
-        (
-            "numero_nel_trailer",
-            num(range(raw, "Number of Lock Masses").map(|r| r.1)),
-        ),
-        (
-            "correzione_ppm",
-            pair(range(raw, "LM m/z-Correction (ppm)")),
-        ),
+        ("numero_nel_trailer", num(number.map(|r| r.1))),
+        ("correzione_ppm", pair(correction)),
     ])
 }
 

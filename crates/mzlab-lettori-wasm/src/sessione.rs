@@ -47,18 +47,24 @@ impl Sessioni {
         Ok(serde_json::json!({ "formato": l.formato().id(), "campioni": c }).to_string())
     }
 
-    /// The index of sample `c`: one object per scan.
+    /// The index of sample `c`: one object per scan, written straight into the text (the same text as `serde_json::json!` gives, keys in alphabetical order, without a `Value` per scan).
     pub fn indice(&mut self, h: u32, c: usize) -> Result<String> {
-        let v: Vec<_> = self
-            .lettore(h)?
-            .indice(c)?
-            .iter()
-            .map(|r| {
-                let pos = r.posizione.map(|p| serde_json::json!([p.membro, p.offset, p.lunghezza]));
-                serde_json::json!({ "id": r.id, "rt": r.rt, "level": r.livello, "polarity": r.polarita, "tic": r.tic, "base": r.picco_base, "filter": r.filtro, "precursor": r.precursore, "pos": pos })
-            })
-            .collect();
-        Ok(serde_json::Value::Array(v).to_string())
+        let v = self.lettore(h)?.indice(c)?;
+        // the room is estimated from the first entries (a growing buffer would copy a text of tens of MB): about a tenth more, and it grows only if that was short
+        let mut sample: Vec<u8> = Vec::new();
+        v.iter().take(64).for_each(|r| voce(&mut sample, r));
+        let take = v.len().min(64).max(1);
+        let mut o: Vec<u8> = Vec::with_capacity(sample.len() / take * v.len() * 11 / 10 + 1024);
+        o.push(b'[');
+        for (i, r) in v.iter().enumerate() {
+            if i > 0 {
+                o.push(b',');
+            }
+            voce(&mut o, r);
+        }
+        o.push(b']');
+        // serde_json writes valid UTF-8 only
+        Ok(String::from_utf8(o).unwrap_or_default())
     }
 
     pub fn scansione(&mut self, h: u32, c: usize, k: usize) -> Result<Scansione> {
@@ -83,9 +89,35 @@ impl Sessioni {
     }
 }
 
-/// A JSON array as text.
-fn lista(v: Vec<serde_json::Value>) -> String {
-    serde_json::Value::Array(v).to_string()
+/// A JSON scalar of `serde_json`, appended to `o` (a `Vec` does not fail to write).
+fn put<T: serde::Serialize + ?Sized>(o: &mut Vec<u8>, v: &T) {
+    let _ = serde_json::to_writer(&mut *o, v);
+}
+
+/// One entry of the index as `{"base":..,"filter":..,"id":..,"level":..,"polarity":..,"pos":..,"precursor":..,"rt":..,"tic":..}`.
+fn voce(o: &mut Vec<u8>, r: &mzlab_core::lettori::VoceScansione) {
+    o.extend_from_slice(b"{\"base\":");
+    put(o, &r.picco_base);
+    o.extend_from_slice(b",\"filter\":");
+    put(o, &r.filtro);
+    o.extend_from_slice(b",\"id\":");
+    put(o, &r.id);
+    o.extend_from_slice(b",\"level\":");
+    put(o, &r.livello);
+    o.extend_from_slice(b",\"polarity\":");
+    put(o, &r.polarita);
+    o.extend_from_slice(b",\"pos\":");
+    match r.posizione {
+        Some(p) => put(o, &(p.membro, p.offset, p.lunghezza)),
+        None => o.extend_from_slice(b"null"),
+    }
+    o.extend_from_slice(b",\"precursor\":");
+    put(o, &r.precursore);
+    o.extend_from_slice(b",\"rt\":");
+    put(o, &r.rt);
+    o.extend_from_slice(b",\"tic\":");
+    put(o, &r.tic);
+    o.push(b'}');
 }
 
 impl Sessioni {
