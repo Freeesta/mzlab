@@ -151,77 +151,81 @@ fn main() {
     );
 
     for cen in [false, true] {
-        if cen && !with_cen {
-            continue;
-        }
-        println!(
-            "-- {}",
-            if cen {
-                "centroids (lettori_centroidi)"
-            } else {
-                "as in the file"
-            }
-        );
-        // phase 1: the fingerprint (SHA-256 + probe) of the member
-        let (mut fs, c) = set(&path);
-        let t = Instant::now();
-        let imp = upload::impronte(&mut fs).expect("fingerprint");
-        line("fingerprint (SHA-256)", t.elapsed().as_secs_f64(), &c, "");
-        let (mut l, c, t_open) = open(&path, cen);
-        let n = l.indice(0).unwrap().len();
-        line("open (indexes)", t_open, &c, &format!("{n} scans"));
-
-        // the decoding alone: every scan once
-        let t = Instant::now();
-        let mut peaks = 0u64;
-        let mut levels = [0usize; 4];
-        for k in 0..n {
-            let s = l.scansione(0, k).unwrap();
-            peaks += s.mz.len() as u64;
-            levels[usize::from(s.level.min(3))] += 1;
-        }
-        line(
-            "decode every scan",
-            t.elapsed().as_secs_f64(),
-            &c,
-            &format!(
-                "{peaks} peaks, MS1 {} MS2 {} MSn {}",
-                levels[1], levels[2], levels[3]
-            ),
-        );
-
-        // phase 2: the scan table (`righe`: every scan decoded again)
-        let t = Instant::now();
-        let p = upload::prepare_lettore(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
-        line("scan table (righe)", t.elapsed().as_secs_f64(), &c, "");
-
-        // phase 3: the .mzidx (every scan decoded a third time)
-        let t = Instant::now();
-        let mut out = Cursor::new(Vec::new());
-        let st = mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("build");
-        line(
-            "build .mzidx",
-            t.elapsed().as_secs_f64(),
-            &c,
-            &format!(
-                "{:.1} MB, {} sections, {} passes",
-                st.bytes as f64 / 1e6,
-                st.sections,
-                st.passes
-            ),
-        );
-
-        if with_mzml {
-            let t = Instant::now();
-            let mut sink = Sink::default();
-            lettori_mzml::scrivi(&mut *l, 0, &mut sink, &mut |_, _| {}).expect("mzML");
-            line(
-                "write mzML (scrivi)",
-                t.elapsed().as_secs_f64(),
-                &c,
-                &format!("{:.1} MB", sink.0 as f64 / 1e6),
-            );
+        if !cen || with_cen {
+            phases(&path, &name, cen, with_mzml);
         }
     }
     println!("peak memory {:.0} MB", peak_rss_mb());
+}
+
+/// Every phase of the site for one reading of the file (`cen`: through `lettori_centroidi`).
+fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
+    println!(
+        "-- {}",
+        if cen {
+            "centroids (lettori_centroidi)"
+        } else {
+            "as in the file"
+        }
+    );
+    // phase 1: the fingerprint (SHA-256 + probe) of the member
+    let (mut fs, c) = set(path);
+    let t = Instant::now();
+    let imp = upload::impronte(&mut fs).expect("fingerprint");
+    line("fingerprint (SHA-256)", t.elapsed().as_secs_f64(), &c, "");
+    let (mut l, c, t_open) = open(path, cen);
+    let n = l.indice(0).unwrap().len();
+    line("open (indexes)", t_open, &c, &format!("{n} scans"));
+
+    // the decoding alone: every scan once
+    let t = Instant::now();
+    let mut peaks = 0u64;
+    let mut levels = [0usize; 4];
+    for k in 0..n {
+        let s = l.scansione(0, k).unwrap();
+        peaks += s.mz.len() as u64;
+        levels[usize::from(s.level.min(3))] += 1;
+    }
+    line(
+        "decode every scan",
+        t.elapsed().as_secs_f64(),
+        &c,
+        &format!(
+            "{peaks} peaks, MS1 {} MS2 {} MSn {}",
+            levels[1], levels[2], levels[3]
+        ),
+    );
+
+    // phase 2: the scan table (`righe`: every scan decoded again)
+    let t = Instant::now();
+    let p = upload::prepare_lettore(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
+    line("scan table (righe)", t.elapsed().as_secs_f64(), &c, "");
+
+    // phase 3: the .mzidx (every scan decoded a third time)
+    let t = Instant::now();
+    let mut out = Cursor::new(Vec::new());
+    let st = mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("build");
+    line(
+        "build .mzidx",
+        t.elapsed().as_secs_f64(),
+        &c,
+        &format!(
+            "{:.1} MB, {} sections, {} passes",
+            st.bytes as f64 / 1e6,
+            st.sections,
+            st.passes
+        ),
+    );
+
+    if with_mzml {
+        let t = Instant::now();
+        let mut sink = Sink::default();
+        lettori_mzml::scrivi(&mut *l, 0, &mut sink, &mut |_, _| {}).expect("mzML");
+        line(
+            "write mzML (scrivi)",
+            t.elapsed().as_secs_f64(),
+            &c,
+            &format!("{:.1} MB", sink.0 as f64 / 1e6),
+        );
+    }
 }
