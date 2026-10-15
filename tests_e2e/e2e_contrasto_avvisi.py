@@ -27,16 +27,16 @@ r = Run(port=8868, wd="/tmp/wd_avvisi")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(800)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_selector("text=Carica dati")
+        pg.click("text=Carica dati"); ready(pg)
         if AXE: pg.add_script_tag(path=AXE)
         for theme in ("light", "dark"):
-            pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.wait_for_timeout(200)
+            pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")
             def boxes():
                 bad = [x for x in pg.evaluate(RATIO) if x[1] < 4.5]; assert not bad, bad
             step(f"{theme}: every box variant has contrast >= 4.5:1", boxes)
             def method():
-                pg.click("#np-method"); pg.wait_for_selector(".avv.warn"); pg.wait_for_timeout(300)
+                pg.click("#np-method"); pg.wait_for_selector(".avv.warn")
                 if SHOTS: pg.screenshot(path=os.path.join(SHOTS, f"metodo-{theme}.png"))
                 if AXE:
                     v = pg.evaluate("axe.run(document, {runOnly: {type: 'rule', values: ['color-contrast']}}).then(r => r.violations.map(v => v.nodes.map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,2).join(' | '))).flat())")
