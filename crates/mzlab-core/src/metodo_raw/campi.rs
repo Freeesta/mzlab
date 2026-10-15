@@ -65,7 +65,7 @@ fn trailer<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Campo> {
             distinct: Default::default(),
         })
         .collect();
-    raw.scan_parameters.for_each(source, |_, rec| {
+    raw.scan_parameters.for_each(source, &mut |_, rec| {
         for (i, c) in cols.iter_mut().enumerate() {
             let Some(v) = rec.value(i) else { continue };
             let t = shown(&v);

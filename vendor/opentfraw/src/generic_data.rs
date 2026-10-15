@@ -198,9 +198,16 @@ impl GenericRecord {
         r: &mut BinaryReader<R>,
         header: &GenericDataHeader,
     ) -> Result<Self> {
+        // the bytes of the record first and then the values from them: `read_value` exists for one kind of reader only (it is not repeated for each source)
+        let bytes = r.read_bytes(header.fixed_record_size())?;
+        Self::from_bytes(&bytes, header)
+    }
+
+    fn from_bytes(bytes: &[u8], header: &GenericDataHeader) -> Result<Self> {
+        let mut r = BinaryReader::new(Cursor::new(bytes));
         let mut values = Vec::with_capacity(header.fields.len());
         for desc in &header.fields {
-            values.push((desc.label.clone(), read_value(r, desc)?));
+            values.push((desc.label.clone(), read_value(&mut r, desc)?));
         }
         Ok(Self { values })
     }
@@ -409,15 +416,14 @@ impl GenericRecordStream {
             *g = (first, buf);
         }
         let at = (i - first) * self.record_size;
-        let mut r = BinaryReader::new(Cursor::new(&g.1[at..at + self.record_size]));
-        GenericRecord::read(&mut r, &self.header).ok()
+        GenericRecord::from_bytes(&g.1[at..at + self.record_size], &self.header).ok()
     }
 
     /// Calls `f(i, record)` for every record in order, reading the file `CHUNK` records at a time. Stops (and says `false`) when the file cannot be read.
     pub fn for_each<R: Read + Seek>(
         &self,
         source: &mut R,
-        mut f: impl FnMut(usize, &RecordView<'_>),
+        f: &mut dyn FnMut(usize, &RecordView<'_>),
     ) -> bool {
         let mut buf = vec![0u8; CHUNK * self.record_size];
         let mut i = 0;

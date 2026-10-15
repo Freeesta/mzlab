@@ -87,7 +87,10 @@ fn ms<R: Read + Seek>(
     lock: Option<V>,
 ) -> Option<V> {
     obj(vec![
-        ("sorgente", obj(vec![("tipo", source_type(raw, source).map(V::s))])),
+        (
+            "sorgente",
+            obj(vec![("tipo", source_type(raw, source).map(V::s))]),
+        ),
         ("calibrazione", obj(vec![("lock_mass", lock)])),
         (
             "periodi",
@@ -246,7 +249,9 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         ("campionatore", sampler(&pairs)),
         (
             "campi",
-            Some(V::Arr(campi::fields(raw, source, &traces, &pairs, &items, &ident))),
+            Some(V::Arr(campi::fields(
+                raw, source, &traces, &pairs, &items, &ident,
+            ))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),

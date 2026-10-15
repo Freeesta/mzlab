@@ -95,7 +95,7 @@ fn ranges<R: Read + Seek>(
     if at.iter().all(Option::is_none) {
         return r;
     }
-    raw.scan_parameters.for_each(source, |_, rec| {
+    raw.scan_parameters.for_each(source, &mut |_, rec| {
         for (k, i) in at.iter().enumerate() {
             let Some(x) = i.and_then(|i| rec.value(i)).and_then(|v| v.as_f64()) else {
                 continue;

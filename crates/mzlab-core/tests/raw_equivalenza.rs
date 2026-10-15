@@ -68,9 +68,33 @@ impl std::io::Write for Sha256Sink {
 
 /// (case, hashes before the change: mzidx, mzml, metodo, intestazioni).
 const PRIMA: &[(&str, [&str; 4])] = &[
-    ("LAB-A", ["c8ca0a6568a025ed1c9533edb02f39dd28b1088788e94b98e3e9e3a05d3760df", "d749c8f9331701663d46ac4562a6c208a3e503804d10d0d07373a25deba965b7", "6ac0e6ce68d207d42ac94eb35bbb3e21060657bb878b84fa3bc13a223dd36e76", "fdb802dc4346660bdeba3cddf1d7cbb8a23d4b99d3e6d3d57a3253d61d9517d4"]),
-    ("PXD077492", ["525f99e4a199a17e7767effe21e43f329f005f1b0bf0447bfb9aa928eb62cec7", "25b4350a38d61c7ed8d9739b9c378798760dc029d10fb63de041b9b892ec41e9", "1006c10f52ddcfcf4bc358ce4cd7773e6bb4e5257865e9aaa72e159c022d81a3", "41be13e4d786327c12cbb8e8ce7c5af7b539ec228957534da5473d1169544d6b"]),
-    ("BAF", ["718df5a030a3b976d70c5e50992d3786f73b483353e5ccaea356771d7fa13fd8", "4073de0ba4fd9efea52dcb2d376a3f8182ebcfe705cadf27871ee6e0d775e4c3", "4f9312ccd9e290b25cb0d305e933e1a102855f200a5a53435439bfa9f822a36a", "648a3fded6940230011583d50681cbcd96940f7e1a2f20605751e626751b8e7a"]),
+    (
+        "LAB-A",
+        [
+            "c8ca0a6568a025ed1c9533edb02f39dd28b1088788e94b98e3e9e3a05d3760df",
+            "d749c8f9331701663d46ac4562a6c208a3e503804d10d0d07373a25deba965b7",
+            "6ac0e6ce68d207d42ac94eb35bbb3e21060657bb878b84fa3bc13a223dd36e76",
+            "fdb802dc4346660bdeba3cddf1d7cbb8a23d4b99d3e6d3d57a3253d61d9517d4",
+        ],
+    ),
+    (
+        "PXD077492",
+        [
+            "525f99e4a199a17e7767effe21e43f329f005f1b0bf0447bfb9aa928eb62cec7",
+            "25b4350a38d61c7ed8d9739b9c378798760dc029d10fb63de041b9b892ec41e9",
+            "1006c10f52ddcfcf4bc358ce4cd7773e6bb4e5257865e9aaa72e159c022d81a3",
+            "41be13e4d786327c12cbb8e8ce7c5af7b539ec228957534da5473d1169544d6b",
+        ],
+    ),
+    (
+        "BAF",
+        [
+            "718df5a030a3b976d70c5e50992d3786f73b483353e5ccaea356771d7fa13fd8",
+            "4073de0ba4fd9efea52dcb2d376a3f8182ebcfe705cadf27871ee6e0d775e4c3",
+            "4f9312ccd9e290b25cb0d305e933e1a102855f200a5a53435439bfa9f822a36a",
+            "648a3fded6940230011583d50681cbcd96940f7e1a2f20605751e626751b8e7a",
+        ],
+    ),
 ];
 
 fn file(d: &Path, caso: &str) -> Option<PathBuf> {
