@@ -122,6 +122,7 @@ declare var MARK_N: any;
 declare var MERGE: any;
 declare var METHOD_FORMATS: any;
 declare var METODO_DOC: any;
+declare var METODO_INCL: any;
 declare var METODO_M: any;
 declare var MS2TR_MAX: any;
 declare var MSG: any;
