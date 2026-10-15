@@ -1,5 +1,7 @@
 //! `metodo/1` of the `.wiff` files of the 3200 QTRAP against what is known of them: the `.dam` that the file names, the SHA-1 that ProteoWizard wrote in its mzML.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped (no data of the laboratory lives here).
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::json::{self, Value};
 use mzlab_core::methodinfo::read_methods;
 use mzlab_core::metodo::{self, Source, SrcFile};

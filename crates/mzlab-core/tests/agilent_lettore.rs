@@ -1,6 +1,8 @@
 //! The Agilent `.D` read through the `Lettore` contract: the same scans, the same index and chromatograms as `AgilentD::run`, read by position from the files of the
 //! folder (real runs, skipped without the data repository), and the refusals of a damaged or oversized set (synthetic).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 mod agilent_folder;
 mod agilent_synth;
 

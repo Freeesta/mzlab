@@ -106,6 +106,8 @@ pub fn svd(a: &[f64], m: usize, n: usize) -> Svd {
     let c: Vec<Vec<f64>> = (0..cols).map(|j| (0..rows).map(|i| if tall { a[i * n + j] } else { a[j * n + i] }).collect()).collect();
     let (left, norms, mut right) = jacobi_columns(c);
     let mut order: Vec<usize> = (0..cols).collect();
+    // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+    #[allow(clippy::disallowed_methods)]
     order.sort_by(|&x, &y| norms[y].partial_cmp(&norms[x]).unwrap_or(std::cmp::Ordering::Equal));
     let top = norms[order[0]];
     let null: Vec<bool> = order.iter().map(|&j| norms[j] <= top * 1e-14).collect();
@@ -142,6 +144,8 @@ pub fn eigh(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         }
     }
     let mut order: Vec<usize> = (0..n).collect();
+    // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+    #[allow(clippy::disallowed_methods)]
     order.sort_by(|&x, &y| m[x * n + x].partial_cmp(&m[y * n + y]).unwrap_or(std::cmp::Ordering::Equal));
     let w = order.iter().map(|&i| m[i * n + i]).collect();
     let vec = (0..n * n).map(|x| v[(x / n) * n + order[x % n]]).collect();

@@ -1,6 +1,8 @@
 //! The one LRU of the engine: after any number of routes `cache_bytes() <= cap`, and every answer is the same before and after the eviction
 //! (an evicted entry is read again from the index). Synthetic data only.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::HashMap;
 
 use mzlab_core::idxread::Index;

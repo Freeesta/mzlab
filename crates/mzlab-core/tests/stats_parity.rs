@@ -2,6 +2,8 @@
 //! survival within 1e-9 relative, and the permutation p-values IDENTICAL (same numpy generator). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

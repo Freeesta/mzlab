@@ -241,7 +241,7 @@ impl<R: ReadAt> Routes<R> {
                 }
             }
         }
-        g.sort_by(|a, b| {
+        crate::sortc::slice_by(&mut g, |a, b| {
             a.level
                 .cmp(&b.level)
                 .then(b.n.cmp(&a.n))

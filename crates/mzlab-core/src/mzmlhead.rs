@@ -421,7 +421,7 @@ impl<R: ReadAt> Mzml<R> {
             }
         }
         let mut analyzers: Vec<String> = self.analyzers()?.into_iter().map(|(_, a)| a).collect();
-        analyzers.sort();
+        crate::sortc::slice_ord(&mut analyzers);
         analyzers.dedup();
         Ok(Metadata {
             instrument: pool.first().cloned().unwrap_or_default(),

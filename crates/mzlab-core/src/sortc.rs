@@ -80,6 +80,44 @@ pub fn any_by_key<T, K: Ord, F: FnMut(&T) -> K>(v: &mut Vec<T>, mut key: F) {
     any_by(v, |a, b| key(a).cmp(&key(b)));
 }
 
+/// The stable order of `n` items as a permutation: `result[i]` is the index of the item that goes to position `i`.
+/// Not generic on purpose: there is ONE copy of the sort in the `.wasm`; each call site only adds its comparison closure.
+pub fn order(n: usize, cmp: &mut dyn FnMut(usize, usize) -> Ordering) -> Vec<u32> {
+    let mut idx: Vec<u32> = (0..n as u32).collect();
+    by(&mut idx, |&a, &b| cmp(a as usize, b as usize));
+    idx
+}
+
+/// Moves `v` so that `v_new[i] = v_old[idx[i]]` (cycle by cycle, swaps only: no `Clone`/`Copy`). `idx` is used up.
+fn permute<T>(v: &mut [T], idx: &mut [u32]) {
+    for i in 0..v.len() {
+        let mut cur = i;
+        while idx[cur] as usize != i {
+            let next = idx[cur] as usize;
+            v.swap(cur, next);
+            idx[cur] = cur as u32;
+            cur = next;
+        }
+        idx[cur] = cur as u32;
+    }
+}
+
+/// Stable sort of a slice of any items (cold paths; hot paths keep `slice::sort*`, see `clippy.toml`).
+pub fn slice_by<T, F: FnMut(&T, &T) -> Ordering>(v: &mut [T], mut cmp: F) {
+    let mut idx = order(v.len(), &mut |a, b| cmp(&v[a], &v[b]));
+    permute(v, &mut idx);
+}
+
+/// Stable sort of a slice by a key.
+pub fn slice_by_key<T, K: Ord, F: FnMut(&T) -> K>(v: &mut [T], mut key: F) {
+    slice_by(v, |a, b| key(a).cmp(&key(b)));
+}
+
+/// Stable sort of a slice of items that order themselves.
+pub fn slice_ord<T: Ord>(v: &mut [T]) {
+    slice_by(v, |a, b| a.cmp(b));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +144,32 @@ mod tests {
             any_by(&mut s, |p, q| p.len().cmp(&q.len()));
             t.sort_by(|p, q| p.len().cmp(&q.len()));
             assert_eq!(s, t);
+        }
+    }
+
+    #[test]
+    fn slice_sorts_like_the_standard_stable_sort() {
+        let mut seed = 99u64;
+        let mut r = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (seed >> 33) as u32
+        };
+        for round in 0..1000 {
+            let n = (r() % 70) as usize;
+            let a: Vec<(u32, usize)> = (0..n).map(|i| (r() % (3 + round % 9), i)).collect();
+            let (mut x, mut y) = (a.clone(), a.clone());
+            slice_by(&mut x, |p, q| p.0.cmp(&q.0));
+            y.sort_by_key(|p| p.0);
+            assert_eq!(x, y, "round {round}");
+            let (mut z, mut w) = (a.clone(), a.clone());
+            slice_by_key(&mut z, |p| std::cmp::Reverse(p.0));
+            w.sort_by_key(|p| std::cmp::Reverse(p.0));
+            assert_eq!(z, w);
+            let mut s: Vec<String> = a.iter().map(|p| format!("{}", p.0)).collect();
+            let mut u = s.clone();
+            slice_ord(&mut s);
+            u.sort();
+            assert_eq!(s, u);
         }
     }
 }

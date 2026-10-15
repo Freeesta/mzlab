@@ -1,6 +1,8 @@
 //! `api/qaqc` in Rust gives the JSON of Python (`tools/qaqc_riferimento.py`): same keys, numbers within 1e-9 (relative), the user's error
 //! with the same key, a request Python must word itself declined. Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

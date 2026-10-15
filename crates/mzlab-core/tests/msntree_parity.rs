@@ -2,6 +2,8 @@
 //! parents, precursors, formulas and peaks (numbers within 1e-9), the same error keys. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

@@ -2,6 +2,8 @@
 //! `mzlab.reader.methodinfo`, `mzlab.analog` and `App.method` give (`tools/dam_riferimento.py`): same texts and counts, numbers within 1e-9. Skipped without
 //! python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

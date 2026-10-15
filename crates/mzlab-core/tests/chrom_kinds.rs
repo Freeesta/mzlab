@@ -1,5 +1,7 @@
 //! The kind and the unit of the non-MS chromatograms: same rules as `mzlab/reader/mzml.py` (parity with the Python engine).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::mzml::{read, ChromKind};
 
 fn chrom(index: usize, id: &str, cv: &str, unit: &str) -> String {

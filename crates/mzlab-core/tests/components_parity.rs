@@ -2,6 +2,8 @@
 //! the scans of the evolving factor analysis are identical, the singular values, sigma and edge agree to 1e-9 (relative).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::Path;
 use std::process::Command;
 

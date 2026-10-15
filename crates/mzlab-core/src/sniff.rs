@@ -88,7 +88,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         .filter_map(|s| s.precursor.filter(|p| *p != 0.0))
         .map(|p| p.round_ties_even() as i64)
         .collect();
-    prec.sort();
+    crate::sortc::slice_ord(&mut prec);
     prec.dedup();
     let hrp = hr_profile(idx, &mut m.r, &facts.instrument)?;
     let mut o = Out::default();

@@ -21,7 +21,7 @@ fn total(f: &Formula) -> Result<u64> {
 pub fn submasses(formula: &str, z: i32, min_mz: f64) -> Result<Vec<f64>> {
     let mut f = parse_formula(formula)?;
     let z = if z == 0 { 1 } else { z };
-    f.sort_by(|a, b| a.0.cmp(&b.0));
+    crate::sortc::slice_by(&mut f, |a, b| a.0.cmp(&b.0));
     total(&f)?;
     let mut mass = vec![0.0f64];
     for (e, n) in &f {
@@ -45,7 +45,9 @@ pub fn subformulas(formula: &str, z: i32, min_mz: f64) -> Result<(Formula, Vec<(
     let f = parse_formula(formula)?;
     let z = if z == 0 { 1 } else { z };
     let mut els: Vec<(String, u64)> = f.clone();
-    els.sort_by(|a, b| ((a.0 != "C" && a.0 != "H"), &a.0).cmp(&((b.0 != "C" && b.0 != "H"), &b.0)));
+    crate::sortc::slice_by(&mut els, |a, b| {
+        ((a.0 != "C" && a.0 != "H"), &a.0).cmp(&((b.0 != "C" && b.0 != "H"), &b.0))
+    });
     let tot = total(&els)? as usize;
     let k = els.len();
     let mut rows: Vec<(f64, Vec<u64>)> = Vec::with_capacity(tot);
@@ -70,7 +72,7 @@ pub fn subformulas(formula: &str, z: i32, min_mz: f64) -> Result<(Formula, Vec<(
             idx[d] = 0;
         }
     }
-    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    crate::sortc::slice_by(&mut rows, |a, b| a.0.total_cmp(&b.0));
     let out = rows
         .into_iter()
         .map(|(mz, ix)| {

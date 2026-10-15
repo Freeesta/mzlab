@@ -2,6 +2,8 @@
 //! that `raw::to_mzml_progress` writes: MS level, polarity, scan time, TIC, base peak, precursor (selected m/z, isolation window, energy,
 //! the scan it comes from), number of points, m/z and intensity. Needs the private data repository (MZLAB_DATI, or `mzlab-dati` beside
 //! this one) with `HRMS/Profile raw/`: without it the test is skipped; no `.raw` lives in this repository.
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;

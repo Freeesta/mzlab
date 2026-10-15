@@ -63,7 +63,7 @@ fn fixed_precursors(keys: &[String]) -> bool {
         return false;
     }
     let mut n: Vec<usize> = count.values().copied().collect();
-    n.sort_unstable();
+    crate::sortc::slice_ord(&mut n);
     let median = match n.len() % 2 {
         1 => n[n.len() / 2] as f64,
         _ => (n[n.len() / 2 - 1] + n[n.len() / 2]) as f64 / 2.0,
@@ -110,7 +110,7 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
     let mut nominal: Vec<String> = msn.iter().map(|s| key(s, true)).collect();
     let keys: Vec<String> = msn.iter().map(|s| key(s, false)).collect();
     let livelli = scans.iter().map(|s| s.level).max().unwrap_or(1);
-    nominal.sort();
+    crate::sortc::slice_ord(&mut nominal);
     nominal.dedup();
     let nodi = nominal.len();
     let out = |motivo| {
