@@ -10,11 +10,12 @@ const LETTORI_FAM = {
   aperti: { ext: [".mzml", ".mzxml"], membri: [], errori: ["err.file.numpress"], soloModulo: [".mzxml"] },
   andi: { ext: [".cdf", ".nc"], membri: [], errori: [], soloModulo: [".cdf", ".nc"] },
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
+  // bruker before agilent: both are `.d` folders and `famigliaDi` takes the first family that matches, so the members `analysis.*` decide, never the extension
+  bruker: { ext: [], membri: ["analysis.tdf", "analysis.tsf", "analysis.baf"], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [] },
   waters: { ext: [], membri: [], errori: [], soloModulo: [] },
   shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
-  bruker: { ext: [], membri: [], errori: [], soloModulo: [] },
 };
 /** @type {any} */ (window).LETTORI_FAM = LETTORI_FAM;
 export default LETTORI_FAM;
