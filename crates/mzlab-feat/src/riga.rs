@@ -143,6 +143,38 @@ fn list(o: &mut Out, v: &[f64]) {
     o.floats(v);
 }
 
+/// One spectrum of `riga_tracce/1`: `{"file", <extra>, "mz", "y"}`.
+fn spectrum(o: &mut Out, file: &str, extra: (&str, f64), mz: &[f64], y: &[f64]) {
+    o.raw("{\"file\":").str(file).raw(",\"").raw(extra.0).raw("\":").num(extra.1).raw(",\"mz\":");
+    list(o, mz);
+    o.raw(",\"y\":");
+    list(o, y);
+    o.raw("}");
+}
+
+/// The MS1 spectrum at the scan of section `si` nearest to `apex`, from `SPEC_BELOW` below to `SPEC_ABOVE` above `mz`: `(rt of the scan, m/z, intensity)`.
+fn ms1_at<R: ReadAt>(index: &mut Index<R>, si: usize, rts: &[f64], apex: f64, mz: f64) -> Result<(f64, Vec<f64>, Vec<f64>)> {
+    let near = (0..rts.len()).min_by(|&i, &j| (rts[i] - apex).abs().total_cmp(&(rts[j] - apex).abs())).unwrap_or(0);
+    let (a, b) = (index.search(si, mz - SPEC_BELOW, false)?, index.search(si, mz + SPEC_ABOVE, true)?);
+    let (mut sx, mut sy) = (Vec::new(), Vec::new());
+    index.each_peak(si, a, b, |p, m, v| {
+        if p == near {
+            sx.push(m);
+            sy.push(v);
+        }
+    })?;
+    Ok((rts[near], sx, sy))
+}
+
+/// The MS2 the exports use for a row of the file of `q`: `(precursor, m/z, intensity)`.
+fn ms2_of<R: ReadAt>(index: &mut Index<R>, q: &crate::table::RowQ, mz: f64, pol: i8) -> Result<Option<(f64, Vec<f64>, Vec<f64>)>> {
+    let mut by_rt: Vec<u32> = (0..index.scans.len() as u32).filter(|&g| index.scans[g as usize].level == 2).collect();
+    by_rt.sort_by(|&a, &b| index.scans[a as usize].rt.total_cmp(&index.scans[b as usize].rt));
+    let Some(g) = pick(index, &by_rt, mz, pol, f64::from(q.rt_lo), f64::from(q.rt_hi)) else { return Ok(None) };
+    let prec = index.scans[g as usize].prec(0.0);
+    Ok(read_peaks(index, pol, &[g])?.remove(&g).map(|(m, v)| (prec, m, v)))
+}
+
 /// The `riga_tracce/1` of the row with `id`: `xic` (one per file: `rt`, `y` in the window of the edges of the peak plus `PAD_WIDTHS` widths on each side, at
 /// most `MAX_POINTS`), `ms1` (spectrum at the apex of the file with the largest area, from `SPEC_BELOW` below to `SPEC_ABOVE` above the m/z of the row) and
 /// `ms2` (the one `ms2spec` chooses for the exports, from `RowMeta::ms2_file`); `ms1` and `ms2` are `null` when there is none. `open(k)` gives the index of file `k`.
@@ -179,16 +211,7 @@ pub fn traces<R: ReadAt>(t: &Aligned, s: &[Sample], id: u32, mut open: impl FnMu
                 }
             }
             if best == Some(k) && !rts.is_empty() {
-                let near = (0..rts.len()).min_by(|&i, &j| (rts[i] - apex).abs().total_cmp(&(rts[j] - apex).abs())).unwrap_or(0);
-                let (a, b) = (index.search(si, mz - SPEC_BELOW, false)?, index.search(si, mz + SPEC_ABOVE, true)?);
-                let (mut sx, mut sy) = (Vec::new(), Vec::new());
-                index.each_peak(si, a, b, |p, m, v| {
-                    if p == near {
-                        sx.push(m);
-                        sy.push(v);
-                    }
-                })?;
-                ms1 = Some((k, rts[near], sx, sy));
+                ms1 = Some((k, ms1_at(&mut index, si, &rts, apex, mz)?));
             }
         }
         let (x, y) = decimate(&x, &y);
@@ -199,39 +222,22 @@ pub fn traces<R: ReadAt>(t: &Aligned, s: &[Sample], id: u32, mut open: impl FnMu
     }
     o.raw("],\"ms1\":");
     match ms1 {
-        Some((k, rt, sx, sy)) => {
-            o.raw("{\"file\":").str(&s[k].file).raw(",\"rt\":").num(rt).raw(",\"mz\":");
-            list(&mut o, &sx);
-            o.raw(",\"y\":");
-            list(&mut o, &sy);
-            o.raw("}")
+        Some((k, (rt, sx, sy))) => spectrum(&mut o, &s[k].file, ("rt", rt), &sx, &sy),
+        None => {
+            o.raw("null");
         }
-        None => o.raw("null"),
-    };
+    }
     o.raw(",\"ms2\":");
     let ms2 = match q.filter(|q| q.ms2_file != NO_FILE && (q.ms2_file as usize) < t.n_files) {
-        Some(q) => {
-            let k = q.ms2_file as usize;
-            let mut index = open(k)?;
-            let mut by_rt: Vec<u32> = (0..index.scans.len() as u32).filter(|&g| index.scans[g as usize].level == 2).collect();
-            by_rt.sort_by(|&a, &b| index.scans[a as usize].rt.total_cmp(&index.scans[b as usize].rt));
-            match pick(&index, &by_rt, mz, pol, f64::from(q.rt_lo), f64::from(q.rt_hi)) {
-                Some(g) => read_peaks(&mut index, pol, &[g])?.remove(&g).map(|(m, v)| (k, index.scans[g as usize].prec(0.0), m, v)),
-                None => None,
-            }
-        }
+        Some(q) => ms2_of(&mut open(q.ms2_file as usize)?, &q, mz, pol)?.map(|m| (q.ms2_file as usize, m)),
         None => None,
     };
     match ms2 {
-        Some((k, prec, m, v)) => {
-            o.raw("{\"file\":").str(&s[k].file).raw(",\"prec\":").num(prec).raw(",\"mz\":");
-            list(&mut o, &m);
-            o.raw(",\"y\":");
-            list(&mut o, &v);
-            o.raw("}")
+        Some((k, (prec, m, v))) => spectrum(&mut o, &s[k].file, ("prec", prec), &m, &v),
+        None => {
+            o.raw("null");
         }
-        None => o.raw("null"),
-    };
+    }
     o.raw("}");
     Ok(o.0)
 }
