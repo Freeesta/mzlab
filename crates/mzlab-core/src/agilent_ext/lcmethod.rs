@@ -49,16 +49,14 @@ impl LcMethod {
 
     /// The segments of the method (the `Time Segments` table says how many; a method without it has the segments its parameters name).
     pub fn segments(&self) -> Vec<u32> {
-        let mut v: Vec<u32> = self
+        let v: std::collections::BTreeSet<u32> = self
             .tables
             .iter()
             .map(|t| t.seg)
             .chain(self.ms.iter().map(|p| p.seg))
             .filter(|s| *s > 0)
             .collect();
-        v.sort_unstable();
-        v.dedup();
-        v
+        v.into_iter().collect()
     }
 }
 

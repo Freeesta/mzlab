@@ -16,7 +16,7 @@ fn run_length_skips_and_changes_width() {
 #[test]
 fn lzf_literal_and_back_reference() {
     // literal run of 3 bytes, then a back reference of length 4 at distance 3
-    let s = [2u8, 1, 2, 3, (2 << 5) | 0, 2];
+    let s = [2u8, 1, 2, 3, 2 << 5, 2];
     assert_eq!(lzf(&s, 7).unwrap(), vec![1, 2, 3, 1, 2, 3, 1]);
     assert!(lzf(&s, 9).is_err());
 }

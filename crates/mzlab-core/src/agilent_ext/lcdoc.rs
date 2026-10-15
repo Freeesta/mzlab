@@ -351,8 +351,6 @@ pub(super) fn ms(d: &AgilentD) -> Option<V> {
     ])
 }
 
-/// The gradient of the binary pump: a table of time, A, B, flow rows, or a timetable of functions (`Change Solvent Composition`, `Change Flow`).
-
 /// `lc`, `campionatore` and `rivelatori` of the method, in this order.
 pub(super) fn sections(d: &AgilentD) -> Vec<(&'static str, Option<V>)> {
     let Some(m) = &d.lcm else { return vec![] };

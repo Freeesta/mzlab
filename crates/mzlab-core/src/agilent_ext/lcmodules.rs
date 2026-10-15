@@ -5,6 +5,7 @@ use super::lcdoc::*;
 use super::lcmethod::{LcMethod, Rc};
 use crate::metodo::{num, obj, text, V};
 
+/// The gradient of the binary pump: a table of time, A, B, flow rows, or a timetable of functions (`Change Solvent Composition`, `Change Flow`).
 fn gradient(m: &LcMethod, pump: &str) -> Vec<V> {
     let rows: Vec<&Rc> =
         m.rc.iter()

@@ -287,10 +287,13 @@ fn plain(k: i64) -> String {
     format!("{}", k as f64 / 1000.0)
 }
 
+/// Times and intensities of one SRM chromatogram.
+type Trace = (Vec<f64>, Vec<f64>);
+
 /// The SRM chromatograms of the MRM visits: one per (Q1, Q3, `ScanMethodID`), the Q1 being `MzOfInterest` and the Q3 the m/z of a point of the visit.
 #[derive(Default)]
 pub(crate) struct Srm {
-    traces: BTreeMap<(i64, i64, i32), (Vec<f64>, Vec<f64>)>,
+    traces: BTreeMap<(i64, i64, i32), Trace>,
 }
 
 #[cfg(test)]

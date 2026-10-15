@@ -98,8 +98,6 @@ impl LettoreAgilent {
     }
 }
 
-/// The chromatograms of the run without their points: the TIC, the BPC and one SIC per ion of the SIM groups.
-
 const SCAN: &str = "AcqData/MSScan.bin";
 const XSD: &str = "AcqData/MSScan.xsd";
 const PEAK: &str = "AcqData/MSPeak.bin";
@@ -139,7 +137,6 @@ fn folder_name(fs: &FileSet) -> String {
         .unwrap_or("run.D")
         .to_string()
 }
-
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
     if let Some(i) = find(fs, SCAN) {
@@ -388,6 +385,7 @@ pub struct LettoreAgilent {
     srm: Option<Vec<Chromatogram>>,
 }
 
+/// The chromatograms of the run without their points: the TIC, the BPC and one SIC per ion of the SIM groups.
 fn listed(l: &mut LettoreAgilent) -> Result<Vec<VoceCromatogramma>> {
     let survey = l.d.survey_chromatograms().into_iter();
     let mut v: Vec<VoceCromatogramma> = survey

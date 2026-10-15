@@ -52,38 +52,14 @@ fn method() -> LcMethod {
         "",
     );
     rc += &row("DAD", "DAD", None, "UV Lamp Required", "Yes", "");
-    rc += &row(
-        "DAD",
-        "DAD",
-        Some(("Signal table", 0)),
-        "Use Sig.",
-        "Yes",
-        "",
-    );
-    rc += &row(
-        "DAD",
-        "DAD",
-        Some(("Signal table", 0)),
-        "Wavelength",
-        "254.0",
-        "nm",
-    );
-    rc += &row(
-        "DAD",
-        "DAD",
-        Some(("Signal table", 0)),
-        "Use Ref.",
-        "Yes",
-        "",
-    );
-    rc += &row(
-        "DAD",
-        "DAD",
-        Some(("Signal table", 0)),
-        "Ref Wavel.",
-        "360.0",
-        "nm",
-    );
+    for (name, v, unit) in [
+        ("Use Sig.", "Yes", ""),
+        ("Wavelength", "254.0", "nm"),
+        ("Use Ref.", "Yes", ""),
+        ("Ref Wavel.", "360.0", "nm"),
+    ] {
+        rc += &row("DAD", "DAD", Some(("Signal table", 0)), name, v, unit);
+    }
     let cell = |r: usize, c: usize, col: &str, v: &str| {
         format!("<SectionInfo><SectionType>Column</SectionType><Name>{col}</Name><RowIndex>{r}</RowIndex><ColumnIndex>{c}</ColumnIndex><Value>{v}</Value></SectionInfo>")
     };
