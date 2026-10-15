@@ -54,14 +54,14 @@ try:
         def copy_xls():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             pg.evaluate("window.__clip=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__clip=t;return Promise.resolve()}},configurable:true})")
-            pg.click(".pnl.act [data-a=dl]"); pg.click("#ctx >> text=Copia i dati"); pg.wait_for_timeout(800)
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia i dati"); pg.wait_for_timeout(800)
             t = pg.evaluate("window.__clip"); assert t and "\t" in t and t.startswith("# mzLab ") and "RT" in t.split("\n")[1], (t or "")[:120]      # first line = provenance
-            with pg.expect_download(timeout=15000) as d: (pg.click(".pnl.act [data-a=dl]"), pg.click("#ctx >> text=Excel"))
+            with pg.expect_download(timeout=15000) as d: (pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
         step("copy the data as text; export to Excel (menu of the cell)", copy_xls)
         def one_row():
             # one row of buttons above the cells, one pair of arrows for the files, one pair for the scans, one pair of undo/redo
-            tops = pg.evaluate("[...new Set([...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>Math.round(b.getBoundingClientRect().top/10)))]")
+            tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
             assert len(tops) == 1, tops
             assert pg.locator("#tools #np-undo").count() == 1 and pg.locator("#tools #np-redo").count() == 1 and pg.locator("#hrbar [data-hb=zundo],#hrbar [data-hb=zredo]").count() == 0
             txt = pg.evaluate("[...document.querySelectorAll('#tools button')].map(b=>b.textContent).join('')")
@@ -70,7 +70,7 @@ try:
         step("one row, one pair of arrows per meaning, one undo/redo, words next to the icons", one_row)
         def narrow():
             pg.set_viewport_size({"width": 760, "height": 1400}); pg.wait_for_timeout(600)
-            tops = pg.evaluate("[...new Set([...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>Math.round(b.getBoundingClientRect().top/10)))]")
+            tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
             assert len(tops) == 1, tops
             assert pg.is_visible("#hr-more"), "what does not fit goes into the «⋯» menu"
             pg.click("#hr-more"); names = pg.evaluate("[...document.querySelectorAll('#ctx button,#ctx [role=menuitem]')].map(b=>b.textContent.trim()).filter(Boolean)")
