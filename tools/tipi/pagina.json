@@ -142,6 +142,9 @@
     "../../TP_Mine/js/36_feature_qc.js",
     "../../TP_Mine/js/37_feature_table.js",
     "../../TP_Mine/js/38_feature_export.js",
+    "../../TP_Mine/js/40_tabui_testi.js",
+    "../../TP_Mine/js/41_tabui_aiuto.js",
+    "../../TP_Mine/js/41_tabui_campi.js",
     "../../TP_Mine/js/42_tp_table.js",
     "../../TP_Mine/js/43_trasformazioni.js"
   ]
