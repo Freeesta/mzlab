@@ -53,9 +53,17 @@ try:
             q.click("#tc-succ"); q.wait_for_url("**/14-frammentazione-esi.html")
             q.wait_for_selector("#tbar"); assert q.get_attribute("#tc-prec", "href") == "13-formula.html"
             q.click("#tc-prec"); q.wait_for_url("**/13-formula.html"); q.wait_for_selector("#tbar")
-            q.goto(T + "index.html"); q.wait_for_selector("#tbar"); assert q.get_attribute("#tc-prec", "aria-disabled") == "true" and q.get_attribute("#tc-prec", "href") is None
-            q.goto(T + "13-formula.html"); q.wait_for_selector("#tbar")
-        step("previous / next change the chapter, the first has no previous", prevnext)
+            assert q.inner_text("#tc-succ").strip() == "14" and q.inner_text("#tc-prec").strip() == "12", (q.inner_text("#tc-succ"), q.inner_text("#tc-prec"))
+            pb, sb = q.locator("#tc-prec svg").bounding_box(), q.locator("#tc-prec .l").bounding_box(); assert pb["x"] < sb["x"], "arrow left of the number (previous)"
+            pb, sb = q.locator("#tc-succ svg").bounding_box(), q.locator("#tc-succ .l").bounding_box(); assert pb["x"] > sb["x"], "arrow right of the number (next)"
+            assert q.get_attribute("#tc-prec", "title").startswith("Precedente: 12.") and q.get_attribute("#tc-succ", "title").startswith("Successivo: 14."), (q.get_attribute("#tc-prec", "title"), q.get_attribute("#tc-succ", "title"))
+            for f, gone, kept in (("index.html", "#tc-prec", "#tc-succ"), ("pratica-tp.html", "#tc-succ", "#tc-prec")):
+                q.goto(T + f); q.wait_for_selector("#tbar"); assert not q.query_selector(gone) and q.query_selector(kept), (f, gone)
+            for w in (1280, 1000):
+                q.set_viewport_size({"width": w, "height": 900}); q.goto(T + "13-formula.html"); q.wait_for_selector("#tbar")
+                assert q.evaluate("document.querySelector('#top').getBoundingClientRect().height") < 80, "header on one row"
+            q.set_viewport_size({"width": 1280, "height": 900}); q.goto(T + "13-formula.html"); q.wait_for_selector("#tbar")
+        step("previous / next show the chapter number (arrow outside), change the chapter, are absent at the ends, one header row", prevnext)
         def cerca():
             q.click("#sc-cerca"); q.wait_for_selector("#cerca-in", state="visible"); assert q.evaluate("TEORIA.cerca.aperta()")
             q.keyboard.press("Escape"); q.wait_for_selector("#cerca-bg", state="hidden")
