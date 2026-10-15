@@ -12,10 +12,10 @@ use mzlab_feat::legacy::lr::{self, detail::detail, summary::summary};
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 
-#[path = "lr_dig/ms2_window.rs"]
-mod ms2_window;
 #[path = "lr_dig/ms2_real.rs"]
 mod ms2_real;
+#[path = "lr_dig/ms2_window.rs"]
+mod ms2_window;
 
 const SHIFT: f64 = 0.30;
 const TIMES: [f64; 7] = [0.0, 5.0, 10.0, 15.0, 30.0, 45.0, 60.0];
