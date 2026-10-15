@@ -71,6 +71,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
+| lettore cartelle Waters MassLynx `.raw` (`crates/mzlab-lettori/src/waters/`, modulo `waters`, raggruppamento in `waters-raw.js`) | `docs/agenti/waters.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
 | pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
 | ingresso di mzFinder: `.mzidx` per ogni file scelto o da IndexedDB (`TP_Mine/files/finder-idx.js`), lista di trasformazioni dell'utente in Rust | `docs/agenti/mzfinder-ingresso.md` |
