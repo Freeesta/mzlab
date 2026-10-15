@@ -1832,6 +1832,8 @@ I18N.add("en", {
   "mappa.side.title": "spectrum of the scan",
   "mappa.side.empty": "no peak in this m/z range",
   "mappa.bot.title": "XIC of the m/z under the sight",
+  "mappa.side.diff": "difference spectrum A − B of the scan",
+  "mappa.bot.tic": "TIC A − B (own scale)",
   "mappa.btn.mir": "sight",
   "mappa.btn.mir.title": "Sight (M key): crosshair, readout and, next to the map, the spectrum of the scan and the XIC of the m/z under the cursor",
   "mappa.btn.menu.title": "More actions on the point of the sight: XIC, spectrum",

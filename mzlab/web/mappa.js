@@ -195,7 +195,7 @@ window.MAPPA = (() => {
     const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
     if (!pt || !(mirOn(p) || st(p).lock)) return;
     const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sp = specFor(p, pt), sc = sp && sp.sid != null ? T("mappa.read.scan", { n: sp.sid + 1 }) + " · " : "";
-    p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
+    p.rd.textContent = `${f ? f.label + (a.ref ? " − " + a.ref.label : "") + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
   }
 
   // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
@@ -204,7 +204,7 @@ window.MAPPA = (() => {
   // point wins (MIRINO.latest, at most once per frame); what has not arrived yet is a preview read from the matrix of the map, marked as such.
   const SIGHT = MIRINO.lru(MIRINO.budget()), AX = new Map(), FLY = new Map();      // spectra and XIC under a memory budget; RT axes; requests in flight
   { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }   // same moments as the cache of explore.js
-  const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
+  const dropFile = k => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); SIGHT.dropIf(key => key[0] === "s" ? key.includes(`-${k}|`) : key.includes(`+${k}|`)); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
   const MEAS = /[?&]perf\b/.test(location.search), meas = window.__mir = [];     // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
   const once = (key, fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
   const axisOf = f => {                                                  // {rt, sid} of the scans of the level; null until it has arrived
@@ -218,11 +218,17 @@ window.MAPPA = (() => {
   const xicKey = (f, a, mz) => `x${f.k}${a.ref ? "+" + a.ref.k : ""}|${xicCentre(f, mz).toFixed(4)}|${xicTol(f, mz).toFixed(5)}|${f.lv || 1}`;
   const specSize = sp => (sp.mz.length + sp.y.length) * 8 + 200, xicSize = xi => (xi.tr || []).reduce((n, t) => n + (t.rt.length + t.y.length) * 8 + 100, 200);
   // what is already in the page for the point: the exact spectrum / XIC, or null
+  // the scan of A (and of B, in a difference) nearest to the point: {f, ax, i, r, rx, j} or null while an RT axis is not in the page
+  function scansAt(p, pt) {
+    const a = p._a, f = a && a.f; if (!f || !pt) return null;
+    const ax = axisOf(f), r = a.ref || null, rx = r ? axisOf(r) : null; if (!ax || (r && !rx)) return null;
+    const i = MIRINO.nearest(ax.rt, pt.rt), j = rx ? MIRINO.nearest(rx.rt, pt.rt) : -1; if (i < 0 || (r && j < 0)) return null;
+    return { f, ax, i, r, rx, j };
+  }
+  const specKeyAt = c => specKey(c.f, c.ax, c.i) + (c.r ? `-${c.r.k}|${c.rx.sid[c.j]}` : "");
   function specFor(p, pt) {
-    const s = st(p), a = p._a, f = a && a.f; if (!f || !pt) return null;
-    const ax = axisOf(f); if (!ax) return null;
-    const i = MIRINO.nearest(ax.rt, pt.rt); if (i < 0) return null;
-    const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+    const s = st(p), c = scansAt(p, pt); if (!c) return null;
+    const key = specKeyAt(c); if (s.spec && s.spec.key === key) return s.spec;
     const sp = SIGHT.get(key); if (sp) s.spec = sp; return sp || null;
   }
   function xicFor(p, pt) {
@@ -241,19 +247,26 @@ window.MAPPA = (() => {
     } catch (e) { /* nothing to show */ }
     return s.xic;
   }
+  // one scan by position: the same arrays as /api/spectrum on a window holding only that scan
+  const getScan = (f, ax, i) => {
+    const key = specKey(f, ax, i), hit = SIGHT.get(key); if (hit) return Promise.resolve(hit);
+    return once(key, async () => {
+      const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${f.lv || 1}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
+      if (!n) throw new Error("no scan");
+      const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
+    });
+  };
   async function fetchSpec(p, rt) {
-    const s = st(p), a = p._a; if (!a) return null; const f = a.f, lv = f.lv || 1;
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f, r = a.ref || null;
     try {
-      const ax = await axisWait(f), i = ax ? MIRINO.nearest(ax.rt, rt) : -1;
-      if (i < 0) return s.spec;
-      const key = specKey(f, ax, i); if (s.spec && s.spec.key === key) return s.spec;
+      const ax = await axisWait(f), rx = r ? await axisWait(r) : null, i = ax ? MIRINO.nearest(ax.rt, rt) : -1, j = rx ? MIRINO.nearest(rx.rt, rt) : -1;
+      if (i < 0 || (r && j < 0)) return s.spec;
+      const key = specKeyAt({ f, ax, i, r, rx, j }); if (s.spec && s.spec.key === key) return s.spec;
       const hit = SIGHT.get(key); if (hit) return (s.spec = hit);
-      const sp = await once(key, async () => {                          // one scan by position: the same arrays as /api/spectrum on a window holding only that scan
-        const j = await J(`api/spectra?k=${f.k}&i0=${i}&i1=${i}&level=${lv}&bin=0.1${MERGE()}`), n = j.scans && j.scans[0];
-        if (!n) throw new Error("no scan");
-        const r = { key, sid: n.sid, rt: n.rt, mz: n.mz, y: n.y }; SIGHT.set(key, r, specSize(r)); return r;
-      });
-      s.spec = sp;
+      if (!r) { s.spec = await getScan(f, ax, i); return s.spec; }
+      const [sa, sb] = await Promise.all([getScan(f, ax, i), getScan(r, rx, j)]);        // A − B over every m/z: peaks of A and B closer than the XIC window are one
+      const d = MIRINO.diffPeaks(sa.mz, sa.y, sb.mz, sb.y, mz => xicTol(f, mz));
+      const sp = { key, sid: sa.sid, rt: sa.rt, rtb: sb.rt, mz: d.mz, y: d.y, signed: true }; SIGHT.set(key, sp, specSize(sp)); s.spec = sp;
     } catch (e) { /* nothing to show */ }
     return s.spec;
   }
@@ -276,8 +289,8 @@ window.MAPPA = (() => {
     if (!m || !pt) return null;
     const i = Math.floor((pt.rt - m.rt0) / (m.rt1 - m.rt0) * m.nrt), j = Math.floor((pt.mz - m.mz0) / m.dmz);
     const out = {};
-    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt }; }
-    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }] }; }
+    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt, signed: !!a.ref }; }
+    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }], signed: !!a.ref }; }
     return out;
   }
   function show(p, pt) {                                                 // exact where the page has it, a preview for the rest
@@ -289,10 +302,20 @@ window.MAPPA = (() => {
     return sp && xi;
   }
   const ask = MIRINO.latest(() => { const p = ask.panel; return p ? exact(p) : null; });
+  const ticKey = a => `${a.f.k}|${a.ref ? a.ref.k : ""}|${a.f.lv || 1}`;
+  // A − B of the TIC of the two files (once per pair): the overall trace of the difference
+  async function fetchTic(p) {
+    const s = st(p), a = p._a; if (!a || !a.ref) return;
+    const key = ticKey(a); if (s.tic && s.tic.key === key) return;
+    try {
+      const lv = a.f.lv || 1, [ca, cb] = await Promise.all([getChrom(a.f.k, "tic", lv), getChrom(a.ref.k, "tic", lv)]), d = MIRINO.diffTrace(ca.rt, ca.y, cb.rt, cb.y);
+      if (p._a && ticKey(p._a) === key) s.tic = { key, rt: d.rt, y: d.y };
+    } catch (e) { /* no TIC */ }
+  }
   async function exact(p) {
     const q = point(p); if (!q) return;
     const s = st(p), t1 = performance.now();
-    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz)]);
+    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz), fetchTic(p)]);
     const t2 = performance.now(), r = point(p); if (!r || !p._a) return;
     const done = show(p, r); readout(p);                                 // an answer for a point the sight has left is not drawn: the newest point is already queued
     if (done) { if (MEAS && s.t0) meas.push({ fetch: t2 - t1, draw: performance.now() - t2, total: performance.now() - s.t0 }); s.t0 = 0; prefetch(p, r); }
@@ -350,22 +373,31 @@ window.MAPPA = (() => {
     const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
-    let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
-    const pr = !prev && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
+    const sg = !!sp.signed, ab = v => sg ? Math.abs(v) : v;                      // difference A − B: bars right (more in A) and left (more in B) of a zero line
+    let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (ab(sp.y[i]) > ymax) ymax = ab(sp.y[i]); }
+    const pr = !prev && !sg && sp.pmz && sp.py ? profRange(sp, a.y0, a.y1) : null;       // profile scan: the continuous line (pmz/py) is drawn, the peaks (mz/y) only label it
     if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T("mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
-    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1; g.beginPath();
+    const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) })); }
+    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
+    if (sg) {
+      g.beginPath(); g.moveTo(xz + .5, M.t); g.lineTo(xz + .5, H - M.b); g.strokeStyle = ink; g.stroke();
+      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) { g.strokeStyle = css(col); g.beginPath(); for (const i of vis) if (sp.y[i] * sgn > 0) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(xz, y); g.lineTo(xz + len(sp.y[i]), y); } g.stroke(); }
+    } else {
+    g.beginPath();
     if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || css("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
     if (!pr)
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
-    g.stroke(); g.globalAlpha = 1;
+    g.stroke();
+    }
+    g.globalAlpha = 1;
     if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, H - M.b + 14); return; }       // a preview has bins, not peaks: no m/z labels
-    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), kept = [];
-    for (const i of top) { if (sp.y[i] < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
-    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
+    const top = vis.slice().sort((u, v) => ab(sp.y[v]) - ab(sp.y[u])), kept = [];
+    for (const i of top) { if (ab(sp.y[i]) < ymax * 0.05) break; if (!kept.some(k => Math.abs(sp.mz[k] - sp.mz[i]) <= GROUP_DA)) kept.push(i); }      // only the highest peak of each group: no M+1 / M+2 or lower neighbours
+    sideLabels(g, W, kept, i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)) }), x0, s);
     if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
-    g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
+    g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
   }
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
@@ -374,12 +406,31 @@ window.MAPPA = (() => {
     g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
     for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
-    let ymax = 0; const tr = xi.tr || [];
-    for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
-    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })) }, true); }
-    const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+    let tr = xi.tr || [], ymax = 0, sg = false;
+    if (a.ref && xi.signed) sg = true;                                              // preview of a difference: the matrix already holds A − B
+    else if (a.ref && tr.length >= 2) { const d = MIRINO.diffTrace(tr[0].rt, tr[0].y, tr[1].rt, tr[1].y); tr = [{ k: tr[0].k, rt: d.rt, y: d.y, label: "A − B" }]; sg = true; }
+    const tic = sg && s.tic && s.tic.key === ticKey(a) ? s.tic : null;               // A − B of the TIC, on its own scale, behind the XIC
+    for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && Math.abs(t.y[i]) > ymax) ymax = Math.abs(t.y[i]);
+    if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map(t => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
+    const lo0 = sg ? -ymax : 0, Y = v => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax) || 1) * (H - mt - mb);
     g.beginPath(); g.moveTo(M.l + .5, mt); g.lineTo(M.l + .5, H - mb + .5); g.stroke();      // intensity axis, like the other chromatograms
-    if (ymax) { g.textAlign = "right"; for (const t of nice(0, ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
+    if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(M.l - 4, y); g.lineTo(M.l, y); g.stroke(); g.fillText(fmtA(t), M.l - 6, y + 3.5); } }
+    if (sg) {
+      const y0 = Y(0); g.beginPath(); g.moveTo(M.l, y0 + .5); g.lineTo(W - M.r, y0 + .5); g.stroke();
+      if (tic) {                                                                    // TIC A − B: thin dashed line with its own scale (written beside the label)
+        const tm = Math.max(...tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
+        for (let i = 0; i < tic.rt.length; i++) { if (tic.rt[i] < a.x0 || tic.rt[i] > a.x1) continue; const x = X(tic.rt[i]), y = y0 - tic.y[i] / tm * (y0 - mt); if (f1) { g.moveTo(x, y); f1 = false; } else g.lineTo(x, y); }
+        g.stroke(); g.setLineDash([]);
+      }
+      const t = tr[0];
+      for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) {          // area between the curve and zero: vermilion where A is higher, blue where B is
+        g.save(); g.beginPath(); g.rect(M.l, sgn > 0 ? mt : y0, W - M.l - M.r, sgn > 0 ? y0 - mt : H - mb - y0); g.clip();
+        g.fillStyle = css(col); g.strokeStyle = css(col); g.globalAlpha = prev ? .35 : .55; g.beginPath(); g.moveTo(X(Math.max(a.x0, t.rt[0] ?? a.x0)), y0);
+        let lx = M.l; for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; lx = X(t.rt[i]); g.lineTo(lx, Y(t.y[i])); }
+        g.lineTo(lx, y0); g.closePath(); g.fill(); g.globalAlpha = 1; g.lineWidth = 1.2; g.stroke(); g.restore();
+      }
+      g.lineWidth = 1;
+    } else
     tr.forEach((t, n) => {
       const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
@@ -387,7 +438,7 @@ window.MAPPA = (() => {
     });
     g.fillStyle = css("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
-    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
+    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, M.l + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 

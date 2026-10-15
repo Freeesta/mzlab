@@ -1832,6 +1832,8 @@ I18N.add("it", {
   "mappa.side.title": "spettro della scansione",
   "mappa.side.empty": "nessun picco in questo intervallo di m/z",
   "mappa.bot.title": "XIC dell'm/z sotto il mirino",
+  "mappa.side.diff": "spettro differenza A − B della scansione",
+  "mappa.bot.tic": "TIC A − B (scala propria)",
   "mappa.btn.mir": "mirino",
   "mappa.btn.mir.title": "Mirino (tasto M): croce, lettura e, accanto alla mappa, lo spettro della scansione e l'XIC dell'm/z sotto il cursore",
   "mappa.btn.menu.title": "Altre azioni sul punto del mirino: XIC, spettro",
