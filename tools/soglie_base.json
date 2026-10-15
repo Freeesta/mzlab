@@ -31,7 +31,7 @@
   "mzlab/web/barra.js": 1040,
   "mzlab/web/draw.js": 756,
   "mzlab/web/eventi.js": 657,
-  "mzlab/web/explore.js": 837,
+  "mzlab/web/explore.js": 1250,
   "mzlab/web/grafici.js": 559,
   "mzlab/web/lang/en.js": 3121,
   "mzlab/web/lang/it.js": 3121,
@@ -49,7 +49,7 @@
  "funzioni": {
   "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 120,
   "TP_Mine/files/feat-worker.js::createFeatPool": 125,
-  "TP_Mine/js/20_tpmine.js::open": 488,
+  "TP_Mine/js/20_tpmine.js::open": 720,
   "TP_Mine/js/21_tpmine_hr.js::render": 196,
   "TP_Mine/js/23_tpmine_albero.js::mount": 193,
   "TP_Mine/js/42_tp_table.js::mount": 330,

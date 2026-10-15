@@ -1,5 +1,5 @@
-"""Settings of the Teoria (impostazioni.js): the gear opens ONE panel with Tema, Lettura facilitata, animations and Avanzamento; none of the data settings; the theme
-is the one of the program (qqq.prefs); «Azzera la Pratica» and «Dimentica dove ero» ask first and then clear qqq.pratica / qqq.teoria.pos; choices persist."""
+"""Settings of the Teoria (impostazioni.js): the gear opens ONE panel with Tema, Lettura facilitata and animations; none of the data settings; the theme
+is the one of the program (qqq.prefs); «Ripristina predefinite» resets only the settings (never qqq.pratica / qqq.teoria.pos); choices persist."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,11 +20,13 @@ try:
         def content():
             q.click("#a11y-btn"); q.wait_for_selector("#a11y-panel:not([hidden])")
             legs = q.eval_on_selector_all("#a11y-panel legend", "e=>e.map(x=>x.textContent.trim())")
-            for w in ("Tema", "Carattere", "Sfondo", "Lettura", "Animazioni", "Avanzamento"): assert w in legs, legs
+            for w in ("Tema", "Carattere", "Sfondo", "Lettura", "Animazioni"): assert w in legs, legs
+            assert "Avanzamento" not in legs and q.locator("#a11y-ask,#a11y-forget-pos,#a11y-forget-pratica,[data-k=focus]").count() == 0
             txt = q.inner_text("#a11y-panel")
             for dead in ("Lingua", "Palette", "Etichette", "Unisci", "Librerie", "Alta risoluzione", "Aggiornamenti", "Tour"): assert dead not in txt, dead
-            assert q.is_visible("#a11y-forget-pratica") and q.is_visible("#a11y-forget-pos")
-        step("one panel: Tema, lettura, animazioni, Avanzamento; no data settings", content)
+            assert q.locator("#a11y-panel .hint").count() == 0, "no explanation lines under the controls"
+            assert q.inner_text("#a11y-reset").strip() == "Ripristina predefinite"
+        step("one panel: Tema, lettura, animazioni; no Avanzamento, no focus mode, no data settings", content)
         def theme():
             q.check("input[name=a11y-tema][value=dark]"); q.wait_for_function("document.documentElement.dataset.theme==='dark'", timeout=8000)
             assert json.loads(ls("qqq.prefs"))["theme"] == "dark"
@@ -36,13 +38,15 @@ try:
             q.check("input[name=a11y-motion][value=always]"); assert q.get_attribute("html", "data-a11y-reduce") is not None
             assert json.loads(ls("qqq.a11y"))["motion"] == "always"
         step("reduced animations set data-a11y-reduce and persist", motion)
-        def forget():
+        def reset():
             q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}');localStorage.setItem('qqq.teoria.pos','{\"last\":\"x\"}')")
-            q.click("#a11y-forget-pos"); assert q.is_visible("#a11y-ask"); q.click("#a11y-ask [data-no]")
-            assert ls("qqq.teoria.pos") is not None and ls("qqq.pratica") is not None
-            q.click("#a11y-forget-pos"); q.click("#a11y-ask [data-yes]"); assert ls("qqq.teoria.pos") is None and ls("qqq.pratica") is not None
-            q.click("#a11y-forget-pratica"); q.click("#a11y-ask [data-yes]"); assert ls("qqq.pratica") is None
-        step("Avanzamento: asks, Annulla keeps, Sì clears only its own key", forget)
+            q.check("input[name=a11y-font][value=dyslexic]"); q.check("[data-k=space]"); assert q.get_attribute("html", "data-a11y-space") is not None
+            q.click("#a11y-reset")
+            assert q.get_attribute("html", "data-a11y-font") is None and q.get_attribute("html", "data-a11y-space") is None and q.get_attribute("html", "data-a11y-reduce") is None
+            assert json.loads(ls("qqq.a11y")) == {}
+            assert ls("qqq.pratica") is not None and ls("qqq.teoria.pos") is not None, "settings only"
+            q.check("input[name=a11y-motion][value=always]")
+        step("Ripristina predefinite: settings back to the defaults, progress and reading position kept", reset)
         def keys():
             q.evaluate("localStorage.setItem('qqq.pratica','{\"v\":1}')"); q.reload(); q.wait_for_selector("#a11y-btn")
             assert json.loads(ls("qqq.a11y"))["motion"] == "always" and ls("qqq.pratica")
@@ -50,7 +54,7 @@ try:
         c.close()
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 900})
         def app():
-            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=cerca]", timeout=15000); pg.click("#np-set")
+            pg.click("#nav [data-v=theory]"); pg.wait_for_selector("#stbar [data-tcmd=indice]", timeout=15000); pg.click("#stbar [data-tcmd=impostazioni]")
             pg.wait_for_function("!document.getElementById('tframe').contentDocument.getElementById('a11y-panel').hidden", timeout=5000)
             assert pg.locator("#uipset").count() == 0
             pg.click("#nav [data-v=data]"); pg.click("#np-set"); pg.wait_for_selector("#uipset")

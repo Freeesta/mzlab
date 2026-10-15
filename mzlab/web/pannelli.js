@@ -239,10 +239,10 @@ function addPanel(type, o, after) {
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button></span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
-    const go = `<span class="tbg"><button class="bt" data-a="tab" title="${I18N.t("tdati.btn.title")}" aria-label="${I18N.t("tdati.btn.title")}">${IC_DATA}</button><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL}</button></span>`;
+    const go = `<span class="tbg"><button class="bt" data-a="tab" title="${I18N.t("tdati.btn.title")}" aria-label="${I18N.t("tdati.btn.title")}">${IC_DATA}</button><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
-  })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${type === "chrom" || type === "xic" || type === "mrm" ? '<div class="corrbar"></div>' : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
+  })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
@@ -562,6 +562,42 @@ function corrWire(x, pick) {          // pick("" | "f<k>" | "tract" | "snip")
     e.preventDefault(); const l = items(), i = l.indexOf(document.activeElement); if (l.length) l[(i + (e.key === "ArrowDown" ? 1 : l.length - 1)) % l.length].focus();
   };
 }
+  // «Corrections» summary: ONE icon in the command bar opens a compact popover (the .corrbar of the panel) with what is active (reference file, factor, background of a stretch, notes); a dot on the icon says that a correction is active
+CIC.sub = ICN('<circle cx="9" cy="9" r="6.5"/><path d="M5.9 9h6.2"/>');
+function corrActive(p) {
+  if (p.corrbar && p.corrbar.querySelector(".subchip,.ibk")) return true;
+  if (p.type === "spec") return p.bg === "w" || (p.bg !== "x" && p.bg !== "" && p.bg != null);
+  if (p.type === "map") return !!(window.MAPPA && MAPPA.corrState(p).now);
+  return (p.bk !== "" && p.bk != null) || !!(p.fondo && p.fondo.mode && p.fondo.mode !== "none");
+}
+function corrInfo(p) {
+  const on = corrActive(p), ttl = I18N.t(on ? "corr.info.titleOn" : "corr.info.title");
+  return `<span class="corrw ciw"><button type="button" data-o="cinfo" class="ci${on ? " act" : ""}" aria-haspopup="dialog" aria-expanded="false" title="${EH(ttl)}" aria-label="${EH(ttl)}">${CIC.sub}<i class="cidot" aria-hidden="true"${on ? "" : " hidden"}></i></button></span>`;
+}
+function corrInfoSync(p) {
+  const b = p.el && p.el.querySelector('[data-o="cinfo"]'); if (!b) return;
+  const on = corrActive(p), ttl = I18N.t(on ? "corr.info.titleOn" : "corr.info.title");
+  b.classList.toggle("act", on); b.title = ttl; b.setAttribute("aria-label", ttl); const d = b.querySelector(".cidot"); if (d) d.hidden = !on;
+}
+function corrInfoWire(p, b) {
+  const m = p.corrbar; if (!m) return;
+  const shut = back => { m.hidden = true; const x = p.el.querySelector('[data-o="cinfo"]'); if (x) x.setAttribute("aria-expanded", "false"); if (back && x) x.focus(); };
+  b.onclick = e => {
+    e.stopPropagation();
+    if (!m.hidden) { shut(false); return; }
+    if (!m.children.length) { const n = document.createElement("span"); n.className = "sm"; n.textContent = I18N.t("corr.info.none"); m.replaceChildren(n); }
+    m.hidden = false; b.setAttribute("aria-expanded", "true");
+    const pr = p.el.getBoundingClientRect(), hm = b.closest(".hmore"), br = (hm || b).getBoundingClientRect();      // in the «⋯» menu of a narrow panel the summary opens under that menu, not over it
+    m.style.top = Math.round(br.bottom - pr.top + 4) + "px"; m.style.left = hm ? "8px" : Math.max(8, Math.min(Math.round(br.left - pr.left), pr.width - m.offsetWidth - 8)) + "px";
+    (m.querySelector("button,input,select") || m).focus();
+  };
+  if (p._cinfoOff) p._cinfoOff();
+  const ac = new AbortController(); p._cinfoOff = () => ac.abort();
+  const sig = { signal: AbortSignal.any([ac.signal, p._ac.signal]) };
+  document.addEventListener("mousedown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!m.hidden && p.el.isConnected && !t.closest(".corrbar,#subpop,#ctx") && !t.closest('[data-o="cinfo"]')) shut(false); }, { capture: true, ...sig });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected && !document.querySelector("#subpop:not([hidden])")) { e.stopPropagation(); shut(true); } }, { capture: true, ...sig });
+  if (!p._cinfoMo) { p._cinfoMo = new MutationObserver(() => corrInfoSync(p)); p._cinfoMo.observe(m, { childList: true, subtree: true }); }
+}
 function ctl(p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
@@ -595,6 +631,7 @@ function ctl(p) {
   const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
+    + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter(f => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter(f => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
@@ -625,7 +662,7 @@ function ctl(p) {
     mChips.push(...MAPPA.optChips(p));
     const mPar = inner => `<span class="cpar"><button class="bt cparl" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.cpar.titleMap")}" aria-label="${I18N.t("ctl.cpar.map")}">${I18N.t("ctl.cpar.map.lab")} &#9662;</button>${mChips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.cpar.titleMap")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map(x => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select><span class="muted mzlv" title="${I18N.t("ctl.map.level.title")}">MS<sup>${lvf}</sup></span>`) +
-      mCorr +
+      mCorr + corrInfo(p) +
       mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
         `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
@@ -635,7 +672,7 @@ function ctl(p) {
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
-      corrWidget(p, { files: f.filter(x => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) +
+      corrWidget(p, { files: f.filter(x => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) + corrInfo(p) +
       (p.bg === "w" ? `<label class="muted">${I18N.t("ctl.range.from")} <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> ${I18N.t("ctl.range.to")} <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
       (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
   }
@@ -686,6 +723,7 @@ function ctl(p) {
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, v => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, v => setFondo(p, v));
+    else if (k === "cinfo") corrInfoWire(p, x);
     else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
         else x.onchange = () => {
       if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does

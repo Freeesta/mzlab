@@ -19,7 +19,6 @@ const BARRA = (() => {
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
-  const K_LAB = "qqq.barra.etichette";   // words next to the icons: auto (as many as fit) | always | hidden
   const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
   const LEVELS = ["all", "main", "none"];
   const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
@@ -38,7 +37,7 @@ const BARRA = (() => {
   let _opener = null;
   let _before = null;
   let _dropped = new Set();
-  let _labMode = "auto", _lvl = "none";
+  let _lvl = "none";
   let _fitRaf = 0;
   const _fitStats = { n: 0, last: 0, max: 0 };
 
@@ -117,7 +116,6 @@ const BARRA = (() => {
     { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
     { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
-    { id: "labels", bar: false, group: "app", ic: () => ICONS.search, run: () => { setLabels(_labMode === "auto" ? "always" : _labMode === "always" ? "hidden" : "auto"); announce(t("cmd.labels.now." + _labMode)); } },
     { id: "report", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
     { id: "chrom", bar: false, group: "graphs", ic: () => IC('<path d="M2 12l3-6 2.5 3 2-5 2.5 8"/>'), visible: () => inData() && shown("#np-chrom"), run: () => clickEl("#np-chrom") },
@@ -465,26 +463,31 @@ const BARRA = (() => {
   }
 
   // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
+  // administrator mode: the chapter editor of the Teoria (embedded, the frame has no button of its own: the bar here gives it)
+  const theoryEditor = () => { try { const w = Q1("#tframe").contentWindow; return w.QADMIN && w.QADMIN.on() && w.TEORIA_EDITOR ? w.TEORIA_EDITOR : null; } catch (_) { return null; } };
+  const EDIT_IC = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L6.5 16.5l-4 1 1-4L13.5 3.5z"/><path d="M11.5 5.5l3 3"/></svg>';
   function theoryCmds() {
     const T = tcmd(); if (!T) return [];
-    return T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
-      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) }));
+    const ed = theoryEditor();
+    return /** @type {any[]} */ (ed ? [{ id: "editor", teo: true, end: false, group: "tools", etichetta: I18N.t("theory.editor"), titolo: I18N.t("theory.editor.title"), chiave: "Alt+E", off: false, ic: () => EDIT_IC, run: () => ed.toggle() }] : []).concat(T.lista.map(c => ({ id: c.id, teo: true, end: c.gruppo === "fine", lat: c.posto === "side", premuto: c.premuto, group: "tools", etichetta: c.etichetta, titolo: c.titolo || c.etichetta, chiave: c.chiave, off: !!c.disabilitato,
+      ic: () => T.icona(c.icona), run: () => c.run(), items: c.figli && c.figli.map(f => ({ id: f.id, teo: true, group: "tools", etichetta: f.etichetta, ic: () => T.icona(c.icona), run: () => f.run() })) })));
   }
   const theoryAll = () => theoryCmds().flatMap(c => (c.items ? c.items : [c]));       // the palette finds the tools one by one
   function buildTheoryBar(bar) {
     const sep = '<span class="tb-sep" role="separator"></span>';
-    const cs = theoryCmds().filter(c => !c.end);
+    const cs = theoryCmds().filter(c => !c.end && !c.lat);
     const gear = theoryCmds().find(c => c.end);
-    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
-    bar.innerHTML = cs.filter(c => c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
+    const one = c => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}><span class="ti">${c.ic()}</span><span class="tl">${EHs(c.etichetta)}</span></button>`;
+    bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + sep + cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join("") + (gear ? sep + one(gear) : "");
     bar.querySelectorAll("button[data-tcmd]").forEach(b => {
       const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
       b.tabIndex = -1;
       b.onclick = () => {
         if (c.off) return;
         if (c.items) { if (Q1("#stmenu") && Q1("#stmenu")._anchor === b) return closeMenu(true); openMenu(b, c.items.map(f => ({ label: f.etichetta, ic: f.ic(), dom: null, fn: () => f.run() }))); b.setAttribute("aria-expanded", "true"); }
-        else c.run();
+        else { c.run(); if (c.premuto) b.setAttribute("aria-pressed", String(c.premuto())); }
       };
+      if (c.premuto) { try { Q1("#tframe").contentDocument.addEventListener("tcmd-stato", () => b.setAttribute("aria-pressed", String(c.premuto()))); } catch (_) { /* frame not reachable */ } }
     });
     setRover(firstItem());
     fit();
@@ -605,7 +608,7 @@ const BARRA = (() => {
       return kids.reduce((s, e) => { const cs = getComputedStyle(e); return s + e.getBoundingClientRect().width + (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0); }, 0) + Math.max(0, kids.length - 1) * gap;
     };
     const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File goes into "Altro"
-    const tryLv = _labMode === "hidden" || phone ? ["none"] : _labMode === "always" ? ["all"] : LEVELS;
+    const tryLv = phone ? ["none"] : LEVELS;
     let chosen = tryLv[tryLv.length - 1];
     for (const lv of tryLv) {
       setLevel(lv);
@@ -631,16 +634,6 @@ const BARRA = (() => {
     _fitStats.n++; _fitStats.last = dt; _fitStats.max = Math.max(_fitStats.max, dt);
   }
 
-  function loadLabMode() {
-    let v = null;
-    try { v = localStorage.getItem(K_LAB); } catch (_) { /* none */ }
-    _labMode = v === "always" || v === "hidden" ? v : "auto";
-  }
-  function setLabels(mode) {
-    _labMode = mode === "always" || mode === "hidden" ? mode : "auto";
-    try { localStorage.setItem(K_LAB, _labMode); } catch (_) { /* no storage */ }
-    fit();
-  }
 
   // roving tabindex
   function items() { return [...document.querySelectorAll("#stbar .tb")].filter(b => !b.hidden && b.offsetParent !== null); }
@@ -1036,7 +1029,6 @@ const BARRA = (() => {
     _mounted = true;
     _mode = isHrMode() ? "hr" : "lr";
     loadState();
-    loadLabMode();
     window.CMD = CMD;
     if (!syncContext()) buildBar();
     const x = Q1("#sb-x");
@@ -1080,8 +1072,6 @@ const BARRA = (() => {
     syncMode,
     syncHR: syncMode,
     fit,
-    setLabels,
-    get labels() { return _labMode; },
     get labelLevel() { return _lvl; },
     get fitStats() { return _fitStats; },
     focusToolbar,

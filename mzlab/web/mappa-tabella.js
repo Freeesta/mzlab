@@ -2,10 +2,19 @@
 // The marked points of the RT x m/z map: the shapes drawn on the map, the Excel / copy export and the table under it (sort, groups, reference).
 // Classic script, loaded before mappa.js, which calls MAPFORME(ctx) and MAPTAB(ctx, forms) once inside its closure: ctx carries the helpers that live there.
 const MAPFORME = c => {
-  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
+  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
   /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
-  // the points of one group of RT share a shape (circle, square, triangle, diamond, by turns); with no groups (LR, table not ready) a circle
-  const grpShape = (p, i) => { const r = st(p).rows; return r && r.length === pts(p).length && r[i] && r[i].g ? SHAPES[(r[i].g - 1) % SHAPES.length] : "circle"; };
+  // the shape of a marker (circle, square, triangle, diamond, by turns) is decided when it is created and never changes when others are added or one is moved or removed:
+  // a point within the RT window of an earlier one takes its shape, a new RT takes the shape after the one of the last point created. Old points without a shape get it in order.
+  function shapeFor(list, rt) {
+    const w = grpTol(), near = list.find(q => q.shape && Math.abs(q.rt - rt) <= w);
+    if (near) return near.shape;
+    const last = list.length ? list[list.length - 1].shape : null;
+    return SHAPES[(SHAPES.indexOf(last) + 1) % SHAPES.length];
+  }
+  const shapeFill = list => { list.forEach((q, i) => { if (!q.shape) q.shape = shapeFor(list.slice(0, i), q.rt); }); return list; };
+  const shapeNew = (list, rt) => shapeFor(shapeFill(list), rt);
+  const grpShape = (p, i) => { const q = shapeFill(pts(p))[i]; return q ? q.shape : "circle"; };
   function shapePath(g, kind, x, y, r) {
     g.beginPath();
     if (kind === "square") g.rect(x - r * .88, y - r * .88, r * 1.76, r * 1.76);
@@ -33,7 +42,7 @@ const MAPFORME = c => {
   const headRow = () => COLS.map(c => T(COLK[c][0]));
   function excel(p) {
     const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
-      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? GRP0} min`],
+      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${grpTol()} min`],
       [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
     dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
       { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }], { p, table: "map-points" });
@@ -42,12 +51,12 @@ const MAPFORME = c => {
     const txt = await PROV.tsv([headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n"), { p, table: "map-points" });
     try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
   }
-  return { grpShape, drawPoints, shapePath, COLS, COLK, excel, copyRows };
+  return { grpShape, shapeNew, drawPoints, shapePath, COLS, COLK, excel, copyRows };
 };
 const MAPTAB = (c, f) => {
-  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, GRP0, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
+  const { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt } = c;
   /** @param {string} k @param {any} [o] */ const T = (k, o) => I18N.t(k, o);
-  const { COLS, COLK, excel, copyRows } = f;
+  const { COLS, COLK, excel, copyRows, grpShape } = f;
   const openDm = (dm, hr, pol) => dmOpen(dm, hr, pol);      // the same recognition and destination as the ruler of the spectrum (spettro.js)
   const xicAB = (p, mz) => xicDirect(mz, p);                // XIC of A and B overlaid: a new XIC panel with the m/z
   let tT = 0;
@@ -62,26 +71,32 @@ const MAPTAB = (c, f) => {
     if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); }
     const f = a.f, ref = a.ref, mzq = list.map(q => `${(+q.rt).toFixed(4)},${(+q.mz).toFixed(5)}`).join(";");
     let rows = [];
-    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? GRP0}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
+    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${grpTol()}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
     rows = rows.map((r, i) => ({ ...r, n: i + 1, note: list[i] ? list[i].note || "" : "" }));
+    if (PREF.align && !s.aligning) {                              // «align»: every point of a group takes the RT of its first marked point, so they stand on one vertical line (measures are asked again there)
+      const first = new Map(); let moved = false;
+      rows.forEach((r, i) => { if (r.g && list[i]) { if (!first.has(r.g)) first.set(r.g, list[i].rt); else if (list[i].rt !== first.get(r.g)) { list[i].rt = first.get(r.g); moved = true; } } });
+      if (moved) { ptsSave(p); s.aligning = true; try { return await tableNow(p); } finally { s.aligning = false; } }
+    }
     const ri = list.findIndex(q => q.ref);                      // the point the student chose as the reference of Δm (none: the most intense of each group)
     if (ri >= 0 && rows[ri] && rows[ri].mz != null) rows.forEach(r => { r.dm = r.mz == null ? null : r.mz - rows[ri].mz; r.isref = r.n - 1 === ri; });
-    s.rows = rows; overlay(p);                                          // the shapes of the points come from the groups of the table
+    s.rows = rows; overlay(p);                                          // the shape of a point is its own (shapeNew)
     const so = s.sort || { c: "n", d: 1 }, val = (r, c) => r[c] == null ? -Infinity : r[c];
     const view = rows.slice().sort((u, v) => typeof val(u, so.c) === "string" ? so.d * String(val(u, so.c)).localeCompare(String(val(v, so.c))) : so.d * (val(u, so.c) - val(v, so.c)));
     const dec = mzd(p), hr = isHrF(f), num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
     const head = COLS.map(c => `<th data-c="${c}" title="${T(COLK[c][1])}">${T(COLK[c][0])}${so.c === c ? (so.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + `<th title="${T("mappa.tab.ref.title")}">${T("mappa.tab.ref")}</th><th></th>`;
     const rowHtml = r => `<tr data-i="${r.n - 1}" class="${s.psel === r.n - 1 ? "on" : ""}">` +
-      `<td>${r.g ? `<span aria-hidden="true">${GLYPH[(r.g - 1) % GLYPH.length]}</span> ` : ""}${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
+      `<td>${r.g ? `<span aria-hidden="true">${GLYPH[SHAPES.indexOf(grpShape(p, r.n - 1))]}</span> ` : ""}${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
       `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
       `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-ref="${r.n - 1}" aria-pressed="${r.isref ? "true" : "false"}" title="${T("mappa.tab.ref.pick", { n: r.n })}" aria-label="${T("mappa.tab.ref.pick", { n: r.n })}">${r.isref ? "●" : "○"}</button></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`;
-    const html = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? GRP0}"> min</label>` +
+    const html = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${grpTol()}"> min</label><label class="muted" title="${T("mappa.tab.align.title")}"><input type="checkbox" data-t="align"${PREF.align ? " checked" : ""}> ${T("mappa.tab.align")}</label>` +
       `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
-      `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${groupedRows(s, view, rowHtml, !s.sort)}</tbody></table></div>`;
+      `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${groupedRows(s, view, rowHtml, !s.sort, r => grpShape(p, r.n - 1))}</tbody></table></div>`;
     box.innerHTML = h`${raw(html)}`;
     box.querySelectorAll("[data-gtog]").forEach(b => b.onclick = () => { const g = +b.dataset.gtog; if (s.gcol.has(g)) s.gcol.delete(g); else s.gcol.add(g); tableNow(p); });
     box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
     box.querySelector('[data-t="grp"]').onchange = ev => { const v = numIt(ev.target.value); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
+    box.querySelector('[data-t="align"]').onchange = ev => { PREF.align = ev.target.checked; prefSave(); tableNow(p); };
     box.querySelector('[data-t="xl"]').onclick = () => excel(p);
     box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
     box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };
@@ -97,13 +112,13 @@ const MAPTAB = (c, f) => {
     grow(p, "tab", Math.ceil(box.offsetHeight) + 5);                    // the panel grows by the height of the table (it scrolls inside beyond its maximum): the map keeps its size
   }
   // HR: the rows of one group (more than one point) sit together under a row of the group that can be folded; the other points follow as they are
-  function groupedRows(s, view, rowHtml, byRt) {
+  function groupedRows(s, view, rowHtml, byRt, shapeOf) {
     const gcol = s.gcol || (s.gcol = new Set()), by = new Map(), out = [];
     view.forEach(r => { if (!by.has(r.g)) by.set(r.g, []); by.get(r.g).push(r); });
     for (const [g, mem] of by) {
       if (mem.length < 2) { out.push(rowHtml(mem[0])); continue; }
       if (byRt) mem.sort((x, y) => x.rt - y.rt || y.ia - x.ia);                  // unsorted table: the members by RT, then the most intense first
-      const open = !gcol.has(g), rts = mem.map(r => r.rt).filter(v => v != null), gl = GLYPH[(g - 1) % GLYPH.length], nm = T(SHAPE_KEY[SHAPES[(g - 1) % SHAPES.length]]);
+      const open = !gcol.has(g), rts = mem.map(r => r.rt).filter(v => v != null), sh = shapeOf(mem[0]), gl = GLYPH[SHAPES.indexOf(sh)], nm = T(SHAPE_KEY[sh]);
       const lab = T("mappa.grp.row", { g, shape: nm, n: mem.length, members: mem.map(r => r.n).sort((x, y) => x - y).join(", ") });
       out.push(`<tr class="mzgr"><td colspan="${COLS.length + 2}"><button data-gtog="${g}" aria-expanded="${open}" aria-label="${T(open ? "mappa.grp.fold" : "mappa.grp.unfold", { g })}" title="${T(open ? "mappa.grp.fold" : "mappa.grp.unfold", { g })}">${open ? "▾" : "▸"}</button> ` +
         `<b><span aria-hidden="true">${gl}</span> ${EH(lab)}</b> <span class="muted">RT ${Math.min(...rts).toFixed(2)}–${Math.max(...rts).toFixed(2)} min</span></td></tr>`);

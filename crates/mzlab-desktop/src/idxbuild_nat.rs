@@ -14,9 +14,12 @@ impl IdxBuilder {
     pub fn build_nat(&self, nat: &Nat, name: &str) -> Result<Stats, Error> {
         let dest = self.path(name)?;
         let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
+        let spill_path = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));
         let r = self.pool.install(|| -> Result<Stats, Error> {
+            // the fingerprints are taken by a second thread (its own mapping of the members) while the scans are decoded; the members this one opens say
+            // they have a SHA-1 already (empty): the index never reads it
             let mut fs = nativi::fileset(&nat.members)?;
-            let impronte = upload::impronte(&mut fs)?;
+            upload::senza_sha1(&mut fs);
             let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
             let mut l = if nat.centroid {
                 lettori_centroidi::centroidato(l)
@@ -24,16 +27,34 @@ impl IdxBuilder {
                 l
             };
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
-            upload::indicizza_lettore(
-                &mut *l,
-                nat.c,
-                &impronte,
-                name,
-                &mut out,
-                DEFAULT_BUDGET,
-                &mut |_| {},
-            )
-            .map(|(st, _)| st)
+            // the peaks that do not fit in the budget wait in a temporary file: the scans are decoded once
+            let mut spill = File::options()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&spill_path)
+                .map_err(|e| io_error(&e))?;
+            let members = nat.members.clone();
+            let r = upload::con_impronte_parallele(
+                move || nativi::fileset(&members),
+                |impronte| {
+                    upload::indicizza_lettore_con(
+                        &mut *l,
+                        nat.c,
+                        impronte,
+                        name,
+                        &mut out,
+                        DEFAULT_BUDGET,
+                        Some(&mut spill),
+                        &mut |_| {},
+                    )
+                    .map(|(st, _)| st)
+                },
+            );
+            drop(spill);
+            let _ = std::fs::remove_file(&spill_path);
+            r
         });
         match r {
             Ok(st) => {

@@ -31,7 +31,7 @@ try:
             q.screenshot(path=SH + "a11y_pannello.png")
             q.keyboard.press("Escape"); assert q.is_hidden("#a11y-panel")
             q.keyboard.press("Tab") ; q.focus("#a11y-btn"); q.keyboard.press("Enter"); assert q.is_visible("#a11y-panel")          # keyboard only
-            txt = q.inner_text("#a11y-panel"); assert "⌘+ / Ctrl+" in txt and "Dimensione" not in txt, txt[:200]
+            txt = q.inner_text("#a11y-panel"); assert "⌘+ / Ctrl+" not in txt and "Dimensione" not in txt, txt[:200]
             assert q.evaluate("localStorage.getItem('qqq.prefs')") is None            # the old key is not touched
             q.close()
         step("Aa button, side panel, Esc, keyboard, no old text-size", panel)
@@ -86,14 +86,14 @@ try:
             assert q.evaluate("location.pathname") != ""
             q.close()
         step("reading ruler follows the mouse and never blocks clicks", ruler)
-        def focus():
-            q = fresh(); assert q.is_visible("#side")
-            q.keyboard.press("f"); assert attr(q, "focus") is not None and q.is_hidden("#side"), "F"
-            q.mouse.wheel(0, 900); q.wait_for_timeout(300)
-            assert q.evaluate("parseFloat(getComputedStyle(document.getElementById('a11y-prog')).width)") > 0
-            q.screenshot(path=SH + "a11y_concentrazione.png")
-            q.keyboard.press("f"); assert q.is_visible("#side"); q.close()
-        step("concentration mode (F): index hidden, progress bar", focus)
+        def indice():
+            q = fresh(); assert q.is_visible("#side") and q.get_attribute("#tc-indice", "aria-pressed") == "true"
+            assert q.locator("#a11y-prog,[data-k=focus]").count() == 0
+            q.click("#tc-indice"); assert attr(q, "noside") is not None and q.is_hidden("#side") and q.get_attribute("#tc-indice", "aria-pressed") == "false"
+            assert json.loads(q.evaluate("localStorage.getItem('qqq.a11y')")).get("noside") is True
+            q.reload(); q.wait_for_selector("#tc-indice"); assert q.is_hidden("#side"), "remembered"
+            q.keyboard.press("f"); assert q.is_visible("#side") and attr(q, "noside") is None; q.close()
+        step("index toggle (button and F): hides/shows the side index, remembered", indice)
         def motion():
             q = fresh("09-quadrupolo.html", motion="reduce"); assert attr(q, "reduce") is not None
             q.evaluate("document.querySelector('#sim-field').scrollIntoView()"); q.wait_for_timeout(600)
@@ -121,12 +121,12 @@ try:
             q.close()
         step("speech synthesis removed: no ▶ and no TTS panel", speech)
         def reset():
-            q = fresh(prefs={"font": "atkinson", "space": True, "bg": "cream", "ruler": True, "focus": True, "nums": True})
+            q = fresh(prefs={"font": "atkinson", "space": True, "bg": "cream", "ruler": True, "noside": True, "nums": True})
             q.click("#a11y-btn"); q.click("#a11y-reset"); q.wait_for_timeout(200)
-            assert all(attr(q, n) is None for n in ("font", "space", "bg", "ruler", "focus", "nums")), q.evaluate("document.documentElement.outerHTML.slice(0,300)")
+            assert all(attr(q, n) is None for n in ("font", "space", "bg", "ruler", "noside", "nums")), q.evaluate("document.documentElement.outerHTML.slice(0,300)")
             assert json.loads(q.evaluate("localStorage.getItem('qqq.a11y')")) == {}
             q.close()
-        step("Ripristina turns everything off", reset)
+        step("Ripristina predefinite turns everything off", reset)
         def pratica():
             q = fresh("pratica.html"); assert q.is_visible("#a11y-btn"); q.close()
             q = fresh(); q.set_viewport_size({"width": 400, "height": 800}); q.reload(); q.wait_for_timeout(600); assert q.is_visible("#a11y-btn"); q.close()

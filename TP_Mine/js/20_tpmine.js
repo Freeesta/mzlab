@@ -20,8 +20,9 @@
 .tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp input.tp-est{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
-.tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
+.tp .b-forte{background:color-mix(in srgb,var(--ok) 14%,var(--panel));color:var(--ink);border-color:var(--ok)}.tp .b-possibile{background:color-mix(in srgb,var(--warn) 14%,var(--panel));color:var(--ink);border-color:var(--warn)}.tp .b-debole{color:var(--muted)}
 
+.tp .tp-lr{margin:4px 0;font-size:12px}.tp-lr .bar{margin-top:2px}
 .tp .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.tp .bar i{display:block;height:100%;background:var(--accent);width:0}
 .tp .tbl{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}.tp canvas{width:100%;height:210px;display:block}
 .tp .crit li{margin:2px 0}.tp .crit .pass{color:var(--ok)}.tp .crit .fail{color:var(--bad)}.tp .crit .na{color:var(--muted)}
@@ -193,9 +194,9 @@
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
-  <div class="row"><button id="tp-page" title="Reload the mzML files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick">Choose mzML...</button></div>
-  <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
-  <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
+  <div class="row"><button id="tp-page" title="Reload the files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick" title="mzML, or the files of the instrument as they are (.raw, .wiff + .wiff.scan): they are prepared in the Data tab and join the list here">Choose files...</button><button id="tp-pickdir" title="A whole folder, for example an Agilent .D">Choose folder...</button></div>
+  <input type="file" id="tp-in" accept=".mzML,.mzml,.raw,.wiff,.scan" multiple hidden><input type="file" id="tp-dir" multiple hidden>
+  <div id="tp-load" role="status" aria-live="polite"></div><div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
   <div class="row tp-ac"><input type="text" id="tp-name" class="grow-in" placeholder="Name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false">${hb("ft.f.name", "Name")}<ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
   <div class="row"><input type="text" id="tp-mol" class="grow-in" placeholder="Formula" aria-label="Neutral molecular formula" spellcheck="false">${hb("ft.f.formula", "Formula")}</div>
@@ -282,15 +283,47 @@
     }
     $("#tp-page").onclick = async () => {
       await loadFromData(false); };
+    const forAdd = x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf };
+    // files of the instrument (.raw, .wiff + .wiff.scan, a .D folder): the Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of nativo-fasi.js), they appear in its list too, and Tabui takes the stubs as "Reload from Data" does
+    const PHASE = { read: "Reading", scans: "Scans", chrom: "Chromatograms" };
+    async function loadMaker(fs, folder) {
+      if (typeof upload !== "function" || typeof CartCarica === "undefined" || typeof ST === "undefined") return msg("The Data tab is not ready: try again in a moment.", true);
+      const before = new Set((ST.files || []).map(f => f.name)), rows = new Map(), box = $("#tp-load");
+      const onIdx = ev => {
+        const d = ev.detail || {}; if (!d.name || before.has(d.name)) return;
+        let r = rows.get(d.name);
+        if (!r) { r = document.createElement("div"); r.className = "tp-lr"; r.innerHTML = `<span class="tp-lrn"></span> <span class="mut tp-lrp"></span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i></i></div>`; r.querySelector(".tp-lrn").textContent = d.name.replace(/\.mzml$/i, ""); box.appendChild(r); rows.set(d.name, r); }
+        const w = Math.min(100, Math.round(100 * (d.frac || 0)));
+        r.querySelector(".tp-lrp").textContent = `${PHASE[d.phase] || "Indexing"} ${w}%`; r.querySelector("i").style.width = w + "%";
+        const b = r.querySelector(".bar"); b.setAttribute("aria-valuenow", String(w)); b.setAttribute("aria-label", `${d.name}: ${PHASE[d.phase] || "Indexing"}`);
+      };
+      addEventListener("mzlab-index", onIdx);
+      msg(`Preparing ${fs.length} file${fs.length === 1 ? "" : "s"} in the Data tab...`);
+      try {
+        if (folder) await CartCarica.fromInput(fs); else await upload(fs, "data");
+        const fresh = new Set((ST.files || []).map(f => f.name).filter(n => !before.has(n)));
+        const got = (await pageFiles()).filter(x => fresh.has(x.name));
+        if (!got.length) return msg("No new sample was added: the files are already in the Data tab, or they cannot be read (see the notice there).", true);
+        await addFiles(got.map(forAdd));
+      } catch (e) { msg(String(e.message || e), true); }
+      finally { removeEventListener("mzlab-index", onIdx); box.textContent = ""; }
+    }
     // default: the Full Scan / HRMS files already loaded in the Data tab (browser memory) are taken at once
     async function loadFromData(quiet) {
       msg("Looking for the files in browser memory...");
       const f = await pageFiles();
-      if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
-      await addFiles(f.map(x => x.nat ? { name: x.name, file: x.buf, nat: true } : x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: /** @type {any} */ (x.buf).slice ? /** @type {any} */ (x.buf).slice(0) : x.buf }), quiet);
+      if (!f.length) return msg(quiet ? "" : "No file in the Data tab of this browser: open them there or use “Choose files...”.", !quiet);
+      await addFiles(f.map(forAdd), quiet);
     }
     $("#tp-pick").onclick = () => $("#tp-in").click();
-    $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
+    $("#tp-in").onchange = async ev => {
+      const fs = [...ev.target.files]; ev.target.value = "";
+      const mz = fs.filter(f => /\.mzml$/i.test(f.name)), other = fs.filter(f => !/\.mzml$/i.test(f.name));
+      if (mz.length) await addFiles(mz.map(f => ({ name: f.name, file: f })));
+      if (other.length) await loadMaker(other, false);
+    };
+    $("#tp-pickdir").onclick = () => { const i = $("#tp-dir"); i.setAttribute("webkitdirectory", ""); i.click(); };
+    $("#tp-dir").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; if (fs.length) await loadMaker(fs, true); };
     // mode: high resolution -> XIC window in ppm (default 5) and RT tolerance from the chromatographic method; unit resolution -> Da and 0.25 min
     let curMode = "";
     function modeUI() {
@@ -642,6 +675,7 @@
       if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
       if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor})${window.TPMS2 ? window.TPMS2.from(d) : ""}: ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
       else P.push("No MS2 with this precursor: a Product Ion Scan on the peak is needed to raise the level.");
+      if (d.sim) P.push(`Against the MS2 of the parent: modified cosine ${d.sim.cos.total.toFixed(3)}, with ${d.sim.n.equal} equal, ${d.sim.n.shifted} shifted and ${d.sim.n.loss} neutral-loss fragments matched within 0.5 Da.`);
       P.push(d.level_text ? esc(d.level_text) : "");
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
     }
@@ -662,7 +696,7 @@
         <div class="card"><h3>Kinetics (peak area)</h3><canvas id="tp-c-kin"></canvas></div></div>
         <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
-        <div class="card">${window.TPMS2.detail(d)}
+        <div class="card">${window.TPMS2.detail(d)}${d.sim && window.TPHR ? `<h3 style="margin-top:8px">Similarity to the parent's MS2</h3>${window.TPHR.simCard(d.sim)}` : ""}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
       window.TPMS2.bindDetail(D, d);
       const isPar = par && id === par.id;
@@ -696,7 +730,7 @@
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
         const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
-          { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || ""])), widths: [6, 38, 12, 9, 9, 50] },
+          { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note", "Similarity to the parent"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || "", d.sim ? d.sim.cos.total : ""])), widths: [6, 38, 12, 9, 9, 50, 14] },
           ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
           { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),

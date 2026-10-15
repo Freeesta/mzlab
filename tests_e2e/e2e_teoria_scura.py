@@ -44,7 +44,7 @@ try:
             assert dark < 400, dark                                                      # the middle of the canvas is not the white of the light theme
         step("an interactive drawing is dark too", sim)
         def live():
-            pg.click("#np-set"); f = tf(); f.wait_for_selector("#a11y-panel:not([hidden])"); f.check("input[name=a11y-tema][value=light]"); pg.wait_for_timeout(2000)      # the gear of the Teoria: the panel has the theme
+            pg.click("#stbar [data-tcmd=impostazioni]"); f = tf(); f.wait_for_selector("#a11y-panel:not([hidden])"); f.check("input[name=a11y-tema][value=light]"); pg.wait_for_timeout(2000)      # the gear of the Teoria: the panel has the theme
             f = tf(); assert f.evaluate("document.documentElement.dataset.theme") == "light"
             assert contrast(f, "getComputedStyle(document.body).color", "getComputedStyle(document.body).backgroundColor") > 7
             pg.screenshot(path=SH + "teoria_chiaro.png")
