@@ -171,7 +171,7 @@ function scanLine(p, data, d0) {
   reg({ id: "spec.xic", gruppo: "xic", disponibile: /** @param {any} c */ c => c.has, nome: /** @param {any} c */ c => T("ctx.spec.xic", { mz: c.lab }), esegui: /** @param {any} c */ c => xicDirect(c.m, c.p) });
   // the double click on a peak: its MS2 when a scan of that precursor exists (tolerance of the Banco in HR, 0.6 in unit resolution), otherwise its XIC (not a menu entry)
   reg({ id: "spec.peak", gruppo: "xic", menu: false, doppio: /** @param {any} c */ c => !!c.has, doppioOrd: 6, esegui: /** @param {any} c */ c => {
-    const id = c.a.hrp ? "spec.ms2" : "spec.extractMs2", a = AZIONI.elenco(c, "tutte").find(x => x.id === id);
+    const id = c.a.hrp ? "spec.ms2" : "spec.extractMs2", a = AZIONI.voce(id);
     if (a && AZIONI.pronta(a, c)) AZIONI.esegui(id, c); else AZIONI.esegui("spec.xic", c);
   } });
   // the m/z on an XIC already open: one row per XIC, or one row that lists them when they are more than 3
