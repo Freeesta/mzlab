@@ -26,14 +26,17 @@ const METODO_DOC = (() => {
   function ms(/** @type {any} */ d) {
     const m = d.ms || {};
     const exps = (m.periodi || []).flatMap((/** @type {any} */ p) => p.esperimenti || []);
-    const line = (/** @type {any} */ e) => join([e.tipo, e.mz ? `m/z ${n(e.mz[0])}–${n(e.mz[1])}` : "", (e.transizioni || []).length ? (e.transizioni.length + " MRM") : "", (e.ce_eV || []).length ? "CE " + e.ce_eV.map(n).join(", ") + " eV" : ""]);
+    const line = (/** @type {any} */ e) => join([e.tipo, e.mz ? `m/z ${n(e.mz[0])}–${n(e.mz[1])}` : "", (e.transizioni || []).length ? (e.transizioni.length + " MRM") : "", (e.ce_eV || []).length ? "CE " + e.ce_eV.map(n).join(", ") + " eV" : "",
+      (e.nce || []).length ? "NCE " + e.nce.map(n).join(", ") : "", e.isolamento_mz != null ? `${T("method.doc.isol")} ${n(e.isolamento_mz)} m/z` : ""]);
+    const sets = (m.impostazioni || []).map((/** @type {any} */ x) => rowOf(x.etichetta || x.id, join([(x.valori || []).map(n).join(", "), x.valore, x.unita], " ")));
     return rowOf(T("method.doc.source"), (m.sorgente || {}).tipo)
-      + exps.map((/** @type {any} */ e, /** @type {number} */ i) => rowOf(`${T("method.sec.experiment")} ${e.indice ?? i + 1}`, line(e))).join("");
+      + exps.map((/** @type {any} */ e, /** @type {number} */ i) => rowOf(`${T("method.sec.experiment")} ${e.indice ?? i + 1}`, line(e))).join("") + sets.join("");
   }
 
   function lc(/** @type {any} */ d) {
     const l = d.lc || {}, g = l.gradiente || [], p = l.pressione_max;
-    const rows = rowOf(T("method.flow"), n(l.flusso_mL_min)) + rowOf(T("method.oven"), l.forno_C != null ? n(l.forno_C) + " °C" : "") + rowOf(T("method.runTime"), l.durata_min != null ? n(l.durata_min) + " min" : "")
+    const solv = (l.solventi || []).map((/** @type {any} */ x) => rowOf(T("method.doc.solvent", { ch: x.canale || "" }), x.nome)).join("");
+    const rows = solv + rowOf(T("method.flow"), n(l.flusso_mL_min)) + rowOf(T("method.oven"), l.forno_C != null ? n(l.forno_C) + " °C" : "") + rowOf(T("method.runTime"), l.durata_min != null ? n(l.durata_min) + " min" : "")
       + rowOf(T("method.doc.pmax"), p ? withUnit(p) : "");
     const tbl = g.length ? `<table><tr><th scope="col" class="num">${EH(T("method.time"))}</th><th scope="col" class="num">% B</th><th scope="col" class="num">${EH(T("method.flow"))}</th></tr>${g.map((/** @type {any} */ q) => `<tr><td class="num">${EH(n(q.t_min))}</td><td class="num">${EH(n(q.B_pct))}</td><td class="num">${EH(n(q.flusso_mL_min))}</td></tr>`).join("")}</table>` : "";
     return fold(T("method.lc.title"), (rows ? `<table>${rows}</table>` : "") + tbl);
@@ -51,14 +54,15 @@ const METODO_DOC = (() => {
     return fold(T("method.doc.fields", { n: c.length }), fields) + fold(T("method.doc.log"), log);
   }
 
+
   /** The section for the open item `f`. */
-  async function html(/** @type {{ k: number }} */ f) {
+  async function html(/** @type {{ k: number, dda?: any }} */ f) {
     const title = `<h4>${EH(T("method.doc.title"))}</h4>`;
     let d;
     try { d = ((await J("api/metodo?k=" + f.k)) || {}).metodo; } catch (_) { d = null; }
     if (!d) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.doc.none"))}</div></section>`;
     const rows = head(d) + ms(d);
-    return `<section class="msec">${title}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d)}</section>`;
+    return `<section class="msec">${title}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d)}</section>`;
   }
-  return { html };
+  return { html, bind: METODO_INCL.bind };
 })();
