@@ -70,6 +70,11 @@ fn legge(b: Vec<u8>) -> Vec<String> {
         let percorsi: Vec<String> = ole.paths_list().take(4).map(String::from).collect();
         percorsi.iter().for_each(|p| drop(ole.read(p)));
     }
+    #[cfg(feature = "estesi")]
+    if let Some(ole) = nota(Ole::open(b.clone(), "x.wiff"), &mut k) {
+        // the method document of the readers module: fallback method, GLP tables, DAD header, scheduled-MRM streams
+        drop(mzlab_core::metodo_wiff::from_wiff(&ole, 1, &Default::default()));
+    }
     nota(methodinfo::read_methods(b, "x.wiff"), &mut k);
     k
 }

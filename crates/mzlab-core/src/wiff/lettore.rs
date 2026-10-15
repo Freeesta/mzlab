@@ -126,7 +126,7 @@ fn field(nome: &str, valore: impl ToString) -> Campo {
     }
 }
 
-impl Lettore for LettoreWiff {
+impl Lettore for LettoreWiff { #[cfg(feature = "estesi")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
     fn formato(&self) -> Formato {
         Formato::SciexWiff
     }
@@ -197,6 +197,9 @@ fn testata(l: &mut LettoreWiff, c: usize) -> Result<Header> {
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
     }
     let sha = l.scan_sha1.clone().flatten();
+    #[cfg(feature = "estesi")]
+    return Ok(l.parte(c)?.w.header_estesi(&l.nome, sha));
+    #[cfg(not(feature = "estesi"))]
     Ok(l.parte(c)?.w.header(&l.nome, sha, false))
 }
 
@@ -272,7 +275,7 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
             ),
             rt: r.time_min,
             livello: e.level.max(1),
-            polarita: w.polarity,
+            polarita: w.polarity_of(&e),
             tic: r.tic,
             picco_base: None,
             filtro: String::new(),
@@ -291,4 +294,20 @@ fn build(w: Wiff, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Res
         indice,
         chroms: None,
     })
+}
+
+/// The spectrum type (CV term) a spectrum of the readers module carries besides its level: precursor-ion and neutral-loss scans.
+#[cfg(feature = "estesi")]
+fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
+    let field = |key: &str| s.id.split_whitespace().find_map(|w| w.strip_prefix(key)).and_then(|v| v.parse::<usize>().ok());
+    let code = field("sample=")
+        .and_then(|n| l.parti.iter().find(|p| p.w.sample as usize == n))
+        .zip(field("experiment="))
+        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)))
+        .and_then(|e| e.code);
+    let mut extra = crate::mzmlwrite::SpectrumExtra::default();
+    if let Some((acc, name)) = super::estesi::spectrum_term(code) {
+        extra.params.push((format!("cv:{acc}"), name.to_string()));
+    }
+    extra
 }

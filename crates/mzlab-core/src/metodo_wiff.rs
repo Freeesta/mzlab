@@ -198,7 +198,7 @@ pub fn run_facts(ole: &Ole, n: u32) -> (Option<String>, Option<String>) {
 
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
-    let method = method_of_sample(ole, n);
+    let method = method_of_sample(ole, n); #[cfg(feature = "estesi")] let method = method.or_else(|| crate::wiff::estesi::fallback_method(ole, n));
     let sample = format!("SampleSubtree/Sample{n}/");
     let (log, data, cfr, props) = read_parts(ole, &sample);
     let prop = |id| {
@@ -268,7 +268,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
                 .map(|g| V::Arr(vec![g])),
         ),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
-    ]);
+    ]); #[cfg(feature = "estesi")] let doc = estesi::extend(doc, ole, n, &sample);
     doc.map_or_else(String::new, |d| d.json())
 }
 
@@ -448,3 +448,6 @@ fn warnings(ole: &Ole, sample: &str, no_log: bool) -> Vec<Option<V>> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "estesi")]
+mod estesi;

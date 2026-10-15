@@ -42,7 +42,7 @@ Si tiene ciò che il file contiene, senza peak picking implicito: il `.wiff` del
 - Spettro di prodotto: se il file mostrato dal pannello MS2 non ha il precursore del pannello (`p.prec`, tolleranza 0,6), `drawSpec` (`picchi.js`) usa il primo file caricato che lo ha; se nessuno lo ha, il messaggio `spec.noPrec`. La prova usa `prodotto.wiff` di `tools/wiff_riferimento.py` (un campione con il solo precursore 305,0; uno con 229,1 a ogni ciclo e 305,0 una volta su quattro, scansioni dense, tempi irregolari) e controlla anche una finestra RT che contiene solo scansioni dell'altro precursore.
 
 ## Limiti noti
-- Verificati solo full scan, prodotto di ione (MS2) e MRM in un periodo. EPI, MS3, perdita neutra, precursori e più periodi: non visti nei dati (si leggono come full scan se il blocco ha il marcatore).
-- Le tracce DAD/analogiche del `.wiff` e i nomi dei campioni (`DabsInfo`) non si leggono.
+- Il motore verifica solo full scan, prodotto di ione (MS2) e MRM in un periodo del 3200: un codice di esperimento sconosciuto, più periodi o un blocco di un altro codec sono `err.file.wiff` (con `detail`), mai un full scan. Le varianti (altri QTRAP, PIS, perdita neutra, sMRM, EPI) sono nel modulo `sciex`: `wiff-varianti.md`.
+- Le tracce DAD/analogiche del `.wiff` non si leggono (il DAD è descritto in `wiff-varianti.md`); i nomi dei campioni sono in `metodo/1` (`campione.nome`).
 - Il TIC è quello dell'indice (come l'mzML), non la somma dei punti. Chiavi i18n: `err.file.notWiff`, `err.file.wiffNoScan`, `err.file.wiff` (nei cataloghi quando la pagina le usa).
 - Centroidi: `Wiff::to_mzml_progress(.., centroid, ..)` scrive un punto per picco con `centroidi` (parametri stimati da ≤64 scansioni, larghezza di riserva 0,7); l'mzML dichiara `MS:1000035` e il software «mzLab centroidi». Gli MRM non cambiano. La pagina non offre la scelta.

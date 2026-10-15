@@ -143,6 +143,9 @@ impl Lettore for SrmDaScansioni {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.inner.extra_mzml(s)
     }
+    fn variante(&mut self, c: usize) -> bool {
+        self.inner.variante(c)
+    }
 }
 
 /// True when sample `c` of `l` has scans that are SRM transitions.

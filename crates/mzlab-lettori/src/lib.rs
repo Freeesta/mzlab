@@ -93,11 +93,15 @@ pub fn estensioni() -> Vec<&'static str> {
     out
 }
 
-/// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans.
+/// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variante"` when the file is of an instrument or a scan type the engine's reader
+/// was not written for (SCIEX other than the 3200 QTRAP).
 pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
     if srm::ha_scansioni_srm(l, c) {
         m.push("srm");
+    }
+    if l.variante(c) {
+        m.push("variante");
     }
     m
 }

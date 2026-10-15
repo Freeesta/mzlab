@@ -13,8 +13,8 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - Il nome del computer e i percorsi sono scritti nel `<run>` dell'mzML (userParam `opentfraw.*`); il documento `metodo/1` che porta li riporta con `operatore`, `strumento.serie` e i campi marcati `identita`.
 
 ## SCIEX `.wiff` / `.dam`
-- Non decodificati: PDA/UV 3D del `.wiff` (flussi `DAD*`; `wiff/` non ha un lettore: per scriverlo servono un `.wiff` con PDA e il suo mzML di msconvert, con la traccia UV da confrontare), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
-- Calibrazione di massa e risoluzione (`GLPTables`), stato del Log a inizio e fine corsa, audit CFR, ora di acquisizione per campione (`SampleTable`).
+- Non decodificati: PDA/UV 3D del `.wiff` (flussi `DAD*`: di `DADSampleHeader` è letta l'intestazione, in `campi`; i valori di `DADIdx` e `DADRealTimeData` no, perché manca un file UV di riferimento), tracce `Devices/Device_N/DevData` (analogiche, pressione), `DDERealTimeData` (IDA), blocchi dei TripleTOF/ZenoTOF (altro codec, rifiutati), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
+- Calibrazione di massa e risoluzione (`GLPTables`) e stringhe di `DabsInfo`/`SampleTable`: in `metodo/1.campi` dal modulo `sciex`; stato del Log a inizio e fine corsa, audit CFR, ora di acquisizione per campione: non estratti.
 - Utente, computer, ente e percorsi stanno nelle proprietà OLE e in `CFR_INFO`: identità, non copiati nell'mzML.
 
 ## Agilent `.D`

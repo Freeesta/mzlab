@@ -7,7 +7,7 @@
 pub mod idx;
 pub mod lettore;
 mod run;
-pub mod scan;
+#[cfg(not(feature = "estesi"))] pub mod scan;
 mod window;
 
 use crate::error::{Error, Result};
@@ -27,7 +27,7 @@ pub struct Experiment {
     pub code: Option<u32>,
     /// 1 for a full scan (and unknown types), 2 for a product-ion scan.
     pub level: u8,
-    pub precursor: Option<f64>,
+    pub precursor: Option<f64>, #[cfg(feature = "estesi")] pub polarity: Option<i8>,
 }
 
 /// A block of the index placed in the `.wiff.scan`.
@@ -83,7 +83,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
         let code = d.get(HEADER_CODE..HEADER_CODE + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
         let prec = d.get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8).map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8]))).filter(|p| p.is_finite() && *p > 0.0);
         let product = code == Some(CODE_PRODUCT);
-        out.push(Experiment { code, level: if product { 2 } else { 1 }, precursor: if product { prec } else { None } });
+        out.push(Experiment { code, level: if product { 2 } else { 1 }, precursor: if product { prec } else { None }, #[cfg(feature = "estesi")] polarity: None });
     }
     out
 }
@@ -100,7 +100,7 @@ impl Wiff {
         let table = ole.read(&format!("{SAMPLES}SampleIdxTable")).ok_or_else(|| bad("no sample table"))?;
         let section = idx::sections(&table).into_iter().find(|s| s.0 == sample).ok_or_else(|| bad("no such sample"))?.1;
         let entries = idx::parse(&ole.read(&format!("{SAMPLES}Sample{sample}/Idx")).ok_or_else(|| bad("no Idx"))?);
-        let experiments = experiments(ole, sample);
+        let experiments = experiments(ole, sample); #[cfg(feature = "estesi")] let experiments = estesi::refine(ole, sample, experiments)?;
         let n_exp = experiments.len().max(1);
         let records = entries
             .iter()
@@ -115,8 +115,21 @@ impl Wiff {
                 experiment: k % n_exp,
             })
             .collect();
-        let method = methodinfo::method_of_sample(ole, sample);
+        let method = methodinfo::method_of_sample(ole, sample); #[cfg(feature = "estesi")] let method = method.or_else(|| estesi::fallback_method(ole, sample));
         let (model, created) = crate::metodo_wiff::run_facts(ole, sample);
         Ok(Wiff { sample, records, experiments, polarity: polarity(&method), method, model, created, wiff_sha1: None, scan_len })
+    }
+}
+
+#[cfg(feature = "estesi")]
+#[path = "scan_estesi.rs"]
+pub mod scan;
+#[cfg(feature = "estesi")]
+pub(crate) mod estesi;
+
+#[cfg(not(feature = "estesi"))]
+impl Wiff {
+    fn polarity_of(&self, _e: &Experiment) -> i8 {
+        self.polarity
     }
 }

@@ -5,7 +5,7 @@
 /** @typedef {{ name: string, blob: Blob }} Member */
 /** @typedef {{ formato: string, campioni: { id: number, name: string, scans: number }[], motivi: string[] }} Probe */
 
-/** @type {Record<string, { ext: string[], membri: string[], errori: string[], soloModulo: string[] }>} */
+/** @type {Record<string, { ext: string[], membri: string[], errori: string[], soloModulo: string[], sonda?: boolean }>} */
 const FAM = /** @type {any} */ (window).LETTORI_FAM;
 
 /** @type {Worker | null} */ let worker = null;

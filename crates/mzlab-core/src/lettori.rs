@@ -201,6 +201,12 @@ pub trait Lettore {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
+    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is
+    /// then the one to open it (`docs/agenti/lettori-modulo.md`).
+    #[cfg(feature = "estesi")]
+    fn variante(&mut self, _c: usize) -> bool {
+        false
+    }
 }
 
 /// A format in the registry.
