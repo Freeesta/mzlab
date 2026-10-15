@@ -497,6 +497,7 @@ async function drawSpec(p, snapped) {
   p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? I18N.t("spec.bgSubtracted") : ""}${p._nCont ? I18N.t("spec.contRemoved", { n: p._nCont }) : ""}</span>`;       // on the row of the x axis title, to the right
   if (isDda) DDA.caption(p);                                // scan, parent, activation, NCE, isolation
   p.leg.title = p.leg.textContent;
+  if (p.corrbar) p.corrbar.innerHTML = "";
   if (window.SUBREF && p.bg !== "w") SUBREF.chip(p);
   const multiFiles = scanFiles(tabFiles(p.tab)).length > 1;
   const showLabel = data.length > 1 || multiFiles;
