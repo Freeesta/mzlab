@@ -1,6 +1,6 @@
 """Disegno: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
-TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: "3b"}; «Remove the brackets» takes them away. Multicentre: ring atoms +
+TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, delta, level: 3b}; «Remove the brackets» takes them away. Multicentre: ring atoms +
 the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
 positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""

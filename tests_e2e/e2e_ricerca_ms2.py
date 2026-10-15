@@ -57,7 +57,7 @@ try:
             assert "Candidato · L" in v and "Prove" in v and "Livello proposto" in v and "Livello deciso" in v, v
             assert "entropia" in v and "vs" in v and ("✓" in v or "✗" in v), v
             assert "è " not in pg.inner_text("#libres .vd .lvb"), "never «it is X»"
-            n = pg.evaluate("LIB.assess([{name:'x',ent:.9,shared:8,dprec:1}],{nScans:1}).proposed"); assert n == "3"
+            n = pg.evaluate("LIB.assess([{name:'x',ent:.9,shared:8,dprec:1}],{nScans:1}).proposed"); assert n == "3a"
         step("a level badge «Candidato · LN», one evidence line per gate, proposed and decided level", level)
         def decision():
             prop = pg.evaluate("document.querySelector('#libres #lv-dec').closest('div').innerText")

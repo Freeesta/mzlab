@@ -28,13 +28,13 @@ def js(code):
 def test_levels_from_the_library_candidate():
     r = js("""const a = M.assessRow(feat(), cand()), b = M.assessRow(feat({ nScans: 1 }), cand()), c = M.assessRow(feat(), cand({ ent: 0.65, shared: 3 })), d = M.assessRow(feat(), cand({ ent: 0.4, shared: 2 }));
       return { a: [a.level, a.name, a.ent, a.dppm], b: b.level, c: c.level, d: d.level, ev: a.evidence }""")
-    assert r["a"] == ["2a", "Alpha", 0.9, 1.2] and r["b"] == "3" and r["c"] == "3" and r["d"] == "5"
+    assert r["a"] == ["2a", "Alpha", 0.9, 1.2] and r["b"] == "3a" and r["c"] == "3a" and r["d"] == "5"
     assert len(r["ev"]) >= 4          # the gates are listed as evidence
 
 
 def test_a_second_structure_close_behind_makes_it_3_not_distinct():
     r = js("""const best = cand({ alt: cand({ name: 'Beta', ik: 'BBBBBBBBBBBBBB-X', ent: 0.88 }) }); const a = M.assessRow(feat(), best); return [a.level, a.alt, a.lv.why]""")
-    assert r == ["3", "Beta", "confirm"]
+    assert r == ["3a", "Beta", "confirm"]
 
 
 def test_feature_without_ms2_is_4_with_a_unique_formula_else_5():
