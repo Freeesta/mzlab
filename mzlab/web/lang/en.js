@@ -823,7 +823,7 @@ I18N.add("en", {
   "ctl.cpar.titleMap": "Map options: color scale and palette, noise threshold, normalization and what the difference shows",
   "corr.button.title": "Background correction (one at a time)",
   "corr.sub.title": "Subtract a file",
-  "corr.fondo.title": "Background (removed after the difference)",
+  "corr.fondo.title": "Subtract the background",
   "fondo.auto.text": "automatic background, {w} min window",
   "export.meta.fondoAuto": "Automatic background",
   "export.note.fondoAuto": "The intensities in this sheet already have the automatic background removed (SNIP baseline centred on the mean noise level): areas may differ from those of the raw signal.",
