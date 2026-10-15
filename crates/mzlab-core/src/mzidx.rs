@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
-use crate::mzidx_spill::{Parti, Spill};
+use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::{self, Item, Spectrum};
 
 pub const BLOCK: u64 = 16384;
@@ -759,7 +759,7 @@ pub(crate) fn build_dopo(
                 let mut failure: Option<Error> = None;
                 if let (Some(p), Some(sp)) = (parti.as_ref(), spill.as_deref_mut()) {
                     // the peaks are in the scratch file: no decoding
-                    p.leggi(sp, lo, hi, &mut |mz, it, pos| {
+                    leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
                         for &(si, q) in &member[pos as usize] {
                             secs[si].fill_pk(mz, it, q)?;
                         }

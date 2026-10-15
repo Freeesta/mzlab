@@ -49,24 +49,30 @@ pub(crate) struct Parti {
     next_slot: u32,
 }
 
+/// The first bucket of every partition for the peaks counted so far.
+fn confini(counts: &[u64]) -> Vec<usize> {
+    let total: u64 = counts.iter().sum();
+    let mut first = vec![0usize; PARTS + 1];
+    let (mut run, mut i) = (0u64, 1usize);
+    for (b, &c) in counts.iter().enumerate().take(NB) {
+        run += c;
+        while i < PARTS && run * PARTS as u64 >= total * i as u64 {
+            first[i] = b + 1;
+            i += 1;
+        }
+    }
+    while i < PARTS {
+        first[i] = NB;
+        i += 1;
+    }
+    first[PARTS] = NB;
+    first
+}
+
 impl Parti {
     /// `counts`: the peaks seen so far in every 1-unit bucket of m/z.
     pub(crate) fn new(counts: &[u64]) -> Parti {
-        let total: u64 = counts.iter().sum();
-        let mut first = vec![0usize; PARTS + 1];
-        let (mut run, mut i) = (0u64, 1usize);
-        for (b, &c) in counts.iter().enumerate().take(NB) {
-            run += c;
-            while i < PARTS && run * PARTS as u64 >= total * i as u64 {
-                first[i] = b + 1;
-                i += 1;
-            }
-        }
-        while i < PARTS {
-            first[i] = NB;
-            i += 1;
-        }
-        first[PARTS] = NB;
+        let first = confini(counts);
         let mut of_bucket = vec![0u8; NB];
         for (p, w) in first.windows(2).enumerate() {
             if let Some(cells) = of_bucket.get_mut(w[0]..w[1]) {
@@ -120,43 +126,43 @@ impl Parti {
         }
         Ok(())
     }
+}
 
-    /// Calls `f(mz, intensity, scan)` for every peak of the partitions that may hold buckets `lo..hi` (one more on each side: a bucket taken after rounding
-    /// the m/z to 32 bits can be the next one), partition by partition, each in the order it was written. `f` keeps the peaks whose bucket it wants.
-    pub(crate) fn leggi(
-        &self,
-        sp: &mut dyn Spill,
-        lo: usize,
-        hi: usize,
-        f: &mut dyn FnMut(f64, f64, u32) -> Result<()>,
-    ) -> Result<()> {
-        let (lo, hi) = (lo.saturating_sub(1), hi.saturating_add(1));
-        let mut buf = Vec::new();
-        buf.try_reserve_exact(CHUNK)
-            .map_err(|_| Error::memory_budget())?;
-        buf.resize(CHUNK, 0);
-        for p in 0..PARTS {
-            if self.first[p] >= self.first[p + 1] || self.first[p] >= hi || self.first[p + 1] <= lo
-            {
-                continue;
-            }
-            let mut left = self.records[p];
-            for &slot in &self.slots[p] {
-                let n = left.min(PER_CHUNK as u64) as usize;
-                let bytes = &mut buf[..n * REC];
-                sp.get(u64::from(slot) * CHUNK as u64, bytes)?;
-                for r in bytes.chunks_exact(REC) {
-                    let (mz, rest) = r.split_at(8);
-                    let (it, pos) = rest.split_at(8);
-                    f(
-                        f64::from_le_bytes(mz.try_into().unwrap_or([0; 8])),
-                        f64::from_le_bytes(it.try_into().unwrap_or([0; 8])),
-                        u32::from_le_bytes(pos.try_into().unwrap_or([0; 4])),
-                    )?;
-                }
-                left -= n as u64;
-            }
+/// Calls `f(mz, intensity, scan)` for every peak of the partitions that may hold buckets `lo..hi` (one more on each side: a bucket taken after rounding
+/// the m/z to 32 bits can be the next one), partition by partition, each in the order it was written. `f` keeps the peaks whose bucket it wants.
+pub(crate) fn leggi_parti(
+    parti: &Parti,
+    sp: &mut dyn Spill,
+    lo: usize,
+    hi: usize,
+    f: &mut dyn FnMut(f64, f64, u32) -> Result<()>,
+) -> Result<()> {
+    let (lo, hi) = (lo.saturating_sub(1), hi.saturating_add(1));
+    let mut buf = Vec::new();
+    buf.try_reserve_exact(CHUNK)
+        .map_err(|_| Error::memory_budget())?;
+    buf.resize(CHUNK, 0);
+    for p in 0..PARTS {
+        if parti.first[p] >= parti.first[p + 1] || parti.first[p] >= hi || parti.first[p + 1] <= lo
+        {
+            continue;
         }
-        Ok(())
+        let mut left = parti.records[p];
+        for &slot in &parti.slots[p] {
+            let n = left.min(PER_CHUNK as u64) as usize;
+            let bytes = &mut buf[..n * REC];
+            sp.get(u64::from(slot) * CHUNK as u64, bytes)?;
+            for r in bytes.chunks_exact(REC) {
+                let (mz, rest) = r.split_at(8);
+                let (it, pos) = rest.split_at(8);
+                f(
+                    f64::from_le_bytes(mz.try_into().unwrap_or([0; 8])),
+                    f64::from_le_bytes(it.try_into().unwrap_or([0; 8])),
+                    u32::from_le_bytes(pos.try_into().unwrap_or([0; 4])),
+                )?;
+            }
+            left -= n as u64;
+        }
     }
+    Ok(())
 }
