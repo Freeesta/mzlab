@@ -243,7 +243,12 @@ impl State {
                     |k| self.open_idx(ns.get(k).map_or("", |n| n.as_str())),
                 )?
             }
-            "row" => t::row_json(&mut at, size, s("samples"), p["id"].as_u64().unwrap_or(0) as u32)?,
+            "row" => t::row_json(
+                &mut at,
+                size,
+                s("samples"),
+                p["id"].as_u64().unwrap_or(0) as u32,
+            )?,
             "row_traces" => {
                 let ns = names(p);
                 t::row_traces_json(

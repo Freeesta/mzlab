@@ -53,20 +53,36 @@ fn fin(v: f32) -> Option<f64> {
 pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
     let r = check(t, s, id)?;
     let mut o = Out::default();
-    o.raw("{\"schema\":").str(SCHEMA).raw(",\"id\":").int(i64::from(id));
+    o.raw("{\"schema\":")
+        .str(SCHEMA)
+        .raw(",\"id\":")
+        .int(i64::from(id));
     o.raw(",\"mz\":").num(t.mz[r]).raw(",\"rt\":").num(t.rt[r]);
     let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
-    o.raw(",\"rt_lo\":").opt(q.and_then(|q| fin(q.rt_lo))).raw(",\"rt_hi\":").opt(q.and_then(|q| fin(q.rt_hi)));
+    o.raw(",\"rt_lo\":")
+        .opt(q.and_then(|q| fin(q.rt_lo)))
+        .raw(",\"rt_hi\":")
+        .opt(q.and_then(|q| fin(q.rt_hi)));
     o.raw(",\"charge\":");
     match q.filter(|q| q.charge != 0) {
         Some(q) => o.int(i64::from(q.charge)),
         None => o.raw("null"),
     };
     o.raw(",\"quality\":");
-    match q.filter(|q| fin(q.q_shape).is_some() || fin(q.q_snr).is_some() || fin(q.q_fwhm).is_some()) {
+    match q
+        .filter(|q| fin(q.q_shape).is_some() || fin(q.q_snr).is_some() || fin(q.q_fwhm).is_some())
+    {
         Some(q) => {
-            o.raw("{\"shape\":").opt(fin(q.q_shape)).raw(",\"snr\":").opt(fin(q.q_snr)).raw(",\"fwhm\":").opt(fin(q.q_fwhm)).raw(",\"flags\":[");
-            let flags = [(Q_SHAPE, "shape"), (Q_SNR, "snr"), (Q_POINTS, "points")].into_iter().filter(|(b, _)| q.qreason & b != 0);
+            o.raw("{\"shape\":")
+                .opt(fin(q.q_shape))
+                .raw(",\"snr\":")
+                .opt(fin(q.q_snr))
+                .raw(",\"fwhm\":")
+                .opt(fin(q.q_fwhm))
+                .raw(",\"flags\":[");
+            let flags = [(Q_SHAPE, "shape"), (Q_SNR, "snr"), (Q_POINTS, "points")]
+                .into_iter()
+                .filter(|(b, _)| q.qreason & b != 0);
             for (i, (_, w)) in flags.enumerate() {
                 o.raw(if i > 0 { "," } else { "" }).str(w);
             }
@@ -77,15 +93,24 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
     o.raw(",\"iso_m1\":").opt(q.and_then(|q| fin(q.iso_m1)));
     o.raw(",\"ms2\":");
     match q.filter(|q| q.ms2_file != NO_FILE && (q.ms2_file as usize) < t.n_files) {
-        Some(q) => o.raw("{\"file\":").str(&s[q.ms2_file as usize].file).raw(",\"purity\":").opt(fin(q.ms2_purity).filter(|p| *p >= 0.0)).raw("}"),
+        Some(q) => o
+            .raw("{\"file\":")
+            .str(&s[q.ms2_file as usize].file)
+            .raw(",\"purity\":")
+            .opt(fin(q.ms2_purity).filter(|p| *p >= 0.0))
+            .raw("}"),
         None => o.raw("null"),
     };
     o.raw(",\"ident\":");
     if t.ident.is_empty() {
         o.raw("null");
     } else {
-        let adduct = adduct_names().get(usize::from(t.ident.ion[r]).wrapping_sub(1)).copied();
-        o.raw("{\"neutral\":").num(t.ident.neutral[r]).raw(",\"adduct\":");
+        let adduct = adduct_names()
+            .get(usize::from(t.ident.ion[r]).wrapping_sub(1))
+            .copied();
+        o.raw("{\"neutral\":")
+            .num(t.ident.neutral[r])
+            .raw(",\"adduct\":");
         match adduct {
             Some(a) => o.str(a),
             None => o.raw("null"),
@@ -100,7 +125,14 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
         if hyp != 0 {
             words.push("hypothesis");
         }
-        let names = [(SRC_RULE, "rule"), (SRC_SUSPECT, "suspect"), (SRC_FAMILY, "family"), (SRC_IMPORTED, "imported"), (SRC_CLEAVAGE, "cleavage"), (SRC_NETWORK, "network")];
+        let names = [
+            (SRC_RULE, "rule"),
+            (SRC_SUSPECT, "suspect"),
+            (SRC_FAMILY, "family"),
+            (SRC_IMPORTED, "imported"),
+            (SRC_CLEAVAGE, "cleavage"),
+            (SRC_NETWORK, "network"),
+        ];
         words.extend(names.iter().filter(|(b, _)| hyp & b != 0).map(|(_, w)| *w));
         for (i, w) in words.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(w);
@@ -111,10 +143,28 @@ pub fn row(t: &Aligned, s: &[Sample], id: u32) -> Result<String> {
     for (k, smp) in s.iter().enumerate() {
         let c = t.cell(r, k);
         let a = measured(t, r, k);
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"file\":").str(&smp.file).raw(",\"type\":").str(&smp.kind).raw(",\"time\":").opt(smp.time_min);
-        o.raw(",\"area\":").opt(a).raw(",\"height\":").opt(a.map(|_| f64::from(t.height[c])));
-        o.raw(",\"apex_rt\":").opt(fin(t.apex_rt[c]).filter(|_| t.state[c] != CELL_ABSENT)).raw(",\"width\":").opt(fin(t.width[c]).filter(|_| t.state[c] != CELL_ABSENT));
-        o.raw(",\"state\":").str(state_word(if a.is_some() { t.state[c] } else { CELL_ABSENT })).raw("}");
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"file\":")
+            .str(&smp.file)
+            .raw(",\"type\":")
+            .str(&smp.kind)
+            .raw(",\"time\":")
+            .opt(smp.time_min);
+        o.raw(",\"area\":")
+            .opt(a)
+            .raw(",\"height\":")
+            .opt(a.map(|_| f64::from(t.height[c])));
+        o.raw(",\"apex_rt\":")
+            .opt(fin(t.apex_rt[c]).filter(|_| t.state[c] != CELL_ABSENT))
+            .raw(",\"width\":")
+            .opt(fin(t.width[c]).filter(|_| t.state[c] != CELL_ABSENT));
+        o.raw(",\"state\":")
+            .str(state_word(if a.is_some() {
+                t.state[c]
+            } else {
+                CELL_ABSENT
+            }))
+            .raw("}");
     }
     o.raw("]}");
     Ok(o.0)
@@ -125,7 +175,10 @@ pub fn decimate(x: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     if x.len() <= MAX_POINTS {
         return (x.to_vec(), y.to_vec());
     }
-    let (mut ox, mut oy) = (Vec::with_capacity(MAX_POINTS), Vec::with_capacity(MAX_POINTS));
+    let (mut ox, mut oy) = (
+        Vec::with_capacity(MAX_POINTS),
+        Vec::with_capacity(MAX_POINTS),
+    );
     for g in 0..MAX_POINTS {
         let (a, b) = (g * x.len() / MAX_POINTS, (g + 1) * x.len() / MAX_POINTS);
         let m = (a..b).max_by(|&i, &j| y[i].total_cmp(&y[j])).unwrap_or(a);
@@ -135,8 +188,13 @@ pub fn decimate(x: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     (ox, oy)
 }
 
+/// A spectrum read from an index: `(rt of the scan or precursor m/z, m/z, intensity)`.
+type Peaks = (f64, Vec<f64>, Vec<f64>);
+
 fn section_pol<R: ReadAt>(index: &Index<R>, level: u8) -> Option<(usize, i8)> {
-    [1i8, -1].into_iter().find_map(|p| index.section_of(level, Some(p)).map(|si| (si, p)))
+    [1i8, -1]
+        .into_iter()
+        .find_map(|p| index.section_of(level, Some(p)).map(|si| (si, p)))
 }
 
 fn list(o: &mut Out, v: &[f64]) {
@@ -145,7 +203,13 @@ fn list(o: &mut Out, v: &[f64]) {
 
 /// One spectrum of `riga_tracce/1`: `{"file", <extra>, "mz", "y"}`.
 fn spectrum(o: &mut Out, file: &str, extra: (&str, f64), mz: &[f64], y: &[f64]) {
-    o.raw("{\"file\":").str(file).raw(",\"").raw(extra.0).raw("\":").num(extra.1).raw(",\"mz\":");
+    o.raw("{\"file\":")
+        .str(file)
+        .raw(",\"")
+        .raw(extra.0)
+        .raw("\":")
+        .num(extra.1)
+        .raw(",\"mz\":");
     list(o, mz);
     o.raw(",\"y\":");
     list(o, y);
@@ -153,9 +217,20 @@ fn spectrum(o: &mut Out, file: &str, extra: (&str, f64), mz: &[f64], y: &[f64]) 
 }
 
 /// The MS1 spectrum at the scan of section `si` nearest to `apex`, from `SPEC_BELOW` below to `SPEC_ABOVE` above `mz`: `(rt of the scan, m/z, intensity)`.
-fn ms1_at<R: ReadAt>(index: &mut Index<R>, si: usize, rts: &[f64], apex: f64, mz: f64) -> Result<(f64, Vec<f64>, Vec<f64>)> {
-    let near = (0..rts.len()).min_by(|&i, &j| (rts[i] - apex).abs().total_cmp(&(rts[j] - apex).abs())).unwrap_or(0);
-    let (a, b) = (index.search(si, mz - SPEC_BELOW, false)?, index.search(si, mz + SPEC_ABOVE, true)?);
+fn ms1_at<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    rts: &[f64],
+    apex: f64,
+    mz: f64,
+) -> Result<Peaks> {
+    let near = (0..rts.len())
+        .min_by(|&i, &j| (rts[i] - apex).abs().total_cmp(&(rts[j] - apex).abs()))
+        .unwrap_or(0);
+    let (a, b) = (
+        index.search(si, mz - SPEC_BELOW, false)?,
+        index.search(si, mz + SPEC_ABOVE, true)?,
+    );
     let (mut sx, mut sy) = (Vec::new(), Vec::new());
     index.each_peak(si, a, b, |p, m, v| {
         if p == near {
@@ -167,41 +242,97 @@ fn ms1_at<R: ReadAt>(index: &mut Index<R>, si: usize, rts: &[f64], apex: f64, mz
 }
 
 /// The MS2 the exports use for a row of the file of `q`: `(precursor, m/z, intensity)`.
-fn ms2_of<R: ReadAt>(index: &mut Index<R>, q: &crate::table::RowQ, mz: f64, pol: i8) -> Result<Option<(f64, Vec<f64>, Vec<f64>)>> {
-    let mut by_rt: Vec<u32> = (0..index.scans.len() as u32).filter(|&g| index.scans[g as usize].level == 2).collect();
-    by_rt.sort_by(|&a, &b| index.scans[a as usize].rt.total_cmp(&index.scans[b as usize].rt));
-    let Some(g) = pick(index, &by_rt, mz, pol, f64::from(q.rt_lo), f64::from(q.rt_hi)) else { return Ok(None) };
+fn ms2_of<R: ReadAt>(
+    index: &mut Index<R>,
+    q: &crate::table::RowQ,
+    mz: f64,
+    pol: i8,
+) -> Result<Option<Peaks>> {
+    let mut by_rt: Vec<u32> = (0..index.scans.len() as u32)
+        .filter(|&g| index.scans[g as usize].level == 2)
+        .collect();
+    by_rt.sort_by(|&a, &b| {
+        index.scans[a as usize]
+            .rt
+            .total_cmp(&index.scans[b as usize].rt)
+    });
+    let Some(g) = pick(
+        index,
+        &by_rt,
+        mz,
+        pol,
+        f64::from(q.rt_lo),
+        f64::from(q.rt_hi),
+    ) else {
+        return Ok(None);
+    };
     let prec = index.scans[g as usize].prec(0.0);
-    Ok(read_peaks(index, pol, &[g])?.remove(&g).map(|(m, v)| (prec, m, v)))
+    Ok(read_peaks(index, pol, &[g])?
+        .remove(&g)
+        .map(|(m, v)| (prec, m, v)))
 }
 
 /// The `riga_tracce/1` of the row with `id`: `xic` (one per file: `rt`, `y` in the window of the edges of the peak plus `PAD_WIDTHS` widths on each side, at
 /// most `MAX_POINTS`), `ms1` (spectrum at the apex of the file with the largest area, from `SPEC_BELOW` below to `SPEC_ABOVE` above the m/z of the row) and
 /// `ms2` (the one `ms2spec` chooses for the exports, from `RowMeta::ms2_file`); `ms1` and `ms2` are `null` when there is none. `open(k)` gives the index of file `k`.
-pub fn traces<R: ReadAt>(t: &Aligned, s: &[Sample], id: u32, mut open: impl FnMut(usize) -> Result<Index<R>>, ppm: f64) -> Result<String> {
+pub fn traces<R: ReadAt>(
+    t: &Aligned,
+    s: &[Sample],
+    id: u32,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
+    ppm: f64,
+) -> Result<String> {
     let r = check(t, s, id)?;
     let mz = t.mz[r];
     let tol = mz * ppm.abs() * 1e-6;
     let q = (!t.meta.is_empty()).then(|| t.meta.get(r));
-    let best = (0..t.n_files).filter_map(|k| measured(t, r, k).map(|a| (k, a))).max_by(|x, y| x.1.total_cmp(&y.1)).map(|x| x.0);
+    let best = (0..t.n_files)
+        .filter_map(|k| measured(t, r, k).map(|a| (k, a)))
+        .max_by(|x, y| x.1.total_cmp(&y.1))
+        .map(|x| x.0);
     let mut o = Out::default();
-    o.raw("{\"schema\":").str(TRACES_SCHEMA).raw(",\"id\":").int(i64::from(id)).raw(",\"mz\":").num(mz).raw(",\"ppm\":").num(ppm).raw(",\"xic\":[");
+    o.raw("{\"schema\":")
+        .str(TRACES_SCHEMA)
+        .raw(",\"id\":")
+        .int(i64::from(id))
+        .raw(",\"mz\":")
+        .num(mz)
+        .raw(",\"ppm\":")
+        .num(ppm)
+        .raw(",\"xic\":[");
     let mut ms1 = None;
     let mut pol = 1i8;
     for (k, smp) in s.iter().enumerate() {
         let mut index = open(k)?;
         let c = t.cell(r, k);
-        let apex = if t.state[c] != CELL_ABSENT { fin(t.apex_rt[c]) } else { None }.unwrap_or(t.rt[r]);
-        let (lo, hi) = q.map_or((f64::NAN, f64::NAN), |q| (f64::from(q.rt_lo), f64::from(q.rt_hi)));
-        let (lo, hi) = if lo.is_finite() && hi.is_finite() && hi > lo { (lo, hi) } else { (apex - 0.1, apex + 0.1) };
+        let apex = if t.state[c] != CELL_ABSENT {
+            fin(t.apex_rt[c])
+        } else {
+            None
+        }
+        .unwrap_or(t.rt[r]);
+        let (lo, hi) = q.map_or((f64::NAN, f64::NAN), |q| {
+            (f64::from(q.rt_lo), f64::from(q.rt_hi))
+        });
+        let (lo, hi) = if lo.is_finite() && hi.is_finite() && hi > lo {
+            (lo, hi)
+        } else {
+            (apex - 0.1, apex + 0.1)
+        };
         let pad = PAD_WIDTHS * (hi - lo);
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"file\":").str(&smp.file).raw(",\"rt\":");
+        o.raw(if k > 0 { "," } else { "" })
+            .raw("{\"file\":")
+            .str(&smp.file)
+            .raw(",\"rt\":");
         let (mut x, mut y) = (Vec::new(), Vec::new());
         if let Some((si, p)) = section_pol(&index, 1) {
             if k == 0 {
                 pol = p;
             }
-            let (a, b) = (index.search(si, mz - tol, false)?, index.search(si, mz + tol, true)?);
+            let (a, b) = (
+                index.search(si, mz - tol, false)?,
+                index.search(si, mz + tol, true)?,
+            );
             let sum = index.sum_window(si, a, b)?;
             let rts = index.arrays(si)?.rt.clone();
             for (i, &rt) in rts.iter().enumerate().take(sum.len()) {
@@ -229,7 +360,9 @@ pub fn traces<R: ReadAt>(t: &Aligned, s: &[Sample], id: u32, mut open: impl FnMu
     }
     o.raw(",\"ms2\":");
     let ms2 = match q.filter(|q| q.ms2_file != NO_FILE && (q.ms2_file as usize) < t.n_files) {
-        Some(q) => ms2_of(&mut open(q.ms2_file as usize)?, &q, mz, pol)?.map(|m| (q.ms2_file as usize, m)),
+        Some(q) => {
+            ms2_of(&mut open(q.ms2_file as usize)?, &q, mz, pol)?.map(|m| (q.ms2_file as usize, m))
+        }
         None => None,
     };
     match ms2 {
