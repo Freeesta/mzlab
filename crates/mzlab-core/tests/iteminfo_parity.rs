@@ -61,6 +61,13 @@ fn infusion_exception(got: &mut Value, want: &Value) {
             }
         }
     }
+    // an MSn infusion is one item of kind `infusion` (not split into MS1 and MS2 parts, not `ms2`)
+    if o.get("kind").and_then(Value::as_str) == Some("infusion") {
+        o.insert("kind".into(), want["kind"].clone());
+        if want.get("mixed").is_some() {
+            o.insert("mixed".into(), want["mixed"].clone());
+        }
+    }
     if o.get("hint").and_then(Value::as_str) == Some("infusion") {
         o.insert("hint".into(), want["hint"].clone());
     }

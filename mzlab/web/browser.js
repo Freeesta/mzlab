@@ -74,13 +74,14 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
   window.fetch = async (input, init = {}) => {
-    const url = typeof input === "string" ? input : /** @type {Request} */ (input).url;
-    if (typeof url !== "string" || !/^(\.\/)?api\//.test(url)) return realFetch(input, init);
+    const raw = typeof input === "string" ? input : /** @type {Request} */ (input).url;
+    if (typeof raw !== "string" || !/^(\.\/)?api\//.test(raw)) return realFetch(input, init);
+    const url = window.INF ? window.INF.qs(raw) : raw;                                 // a request that names a node of the MSn tree carries the grouping of the tree
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;
     if (tr) tr.push("fetch> " + url.slice(0, 80));

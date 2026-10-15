@@ -126,3 +126,13 @@ fn energies_split_keys_but_not_nodes() {
     let got = infusione(&v, None, "a.mzML").unwrap();
     assert_eq!((got.motivo, got.nodi), ("blocchi", 1));
 }
+
+#[test]
+fn an_msn_infusion_is_one_item_not_survey_plus_product_ions() {
+    let v = tune_blocks();
+    assert!(con_msn(&v, None, "x.mzML"));
+    // a file of MS1 scans only, a run of constant RT and an LC run stay what they were
+    assert!(!con_msn(&[ms1(0.0), ms1(0.1), ms1(0.2)], None, "x.mzML"));
+    assert!(!con_msn(&[msn(1.0, &[(317.2, 25.0)])], None, "x.mzML"));
+    assert!(!con_msn(&prm(), None, "x.mzML"));
+}
