@@ -56,12 +56,15 @@ function saveBlob(blob, name, wait = 4000) {
 }
 // decimal text typed by the student ("0,5" or "0.5") -> number | NaN; lenient like parseFloat (a trailing unit is ignored)
 const numIt = t => parseFloat(String(t).replace(",", "."));
-// text typed in the time field: "", "12", "0,5", "1.25" -> number | null (empty) | NaN (not a number); no exponent, no sign
-function parseDecimal(text) {
+// text typed in the time field: "", "12", "0,5", "1.25" -> number | null (empty) | NaN (not a number); no exponent; a sign ("-30", "−30") only with `signed` (the dark)
+function parseDecimal(text, signed = false) {
   const s = String(text ?? "").trim().replace(",", ".");
   if (s === "") return null;
-  return /^\d+(\.\d*)?$|^\.\d+$/.test(s) ? Number(s) : NaN;
+  const m = signed === true ? /^([-\u2212]?)(.*)$/.exec(s) : null, neg = !!(m && m[1]), body = m ? m[2] : s;
+  return /^\d+(\.\d*)?$|^\.\d+$/.test(body) ? (neg ? -Number(body) : Number(body)) : NaN;
 }
+// the time of a dark is the minutes of darkness BEFORE the time zero: always <= 0 (a positive number typed or read is taken as its negative)
+const darkTime = v => (v == null || Number.isNaN(v) || v === 0 ? v : -Math.abs(v));
 
 // the unit chosen by the student (localStorage "qqq.tunit"; in memory if the storage is not available); a time is shown only when the file name gave one
 let _tunit = "min";

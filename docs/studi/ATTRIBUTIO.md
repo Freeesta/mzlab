@@ -128,7 +128,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | Pacchetto | Contenuto | Onda | Dipende da | `.wasm` | Stima (giorni-chat) | Stato |
 |---|---|---|---|---|---|---|
 | AT-00 | fondamenta: campagna sintetica in `tests/data/attributio/`, `tools/attributio_riferimento.py` e dati d'oro, `docs/agenti/attributio.md`, riga di AGENTS.md §5, riga di `LICENZE-TERZI.md` | 1 | — | nessuno | 1 | fatto: 15 feature, dati d'oro 35 KB, `--controlla` passato al primo colpo |
-| AT-01 | `campaign.toml` (sottoinsieme TOML), lettori (mzMine, SIRIUS, GNPS2, MGF, standard, decisioni), sorbenti e DETECTED, `feature_state` | 2 | AT-00 | nessuno | 2 | da fare |
+| AT-01 | `campaign.toml` (sottoinsieme TOML), lettori (mzMine, SIRIUS, GNPS2, MGF, standard, decisioni), sorbenti e DETECTED, `feature_state` | 2 | AT-00 | nessuno | 2 | fatto: ~4 500 righe in 18 file, 16 prove di parità, nessuna dipendenza nuova, `.wasm` non toccati; righe per fonte sui dati veri non misurate (senza `MZLAB_DATI`) |
 | AT-05 | abbinamento della revisione, indice delle librerie, fonti, Δm, sopra `crates/mzlab-lib` | 2 | AT-00 | nessuno | 1,5 | da fare |
 | AT-02 | cascata dei livelli (`annotate.py`) e controlli di formula | 3 | AT-01 | nessuno | 2 | da fare |
 | AT-06 | spiegazione dei frammenti, isotopi, purezza, spettri grezzi, RT-logP, frammentatore; proposte di `build.py` | 3 | AT-01, AT-05 | nessuno | 2,5 | da fare |
@@ -137,7 +137,7 @@ Un pacchetto = una chat DEV = una PR unita a CI verde, pubblicata subito dietro 
 | AT-07 | Banco 2b: revisione, lista di controllo, alternative con la stessa formula, `rules.py`, scrittura delle decisioni | 6 | AT-04, AT-06 | `attributio` (in serie) | 2 | da fare |
 | AT-08 | prove esportate, cartella di Schymanski, tabella per la pubblicazione, quantificazione e gradiente | 7 | AT-07 | `attributio` (in serie) | 1 | da fare |
 | MZ-00 | diagnosi della concordanza con mzmine (protocollo corretto, motivi) e dati d'oro per stadio | 1 | — | nessuno | 1,5 | strumenti e dati d'oro fatti (`docs/agenti/attributio.md`); sui 4 sintetici recall 0,538→0,692, |log2| 0,080→0,028; misura sul Timolol vero da fare con il privato |
-| MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | da fare |
+| MZ-01 | costruttore ADAP | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/adap.rs`, 45/45 cromatogrammi uguali a mzmine 3.9.0 sui sintetici, lastre = stessa uscita (≥ 200 000 punti, 1 MB); prova sui dati veri pronta, da girare con il privato |
 | MZ-02 | risolutore a minimo locale | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted/resolve.rs`, 49 feature su 49 identiche ai dati d'oro di mzmine 3.9.0 (sintetici); dati veri del privato da confrontare |
 | MZ-03 | join aligner e riempimento | 2 | MZ-00 | nessuno | 1 | fatto: `untargeted::{join,gapfill,table}`; sui sintetici d'oro 13 righe su 13 uguali a mzmine e 3 celle su 3 riempite uguali (area e altezza entro 6·10⁻⁴, 4 cifre del CSV); sui dati veri da misurare con il privato (`untargeted_join_dati`, soglia 0,97) |
 | MZ-04 | `.wasm` `untargeted`, ricetta e voce di amministratore | 3 | MZ-01, MZ-02, MZ-03 | crea `untargeted` | 1 | da fare |

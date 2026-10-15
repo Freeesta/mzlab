@@ -2,7 +2,7 @@
 """Reference runner: executes Attributio 1.12.0 and writes golden JSON files per stage.
 
 Tool only (never shipped in the site). Needs ATTRIBUTIO_SRC=<path of Attributio's src/>.
-Stages: campagna, letture, rilevazione, livelli, identita, proposte, decisioni.
+Stages: campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard (synthetic campaign) and sorbenti (campaign of the per-sorbent lists).
 
     ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_riferimento.py
     ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_riferimento.py --controlla
@@ -21,6 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CAMPAGNA = ROOT / "tests/data/attributio/campagna_sintetica"
 USCITA = ROOT / "tests/golden/attributio/sintetica"
+SORBENTI = ROOT / "tests/data/attributio/campagna_sorbenti"
+USCITA_SORBENTI = ROOT / "tests/golden/attributio/sorbenti"
 POLS = ("POS", "NEG")
 LEVEL_COLS = ["_pol", "_id", "level", "level_sub", "level_basis", "name"]
 
@@ -144,6 +146,48 @@ def stadio_decisioni(C, feat):
     return {"decisioni": frame_rows(d), "abbinate": frame_rows(m)}
 
 
+def stadio_sirius(C):
+    from attributio.readers.sirius import load_sirius_tables
+    cano, st, sp = load_sirius_tables(C)
+    return {"canopus": frame_rows(cano), "structure": frame_rows(st), "spectral": frame_rows(sp)}
+
+
+def stadio_standard(C):
+    from attributio.annotate import detection_table, feature_mgf, standards_settings
+    from attributio.readers import ms2
+    from attributio.readers.standards import load_decisions, mass_rt_candidates, match_reference_standards
+    cfg = standards_settings(C)
+    lib = C.load_standards_library()
+    out: dict = {"candidati": {}, "abbinamenti": {}, "spettri": {}}
+    for p in POLS:
+        det = detection_table(C, p, list(C.sites))
+        kw = dict(mass_tol_ppm=cfg["mass_tol_ppm"], rt_tol_min=cfg["rt_tol_min"], rt_column=cfg["rt_column"][p],
+                  adduct_columns=cfg["adducts"][p])
+        out["candidati"][p] = frame_rows(mass_rt_candidates(det, p, lib, **kw))
+        fs = ms2.read_feature_spectra(feature_mgf(C, p))
+        lj = cfg["ms2_library"][p]
+        ls = ms2.read_library_spectra(lj)
+        out["spettri"][p] = {"feature": sorted([[k, len(v[0]), v[2]] for k, v in fs.items()]),
+                             "libreria": sorted([[n, len(v)] for n, v in ls.items()])}
+        m = match_reference_standards(det, p, lib, feature_spectra=fs, library_spectra=ls,
+                                      ms2_min_cosine=cfg["ms2_min_cosine"], ms2_min_matched=cfg["ms2_min_matched"],
+                                      ms2_tol_da=cfg["ms2_tol_da"], precursor_tol_ppm=cfg["precursor_tol_ppm"],
+                                      decisions=load_decisions(cfg["decisions"]), **kw)
+        out["abbinamenti"][p] = frame_rows(m)
+    return out
+
+
+def stadio_sorbenti(C):
+    from attributio.annotate import detection_table
+    from attributio.sorbents import blank_abundance
+    df = C.load_feature_table("POS")
+    cols = ["id", "mz", "rt", "fragment_scans", "blank_abundance:OA", "blank_abundance:EC", "twin_id"]
+    return {"tabella": frame_rows(df, cols), "gemelli": {str(k): v for k, v in C.twin_map("POS").items()},
+            "rilevazione": frame_rows(detection_table(C, "POS", list(C.sites))),
+            "colonne": list(df.columns),
+            "blank_abundance": [[t, blank_abundance(t)] for t in ("", "x (abundance 1.3E3)", "abundance 5)", "(abundance 2) (abundance 7)")]}
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -167,6 +211,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--campagna", type=Path, default=CAMPAGNA)
     ap.add_argument("--uscita", type=Path, default=USCITA)
+    ap.add_argument("--sorbenti", type=Path, default=SORBENTI)
+    ap.add_argument("--uscita-sorbenti", type=Path, default=USCITA_SORBENTI)
     ap.add_argument("--controlla", action="store_true",
                     help="compare livelli.json with livelli_attesi.csv (exit 1 on difference)")
     a = ap.parse_args()
@@ -184,6 +230,9 @@ def main() -> int:
     scrivi(a.uscita, "identita.json", stadio_identita(feat, C))
     scrivi(a.uscita, "proposte.json", stadio_proposte(C))
     scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat))
+    scrivi(a.uscita, "sirius.json", stadio_sirius(C))
+    scrivi(a.uscita, "standard.json", stadio_standard(C))
+    scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(Path(src).expanduser().resolve(), a.sorbenti.resolve())))
     return controlla(a.uscita, a.campagna) if a.controlla else 0
 
 

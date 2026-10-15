@@ -2,6 +2,7 @@
 //! attribution of the Java file it was rewritten from (MIT, (c) 2004-2022 The mzmine Development Team; source read at the tag `v3.9.0`; licence line in
 //! `LICENZE-TERZI.md`). Here: `join` (join aligner), `gapfill` (peak finder that fills the empty cells) and `table` (the result as the `Aligned` table).
 
+pub mod adap;
 pub mod gapfill;
 pub mod join;
 pub mod resolve;
