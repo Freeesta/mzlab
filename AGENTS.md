@@ -56,6 +56,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento | `docs/agenti/intestazione.md` |
+| barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
