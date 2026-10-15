@@ -69,7 +69,7 @@ Questo file è già nel tuo contesto (Claude Code lo carica da solo): non rilegg
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità delle feature: `mzfinder-untargeted.md`; validazione delle feature: `mzfinder-validazione.md`; tabella dei prodotti HR: `mzfinder-tabella.md`; indice dei sospetti `.mzsus`: `sospetti.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` |
-| lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
+| lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
 | benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |

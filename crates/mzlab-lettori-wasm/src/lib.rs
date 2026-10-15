@@ -179,12 +179,20 @@ pub fn estensioni() -> String {
 }
 
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
-/// as scans), `"variante"` (an Agilent `.D` whose points the engine cannot read: QqQ MRM, Q-TOF profile or flight times). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
+/// as scans), `"pda"` (UV traces), `"variante"` (a file whose points the engine would misread: an Agilent `.D` QqQ MRM or Q-TOF profile or flight times, a SCIEX file of the 3200 reader). The module links no reader of the engine, so it cannot say whether the engine would have opened the file: the page knows.
 #[wasm_bindgen]
 pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<String, JsValue> {
     let m = Membri::new(names, sizes, read)?;
     let mut motivi: Vec<&str> = mzlab_lettori::motivi_insieme(&mut m.fileset());
-    let mut l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
+        Ok(l) => l,
+        // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
+        #[cfg(feature = "sciex")]
+        Err(e) if e.key == "err.file.wiff" => {
+            return Ok(r#"{"formato":"sciex-wiff","campioni":[],"motivi":["variante"]}"#.into())
+        }
+        Err(e) => return Err(error_json(&e)),
+    };
     let campioni: Vec<serde_json::Value> = l
         .campioni()
         .iter()
