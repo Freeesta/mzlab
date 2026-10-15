@@ -33,7 +33,7 @@ try:
         def fresh(admin, hash_=""):
             c = b.new_context(viewport={"width": 1400, "height": 900}); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
-            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            if admin: pg.add_init_script("try{if(!sessionStorage.getItem('adm0')){sessionStorage.setItem('adm0','1');localStorage.setItem('qqq.admin','1');}}catch(_){}")      # once per tab: a reload after leaving the mode must not switch it back on
             pg.goto(f"http://127.0.0.1:{PORT}/" + hash_); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(1500)
             return pg
         pg = fresh(False)
