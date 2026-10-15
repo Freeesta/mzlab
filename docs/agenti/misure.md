@@ -235,3 +235,6 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
 - `.wasm` per famiglia, in byte (tetto): `thermo` 437 515 (458 752), `agilent` 337 567 (393 216), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
 - Picco di memoria del modulo `thermo` che indicizza un `.raw` (memoria iniziale 32 MB): 44,4 MB per 7 952 scansioni, 85,1 MB per 16 524.
+
+## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
+- `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_tempi` e profilo `desktop` (studio `docs/studi/RAW_VELOCE.md`, DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.

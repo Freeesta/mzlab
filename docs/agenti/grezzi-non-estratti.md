@@ -30,3 +30,9 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 
 ## mzXML (modulo «aperti»)
 - Non portati: il testo degli elementi della testata (p. es. lo SHA-1 in coda al file), `scanOrigin`, `maldi`, `separation`/`spotting` di una scansione, `processingOperation`; gli attributi di ogni elemento della testata stanno invece tutti in `metodo/1.campi`, quelli di ogni scansione in `intestazione`.
+
+## Waters MassLynx `.raw` (modulo `waters`)
+- Mobilità ionica (HDMSe, SONAR, cyclic IMS): gli m/z si sommano su tutti i bin di deriva; il tempo di deriva e la calibrazione di mobilità (`mob_cal.csv`) non sono estratti. Lock mass: la funzione è data come cromatogramma e in `campi`, ma la correzione dell'm/z non è applicata (30-100 ppm).
+- Non decodificati: le righe di `_FUNCnnn.STS`/`.EE` oltre «Set Mass» e «Collision Energy» (stanno solo nei byte), la tabella `_HISTORY.INF`, i parametri di rampa oltre quelli di `_extern.inf`, la codifica a 6 byte (nessun file vero) e le funzioni di tipo MALDI.
+- Identità (`User Name`, `Submitter`, `Laboratory Name`, percorsi del computer): in `metodo/1.campi` marcate `identita`, mai nell'mzML.
+

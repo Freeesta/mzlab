@@ -2035,6 +2035,7 @@ dependencies = [
  "flate2",
  "mzlab-core",
  "ruzstd",
+ "serde_json",
 ]
 
 [[package]]

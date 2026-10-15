@@ -11,6 +11,8 @@ pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
 pub mod srm;
+#[cfg(any(feature = "waters", feature = "tutte"))]
+pub mod waters;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
 #[cfg(any(feature = "aperti", feature = "tutte"))]
@@ -29,6 +31,8 @@ static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
 static VOCE_BRUKER_TDF: VoceLettore = bruker::tdf::VOCE;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 static VOCE_BRUKER_TSF: VoceLettore = bruker::tdf::VOCE_TSF;
+#[cfg(any(feature = "waters", feature = "tutte"))]
+static VOCE_WATERS: VoceLettore = waters::VOCE;
 
 /// The name of the family this build serves (`"tutte"` for the desktop app and for tests).
 pub fn famiglia() -> &'static str {
@@ -74,6 +78,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_BRUKER_TDF),
         #[cfg(any(feature = "bruker", feature = "tutte"))]
         Some(&VOCE_BRUKER_TSF),
+        #[cfg(any(feature = "waters", feature = "tutte"))]
+        Some(&VOCE_WATERS),
     ];
     voci.iter().flatten().copied().collect()
 }

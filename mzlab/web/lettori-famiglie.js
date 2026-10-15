@@ -15,7 +15,7 @@ const LETTORI_FAM = {
   bruker: { ext: [], membri: ["analysis.tdf", "analysis.tsf", "analysis.baf"], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [], sonda: true },
-  waters: { ext: [], membri: [], errori: [], soloModulo: [] },
+  waters: { ext: [".raw"], membri: ["_func001.dat"], errori: [], soloModulo: [] },
   shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
 };
 /** @type {any} */ (window).LETTORI_FAM = LETTORI_FAM;
