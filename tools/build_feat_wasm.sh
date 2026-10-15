@@ -49,3 +49,5 @@ m["finder_lr"] = {"js": "finder-lr/mzlab_finder_lr_wasm.js", "wasm": "finder-lr/
                  "sha256": hashlib.sha256(open(f"{o}/finder-lr/mzlab_finder_lr_wasm_bg.wasm", "rb").read()).hexdigest()}
 json.dump(m, open(f"{o}/manifest.json", "w"), indent=1)
 P
+# the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh
+tools/build_lettori_wasm.sh "${1:-site/static}"
