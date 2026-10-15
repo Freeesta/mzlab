@@ -133,7 +133,7 @@ Misurato su 30 `.raw` aperti di `dati_formati/` (sonda temporanea su `RawFileRea
 | LAB-A: idem | 2,79 s | ≤ 1,0 s |
 | Letture intere del file prima della mappa | 3 (copia, SHA-256, SHA-1) | 1 (la copia; gli hash nella stessa passata) |
 | Tabella (righe) | 9× la decodifica | ≤ 1,5× la decodifica |
-| `.mzidx` del BAF, budget 192 MB | 7,07 s, 2 passate | ≤ 3 s |
+| `.mzidx` del BAF, budget 192 MB | 7,07 s, 2 passate | ≤ 3 s (RV-04: una decodifica, righe dirette; misura in locale con `raw_tempi`) |
 | mzML del BAF (nativo) | 13,99 s | ≤ 6 s con zlib veloce; ≤ 4 s con numpress (opzione) |
 | Centroidi del file segnati come profilo | −82 % dei picchi | 0 scansioni ricentroidate per errore |
 | Modulo per scansione (WASM) | 99 µs | ≤ 40 µs |

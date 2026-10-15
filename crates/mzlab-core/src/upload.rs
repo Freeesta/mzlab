@@ -224,7 +224,44 @@ pub fn prepare_lettore(
     membri: &[Impronta],
     name: &str,
 ) -> Result<Prepared> {
-    let mut t = mzidx_lettore::righe(l, c)?;
+    let t = mzidx_lettore::righe(l, c)?;
+    dalla_tabella(t, l, c, membri, name)
+}
+
+/// The table, the index and the SHA-256 of sample `c` of a vendor file set with one decoding of the scans for the table and for pass 1 of the builder
+/// (the later passes, when the peaks do not fit in `budget`, decode again). `fase(3)` is called when the table is done and the index starts.
+/// Returns the statistics of the build and the `sha256` of the set. The index is the one `prepare_lettore` + `mzidx::build_lettore` write.
+pub fn indicizza_lettore(
+    l: &mut dyn Lettore,
+    c: usize,
+    membri: &[Impronta],
+    name: &str,
+    out: &mut dyn crate::mzidx::Output,
+    budget: usize,
+    fase: &mut dyn FnMut(u32),
+) -> Result<(crate::mzidx::Stats, String)> {
+    let (t, prima) = mzidx_lettore::righe_prima(l, c, budget)?;
+    let p = dalla_tabella(t, l, c, membri, name)?;
+    fase(3);
+    let n = l.indice(c)?.len();
+    let st = crate::mzidx::build_dopo(
+        &p.table,
+        prima,
+        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        out,
+        budget,
+        true,
+    )?;
+    Ok((st, p.sha256))
+}
+
+fn dalla_tabella(
+    mut t: Table,
+    l: &mut dyn Lettore,
+    c: usize,
+    membri: &[Impronta],
+    name: &str,
+) -> Result<Prepared> {
     let scans_json = mzidx_lettore::rows_json(&mut t, l.indice(c)?).into_bytes();
     let campione = l
         .campioni()
