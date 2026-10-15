@@ -261,3 +261,35 @@ def concordanza_mzmine(nativa, mzmine, colonne, soglia_area: float) -> dict:
         d = (y - x) / np.log(2)
         out["log2_mediano"] = float(np.median(np.abs(d - np.median(d))))
     return out
+
+
+MIN_A_S = 60.0        # mzmine areas are intensity x min, ours counts x s
+
+
+def abbina_ioni(nativa, mzmine, colonne, altezza_min: float):
+    """(fm, fn, ia, ib): the rows of mzmine and of the native table with a largest height of at least `altezza_min` (the same floor, in counts, on both sides)
+    and the one-to-one match between them (`abbina.abbina`: within 5 ppm and 0.1 min); `ia`/`ib` index into `fm`/`fn`."""
+    fm = np.flatnonzero(mzmine.massimo_altezza(colonne) >= altezza_min)
+    fn = np.flatnonzero(nativa.massimo_altezza(colonne) >= altezza_min)
+    ia, ib = abbina(mzmine.mz[fm], mzmine.rt[fm], nativa.mz[fn], nativa.rt[fn], PPM, 0.1)
+    return fm, fn, ia, ib
+
+
+def concordanza_mzmine_ioni(nativa, mzmine, colonne, altezza_min: float) -> dict:
+    """Agreement with mzmine row by ion (the native table in `Mode::Ion`), the rows under a common floor of height, the areas of mzmine in counts x s: recall,
+    precision, Spearman correlation of the log areas, median |log2 ratio| of the areas (`log2_mediano`, no scale factor) and the same after the median shift
+    (`log2_centrato`, what `concordanza_mzmine` reports)."""
+    fm, fn, ia, ib = abbina_ioni(nativa, mzmine, colonne, altezza_min)
+    out = {"righe_mzmine": len(fm), "righe_native": len(fn), "abbinate": int(len(ia))}
+    if len(fm) == 0 or len(fn) == 0:
+        return out
+    out.update(richiamo=len(ia) / len(fm), precisione=len(ia) / len(fn))
+    am, an = mzmine.massimo(colonne)[fm] * MIN_A_S, nativa.massimo(colonne)[fn]
+    ok = (am[ia] > 0) & (an[ib] > 0)
+    if int(ok.sum()) >= 3:
+        x, y = np.log(am[ia][ok]), np.log(an[ib][ok])
+        out["spearman"] = float(np.corrcoef(_ranghi(x), _ranghi(y))[0, 1])
+        d = (y - x) / np.log(2)
+        out["log2_mediano"] = float(np.median(np.abs(d)))
+        out["log2_centrato"] = float(np.median(np.abs(d - np.median(d))))
+    return out
