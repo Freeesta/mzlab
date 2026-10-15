@@ -1,7 +1,6 @@
 //! The session interface of a module, in plain Rust (the `wasm_bindgen` functions of `lib.rs` only convert): a reader stays open under a handle, and the engine's external reader asks it for the
 //! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON or typed arrays; an error is `{error_key, params}`.
 use std::collections::HashMap;
-use std::io::Write;
 
 use mzlab_core::lettori::Lettore;
 use mzlab_core::Result;
@@ -92,21 +91,32 @@ fn put_str(o: &mut Vec<u8>, v: &str) {
     let _ = serde_json::to_writer(&mut *o, v);
 }
 
-/// A JSON number, `null` for NaN and infinities; `Number` prints a float the way `serde_json` serialises it.
+/// A JSON number, `null` for NaN and infinities (the serialiser of `serde_json`, as `json!` uses).
 fn put_f64(o: &mut Vec<u8>, v: f64) {
-    match serde_json::Number::from_f64(v) {
-        Some(n) => {
-            let _ = write!(o, "{n}");
-        }
-        None => o.extend_from_slice(b"null"),
+    let _ = serde_json::to_writer(&mut *o, &v);
+}
+
+/// A whole number in decimal (an offset in a file stays far below `i64::MAX`).
+fn put_int(o: &mut Vec<u8>, v: i64) {
+    if v < 0 {
+        o.push(b'-');
     }
+    let mut n = v.unsigned_abs();
+    let mut d = [0u8; 20];
+    let mut i = d.len();
+    loop {
+        i -= 1;
+        d[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 {
+            break;
+        }
+    }
+    o.extend_from_slice(&d[i..]);
 }
 
 fn put_opt(o: &mut Vec<u8>, v: Option<f64>) {
-    match v {
-        Some(x) => put_f64(o, x),
-        None => o.extend_from_slice(b"null"),
-    }
+    let _ = serde_json::to_writer(&mut *o, &v);
 }
 
 /// One entry of the index as `{"base":..,"filter":..,"id":..,"level":..,"polarity":..,"pos":..,"precursor":..,"rt":..,"tic":..}`.
@@ -117,14 +127,20 @@ fn voce(o: &mut Vec<u8>, r: &mzlab_core::lettori::VoceScansione) {
     put_str(o, &r.filtro);
     o.extend_from_slice(b",\"id\":");
     put_str(o, &r.id);
-    let _ = write!(
-        o,
-        ",\"level\":{},\"polarity\":{},\"pos\":",
-        r.livello, r.polarita
-    );
+    o.extend_from_slice(b",\"level\":");
+    put_int(o, r.livello.into());
+    o.extend_from_slice(b",\"polarity\":");
+    put_int(o, r.polarita.into());
+    o.extend_from_slice(b",\"pos\":");
     match r.posizione {
         Some(p) => {
-            let _ = write!(o, "[{},{},{}]", p.membro, p.offset, p.lunghezza);
+            o.push(b'[');
+            put_int(o, p.membro.into());
+            o.push(b',');
+            put_int(o, p.offset as i64);
+            o.push(b',');
+            put_int(o, p.lunghezza.into());
+            o.push(b']');
         }
         None => o.extend_from_slice(b"null"),
     }

@@ -233,8 +233,8 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 - Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.
 
 ## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
-- `.wasm` per famiglia, in byte (tetto): `thermo` 437 515 (458 752), `agilent` 337 567 (393 216), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
-- Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s). Il `.wasm` `thermo` pesa 462 935 B (tetto 458 752, superato).
+- `.wasm` per famiglia, in byte (tetto): `thermo` 462 935 (614 400), `agilent` 337 567 (393 216), `sciex` 303 705 (327 680), `bruker` 416 514 (524 288, con `ruzstd`). Il `.wasm` del motore pesa 1 439 240 B (senza il lettore Thermo, che sta nel modulo `thermo`).
+- Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s). Il `.wasm` `thermo` pesa 462 935 B (tetto 614 400).
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
 - `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_tempi` e profilo `desktop` (studio `docs/studi/RAW_VELOCE.md`, DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
