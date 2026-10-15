@@ -1,0 +1,133 @@
+# The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
+# Runs on pull requests that touch the engine, the page or the build, and by hand. Not a required check of the protected main branch.
+# `sito-e2e` runs the quick checks of tools/verifica.py (JS syntax with Teoria and the shell, i18n, code map, sizes), builds the site + .wasm
+# and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
+# (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
+# The run on main fills the Rust cache when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
+name: sito-rust
+
+on:
+  push:
+    branches: [main]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
+  pull_request:
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", ".github/workflows/sito-rust.yml"]
+  workflow_dispatch:
+    inputs:
+      solo:
+        description: "e2e to run (comma separated)"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sito-rust-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
+
+jobs:
+  sito-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cache/ms-playwright
+            target
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          restore-keys: sito-rust-${{ runner.os }}-
+      - name: Install
+        run: |
+          python -m pip install -e ".[test]" playwright
+          python -m playwright install --with-deps chromium
+      # the checks of tools/verifica.py that are not pytest nor e2e, first: a syntax error stops the job in seconds
+      - name: Quick checks (JS syntax, i18n, code map, sizes)
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "tools")
+          import verifica as v
+          v.LOG.mkdir(parents=True, exist_ok=True)
+          r = []
+          v.js_syntax(r); v.i18n(r); v.codice(r)
+          for name, state, dt, notes in r:
+              print(state, name, *notes[:5])
+          sys.exit(any(x[1] == "FAIL" for x in r))
+          PY
+      - uses: actions/cache@v4
+        with:
+          path: .pyodide-cache
+          key: pyodide-${{ hashFiles('tools/build_site.py') }}
+      - name: Build the site (downloads Pyodide from jsDelivr)
+        run: |
+          # Pyodide files are checked against the SHA-256 pinned in tools/build_site.py, so a cached copy is as safe as a download
+          if [ -f .pyodide-cache/pyodide.mjs ]; then
+            python tools/build_site.py --pyodide-dir .pyodide-cache
+          else
+            python tools/build_site.py
+            mkdir -p .pyodide-cache && cp site/static/mzfinder/pyodide/* .pyodide-cache/
+          fi
+      - name: Build the WASM engine into the site (as pages.yml does)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1703936 engine
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
+          tools/build_feat_wasm.sh site/static
+      # saved right after the build, so a red e2e does not lose the cache (main only)
+      - uses: actions/cache/save@v4
+        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cache/ms-playwright
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - name: e2e on the built site
+        run: |
+          ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
+          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf' }}"
+      - name: Print the logs of the failed tests (readable in the job log)
+        if: failure()
+        shell: bash
+        run: |
+          cat .verifica/ultimo.md | cut -c1-2000
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
+      - name: Logs of the failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sito-rust
+          path: .verifica/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # The name `sito` stays: the one check that sums up the job.
+  sito:
+    if: always()
+    needs: [sito-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: sito-e2e passed
+        run: |
+          echo "sito-e2e: ${{ needs.sito-e2e.result }}"
+          test "${{ needs.sito-e2e.result }}" = success
