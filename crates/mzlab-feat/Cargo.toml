@@ -14,6 +14,8 @@ default = ["chem"]
 chem = []
 # `attributio`: the port of Attributio (cascade of levels, review); off by default and not part of any .wasm yet (`docs/agenti/attributio.md`).
 attributio = ["dep:mzlab-lib"]
+# `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
+untargeted = []
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }

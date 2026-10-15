@@ -57,6 +57,8 @@ pub mod table;
 pub mod target;
 pub mod tp;
 pub mod trace;
+#[cfg(feature = "untargeted")]
+pub mod untargeted;
 pub mod view;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).

@@ -20,7 +20,7 @@ try:
     mzbuf = open(mz, "rb").read()
     with sync_playwright() as p:
         pg = r.page(p)
-        raws = [blob(f"campione{i}.lcd") for i in range(1, 6)]
+        raws = [blob(f"campione{i}.lcdx") for i in range(1, 6)]
         def drop():
             pg.set_input_files("#pick", raws + [blob("s_t0.mzML", mzbuf)])
             pg.wait_for_function("document.querySelector('#unopen') && !document.querySelector('#unopen').hidden", timeout=15000)
@@ -57,7 +57,7 @@ try:
             pg.wait_for_timeout(800); assert pg.locator("#unopen").is_hidden(), "same group dropped again: no second notice"
         step("close button; the same group dropped again gives no new notice", again)
         def wiff_mixed():
-            pg.set_input_files("#pick", [blob("b.wiff2"), blob("e.wiff2"), blob("c.d"), blob("x.lcd"), blob("y.lcdx"), blob("z.xyz"), blob("q.txt")])      # a .wiff with its .scan is converted by the engine
+            pg.set_input_files("#pick", [blob("b.wiff2"), blob("e.wiff2"), blob("c.d"), blob("x.lcdx"), blob("y.lcdx"), blob("z.xyz"), blob("q.txt")])      # a .wiff with its .scan is converted by the engine
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             t = pg.inner_text("#unopen")
             assert "5" in t and ".wiff" in t and "2 file ignorati" in t, t
@@ -67,7 +67,7 @@ try:
             pg.keyboard.press("Escape"); assert pg.locator("#unopen").is_hidden(), "Esc closes"
         step("mixed .wiff/.d/.lcd and unknown formats: one notice, one line per kind; Esc closes", wiff_mixed)
         def more():
-            pg.set_input_files("#pick", [blob(f"m{i}.lcd") for i in range(8)])
+            pg.set_input_files("#pick", [blob(f"m{i}.lcdx") for i in range(8)])
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             pg.locator("#unopen details.unopen-names summary").click()
             assert pg.locator("#unopen details.unopen-names li").count() == 6 and "3" in pg.locator("#unopen details.unopen-names li").last.inner_text()
@@ -76,14 +76,14 @@ try:
             pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_timeout(800)
             assert pg.locator("#convhelp summary").inner_text() == "Don't have mzML files?", pg.locator("#convhelp summary").inner_text()
             pg.evaluate("document.querySelector('#convhelp').open=true"); assert "press Add" in pg.inner_text("#convhelp ol"), pg.inner_text("#convhelp ol")
-            pg.set_input_files("#pick", [blob(f"e{i}.lcd") for i in range(5)])
+            pg.set_input_files("#pick", [blob(f"e{i}.lcdx") for i in range(5)])
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
-            t = pg.inner_text("#unopen"); assert "5 .lcd files can't be opened in the browser" in t, t
+            t = pg.inner_text("#unopen"); assert "5 .lcdx files can't be opened in the browser" in t, t
         step("English text", en)
         def contrast():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.dataset.theme='{th}'")
-                pg.set_input_files("#pick", [blob(f"{th}{i}.lcd") for i in range(3)])
+                pg.set_input_files("#pick", [blob(f"{th}{i}.lcdx") for i in range(3)])
                 pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
                 c = pg.evaluate("""()=>{const u=document.querySelector('#unopen'),cs=getComputedStyle(u);const p=s=>s.match(/\\d+(\\.\\d+)?/g).slice(0,3).map(Number);return [p(cs.color),p(cs.backgroundColor)]}""")
                 a, b = lum(c[0]), lum(c[1]); ratio = (max(a, b) + .05) / (min(a, b) + .05)
