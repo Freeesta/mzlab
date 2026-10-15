@@ -51,7 +51,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
     });
 
     let pb = upload::prepare_lettore(&mut l, 0, &[], &name).unwrap();
-    let mut due = |l: &mut Finto, budget: usize| {
+    let due = |l: &mut Finto, budget: usize| {
         let mut out = std::io::Cursor::new(Vec::new());
         mzidx::build_lettore(&pb.table, l, 0, &mut out, budget).map(|st| (out.into_inner(), st))
     };
