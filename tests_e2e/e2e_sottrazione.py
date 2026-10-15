@@ -20,6 +20,9 @@ try:
         assert pg.evaluate("E.files.length") == 3 and pg.evaluate("shown().length") == 3, pg.evaluate("[E.files.length, shown().length, E.browse]")
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:253.3,w:0.5,label:'m/z 253'}]})"); ready(pg)
         pg.evaluate("addPanel('chrom',{kind:'tic'})"); ready(pg)
+        def opn():      # the summary of the corrections is a popover under one icon of the panel: open it (once)
+            if not pg.locator(".corrbar:not([hidden])").count(): pg.locator("[data-o=cinfo]").first.click()
+            pg.wait_for_selector(".corrbar:not([hidden])")
         def raw():
             assert pg.locator(".subchip").count() == 0
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
@@ -47,7 +50,7 @@ try:
         step("what appears is positive", prod)
         def factor():
             a = pg.evaluate(MINS % "xic")["SUB_t10.mzML"]
-            pg.locator(".subchip [data-s=pop]").first.click(); pg.wait_for_selector("#subpop:not([hidden])")
+            opn(); pg.locator(".subchip [data-s=pop]").first.click(); pg.wait_for_selector("#subpop:not([hidden])")
             pg.fill("#sp-fn", "0.5"); pg.dispatch_event("#sp-fn", "change"); pg.wait_for_timeout(600); ready(pg)
             b = pg.evaluate(MINS % "xic")["SUB_t10.mzML"]
             assert abs(b) < abs(a) and pg.evaluate("S.ref.factor") == 0.5, (a, b)
@@ -112,7 +115,7 @@ try:
             pg.evaluate("S.ref.clip=false; SUBREF.refresh(E.tab,true)"); ready(pg)
         step("«clip at zero» also cuts the spectrum", spec_clip)
         def walk():
-            pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
+            opn(); pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
             assert pg.evaluate("E.browse") is True and pg.evaluate("E.files[E.cur].file") != "SUB_t0.mzML"
             c1 = pg.evaluate("E.files[E.cur].file")
             pg.locator(".subchip [data-s=next]").first.click(); ready(pg)
@@ -124,7 +127,7 @@ try:
                 assert (b.get_attribute("aria-label") or b.inner_text().strip()), b.inner_html()
         step("every button of the chip has a name", aria)
         def off():
-            pg.locator(".subchip [data-s=off]").first.click(); ready(pg); pg.wait_for_timeout(300)
+            opn(); pg.locator(".subchip [data-s=off]").first.click(); ready(pg); pg.wait_for_timeout(300)
             assert pg.locator(".subchip").count() == 0 and pg.evaluate("!SUBREF.isOn()")
             pg.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg)
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m

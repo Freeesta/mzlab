@@ -70,7 +70,7 @@ try:
         def reload():
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(5000)
             assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).fondo.ib.mode") == "mean"
-            pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); pg.wait_for_timeout(500)
+            pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode") == "none"
         step("saved in the notebook, removable with one click", reload)
         pg.screenshot(path=SH + "230_ibk.png", full_page=True)
