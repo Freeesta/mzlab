@@ -107,7 +107,16 @@ impl Membri {
             .collect();
         FileSet { membri }
     }
+}
 
+pub(crate) struct Dataset {
+    pub(crate) membri: Membri,
+    pub(crate) centroid: bool,
+    pub(crate) l: Option<Box<dyn Lettore>>,
+    pub(crate) used: u64,
+}
+
+impl Membri {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
     fn apri_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
         match lettori::apri(fs, &Limiti::sito()) {
@@ -141,13 +150,6 @@ impl Membri {
             l
         })
     }
-}
-
-pub(crate) struct Dataset {
-    pub(crate) membri: Membri,
-    pub(crate) centroid: bool,
-    pub(crate) l: Option<Box<dyn Lettore>>,
-    pub(crate) used: u64,
 }
 
 /// The datasets of the session and which sample of which dataset each slot is.

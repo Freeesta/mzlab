@@ -66,9 +66,9 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
 
 #[test]
 fn le_intensita_di_32_bit_non_diventano_larghe() {
-    let s = Risposte::scansione(0, vec![1.0], vec![2.5], "{}").unwrap();
+    let s = RisposteScansioni::scansione(0, vec![1.0], vec![2.5], "{}").unwrap();
     assert!(s.wide.is_none());
-    assert!(Risposte::scansione(0, vec![1.0, 2.0], vec![2.5], "{}").is_err());
+    assert!(RisposteScansioni::scansione(0, vec![1.0, 2.0], vec![2.5], "{}").is_err());
 }
 
 #[test]

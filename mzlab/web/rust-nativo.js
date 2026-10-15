@@ -54,6 +54,13 @@ async function srmDi(st, memberFiles, native_srm, ext) {
   return out;
 }
 
+/** the samples of the dataset a page describes: JSON `{format, samples: [{id, name, scans}]}` @param {Function} native_samples @param {{ prepara: (names: string[]) => Promise<void> }} ext @param {{ name: string, blob: Blob }[]} members */
+async function samplesDi(native_samples, ext, members) {
+  await ext.prepara(members.map(x => x.name));
+  const rd = reader(members.map(x => x.blob), undefined);
+  return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
+}
+
 /** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function }} h */
 export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external }) {
   const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
@@ -131,12 +138,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     return sink.finish();
   }
 
-  /** the samples of the dataset a page describes: JSON `{format, samples: [{id, name, scans}]}` */
-  async function samples(/** @type {{ name: string, blob: Blob }[]} */ members) {
-    await ext.prepara(members.map(x => x.name));
-    const rd = reader(members.map(x => x.blob), undefined);
-    return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
-  }
+  const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
 
   return { stubOf, attach, put, indexJob, toMzml, samples, sweep, srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => stubs.delete(n) };
 }

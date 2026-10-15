@@ -162,6 +162,12 @@ impl Risposte {
             .collect())
     }
 
+}
+
+/// The answers about the scans and their headers.
+pub struct RisposteScansioni;
+
+impl RisposteScansioni {
     /// The scan: points as the module sends them and `{id, level, rt, polarity, profile, filter, precursor}`.
     pub(crate) fn scansione(k: usize, mz: Vec<f64>, y: Vec<f64>, meta: &str) -> Result<Spectrum> {
         if mz.len() != y.len() {
@@ -218,6 +224,12 @@ impl Risposte {
             .collect())
     }
 
+}
+
+/// The answers about the chromatograms and the header of the mzML.
+pub struct RisposteTracce;
+
+impl RisposteTracce {
     /// `{id, kind, q1, q3, unit, time, intensity}`.
     pub(crate) fn cromatogramma(t: &str) -> Result<Chromatogram> {
         let x = doc(t)?;
@@ -320,22 +332,22 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
     }
     fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let (mz, y, meta) = self.m.scansione(c, k)?;
-        Risposte::scansione(k, mz, y, &meta)
+        RisposteScansioni::scansione(k, mz, y, &meta)
     }
     fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        Risposte::intestazione(&self.m.intestazione(c, k)?)
+        RisposteScansioni::intestazione(&self.m.intestazione(c, k)?)
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        Risposte::cromatogrammi(&self.m.cromatogrammi(c)?)
+        RisposteScansioni::cromatogrammi(&self.m.cromatogrammi(c)?)
     }
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        Risposte::cromatogramma(&self.m.cromatogramma(c, id)?)
+        RisposteTracce::cromatogramma(&self.m.cromatogramma(c, id)?)
     }
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.m.metodo(c)
     }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        Risposte::testata(&self.m.testata(c)?)
+        RisposteTracce::testata(&self.m.testata(c)?)
     }
 }
 
