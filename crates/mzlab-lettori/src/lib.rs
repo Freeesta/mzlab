@@ -4,6 +4,8 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
+#[cfg(any(feature = "andi", feature = "tutte"))]
+pub mod andi;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod aperti;
 #[cfg(any(feature = "waters", feature = "tutte"))]
@@ -15,6 +17,8 @@ pub mod srm;
 static VOCE_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::VOCE;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 static VOCE_MZXML: VoceLettore = aperti::mzxml::VOCE;
+#[cfg(any(feature = "andi", feature = "tutte"))]
+static VOCE_ANDI: VoceLettore = andi::ms::VOCE;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
@@ -36,6 +40,8 @@ pub fn famiglia() -> &'static str {
         "thermo"
     } else if cfg!(feature = "aperti") {
         "aperti"
+    } else if cfg!(feature = "andi") {
+        "andi"
     } else if cfg!(feature = "waters") {
         "waters"
     } else if cfg!(feature = "shimadzu") {
@@ -54,6 +60,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_MZML_NUMPRESS),
         #[cfg(any(feature = "aperti", feature = "tutte"))]
         Some(&VOCE_MZXML),
+        #[cfg(any(feature = "andi", feature = "tutte"))]
+        Some(&VOCE_ANDI),
         #[cfg(any(feature = "agilent", feature = "tutte"))]
         Some(&VOCE_AGILENT),
         #[cfg(any(feature = "sciex", feature = "tutte"))]
