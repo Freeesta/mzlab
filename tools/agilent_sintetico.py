@@ -114,6 +114,8 @@ def write_lcms(root: Path, name: str, kind: str, n: int = 40) -> Path:
                               1, off, len(blk), npts, len(raw), 0.0, 0.0, 0.0, 0.0, 0.0)
     (d / "AcqData/MSScan.bin").write_bytes(bytes(head + recs))
     (d / "AcqData" / ("MSPeak.bin" if kind == "mrm" else "MSProfile.bin")).write_bytes(bytes(data))
+    if kind != "mrm":
+        (d / "AcqData" / "MSPeak.bin").write_bytes(b"")   # a profile-only run keeps an empty MSPeak.bin
     (d / "AcqData/MSScan.xsd").write_text(XSD, encoding="utf-8")
     (d / "AcqData/MSTS.xml").write_text(f'<?xml version="1.0"?><TimeSegments><Version>3</Version><TimeSegment TimeSegmentID="1"><StartTime>1</StartTime><EndTime>{1 + 0.05 * n}</EndTime><NumOfScans>{n}</NumOfScans></TimeSegment></TimeSegments>', encoding="utf-8")
     (d / "AcqData/Devices.xml").write_text('<Devices><Device DeviceID="1"><Name>QTOF</Name><ModelNumber>G6550A</ModelNumber><SerialNumber>SYNTH0002</SerialNumber></Device></Devices>', encoding="utf-8")

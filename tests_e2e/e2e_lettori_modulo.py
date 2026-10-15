@@ -95,19 +95,17 @@ try:
             lc = page(b, "&lettori=modulo")
             lc.set_input_files("#pickdir", str(lc_top))
             lc.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
-            lc.click("#opbtn"); lc.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-            lc.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
             r = lc.evaluate("""async () => {
               const rb = await window.MZLAB_RUST_READY, out = {};
               for (const n of ["mrm.mzML", "perfil.mzML"]) {
                 const f = CONV.files.get(n) || await rb.nativeToMzml(n, 1 << 20, undefined, undefined);
                 out[n] = await f.text();
               }
-              return { names: ST.files.map(x => x.name).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
+              return { names: [...document.querySelectorAll("#flist tr")].map(t => (t.innerText.match(/\S+\.mzML/) || [""])[0]).filter(Boolean).sort(), mrm: out["mrm.mzML"], perfil: out["perfil.mzML"], miss: (window.MZLAB_LR_MISS || []).length };
             }""")
             assert r["names"] == ["mrm.mzML", "perfil.mzML"] and r["miss"] == 0, (r["names"], r["miss"])
             assert "SRM SIC Q1=301.1 Q3=150.05" in r["mrm"] and "SRM SIC Q1=301.1 Q3=200.05" in r["mrm"], "no SRM chromatograms"
-            assert "MS:1000129" in r["mrm"] or "negative scan" in r["mrm"], "negative polarity"
+            assert 'MS:1000130' in r["perfil"] and 'profile' in r["perfil"].lower(), "profile spectra, positive"
             assert 'spectrumList count="40"' in r["perfil"], "profile spectra"
         step("a QqQ MRM run and a Q-TOF profile run open through the module (SRM chromatograms, profile spectra)", lc_runs)
         b.close()

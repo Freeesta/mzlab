@@ -6,7 +6,9 @@
 
 const AgilentD = (() => {
   // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
-  const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms" };
+  const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms", profile: "AcqData/MSProfile.bin", masscal: "AcqData/MSMassCal.bin", defcal: "AcqData/DefaultMassCal.xml", acqxml: "AcqData/AcqMethod.xml", sampleinfo: "AcqData/sample_info.xml", sequence: "AcqData/sequence.xml" };
+  // the other files directly under AcqData (module traces, DAD data, audit trail...): the readers module of the LC/MS variants keeps them as size and SHA-1 (docs/agenti/agilent-lcms.md); the key is «x:» + the path
+  const OTHER = /^AcqData\/[^/]+$/i, relOf = /** @type {(k: string) => string} */ k => /** @type {any} */ (NEED)[k] || k.slice(2);
   const dirOf = f => (typeof CartCarica !== "undefined" ? CartCarica.dir(f) : (f.webkitRelativePath || "").replace(/[^/]*$/, ""));
 
   // where a file lies in a .D folder: { root: "a/b/x.D/", name: "x.D", rel: "AcqData/MSScan.bin" }, or null when no folder above it is called *.D
@@ -26,9 +28,10 @@ const AgilentD = (() => {
       const r = runs.get(loc.root) || { name: loc.name, root: loc.root, files: {}, seen: new Set() };
       runs.set(loc.root, r);
       r.seen.add(loc.rel.toLowerCase());
-      for (const [k, rel] of Object.entries(NEED)) if (rel.toLowerCase() === loc.rel.toLowerCase()) r.files[k] = f;
+      const hit = Object.entries(NEED).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase());
+      if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
     }
-    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k]).map(k => NEED[k]) }));
+    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, missing: r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
     return { runs: list, rest };
   }
 
@@ -68,7 +71,7 @@ const AgilentD = (() => {
       else if (!rb || rb.disabled || !rb.nativeSamples) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else {
         // the folder is read as it is: its files are the members, a run is one sample
-        const mem = Object.entries(r.files).map(([k, f]) => ({ name: r.name + "/" + NEED[k], blob: f }));
+        const mem = Object.entries(r.files).map(([k, f]) => ({ name: r.name + "/" + relOf(k), blob: f }));
         try {
           const nm = mzmlName(r, [...taken, ...out.files.map(f => f.name)]);
           const s = (await rb.nativeSamples(mem)).samples;

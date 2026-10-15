@@ -4,6 +4,8 @@ Codice in `crates/mzlab-core/src/agilent_ext/` (`mod.rs`, `run.rs`, `lettore.rs`
 
 `agilent/` non cambia, così `mzlab_wasm.wasm` resta identico bit per bit (i numeri di riga dei panic entrano nel binario: un'aggiunta a metà file di `agilent/` lo cambia): una correzione ai cinque file copiati va fatta in entrambe le cartelle. Il GC/MS e `data.ms` sono in `agilent.md`. Formati ricavati da quattordici corse vere (repository dati privato, `dati_formati/agilent_D/`: QqQ 6460, 6470, 6490, 6495; Q-TOF 6520, 6530, 6550) e dagli mzML di msconvert di quattro coppie; nessun dato nel repository pubblico.
 
+La pagina (`agilent-d.js`, `NEED` e i file `AcqData/*` non elencati, chiave `x:<percorso>`) passa al motore e al modulo anche `MSProfile.bin`, `MSMassCal.bin`, `DefaultMassCal.xml`, `AcqMethod.xml`, `sample_info.xml`, `sequence.xml` e gli altri file sotto `AcqData/` (il DAD, le tracce dei moduli); `MSPeak.bin` non è richiesto se c'è `MSProfile.bin`.
+
 Prove: `crates/mzlab-lettori/tests/agilent_lcms.rs` (salta senza dati), `crates/mzlab-core/tests/agilent_msconvert.rs`, `robustezza_agilent.rs`, `tests_e2e/e2e_lettori_modulo.py` (cartelle di `tools/agilent_sintetico.py::write_lcms`).
 
 ## `MSScan.bin` di una corsa LC/MS
