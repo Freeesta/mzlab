@@ -666,7 +666,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll("[data-pend-rm]").forEach(b => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
-  Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
+  Q("#flst").querySelectorAll("[data-pg]").forEach(x => { x.onclick = () => ms2Goto(x.dataset.pg); x.ondblclick = () => ms2Spectrum(x.dataset.pg); });
   Q("#flst").querySelectorAll(".fgh[data-gt]").forEach(el => {
     const flip = () => { const t = el.dataset.gt; E._grpOpen[t] = !isExpOpen(t); renderFileList(); };
     el.onclick = e => { if (!e.target.closest("input")) flip(); };

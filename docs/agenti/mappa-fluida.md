@@ -20,6 +20,7 @@ Misure, diagnosi e pacchetti di lavoro numerati per zoom, spostamento, mirino, c
 7. **Disegno**: `draw(p)` a ogni evento di input (non uno per frame); `MAPPA.after` ridimensiona la tela del sovrapposto e riscrive legenda e tabella a ogni disegno; la regione nitida parte 150 ms (`QUIET`) dopo l'ultimo gesto.
 8. **Mirino**: LRU proprio di spettri (64 MB, 32 su iPad) con lettura anticipata: è adeguato.
 9. **3D** (`mappa3d.js`): la stessa rotta di regione fino a 1024², quindi eredita il punto 3.
+10. **`.raw` Thermo** (lettore esterno): le scansioni lette dal modulo `thermo` (mappa, XIC fuori indice, scorrimento MS1/MS2) arrivano al motore come un solo `Uint8Array` (`lettori-modulo.md`, trasporto binario), senza meta JSON; la riga del `.raw` in questa tabella si misura sui dati veri con `python3 tools/bench_raw.py FILE.raw --steps scansione` (µs per scansione nel modulo).
 
 ## Misure (Chromium headless, container a 4 CPU, sito con motore Rust/WASM)
 | gesto | LR 1500×500 | HRC 3000×3000 |

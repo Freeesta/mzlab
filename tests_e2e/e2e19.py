@@ -49,8 +49,8 @@ try:
             assert str(pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').prec")) == pr1 != str(p0)
             assert str(pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='spec').prec")) == pr1
             sp = pg.evaluate("(()=>{const s=E.panels.find(p=>p.tab==='ms2'&&p.type==='spec');return {r0:s.r0,lock:!!s.lock,zy:s.zoomY}})()"); assert sp["r0"] is not None and not sp["lock"] and sp["zy"] is None, sp
-            pg.locator("#flst input[data-pr]:not(:checked)").first.click(); pg.wait_for_timeout(1500); assert n() == 4, n()      # a second pair, to compare two precursors
-            pg.locator("#flst input[data-pr]:checked").nth(1).click(); pg.wait_for_timeout(500); assert n() == 2, n()
+            pg.locator("#flst input[data-pr]:not(:checked)").first.click(); pg.wait_for_timeout(1500); assert n() == 3, n()      # a second chromatogram alone (the spectrum comes on a double click)
+            pg.locator("#flst input[data-pr]:checked").nth(1).click(); pg.wait_for_timeout(500); assert n() == 1, n()      # the second precursor in the list is the one with the pair: it closes, the lone chromatogram stays
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")
             sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 90, sel     # the precursor menu is wide enough to read
             pg.screenshot(path=SH + "19_ms2b.png")

@@ -149,6 +149,15 @@
  ],
  "data": "2026-10-14",
  "format": "cancello/2",
+ "untargeted": {
+  "crate_version": "1.0.1",
+  "log2": null,
+  "ok": null,
+  "precision": null,
+  "protocol": "ion/height-floor/counts-s",
+  "recall": null,
+  "spearman": null
+ },
  "vista_candidati": true,
  "vista_tabella": true
 }

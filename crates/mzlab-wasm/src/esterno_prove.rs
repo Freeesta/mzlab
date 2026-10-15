@@ -1,5 +1,6 @@
 // The tests of esterno.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
+use mzlab_core::lettori::Posizione;
 
 struct Finto;
 
@@ -7,15 +8,53 @@ impl Modulo for Finto {
     fn campioni(&mut self) -> Result<String> {
         Ok(r#"{"formato":"thermo-raw","campioni":[{"id":1,"name":"a","scans":2}]}"#.into())
     }
-    fn indice(&mut self, c: usize) -> Result<String> {
+    fn protocollo(&mut self) -> Result<u32> {
+        Ok(PROTOCOLLO)
+    }
+    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
         if c != 0 {
             return Err(Error::new("error.badIndex"));
         }
-        Ok(r#"[{"id":"scan=1","rt":0.1234567890123,"level":2,"polarity":-1,"tic":1e300,"base":null,"filter":"f","precursor":445.5,"pos":[0,4096,77]},
-               {"id":"scan=2","rt":0.2,"level":1,"polarity":1,"tic":3.5,"base":200.25,"filter":"g","precursor":null,"pos":null}]"#.into())
+        Ok(mzlab_core::trasporto::encode_indice(&[
+            VoceScansione {
+                id: "scan=1".into(),
+                rt: 0.1234567890123,
+                livello: 2,
+                polarita: -1,
+                tic: 1e300,
+                picco_base: None,
+                filtro: "f".into(),
+                precursore: Some(445.5),
+                posizione: Some(Posizione {
+                    membro: 0,
+                    offset: 4096,
+                    lunghezza: 77,
+                }),
+            },
+            VoceScansione {
+                id: "scan=2".into(),
+                rt: 0.2,
+                livello: 1,
+                polarita: 1,
+                tic: 3.5,
+                picco_base: Some(200.25),
+                filtro: "g".into(),
+                precursore: None,
+                posizione: None,
+            },
+        ]))
     }
-    fn scansione(&mut self, _: usize, _: usize) -> Result<(Vec<f64>, Vec<f64>, String)> {
-        Ok((vec![100.0, 200.5], vec![1.5, 16777217.0], r#"{"id":"scan=1","level":1,"rt":0.5,"polarity":1,"profile":true,"filter":"f","precursor":null}"#.into()))
+    fn scansione(&mut self, _: usize, _: usize) -> Result<Vec<u8>> {
+        Ok(mzlab_core::trasporto::encode_scansione(&Spectrum {
+            level: 1,
+            rt: 0.5,
+            polarity: 1,
+            profile: true,
+            mz: vec![100.0, 200.5],
+            intensity: vec![1.5, 16777216.0],
+            wide: Some(vec![1.5, 16777217.0]),
+            ..Spectrum::default()
+        }))
     }
     fn intestazione(&mut self, _: usize, _: usize) -> Result<String> {
         Ok(r#"[{"name":"a","value":"b","unit":"volt","cv":null}]"#.into())
@@ -62,6 +101,8 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
     assert_eq!(l.indice(1).err().map(|e| e.key), Some("error.badIndex"));
     let s = l.scansione(0, 1).unwrap();
     assert_eq!((s.index, s.level, s.profile, s.mz.len()), (1, 1, true, 2));
+    // the id and the filter are the ones of the row of the index
+    assert_eq!((s.id.as_str(), s.filter.as_str()), ("scan=2", "g"));
     // 16777217 does not fit a 32-bit float: the scan keeps the 64-bit intensities
     assert_eq!(s.wide.as_deref(), Some(&[1.5, 16777217.0][..]));
     assert_eq!(
@@ -86,10 +127,48 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
 }
 
 #[test]
-fn le_intensita_di_32_bit_non_diventano_larghe() {
-    let s = RisposteScansioni::scansione(0, vec![1.0], vec![2.5], "{}").unwrap();
-    assert!(s.wide.is_none());
-    assert!(RisposteScansioni::scansione(0, vec![1.0, 2.0], vec![2.5], "{}").is_err());
+fn un_modulo_di_un_altro_protocollo_si_rifiuta() {
+    struct Vecchio(Finto);
+    impl Modulo for Vecchio {
+        fn protocollo(&mut self) -> Result<u32> {
+            Ok(PROTOCOLLO - 1)
+        }
+        fn campioni(&mut self) -> Result<String> {
+            self.0.campioni()
+        }
+        fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
+            self.0.indice(c)
+        }
+        fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+            self.0.scansione(c, k)
+        }
+        fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
+            self.0.intestazione(c, k)
+        }
+        fn cromatogrammi(&mut self, c: usize) -> Result<String> {
+            self.0.cromatogrammi(c)
+        }
+        fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
+            self.0.cromatogramma(c, id)
+        }
+        fn metodo(&mut self, c: usize) -> Result<String> {
+            self.0.metodo(c)
+        }
+        fn testata(&mut self, c: usize) -> Result<String> {
+            self.0.testata(c)
+        }
+    }
+    let e = LettoreEsterno::new(Vecchio(Finto)).err().unwrap();
+    assert_eq!(
+        (e.key, e.params),
+        (
+            "err.file.wiffLoad",
+            vec![
+                ("family", "thermo".to_string()),
+                ("detail", "protocol".to_string())
+            ]
+        )
+    );
 }
 
 #[test]

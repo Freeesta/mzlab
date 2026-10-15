@@ -1,6 +1,6 @@
 """Tabui (internal name TP Mine, also mzFinder) step (a): the tab exists only in the administrator mode (localStorage «qqq.admin» = «1», QTOOLS admin:true of tpmine-loader.js).
 Without it: no tab, no section, the package of Tabui is not downloaded, QTOOLS lists nothing, and the address #/tpmine stays on the Data tab. With it: the tab is in the header
-from the start and survives a reload. Five quick clicks on the logo bring the tab up at once, without a reload.
+from the start and survives a reload. Five quick clicks on the logo bring the tab up at once, without a reload; five more take it away (the page reloads).
 Run from the repo root: python3 tests_e2e/e2e_tpmine1.py   (needs Playwright and a built Pyodide dir or internet)"""
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
@@ -33,7 +33,7 @@ try:
         def fresh(admin, hash_=""):
             c = b.new_context(viewport={"width": 1400, "height": 900}); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
-            if admin: pg.add_init_script("try{localStorage.setItem('qqq.admin','1');}catch(_){}")
+            if admin: pg.add_init_script("try{if(!sessionStorage.getItem('adm0')){sessionStorage.setItem('adm0','1');localStorage.setItem('qqq.admin','1');}}catch(_){}")      # once per tab: a reload after leaving the mode must not switch it back on
             pg.goto(f"http://127.0.0.1:{PORT}/" + hash_); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(1500)
             return pg
         pg = fresh(False)
@@ -72,6 +72,13 @@ try:
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=30000)
         step("after a reload it is still there", reload_on)
+        def five_off():
+            for _ in range(5): pg.click("header img.logo")
+            pg.wait_for_function("localStorage.getItem('qqq.admin') === null", timeout=15000)
+            pg.wait_for_function("!document.querySelector('#nav button[data-v=\"tpmine\"]')", timeout=30000)      # the page reloads once the logo is whole
+            pg.wait_for_selector("#drop", timeout=120000)
+            assert not pg.query_selector(TAB) and pg.evaluate("window.QTOOLS.list().length") == 0
+        step("five more clicks on the logo leave the mode: the tab is gone", five_off)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

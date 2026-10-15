@@ -25,8 +25,8 @@ fn polyline(knots: &[(usize, f64)]) -> Vec<f64> {
     let mut y = vec![0.0; N];
     for w in knots.windows(2) {
         let ((a, ya), (b, yb)) = (w[0], w[1]);
-        for i in a..=b {
-            y[i] = ya + (yb - ya) * (i - a) as f64 / (b - a) as f64;
+        for (i, v) in y.iter_mut().enumerate().take(b + 1).skip(a) {
+            *v = ya + (yb - ya) * (i - a) as f64 / (b - a) as f64;
         }
     }
     y
@@ -136,8 +136,8 @@ fn shape_filters() {
 fn dense_trace_keeps_only_what_stands_out() {
     // 80 scans at 6e4 and 20 scans of a peak over them: the quantile 0.85 falls inside the peak, so the baseline and its foot go to 0
     let mut y = vec![6e4; 100];
-    for k in 0..20 {
-        y[40 + k] = 1e5 + 5e5 * (1.0 - ((k as f64 - 9.5) / 10.0).abs());
+    for (k, v) in y[40..60].iter_mut().enumerate() {
+        *v = 1e5 + 5e5 * (1.0 - ((k as f64 - 9.5) / 10.0).abs());
     }
     let f = resolve(&chrom(y), &axis(100), &MinParams::default());
     assert_eq!(f.len(), 1);

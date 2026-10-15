@@ -4,13 +4,13 @@
 //! The steps themselves are in `run`, shared with the native example, so the browser and the desktop write the same bytes.
 #![forbid(unsafe_code)]
 // the .wasm of `finder` (or `finder_msn`) alone has no step that writes to a sink or reads the stored files
-#![cfg_attr(not(any(feature = "detect", feature = "proofs", feature = "mrm")), allow(dead_code))]
+#![cfg_attr(not(any(feature = "detect", feature = "proofs", feature = "mrm", feature = "untargeted")), allow(dead_code))]
 use js_sys::{Array, Function, Uint8Array};
-#[cfg(any(feature = "detect", feature = "proofs"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 use mzlab_core::budget::MemBudget;
 use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::{Error, Result};
-#[cfg(any(feature = "detect", feature = "proofs"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 use mzlab_core::idxread::Index;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
@@ -24,6 +24,8 @@ pub mod msn;
 pub mod run;
 #[cfg(feature = "proofs")]
 pub mod state;
+#[cfg(feature = "untargeted")]
+pub mod untargeted;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
@@ -90,7 +92,7 @@ impl ReadAt for JsReader {
     }
 }
 
-#[cfg(any(feature = "detect", feature = "proofs"))]
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
     let r = JsReader {
         read: read.clone(),
@@ -473,4 +475,41 @@ pub fn build_evidence(
     )
     .map_err(js_err)?;
     Ok(out)
+}
+
+#[cfg(feature = "untargeted")]
+/// The pipeline after mzmine 3.9.0 on one file (`.mzidx` of `size` bytes read with `read`) written to `write(offset, bytes)` as a `.mzfeatf`: `{"bytes", "sha256"}`.
+/// `params` is the recipe `{"engine": "untargeted", "adap": {...}, "resolve": {...}, ...}` (`mzlab_feat::untargeted::pipeline::UntParams`).
+#[wasm_bindgen]
+pub fn detect_untargeted_to(
+    read: Function,
+    size: f64,
+    name: &str,
+    params: &str,
+    write: Function,
+) -> std::result::Result<String, JsValue> {
+    let p = mzlab_feat::untargeted::pipeline::UntParams::from_json(params).map_err(js_err)?;
+    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
+    to_sink(write, |sink| untargeted::detect_to(&mut ix, name, &p, sink))
+}
+
+#[cfg(feature = "untargeted")]
+/// Join and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to `write(offset, bytes)` as the `.mzfeat`:
+/// `{"bytes", "sha256"}`. `budget_mb` 0/NaN = 192; past it the step answers `error.memoryBudget`.
+#[wasm_bindgen]
+pub fn align_untargeted_to(
+    files: Array,
+    read: Function,
+    sizes: Vec<f64>,
+    params: &str,
+    write: Function,
+    budget_mb: f64,
+) -> std::result::Result<String, JsValue> {
+    let p = mzlab_feat::untargeted::pipeline::UntParams::from_json(params).map_err(js_err)?;
+    let budget = MemBudget::from_request(budget_mb);
+    let mut src = JsStored { files };
+    let open = |k| open_one(&read, k, sizes[k]);
+    to_sink(write, |sink| {
+        untargeted::align_to(&mut src, &budget, &p, open, sink)
+    })
 }

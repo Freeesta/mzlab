@@ -274,7 +274,7 @@
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
         st.files = st.files.filter(f => !info.some(i => i.name === f.name));
         for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
-        if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
+        if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr" || (f.kind === "ms2" && !st.files.some(x => x.kind === "hr")));   // automatic start: the Full Scan / HRMS series, and its MS2 files when it is low resolution
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg(""); bar(0);
         estimateLr();
@@ -441,7 +441,7 @@
       if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
-        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked };
+        const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, min_files: +$("#tp-minf").value, discover: $("#tp-disc").checked, ms2_overrides: window.TPMS2 ? window.TPMS2.start(st.files) : [] };
         const parent = { name: (nameIn.dataset.raw && nameIn.value === MOLUI.cap(nameIn.dataset.raw) ? nameIn.dataset.raw : $("#tp-name").value.trim()), neutral: mol, adduct: $("#tp-add").value };
         if (pv.smi) parent.smiles = pv.smi;
         if ($("#tp-prt").value !== "" && +$("#tp-prt").value >= 0) parent.rt = +$("#tp-prt").value;
@@ -494,7 +494,8 @@
         <div class="stat"><b data-count="${s.rows.length}">0</b><span>ions analysed</span></div></div>
         <div class="row" style="margin-top:10px"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">📋 Copy summary</button></div></div>
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
-        <div id="tp-view"></div>${mrmCard(s.mrm)}<div id="tp-det"></div>`;
+        <div id="tp-view"></div>${window.TPMS2 ? window.TPMS2.card(s) : ""}${mrmCard(s.mrm)}<div id="tp-det"></div>`;
+      if (window.TPMS2) window.TPMS2.mount({ st, call, refresh: ms2Refresh });
       R.querySelectorAll(".stat b").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
@@ -606,14 +607,22 @@
         <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Type</th><th>t</th>${c ? "<th>conc. (mg/L)</th>" : ""}<th>Quant. area</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Qual. area</th><th>Qual/Quant</th>`).join("")}<th>Ratio</th>${c ? "<th>Calculated (mg/L)</th><th></th>" : ""}</tr>${body}</table></div></div>
         ${c ? `<div><div class="mut">Line: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · weights ${c.weighting} · R² (unweighted) ${c.r2.toFixed(4)} · ${c.points.length} points, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas></div>` : ""}</div></div>`;
     }
+    const hasMs2 = (/** @type {any} */ s) => !!(s.ms2_links && s.ms2_links.experiments && s.ms2_links.experiments.length);      // a series without MS2 file has no card and no column
+    /** @param {number[]} touched */
+    function ms2Refresh(touched) {          // after a correction of the MS2 matches: the card, the table of rows and the open detail
+      const c = $("#tp-ms2map"), s = st.summary; if (!c || !s) return;
+      const h = document.createElement("div"); h.innerHTML = window.TPMS2.card(s); c.replaceWith(h.firstElementChild);
+      window.TPMS2.mount({ st, call, refresh: ms2Refresh }); rows();
+      if (st.sel != null && (touched.includes(st.sel))) show(st.sel);
+    }
     function rows() {
       if (!$("#tp-t")) return;
       const s = st.summary, f = st.filter;
       const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
-      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
+      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th>${hasMs2(s) ? "<th>MS2</th>" : ""}</tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
         <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lvb lv-${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
         <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(MOLUI.cap(r.name))}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
-        <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td></tr>`).join("");
+        <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td>${hasMs2(s) ? `<td class="n">${window.TPMS2.cell(r)}</td>` : ""}</tr>`).join("");
       $("#tp-t").querySelectorAll("tr.clk").forEach(tr => tr.onclick = () => show(+tr.dataset.id));
     }
     function words(d, par) {
@@ -624,7 +633,7 @@
       P.push(`<b>${esc(MOLUI.cap(d.name))}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
       if (first && mx) P.push(`Appears at ${first.time} min and peaks at ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "it is absent from the blank." : "something shows in the blank: be careful.") : "there is no blank to rule out a contaminant."}`);
       if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
-      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor}): ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
+      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor})${window.TPMS2 ? window.TPMS2.from(d) : ""}: ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
       else P.push("No MS2 with this precursor: a Product Ion Scan on the peak is needed to raise the level.");
       P.push(d.level_text ? esc(d.level_text) : "");
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
@@ -646,8 +655,9 @@
         <div class="card"><h3>Kinetics (peak area)</h3><canvas id="tp-c-kin"></canvas></div></div>
         <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
         <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
-        <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
+        <div class="card">${window.TPMS2.detail(d)}
         ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>${specHtml(d.specificity)}`;
+      window.TPMS2.bindDetail(D, d);
       const isPar = par && id === par.id;
       if (window.TPALBERO && (isPar || (d.ms2 && d.ms2.scans))) { const a = document.createElement("div"); a.className = "card"; a.id = "tp-alb"; D.appendChild(a); window.TPALBERO.mount(a, { esc, call }, isPar ? {} : { compareId: id }); }
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -675,11 +685,12 @@
         const head = ["#", "Candidate", "Formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
         const line = r => [r.id, r.name, r.formula, r.delta, r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", Math.round(r.max_area), ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
-        if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det }, null, 1), "application/json");
+        if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det, ms2_overrides: window.TPMS2 ? window.TPMS2.overrides() : [] }, null, 1), "application/json");
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
         const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
           { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
           { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || ""])), widths: [6, 38, 12, 9, 9, 50] },
+          ...(window.TPMS2 && window.TPMS2.sheet() ? [window.TPMS2.sheet()] : []),
           { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
           { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];

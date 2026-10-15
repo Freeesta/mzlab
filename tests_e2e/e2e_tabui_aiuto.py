@@ -24,7 +24,11 @@ else:
     from lib_sito import add_wasm; add_wasm(site)
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1); errs = []
+import urllib.request
+for _ in range(100):                                                  # the server answers: no fixed pause
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).read(); break
+    except Exception: __import__("threading").Event().wait(0.1)
+errs = []
 AXE = lib.axe_path()
 TAB = '#nav button[data-v="tpmine"]'
 POP = "#tph-pop"
@@ -53,7 +57,7 @@ try:
         def mouse():
             pg.hover("#tph-test .tph-b"); pg.wait_for_selector(POP + ":not([hidden])", timeout=3000)
             assert "Identification level" in pg.inner_text(POP) and pg.get_attribute("#tph-test .tph-b", "aria-expanded") == "true"
-            pg.hover(POP); pg.wait_for_timeout(400); assert pg.is_visible(POP), "the popover must stay open under the pointer"
+            pg.hover(POP); lib.hold(pg, 400); assert pg.is_visible(POP), "the popover must stay open under the pointer"
             pg.mouse.move(5, 5); pg.wait_for_selector(POP, state="hidden", timeout=3000)
         step("the popover opens on hover, stays under the pointer, closes when it leaves", mouse)
         def keyboard():
