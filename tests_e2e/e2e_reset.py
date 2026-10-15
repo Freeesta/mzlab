@@ -108,6 +108,15 @@ try:
             assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
         step("«Delete all files» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
+        def stuck():
+            pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
+            assert pg.locator("#stuck").count() == 0, "not at once"
+            pg.wait_for_selector("#stuckbtn", timeout=20000)
+            assert "Full reset" in pg.inner_text("#stuckbtn") and "Not starting" in pg.inner_text("#stuck"), pg.inner_text("#stuck")
+            pg.click("#stuckbtn"); pg.wait_for_selector("#resetdlg[open]")
+            assert "Files and session only" in pg.inner_text("#resetdlg"), "the same dialog as «New session»"
+            pg.keyboard.press("Escape"); pg.wait_for_selector("#resetdlg", state="detached")
+        step("after 10 s on the start screen without files a «Full reset» button opens the same dialog", stuck)
         b.close()
     r.close()
 except Exception as e:
