@@ -20,3 +20,14 @@ Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synth
 | `library/ms2_pos.json` | `05d845806d09b3c77fe546cd7eca75e579b40f33a21879e272c870bad3f01830` |
 | `library/standards.csv` | `89072ddab2272840b11d7511bbc9c9f3b014dd3119f494352a35084c1bc3b2b2` |
 | `livelli_attesi.csv` | `bd5ec6fa530537be04959a616389a7f5bfab63d5184de5604e9cbfd5f0e53b55` |
+
+## Campagna dei sorbenti
+
+Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per sorbente e due feature gemelle (id 3 → 2); serve ai dati d'oro di `tests/golden/attributio/sorbenti/`.
+
+| File (in `campagna_sorbenti/`) | sha256 |
+|---|---|
+| `campaign.toml` | `228a7a30bccfcef6f1c58be14406df6105c3068850b86fe56152105384f9ecab` |
+| `data/mz/DDA_POS/EC/list_EC.csv` | `f8ee12386e98e3fa92087aace40c387060eb13b71c77db9e20da8489027b69c3` |
+| `data/mz/DDA_POS/OA/list_OA.csv` | `4369a8e1642c6ff935a5b80b92157745b18e88a5fb7c57b405a8e592e1d884f9` |
+| `data/mz/DDA_POS/merged/merged_pos.csv` | `f77cd19ab5a5c71c46fc5dcc078118367d234aebef972928d48714c21215d9ca` |

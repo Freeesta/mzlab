@@ -8,12 +8,13 @@ const R = () => S.ref;
 const num = v => I18N.fix(v, 2);
 const fileOf = k => (k != null && k !== "" && E.files[+k] && !E.files[+k].gone ? E.files[+k] : null);
 
-// the file chosen by "auto" in a tab: the t0 (the first one), otherwise the only blank of the tab, otherwise the first by time (files without a time come after those with one)
+// the file chosen by "auto" in a tab: the t0 (a sample at time 0, the first one), otherwise the only blank of the tab, otherwise the first by time (the dark, whose time is negative, never; files without a time come after those with one)
 function autoFile(tab) {
   const fs = tabFiles(tab); if (!fs.length) return null;
-  const z = fs.filter(f => window.CDOC && CDOC.kindOf(f) === "t0"); if (z.length) return z[0];
+  const dark = f => !!window.CDOC && CDOC.kindOf(f) === "dark";
+  const z = fs.filter(f => f.type === "sample" && f.time === 0 && !dark(f)); if (z.length) return z[0];
   const bl = fs.filter(f => f.type === "blank"); if (bl.length === 1) return bl[0];
-  const timed = fs.filter(f => f.time != null && isFinite(f.time));
+  const timed = fs.filter(f => f.time != null && isFinite(f.time) && !dark(f));
   return timed.length ? timed.reduce((a, b) => (b.time < a.time ? b : a)) : fs[0];
 }
 // the reference that applies to a panel: its own choice (menu «Correz.», «fondo», «differenza») wins, otherwise the one of the session when it is on for the tab
