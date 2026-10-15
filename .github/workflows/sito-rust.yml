@@ -46,7 +46,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             ~/.cache/ms-playwright
             target
-          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}
+          key: sito-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'pyproject.toml') }}-${{ github.sha }}
           restore-keys: sito-rust-${{ runner.os }}-
       - name: Install
         run: |
