@@ -297,6 +297,7 @@ async function handle(ev) {
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
         return;
       }
+      case "natregistro": info = await nativo.registro(String(m.name).split("#")[0], m.id); break;       // one series of the instrument log of a .raw (status log, scan trailer), on demand
       case "natsrm": {                                                                // the SRM traces of a sample of a maker's file, for mzFinder (no mzML)
         const b = await nativo.srm(m.name);
         postMessage({ id, op: m.op, srm: b }, b ? [b.buffer] : []);

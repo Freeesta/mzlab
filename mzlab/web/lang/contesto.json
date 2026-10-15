@@ -554,5 +554,6 @@
   "tip.raw": "Piccolo valore nel riquadro del mouse, accanto a quello corretto. {v} = valore della traccia prima del fondo, già formattato.",
   "load.box.menu": "Nome accessibile dell'elenco aperto da una casella dei ruoli (Bianco, t0, Infusione) nella tabella di caricamento; {role} = nome della casella.",
   "load.cell.of": "Nome accessibile di una cella della tabella di caricamento; {f} = nome del file, {col} = nome della colonna.",
-  "inf.skip": "Suggerimento di una riga dell'albero dei precursori: quante generazioni mancano tra il nodo e il suo genitore ({n})."
+  "inf.skip": "Suggerimento di una riga dell'albero dei precursori: quante generazioni mancano tra il nodo e il suo genitore ({n}).",
+  "method.reg.go": "Nome accessibile del pulsante di una voce del registro errori nella finestra del metodo: porta il cursore al suo tempo; {t} = tempo in minuti."
 }

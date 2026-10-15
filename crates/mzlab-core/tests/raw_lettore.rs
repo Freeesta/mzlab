@@ -237,3 +237,35 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
         "{start}"
     );
 }
+
+#[test]
+fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_of_the_file() {
+    let files = raw_files();
+    if files.is_empty() {
+        eprintln!("SKIP raw_lettore: no data repository (MZLAB_DATI)");
+        return;
+    }
+    for f in files.iter().take(3) {
+        let mut l = lettori::apri(set(f), &Limiti::sito()).unwrap();
+        let doc = mzlab_core::json::parse(l.metodo(0).unwrap().as_bytes()).unwrap();
+        let listed: Vec<String> = l
+            .cromatogrammi(0)
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect();
+        for s in doc.get("serie_registro").map_or(&[][..], |a| a.arr()) {
+            let id = s.get("id").and_then(|i| i.str()).unwrap();
+            assert!(!listed.iter().any(|x| x == id), "{id} is in the mzML list");
+            let c = l.cromatogramma(0, id).unwrap();
+            assert_eq!(c.time.len(), c.intensity.len());
+            assert_eq!(
+                c.time.len() as f64,
+                s.get("n").and_then(|n| n.f64()).unwrap(),
+                "{id}"
+            );
+            assert!(c.time.windows(2).all(|w| w[0] <= w[1]), "{id}: time order");
+        }
+        assert!(l.cromatogramma(0, "status:nothing/here").is_err());
+    }
+}

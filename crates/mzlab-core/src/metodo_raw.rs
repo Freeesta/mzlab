@@ -5,8 +5,10 @@
 
 pub(crate) mod campi;
 mod lock;
+mod registro;
 mod rivelatori;
 mod script;
+pub(crate) mod serie;
 pub(crate) mod tsq;
 
 use crate::metodo::{self, lc_sections, num, obj, text, Source, V};
@@ -241,6 +243,11 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         (
             "campi",
             Some(V::Arr(campi::fields(raw, &traces, &pairs, &items, &ident))),
+        ),
+        ("registro", Some(V::Arr(registro::voci(&raw.error_log)))),
+        (
+            "serie_registro",
+            Some(V::Arr(serie::sezione(&serie::indice(raw)))),
         ),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),

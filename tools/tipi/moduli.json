@@ -58,6 +58,8 @@
     "../../mzlab/web/rust-recycle.js",
     "../../mzlab/web/rust-supervisor.js",
     "../../mzlab/web/rust-scans.js",
+    "../../mzlab/web/metodo-registro.js",
+    "../../mzlab/web/registro-serie.js",
     "../../mzlab/web/sottrazione.js",
     "../../mzlab/web/tdati-pannelli.js",
     "../../mzlab/web/tdati.js",

@@ -47,6 +47,8 @@ export function createEsterno(native_external) {
       if (loaded.has(fam)) return;
       try { loaded.set(fam, await loadModulo(fam)); } catch (e) { throw loadError(fam, e); }
     },
+    /** a session of the module over the members of a dataset, for the page's own reads (the series of the instrument log); `prepara` first */
+    apri: open,
     loaded: () => [...loaded.keys()],
   };
 }
