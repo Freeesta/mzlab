@@ -187,7 +187,8 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     let mut l = match mzlab_lettori::apri(m.fileset(), &Limiti::sito()) {
         Ok(l) => l,
         // a SCIEX file the module itself refuses (a TOF, several periods, an unknown scan type) is a variant too: the engine would read it as a 3200 and be wrong
-        Err(e) if e.key == "err.file.wiff" => return Ok(serde_json::json!({ "formato": "sciex-wiff", "campioni": [], "motivi": ["variante"] }).to_string()),
+        #[cfg(feature = "sciex")]
+        Err(e) if e.key == "err.file.wiff" => return Ok(r#"{"formato":"sciex-wiff","campioni":[],"motivi":["variante"]}"#.into()),
         Err(e) => return Err(error_json(&e)),
     };
     let campioni: Vec<serde_json::Value> = l
