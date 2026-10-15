@@ -156,10 +156,26 @@ fn coppia(r: &str) -> (String, String) {
     )
 }
 
+type Rampe = BTreeMap<u32, (Option<f64>, Option<f64>)>;
+
+/// One "Collision Energy" line of function `n`: an end of a ramp or a fixed value.
+fn energia(e: &mut Extern, rampe: &mut Rampe, n: u32, b: &str, v: &str) {
+    if b.ends_with("Collision Energy Ramp Start") || b.ends_with("Collision Energy Low") {
+        rampe.entry(n).or_default().0 = numero(v);
+    } else if b.ends_with("Collision Energy Ramp End") || b.ends_with("Collision Energy High") {
+        rampe.entry(n).or_default().1 = numero(v);
+    } else if let Some((a, z)) = v.split_once("(Ramping to") {
+        rampe.insert(n, (numero(a), numero(z.trim_end_matches(')'))));
+    } else if !b.contains("Use ") && !b.contains("Manual") {
+        let f = e.funzioni.entry(n).or_default();
+        f.ce = f.ce.or(numero(v));
+    }
+}
+
 pub(super) fn extern_inf(t: &str) -> Extern {
     let mut e = Extern::default();
     let (mut sezione, mut funz) = (String::new(), None::<u32>);
-    let mut rampe: BTreeMap<u32, (Option<f64>, Option<f64>)> = BTreeMap::new();
+    let mut rampe = Rampe::new();
     for riga in t.lines() {
         let r = riga.trim();
         if r.is_empty() {
@@ -198,25 +214,8 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             ("Set Mass", Some(n)) => {
                 e.funzioni.entry(n).or_default().set_mass = numero(&v).filter(|&m| m > 0.0);
             }
-            (b, Some(n))
-                if b.ends_with("Collision Energy Ramp Start")
-                    || b.ends_with("Collision Energy Low") =>
-            {
-                rampe.entry(n).or_default().0 = numero(&v);
-            }
-            (b, Some(n))
-                if b.ends_with("Collision Energy Ramp End")
-                    || b.ends_with("Collision Energy High") =>
-            {
-                rampe.entry(n).or_default().1 = numero(&v);
-            }
             (b, Some(n)) if b.contains("Collision Energy") => {
-                if let Some((a, z)) = v.split_once("(Ramping to") {
-                    rampe.insert(n, (numero(a), numero(z.trim_end_matches(')'))));
-                } else if !b.contains("Use ") && !b.contains("Manual") {
-                    let f = e.funzioni.entry(n).or_default();
-                    f.ce = f.ce.or(numero(&v));
-                }
+                energia(&mut e, &mut rampe, n, b, &v);
             }
             _ => {}
         }
