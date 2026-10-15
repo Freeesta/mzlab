@@ -6,6 +6,8 @@ use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
 
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod aperti;
+#[cfg(any(feature = "waters", feature = "tutte"))]
+pub mod waters;
 pub mod srm;
 
 // The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
@@ -19,6 +21,8 @@ static VOCE_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
 static VOCE_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
 static VOCE_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
+#[cfg(any(feature = "waters", feature = "tutte"))]
+static VOCE_WATERS: VoceLettore = waters::VOCE;
 
 /// The name of the family this build serves (`"tutte"` for the desktop app and for tests).
 pub fn famiglia() -> &'static str {
@@ -56,6 +60,8 @@ pub fn registro() -> Vec<&'static VoceLettore> {
         Some(&VOCE_SCIEX),
         #[cfg(any(feature = "thermo", feature = "tutte"))]
         Some(&VOCE_THERMO),
+        #[cfg(any(feature = "waters", feature = "tutte"))]
+        Some(&VOCE_WATERS),
     ];
     voci.iter().flatten().copied().collect()
 }

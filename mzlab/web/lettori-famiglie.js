@@ -10,7 +10,7 @@ const LETTORI_FAM = {
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [] },
-  waters: { ext: [], membri: [], errori: [], soloModulo: [] },
+  waters: { ext: [".raw"], membri: ["_func001.dat"], errori: [], soloModulo: [] },
   shimadzu: { ext: [], membri: [], errori: [], soloModulo: [] },
   bruker: { ext: [], membri: [], errori: [], soloModulo: [] },
 };

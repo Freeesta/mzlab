@@ -29,7 +29,7 @@ Registro dei lettori nativi: `LETTORI` in `crates/mzlab-core/src/lettori.rs:218`
 | **mzData** | assente | — | — | — |
 | **netCDF / ANDI-MS (`.cdf`)** | assente | — | solo estensione in `project.rs:17` | — |
 | **MGF / MSP / JSON / `.mzlib`** | letto **come libreria**, non come corsa | Rust `crates/mzlab-lib/src/parse.rs` (`detect`, `parse_all`) + `libreria-worker.js` (`formatOf`) | spettri di riferimento (precursore, polarità, metadati); `.lib`/`.mzvault`/`sqlite`/NIST → `lib.err.unsupported` (`libreria-worker.js:93`) | `crates/mzlab-lib/tests/parse.rs`; nessun MGF trattato come file di dati della vista Dati |
-| **Waters `.raw` (cartella MassLynx)** | assente | — | guida di conversione | — |
+| **Waters `.raw` (cartella MassLynx)** | letto dal modulo `waters` (cartella `X.raw/` con `_FUNC001.DAT`; nessun motore la legge) | Rust `crates/mzlab-lettori/src/waters/`, scritto da zero (`docs/agenti/waters.md`; `openwraw` come guida) | funzioni di scansione (MS, MSe a due livelli, DDA, centroidi o profilo), funzioni SIR/MRM come cromatogrammi SRM per canale (Q1/Q3/CE/nome), TIC, funzione lock mass (cromatogramma, correzione non applicata), tracce analogiche, `metodo/1` | `waters_sintetico.rs`, `robustezza_waters.rs`, `waters_dati.rs` (13 cartelle vere; parità con msconvert per un Xevo TQ-XS: 128 SRM + TIC + 4 tracce), `tests_e2e/e2e_waters.py`. Spettri TOF, DDA e SIR **non verificati contro msconvert**; mobilità ionica non decodificata |
 | **Bruker `.d`** (TDF/TSF timsTOF, BAF) | assente | — | `.d` va al lettore Agilent, che lo rifiuta senza `MSScan.bin` | — |
 | **Shimadzu `.lcd` / `.qgd`** | assente | — | `.lcd`/`.lcdx` in `UNOPEN_RE`; `.qgd` «non riconosciuto» | — |
 | **JEOL, LECO (`.peg`, `.smp`), PerkinElmer, Bruker ion trap (`.yep`)** | assente | — | — | — |
@@ -38,28 +38,28 @@ Desktop (`crates/mzlab-desktop`): stessi lettori nativi, compilati senza tetto d
 
 ## 2. Matrice formati × esperimenti
 
-Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Waters, Bruker, Shimadzu, CDF) sono tutte **A** e non sono ripetute.
+Legenda: **L** letto e provato · **P** parziale (si legge, ma manca un pezzo detto nella cella) · **A** assente · **NV** il codice c'è ma nessun file vero l'ha provato · — non esiste nel formato. Le colonne dei formati assenti (Bruker, Shimadzu, CDF) sono tutte **A** e non sono ripetute.
 
-| Esperimento | mzML | Thermo `.raw` | SCIEX `.wiff` (3200) | Agilent `.D` |
-|---|---|---|---|---|
-| Full scan LR | L (`mzidx_parity.rs`) | NV (trappola ionica: codice c'è, nessun file) | L (`wiff_parity.rs`) | L (5977, `agilent_msconvert.rs`) |
-| Full scan HR | L | L (Q Exactive, `raw_parity.rs`) | — | NV (Q-TOF: `agilent.md` «Non verificato», profili non localizzati) |
-| SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) |
-| SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | A (`agilent.md`: «i cromatogrammi SRM no») |
-| Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) |
-| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | A: letti come full scan (`wiff.md`, «Limiti noti») | A |
-| EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — |
-| DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV |
-| DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV |
-| PRM | P: classificato (`iteminfo.rs:319`) | L come MS2 | — | — |
-| Mobilità ionica / PASEF | A (nessun array di mobilità letto in `mzml.rs`) | — | — | A (campo nello schema, mai letto) |
-| MSn (n ≥ 3) | L (`msnalbero.rs`, `msn_albero.rs`) | L | A | — |
-| UV/PDA | P: solo cromatogrammi PDA (`mzml.rs:280-281`), non gli spettri UV 3D | A (controller `Pda`/`Uv` elencati, non letti) | A (flussi `DAD*`, `grezzi-non-estratti.md`) | A |
-| TIC / BPC / XIC | L | L (TIC dal file; XIC dal `.mzidx`) | L (TIC dell'indice) | L (TIC/BPC dai record) |
-| Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) |
-| Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A |
-| Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) |
-| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS |
+| Esperimento | mzML | Thermo `.raw` | SCIEX `.wiff` (3200) | Agilent `.D` | Waters `.raw` |
+|---|---|---|---|---|---|
+| Full scan LR | L (`mzidx_parity.rs`) | NV (trappola ionica: codice c'è, nessun file) | L (`wiff_parity.rs`) | L (5977, `agilent_msconvert.rs`) | — |
+| Full scan HR | L | L (Q Exactive, `raw_parity.rs`) | — | NV (Q-TOF: `agilent.md` «Non verificato», profili non localizzati) | P: TOF (MTBLS178, MTBLS1198, MTBLS957) letti, somma delle intensità uguale al TIC dell'indice; **non verificato contro msconvert** |
+| SIM | L (filtro `sim`, `iteminfo.rs:284-290`) | NV (filtro letto, nessun file) | — | L (+ SIC derivato) | P: funzione SIR letta come canali `SIC`, nome dell'id non verificato |
+| SRM/MRM | L (cromatogrammi SRM, `srm.rs::da_voci`) | P: le scansioni SRM si leggono come spettri, ma `cromatogrammi` dà solo TIC (`rawlettore.rs:222`) → nessuna traccia SRM per mzFinder/MRM | L (`wiff/run.rs`) | A (`agilent.md`: «i cromatogrammi SRM no») | L (`waters_dati.rs`: 128 SRM uguali a msconvert) |
+| Product ion (MS2) | L | L | L (codice 11) | NV (`MSLevel`, `MzOfInterest` nello schema) | NV (DDA: precursore da `.STS`/`_extern.inf`, nessun mzML) |
+| Precursor ion / neutral loss | P: letti come spettri, il tipo di scansione (MS:1000341, MS:1000326) non è riconosciuto (nessuna occorrenza nel codice) | NV | A: letti come full scan (`wiff.md`, «Limiti noti») | A | A |
+| EPI / MS3 su QTRAP | L (come MSn) | — | A (non visti, letti come full scan) | — | — |
+| DDA | L (`/api/dda`, `hrroutes.rs:61`) | L | — | NV | NV |
+| DIA / SWATH / MSe / AIF | P: classificati (`iteminfo.rs:278-325`: DIA, AIF), nessuna deconvoluzione dedicata | L (eventi DIA dei Tribrid corretti, `MODIFICHE-MZLAB.md`) | — | NV | P: MSe a livello 1 e 2 senza precursore (nessun mzML di msconvert); HDMSe senza tempo di deriva |
+| PRM | P: classificato (`iteminfo.rs:319`) | L come MS2 | — | — | — |
+| Mobilità ionica / PASEF | A (nessun array di mobilità letto in `mzml.rs`) | — | — | A (campo nello schema, mai letto) | A (funzioni IMS sommate su tutta la deriva, avviso `meta.nonDecodificato`) |
+| MSn (n ≥ 3) | L (`msnalbero.rs`, `msn_albero.rs`) | L | A | — | — |
+| UV/PDA | P: solo cromatogrammi PDA (`mzml.rs:280-281`), non gli spettri UV 3D | A (controller `Pda`/`Uv` elencati, non letti) | A (flussi `DAD*`, `grezzi-non-estratti.md`) | A | NV (canali `Pda`/analogici delle `_CHROnnn.DAT`: nessun UV vero) |
+| TIC / BPC / XIC | L | L (TIC dal file; XIC dal `.mzidx`) | L (TIC dell'indice) | L (TIC/BPC dai record) | L (TIC delle funzioni non di riferimento) |
+| Tracce accessorie (pressione, analogici) | L (`analog.rs`) | P: pressione solo nell'mzML scritto, non come cromatogramma del lettore | A | A (`GC.ini` come metadati) | L (pressione, flusso, % solventi uguali a msconvert) |
+| Calibrazione / lock mass | — (già applicata) | P: campi del trailer (`opentfraw.lock_mass_*`, `extra.rs:122-125`), nessuna correzione | A (`GLPTables`) | A | P: cromatogramma della lock mass e campo in `metodo/1`, correzione non applicata |
+| Polarità mista | L (`iteminfo.rs`: parti «mixed») | L | L | NV (codice 1 mai visto) | NV |
+| Metodo e metadati (`metodo/1`) | P (solo testata; `metodo/1` solo se scritto da mzLab) | L | P (nome, vial, calibrazione mancanti) | L per GC/MS, A per LC/MS | L (`metodo/1` da `_HEADER.TXT`, `_extern.inf`, `_INLET.INF`; operatore `identita`) |
 
 ### Metodo e metadati (colonna «metodo/metadati» per formato)
 
