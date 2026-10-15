@@ -80,7 +80,11 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     )?;
     let v = json::parse(info.as_bytes())?;
     let kind = v.get("kind").and_then(|x| x.str()).unwrap_or("");
-    let parts = if kind == "infusion" { vec![] } else { file_parts(&idx.scans, facts.srm > 0) };
+    let parts = if kind == "infusion" {
+        vec![]
+    } else {
+        file_parts(&idx.scans, facts.srm > 0)
+    };
     let mut prec: Vec<i64> = idx
         .scans
         .iter()
