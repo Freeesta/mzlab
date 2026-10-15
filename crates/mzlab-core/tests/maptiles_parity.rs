@@ -2,6 +2,8 @@
 //! (Rust against Rust; the file is synthetic: evenly spaced scans and m/z on a binary grid, so every cell edge is exact). Also: the answer of
 //! `api/maptiles`, the bytes round trip, and the refusal of bytes of another index.
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use mzlab_core::idxread::Index;
 use mzlab_core::maproute::map_route;
 use mzlab_core::maptiles::{cell_width, Pyramid};

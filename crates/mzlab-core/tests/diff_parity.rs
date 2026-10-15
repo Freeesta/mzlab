@@ -2,6 +2,8 @@
 //! lengths, numbers within 1e-9 (relative), the errors of the user's setting with the same key and parameters, a request Python must word
 //! itself declined. Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

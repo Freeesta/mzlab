@@ -72,7 +72,7 @@ pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
 pub fn samples(ole: &Ole) -> Vec<u32> {
     let mut v: Vec<u32> = ole.read(&format!("{SAMPLES}SampleIdxTable")).map(|t| idx::sections(&t).into_iter().map(|s| s.0).collect()).unwrap_or_default();
     v.retain(|n| ole.has(&format!("{SAMPLES}Sample{n}/Idx")));
-    v.sort_unstable();
+    crate::sortc::slice_ord(&mut v);
     v.dedup();
     v
 }

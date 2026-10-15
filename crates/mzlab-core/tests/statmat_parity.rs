@@ -1,6 +1,8 @@
 //! `statmat` against numpy (`tools/statmat_riferimento.py`): singular values and eigenvalues to 1e-12 (relative to the largest), the signs
 //! of the 2x2 eigenvectors exactly. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::Path;
 use std::process::Command;
 

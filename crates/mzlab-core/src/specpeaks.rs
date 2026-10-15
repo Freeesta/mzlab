@@ -128,6 +128,8 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
         return (mz.to_vec(), y.to_vec());
     }
     let mut o: Vec<usize> = (0..mz.len()).collect();
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    #[allow(clippy::disallowed_methods)]
     o.sort_by(|a, b| mz[*a].total_cmp(&mz[*b]));
     let (mzs, ys): (Vec<f64>, Vec<f64>) = o.iter().map(|&i| (mz[i], y[i])).unzip();
     let nom: Vec<i64> = mzs.iter().map(|&m| nominal(m)).collect();
@@ -162,6 +164,8 @@ pub fn pad_zeros(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
     om.extend(gap.iter().map(|&i| mz[i + 1] - step));
     oy.resize(om.len(), 0.0);
     let mut o: Vec<usize> = (0..om.len()).collect();
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    #[allow(clippy::disallowed_methods)]
     o.sort_by(|a, b| om[*a].total_cmp(&om[*b]));
     (
         o.iter().map(|&i| om[i]).collect(),

@@ -2,6 +2,8 @@
 //! whole files and the parts of mixed files: from the `.mzidx` and a few header facts. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

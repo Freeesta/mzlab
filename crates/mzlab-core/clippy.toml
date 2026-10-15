@@ -1,0 +1,9 @@
+disallowed-methods = [
+    { path = "slice::sort", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_ord" },
+    { path = "slice::sort_by", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_by" },
+    { path = "slice::sort_by_key", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_by_key" },
+    { path = "slice::sort_by_cached_key", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_by_key" },
+    { path = "slice::sort_unstable", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_ord" },
+    { path = "slice::sort_unstable_by", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_by" },
+    { path = "slice::sort_unstable_by_key", reason = "costs ~2.5 KB of .wasm per call site: use crate::sortc::slice_by_key" },
+]

@@ -63,7 +63,7 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
             .map(|s| s.polarity)
             .filter(|p| *p == 1 || *p == -1)
             .collect();
-        v.sort();
+        crate::sortc::slice_ord(&mut v);
         v.dedup();
         v
     };
@@ -83,7 +83,7 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
                 .map(|s| s.polarity)
                 .filter(|p| *p == 1 || *p == -1)
                 .collect();
-            v.sort();
+            crate::sortc::slice_ord(&mut v);
             v.dedup();
             v.reverse();
             v.into_iter().map(Some).collect()
@@ -337,14 +337,14 @@ fn ms2_exps(ms2: &[&Scan]) -> Vec<(Option<f64>, Option<f64>, usize)> {
         }
     }
     let key = |k: &(Option<f64>, Option<f64>)| (k.0.unwrap_or(0.0), k.1.unwrap_or(0.0));
-    cnt.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut cnt, |a, b| {
         key(&a.0)
             .0
             .total_cmp(&key(&b.0).0)
             .then(key(&a.0).1.total_cmp(&key(&b.0).1))
     });
     let mut precs: Vec<Option<u64>> = cnt.iter().map(|(k, _)| k.0.map(f64::to_bits)).collect();
-    precs.sort();
+    crate::sortc::slice_ord(&mut precs);
     precs.dedup();
     if precs.len() <= 8 {
         return cnt.into_iter().map(|((p, ce), n)| (p, ce, n)).collect();
@@ -429,7 +429,7 @@ pub fn item_info<R: ReadAt>(
         rt_max = 0.0;
     }
     let mut pols: Vec<i8> = sc.iter().map(|s| s.polarity).filter(|p| *p != 0).collect();
-    pols.sort();
+    crate::sortc::slice_ord(&mut pols);
     pols.dedup();
     let mut polarity = match pols.as_slice() {
         [1] => "positive",

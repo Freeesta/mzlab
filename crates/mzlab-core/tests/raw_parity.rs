@@ -1,5 +1,7 @@
 //! `.raw` against the mzML msconvert made from the same file (m/z 1e-6, intensity 1e-4, relative). Needs the private data
 //! repository (MZLAB_DATI, or `mzlab-dati` beside this one): without it the test is skipped; no `.raw` lives in this repository.
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;

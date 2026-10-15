@@ -52,6 +52,8 @@ struct Ctx<'a> {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
+    // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+    #[allow(clippy::disallowed_methods)]
     v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Equal));
     let n = v.len();
     if n % 2 == 1 { v[n / 2] } else { (v[n / 2 - 1] + v[n / 2]) / 2.0 }
@@ -126,7 +128,7 @@ fn reference_columns(inp: &RefIn) -> R<Vec<usize>> {
         }
         None => (0..n as usize).filter(|&i| inp.roles[i] == "blank" || inp.roles[i] == "dark" || inp.times[i].map_or(false, |t| t <= 0.0)).collect(),
     };
-    ref_cols.sort_unstable();
+    crate::sortc::slice_ord(&mut ref_cols);
     ref_cols.dedup();
     if ref_cols.is_empty() {
         return user("err.stat.ref.none", "no reference: mark a blank or give a file at time 0");
@@ -169,6 +171,8 @@ fn setup<'a>(inp: &'a RefIn<'a>, o: &'a RefOpts, ref_cols: &[usize]) -> R<(Ctx<'
     };
     let samples = |i: usize| inp.roles[i] == "sample" && inp.times[i].is_some();
     let mut ser: Vec<f64> = (0..n).filter(|&i| samples(i)).map(|i| inp.times[i].unwrap()).collect();
+    // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+    #[allow(clippy::disallowed_methods)]
     ser.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Equal));
     ser.dedup();
     let cols_at = ser.iter().map(|&t| (0..n).filter(|&i| samples(i) && inp.times[i] == Some(t)).collect()).collect();
@@ -248,6 +252,8 @@ pub fn identity_links(mz: &[f64], rt: &[f64]) -> R<Value> {
         .filter(|&(i, j)| singles[j].1 != singles[i].1).map(|(i, j)| (singles[i].0, singles[j].0, singles[j].1 - singles[i].1)).collect();
     let losses: Vec<(&str, f64)> = NEUTRAL_LOSSES.iter().map(|&f| (f, mass(&parse_formula(f).unwrap_or_default()))).collect();
     let mut order: Vec<usize> = (0..n).collect();
+    // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
+    #[allow(clippy::disallowed_methods)]
     order.sort_by(|&a, &b| mz[a].partial_cmp(&mz[b]).unwrap_or(Equal));
     let sm: Vec<f64> = order.iter().map(|&i| mz[i]).collect();
     let near = |tgt: f64| {
