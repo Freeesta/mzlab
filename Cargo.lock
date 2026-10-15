@@ -1952,6 +1952,7 @@ dependencies = [
  "mzlab-feat",
  "mzlab-feat-table-wasm",
  "mzlab-feat-wasm",
+ "mzlab-lettori",
  "mzlab-lib",
  "rayon",
  "serde",
@@ -2022,6 +2023,24 @@ dependencies = [
  "mzlab-core",
  "mzlab-feat",
  "mzlab-feat-wasm",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-lettori"
+version = "1.0.1"
+dependencies = [
+ "mzlab-core",
+]
+
+[[package]]
+name = "mzlab-lettori-wasm"
+version = "1.0.1"
+dependencies = [
+ "js-sys",
+ "mzlab-core",
+ "mzlab-lettori",
  "serde_json",
  "wasm-bindgen",
 ]

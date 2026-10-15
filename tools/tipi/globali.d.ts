@@ -22,6 +22,8 @@ declare var FIG: any;
 declare var GRADIENTE: any;
 declare var I18N: any;
 declare var KMDCALC: any;
+declare var LETTORI_FAM: any;
+declare var LETTORI_MOD: any;
 declare var LISTE: any;
 declare var LIVELLI: any;
 declare var LIVELLI_DATI: any;

@@ -231,3 +231,6 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 
 ## Gesti della mappa (`python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR`, Chromium headless 4 CPU, motore WASM, file sintetici)
 - Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.
+
+## Moduli lettori (`tools/build_lettori_wasm.sh`, dopo `wasm_opt -Oz`)
+- `.wasm` per famiglia, in byte (tetto): `thermo` 441 397 (458 752), `agilent` 345 146 (393 216), `sciex` 307 076 (327 680). Il `.wasm` del motore resta a SHA-256 `b488183a…` (invariato).

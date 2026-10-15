@@ -1,7 +1,7 @@
 //! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `nativi.rs`).
 use std::fs::File;
 
-use mzlab_core::lettori::{self, Limiti};
+use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::{self, Stats, DEFAULT_BUDGET};
 use mzlab_core::{lettori_centroidi, upload, Error};
 
@@ -17,7 +17,7 @@ impl IdxBuilder {
         let r = self.pool.install(|| -> Result<Stats, Error> {
             let mut fs = nativi::fileset(&nat.members)?;
             let impronte = upload::impronte(&mut fs)?;
-            let l = lettori::apri(fs, &Limiti::desktop())?;
+            let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
             let mut l = if nat.centroid {
                 lettori_centroidi::centroidato(l)
             } else {

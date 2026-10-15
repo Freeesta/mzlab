@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_centroidi, Error, Result};
 
 use crate::mapped::{Held, Mapped};
@@ -38,7 +38,7 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
 
 /// The reader of a dataset; with `centroid` its profile scans become centroids.
 pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<dyn Lettore>> {
-    let l = lettori::apri(fileset(members)?, &Limiti::desktop())?;
+    let l = mzlab_lettori::apri(fileset(members)?, &Limiti::desktop())?;
     Ok(if centroid {
         lettori_centroidi::centroidato(l)
     } else {

@@ -82,6 +82,15 @@ def _click(self, selector, *a, **k):
     if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): _tempi(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
+_real_ast = _Page.add_script_tag
+def _add_script_tag(self, *a, **k):
+    """The page forbids inline scripts (CSP script-src without 'unsafe-inline'): a file or a text is run with evaluate, as from the console, not as a <script> tag."""
+    path, content = k.get("path"), k.get("content")
+    if path or content:
+        self.evaluate(content if content else open(path, encoding="utf-8").read())
+        return None
+    return _real_ast(self, *a, **k)
+_Page.add_script_tag = _add_script_tag
 _Page.set_input_files = _sif
 def hold(pg, ms):
     """A pause that is really `ms` long (something that only time can bring, with nothing in the page to wait for)."""

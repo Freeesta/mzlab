@@ -45,6 +45,8 @@
     "../../mzlab/web/rust-bridge.js",
     "../../mzlab/web/nativo-fasi.js",
     "../../mzlab/web/rust-nativo-pagina.js",
+    "../../mzlab/web/lettori-famiglie.js",
+    "../../mzlab/web/lettori-modulo.js",
     "../../mzlab/web/rust-nativo.js",
     "../../mzlab/web/rust-centroidi.js",
     "../../mzlab/web/rust-convert.js",
