@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("window.__arcs=0; const a=CanvasRenderingContext2D.prototype.arc; CanvasRenderingContext2D.prototype.arc=function(){window.__arcs++; return a.apply(this,arguments)}; 0")
         SP = "E.panels.find(p=>p.type==='spec')"
         redraw = f"(async()=>{{window.__arcs=0; await draw({SP}); return window.__arcs}})()"
