@@ -271,6 +271,7 @@
   "m3d.read.nom": "Lettura del cursore 3D; {n} = massa nominale della cella (numero intero).",
   "m3d.xic": "Titolo del piccolo grafico XIC del visore 3D; {mz} = valore m/z sotto il cursore.",
   "m3d.spc": "Titolo del piccolo spettro del visore 3D; {rt} = tempo di ritenzione in minuti.",
+  "mappa.lbl.tip": "Tooltip di un'etichetta m/z dello spettro laterale della mappa; {mz} = m/z del picco, {snr} = rapporto segnale/rumore locale.",
   "mappa.read.scan": "Lettura del mirino della mappa; {n} = numero d'ordine della scansione nel file.",
   "hr.pol.tip": "Suggerimento sul segno di polarità; {pol} = positive / negative / mixed (come scritto nel file).",
   "hr.notice": "Avviso temporaneo in basso; {files} = nomi dei file.",

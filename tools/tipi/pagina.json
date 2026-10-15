@@ -71,6 +71,7 @@
     "../../mzlab/web/scroll.js",
     "../../mzlab/web/spettro.js",
     "../../mzlab/web/mirino.js",
+    "../../mzlab/web/mappa-render.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
     "../../mzlab/web/xlsx.js",

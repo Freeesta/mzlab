@@ -35,6 +35,7 @@ declare var LOSS_REFS: any;
 declare var MAPEX: any;
 declare var MAPPA: any;
 declare var MAPPA_PNL: any;
+declare var MAPREND: any;
 declare var MARG_L: any;
 declare var MARG_R: any;
 declare var METODO_REGISTRO: any;
