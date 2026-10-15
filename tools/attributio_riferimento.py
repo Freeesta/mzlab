@@ -2,7 +2,7 @@
 """Reference runner: executes Attributio 1.12.0 and writes golden JSON files per stage.
 
 Tool only (never shipped in the site). Needs ATTRIBUTIO_SRC=<path of Attributio's src/>.
-Stages: campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard, abbinamenti (synthetic campaign) and sorbenti (campaign of the per-sorbent lists).
+Stages: campagna, letture, rilevazione, livelli, identita, nomi, membri, proposte, decisioni, sirius, standard, abbinamenti (synthetic campaign) and sorbenti (campaign of the per-sorbent lists).
 
     ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_riferimento.py
     ATTRIBUTIO_SRC=../attributio/src python3 tools/attributio_riferimento.py --controlla
@@ -129,6 +129,69 @@ def stadio_identita(feat, C):
     sites = list(C.sites)
     it = identity_table(feat, sites)
     return {"identity_table": frame_rows(it), "level_counts": level_counts(feat, sites)}
+
+
+def _tabella_curazione(percorso):
+    """(pattern, canonical_name, category) rows of a curation table of the campaign, as curation._load_pattern_csv reads them."""
+    import pandas as pd
+    df = pd.read_csv(percorso, sep=";", keep_default_na=False, dtype=str)
+    return list(df[["pattern", "canonical_name", "category"]].itertuples(index=False, name=None))
+
+
+NOMI = [
+    "Caffeine", "caffeine [M+H]+", "Caffeine M-H", "Fictacin B", "Fictamine isomer", "Fictastructin", "TestStandardA", "Fictazine isomer, RT 8.0 min",
+    "Caffeine isomer, RT 7.5 min", "Massbank: Foo acid (LM6)|3-methyl-bar", "Foo bar (9CI)", "Foo (tentative) bar", "Atcardil", "ATCARDIL", "tudcabil",
+    "hexaethylene glycol", "Polyethylene glycol", "PEG [C12H26O7]", "peg diol", "Oprea1_123", "ncgc00123", "Z1234567", "Compound 12", "Compound12",
+    "x [CCS=123.4] CollisionEnergy:30 [M+H]+", "Name CollisionEnergy:20", "Name [M-H]-", "Name M+H+", "Name [M+H+]", "Name (tentative)", "zinc123",
+    "Ketamine", "norketamine", "calypsol", "metoprolol", "metoprolol acid", "dutoprol", "xmetoprolol", "EXP-3174", "exp3174", "carboxylosartan",
+    "carboxy-losartan acid", "trifloxystrobin cga 321113", "trifloxystrobin cga321113", "7-oxodehydroabietic", "7-oxocallitrisic", "fictbase",
+    "fictbaseine", "fictbaseineine", "Fictanoid x", "fictstd-d3", "  ", "", "Atenolol acid", "cid:123", "Sulfamethoxazole (antibiotic)",
+]
+FORMULE_NOMI = [None, "C6H14O4"]
+
+
+def stadio_nomi():
+    import re
+    import attributio.curation as cu
+    from attributio import names
+    saved = (cu.CEC_MAP, cu.NONCEC_OVERRIDE)
+    cu.CEC_MAP = cu.NAME_MAP = _tabella_curazione(CAMPAGNA / "curation" / "name_map.csv")
+    cu.NONCEC_OVERRIDE = _tabella_curazione(CAMPAGNA / "curation" / "category_override.csv")
+    try:
+        rows = []
+        for n in NOMI:
+            clean = cu.clean_library_name(n)
+            r = {"name": n, "clean": clean, "classify": cu.classify_noncec(clean), "match_cec": list(cu.match_cec(clean)),
+                 "noncec": cu.match_noncec_override(clean),
+                 "identity": list(cu.curate_identity(None, None, clean)),
+                 "identity_formula": list(cu.curate_identity(None, None, clean, "C1H2O3")),
+                 "raw_canonical": [names.canonical_name(n, f) for f in FORMULE_NOMI],
+                 "clean_canonical": [names.canonical_name(clean, f) for f in FORMULE_NOMI]}
+            rows.append(r)
+        sin_nome = {"none": list(cu.curate_identity(None, None, None)), "formula": list(cu.curate_identity(None, None, None, "C9H9")),
+                    "given": list(cu.curate_identity("Given", "ppcp", "Caffeine")), "blank_given": list(cu.curate_identity("  ", None, "caffeine"))}
+        return {"names": rows, "unnamed": sin_nome, "audit": cu.audit_cec_map()}
+    finally:
+        cu.CEC_MAP, cu.NONCEC_OVERRIDE = saved
+
+
+def stadio_membri(feat, C):
+    import attributio.curation as cu
+    from attributio.chem import members
+    from attributio.identity import identity_table_by_structure
+    saved = (cu.CEC_MAP, cu.NONCEC_OVERRIDE)
+    cu.CEC_MAP = cu.NAME_MAP = _tabella_curazione(CAMPAGNA / "curation" / "name_map.csv")
+    cu.NONCEC_OVERRIDE = _tabella_curazione(CAMPAGNA / "curation" / "category_override.csv")
+    try:
+        ev = members.feature_evidence(C, feat)
+        mem = members.identity_members(ev)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            st = identity_table_by_structure(feat, list(C.sites))
+        ev_cols = [c for c in ev.columns if c not in ("spec_reference",)] + ["spec_reference"]
+        return {"evidence": frame_rows(ev, ev_cols), "members": frame_rows(mem), "by_structure": frame_rows(st)}
+    finally:
+        cu.CEC_MAP, cu.NONCEC_OVERRIDE = saved
 
 
 def stadio_proposte(C):
@@ -531,6 +594,8 @@ def main() -> int:
         "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stadio_rilevazione(C)),
         "livelli": lambda: scrivi(a.uscita, "livelli.json", stadio_livelli(feat)),
         "identita": lambda: scrivi(a.uscita, "identita.json", stadio_identita(feat, C)),
+        "nomi": lambda: scrivi(a.uscita, "nomi.json", stadio_nomi()),
+        "membri": lambda: scrivi(a.uscita, "membri.json", stadio_membri(feat, C)),
         "proposte": lambda: scrivi(a.uscita, "proposte.json", stadio_proposte(C)),
         "decisioni": lambda: scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat)),
         "abbinamenti": lambda: scrivi(a.uscita, "abbinamenti.json", stadio_abbinamenti()),

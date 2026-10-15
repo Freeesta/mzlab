@@ -12,7 +12,7 @@ use crate::attributio::readers::standards::StandardsSettings;
 use crate::attributio::sources::merged_table_path;
 
 /// Every file whose change must invalidate the cache that exists: the merged tables, the SIRIUS and GNPS2 exports, the mzMine annotations and the FBMN MGF, the
-/// standards library and its spectra, the decisions, the sorbent tables and the campaign file.
+/// standards library and its spectra, the decisions, the curation tables, the sorbent tables and the campaign file.
 pub fn source_files(c: &Campaign, io: &Io) -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
     for pol in POLARITIES {
@@ -48,6 +48,7 @@ pub fn source_files(c: &Campaign, io: &Io) -> Vec<String> {
     }
     files.push(c.file_name.clone());
     files.extend(c.feature_decisions_csv.clone());
+    files.extend(c.curation_csv.iter().flatten().cloned());
     files.retain(|f| io.read(f).is_some());
     files
 }

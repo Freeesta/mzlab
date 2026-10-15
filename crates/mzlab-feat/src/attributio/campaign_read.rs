@@ -6,6 +6,10 @@ use super::error::{py_list, CampaignError, Result};
 use super::io::join;
 use super::toml::{self, Table, Value};
 
+/// Keys of `[curation]` that name a curation table, in the order of `Campaign::curation_csv`.
+pub(crate) const CURATION_KEYS: [&str; 3] =
+    ["name_map", "category_override", "identity_formula_override"];
+
 impl Campaign {
     /// Reads the text of a `campaign.toml`. `file_name` is the name used in messages, `root_name` the name of the campaign folder (the id when the file has none).
     pub fn from_toml(text: &str, file_name: &str, root_name: &str, env: Env) -> Result<Campaign> {
@@ -97,6 +101,7 @@ impl Campaign {
             annotation: Table::default(),
             presence_blank_fold: None,
             feature_decisions_csv: None,
+            curation_csv: [None, None, None],
             sites: Vec::new(),
             site_prefix: Vec::new(),
             matrices: Vec::new(),
@@ -194,6 +199,12 @@ impl Campaign {
             .str_opt("feature_decisions")?
             .filter(|s| !s.is_empty())
             .map(|s| expand(&s, &self.env));
+        for (slot, key) in self.curation_csv.iter_mut().zip(CURATION_KEYS) {
+            *slot = cu
+                .str_opt(key)?
+                .filter(|s| !s.is_empty())
+                .map(|s| expand(&s, &self.env));
+        }
         Ok(())
     }
 

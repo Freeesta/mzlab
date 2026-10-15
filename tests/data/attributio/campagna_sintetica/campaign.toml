@@ -47,6 +47,10 @@ ms2_min_matched = 2
 # The chemist's decisions on single features: POS 2 taken from Level 2 to 3, POS 4 renamed
 # so that it joins the Caffeine identity, and one decision whose feature does not exist.
 feature_decisions = "03 Stats/scripts/shared/feature_decisions.csv"
+# The tables of the name curation (synthetic): the contaminant map, the non-contaminant buckets and the formula corrections.
+name_map = "curation/name_map.csv"
+category_override = "curation/category_override.csv"
+identity_formula_override = "curation/identity_formula_override.csv"
 
 [sites.SiteA]
 file_prefix = "SiteA"

@@ -1,0 +1,9 @@
+pattern;canonical_name;category;decided_on;rationale
+atenolol acid|metoprolol acid;Beta-blocker acid (synthetic);pharma;2026-01-01;Synthetic fixture row: an earlier pattern that shadows a later one.
+caffeine;Caffeine;ppcp;2026-01-01;Synthetic fixture row: the contaminant of the synthetic campaign.
+(?<!nor)ketamine|calypsol;Ketamine;pharma;2026-01-01;Synthetic fixture row: a pattern with lookbehind.
+(?<!\w)metoprolol(?! acid)|dutoprol;Metoprolol;pharma;2026-01-01;Synthetic fixture row: lookbehind and lookahead.
+exp[- ]?3174|\bcarboxy-?losartan\b;Carboxylosartan;pharma;2026-01-01;Synthetic fixture row: class, optional character and word boundary.
+trifloxystrobin cga.?321113;Trifloxystrobin acid;fungicide;2026-01-01;Synthetic fixture row: any character.
+7-oxo(dehydroabietic|callitrisic)|diethylamino\)-2-hydroxy;Resin acid (synthetic);industrial;2026-01-01;Synthetic fixture row: group and escaped parenthesis.
+^fictbase(ine){1,2}$;Fictbase;herbicide;2026-01-01;Synthetic fixture row: anchors and counted repeat.

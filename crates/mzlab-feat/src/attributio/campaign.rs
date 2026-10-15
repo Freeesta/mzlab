@@ -186,6 +186,8 @@ pub struct Campaign {
     pub annotation: Table,
     pub presence_blank_fold: Option<f64>,
     pub feature_decisions_csv: Option<String>,
+    /// The curation tables of `[curation]` (`name_map`, `category_override`, `identity_formula_override`), read by `curation::TableCuration`.
+    pub curation_csv: [Option<String>; 3],
     pub sites: Vec<(String, Table)>,
     pub site_prefix: Vec<(String, String)>,
     pub matrices: Vec<(String, Matrix)>,
