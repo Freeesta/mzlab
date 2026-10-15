@@ -4,7 +4,7 @@
 set -eu
 # Limit of every .wasm after wasm-opt -Oz, bytes (raised from 460800 to leave room to grow; the size diet is a package of its own; measured: detect 419435, proofs 458034, mrm 244480).
 limit=512000
-limit_lr=600000   # finder-lr carries the structure graph (chem) for the supposed tree
+limit_lr=800000   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 610796
 out=${1:-site/static}/wasm-feat
 for which in detect proofs mrm finder finder_msn; do
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which

@@ -38,14 +38,17 @@ jobs:
         run: |
           rustup show
           rustup target add wasm32-unknown-unknown
-      - uses: actions/cache@v4
+      # Every run restores the newest cache; only main saves one, keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
+      # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
+      - id: rcache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: pytest-wasm-${{ runner.os }}-
       - name: wasm-bindgen-cli (same version as Cargo.lock)
         run: |
@@ -54,11 +57,21 @@ jobs:
             cargo install wasm-bindgen-cli --version "$ver" --locked --force
           fi
       - name: Install
-        run: python -m pip install -e ".[test]"
+        run: python -m pip install -e ".[test]" pytest-xdist
+      # the tests spread over the 4 CPUs of the runner; --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
-        run: python -m pytest -q tests
+        run: python -m pytest -q -n auto --dist loadfile tests
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && matrix.python == '3.14' && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
   # No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
@@ -80,7 +93,8 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         run: rustup show
-      - uses: actions/cache@v4
+      - id: rcache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
@@ -88,7 +102,7 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             ~/.cargo/bin/wasm-bindgen.exe
             target
-          key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: sito-e2e-${{ runner.os }}-
       - name: Install
         run: |
@@ -96,6 +110,17 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Smoke tests
         run: python tools/verifica.py --browser chromium --fumo
+      # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
