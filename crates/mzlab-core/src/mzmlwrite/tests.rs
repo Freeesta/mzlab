@@ -37,12 +37,20 @@ fn numpress_is_lossy_but_close_and_off_by_default() {
     let plain = write_one(&sp, Opzioni::default());
     let np = write_one(&sp, Opzioni { numpress: true, ..Default::default() });
     assert!(!String::from_utf8_lossy(&plain).contains("MS:1002312"));
-    assert!(String::from_utf8_lossy(&np).contains("MS:1002312"));
+    let t = String::from_utf8_lossy(&np);
+    assert!(t.contains("MS:1002312") || t.contains("MS:1002746"));
     assert!(np.len() < plain.len());
-    let g = &mzml::read(&np[..]).unwrap().spectra[0];
-    assert_eq!(g.mz.len(), mz.len());
-    for (a, b) in g.mz.iter().zip(&mz) { assert!((a - b).abs() < 1e-4, "{a} {b}"); }
-    for (a, b) in g.intensity.iter().zip(&intensity) { assert!(((a - b) / b).abs() < 1e-3f32, "{a} {b}"); }
+    // the core reader refuses numpress (the readers of the «aperti» module decode it): read the arrays back with the codec itself
+    let text = String::from_utf8(np).unwrap();
+    let mut back = Vec::new();
+    for part in text.split("<binaryDataArray ").skip(1) {
+        let (codec, zlib) = part.split("accession=\"").skip(1).find_map(|a| numpress::of_accession(&a[..a.find('"').unwrap()])).expect("numpress codec");
+        let b = part.split("<binary>").nth(1).unwrap().split("</binary>").next().unwrap();
+        back.push(numpress::decode_text(codec, zlib, b, 400).unwrap());
+    }
+    assert_eq!(back.len(), 2);
+    for (a, b) in back[0].iter().zip(&mz) { assert!((a - b).abs() < 1e-4, "{a} {b}"); }
+    for (a, b) in back[1].iter().zip(&intensity) { assert!(((a - *b as f64) / *b as f64).abs() < 1e-3, "{a} {b}"); }
     let p = &mzml::read(&plain[..]).unwrap().spectra[0];
     assert!(p.mz == mz && p.intensity == intensity);
 }

@@ -14,7 +14,7 @@ use crate::error::{Error, Result};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::numpress::{self, Np};
 
-/// The zlib level of the arrays. Level 1 is the fastest and 6 the default of zlib: on a Q Exactive DDA the level 1 file is 8 % larger and written in 40 % less time.
+/// The zlib level of the arrays. Level 1 is the fastest and 6 the default of zlib: on the synthetic spectra of `examples/mzml_scrivi.rs` level 1 writes 2.3 times faster than 6 and the file is 0.3 % larger.
 pub const LIVELLO_ZLIB: u32 = 1;
 
 /// How the arrays are written.
