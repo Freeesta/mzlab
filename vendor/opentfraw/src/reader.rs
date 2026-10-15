@@ -3,14 +3,14 @@ use std::io::{Read, Seek, SeekFrom};
 
 use crate::error::{Error, Result};
 use crate::error_log::ErrorEntry;
-use crate::generic_data::{GenericDataHeader, GenericRecord, GenericValue};
+use crate::generic_data::{GenericDataHeader, GenericRecord, GenericRecordStream, GenericValue};
 use crate::header::FileHeader;
 use crate::raw_file_info::RawFileInfo;
 use crate::run_header::RunHeader;
 use crate::scan_data::{
     read_flat_peaks, read_scan_srm_v66, search_v63_transition, Peak, ScanDataPacket,
 };
-use crate::scan_event::{ScanEvent, ScanEventPreamble};
+use crate::scan_event::{ScanEvent, ScanEventPreamble, ScanEventTable};
 use crate::scan_index::ScanIndexEntry;
 use crate::seq_row::SeqRow;
 
@@ -329,9 +329,10 @@ pub struct RawFileReader {
     pub raw_file_info: RawFileInfo,
     pub run_header: RunHeader,
     pub scan_index: Vec<ScanIndexEntry>,
-    pub scan_events: Vec<ScanEvent>,
+    pub scan_events: ScanEventTable,
     pub scan_parameters_header: GenericDataHeader,
-    pub scan_parameters: Vec<GenericRecord>,
+    /// The trailer records, left in the file (read when asked: [`Self::scan_parameters`], `GenericRecordStream::for_each`).
+    pub scan_parameters: GenericRecordStream,
     pub error_log: Vec<ErrorEntry>,
     // Instrument log uses same structure
     pub inst_log_header: GenericDataHeader,
@@ -584,7 +585,7 @@ impl RawFileReader {
         // Each event consumes at least its preamble on disk (the body may add
         // more, but the preamble alone is a safe lower bound for the count check).
         r.check_count(n_events as u64, preamble_size as u64)?;
-        let mut scan_events = Vec::with_capacity(n_events as usize);
+        let mut scan_events = ScanEventTable::with_capacity(n_events as usize);
         for _ in 0..n_events {
             scan_events.push(ScanEvent::read(&mut r, version, sizes)?);
         }
@@ -642,19 +643,26 @@ impl RawFileReader {
             };
             match GenericDataHeader::find_forward(&mut r, scan_distance, expected_record_size)? {
                 Some(hdr) => {
-                    // Records start directly at scan_params_addr - no stream preamble.
-                    r.seek_to(run_header.scan_params_addr)?;
-                    r.check_count(num_scans as u64, hdr.fixed_record_size().max(1) as u64)?;
-                    let mut params = Vec::with_capacity(num_scans as usize);
-                    for _ in 0..num_scans {
-                        params.push(GenericRecord::read(&mut r, &hdr)?);
-                    }
+                    // Records start directly at scan_params_addr - no stream preamble. They stay in the
+                    // file (`scan_parameters` reads one when asked): a DDA file has 600 bytes of them per scan.
+                    let params = GenericRecordStream::new(
+                        &mut r,
+                        &hdr,
+                        run_header.scan_params_addr,
+                        num_scans as usize,
+                    )?;
                     (hdr, params)
                 }
-                None => (GenericDataHeader { fields: Vec::new() }, Vec::new()),
+                None => (
+                    GenericDataHeader { fields: Vec::new() },
+                    GenericRecordStream::empty(),
+                ),
             }
         } else {
-            (GenericDataHeader { fields: Vec::new() }, Vec::new())
+            (
+                GenericDataHeader { fields: Vec::new() },
+                GenericRecordStream::empty(),
+            )
         };
 
         // 11. Instrument log - GenericData format in v64+
@@ -1173,14 +1181,18 @@ impl RawFileReader {
         }
     }
 
-    /// Return the scan-parameter record for a given 1-based scan number.
+    /// Return the scan-parameter record for a given 1-based scan number, read from `source` (the one the file was opened with).
     ///
-    /// Returns `None` if the file has no scan-parameter stream or if
-    /// `scan_number` is outside the valid scan range.
-    pub fn scan_parameters(&self, scan_number: u32) -> Option<&GenericRecord> {
+    /// Returns `None` if the file has no scan-parameter stream, if
+    /// `scan_number` is outside the valid scan range or if the record cannot be read.
+    pub fn scan_parameters<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Option<GenericRecord> {
         let first = self.run_header.sample_info.first_scan_number;
         let idx = scan_number.checked_sub(first)? as usize;
-        self.scan_parameters.get(idx)
+        self.scan_parameters.get(source, idx)
     }
 
     /// Return a typed view of the scan-parameter record for a given scan.
@@ -1188,8 +1200,13 @@ impl RawFileReader {
     /// This wraps [`Self::scan_parameters`] in a [`ScanParams`] accessor that
     /// provides named, type-safe fields and handles label-name variations
     /// across instrument families.
-    pub fn scan_params(&self, scan_number: u32) -> Option<ScanParams<'_>> {
-        self.scan_parameters(scan_number).map(ScanParams)
+    pub fn scan_params<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+    ) -> Option<ScanParams<'static>> {
+        self.scan_parameters(source, scan_number)
+            .map(|r| ScanParams(std::borrow::Cow::Owned(r)))
     }
 
     /// Return the raw instrument-log record for a given scan number, or
@@ -1217,7 +1234,16 @@ impl RawFileReader {
     /// Example output: `"FTMS + p NSI Full ms [350.0000-1500.0000]"`.
     ///
     /// See [`crate::scan_filter`] for grammar details.
-    pub fn scan_filter(&self, scan_number: u32) -> Option<String> {
+    pub fn scan_filter<R: Read + Seek>(&self, source: &mut R, scan_number: u32) -> Option<String> {
+        self.scan_filter_with(scan_number, self.scan_params(source, scan_number).as_ref())
+    }
+
+    /// [`Self::scan_filter`] with the trailer record of the scan already read.
+    pub fn scan_filter_with(
+        &self,
+        scan_number: u32,
+        params: Option<&ScanParams<'_>>,
+    ) -> Option<String> {
         let first = self.run_header.sample_info.first_scan_number;
         let idx = scan_number.checked_sub(first)? as usize;
         let entry = self.scan_index.get(idx)?;
@@ -1261,14 +1287,11 @@ impl RawFileReader {
         let event = self.scan_events.get(idx)?;
         // Precursor m/z and activation energy come from the per-scan params
         // table (not the event body) for v66+. Fall back silently if missing.
-        let params = self.scan_params(scan_number);
-        let precursor = params.as_ref().and_then(|p| p.monoisotopic_mz());
-        let energy = params.as_ref().and_then(|p| p.activation_energy());
-        let supplemental = params
-            .as_ref()
-            .and_then(|p| p.supplemental_activation_energy());
+        let precursor = params.and_then(|p| p.monoisotopic_mz());
+        let energy = params.and_then(|p| p.activation_energy());
+        let supplemental = params.and_then(|p| p.supplemental_activation_energy());
         Some(crate::scan_filter::build_filter(
-            event,
+            &event,
             entry,
             precursor,
             energy,
@@ -1423,13 +1446,18 @@ fn extract_utf16le_texts(buf: &[u8], min_chars: usize) -> Vec<String> {
 ///     println!("Charge state:   {:?}", p.charge_state());
 /// }
 /// ```
-pub struct ScanParams<'a>(pub &'a GenericRecord);
+pub struct ScanParams<'a>(pub std::borrow::Cow<'a, GenericRecord>);
 
 impl<'a> ScanParams<'a> {
     /// Return the raw `GenericRecord` for direct field access.
     #[inline]
     pub fn record(&self) -> &GenericRecord {
-        self.0
+        &self.0
+    }
+
+    /// A view of the same record that borrows it (to hand it to a second function without copying it).
+    pub fn borrowed(&self) -> ScanParams<'_> {
+        ScanParams(std::borrow::Cow::Borrowed(&self.0))
     }
 
     /// Ion injection / fill time in milliseconds.
@@ -1807,7 +1835,7 @@ impl<'a> StatusLogEntry<'a> {
     /// Return the raw record for direct field access.
     #[inline]
     pub fn record(&self) -> &GenericRecord {
-        self.0
+        &self.0
     }
 
     /// Ion injection time in milliseconds (present on Orbitrap family).

@@ -291,8 +291,13 @@ fn compare() -> Option<Report> {
         return None;
     };
     let refp = rawp.with_extension("mzML");
-    let ours_p =
-        std::env::temp_dir().join(format!("mzlab-profile-parity-{}.mzML", std::process::id()));
+    // one file per call: the two tests of this file run in parallel threads of one process
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let ours_p = std::env::temp_dir().join(format!(
+        "mzlab-profile-parity-{}-{}.mzML",
+        std::process::id(),
+        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
     {
         let mut out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
         raw::to_mzml_progress(

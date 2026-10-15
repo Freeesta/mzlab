@@ -303,6 +303,38 @@ def stadio_abbinamenti():
             "fonti": _abbinamento_fonti(), "impostazioni": _abbinamento_impostazioni()}
 
 
+def stadio_formule():
+    """Masses of 20 formulas/adducts, ion m/z, closest common adduct, structure fit and norm_name (AT-02)."""
+    from attributio.chem import formula as F
+    from attributio.chem.checks import norm_name
+    cases = [("C10H12N2O", "[M+H]+"), ("C9H8O4", "[M-H]-"), ("C8H10N4O2", "[M+Na]+"), ("C17H19NO3", "[M+NH4]+"),
+             ("C12H22O11", "[M+K]+"), ("C6H12O6", "[M-H2O+H]+"), ("C16H36N+", "[M]+"), ("C7H5NO3S", "[M+Cl]-"),
+             ("C21H27N7O14P2", "[M+2H]2+"), ("C2H4O2", "[M+HCOO]-"), ("C15H10O5", "[M-2H]2-"), ("C6H5Cl", "M+H"),
+             ("C4H11N", "[2M+H]+"), ("C14H18N2O5", "[M + H3N + H]+"), ("C9H13N5O3", "[M+CH3COO]-"), ("C5H5N5", "[M+ACN+H]+"),
+             ("C3H7NO2S", "mz_MH_pos"), ("C20H25N3O", "[M-H2O-H]-"), ("C8H18O3", "[M-e]+"), ("C12H10Br2", "[M-H]-")]
+    items = []
+    for f, a in cases:
+        m = F.formula_mass(f)
+        p = F.parse_adduct(a)
+        mz = F.ion_mz(m, a) if m is not None else None
+        pol = "POS" if (p and p[2] > 0) else "NEG"
+        obs = None if mz is None else mz * (1 + 3e-6)
+        ba = F.best_common_adduct(obs, F.neutral_equivalent(m, f), pol) if obs else None
+        items.append({"formula": f, "adduct": a, "mass": m, "parsed": list(p) if p else None, "mz": mz, "pol": pol,
+                      "observed": obs, "closest": list(ba) if ba else None, "charge": F.formula_charge(f),
+                      "neutral": None if m is None else F.neutral_equivalent(m, f)})
+    fits = []
+    for f, a, pre, pol in [("C10H12N2O", "[M+H]+", 177.1022, "POS"), ("C10H12N2O", "[M+Na]+", 177.1022, "POS"),
+                           ("C9H8O4", "[M-H]-", 179.0350, "NEG"), ("C16H36N+", "[M]+", 242.2842, "POS"),
+                           ("C10H12N2O", "[M+H]+", 300.0, "POS"), (None, "[M+H]+", 100.0, "POS"),
+                           ("C10H12N2O", "[M+H]+", None, "POS")]:
+        e, ok = F.structure_fit(f, a, pre, pol)
+        fits.append({"formula": f, "adduct": a, "precursor": pre, "pol": pol, "ppm": e, "ok": None if ok != ok else bool(ok)})
+    names = ["Caffeine (standard)", "Café au lait", "2-Methyl-1H-indole", "  Ibuprofen ", "N,N-Diethyl-m-toluamide (DEET) (x)",
+             "Naïve Zoë", "", "α-Tocopherol"]
+    return {"items": items, "fits": fits, "names": [{"in": n, "out": norm_name(n)} for n in names]}
+
+
 def controlla(uscita: Path, campagna: Path) -> int:
     got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
     with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
@@ -346,6 +378,7 @@ def main() -> int:
     scrivi(a.uscita, "proposte.json", stadio_proposte(C))
     scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat))
     scrivi(a.uscita, "abbinamenti.json", stadio_abbinamenti())
+    scrivi(a.uscita, "formule.json", stadio_formule())
     scrivi(a.uscita, "sirius.json", stadio_sirius(C))
     scrivi(a.uscita, "standard.json", stadio_standard(C))
     scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(Path(src).expanduser().resolve(), a.sorbenti.resolve())))

@@ -182,6 +182,8 @@ pub fn detail<R: ReadAt>(
     let m = ms2::ms2(d, e, &mut open)?;
     o.raw(",\"ms2\":");
     ms2::ms2_json(&mut o, &m);
+    o.raw(",\"ms2_links\":");
+    ms2::links_json(&mut o, d, e, &mut open)?;
     o.raw(",\"transitions\":");
     if e.unexpected || e.steps > 0 || d.entries.first().is_some_and(|p| p.id == e.id) {
         ms2::transitions_json(&mut o, d, e, &m);

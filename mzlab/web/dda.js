@@ -314,14 +314,30 @@ const DDA = (() => {
       draw(x); uiSave(); return true;
     } catch (e) { return fail("follow", e); }
   }
-  // MS2 scans of the shown Full Scan whose precursor is the peak m (within the tolerance of the Banco), closest first: [{ j, prec }]
-  function ms2For(p, m) {
+  // MS2 scans of the shown Full Scan whose precursor is the peak m (within the tolerance of the Banco), closest first: [{ j, prec }].
+  // With o.rt = [t0, t1] (or null: any time) the scans are those of the whole file, not of one Full Scan (p = { k }): the precursor m inside the RT window, the one closest to the middle of the window first
+  // (an entry of the inclusion list of the method); each carries its `rt`.
+  function ms2For(p, m, o) {
     try {
-      if (p.duo == null || !p._a || m == null) return [];
+      if (m == null) return [];
+      if (o) {
+        const f = E.files[p.k], D = ready(f.k); if (!D) return [];
+        const tol = tolOf(f, m), [t0, t1] = o.rt || [-Infinity, Infinity], mid = o.rt ? (t0 + t1) / 2 : null;
+        return D.sid.map((_, j) => j).filter(j => { const q = D.tgt[j] ?? D.prec[j]; return q != null && Math.abs(q - m) <= tol && D.rt[j] >= t0 && D.rt[j] <= t1; })
+          .map(j => ({ j, prec: D.tgt[j] ?? D.prec[j], rt: D.rt[j] })).sort((a, b) => (mid != null ? Math.abs(a.rt - mid) - Math.abs(b.rt - mid) : Math.abs(a.prec - m) - Math.abs(b.prec - m)));
+      }
+      if (p.duo == null || !p._a) return [];
       const f = E.files[p.k], D = ready(f.k), d0 = p._a.data[0].d; if (!D || d0.sid == null) return [];
       const tol = tolOf(f, m);
       return (D.byParent.get(d0.sid) || []).map(j => ({ j, prec: D.tgt[j] ?? D.prec[j] })).filter(q => q.prec != null && Math.abs(q.prec - m) <= tol).sort((a, b) => Math.abs(a.prec - m) - Math.abs(b.prec - m));
     } catch (e) { return []; }
+  }
+  // The MS2 scan of an entry of the inclusion list of the method (m/z, RT window), shown like a row of the list of precursors
+  async function openEntry(f, mz, rt) {
+    try {
+      const D = await get(f.k), q = ms2For({ k: f.k }, mz, { rt })[0]; if (!q) return false;
+      return await showMs2(D, q.prec, q.j);
+    } catch (e) { return fail("openEntry", e); }
   }
   const openMs2 = (p, j) => selectMs2(byId(p.duo), ready(E.files[p.k].k).sid[j]);
   function menu(p, px, py, m) {
@@ -385,14 +401,17 @@ const DDA = (() => {
       });
     } catch (e) { fail("openList", e); }
   }
+  // the Full Scan with its MS2 panel opens and the MS2 scan i of D is chosen, following the precursor ion
+  async function showMs2(D, ion, i) {
+    setTab("full", true); await new Promise(r => setTimeout(r, 700));
+    const s1 = E.panels.find(q => q.type === "spec" && q.duo != null && q.el && q.tab === "full"), s2 = s1 && byId(s1.duo); if (!s2) return nearMsg(OFF);
+    s2.ion = ion; s2._mixed = null; s2.avg = null;
+    await selectMs2(s2, D.sid[i]);
+    const c = byId(s1.link); if (c) draw(c);
+    return true;
+  }
   async function fromList(f, g) {
-    try {
-      setTab("full", true); await new Promise(r => setTimeout(r, 700));
-      const s1 = E.panels.find(q => q.type === "spec" && q.duo != null && q.el && q.tab === "full"), s2 = s1 && byId(s1.duo); if (!s2) return nearMsg(OFF);
-      const D = await get(f.k); s2.ion = g.mz; s2._mixed = null; s2.avg = null;
-      await selectMs2(s2, D.sid[g.best]);
-      const c = byId(s1.link); if (c) draw(c);
-    } catch (e) { fail("fromList", e); }
+    try { await showMs2(await get(f.k), g.mz, g.best); } catch (e) { fail("fromList", e); }
   }
   // "Mostra le MS2 accanto alla Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)
   function menuShow(p) {
@@ -419,6 +438,6 @@ const DDA = (() => {
     AZIONI.registra({ id: "chrom.ddaShow", gruppo: "link", ordine: 1, viste: ["chrom"], voci: c => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
     AZIONI.registra({ id: "spec.ddaShow", gruppo: "link", ordine: 1, viste: ["spec"], voci: c => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
   }
-  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
+  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;

@@ -113,6 +113,9 @@ impl FinderLrDig {
         .map_err(user)?;
         Ok(())
     }
+}
+#[wasm_bindgen]
+impl FinderLrDig {
     /// The JSON of `api.run`; `timing` is a JSON object copied into it.
     pub fn summary(&self, timing: &str) -> String {
         lr::summary::summary(&self.inner, timing)
@@ -169,4 +172,42 @@ pub fn finder_lr_dig(
 ) -> std::result::Result<FinderLrDig, JsValue> {
     let inner = lr::dig(files_json, parent_json, settings_json, table, registry).map_err(user)?;
     Ok(FinderLrDig { inner })
+}
+
+#[wasm_bindgen]
+impl FinderLrDig {
+    /// Matches the MS2 experiments of the series to the rows (`ms2_links/1`) and keeps the matches for `summary`, `detail` and the trees: `read`/`sizes` give
+    /// the `.mzidx` of the columns then the MS2 files, `overrides_json` the corrections of the user. Call it after `isf`, before `summary`.
+    pub fn ms2_link(
+        &mut self,
+        read: Function,
+        sizes: Vec<f64>,
+        overrides_json: &str,
+    ) -> std::result::Result<String, JsValue> {
+        let ov = lr::ms2link::overrides(overrides_json).map_err(user)?;
+        lr::ms2link::ms2_link(&mut self.inner, &ov, &mut |k| {
+            open(&read, k, sizes.get(k).copied().unwrap_or(f64::NAN))
+        })
+        .map_err(user)?;
+        Ok(self.links_json())
+    }
+    /// The same with new corrections, without redoing the Dig; `summary` then counts the new matches.
+    pub fn relink(
+        &mut self,
+        read: Function,
+        sizes: Vec<f64>,
+        overrides_json: &str,
+    ) -> std::result::Result<String, JsValue> {
+        self.ms2_link(read, sizes, overrides_json)
+    }
+    fn links_json(&self) -> String {
+        let mut o = mzlab_core::json::Out::default();
+        match &self.inner.links {
+            Some(l) => lr::ms2link::json(&mut o, l),
+            None => {
+                o.raw("null");
+            }
+        }
+        o.0
+    }
 }

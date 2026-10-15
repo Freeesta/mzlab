@@ -98,6 +98,8 @@ export async function run(c, a) {
   progress("", null, "xic", JSON.parse(dig.live()));
   progress("Searching for unexpected ions...", 0.9, "unexpected");
   progress("Looking for MS2 scans...", 0.95, "ms2");
+  const mx = await c.openIdx(cols);      // the columns then the MS2 files: the matches of the MS2 experiments to the rows
+  try { dig.ms2_link(mx.read, mx.sizes, JSON.stringify(JSON.parse(a[2] || "{}").ms2_overrides || [])); } finally { mx.close(); }
   progress("Computing the tables...", 0.97, "tables");
   lap("dig", t); lap("total", t0);
   const sum = dig.summary(JSON.stringify(timing));
@@ -107,13 +109,14 @@ export async function run(c, a) {
   return JSON.stringify(d);
 }
 
-/** detail, frag_tree and frag_tree_compare of the last run (the XICs of detail from the .mzidx of its columns) @param {Ctx} c @param {string} fn @param {any[]} a */
+/** detail, frag_tree and frag_tree_compare of the last run (the XICs of detail from the .mzidx of its columns), and ms2_relink: the MS2 matches with new corrections (a JSON array), as ms2_links/1 @param {Ctx} c @param {string} fn @param {any[]} a */
 export async function ofDig(c, fn, a) {
   if (!dig) throw new Error("no experiment in memory: run the analysis first");
-  if (!["detail", "frag_tree", "frag_tree_compare"].includes(fn)) throw new Error("no high-resolution experiment in memory");
+  if (!["detail", "frag_tree", "frag_tree_compare", "ms2_relink"].includes(fn)) throw new Error("no high-resolution experiment in memory");
   const ix = await c.openIdx(cols);        // the columns then the MS2 files: the tree and the XICs read their .mzidx
   try {
     if (fn === "frag_tree") return dig.frag_tree(ix.read, ix.sizes);
+    if (fn === "ms2_relink") return dig.relink(ix.read, ix.sizes, typeof a[0] === "string" ? a[0] : JSON.stringify(a[0] || []));
     return fn === "detail" ? dig.detail(+a[0], ix.read, ix.sizes) : dig.frag_tree_compare(+a[0], ix.read, ix.sizes);
   } finally { ix.close(); }
 }

@@ -8,6 +8,7 @@ pub mod kin;
 pub mod labels;
 pub mod mrm;
 pub mod ms2;
+pub mod ms2link;
 pub mod peak1d;
 pub mod plan;
 pub mod rows;
@@ -76,6 +77,8 @@ pub struct LrDig {
     pub entries: Vec<Entry>,
     /// Evidence of in-source fragments, `(entry id, verdict)` (`isf::evaluate`; empty until the page asks for it).
     pub isf: Vec<(i64, crate::legacy::lrisf::IsfVerdict)>,
+    /// The MS2 matches (`ms2link::ms2_link`; `None` until computed: the pools are empty).
+    pub links: Option<ms2link::Links>,
 }
 
 /// `+X-Y`: atoms gained and lost from the parent (empty without both formulas).
@@ -225,5 +228,6 @@ pub fn dig(
         decay: dec,
         entries,
         isf: Vec::new(),
+        links: None,
     })
 }
