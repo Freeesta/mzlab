@@ -64,7 +64,7 @@ function set(tab, on) {
 const isOn = (tab = E.tab) => !!R().on[tab] || E.panels.some(p => (p.tab || E.tab) === tab && eff(p));
 const toggle = (tab = E.tab) => set(tab, !isOn(tab));
 
-// ◀ ▶: the file shown goes through the files of the tab (t1 … tn) while the reference stays; the reference itself is skipped
+// ‹ ›: the file shown goes through the files of the tab (t1 … tn) while the reference stays; the reference itself is skipped
 function step(p, d) {
   const o = eff(p), tab = p.tab || E.tab, fs = tabFiles(tab).filter(f => !o || f.k !== o.k); if (fs.length < 1) return;
   const i = fs.findIndex(f => f.k === E.cur);
@@ -115,7 +115,7 @@ function chip(p) {
   const tab = p.tab || E.tab, many = tabFiles(tab).length > 2;
   const c = document.createElement("span"); c.className = "subchip"; c.setAttribute("role", "group"); c.setAttribute("aria-label", T("sub.chip.aria"));
   const lab = T("sub.chip", { file: o.file.label + (o.auto ? T("sub.auto") : ""), f: num(o.factor), norm: normText(o) });
-  c.innerHTML = `${many ? `<button type="button" data-s="prev" aria-label="${EH(T("sub.prev", { file: o.file.label }))}" title="${EH(T("sub.prev", { file: o.file.label }))}">&#9664;</button>` : ""}<button type="button" data-s="pop" aria-haspopup="dialog" title="${EH(T("sub.chip.title"))}">${EH(lab)} &#9662;</button>${many ? `<button type="button" data-s="next" aria-label="${EH(T("sub.next", { file: o.file.label }))}" title="${EH(T("sub.next", { file: o.file.label }))}">&#9654;</button>` : ""}<button type="button" data-s="off" aria-label="${EH(T("sub.off.aria"))}" title="${EH(T("sub.off.aria"))}">&times;</button>`;
+  c.innerHTML = `${many ? `<button type="button" data-s="prev" aria-label="${EH(T("sub.prev", { file: o.file.label }))}" title="${EH(T("sub.prev", { file: o.file.label }))}">&#8249;</button>` : ""}<button type="button" data-s="pop" aria-haspopup="dialog" title="${EH(T("sub.chip.title"))}">${EH(lab)} &#9662;</button>${many ? `<button type="button" data-s="next" aria-label="${EH(T("sub.next", { file: o.file.label }))}" title="${EH(T("sub.next", { file: o.file.label }))}">&#8250;</button>` : ""}<button type="button" data-s="off" aria-label="${EH(T("sub.off.aria"))}" title="${EH(T("sub.off.aria"))}">&times;</button>`;
   c.querySelector("[data-s=pop]").onclick = e => { if (pop && !pop.hidden && popP === p) popClose(); else popOpen(p, e.currentTarget); };
   const pv = c.querySelector("[data-s=prev]"), nx = c.querySelector("[data-s=next]");
   if (pv) pv.onclick = () => step(p, -1);

@@ -115,6 +115,19 @@ try:
             pg.check("#uip-cont"); pg.wait_for_timeout(300); assert pg.evaluate("LISTE.isOn()") is True
             pg.click("#np-set")
         step("gear switch: on by default, kept in qqq.contaminanti.on", gear)
+        def gear_lab():
+            pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)
+            assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
+            pg.click("#np-set")
+            pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
+            pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
+            pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
+        step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
+        def gear_fresh():
+            pg.evaluate("localStorage.removeItem('qqq.contaminanti.on')"); pg.evaluate("window.__L=window.LISTE;window.LISTE=undefined")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000); ok = pg.is_checked("#uip-cont")
+            pg.click("#np-set"); pg.evaluate("window.LISTE=window.__L"); assert ok, "known contaminants are on for a new user, also before the lists are loaded"
+        step("known contaminants: on by default in the settings", gear_fresh)
 
         def series():
             o = pg.evaluate("""(async()=>{const j=await J('api/contaminants');const idx=LISTE.buildIndex(j.lists);

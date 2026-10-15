@@ -81,7 +81,7 @@ function activeFile(k) {
   if (f.kind !== E.tab) setTab(f.kind);
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }
-/** ◀ ▶: the next file of the tab, among the ticked ones when several are shown. */
+/** ‹ ›: the next file of the tab, among the ticked ones when several are shown. */
 function goFile(d) {
   const tf = tabFiles(), v = tf.filter(f => f.vis), ring = v.length > 1 ? v : tf; if (tf.length < 2) return;
   activeFile(ring[(Math.max(0, ring.findIndex(f => f.k === E.cur)) + d + ring.length) % ring.length].k);

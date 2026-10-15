@@ -17,7 +17,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
-            n = pg.locator("#hrbar button[data-hb]").count(); assert n >= 14, n
+            n = pg.locator("#hrbar button[data-hb]").count(); assert n == 7, n
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
@@ -27,9 +27,9 @@ try:
             n0 = pg.evaluate("E.panels.length")
             pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Cromatogramma"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.length") == n0 + 1 and pg.evaluate("E.active.type") == "chrom"
-            pg.click("#hrbar [data-hb=del]"); pg.wait_for_timeout(500)
+            pg.click(".pnl.act .x"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.length") == n0
-        step("«Cella» adds a chromatogram (active), the bin removes the active cell", add_del)
+        step("«Cella» adds a chromatogram (active), the × of the cell removes it", add_del)
         def decimals():
             assert pg.locator("#hrbar [data-hb=dec]").count() == 0, "the decimals field left the bar"
             pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'))"); drawer(pg, "disp"); pg.wait_for_selector("#dsp-0", timeout=5000)
@@ -37,12 +37,6 @@ try:
             assert pg.evaluate("UIP.hrDec") == 3
             pg.select_option("#dsp-0", "4"); pg.wait_for_timeout(500)
         step("decimals of the m/z from the display options", decimals)
-        def norm():
-            pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))"); pg.click("#hrbar [data-hb=norm]"); pg.wait_for_timeout(1200)
-            ym = pg.evaluate("E.panels.find(p=>p.type==='chrom')._a.ymax"); assert abs(ym - 108) < 0.5, ym
-            pg.click("#hrbar [data-hb=norm]"); pg.wait_for_timeout(800)
-            assert pg.evaluate("E.panels.find(p=>p.type==='chrom')._a.ymax") > 1000
-        step("0-100 ⇄ absolute from the toolbar", norm)
         def steps_():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(1200)
@@ -53,18 +47,44 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur") < c1
         step("previous / next scan from the toolbar", steps_)
         def pin():
-            pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'&&p.link!=null&&p.dda==null))"); pg.click("#hrbar [data-hb=pin]"); pg.wait_for_timeout(500)
+            pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'&&p.link!=null&&p.dda==null))"); pg.click(".pnl.act [data-bf=pin]"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.active.pin") is True
-            pg.click("#hrbar [data-hb=pin]"); pg.wait_for_timeout(500); assert not pg.evaluate("E.active.pin")
-        step("pin from the toolbar", pin)
+            pg.click(".pnl.act [data-bf=pin]"); pg.wait_for_timeout(500); assert not pg.evaluate("E.active.pin")
+        step("pin from the header of the cell", pin)
         def copy_xls():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             pg.evaluate("window.__clip=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__clip=t;return Promise.resolve()}},configurable:true})")
-            pg.click("#hrbar [data-hb=copy]"); pg.click("#ctx >> text=Dati"); pg.wait_for_timeout(800)
+            pg.click(".pnl.act [data-a=dl]"); pg.click("#ctx >> text=Copia i dati"); pg.wait_for_timeout(800)
             t = pg.evaluate("window.__clip"); assert t and "\t" in t and t.startswith("# mzLab ") and "RT" in t.split("\n")[1], (t or "")[:120]      # first line = provenance
-            with pg.expect_download(timeout=15000) as d: pg.click("#hrbar [data-hb=xls]")
+            with pg.expect_download(timeout=15000) as d: (pg.click(".pnl.act [data-a=dl]"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
-        step("copy the data as text; export to Excel", copy_xls)
+        step("copy the data as text; export to Excel (menu of the cell)", copy_xls)
+        def one_row():
+            # one row of buttons above the cells, one pair of arrows for the files, one pair for the scans, one pair of undo/redo
+            tops = pg.evaluate("[...new Set([...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>Math.round(b.getBoundingClientRect().top/10)))]")
+            assert len(tops) == 1, tops
+            assert pg.locator("#tools #np-undo").count() == 1 and pg.locator("#tools #np-redo").count() == 1 and pg.locator("#hrbar [data-hb=zundo],#hrbar [data-hb=zredo]").count() == 0
+            txt = pg.evaluate("[...document.querySelectorAll('#tools button')].map(b=>b.textContent).join('')")
+            assert "\u25c0" not in txt and "\u25b6" not in txt and "\u21b6" not in txt, txt
+            assert pg.locator("#hrbar .hl").first.inner_text().strip() != "", "words next to the icons when there is room"
+        step("one row, one pair of arrows per meaning, one undo/redo, words next to the icons", one_row)
+        def narrow():
+            pg.set_viewport_size({"width": 760, "height": 1400}); pg.wait_for_timeout(600)
+            tops = pg.evaluate("[...new Set([...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>Math.round(b.getBoundingClientRect().top/10)))]")
+            assert len(tops) == 1, tops
+            assert pg.is_visible("#hr-more"), "what does not fit goes into the «⋯» menu"
+            pg.click("#hr-more"); names = pg.evaluate("[...document.querySelectorAll('#ctx button,#ctx [role=menuitem]')].map(b=>b.textContent.trim()).filter(Boolean)")
+            assert names and all(len(n) > 2 for n in names), names
+            pg.keyboard.press("Escape"); pg.set_viewport_size({"width": 1500, "height": 1400}); pg.wait_for_timeout(600)
+        step("narrow window: one row, the buttons that do not fit are in «⋯» with their names", narrow)
+        def no_dup():
+            # a button of the bar above must not repeat a button of the header of a cell: the bar keeps global actions or actions on several cells
+            bar = set(pg.evaluate("[...document.querySelectorAll('#hrbar [data-hb]')].map(b=>b.dataset.hb)"))
+            assert bar == {"prev", "next", "zall", "add", "type", "lib", "tree"}, bar
+            same = {"pin": "pin", "del": "x", "norm": "disp", "peaks": "iauto", "copy": "dl", "xls": "dl", "zundo": "undo", "zredo": "redo", "zoom": "fit"}
+            hd = set(pg.evaluate("[...document.querySelectorAll('.pnl .hd [data-a],.pnl .hd [data-bf]')].map(b=>b.dataset.a||b.dataset.bf)")) | {"x"}
+            assert not [k for k in same if k in bar and same[k] in hd], bar
+        step("no action is both in the bar above and in the header of a cell", no_dup)
         def cross():
             c = "E.panels.find(p=>p.type==='chrom')"
             key = pg.evaluate(f"BANCO.groupsOf(E.files[{c}.k??E.files.find(f=>f.kind==='full').k].k||E.files.find(f=>f.kind==='full').k).then(g=>g.find(x=>x.level===2).key)")

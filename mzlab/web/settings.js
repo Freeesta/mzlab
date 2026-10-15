@@ -99,6 +99,9 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
 function uipAdminOn() { try { return localStorage.getItem("qqq.admin") === "1" || localStorage.getItem("qqq.teoria.esteso") === "1"; } catch (_) { return false; } }
 
+// known contaminants on HR spectra: on unless the student turned them off (read from the same key as liste.js, which may not be loaded yet)
+function uipContOn() { try { return localStorage.getItem("qqq.contaminanti.on") !== "false"; } catch (_) { return true; } }
+
 // --- popup of the gear
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
@@ -116,8 +119,7 @@ function uipOpen(btn) {
     <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row hr-only" title="${I18N.t("settings.hrPpm.title")}">${I18N.t("settings.hrPpm", { input: `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px">` })}</div>
-    <label class="row hr-only" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.cont.title")}"><input type="checkbox" id="uip-cont" ${window.LISTE && LISTE.isOn() ? "checked" : ""}> <span>${I18N.t("settings.cont")}</span></label>
-    <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
+    <label class="row hr-only" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.cont.title")}"><input type="checkbox" id="uip-cont" ${uipContOn() ? "checked" : ""}> <span>${I18N.t("settings.cont")}</span></label>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     <div class="uip-arch" id="uip-space-row" style="margin:8px 0;padding-top:8px;border-top:1px solid var(--line)">${window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px"><button id="uip-cen" type="button" title="${I18N.t("settings.cen.title")}">${I18N.t("settings.cen.btn")}</button><button id="uip-cen-x" type="button" hidden>${I18N.t("settings.cen.stop")}</button><span class="sm" id="uip-cen-st" role="status" aria-live="polite"></span></div>` : ""}</div>
@@ -162,7 +164,6 @@ function uipOpen(btn) {
     if (typeof S !== "undefined" && S.view !== "data" && typeof setView === "function") { setView("data"); setTimeout(go, 150); } else go();
   };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
-  const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   uipReset(d);
   const uipExt = d.querySelector("#uip-ext");           // desktop app: external downloads of public libraries (off until the user turns it on)
   if (uipExt && window.__TAURI__ && __TAURI__.core) {
