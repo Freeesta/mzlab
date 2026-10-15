@@ -18,3 +18,8 @@ tutte = ["aperti", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core", features = ["estesi"] }
+
+[dev-dependencies]
+# the tests build their own mzML files (an encoder of numpress and of zlib arrays); versions as in mzlab-core
+base64 = "0.23"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

@@ -166,12 +166,13 @@ async function wiffToMzml(files,box){const rb=window.MZLAB_RUST_READY?await wind
     CONVROWS.drop(e.row)}
   return res}
 // Rule R (docs/agenti/lettori-modulo.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
-// module, a sample the engine refused with an error of variant (File with `mzlabModulo`, made by LETTORI_MOD.stand), a dataset the module's probe says the engine cannot do, and, with ?lettori=modulo, a .D folder (proof of the path).
+// module, a sample the engine refused with an error of variant (File with `mzlabModulo`, made by LETTORI_MOD.stand), an mzML with numpress arrays, a dataset the module's probe says the engine cannot do, and, with ?lettori=modulo, a .D folder (proof of the path).
 const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
 /** the family whose module takes `f` ("" = none): a sample the engine refused, a file with an extension only a module reads, a dataset the module of its family says the engine cannot do (probe) */
 async function moduloWants(M,f){
   if(f.mzlabModulo)return f.mzlabModulo.fam;const n=f.name.toLowerCase();
   if(M.extensions().some(e=>n.endsWith(e)))return M.famigliaDi([n]);
+  if(n.endsWith(".mzml")&&!f.mzlabNat){const v=await M.variante(f);if(v)return v}      // an mzML with numpress arrays: the engine refuses it (err.file.numpress), the module writes it again with zlib
   const nat=f.mzlabNat;if(!nat)return "";const fam=M.famigliaDi(nat.members.map(m=>m.name));if(!fam)return "";
   if(LETT_FORCE&&nat.members.some(m=>/\.d\//i.test(m.name)))return fam;
   if(!M.loaded)return "";
