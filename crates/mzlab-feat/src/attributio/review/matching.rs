@@ -139,13 +139,7 @@ pub fn compare(
     shift: f64,
 ) -> Comparison {
     let a = match_spectra(exp, reference, tol, shift, None);
-    let (cos_vis, matched_vis) = match low_limit.filter(|l| *l != 0.0) {
-        Some(l) => {
-            let b = match_spectra(exp, reference, tol, shift, Some(l));
-            (b.cosine, b.matched)
-        }
-        None => (a.cosine, a.matched),
-    };
+    let (cos_vis, matched_vis) = visible(exp, reference, tol, low_limit, shift, &a);
     Comparison {
         cos: a.cosine,
         rev: a.reverse,
@@ -154,6 +148,24 @@ pub fn compare(
         pairs: a.pairs,
         cos_vis,
         matched_vis,
+    }
+}
+
+/// Cosine and matched count on the peaks of the reference at or above `low_limit`; all of them (`all`) when there is no limit.
+fn visible(
+    exp: &Ms2,
+    reference: &Ms2,
+    tol: f64,
+    low_limit: Option<f64>,
+    shift: f64,
+    all: &Match,
+) -> (f64, usize) {
+    match low_limit.filter(|l| *l != 0.0) {
+        Some(l) => {
+            let b = match_spectra(exp, reference, tol, shift, Some(l));
+            (b.cosine, b.matched)
+        }
+        None => (all.cosine, all.matched),
     }
 }
 

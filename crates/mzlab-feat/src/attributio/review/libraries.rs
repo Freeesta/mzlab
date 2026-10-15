@@ -230,23 +230,6 @@ pub struct LibraryIndex {
     pub warnings: Vec<String>,
 }
 
-fn pol_code(pol: &str) -> i8 {
-    match pol {
-        "POS" => 1,
-        "NEG" => -1,
-        _ => 0,
-    }
-}
-
-fn digest(b: &[u8]) -> (usize, u64) {
-    (
-        b.len(),
-        b.iter().fold(0xcbf29ce484222325u64, |h, x| {
-            (h ^ *x as u64).wrapping_mul(0x100000001b3)
-        }),
-    )
-}
-
 impl LibraryIndex {
     /// Parses and indexes the files; the same bytes under two labels count once, a `.siriusdb` leaves a warning.
     pub fn build(inputs: Vec<LibInput>) -> LibraryIndex {
@@ -294,7 +277,18 @@ impl LibraryIndex {
             .map(|f| (f.label.clone(), f.records.len()))
             .collect()
     }
+}
 
+fn digest(b: &[u8]) -> (usize, u64) {
+    (
+        b.len(),
+        b.iter().fold(0xcbf29ce484222325u64, |h, x| {
+            (h ^ *x as u64).wrapping_mul(0x100000001b3)
+        }),
+    )
+}
+
+impl LibraryIndex {
     /// The record of an `.mzlib` spectrum index of a file.
     fn row_of(f: &LibFile, i: u32) -> Option<usize> {
         let r = f.lib.as_ref()?.rec(i).ok()?;
@@ -330,7 +324,17 @@ impl LibraryIndex {
         });
         out.into_iter().map(|(_, r)| r).collect()
     }
+}
 
+fn pol_code(pol: &str) -> i8 {
+    match pol {
+        "POS" => 1,
+        "NEG" => -1,
+        _ => 0,
+    }
+}
+
+impl LibraryIndex {
     /// The `n` library spectra within ± `window_da` of the precursor (same polarity) and outside the exact window with the best Flash hybrid score
     /// (fragments and neutral losses, the peaks a modified cosine can match), for the exact scoring of `matching`.
     pub fn analog_candidates(

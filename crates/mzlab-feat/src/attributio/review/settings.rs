@@ -9,101 +9,8 @@
 // Unknown keys are refused (a typo would silently keep the default). The thresholds decide only the automatic proposal shown to the chemist and
 // which candidates are listed; nothing here changes a level.
 
-/// A value of the `[review]` table: a number, a text or a list of them.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    Num(f64),
-    Str(String),
-    List(Vec<Value>),
-}
-
-trait Field: Sized {
-    fn from_value(v: &Value) -> Option<Self>;
-    fn to_value(&self) -> Value;
-}
-
-impl Field for f64 {
-    fn from_value(v: &Value) -> Option<f64> {
-        if let Value::Num(n) = v {
-            Some(*n)
-        } else {
-            None
-        }
-    }
-    fn to_value(&self) -> Value {
-        Value::Num(*self)
-    }
-}
-
-impl Field for i64 {
-    fn from_value(v: &Value) -> Option<i64> {
-        if let Value::Num(n) = v {
-            (n.fract() == 0.0).then_some(*n as i64)
-        } else {
-            None
-        }
-    }
-    fn to_value(&self) -> Value {
-        Value::Num(*self as f64)
-    }
-}
-
-impl Field for String {
-    fn from_value(v: &Value) -> Option<String> {
-        if let Value::Str(s) = v {
-            Some(s.clone())
-        } else {
-            None
-        }
-    }
-    fn to_value(&self) -> Value {
-        Value::Str(self.clone())
-    }
-}
-
-impl<T: Field> Field for Vec<T> {
-    fn from_value(v: &Value) -> Option<Vec<T>> {
-        if let Value::List(l) = v {
-            l.iter().map(T::from_value).collect()
-        } else {
-            None
-        }
-    }
-    fn to_value(&self) -> Value {
-        Value::List(self.iter().map(Field::to_value).collect())
-    }
-}
-
-macro_rules! settings {
-    ($( $(#[$doc:meta])* $name:ident : $ty:ty = $def:expr ;)*) => {
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct ReviewSettings { $( $(#[$doc])* pub $name: $ty, )* }
-
-        impl Default for ReviewSettings {
-            fn default() -> Self { ReviewSettings { $( $name: $def, )* } }
-        }
-
-        impl ReviewSettings {
-            /// The keys a campaign may set.
-            pub const KEYS: &'static [&'static str] = &[ $( stringify!($name), )* ];
-
-            fn set(&mut self, key: &str, v: &Value) -> Result<(), String> {
-                match key {
-                    $( stringify!($name) => {
-                        self.$name = <$ty as Field>::from_value(v).ok_or_else(|| format!("[review] {key}: wrong type"))?;
-                        Ok(())
-                    } )*
-                    _ => Err(format!("[review]: unknown key {key}")),
-                }
-            }
-
-            /// Every setting with its value, in declaration order.
-            pub fn entries(&self) -> Vec<(&'static str, Value)> {
-                vec![ $( (stringify!($name), Field::to_value(&self.$name)), )* ]
-            }
-        }
-    };
-}
+pub use super::fields::Value;
+use super::fields::{settings, Field};
 
 settings! {
     // explanation of the spectrum by the candidate structure
@@ -210,6 +117,35 @@ settings! {
     ref_decimals: i64 = 5;
 }
 
+/// A line without its `#` comment (a `#` inside a quoted text stays).
+fn strip_comment(line: &str) -> &str {
+    let mut quote: Option<char> = None;
+    for (i, c) in line.char_indices() {
+        match (quote, c) {
+            (None, '"' | '\'') => quote = Some(c),
+            (Some(q), c) if c == q => quote = None,
+            (None, '#') => return &line[..i],
+            _ => {}
+        }
+    }
+    line
+}
+
+/// Open brackets not yet closed (outside quoted texts).
+fn depth(s: &str) -> i32 {
+    let (mut d, mut quote) = (0, None::<char>);
+    for c in s.chars() {
+        match (quote, c) {
+            (None, '"' | '\'') => quote = Some(c),
+            (Some(q), c) if c == q => quote = None,
+            (None, '[') => d += 1,
+            (None, ']') => d -= 1,
+            _ => {}
+        }
+    }
+    d
+}
+
 impl ReviewSettings {
     /// The settings of a campaign from the text of its `campaign.toml` (`config_name` is the file name, for the messages): the defaults with the
     /// keys of the `[review]` table set. An unknown key is refused as a whole, before any is applied.
@@ -268,35 +204,6 @@ fn review_table(text: &str) -> Result<Vec<(String, Value)>, String> {
         out.push((k.trim().trim_matches('"').to_string(), p.value()?));
     }
     Ok(out)
-}
-
-/// A line without its `#` comment (a `#` inside a quoted text stays).
-fn strip_comment(line: &str) -> &str {
-    let mut quote: Option<char> = None;
-    for (i, c) in line.char_indices() {
-        match (quote, c) {
-            (None, '"' | '\'') => quote = Some(c),
-            (Some(q), c) if c == q => quote = None,
-            (None, '#') => return &line[..i],
-            _ => {}
-        }
-    }
-    line
-}
-
-/// Open brackets not yet closed (outside quoted texts).
-fn depth(s: &str) -> i32 {
-    let (mut d, mut quote) = (0, None::<char>);
-    for c in s.chars() {
-        match (quote, c) {
-            (None, '"' | '\'') => quote = Some(c),
-            (Some(q), c) if c == q => quote = None,
-            (None, '[') => d += 1,
-            (None, ']') => d -= 1,
-            _ => {}
-        }
-    }
-    d
 }
 
 struct Parser {

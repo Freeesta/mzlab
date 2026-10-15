@@ -322,6 +322,12 @@ fn source_tables_match_attributio() {
             assert_eq!(c.xlogp, x["xlogp"].as_f64());
         }
     }
+}
+
+#[test]
+fn network_and_gnps_tables_match_attributio() {
+    let (g, t) = (golden(), texts());
+    let fonti = &g["fonti"];
     let edges = network_edges(&t);
     let w = fonti["network_edges"].as_array().unwrap();
     assert_eq!(edges.len(), w.len());
