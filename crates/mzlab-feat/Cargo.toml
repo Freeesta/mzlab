@@ -38,3 +38,7 @@ required-features = ["untargeted"]
 [[test]]
 name = "untargeted_join_dati"
 required-features = ["untargeted"]
+
+[[test]]
+name = "untargeted_pipeline"
+required-features = ["untargeted"]

@@ -91,6 +91,12 @@ impl State {
                 .map_err(|e| e.key.to_string())
         })
         .map_err(user)?;
+        // the matches of the MS2 experiments to the rows (`ms2_links/1`), as the example `finder_lr` and the worker of the site
+        legacy::lr::ms2link::ms2_link(&mut d, &[], &mut |k| {
+            self.open_idx(names.get(k).map_or("", |n| n.as_str()))
+                .map_err(|e| e.key.to_string())
+        })
+        .map_err(user)?;
         let timing = if s("timing").is_empty() {
             "{}"
         } else {

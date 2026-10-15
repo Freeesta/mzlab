@@ -70,6 +70,27 @@ export function createDesktopPool(opts = {}) {
       if (pool.onProgress) pool.onProgress({ phase: "align", ms: Math.round(performance.now() - t0) });
       return tableBytes(r.bytes);
     },
+    /** mzmine-like (Attributio) engine: the features of every file (`feat/untargeted/detect`), the .mzfeatf stay in the app @param {{ name: string }[]} files @param {any} params */
+    async detectAllUnt(files, params) {
+      const text = recipeText(params), out = files.map(() => new Uint8Array(0));
+      let next = 0, done = 0;
+      const lane = async () => {
+        while (next < files.length) {
+          const f = files[next++], t0 = performance.now();
+          await json("feat/untargeted/detect", { name: nameOf(f.name), params: text });
+          if (pool.onProgress) pool.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0) });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(DETECT_LANES, files.length) }, lane));
+      return out;
+    },
+    /** mzmine-like engine: join + gap filling of the series (`feat/untargeted/align`) @param {Uint8Array[]} _stored @param {string[]} paths @param {any} params */
+    async alignUnt(_stored, paths, params) {
+      const t0 = performance.now();
+      const r = await json("feat/untargeted/align", { names: paths.map(nameOf), params: recipeText(params) });
+      if (pool.onProgress) pool.onProgress({ phase: "align", ms: Math.round(performance.now() - t0) });
+      return tableBytes(r.bytes);
+    },
     /** L7: `{ state, tried, found, registry, ms }` (the state of the hypotheses stays in the app) @param {any} a */
     async hypotheses(a) {
       const t0 = performance.now(), rules = a.rules instanceof Uint8Array ? new TextDecoder().decode(a.rules) : a.rules;
