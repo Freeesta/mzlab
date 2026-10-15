@@ -65,7 +65,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
     best.map(|(_, v)| v)
 }
 
-/// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans).
+/// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
+/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`).
 pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let name = fs
         .membri
@@ -74,7 +75,11 @@ pub fn apri_nudo(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or_default();
     let v =
         riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
-    (v.apri)(fs, limiti)
+    let mut l = (v.apri)(fs, limiti)?;
+    if l.formato() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
+        l = Box::new(srm::SrmDaScansioni::new(l));
+    }
+    Ok(l)
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
