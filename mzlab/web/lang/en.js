@@ -2596,6 +2596,7 @@ I18N.add("en", {
   "grad.none": "This file has no gradient (mzML files do not contain it). You can type it, or import it from a .raw file or a CSV.",
   "grad.src.dam": "From the .dam method",
   "grad.src.raw": "Read from the .raw file",
+  "grad.src.file": "Read from the file's method",
   "grad.src.manual": "Entered by hand",
   "grad.src.csv": "Imported from a CSV",
   "grad.src.course": "Course method",

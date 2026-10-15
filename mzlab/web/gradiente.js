@@ -11,12 +11,20 @@ const T = (k, p) => I18N.t(k, p);
 const lastRead = () => { const o = lsObj(LAST_KEY); return Array.isArray(o.points) ? o : null; };
 const lastWrite = m => { try { localStorage.setItem(LAST_KEY, JSON.stringify({ points: m.points, run_time: m.run_time })); } catch (_) { /* not saved */ } };
 
+// The pump program that the file's own method document (metodo/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
+async function fromMethod(f) {
+  let lc = null;
+  try { lc = (((await J("api/metodo?k=" + f.k)) || {}).metodo || {}).lc; } catch (_) { return null; }
+  const pts = ((lc && lc.gradiente) || []).filter(q => q.t_min != null && q.B_pct != null).map(q => ({ t: +q.t_min, b: +q.B_pct, ...(q.flusso_mL_min != null ? { flow: +q.flusso_mL_min } : {}) }));
+  return pts.length > 1 ? { source: "file", points: pts, run_time: lc.durata_min != null ? +lc.durata_min : pts[pts.length - 1].t } : null;
+}
 // The gradient of file f: .dam first (the server), then what was entered; one that the notebook remembers is given back to the server first.
 async function get(f) {
   const n = nameOf(f);
   if (cache.has(n)) return cache.get(n);
   let g = null;
   try { g = (await J("api/gradient?k=" + f.k)).gradient; } catch (_) { /* no gradient */ }
+  if (!g) g = await fromMethod(f);
   if (!g && NB.gradienti && NB.gradienti[n]) { try { g = (await post("api/gradient", { k: f.k, model: NB.gradienti[n] })).gradient; } catch (_) { /* stays null */ } }
   cache.set(n, g);
   return g;
@@ -35,7 +43,7 @@ const forget = () => cache.clear();
 document.addEventListener("nbreset", () => { forget(); });
 
 // ---- the section in the Method window (files without a gradient of their own)
-const SRC = { dam: "grad.src.dam", raw: "grad.src.raw", manual: "grad.src.manual", csv: "grad.src.csv", course: "grad.src.course" };
+const SRC = { dam: "grad.src.dam", raw: "grad.src.raw", file: "grad.src.file", manual: "grad.src.manual", csv: "grad.src.csv", course: "grad.src.course" };
 let draft = null;                                            // the table being edited: [{t, b, flow}] as text
 const row = (r, i) => `<tr><td><input data-c="t" data-i="${i}" inputmode="decimal" aria-label="${T("grad.col.time")}" value="${EH(r.t ?? "")}"></td><td><input data-c="b" data-i="${i}" inputmode="decimal" aria-label="% B" value="${EH(r.b ?? "")}"></td><td><input data-c="flow" data-i="${i}" inputmode="decimal" aria-label="${T("grad.col.flow")}" value="${EH(r.flow ?? "")}"></td><td><button type="button" class="bt" data-del="${i}" aria-label="${T("grad.delRow")}" title="${T("grad.delRow")}">&times;</button></td></tr>`;
 const toDraft = g => (g ? g.points.map(p => ({ t: p.t, b: p.b, flow: p.flow ?? "" })) : [{ t: 0, b: "", flow: "" }, { t: "", b: "", flow: "" }]);

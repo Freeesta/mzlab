@@ -2596,6 +2596,7 @@ I18N.add("it", {
   "grad.none": "Per questo file non c'è un gradiente (gli mzML non lo contengono). Puoi inserirlo, importarlo da un file .raw o da un CSV.",
   "grad.src.dam": "Dal metodo .dam",
   "grad.src.raw": "Letto dal file .raw",
+  "grad.src.file": "Letto dal metodo del file",
   "grad.src.manual": "Inserito a mano",
   "grad.src.csv": "Importato da un CSV",
   "grad.src.course": "Metodo del corso",
