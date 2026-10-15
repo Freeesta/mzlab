@@ -68,7 +68,7 @@ function sortFiles(){const c=fileComparator(ST.files,f=>f.conc==null?null:f.conc
 const METHOD_FORMATS=[{ext:".dam",maker:"SCIEX"}];
 const isMethodFile=name=>METHOD_FORMATS.some(x=>name.toLowerCase().endsWith(x.ext));
 (()=>{const fm=METHOD_FORMATS.map(x=>x.ext+" "+x.maker).join(", ");$("#pickdam").accept=METHOD_FORMATS.map(x=>x.ext).join(",");
-  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop",{formats:fm}));$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop",{formats:fm})}</b><br>${I18N.t("load.method.dropHint")}`})();
+  $("#dropdam").setAttribute("aria-label",I18N.t("load.method.drop")+" ("+fm+")");$("#dropdam").innerHTML=`<b>${I18N.t("load.method.drop")}</b><br>${I18N.t("load.method.dropHint")}<small class="fmts">${esc(METHOD_FORMATS.map(x=>x.ext).join(" · "))}</small>`})();
 // each method is a chip «Method: name» with ×; the method goes with the data file of the same base name, else with the selected file (api.method)
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<span class="chip"><span>${I18N.t("load.method.chip",{name:esc(m.name)})}</span> <span class="muted sm">${esc(m.info&&m.info.key?I18N.t(m.info.key,m.info.params):"")} · ${sz(m.size)}</span> <button type="button" data-mrm="${i}" aria-label="${esc(I18N.t("load.method.remove",{name:m.name}))}" title="${I18N.t("load.table.remove")}">&times;</button></span>`).join("");
@@ -141,7 +141,7 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
 (()=>{const b=$("#fs-btn"),de=document.documentElement;if(!b||!de.requestFullscreen)return;b.hidden=false;
   const sync=()=>{const on=!!document.fullscreenElement,k=on?"header.fullscreen.exit":"header.fullscreen";b.setAttribute("aria-pressed",on);b.querySelector(".fs-in").hidden=on;b.querySelector(".fs-out").hidden=!on;b.title=I18N.t(k);b.setAttribute("aria-label",b.title);b.dataset.i18nTitle=b.dataset.i18nAriaLabel=k};
   b.onclick=()=>{(document.fullscreenElement?document.exitFullscreen():de.requestFullscreen({navigationUI:"hide"})).catch(()=>{})};document.addEventListener("fullscreenchange",sync)})();
-(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#drop");if(b&&d&&b.nativo){d.setAttribute("data-i18n-html","load.dropWiff");d.innerHTML=I18N.t("load.dropWiff");d.title=I18N.t("load.dropWiff.tip");const h=document.querySelector("h3[data-i18n=\"load.step1.title\"]");if(h){h.setAttribute("data-i18n","load.step1.titleNative");h.textContent=I18N.t("load.step1.titleNative")}CONVERT_RAW=true;$("#convhelp").hidden=true
 }})})();   // the .raw note only where the Rust engine can read it
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
